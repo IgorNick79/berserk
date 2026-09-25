@@ -31,6 +31,7 @@ final class Engine
 
         $strike = new StrikeResolver($state, $this);
         $action = new ActionResolver($state, $this);
+        $movement = new MovementResolver($state, $this);
         $turn   = new TurnProcessor($state, $this);
         $zone   = new ZoneManager($state);
         $turnPhase = new TurnPhaseProcessor($state, $this);
@@ -52,8 +53,8 @@ final class Engine
             'place_card'   => $this->placeCard($state, $playerKey, $cmd),
             'unplace_card' => $this->unplaceCard($state, $playerKey, $cmd),
             'confirm_place'       => $this->confirmPlace($state, $playerKey, $cmd),
-            'move'                => $this->moveCard($state, $playerKey, $cmd),
-            'jump'                => $this->jumpCard($state, $playerKey, $cmd),
+            'move'                => $movement->move($playerKey, $cmd),
+            'jump'                => $movement->jump($playerKey, $cmd),
             'strike'              => $strike->declare($playerKey, $cmd),
             'choose_defender'     => $strike->chooseDefender($playerKey, $cmd),
             'choose_redirect'       => $strike->chooseRedirect($playerKey, $cmd),
@@ -647,220 +648,6 @@ final class Engine
         }
 
         return Result::ok($events);
-    }
-
-    private function moveCard(GameState $state, string $playerKey, Command $cmd): Result
-    {
-        if ($state->status !== 'battle') {
-            return Result::error('Сейчас не бой');
-        }
-        if ($state->battle['active'] !== $playerKey) {
-            return Result::error('Сейчас не ваш ход');
-        }
-        if (!empty($state->battle['strike'])) {
-            return Result::error('Идёт сражение');
-        }
-
-        $cardId = (int) $cmd->get('card_id', 0);
-        $row    = (int) $cmd->get('row', 0);
-        $col    = (int) $cmd->get('col', 0);
-
-        $card = $state->getCard($cardId);
-        if (!$card || $card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_FIELD) {
-            return Result::error('Карта не на поле');
-        }
-        if ($card->closed) {
-            return Result::error('Закрытая карта не может двигаться');
-        }
-
-        // Басаарг: проверка что после хода цель остаётся достижимой
-        if (!empty($card->prop['forced_strike'])) {
-            $forced = CardStats::getForcedStrikeTarget($state, $card);
-            if ($forced !== null) {
-                $oldRow = $card->row;
-                $oldCol = $card->col;
-
-                $card->row = $row;
-                $card->col = $col;
-                $stillReachable = CardStats::getForcedStrikeTarget($state, $card);
-                $card->row = $oldRow;
-                $card->col = $oldCol;
-
-                if ($stillReachable === null) {
-                    return Result::error('Нельзя уйти от обязательной цели');
-                }
-            }
-        }
-
-        if (isset($card->markers['rooted'])) {
-            return Result::error('Карта обездвижена');
-        }
-        if ($card->move <= 0) {
-            return Result::error('Нет ходов');
-        }
-
-        $drow = abs($row - $card->row);
-        $dcol = abs($col - $card->col);
-
-        $canDiag = !empty($card->prop['can_move_diagonal']);
-        $isOrtho = ($drow + $dcol) === 1;
-        $isDiag  = $canDiag && $drow === 1 && $dcol === 1;
-
-        $isRowExtreme = !empty($card->prop['row_extreme'])
-            && $drow === 0
-            && (($card->col === 1 && $col === 5) || ($card->col === 5 && $col === 1));
-
-        if (!$isOrtho && !$isDiag && !$isRowExtreme) {
-            return Result::error('Только на соседнюю клетку');
-        }
-
-        $zone = new ZoneManager($state);
-        if ($zone->isFieldOccupied($row, $col)) {
-            return Result::error('Клетка занята');
-        }
-        if (!empty($state->cell_markers["{$row}_{$col}"])) {
-            return Result::error('На клетке маркер');
-        }
-
-        // Проверка границ поля
-        if ($row < 1 || $row > 6 || $col < 1 || $col > 5) {
-            return Result::error('За пределами поля');
-        }
-
-        $oldRow = $card->row;
-        $oldCol = $card->col;
-
-        $card->row = $row;
-        $card->col = $col;
-        $card->move--;
-
-        $card->flags['moved_this_turn'] = true;
-
-        $this->applyMovePenalty($card);
-        $this->syncCoinBonus($card);
-        $this->applyOnMoveEffects($state, $card, $oldRow, $oldCol);
-        $this->applyAirinTriggers($state, $card, $oldRow, $oldCol);
-
-        // Если двинулся Василиск — снять его rooted со всех целей
-        $this->clearRootedBySource($state, $card->instanceId);
-
-        $this->refreshArmor($state);
-        $this->maybeOpenForcedStrike($state, $card, $playerKey);
-
-        $state->bumpVersion();
-
-        return Result::ok(["card_moved:{$playerKey}:{$cardId}:{$row}_{$col}"]);
-    }
-
-    private function jumpCard(GameState $state, string $playerKey, Command $cmd): Result
-    {
-        if ($state->status !== 'battle') {
-            return Result::error('Сейчас не бой');
-        }
-        if ($state->battle['active'] !== $playerKey) {
-            return Result::error('Сейчас не ваш ход');
-        }
-        if (!empty($state->battle['strike'])) {
-            return Result::error('Идёт сражение');
-        }
-
-        $cardId = (int) $cmd->get('card_id', 0);
-        $row    = (int) $cmd->get('row', 0);
-        $col    = (int) $cmd->get('col', 0);
-
-        $card = $state->getCard($cardId);
-        if (!$card || $card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_FIELD) {
-            return Result::error('Карта не на поле');
-        }
-        if ($card->closed) {
-            return Result::error('Закрытая карта не может двигаться');
-        }
-        if (!empty($card->flags['moved_this_turn'])) {
-            return Result::error('Существо уже двигалось в этот ход');
-        }
-        if (isset($card->markers['rooted'])) {
-            return Result::error('Карта обездвижена');
-        }
-
-        // Действие jump — есть ли оно
-        $jumpAction = null;
-        foreach ($card->prop['actions'] ?? [] as $a) {
-            if (($a['type'] ?? '') === 'jump') {
-                $jumpAction = $a;
-                break;
-            }
-        }
-        if (!$jumpAction) {
-            return Result::error('У карты нет прыжка');
-        }
-
-        // Границы поля
-        if ($row < 1 || $row > 6 || $col < 1 || $col > 5) {
-            return Result::error('За пределами поля');
-        }
-
-        // Целевая клетка свободна
-        $zone = new ZoneManager($state);
-        if ($zone->isFieldOccupied($row, $col)) {
-            return Result::error('Клетка занята');
-        }
-        if (!empty($state->cell_markers["{$row}_{$col}"])) {
-            return Result::error('На клетке маркер');
-        }
-
-        // Дистанция — манхэттен
-        $dr = abs($row - $card->row);
-        $dc = abs($col - $card->col);
-        $dist = $dr + $dc;
-
-        if ($dist === 0) {
-            return Result::error('Нельзя прыгнуть на ту же клетку');
-        }
-
-        $range = (int) ($jumpAction['range'] ?? 0);
-        if ($range > 0 && $dist > $range) {
-            return Result::error('Превышена дальность прыжка');
-        }
-
-        // Басаарг: проверка что после хода цель остаётся достижимой
-        if (!empty($card->prop['forced_strike'])) {
-            $forced = CardStats::getForcedStrikeTarget($state, $card);
-            if ($forced !== null) {
-                $oldRow = $card->row;
-                $oldCol = $card->col;
-
-                $card->row = $row;
-                $card->col = $col;
-                $stillReachable = CardStats::getForcedStrikeTarget($state, $card);
-                $card->row = $oldRow;
-                $card->col = $oldCol;
-
-                if ($stillReachable === null) {
-                    return Result::error('Нельзя уйти от обязательной цели');
-                }
-            }
-        }
-
-        $oldRow = $card->row;
-        $oldCol = $card->col;
-
-        // Перемещаем
-        $card->row = $row;
-        $card->col = $col;
-        $card->move = 0;
-        $card->flags['moved_this_turn'] = true;
-
-        $this->applyMovePenalty($card);
-        $this->syncCoinBonus($card);
-        $this->applyOnMoveEffects($state, $card, $oldRow, $oldCol);
-        $this->applyAirinTriggers($state, $card, $oldRow, $oldCol);
-
-        $this->clearRootedBySource($state, $card->instanceId);
-        $this->refreshArmor($state);
-        $this->maybeOpenForcedStrike($state, $card, $playerKey);
-
-        $state->bumpVersion();
-        return Result::ok(["card_jumped:{$playerKey}:{$cardId}:{$row}_{$col}"]);
     }
 
     public function applyCombatEffect(
@@ -1810,7 +1597,7 @@ final class Engine
         return Result::ok(["auto_target:{$targetId}"]);
     }
 
-    private function clearRootedBySource(GameState $state, int $sourceId): void
+    public function clearRootedBySource(GameState $state, int $sourceId): void
     {
         foreach ($state->cards as $card) {
             if (!isset($card->markers['rooted'])) continue;
@@ -1823,13 +1610,6 @@ final class Engine
             } else {
                 $card->markers['rooted']['sources'] = $sources;
             }
-        }
-    }
-
-    private function applyMovePenalty(CardInstance $card): void
-    {
-        if (!empty($card->prop['lose_coins_on_move']) && $card->coins > 0) {
-            $card->coins = 0;
         }
     }
 
@@ -1973,61 +1753,6 @@ final class Engine
         return Result::ok(["any_death_target:{$targetId}"]);
     }
 
-    private function applyOnMoveEffects(
-        GameState $state,
-        CardInstance $card,
-        int $oldRow = 0,
-        int $oldCol = 0
-    ): void {
-        // Стандартный on_move
-        $effects = $card->prop['on_move'] ?? [];
-        if (is_array($effects)) {
-            foreach ($effects as $eff) {
-                if (($eff['type'] ?? '') === 'modifier') {
-                    $card->modifiers[] = [
-                        'stat'   => $eff['stat'] ?? 'ability_strike',
-                        'value'  => (int) ($eff['value'] ?? 1),
-                        'expire' => $eff['expire'] ?? 'end_of_turn',
-                    ];
-                }
-            }
-        }
-
-        // Переход между половинами
-        $halfEffects = $card->prop['on_move_half'] ?? [];
-        if (!is_array($halfEffects) || empty($halfEffects)) return;
-        if ($oldRow === 0 || $oldCol === 0) return;
-
-        $fromHalf = $this->halfOf($card->owner, $oldRow);
-        $toHalf   = $this->halfOf($card->owner, $card->row);
-
-        foreach ($halfEffects as $eff) {
-            if (($eff['from'] ?? '') !== $fromHalf) continue;
-            if (($eff['to']   ?? '') !== $toHalf)   continue;
-
-            foreach ($eff['modifiers'] ?? [] as $m) {
-                $card->modifiers[] = [
-                    'stat'   => $m['stat'],
-                    'value'  => (int) ($m['value'] ?? 1),
-                    'expire' => $m['expire'] ?? 'end_of_turn',
-                    'source' => $card->owner,
-                ];
-            }
-
-            foreach ($eff['flags'] ?? [] as $flag) {
-                $card->flags[$flag] = true;
-            }
-        }
-    }
-
-    private function halfOf(string $owner, int $row): string
-    {
-        if ($owner === 'host') {
-            return $row <= 3 ? 'own' : 'enemy';
-        }
-        return $row >= 4 ? 'own' : 'enemy';
-    }
-
     public function tryProphecyBlock(
         GameState $state,
         CardInstance $attacker,
@@ -2085,87 +1810,5 @@ final class Engine
         ];
     }
 
-    private function applyAirinTriggers(
-        GameState $state,
-        CardInstance $moved,
-        int $oldRow,
-        int $oldCol
-    ): void {
-        // У перемещённой карты должна быть магическая способность
-        $hasMagic = false;
-        foreach ($moved->prop['actions'] ?? [] as $a) {
-            $t = $a['type'] ?? '';
-            if (in_array($t, ['discharge', 'magic', 'cast'], true)) {
-                $hasMagic = true;
-                break;
-            }
-        }
-        if (!$hasMagic) return;
 
-        foreach ($state->cards as $airin) {
-            if ($airin->owner !== $moved->owner) continue;
-            if ($airin->instanceId === $moved->instanceId) continue;
-            if ($airin->zone !== CardInstance::ZONE_FIELD) continue;
-            if (empty($airin->prop['airin_trigger'])) continue;
-            if ($airin->dying || $airin->hp <= 0) continue;
-
-            // Была ли цель рядом с Айрин до движения?
-            if ($this->isAdjacent($oldRow, $oldCol, $airin->row, $airin->col)) {
-                continue;
-            }
-
-            // Стоит ли рядом теперь?
-            if (!$this->isAdjacent($moved->row, $moved->col, $airin->row, $airin->col)) {
-                continue;
-            }
-
-            $used = (int) ($airin->flags['airin_triggered_this_turn'] ?? 0);
-            if ($used >= 2) continue;
-
-            $airin->flags['airin_triggered_this_turn'] = $used + 1;
-
-            $airin->modifiers[] = [
-                'stat'   => 'ability_discharge',
-                'value'  => 1,
-                'expire' => 'end_of_turn',
-                'source' => $moved->owner,
-            ];
-        }
-    }
-
-    private function isAdjacent(int $r1, int $c1, int $r2, int $c2): bool
-    {
-        $dr = abs($r1 - $r2);
-        $dc = abs($c1 - $c2);
-        return ($dr <= 1 && $dc <= 1 && ($dr + $dc) > 0);
-    }
-
-    private function maybeOpenForcedStrike(GameState $state, CardInstance $card, string $playerKey): void
-    {
-        if (empty($card->prop['forced_strike'])) return;
-        if ($card->move > 0) return;
-        if ($card->closed) return;
-
-        $candidates = [];
-        foreach ($state->cards as $t) {
-            if ($t->zone !== CardInstance::ZONE_FIELD) continue;
-            if ($t->owner === $card->owner) continue;
-            if (!$t->closed) continue;
-            if ($t->dying || $t->hp <= 0) continue;
-
-            $dr = abs($t->row - $card->row);
-            $dc = abs($t->col - $card->col);
-            if ($dr <= 1 && $dc <= 1 && ($dr + $dc) > 0) {
-                $candidates[] = $t->instanceId;
-            }
-        }
-
-        if (empty($candidates)) return;
-
-        $state->battle['pending_forced_strike'] = [
-            'owner'       => $playerKey,
-            'attacker_id' => $card->instanceId,
-            'candidates'  => $candidates,
-        ];
-    }
 }
