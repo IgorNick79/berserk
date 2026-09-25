@@ -1,0 +1,16 @@
+{
+  "first_player": "host",
+  "host_side": 1,
+  "player_side": 2,
+  "stage": "battle",
+  "cards": [
+    {"owner": "host", "ukid": "s1_129", "row": 3, "col": 3},
+    {"owner": "host", "ukid": "s1_175",   "row": 3, "col": 2},
+
+    {"owner": "player", "ukid": "s1_193", "row": 4, "col": 2},
+    {"owner": "player", "ukid": "s1_70",   "row": 4, "col": 3},
+    {"owner": "player", "ukid": "s1_1",   "row": 5, "col": 3},
+    {"owner": "player", "ukid": "s1_1",   "row": 4, "col": 1},
+    {"owner": "player", "ukid": "s1_11",  "row": 5, "col": 4}
+  ]
+}

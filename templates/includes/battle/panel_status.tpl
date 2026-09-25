@@ -1,0 +1,1 @@
+<p class="wait">{{text}}</p>

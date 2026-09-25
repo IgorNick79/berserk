@@ -1,0 +1,22 @@
+{
+  "first_player": "host",
+  "host_side": 1,
+  "player_side": 2,
+  "cards": [
+    {"owner": "host",   "ukid": "s1_55", "row": 3, "col": 1},
+    {"owner": "host",   "ukid": "s1_49", "row": 3, "col": 2},
+    {"owner": "host",   "ukid": "s1_74", "row": 3, "col": 3},
+    {"owner": "host",   "ukid": "s1_73", "row": 2, "col": 3},
+    {"owner": "host",   "ukid": "s1_8",  "row": 2, "col": 2},
+    {"owner": "host",   "ukid": "s1_76", "row": 1, "col": 3},
+    {"owner": "host",   "ukid": "s1_101","row": 1, "col": 4},
+
+    {"owner": "player", "ukid": "s1_120",  "row": 4, "col": 1},
+    {"owner": "player", "ukid": "s1_121",  "row": 4, "col": 2},
+    {"owner": "player", "ukid": "s1_130",  "row": 4, "col": 3},
+    {"owner": "player", "ukid": "s1_107",  "row": 4, "col": 4},
+    {"owner": "player", "ukid": "s1_107",  "row": 5, "col": 4},
+    {"owner": "player", "ukid": "s1_106",  "row": 5, "col": 5},
+    {"owner": "player", "ukid": "s1_131",  "row": 5, "col": 3}
+  ]
+}

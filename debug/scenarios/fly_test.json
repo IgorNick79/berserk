@@ -1,0 +1,13 @@
+{
+  "first_player": "host",
+  "host_side": 1,
+  "player_side": 2,
+  "cards": [
+    {"owner": "host",   "ukid": "s1_1",  "row": 2, "col": 2},
+    {"owner": "host",   "ukid": "s1_1",  "row": 2, "col": 3},
+    {"owner": "host",   "ukid": "s1_70", "row": 3, "col": 2},
+    {"owner": "player", "ukid": "s1_1",  "row": 6, "col": 2},
+    {"owner": "player", "ukid": "s1_1",  "row": 6, "col": 3},
+    {"owner": "player", "ukid": "s1_74", "row": 6, "col": 4}
+  ]
+}

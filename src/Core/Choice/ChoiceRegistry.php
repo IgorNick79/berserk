@@ -1,0 +1,84 @@
+<?php
+// src/Core/Choice/ChoiceRegistry.php
+
+declare(strict_types=1);
+
+namespace Berserk\Core\Choice;
+
+use Berserk\Core\GameState;
+use Berserk\Core\Engine;
+use Berserk\Core\Command;
+use Berserk\Core\Result;
+use Berserk\Core\CardInstance;
+use Berserk\View\Ui\PanelSpec;
+
+final class ChoiceRegistry
+{
+    /** @return ChoiceHandlerInterface[] */
+    public static function all(): array
+    {
+        static $handlers = null;
+        if ($handlers === null) {
+            $handlers = [
+                new CoinSpendChoice(),
+                new DiceChoiceChoice(),
+                new CellMarkerChoice(),
+                new InstantPickChoice(),
+                new CombatPickChoice(),
+                new IncarnationChoice(),
+                new ValhallaPickChoice(),
+                new AnyDeathChoice(),
+                new WhipChoice(),
+                new WoundTransferChoice(),
+                new MultiHealChoice(),
+                new MultiDischargeChoice(),
+                new SelfWoundChoice(),
+                new CardChoice(),
+                new BloodTapChoice(),
+                new TransferChoice(), 
+                new ReviveChoice(),
+                new GrezyChoice(),
+                new ForcedStrikeChoice(),
+                // ─── Фаза хода ───────────────────────────────────────
+                new TurnAckChoice(),
+                new TurnInstantsChoice(),
+                new TurnSubChoice(),
+                new TurnPhaseChoice(),
+            ];
+        }
+        return $handlers;
+    }
+
+    public static function byPendingKey(string $key): ?ChoiceHandlerInterface
+    {
+        foreach (self::all() as $h) {
+            if ($h->pendingKey() === $key) return $h;
+        }
+        return null;
+    }
+
+    public static function byCommandType(string $type): ?ChoiceHandlerInterface
+    {
+        foreach (self::all() as $h) {
+            if (in_array($type, $h->commandTypes(), true)) return $h;
+        }
+        return null;
+    }
+
+    /** Какой pending сейчас активен (первый найденный в реестре) */
+    public static function current(GameState $state): ?ChoiceHandlerInterface
+    {
+        foreach (self::all() as $h) {
+            // Если хендлер умеет isActive() — он сам знает, когда активен
+            if (method_exists($h, 'isActive')) {
+                if ($h->isActive($state)) return $h;
+                continue;
+            }
+
+            // Стандартная проверка по плоскому ключу
+            $key = $h->pendingKey();
+            if (!empty($state->battle[$key])) return $h;
+        }
+        return null;
+    }
+}

@@ -1,0 +1,2957 @@
+<?php
+// src/Core/ActionResolver.php
+
+declare(strict_types=1);
+
+namespace Berserk\Core;
+
+/**
+ * Логика действий карт (кроме простого удара — он в StrikeResolver).
+ * Обрабатывает: shot, throw, discharge, magic, cast, tap, heal, impact, execute, uchr.
+ */
+final class ActionResolver
+{
+    public function __construct(
+        private GameState $state,
+        private Engine $engine,
+    ) {}
+
+    // ─── Команда action ───────────────────────────────────────
+
+    public function handle(string $playerKey, Command $cmd): Result
+    {
+        if ($this->state->status !== 'battle') {
+            return Result::error('Сейчас не бой');
+        }
+        if ($this->state->battle['active'] !== $playerKey) {
+            return Result::error('Сейчас не ваш ход');
+        }
+        if (!empty($this->state->battle['strike'])) {
+            return Result::error('Идёт сражение');
+        }
+
+        if (!empty($this->state->battle['pending_coin_spend'])) {
+            return Result::error('Сначала выберите количество монет');
+        }
+
+        // Обязательная атака
+        foreach ($this->state->cards as $c) {
+            if ($c->owner !== $playerKey) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if (CardStats::getForcedStrikeTarget($this->state, $c) !== null) {
+                return Result::error('Сначала обязаны атаковать закрытое существо');
+            }
+        }
+
+        $cardId    = (int) $cmd->get('card_id', 0);
+        $targetId  = (int) $cmd->get('target_id', 0);
+        $actionKey = (string) $cmd->get('action_key', '');
+
+        $attacker = $this->state->getCard($cardId);
+        $err = $this->validateAttacker($attacker, $playerKey);
+        if ($err) return $err;
+
+        $action = $this->findAction($attacker, $actionKey);
+        if (!$action) {
+            return Result::error('Действие не найдено');
+        }
+
+        $type = $action['type'] ?? '';
+
+        if ($type === 'place_cell_marker') {
+            return $this->startPlaceCellMarker($attacker, $action, $cardId, $playerKey);
+        }
+
+        if ($type === 'become_fly') {
+            return $this->resolveBecomeFly($attacker, $action, $cardId, $playerKey);
+        }
+        
+        if ($type === 'steal_coin') {
+            return $this->resolveStealCoin($attacker, $action, $cardId, $targetId, $playerKey);
+        }
+
+        if ($type === 'give_coin') {
+            return $this->resolveGiveCoin($attacker, $action, $cardId, $targetId, $playerKey);
+        }
+
+        if ($type === 'poison_target') {
+            return $this->resolvePoisonTarget($attacker, $action, $cardId, $targetId, $playerKey);
+        }
+
+        if ($type === 'damage_poisoned') {
+            return $this->resolveDamagePoisoned($attacker, $action, $cardId, $playerKey);
+        }
+
+        if ($type === 'dive') {
+            return $this->startDive($attacker, $action, $cardId, $targetId, $playerKey);
+        }
+
+        // ── Перераспределение ран (Волхв) ──────────────────────
+        if ($type === 'wound_transfer') {
+            $proc = new WoundTransferProcessor($this->state, $this->engine);
+            return $proc->start($playerKey, $attacker, [
+                'kind'          => 'volkhv',
+                'donor_filter'  => (string) ($action['donor_filter']  ?? 'wounded'),
+                'target_filter' => (string) ($action['target_filter'] ?? 'enemy'),
+                'max_transfer'  => (int)    ($action['max_transfer']  ?? 2),
+                'coins_cost'    => (int)    ($action['coins']         ?? 0),
+                'on_finish'     => 'main_phase',
+            ]);
+        }
+
+        // Грезы Архааля
+        if ($type === 'grezy_prophecy') {
+            return $this->startGrezyProphecy($attacker, $action, $cardId, $playerKey);
+        }
+
+        if ($type === 'dissonance') {
+            return $this->resolveDissonance($attacker, $action, $cardId, $targetId, $playerKey);
+        }
+
+        // Множественное излечение (Фея леса)
+        if ($type === 'heal' && !empty($action['max_targets'])) {
+            return $this->startMultiHeal($attacker, $action, $cardId, $playerKey);
+        }
+
+        // Множественный разряд (Аколит Дзара)
+        if ($type === 'multi_discharge') {
+            return $this->startMultiDischarge($attacker, $action, $cardId, $playerKey);
+        }
+
+        // Украсть оружие (Лесной разбойник)
+        if ($type === 'steal_strike') {
+            return $this->resolveStealStrike($attacker, $action, $cardId, $targetId, $playerKey);
+        }
+
+        // Песчаные когти (Хозяйка прайда)
+        if ($type === 'sand_claws') {
+            return $this->resolveSandClaws($attacker, $action, $cardId, $targetId, $playerKey);
+        }
+
+        // Кровавый разряд (Ведьма слуа)
+        if ($type === 'blood_tap') {
+            return $this->startBloodTap($attacker, $action, $cardId, $targetId, $playerKey);
+        }
+
+        // Возрождение (Знахарь племени)
+        if ($type === 'revive') {
+            return $this->startRevive($attacker, $action, $cardId, $playerKey);
+        }
+
+        // Таран (Центурион): выбор количества ран, урон X-1 напротив
+        if ($type === 'self_wound_strike') {
+            if (empty($action['target']) || $action['target'] !== 'opposite') {
+                // нечего проверять — на всякий
+            }
+            $cost = (int) ($action['coins'] ?? 0);
+            if ($attacker->coins < $cost) {
+                return Result::error('Не хватает монет');
+            }
+
+            $target = $this->state->getCard($targetId);
+            if (!$target) {
+                return Result::error('Цель не найдена');
+            }
+            if ($target->owner === $playerKey) {
+                return Result::error('Нельзя бить своих');
+            }
+            if (!CardStats::isOpposite($attacker, $target)) {
+                return Result::error('Только по карте напротив');
+            }
+
+            $attacker->coins -= $cost;
+
+            $this->state->battle['pending_self_wound'] = [
+                'attacker_id' => $cardId,
+                'target_id'   => $targetId,
+                'action'      => $action,
+                'max_wounds'  => $attacker->hp,
+            ];
+
+            $this->state->bumpVersion();
+            return Result::ok(['self_wound_started']);
+        }
+
+        // transfer_wounds — особый путь, без цели
+        if ($type === 'impact' && !empty($action['transfer_wounds'])) {
+            $cost = (int) ($action['coins'] ?? 0);
+            if ($cost > 0) {
+                if ($attacker->coins < $cost) {
+                    return Result::error('Не хватает монет');
+                }
+                $attacker->coins -= $cost;
+            }
+            return $this->startTransfer($attacker, $action, $cardId, $playerKey);
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target
+            || ($target->zone !== CardInstance::ZONE_FIELD
+                && $target->zone !== CardInstance::ZONE_FLYING)) {
+            return Result::error('Цель не на поле');
+        }
+
+        // Раскрытие атакованной цели
+        $isAttack = in_array($type, ['shot', 'throw', 'discharge', 'magic', 'cast', 'tap'], true)
+            && $target->owner !== $playerKey;
+        if ($isAttack) {
+            $this->engine->revealCard($this->state, $target);
+        }
+
+        // Проверка цели по типу
+        $err = $this->validateTarget($attacker, $target, $action, $type, $playerKey);
+        if ($err) return $err;
+
+        // Пророчество-блок (Дочь перламутра)
+        $blockTypes = ['shot', 'throw', 'tap', 'magic', 'cast', 'discharge'];
+        if (in_array($type, $blockTypes, true)) {
+            if ($this->engine->tryProphecyBlock($this->state, $attacker, $target, $type)) {
+                $attacker->closed = true;
+                $this->state->bumpVersion();
+                return Result::ok(["action_blocked:{$type}:{$cardId}->{$targetId}"]);
+            }
+        }
+
+        // Условие ally_price_near (Оури)
+        if (!empty($action['condition'])
+            && ($action['condition']['type'] ?? '') === 'ally_price_near') {
+
+            if (empty($attacker->flags['moved_this_turn'])
+                || !empty($attacker->flags['shot_used_this_turn'])
+                || !CardStats::hasAllyPriceNear($this->state, $attacker, (int) $action['condition']['min'])) {
+                return Result::error('Условие не выполнено: нужно подойти к существу 7+');
+            }
+        }
+
+        // Выбор количества монет
+        $coinConfig = $attacker->prop['coins'][$type] ?? null;
+        if (is_array($coinConfig)
+            && ($coinConfig['spend'] ?? '') === 'choice'
+            && $attacker->coins > 0
+            && $targetId > 0
+        ) {
+            return $this->startCoinSpendChoice(
+                $attacker, $action, $type, $cardId, $targetId, $playerKey
+            );
+        }
+
+        // Монеты
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0) {
+            if ($attacker->coins < $cost) {
+                return Result::error('Не хватает монет');
+            }
+            $attacker->coins -= $cost;
+        }
+
+        // Особые пути
+        if ($type === 'heal')   return $this->resolveHeal($attacker, $target, $action, $cardId, $targetId, $playerKey);
+        if ($type === 'impact') return $this->resolveImpact($attacker, $action, $cardId, $targetId, $playerKey);
+        if ($type === 'execute') return $this->resolveExecute($attacker, $target, $action, $cardId, $targetId, $playerKey);
+        if (!empty($action['grant_modifier'])) {
+            return $this->resolveGrantModifier($attacker, $action, $cardId, $targetId, $playerKey);
+        }
+
+        // Остальные — бросок кубика
+        return $this->resolveDamage($attacker, $target, $action, $type, $cardId, $targetId, $playerKey);
+    }
+
+    // ─── УЧР ──────────────────────────────────────────────────
+
+    public function uchr(string $playerKey, Command $cmd): Result
+    {
+        if ($this->state->status !== 'battle') {
+            return Result::error('Сейчас не бой');
+        }
+        if ($this->state->battle['active'] !== $playerKey) {
+            return Result::error('Сейчас не ваш ход');
+        }
+        if (!empty($this->state->battle['strike'])) {
+            return Result::error('Идёт сражение');
+        }
+
+        if (!empty($this->state->battle['pending_coin_spend'])) {
+            return Result::error('Сначала выберите количество монет');
+        }
+
+        // Обязательная атака
+        foreach ($this->state->cards as $c) {
+            if ($c->owner !== $playerKey) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if (CardStats::getForcedStrikeTarget($this->state, $c) !== null) {
+                return Result::error('Сначала обязаны атаковать закрытое существо');
+            }
+        }
+
+        $cardId   = (int) $cmd->get('card_id', 0);
+        $targetId = (int) $cmd->get('target_id', 0);
+
+        $attacker = $this->state->getCard($cardId);
+        $target   = $this->state->getCard($targetId);
+
+        if (!$attacker || $attacker->owner !== $playerKey || $attacker->zone !== CardInstance::ZONE_FIELD) {
+            return Result::error('Атакующий не на поле');
+        }
+        if ($attacker->closed) {
+            return Result::error('Атакующий закрыт');
+        }
+        if (!$target || $target->zone !== CardInstance::ZONE_FIELD) {
+            return Result::error('Цель не на поле');
+        }
+        if ($target->owner === $playerKey) {
+            return Result::error('Нельзя атаковать своих');
+        }
+
+        $this->engine->revealCard($this->state, $target);
+
+        $uchrAction = null;
+        foreach ($attacker->prop['actions'] ?? [] as $a) {
+            if (($a['type'] ?? '') === 'uchr') {
+                $uchrAction = $a;
+                break;
+            }
+        }
+        if (!$uchrAction) {
+            return Result::error('У карты нет УЧР');
+        }
+
+        $drow = abs($target->row - $attacker->row);
+        $dcol = abs($target->col - $attacker->col);
+        if (($drow + $dcol) !== 2) {
+            return Result::error('УЧР только на расстоянии 2 по прямой');
+        }
+        if ($drow !== 0 && $dcol !== 0) {
+            return Result::error('УЧР не по диагонали');
+        }
+
+        // Пророчество-блок (Дочь перламутра)
+        if ($this->engine->tryProphecyBlock($this->state, $attacker, $target, 'uchr')) {
+            $attacker->closed = true;
+            $this->state->bumpVersion();
+            return Result::ok(["uchr_blocked:{$cardId}->{$targetId}"]);
+        }
+
+        $midRow = $attacker->row;
+        $midCol = $attacker->col;
+        if ($drow === 0) {
+            $midCol = (int) (($attacker->col + $target->col) / 2);
+        } else {
+            $midRow = (int) (($attacker->row + $target->row) / 2);
+        }
+
+        $midCard = null;
+        foreach ($this->state->cards as $c) {
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->row === $midRow && $c->col === $midCol) {
+                $midCard = $c;
+                break;
+            }
+        }
+
+        foreach ($this->state->cards as $c) {
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->row === $midRow && $c->col === $midCol) {
+                if ($c->owner !== $playerKey) {
+                    return Result::error('Между вами и целью чужое существо');
+                }
+                break;
+            }
+        }
+
+        $dice   = random_int(1, 6);
+        if ($dice < 1) $dice = 1;
+        $level  = BattleHelper::diceToLevel($dice);
+
+        $val = 0;
+        if (isset($uchrAction['strike'])) {
+            $val = (int) ($uchrAction['strike'][$level] ?? 0);
+        } elseif (isset($uchrAction['value'])) {
+            $val = (int) $uchrAction['value'];
+        }
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'uchr',
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => $dice,
+            'defend_dice' => 0,
+            'result'      => ['attack' => $level, 'defend' => '', 'winner' => 'attack'],
+            'final'       => ['attack' => $level, 'defend' => '', 'decreased' => false],
+            'damage'      => $val,
+            'confirmed'   => [],
+        ];
+
+        $val += CardStats::getAbilityBonus($this->state, $attacker, $target, 'uchr');
+        $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, 'uchr');
+        $val -= $reduction;
+        if ($val < 0) $val = 0;
+        if (CardStats::hasDefense($this->state, $target, 'uchr', $attacker)) {
+            $val = 0;
+        }
+
+        $this->engine->applyDamage($this->state, $target, $val, 'uchr', $attacker);
+        $this->state->battle['strike']['damage_reduction'] = $reduction;
+        $this->state->battle['strike']['damage_total'] = $val;
+
+        // Эффекты на промежуточную карту (через кого бьют)
+        if ($midCard && !empty($uchrAction['apply_to_mid'])) {
+            foreach ($uchrAction['apply_to_mid'] as $eff) {
+                if (($eff['type'] ?? '') === 'modifier') {
+                    $midCard->modifiers[] = [
+                        'stat'   => $eff['stat'],
+                        'value'  => (int) ($eff['value'] ?? 1),
+                        'expire' => $eff['expire'] ?? 'end_of_turn',
+                        'source' => $playerKey,
+                    ];
+
+                    $this->state->battle['strike']['uchr_mid_effects'][] = [
+                        'target_id'   => $midCard->instanceId,
+                        'target_ukid' => $midCard->ukid,
+                        'stat'        => $eff['stat'],
+                        'value'       => (int) ($eff['value'] ?? 1),
+                    ];
+                }
+            }
+        }
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $attacker->closed = true;
+
+        $this->state->bumpVersion();
+        return Result::ok(["uchr:{$playerKey}:{$cardId}->{$targetId}:dice={$dice}:dmg={$val}"]);
+    }
+
+    // ─── Проверки ─────────────────────────────────────────────
+
+    private function validateAttacker(?CardInstance $attacker, string $playerKey): ?Result
+    {
+        if (!$attacker
+            || $attacker->owner !== $playerKey
+            || ($attacker->zone !== CardInstance::ZONE_FIELD
+                && $attacker->zone !== CardInstance::ZONE_FLYING)) {
+            return Result::error('Карта не на поле');
+        }
+        if ($attacker->closed) {
+            return Result::error('Карта закрыта');
+        }
+        return null;
+    }
+
+    private function findAction(CardInstance $attacker, string $actionKey): ?array
+    {
+        foreach ($attacker->prop['actions'] ?? [] as $a) {
+            $key = $a['key'] ?? $a['type'] ?? '';
+            if ($key === $actionKey) {
+                return $a;
+            }
+        }
+        return null;
+    }
+
+    private function validateTarget(
+        CardInstance $attacker,
+        CardInstance $target,
+        array $action,
+        string $type,
+        string $playerKey
+    ): ?Result {
+        if ($type === 'tap') {
+            if (!empty($action['self']) && $target->instanceId !== $attacker->instanceId) {
+                return Result::error('Только на себя');
+            }
+            if (!empty($action['own']) && $target->owner !== $playerKey) {
+                return Result::error('Только на своих');
+            }
+            if (empty($action['own']) && empty($action['self']) && $target->owner === $playerKey) {
+                return Result::error('Нельзя бить своих');
+            }
+            if (!empty($action['near'])) {
+                $dr = abs($target->row - $attacker->row);
+                $dc = abs($target->col - $attacker->col);
+                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
+                    return Result::error('Цель не соседняя');
+                }
+            }
+        } elseif ($type === 'heal') {
+            if ($target->type !== 'creature' && $target->type !== 'fly') {
+                return Result::error('Можно лечить только существ');
+            }
+            if (!empty($action['own']) && $target->owner !== $playerKey) {
+                return Result::error('Только на своих');
+            }
+            if (!empty($action['self']) && $target->instanceId !== $attacker->instanceId) {
+                return Result::error('Только на себя');
+            }
+            if (!empty($action['near'])) {
+                $dr = abs($target->row - $attacker->row);
+                $dc = abs($target->col - $attacker->col);
+                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
+                    return Result::error('Цель не соседняя');
+                }
+            }
+        } elseif ($type === 'execute') {
+            if ($target->owner === $playerKey) {
+                return Result::error('Нельзя добить своих');
+            }
+            if ($target->type === 'fly') {
+                return Result::error('Нельзя добить летающего');
+            }
+            if ($target->hp > (int) ($action['value'] ?? 0)) {
+                return Result::error('У цели слишком много HP');
+            }
+            if (!empty($action['near'])) {
+                $dr = abs($target->row - $attacker->row);
+                $dc = abs($target->col - $attacker->col);
+                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
+                    return Result::error('Цель не соседняя');
+                }
+            }
+        } elseif ($type === 'impact') {
+            if (!empty($action['self_destroy']) && $target->instanceId !== $attacker->instanceId) {
+                return Result::error('Цель — сам кастующий');
+            }
+
+            if (!empty($action['transfer_wounds'])) {
+                $tw = $action['transfer_wounds'];
+                $from = $tw['from'] ?? [];
+
+                if (!empty($from['owner']) && $from['owner'] === 'own') {
+                    if ($target->owner !== $playerKey) {
+                        return Result::error('Только на своих');
+                    }
+                }
+                if (!empty($from['near'])) {
+                    $dr = abs($target->row - $attacker->row);
+                    $dc = abs($target->col - $attacker->col);
+                    if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
+                        return Result::error('Цель не соседняя');
+                    }
+                }
+                if (!empty($from['element']) && $target->element !== $from['element']) {
+                    return Result::error('Неверный элемент цели');
+                }
+                if ($target->instanceId === $attacker->instanceId) {
+                    return Result::error('Нельзя перераспределить на себя');
+                }
+            }
+        } elseif ($type === 'magic') {
+            // Ближний удар (как strike), либо в пределах range если указан
+            $drow = abs($target->row - $attacker->row);
+            $dcol = abs($target->col - $attacker->col);
+            $dist = $drow + $dcol;
+
+            $range = (int) ($action['range'] ?? 0);
+            if ($range > 0) {
+                if ($dist > $range) {
+                    return Result::error('Превышена дальность');
+                }
+                if ($dist === 0) {
+                    return Result::error('Цель не соседняя');
+                }
+            } else {
+                if ($drow > 1 || $dcol > 1 || $dist === 0) {
+                    return Result::error('Цель не соседняя');
+                }
+            }
+        } elseif ($type === 'poison_target') {
+            if ($target->zone !== CardInstance::ZONE_FIELD
+                && $target->zone !== CardInstance::ZONE_FLYING) {
+                return Result::error('Цель не на поле');
+            }
+            return null;
+        } elseif (!empty($action['grant_modifier'])) {
+            if (!empty($action['self']) && $target->instanceId !== $attacker->instanceId) {
+                return Result::error('Только на себя');
+            }
+            if (!empty($action['own']) && $target->owner !== $playerKey) {
+                return Result::error('Только на своих');
+            }
+            return null;
+        } elseif ($type === 'dissonance') {
+            if ($target->owner === $playerKey) {
+                return Result::error('Только на врага');
+            }
+            if ($target->zone !== CardInstance::ZONE_FIELD) {
+                return Result::error('Цель не на поле');
+            }
+            return null;
+        } else {
+            // Support-действие: cast с target = ally_other (Щит света)
+            if (($action['target'] ?? '') === 'ally_other') {
+                if ($target->owner !== $playerKey) {
+                    return Result::error('Только на своих');
+                }
+                if ($target->instanceId === $attacker->instanceId) {
+                    return Result::error('Только на другое существо');
+                }
+                if ($target->zone !== CardInstance::ZONE_FIELD
+                    && $target->zone !== CardInstance::ZONE_FLYING) {
+                    return Result::error('Цель не на поле');
+                }
+                return null;
+            }
+
+            // shot / throw / discharge / cast
+            if ($target->owner === $playerKey) {
+                return Result::error('Нельзя бить своих');
+            }
+
+            $attackerIsFlying = ($attacker->zone === CardInstance::ZONE_FLYING);
+
+            // Перехват Паука
+            if ($attackerIsFlying
+                && in_array($type, ['shot', 'throw', 'discharge', 'magic', 'cast', 'tap'], true)) {
+
+                $interceptors = CardStats::getAirInterceptors($this->state, $playerKey);
+                if (!empty($interceptors)) {
+                    $allowedIds = array_map(fn($p) => $p->instanceId, $interceptors);
+                    if (!in_array($target->instanceId, $allowedIds, true)) {
+                        return Result::error('Летун может атаковать только Паука-пересмешника');
+                    }
+                }
+            }
+
+            // Перехват (только shot / throw / disacharge)
+            if (in_array($type, ['shot', 'throw', 'discharge'], true)) {
+                $interceptors = CardStats::getRangedInterceptors($this->state, $playerKey);
+                if (!empty($interceptors)) {
+                    $allowedIds = array_map(fn($p) => $p->instanceId, $interceptors);
+                    if (!in_array($target->instanceId, $allowedIds, true)) {
+                        return Result::error('Стрелок может бить только Резчика идолов');
+                    }
+                    // цель — Резчик, дальность игнорируется, дальше не проверяем
+                    return null;
+                }
+            }
+
+            $targetIsFlying   = ($target->zone === CardInstance::ZONE_FLYING);
+
+            if (!$targetIsFlying && !$attackerIsFlying) {
+                $drow = abs($target->row - $attacker->row);
+                $dcol = abs($target->col - $attacker->col);
+                $maxd = max($drow, $dcol);
+                $dist = $drow + $dcol;
+
+                if ($maxd <= 1 && empty($action['near_shot'])) {
+                    return Result::error('Дальняя атака невозможна по соседней клетке');
+                }
+                $range = (int) ($action['range'] ?? 0);
+                if ($range > 0 && $dist > $range) {
+                    return Result::error('Превышена дальность');
+                }
+            }
+        }
+        return null;
+    }
+
+    // ─── Особые пути ──────────────────────────────────────────
+
+    private function resolveBecomeFly(
+        CardInstance $attacker, array $action,
+        int $cardId, string $playerKey
+    ): Result {
+        if ($attacker->type === 'fly') {
+            return Result::error('Уже летающий');
+        }
+        if ($attacker->zone !== CardInstance::ZONE_FIELD) {
+            return Result::error('Не на поле');
+        }
+
+        $attacker->type = 'fly';
+        $attacker->closed = true;
+
+        (new ZoneManager($this->state))->toFlying($attacker);
+
+        // Для отображения результата
+        $this->state->battle['strike'] = [
+            'kind'        => 'become_fly',
+            'action_name' => $action['name'] ?? 'Получить полёт',
+            'attacker_id' => $cardId,
+            'target_id'   => $cardId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'confirmed'   => [],
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(["become_fly:{$playerKey}:{$cardId}"]);
+    }
+
+    private function resolveHeal(
+        CardInstance $attacker, CardInstance $target, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        $healRaw = $action['value'] ?? 0;
+        if ($healRaw === 'full') {
+            $healValue = $target->hpMax - $target->hp;
+        } else {
+            $healValue = (int) $healRaw;
+        }
+        $target->hp += $healValue;
+        if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
+
+        $poisonRemoved = false;
+        if (!empty($action['heal_poison']) && isset($target->markers['poison'])) {
+            unset($target->markers['poison']);
+            $poisonRemoved = true;
+        }
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'           => 'heal',
+            'action_name'    => $action['name'] ?? 'Излечение',
+            'attacker_id'    => $cardId,
+            'target_id'      => $targetId,
+            'defender_id'    => null,
+            'state'          => 'results',
+            'attack_dice'    => 0,
+            'defend_dice'    => 0,
+            'result'         => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'          => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'         => 0,
+            'heal'           => $healValue,
+            'poison_removed' => $poisonRemoved,
+            'confirmed'      => [],
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(["heal:{$playerKey}:{$cardId}->{$targetId}:value={$healValue}"]);
+    }
+
+    private function applyShieldLight(
+        CardInstance $attacker, CardInstance $target, array $action,
+        int $amount, string $playerKey
+    ): Result {
+        $target->modifiers[] = [
+            'stat'   => 'shield_light',
+            'value'  => 1,
+            'expire' => $amount,
+            'timing' => 'not_source_turn',
+            'source' => $playerKey,
+        ];
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'shield_light',
+            'action_name' => $action['name'] ?? 'Щит света',
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => $target->instanceId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'shield_data' => [
+                'turns'     => $amount,
+                'target_id' => $target->instanceId,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(["shield:{$playerKey}:{$attacker->instanceId}->{$target->instanceId}:{$amount}"]);
+    }
+
+    private function resolveImpact(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        $this->state->battle['strike'] = [
+            'kind'        => 'impact',
+            'action_name' => $action['name'] ?? 'Воздействие',
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'confirmed'   => [],
+        ];
+
+        $value  = (int) ($action['value'] ?? 0);
+        $poison = (int) ($action['poison'] ?? 0);
+        $applied = [];
+
+        if (($action['target'] ?? '') === 'all_near') {
+            foreach ($this->state->cards as $c) {
+                if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+                if ($c->instanceId === $attacker->instanceId) continue;
+
+                $filter = $action['filter'] ?? null;
+                if ($filter === 'enemy' && $c->owner === $playerKey) continue;
+                if ($filter === 'own'   && $c->owner !== $playerKey) continue;
+
+                $dr = abs($c->row - $attacker->row);
+                $dc = abs($c->col - $attacker->col);
+                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+                $hpBefore = $c->hp;
+                if ($value > 0) {
+                    $this->engine->applyDamage($this->state, $c, $value, 'impact', $attacker);
+                }
+                if ($poison > 0) {
+                    $this->engine->applyPoison($c, $poison, $playerKey);
+                }
+                $applied[] = [
+                    'target_id' => $c->instanceId,
+                    'damage'    => max(0, $hpBefore - $c->hp),
+                    'poison'    => $poison,
+                ];
+            }
+        }
+
+        if (!empty($action['self_destroy'])) {
+            $attacker->hp = 0;
+            $attacker->dying = true;
+        }
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike']['impact_targets'] = $applied;
+        $this->state->battle['strike']['self_destroyed'] = !empty($action['self_destroy']);
+
+        $this->engine->checkGameOver($this->state);
+        $this->engine->flushDeadeatQueue($this->state);
+
+        $this->state->bumpVersion();
+        return Result::ok(["impact:{$playerKey}:{$cardId}"]);
+    }
+
+    private function resolveExecute(
+        CardInstance $attacker, CardInstance $target, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        // Структура до смерти цели
+        $this->state->battle['strike'] = [
+            'kind'        => 'execute',
+            'action_name' => $action['name'] ?? 'Добивание',
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'execute'     => true,
+            'confirmed'   => [],
+        ];
+
+        $target->hp = 0;
+        $target->dying = true;
+        $this->engine->refreshArmor($this->state);
+
+        // Трупоедство
+        if (!empty($attacker->prop['deadeat']) && $attacker->hp > 0) {
+            $this->state->battle['strike']['deadeat_queue'][] = [
+                'instance_id' => $attacker->instanceId,
+            ];
+        }
+
+        $this->engine->triggerOnDeath($this->state, $target);
+
+        $attacker->closed = true;
+
+        $this->engine->checkGameOver($this->state);
+        $this->engine->flushDeadeatQueue($this->state);
+
+        $this->state->bumpVersion();
+        return Result::ok(["execute:{$playerKey}:{$cardId}->{$targetId}"]);
+    }
+
+    private function resolveGrantModifier(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        $raw = $action['grant_modifier'];
+
+        // Принимаем и одиночный объект, и массив
+        $modifiers = isset($raw['stat']) ? [$raw] : $raw;
+
+        foreach ($modifiers as $modifier) {
+            $attacker->modifiers[] = [
+                'stat'   => $modifier['stat'],
+                'value'  => $modifier['value'] ?? 1,
+                'expire' => $modifier['expire'] ?? 'permanent',
+                'source' => $playerKey,
+            ];
+        }
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'             => 'modifier',
+            'action_name'      => $action['name'] ?? 'Способность',
+            'attacker_id'      => $cardId,
+            'target_id'        => $targetId,
+            'defender_id'      => null,
+            'state'            => 'results',
+            'attack_dice'      => 0,
+            'defend_dice'      => 0,
+            'result'           => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'            => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'           => 0,
+            'modifier_granted' => $modifiers,
+            'confirmed'        => [],
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(["modifier:{$playerKey}:{$cardId}:{$modifier['stat']}"]);
+    }
+
+    private function resolveDamage(
+        CardInstance $attacker, CardInstance $target, array $action,
+        string $type, int $cardId, int $targetId, string $playerKey,
+        ?int $forcedCoinSpend = null
+    ): Result {
+        $dice   = random_int(1, 6);
+        $dice = 6;
+        if ($dice < 1) $dice = 1;
+        $level  = BattleHelper::diceToLevel($dice);
+
+        $val = 0;
+        if (isset($action['strike']) && is_array($action['strike'])) {
+            $val = (int) ($action['strike'][$level] ?? 0);
+        } elseif (isset($action['value'])) {
+            $val = (int) $action['value'];
+        }
+
+        // Монеты за действие (Арбалетчик, Повелитель)
+        $coinBonus = 0;
+        $coinsSpent = 0;
+        $coinConfig = $attacker->prop['coins'][$type] ?? null;
+        // Аргвальд: coin_bonus + reset
+        if (!empty($action['coin_bonus']) && $attacker->coins > 0) {
+            $perCoin = (int) $action['coin_bonus'];
+            $coinsHeld = $attacker->coins;
+            $coinBonus = $perCoin * $coinsHeld;
+            $coinsSpent = $coinsHeld;
+            $attacker->coins = 0;
+            $val += $coinBonus;
+
+            if (!empty($action['reset_coins_after'])) {
+                // уже сбросили
+            }
+        } elseif (is_array($coinConfig) && $attacker->coins > 0) {
+            $perCoin = (int) ($coinConfig['value'] ?? 0);
+            $spend   = $coinConfig['spend'] ?? 'all';
+            if ($perCoin > 0) {
+                $coinsHeld = $attacker->coins;
+
+                if ($forcedCoinSpend !== null) {
+                    $coinsSpent = min($coinsHeld, $forcedCoinSpend);
+                    $coinBonus  = $perCoin * $coinsSpent;
+                } else {
+                    // как было
+                    $coinBonus = $perCoin * $coinsHeld;
+                    $coinsSpent = ($spend === 'all')
+                        ? $coinsHeld
+                        : min($coinsHeld, (int) $spend);
+                }
+
+                $attacker->coins -= $coinsSpent;
+                $val += $coinBonus;
+
+                $this->engine->syncCoinBonus($attacker);
+            }
+        }
+
+        // Защита цели
+        $defended = false;
+        if (in_array($type, ['shot', 'throw', 'discharge', 'magic', 'cast'], true)) {
+            $defended = CardStats::hasDefense($this->state, $target, $type, $attacker);
+            if ($defended) $val = 0;
+        }
+
+        // Аргвальд: получает монету при разряде по нему
+        if ($type === 'discharge' && !empty($target->prop['on_discharge_self'])) {
+            $bonus = (int) ($target->prop['on_discharge_self']['coins'] ?? 1);
+            if ($bonus > 0) {
+                $target->coins += $bonus;
+                $this->engine->syncCoinBonus($target);
+            }
+        }
+
+        $this->state->battle['strike'] = [
+            'kind'        => $type,
+            'action_name' => $action['name'] ?? '',
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => $dice,
+            'defend_dice' => 0,
+            'result'      => ['attack' => $level, 'defend' => '', 'winner' => 'attack'],
+            'final'       => ['attack' => $level, 'defend' => '', 'decreased' => false],
+            'damage'      => $val,
+            'defended'    => $defended,
+            'confirmed'   => [],
+        ];
+
+        // Эффекты действия (strike_effects) — например, яд при среднем/сильном разряде
+        if (!empty($action['strike_effects'])) {
+            $this->engine->applyStrikeEffects($attacker, $target, $level, $action['strike_effects']);
+        }
+
+        $reduction = 0;
+        $shotBonus = 0;
+        $abilityBonus = 0;
+
+        $abilityBonus = CardStats::getAbilityBonus($this->state, $attacker, $target, $type, $level);
+        $val += $abilityBonus;
+
+        // flying_bonus (Крондак)
+        $flyingBonus = 0;
+        if (!empty($action['flying_bonus']) && $target->type === 'fly') {
+            $flyingBonus = (int) $action['flying_bonus'];
+            $val += $flyingBonus;
+        }
+
+        // all_rows_bonus (Суккуб-истязатель)
+        $rowsBonus = 0;
+        if (!empty($action['all_rows_bonus'])
+            && CardStats::hasOwnCreatureInAllRows($this->state, $playerKey)) {
+            $rowsBonus = (int) $action['all_rows_bonus'];
+            $val += $rowsBonus;
+        }
+
+        if ($type === 'shot') {
+            $shotBonus = CardStats::getShotBonus($attacker);
+            $val += $shotBonus;
+        }
+
+        $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, $type);
+        $val -= $reduction;
+        if ($val < 0) $val = 0;
+
+        // Мира: закрыть цель, если она уже получала раны от 2+ других выстрелов/метаний
+        $closeAfter = false;
+        if (!empty($action['close_on_ranged_hits'])) {
+            $hitsBefore = (int) ($target->flags['ranged_hits_this_turn'] ?? 0);
+            if ($hitsBefore >= (int) $action['close_on_ranged_hits']) {
+                $closeAfter = true;
+            }
+        }
+
+        $this->engine->applyDamage($this->state, $target, $val, $type, $attacker);
+
+        if ($closeAfter) {
+            $target->closed = true;
+        }
+
+        if ($reduction > 0) $this->state->battle['strike']['damage_reduction'] = $reduction;
+        if ($abilityBonus > 0) $this->state->battle['strike']['ability_bonus'] = $abilityBonus;
+        if ($shotBonus > 0) $this->state->battle['strike']['shot_bonus'] = $shotBonus;
+        if ($coinBonus > 0) {
+            $this->state->battle['strike']['coin_bonus'] = $coinBonus;
+            $this->state->battle['strike']['coins_spent'] = $coinsSpent;
+        }
+        if ($rowsBonus > 0) {
+            $this->state->battle['strike']['rows_bonus'] = $rowsBonus;
+        }
+        if ($flyingBonus > 0) $this->state->battle['strike']['flying_bonus'] = $flyingBonus;
+
+        $this->engine->applyAnswer($this->state, $target, $attacker, $type);
+        $this->engine->flushDeadeatQueue($this->state);
+
+        // Итоговый урон после всех бонусов (для отображения)
+        $this->state->battle['strike']['damage_total'] = $val;
+
+
+        if (empty($action['no_close'])) {
+            $attacker->closed = true;
+        }
+
+        // Условие-действие: помечаем как использованное
+        if (!empty($action['condition'])
+            && ($action['condition']['type'] ?? '') === 'ally_price_near') {
+            $attacker->flags['shot_used_this_turn'] = true;
+        }
+
+        if (!empty($action['marker']['type'])) {
+            $this->engine->applyMarker($target, $action['marker'], $playerKey);
+        }
+        if (is_numeric($action['poison'] ?? null) && (int) $action['poison'] > 0) {
+            $this->engine->applyPoison($target, (int) $action['poison'], $playerKey);
+        }
+
+        $this->state->bumpVersion();
+        return Result::ok(["action:{$playerKey}:{$type}:{$cardId}->{$targetId}:dmg={$val}"]);
+    }
+
+    private function startTransfer(
+        CardInstance $attacker, array $action,
+        int $cardId, string $playerKey
+    ): Result {
+        $tw = $action['transfer_wounds'];
+        $from = $tw['from'] ?? [];
+        $maxValue = (int) ($tw['value'] ?? 0);
+
+        $candidates = [];
+        foreach ($this->state->cards as $t) {
+            if ($t->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($t->instanceId === $attacker->instanceId) continue;
+
+            if (!empty($from['owner']) && $from['owner'] === 'own') {
+                if ($t->owner !== $playerKey) continue;
+            }
+            if (!empty($from['near'])) {
+                $dr = abs($t->row - $attacker->row);
+                $dc = abs($t->col - $attacker->col);
+                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+            }
+            if (!empty($from['element']) && $t->element !== $from['element']) continue;
+
+            $wounds = $t->hpMax - $t->hp;
+            if ($wounds <= 0) continue;
+
+            $candidates[] = $t->instanceId;
+        }
+
+        if (empty($candidates)) {
+            return Result::error('Нет целей для снятия ран');
+        }
+
+        $this->state->battle['pending_transfer'] = [
+            'attacker_id' => $cardId,
+            'action_name' => $action['name'] ?? 'Перераспределение',
+            'max_value'   => $maxValue,
+            'candidates'  => $candidates,
+            'donor_id'    => null,
+            'cost'        => (int) ($action['coins'] ?? 0),
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['transfer_started']);
+    }
+
+    public function chooseTransferDonor(string $playerKey, Command $cmd): Result
+    {
+        $pt = $this->state->battle['pending_transfer'] ?? null;
+        if (!$pt) {
+            return Result::error('Нет ожидающего выбора');
+        }
+
+        $attacker = $this->state->getCard($pt['attacker_id']);
+        if (!$attacker || $attacker->owner !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $donorId = (int) $cmd->get('donor_id', 0);
+        if (!in_array($donorId, $pt['candidates'], true)) {
+            return Result::error('Неверный донор');
+        }
+
+        $donor = $this->state->getCard($donorId);
+        if (!$donor) {
+            return Result::error('Донор не найден');
+        }
+
+        $wounds = $donor->hpMax - $donor->hp;
+        if ($wounds <= 0) {
+            return Result::error('Нет ран');
+        }
+
+        $pt['donor_id'] = $donorId;
+        $pt['wounds_available'] = min($wounds, $pt['max_value']);
+        $this->state->battle['pending_transfer'] = $pt;
+
+        $this->state->bumpVersion();
+        return Result::ok(['transfer_donor']);
+    }
+
+    public function chooseTransferAmount(string $playerKey, Command $cmd): Result
+    {
+        $pt = $this->state->battle['pending_transfer'] ?? null;
+        if (!$pt || empty($pt['donor_id'])) {
+            return Result::error('Нет ожидающего выбора');
+        }
+
+        $attacker = $this->state->getCard($pt['attacker_id']);
+        $donor = $this->state->getCard($pt['donor_id']);
+        if (!$attacker || $attacker->owner !== $playerKey || !$donor) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $amount = (int) $cmd->get('amount', 0);
+        $maxAmount = (int) $pt['wounds_available'];
+        if ($amount < 1 || $amount > $maxAmount) {
+            return Result::error('Неверное количество');
+        }
+
+        $donor->hp += $amount;
+        if ($donor->hp > $donor->hpMax) $donor->hp = $donor->hpMax;
+
+        $attacker->hp -= $amount;
+        if ($attacker->hp <= 0) {
+            $attacker->hp = 0;
+            $attacker->dying = true;
+        }
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'transfer_wounds',
+            'action_name' => $pt['action_name'],
+            'attacker_id' => $pt['attacker_id'],
+            'target_id'   => $pt['donor_id'],
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'transfer'    => [
+                'value'   => $amount,
+                'from_id' => $donor->instanceId,
+                'to_id'   => $attacker->instanceId,
+            ],
+            'confirmed'   => [],
+        ];
+
+        unset($this->state->battle['pending_transfer']);
+
+        $this->engine->checkGameOver($this->state);
+
+        $this->state->bumpVersion();
+        return Result::ok(["transfer_amount:{$amount}"]);
+    }
+
+    private function startCoinSpendChoice(
+        CardInstance $attacker, array $action, string $type,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        $coinConfig = $attacker->prop['coins'][$type];
+
+        $maxByProp = (int) ($coinConfig['max_value'] ?? 0);
+        $max = $maxByProp > 0 ? min($attacker->coins, $maxByProp) : $attacker->coins;
+        $min = (int) ($coinConfig['min_value'] ?? 0);
+
+        $this->state->battle['pending_coin_spend'] = [
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'action'      => $action,
+            'type'        => $type,
+            'max_coins'   => $max,
+            'min_coins'   => $min,
+            'per_coin'    => (int) ($coinConfig['value'] ?? 0),
+            'mode'        => (string) ($coinConfig['mode'] ?? 'damage'),
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['coin_spend_started']);
+    }
+
+    public function chooseCoinSpend(string $playerKey, Command $cmd): Result
+    {
+        $pcs = $this->state->battle['pending_coin_spend'] ?? null;
+        if (!$pcs) {
+            return Result::error('Нет ожидающего выбора');
+        }
+
+        $attacker = $this->state->getCard($pcs['attacker_id']);
+        $target   = $this->state->getCard($pcs['target_id']);
+        if (!$attacker || $attacker->owner !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+        if (!$target) {
+            return Result::error('Цель не найдена');
+        }
+
+        $amount    = (int) $cmd->get('amount', -1);
+        $maxAmount = (int) $pcs['max_coins'];
+        $minAmount = (int) ($pcs['min_coins'] ?? 0);
+        if ($amount < $minAmount || $amount > $maxAmount) {
+            return Result::error('Неверное количество монет');
+        }
+
+        $action = $pcs['action'];
+        $type   = $pcs['type'];
+        $mode   = $pcs['mode'] ?? 'damage';        // ← КЛЮЧЕВАЯ СТРОКА
+
+        unset($this->state->battle['pending_coin_spend']);
+
+        if ($mode === 'shield') {
+            $attacker->coins -= $amount;
+            $this->engine->syncCoinBonus($attacker);
+            return $this->applyShieldLight($attacker, $target, $action, $amount, $playerKey);
+        }
+
+        return $this->resolveDamage(
+            $attacker, $target, $action, $type,
+            $attacker->instanceId, $target->instanceId,
+            $playerKey,
+            $amount
+        );
+    }
+
+    public function chooseSelfWound(string $playerKey, Command $cmd): Result
+    {
+        $psw = $this->state->battle['pending_self_wound'] ?? null;
+        if (!$psw) {
+            return Result::error('Нет ожидающего выбора');
+        }
+
+        $attacker = $this->state->getCard($psw['attacker_id']);
+        $target   = $this->state->getCard($psw['target_id']);
+        if (!$attacker || $attacker->owner !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+        if (!$target) {
+            return Result::error('Цель не найдена');
+        }
+
+        $amount    = (int) $cmd->get('amount', -1);
+        $maxWounds = (int) $psw['max_wounds'];
+        if ($amount < 1 || $amount > $maxWounds) {
+            return Result::error('Неверное количество ран');
+        }
+
+        unset($this->state->battle['pending_self_wound']);
+
+        $action = $psw['action'];
+        $attacker->closed = true;
+
+        // Себе раны
+        $attacker->hp -= $amount;
+
+        $damage   = 0;
+        $diedSelf = false;
+
+        if ($attacker->hp <= 0) {
+            $attacker->hp    = 0;
+            $attacker->dying = true;
+            $diedSelf        = true;
+        } else {
+            $damage = max(0, $amount - 1);
+            if ($damage > 0) {
+                $this->engine->applyDamage($this->state, $target, $damage, 'tap', $attacker);
+            }
+        }
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'self_wound',
+            'action_name' => $action['name'] ?? 'Таран',
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => $target->instanceId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => $damage,
+            'self_wound'  => [
+                'amount'    => $amount,
+                'damage'    => $damage,
+                'died_self' => $diedSelf,
+            ],
+            'confirmed'   => [],
+        ];
+
+        if ($diedSelf) {
+            (new ZoneManager($this->state))->toGraveyard($attacker);
+        }
+
+        $this->engine->checkGameOver($this->state);
+
+        $this->state->bumpVersion();
+        return Result::ok(["self_wound:{$amount}:dmg={$damage}"]);
+    }
+
+    private function startMultiHeal(
+        CardInstance $attacker, array $action, int $cardId, string $playerKey
+    ): Result {
+        $filter     = $action['filter'] ?? '';
+        $candidates = [];
+
+        foreach ($this->state->cards as $c) {
+            if ($c->owner !== $playerKey) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            if ($filter === 'own_forest' && $c->element !== 'forests') continue;
+
+            $candidates[] = $c->instanceId;
+        }
+
+        if (empty($candidates)) {
+            return Result::error('Нет подходящих целей');
+        }
+
+        $this->state->battle['pending_multi_heal'] = [
+            'attacker_id' => $cardId,
+            'action'      => $action,
+            'candidates'  => $candidates,
+            'max_targets' => (int) ($action['max_targets'] ?? 3),
+            'value'       => (int) ($action['value'] ?? 1),
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['multi_heal_started']);
+    }
+
+    public function chooseMultiHeal(string $playerKey, Command $cmd): Result
+    {
+        $pmh = $this->state->battle['pending_multi_heal'] ?? null;
+        if (!$pmh) return Result::error('Нет ожидающего выбора');
+
+        $attacker = $this->state->getCard($pmh['attacker_id']);
+        if (!$attacker || $attacker->owner !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $raw = $cmd->get('target_ids', []);
+        if (!is_array($raw)) $raw = [$raw];
+        $targetIds  = array_values(array_unique(array_map('intval', $raw)));
+        $maxTargets = (int) $pmh['max_targets'];
+
+        if (empty($targetIds)) {
+            return Result::error('Выберите хотя бы одну цель');
+        }
+        if (count($targetIds) > $maxTargets) {
+            return Result::error('Слишком много целей (макс. ' . $maxTargets . ')');
+        }
+
+        foreach ($targetIds as $tid) {
+            if (!in_array($tid, $pmh['candidates'], true)) {
+                return Result::error('Неверная цель');
+            }
+        }
+
+        unset($this->state->battle['pending_multi_heal']);
+
+        $value  = (int) $pmh['value'];
+        $healed = [];
+
+        foreach ($targetIds as $tid) {
+            $card = $this->state->getCard($tid);
+            if (!$card) continue;
+
+            $hpBefore = $card->hp;
+            $card->hp += $value;
+            if ($card->hp > $card->hpMax) $card->hp = $card->hpMax;
+
+            $healed[] = [
+                'target_id' => $tid,
+                'heal'      => $card->hp - $hpBefore,
+            ];
+        }
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'multi_heal',
+            'action_name' => $pmh['action']['name'] ?? 'Излечение',
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => $targetIds[0] ?? 0,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'healed'      => $healed,
+            'confirmed'   => [],
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['multi_heal_done']);
+    }
+
+    private function resolveStealStrike(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        if (!empty($attacker->flags['steal_weapon_used']) && !empty($action['once_per_battle'])) {
+            return Result::error('Уже использовано в этом бою');
+        }
+
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0) {
+            if ($attacker->coins < $cost) {
+                return Result::error('Не хватает монет');
+            }
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target) {
+            return Result::error('Цель не найдена');
+        }
+        if ($target->owner === $playerKey) {
+            return Result::error('Только на врага');
+        }
+        if ($target->zone !== CardInstance::ZONE_FIELD) {
+            return Result::error('Цель не на поле');
+        }
+
+        $dr = abs($target->row - $attacker->row);
+        $dc = abs($target->col - $attacker->col);
+        if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
+            return Result::error('Цель не соседняя');
+        }
+
+        if ($cost > 0) $attacker->coins -= $cost;
+
+        $target->modifiers[] = [
+            'stat'   => 'ability_strike',
+            'value'  => -1,
+            'expire' => 'permanent',
+            'source' => $playerKey,
+        ];
+        $attacker->modifiers[] = [
+            'stat'   => 'ability_strike',
+            'value'  => 1,
+            'expire' => 'permanent',
+            'source' => $playerKey,
+        ];
+
+        $attacker->closed = true;
+        $attacker->flags['steal_weapon_used'] = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'steal',
+            'action_name' => $action['name'] ?? 'Украсть оружие',
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'steal'       => [
+                'target_id' => $targetId,
+                'from'      => -1,
+                'to'        => 1,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(["steal_weapon:{$playerKey}:{$cardId}->{$targetId}"]);
+    }
+
+    private function resolveSandClaws(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        $target = $this->state->getCard($targetId);
+        if (!$target) return Result::error('Цель не найдена');
+        if ($target->owner === $playerKey) return Result::error('Только на врага');
+        if ($target->zone !== CardInstance::ZONE_FIELD) {
+            return Result::error('Цель не на поле');
+        }
+
+        $value = (int) ($action['value'] ?? 1);
+
+        // Урон
+        if ($value > 0) {
+            $this->engine->applyDamage($this->state, $target, $value, 'tap', $attacker);
+        }
+
+        // Маркер: цели — песчаные когти, источника — owner атакующего
+        if (!isset($target->markers['sand_claws'])) {
+            $target->markers['sand_claws'] = [
+                'value'  => 1,
+                'source' => $playerKey,
+                'expire' => 1,
+                'timing' => 'source_turn',
+            ];
+        } else {
+            $target->markers['sand_claws']['value']++;
+            $target->markers['sand_claws']['expire'] = 1;
+        }
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'sand_claws',
+            'action_name' => $action['name'] ?? 'Песчаные когти',
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => $value,
+            'sand_claws'  => ['target_id' => $targetId, 'value' => 1],
+            'confirmed'   => [],
+        ];
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(["sand_claws:{$playerKey}:{$cardId}->{$targetId}"]);
+    }
+
+    private function startMultiDischarge(
+        CardInstance $attacker, array $action, int $cardId, string $playerKey
+    ): Result {
+        $candidates = [];
+
+        foreach ($this->state->cards as $c) {
+            if ($c->owner === $playerKey) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $candidates[] = $c->instanceId;
+        }
+
+        if (empty($candidates)) {
+            return Result::error('Нет подходящих целей');
+        }
+
+        $this->state->battle['pending_multi_discharge'] = [
+            'attacker_id' => $cardId,
+            'action'      => $action,
+            'candidates'  => $candidates,
+            'max_targets' => (int) ($action['max_targets'] ?? 3),
+            'value'       => (int) ($action['value'] ?? 1),
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['multi_discharge_started']);
+    }
+
+    public function chooseMultiDischarge(string $playerKey, Command $cmd): Result
+    {
+        $pmd = $this->state->battle['pending_multi_discharge'] ?? null;
+        if (!$pmd) return Result::error('Нет ожидающего выбора');
+
+        $attacker = $this->state->getCard($pmd['attacker_id']);
+        if (!$attacker || $attacker->owner !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $raw = $cmd->get('target_ids', []);
+        if (!is_array($raw)) $raw = [$raw];
+        $targetIds  = array_values(array_unique(array_map('intval', $raw)));
+        $maxTargets = (int) $pmd['max_targets'];
+
+        if (empty($targetIds)) {
+            return Result::error('Выберите хотя бы одну цель');
+        }
+        if (count($targetIds) > $maxTargets) {
+            return Result::error('Слишком много целей (макс. ' . $maxTargets . ')');
+        }
+
+        foreach ($targetIds as $tid) {
+            if (!in_array($tid, $pmd['candidates'], true)) {
+                return Result::error('Неверная цель');
+            }
+        }
+
+        unset($this->state->battle['pending_multi_discharge']);
+
+        $value   = (int) $pmd['value'];
+        $results = [];
+
+        foreach ($targetIds as $tid) {
+            $target = $this->state->getCard($tid);
+            if (!$target) continue;
+
+            $hpBefore = $target->hp;
+
+            // Защита от разряда
+            $defended = CardStats::hasDefense($this->state, $target, 'discharge', $attacker);
+            if ($defended) {
+                $results[] = ['target_id' => $tid, 'damage' => 0, 'defended' => true];
+                continue;
+            }
+
+            $this->engine->applyDamage($this->state, $target, $value, 'discharge', $attacker);
+
+            $results[] = [
+                'target_id' => $tid,
+                'damage'    => max(0, $hpBefore - $target->hp),
+                'defended'  => false,
+            ];
+        }
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'multi_discharge',
+            'action_name' => $pmd['action']['name'] ?? 'Тройной разряд',
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => $targetIds[0] ?? 0,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'discharged'  => $results,
+            'confirmed'   => [],
+        ];
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(['multi_discharge_done']);
+    }
+
+    public function cancelPending(string $playerKey, Command $cmd): Result
+    {
+        $state = $this->state;
+        $cancelled = [];
+
+        if (!empty($state->battle['pending_forced_strike'])) {
+            return Result::error('Обязательная атака — отмена невозможна');
+        }
+
+        if (!empty($state->battle['pending_whip'])) {
+            $pw = $state->battle['pending_whip'];
+            if ($pw['owner'] === $playerKey) {
+                unset($state->battle['pending_whip']);
+                $cancelled[] = 'whip';
+            }
+        }
+
+        // multi_heal — монеты/ресурсы не тратились
+        if (!empty($state->battle['pending_multi_heal'])) {
+            $pmh  = $state->battle['pending_multi_heal'];
+            $card = $state->getCard($pmh['attacker_id']);
+            if ($card && $card->owner === $playerKey) {
+                unset($state->battle['pending_multi_heal']);
+                $cancelled[] = 'multi_heal';
+            }
+        }
+
+        // multi_discharge — то же
+        if (!empty($state->battle['pending_multi_discharge'])) {
+            $pmd  = $state->battle['pending_multi_discharge'];
+            $card = $state->getCard($pmd['attacker_id']);
+            if ($card && $card->owner === $playerKey) {
+                unset($state->battle['pending_multi_discharge']);
+                $cancelled[] = 'multi_discharge';
+            }
+        }
+
+        // coin_spend — монеты ещё НЕ списаны
+        if (!empty($state->battle['pending_coin_spend'])) {
+            $pcs  = $state->battle['pending_coin_spend'];
+            $card = $state->getCard($pcs['attacker_id']);
+            if ($card && $card->owner === $playerKey) {
+                unset($state->battle['pending_coin_spend']);
+                $cancelled[] = 'coin_spend';
+            }
+        }
+
+        // self_wound — монеты УЖЕ списаны, возвращаем
+        if (!empty($state->battle['pending_self_wound'])) {
+            $psw  = $state->battle['pending_self_wound'];
+            $card = $state->getCard($psw['attacker_id']);
+            if ($card && $card->owner === $playerKey) {
+                $cost = (int) ($psw['action']['coins'] ?? 0);
+                $card->coins += $cost;
+                $this->engine->syncCoinBonus($card);
+                unset($state->battle['pending_self_wound']);
+                $cancelled[] = 'self_wound';
+            }
+        }
+
+        // transfer — монеты УЖЕ списаны, возвращаем (если сохранён cost)
+        if (!empty($state->battle['pending_transfer'])) {
+            $pt   = $state->battle['pending_transfer'];
+            $card = $state->getCard($pt['attacker_id']);
+            if ($card && $card->owner === $playerKey) {
+                $cost = (int) ($pt['cost'] ?? 0);
+                $card->coins += $cost;
+                unset($state->battle['pending_transfer']);
+                $cancelled[] = 'transfer';
+            }
+        }
+
+        // revive — монеты уже списаны, возвращаем
+        if (!empty($state->battle['pending_revive'])) {
+            $pr   = $state->battle['pending_revive'];
+            $card = $state->getCard($pr['healer_id']);
+            if ($card && $card->owner === $playerKey) {
+                $card->coins += (int) ($pr['cost'] ?? 0);
+                unset($state->battle['pending_revive']);
+                $cancelled[] = 'revive';
+            }
+        }
+
+        if (!empty($state->battle['pending_blood_tap'])) {
+            $pb   = $state->battle['pending_blood_tap'];
+            $card = $state->getCard($pb['attacker_id']);
+            if ($card && $card->owner === $playerKey) {
+                unset($state->battle['pending_blood_tap']);
+                $cancelled[] = 'blood_tap';
+            }
+        }
+
+        if (!empty($state->battle['pending_valhalla_pick'])) {
+            $pv = $state->battle['pending_valhalla_pick'];
+            if ($pv['owner'] === $playerKey) {
+                unset($state->battle['pending_valhalla_pick']);
+                $cancelled[] = 'valhalla_pick';
+            }
+        }
+
+        if (!empty($state->battle['pending_instant_pick'])) {
+            $pi = $state->battle['pending_instant_pick'];
+            if ($pi['owner'] === $playerKey) {
+                unset($state->battle['pending_instant_pick']);
+                $cancelled[] = 'instant_pick';
+
+                // Возврат в подочередь инстантов
+                if (!empty($state->battle['turn_phase'])) {
+                    (new TurnPhaseProcessor($state, $this->engine))->resume();
+                }
+            }
+        }
+
+        if (!empty($state->battle['pending_cell_marker_pick'])) {
+            $pm = $state->battle['pending_cell_marker_pick'];
+            if ($pm['owner'] === $playerKey) {
+                unset($state->battle['pending_cell_marker_pick']);
+                $cancelled[] = 'cell_marker';
+            }
+        }
+
+        if (!empty($state->battle['pending_dice_choice'])) {
+            $dc = $state->battle['pending_dice_choice'];
+            if ($dc['owner'] === $playerKey) {
+                unset($state->battle['pending_dice_choice']);
+                $cancelled[] = 'dice_choice';
+            }
+        }
+
+        if (!empty($state->battle['pending_combat_pick'])) {
+            $pc = $state->battle['pending_combat_pick'];
+            if ($pc['owner'] === $playerKey) {
+                unset($state->battle['pending_combat_pick']);
+                $cancelled[] = 'combat_pick';
+            }
+        }
+
+        if (!empty($state->battle['pending_turn_instants'])) {
+            $ti = $state->battle['pending_turn_instants'];
+            if ($ti['owner'] === $playerKey) {
+                unset($state->battle['pending_turn_instants']);
+                $cancelled[] = 'turn_instants';
+            }
+        }
+        if (!empty($state->battle['pending_dice_choice'])) {
+            $dc = $state->battle['pending_dice_choice'];
+            if ($dc['owner'] === $playerKey) {
+                unset($state->battle['pending_dice_choice']);
+                $cancelled[] = 'dice_choice';
+            }
+        }
+
+        if (!empty($state->battle['pending_wound_transfer'])) {
+            $pw = $state->battle['pending_wound_transfer'];
+            if ($pw['owner'] === $playerKey) {
+                $cost = (int) ($pw['options']['coins_cost'] ?? 0);
+                if ($cost > 0) {
+                    $src = $state->getCard($pw['source_id']);
+                    if ($src) {
+                        $src->coins += $cost;
+                        $src->closed = false; 
+                        $this->engine->syncCoinBonus($src);
+                    }
+                }
+                unset($state->battle['pending_wound_transfer']);
+                $cancelled[] = 'wound_transfer';
+            }
+        }
+
+        if (!empty($state->battle['pending_dive'])) {
+            $pd = $state->battle['pending_dive'];
+            if ($pd['owner'] === $playerKey) {
+                $attacker = $state->getCard($pd['attacker_id']);
+                if ($attacker) {
+                    $cost = (int) ($pd['action']['coins'] ?? 0);
+                    if ($cost > 0) {
+                        $attacker->coins += $cost;
+                        $this->engine->syncCoinBonus($attacker);
+                    }
+                }
+                unset($state->battle['pending_dive']);
+                $cancelled[] = 'dive';
+            }
+        }
+
+        if (empty($cancelled)) {
+            return Result::error('Нечего отменять');
+        }
+
+        // Если мы внутри фазы хода и был отменён её pending — возобновляем
+        if (!empty($state->battle['turn_phase'])) {
+            (new TurnPhaseProcessor($state, $this->engine))->resume();
+        }
+
+        $state->bumpVersion();
+        return Result::ok(['cancelled:' . implode(',', $cancelled)]);
+    }
+
+    private function startRevive(
+        CardInstance $attacker, array $action, int $cardId, string $playerKey
+    ): Result {
+        if (!empty($attacker->flags['revive_used']) && !empty($action['once_per_battle'])) {
+            return Result::error('Уже использовано в этом бою');
+        }
+
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0) {
+            if ($attacker->coins < $cost) {
+                return Result::error('Не хватает монет');
+            }
+            $attacker->coins -= $cost;
+        }
+
+        // Кандидаты — свои существа с кладбища
+        $candidates = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->owner !== $playerKey) continue;
+            if ($c->zone !== CardInstance::ZONE_GRAVEYARD) continue;
+            $candidates[] = $c->instanceId;
+        }
+
+        if (empty($candidates)) {
+            // Возврат монет
+            $attacker->coins += $cost;
+            return Result::error('На кладбище нет существ');
+        }
+
+        $this->state->battle['pending_revive'] = [
+            'healer_id'  => $cardId,
+            'action'     => $action,
+            'cost'       => $cost,
+            'candidates' => $candidates,
+            'chosen_id'  => null,
+            'step'       => 'card',
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['revive_started']);
+    }
+
+    public function chooseReviveTarget(string $playerKey, Command $cmd): Result
+    {
+        $pr = $this->state->battle['pending_revive'] ?? null;
+        if (!$pr || ($pr['step'] ?? '') !== 'card') {
+            return Result::error('Нет ожидающего выбора');
+        }
+
+        $healer = $this->state->getCard($pr['healer_id']);
+        if (!$healer || $healer->owner !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        if (!in_array($targetId, $pr['candidates'], true)) {
+            return Result::error('Неверная цель');
+        }
+
+        $card = $this->state->getCard($targetId);
+        if (!$card) return Result::error('Карта не найдена');
+
+        $pr['chosen_id'] = $targetId;
+
+        // Флай — сразу в FLYING-зону, без выбора клетки
+        if ($card->type === 'fly') {
+            $this->reviveFlyer($healer, $card, $pr);
+            unset($this->state->battle['pending_revive']);
+            $this->state->bumpVersion();
+            return Result::ok(["revived:{$card->instanceId}:flyer"]);
+        }
+
+        // Обычное — переходим к выбору клетки
+        $pr['step'] = 'cell';
+        $this->state->battle['pending_revive'] = $pr;
+        $this->state->bumpVersion();
+        return Result::ok(['revive_choose_cell']);
+    }
+
+    public function chooseReviveCell(string $playerKey, Command $cmd): Result
+    {
+        $pr = $this->state->battle['pending_revive'] ?? null;
+        if (!$pr || ($pr['step'] ?? '') !== 'cell') {
+            return Result::error('Нет ожидающего выбора');
+        }
+
+        $healer = $this->state->getCard($pr['healer_id']);
+        if (!$healer || $healer->owner !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $card = $this->state->getCard($pr['chosen_id']);
+        if (!$card) return Result::error('Карта не найдена');
+
+        $row = (int) $cmd->get('row', 0);
+        $col = (int) $cmd->get('col', 0);
+
+        $dr = abs($row - $healer->row);
+        $dc = abs($col - $healer->col);
+        if ($dr > 1 || $dc > 1 || ($dr === 0 && $dc === 0)) {
+            return Result::error('Только соседняя клетка');
+        }
+
+        $zone = new ZoneManager($this->state);
+        if ($zone->isFieldOccupied($row, $col)) {
+            return Result::error('Клетка занята');
+        }
+
+        $zone->toField($card, $row, $col);
+
+        // Базовые значения
+        $card->hp        = $card->hpMax;
+        $card->move      = $card->moveMax;
+        $card->armor     = 0;
+        $card->armorMax  = 0;
+        $card->coins     = 0;
+        $card->closed    = true;    // в закрытом виде
+        $card->dying     = false;
+        $card->revealed  = true;
+        $card->markers   = [];      // сбрасываем incarnation и всё остальное
+        $card->modifiers = [];
+        $card->flags     = [];      // moved_this_turn и т.д. — с нуля
+                                    // flags.incarnated НЕ ставим — это не инкарнация
+
+        $healer->closed = true;
+        $healer->flags['revive_used'] = true;
+
+        $this->engine->refreshArmor($this->state);
+        $this->engine->checkGameOver($this->state);
+
+        unset($this->state->battle['pending_revive']);
+
+        $this->state->bumpVersion();
+        return Result::ok(["revived:{$card->instanceId}:{$row}_{$col}"]);
+    }
+
+    private function reviveFlyer(CardInstance $healer, CardInstance $card, array $pr): void
+    {
+        $zone = new ZoneManager($this->state);
+        $zone->toFlying($card);
+
+        $card->hp        = $card->hpMax;
+        $card->move      = $card->moveMax;
+        $card->armor     = 0;
+        $card->armorMax  = 0;
+        $card->coins     = 0;
+        $card->closed    = true;
+        $card->dying     = false;
+        $card->revealed  = true;
+        $card->markers   = [];
+        $card->modifiers = [];
+        $card->flags     = [];
+
+        $healer->closed = true;
+        $healer->flags['revive_used'] = true;
+
+        $this->engine->refreshArmor($this->state);
+    }
+
+    private function startGrezyProphecy(
+        CardInstance $attacker, array $action, int $cardId, string $playerKey
+    ): Result {
+        $count = (int) ($action['count'] ?? 1);
+
+        $pp     = new ProphecyProcessor($this->state, $this->engine);
+        $peeked = $pp->peek($playerKey, $count);
+        if ($peeked === null) {
+            return Result::error('Колода пуста');
+        }
+
+        $price = (int) $peeked['meta']['first_price'];
+
+        $attacker->closed = true;
+
+        $title   = 'Пророчество 1 — стоимость ' . $price;
+        $actions = [['label' => 'Продолжить', 'cmd' => 'grezy_continue']];
+
+        $pp->commit($playerKey, $attacker, $peeked, 'grezy', $title, $actions);
+
+        $this->state->bumpVersion();
+        return Result::ok(['grezy_prophecy_started']);
+    }
+
+    public function grezyContinue(string $playerKey, Command $cmd): Result
+    {
+        $pp = $this->state->battle['pending_prophecy'] ?? null;
+        if (!$pp || ($pp['context'] ?? '') !== 'grezy') {
+            return Result::error('Нет ожидающего пророчества');
+        }
+        if ($pp['owner'] !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $price    = (int) ($pp['meta']['price'] ?? 0);
+        $attacker = $this->state->getCard($pp['source_id']);
+        if (!$attacker) return Result::error('Карта не найдена');
+
+        // Враги ценой X
+        $enemies = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->owner === $attacker->owner) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            if ((int) $c->price !== $price) continue;
+            $enemies[] = $c->instanceId;
+        }
+
+        // Свои ценой X
+        $allies = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->owner !== $attacker->owner) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            if ((int) $c->price !== $price) continue;
+            $allies[] = $c->instanceId;
+        }
+
+        unset($this->state->battle['pending_prophecy']);
+
+        if (empty($enemies) && empty($allies)) {
+            $this->state->bumpVersion();
+            return Result::ok(['grezy_no_targets']);
+        }
+
+        $this->state->battle['pending_grezy'] = [
+            'attacker_id'  => $attacker->instanceId,
+            'shown_ukid'   => $pp['shown_ukids'][0],
+            'price'        => $price,
+            'enemies'      => $enemies,
+            'allies'       => $allies,
+            'chosen_enemy' => null,
+            'chosen_own'   => null,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['grezy_choice_started']);
+    }
+
+    public function grezyPick(string $playerKey, Command $cmd): Result
+    {
+        $pg = $this->state->battle['pending_grezy'] ?? null;
+        if (!$pg) return Result::error('Нет ожидающего выбора');
+
+        $attacker = $this->state->getCard($pg['attacker_id']);
+        if (!$attacker || $attacker->owner !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $enemyId = (int) $cmd->get('enemy_id', 0);
+        $ownId   = (int) $cmd->get('own_id', 0);
+
+        // Валидация врага
+        if (!empty($pg['enemies'])) {
+            if ($enemyId <= 0 || !in_array($enemyId, $pg['enemies'], true)) {
+                return Result::error('Выбери врага');
+            }
+        } else {
+            $enemyId = 0;
+        }
+
+        // Валидация союзника
+        if (!empty($pg['allies'])) {
+            if ($ownId <= 0 || !in_array($ownId, $pg['allies'], true)) {
+                return Result::error('Выбери своё существо');
+            }
+        } else {
+            $ownId = 0;
+        }
+
+        $pg['chosen_enemy'] = $enemyId ?: null;
+        $pg['chosen_own']   = $ownId ?: null;
+
+        return $this->applyGrezy($pg);
+    }
+
+    private function applyGrezy(array $pg): Result
+    {
+        $attacker = $this->state->getCard($pg['attacker_id']);
+        unset($this->state->battle['pending_grezy']);
+
+        $log = [];
+
+        if (!empty($pg['chosen_enemy'])) {
+            $enemy = $this->state->getCard($pg['chosen_enemy']);
+            if ($enemy) {
+                $this->engine->applyPoison($enemy, 1, $attacker->owner);
+                $log[] = 'poison:' . $enemy->instanceId;
+            }
+        }
+
+        if (!empty($pg['chosen_own'])) {
+            $ally = $this->state->getCard($pg['chosen_own']);
+            if ($ally) {
+                $ally->modifiers[] = [
+                    'stat'   => 'damage_reduction',
+                    'value'  => 1,
+                    'types'  => ['strike', 'shot', 'throw', 'tap', 'uchr', 'execute', 'impact'],
+                    'expire' => 'end_of_opponent_turn',
+                    'source' => $attacker->owner,
+                ];
+                $log[] = 'shield:' . $ally->instanceId;
+            }
+        }
+
+        $this->state->bumpVersion();
+        return Result::ok(array_merge(['grezy_applied'], $log));
+    }
+
+    public function chooseWhipTarget(string $playerKey, Command $cmd): Result
+    {
+        $pw = $this->state->battle['pending_whip'] ?? null;
+        if (!$pw) return Result::error('Нет ожидающего выбора');
+        if ($pw['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+
+        $source = $this->state->getCard($pw['source_id']);
+        if (!$source) return Result::error('Источник не найден');
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        if (!in_array($targetId, $pw['targets'], true)) {
+            return Result::error('Неверная цель');
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target) return Result::error('Цель не найдена');
+
+        $value = (int) $pw['value'];
+
+        // Рана
+        $hpBefore  = $target->hp;
+        $target->hp -= $value;
+
+        $died = false;
+        if ($target->hp <= 0) {
+            $target->hp    = 0;
+            $target->dying = true;
+            $died = true;
+            $this->engine->refreshArmor($this->state);
+        } else {
+            // Не погиб — +1 move до конца хода
+            $target->modifiers[] = [
+                'stat'   => 'move',
+                'value'  => 1,
+                'expire' => 'end_of_turn',
+                'source' => $playerKey,
+            ];
+            // Применяем немедленно — текущий move ещё не пересчитан
+            $target->move += 1;
+        }
+
+        $sourceName = $target->ukid;
+        $targetName = $target->ukid;
+
+        unset($this->state->battle['pending_whip']);
+
+        // Если умер — в могилу
+        if ($died) {
+            (new ZoneManager($this->state))->toGraveyard($target);
+            $this->engine->checkGameOver($this->state);
+        }
+
+        // Продолжаем фазу
+        if (!empty($this->state->battle['turn_phase'])) {
+            (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+        }
+
+        $this->state->bumpVersion();
+        return Result::ok([
+            "whip:{$target->instanceId}:" . ($died ? 'died' : 'move+1'),
+        ]);
+    }
+
+    private function startBloodTap(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        $target = $this->state->getCard($targetId);
+        if (!$target) return Result::error('Цель не найдена');
+        if ($target->owner === $playerKey) return Result::error('Только на врага');
+        if ($target->zone !== CardInstance::ZONE_FIELD
+            && $target->zone !== CardInstance::ZONE_FLYING) {
+            return Result::error('Цель не на поле');
+        }
+
+        $base      = (int) ($action['base_hp'] ?? 8);
+        $maxExtra  = (int) ($action['max_extra'] ?? 4);
+        $extras    = $attacker->hp - $base;
+
+        if ($extras <= 0) {
+            return Result::error('Нет дополнительных жизней');
+        }
+
+        $maxX = min($maxExtra, $extras);
+
+        $this->state->battle['pending_blood_tap'] = [
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'max_x'       => $maxX,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['blood_tap_started']);
+    }
+
+    public function chooseBloodTap(string $playerKey, Command $cmd): Result
+    {
+        $pb = $this->state->battle['pending_blood_tap'] ?? null;
+        if (!$pb) return Result::error('Нет ожидающего выбора');
+
+        $attacker = $this->state->getCard($pb['attacker_id']);
+        $target   = $this->state->getCard($pb['target_id']);
+        if (!$attacker || $attacker->owner !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+        if (!$target) return Result::error('Цель не найдена');
+
+        $x = (int) $cmd->get('amount', -1);
+        if ($x < 1 || $x > (int) $pb['max_x']) {
+            return Result::error('Неверное количество');
+        }
+
+        unset($this->state->battle['pending_blood_tap']);
+
+        $attacker->hp -= $x;
+        $attacker->closed = true;
+
+        if ($attacker->hp <= 0) {
+            $attacker->hp = 0;
+            $attacker->dying = true;
+        }
+
+        if (!$attacker->dying) {
+            $this->engine->applyDamage($this->state, $target, $x, 'discharge', $attacker);
+        }
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'blood_tap',
+            'action_name' => 'Кровавый разряд',
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => $target->instanceId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => $x,
+            'blood_tap'   => ['x' => $x, 'target_id' => $target->instanceId],
+            'confirmed'   => [],
+        ];
+
+        if ($attacker->dying) {
+            (new ZoneManager($this->state))->toGraveyard($attacker);
+        }
+
+        $this->engine->checkGameOver($this->state);
+        $this->engine->flushDeadeatQueue($this->state);
+
+        $this->state->bumpVersion();
+        return Result::ok(["blood_tap:{$x}"]);
+    }
+
+    private function resolvePoisonTarget(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        $target = $this->state->getCard($targetId);
+        if (!$target) return Result::error('Цель не найдена');
+        if ($target->zone !== CardInstance::ZONE_FIELD
+            && $target->zone !== CardInstance::ZONE_FLYING) {
+            return Result::error('Цель не на поле');
+        }
+
+        $value = (int) ($action['value'] ?? 1);
+        $this->engine->applyPoison($target, $value, $playerKey);
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'poison_target',
+            'action_name' => $action['name'] ?? 'Отравление',
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'poison_applied' => ['target_id' => $targetId, 'value' => $value],
+            'confirmed'   => [],
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(["poison_target:{$targetId}:{$value}"]);
+    }
+
+    private function resolveDamagePoisoned(
+        CardInstance $attacker, array $action,
+        int $cardId, string $playerKey
+    ): Result {
+        $value  = (int) ($action['value'] ?? 1);
+        $filter = (string) ($action['filter'] ?? 'enemy');
+
+        $affected = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            if (empty($c->markers['poison'])) continue;
+
+            if ($filter === 'enemy' && $c->owner === $playerKey) continue;
+            if ($filter === 'own'   && $c->owner !== $playerKey) continue;
+
+            $hpBefore = $c->hp;
+            $this->engine->applyDamage($this->state, $c, $value, 'discharge', $attacker);
+            $affected[] = [
+                'target_id' => $c->instanceId,
+                'damage'    => max(0, $hpBefore - $c->hp),
+            ];
+        }
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'damage_poisoned',
+            'action_name' => $action['name'] ?? 'Власть Ундины',
+            'attacker_id' => $cardId,
+            'target_id'   => $affected[0]['target_id'] ?? 0,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'poisoned_damage' => $affected,
+            'confirmed'   => [],
+        ];
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->engine->checkGameOver($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(['damage_poisoned:' . count($affected)]);
+    }
+
+    private function startPlaceCellMarker(
+        CardInstance $attacker, array $action, int $cardId, string $playerKey
+    ): Result {
+        if ($attacker->closed) {
+            return Result::error('Карта закрыта');
+        }
+
+        $zone = new ZoneManager($this->state);
+        $candidates = [];
+
+        for ($row = 1; $row <= 6; $row++) {
+            for ($col = 1; $col <= 5; $col++) {
+                if ($zone->isFieldOccupied($row, $col)) continue;
+                if ($zone->isCellMarked($row, $col)) continue;
+                $candidates[] = "{$row}_{$col}";
+            }
+        }
+
+        if (empty($candidates)) {
+            return Result::error('Нет свободных клеток');
+        }
+
+        $this->state->battle['pending_cell_marker_pick'] = [
+            'owner'    => $playerKey,
+            'card_id'  => $cardId,
+            'marker'   => (string) ($action['marker'] ?? 'marker'),
+            'duration' => (string) ($action['duration'] ?? 'end_of_opponent_turn'),
+            'label'    => (string) ($action['name'] ?? 'Маркер'),
+            'cells'    => $candidates,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['cell_marker_started']);
+    }
+
+    public function chooseCellMarker(string $playerKey, Command $cmd): Result
+    {
+        $pm = $this->state->battle['pending_cell_marker_pick'] ?? null;
+        if (!$pm) return Result::error('Нет ожидающего выбора');
+        if ($pm['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+
+        $row = (int) $cmd->get('row', 0);
+        $col = (int) $cmd->get('col', 0);
+        $key = "{$row}_{$col}";
+
+        if (!in_array($key, $pm['cells'], true)) {
+            return Result::error('Неверная клетка');
+        }
+
+        $attacker = $this->state->getCard($pm['card_id']);
+        if (!$attacker) return Result::error('Карта не найдена');
+
+        (new ZoneManager($this->state))->setCellMarker(
+            $row, $col,
+            $pm['marker'],
+            1,                       // expire
+            $pm['duration'],
+            $playerKey
+        );
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'cell_marker',
+            'action_name' => $pm['label'],
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => 0,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'cell_marker' => ['row' => $row, 'col' => $col, 'type' => $pm['marker']],
+            'confirmed'   => [],
+        ];
+
+        unset($this->state->battle['pending_cell_marker_pick']);
+
+        $this->state->bumpVersion();
+        return Result::ok(["cell_marker:{$row}_{$col}"]);
+    }
+
+    public function playCombatInstant(string $playerKey, Command $cmd): Result
+    {
+        return (new InstantProcessor($this->state, $this->engine))
+            ->playCombat($playerKey, (int) $cmd->get('card_id', 0), (string) $cmd->get('instant_key', ''));
+    }
+
+    public function chooseCombatPick(string $playerKey, Command $cmd): Result
+    {
+        return (new InstantProcessor($this->state, $this->engine))->chooseTarget($playerKey, $cmd);
+    }
+
+    public function openTurnInstants(string $playerKey, Command $cmd): Result
+    {
+        return (new InstantProcessor($this->state, $this->engine))->openTurnInstants($playerKey, $cmd);
+    }
+
+    public function playTurnInstant(string $playerKey, Command $cmd): Result
+    {
+        return (new InstantProcessor($this->state, $this->engine))->playTurnInstant($playerKey, $cmd);
+    }
+
+    public function removeTurnInstant(int $cardId, string $key): void
+    {
+        (new InstantProcessor($this->state, $this->engine))->removeTurnInstant($cardId, $key);
+    }
+
+    private function resolveDissonance(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        $target = $this->state->getCard($targetId);
+        if (!$target) return Result::error('Цель не найдена');
+        if ($target->owner === $playerKey) return Result::error('Только на врага');
+        if ($target->zone !== CardInstance::ZONE_FIELD) {
+            return Result::error('Цель не на поле');
+        }
+
+        $value    = (int) ($action['value'] ?? 1);
+        $baseWeak = (int) $target->strikeWeak;
+
+        $affected = [];
+
+        // Основная цель
+        $hpBefore = $target->hp;
+        $this->engine->applyDamage($this->state, $target, $value, 'impact', $attacker);
+        $affected[] = [
+            'target_id' => $target->instanceId,
+            'damage'    => max(0, $hpBefore - $target->hp),
+        ];
+
+        // Соседи с таким же strikeWeak
+        foreach ($this->state->cards as $c) {
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->owner === $playerKey) continue;
+            if ($c->instanceId === $target->instanceId) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $d2r = abs($c->row - $target->row);
+            $d2c = abs($c->col - $target->col);
+            if ($d2r > 1 || $d2c > 1 || ($d2r + $d2c) === 0) continue;
+
+            if ((int) $c->strikeWeak !== $baseWeak) continue;
+
+            $hpBefore2 = $c->hp;
+            $this->engine->applyDamage($this->state, $c, $value, 'impact', $attacker);
+            $affected[] = [
+                'target_id' => $c->instanceId,
+                'damage'    => max(0, $hpBefore2 - $c->hp),
+            ];
+        }
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'dissonance',
+            'action_name' => $action['name'] ?? 'Диссонанс',
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'dissonance'  => [
+                'base_weak' => $baseWeak,
+                'targets'   => $affected,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->engine->checkGameOver($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(['dissonance:' . count($affected)]);
+    }
+
+    public function chooseDiceChoice(string $playerKey, Command $cmd): Result
+    {
+        $dc = $this->state->battle['pending_dice_choice'] ?? null;
+        if (!$dc) return Result::error('Нет ожидающего выбора');
+        if ($dc['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+
+        $choice = (string) $cmd->get('choice', '');
+        $valid  = ['plus:own', 'minus:own', 'plus:enemy', 'minus:enemy', 'reroll:any'];
+        if (!in_array($choice, $valid, true)) {
+            return Result::error('Неверный выбор');
+        }
+
+        $card = $this->state->getCard($dc['card_id']);
+        if (!$card) return Result::error('Карта не найдена');
+        if ($card->closed) return Result::error('Карта закрыта');
+        if (!empty($card->flags['in_stack'])) {
+            return Result::error('Карта уже в стеке');
+        }
+
+        $card->flags['in_stack'] = true;
+
+        $this->state->battle['strike']['instant_stack'][] = [
+            'card_id'   => $card->instanceId,
+            'effect'    => ['type' => 'dice_choice'],
+            'target_id' => $card->instanceId,
+            'player'    => $playerKey,
+            'label'     => $dc['label'],
+            'choice'    => $choice,
+        ];
+
+        $this->state->battle['strike']['instant_passed'] = [];
+
+        unset($this->state->battle['pending_dice_choice']);
+
+        $this->state->bumpVersion();
+        return Result::ok(['dice_choice_stacked']);
+    }
+
+    private function resolveGiveCoin(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        $cost = (int) ($action['coins'] ?? 1);
+
+        if ($attacker->coins < $cost) {
+            return Result::error('Не хватает монет');
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target) return Result::error('Цель не найдена');
+        if ($target->owner !== $playerKey) return Result::error('Только на союзника');
+        if ($target->instanceId === $attacker->instanceId) return Result::error('Нельзя на себя');
+        if ($target->zone !== CardInstance::ZONE_FIELD
+            && $target->zone !== CardInstance::ZONE_FLYING) {
+            return Result::error('Цель не на поле');
+        }
+        if ($target->dying || $target->hp <= 0) {
+            return Result::error('Цель мертва');
+        }
+        if (!CardStats::canSpendCoins($target)) {
+            return Result::error('Цель не может потратить монеты');
+        }
+
+        $max = (int) ($target->prop['coins']['max_value'] ?? 0);
+        if ($max > 0 && $target->coins >= $max) {
+            return Result::error('У цели максимум монет');
+        }
+
+        $attacker->coins -= $cost;
+        $this->engine->syncCoinBonus($attacker);
+
+        $target->coins += $cost;
+        $this->engine->syncCoinBonus($target);
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'give_coin',
+            'action_name' => $action['name'] ?? 'Передать монету',
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'give_coin'   => [
+                'target_id' => $targetId,
+                'value'     => $cost,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(["give_coin:{$playerKey}:{$cardId}->{$targetId}:{$cost}"]);
+    }
+
+    private function resolveStealCoin(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        if (!empty($attacker->flags['steal_coin_used']) && !empty($action['once_per_battle'])) {
+            return Result::error('Уже использовано в этом бою');
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target) return Result::error('Цель не найдена');
+        if ($target->owner === $playerKey) return Result::error('Только на врага');
+        if ($target->zone !== CardInstance::ZONE_FIELD
+            && $target->zone !== CardInstance::ZONE_FLYING) {
+            return Result::error('Цель не на поле');
+        }
+        if ($target->dying || $target->hp <= 0) {
+            return Result::error('Цель мертва');
+        }
+        if ((int) $target->coins <= 0) {
+            return Result::error('У цели нет монет');
+        }
+
+        $value = (int) ($action['value'] ?? 1);
+        $stolen = min($value, (int) $target->coins);
+
+        $target->coins -= $stolen;
+        $this->engine->syncCoinBonus($target);
+
+        $attacker->closed = true;
+        $attacker->flags['steal_coin_used'] = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'steal_coin',
+            'action_name' => $action['name'] ?? 'Уловка',
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'steal_coin'  => [
+                'target_id' => $targetId,
+                'value'     => $stolen,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(["steal_coin:{$playerKey}:{$cardId}->{$targetId}:{$stolen}"]);
+    }
+
+    private function startDive(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        if ($attacker->zone !== CardInstance::ZONE_FLYING) {
+            return Result::error('Пикирование только из полёта');
+        }
+        if (!empty($attacker->flags['dive_used']) && !empty($action['once_per_battle'])) {
+            return Result::error('Пикирование уже использовано');
+        }
+
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0 && $attacker->coins < $cost) {
+            return Result::error('Не хватает монет');
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target) return Result::error('Цель не найдена');
+        if ($target->owner === $playerKey) return Result::error('Только на врага');
+        if ($target->zone !== CardInstance::ZONE_FIELD) return Result::error('Цель не на земле');
+        if ($target->type === 'fly') return Result::error('Цель летающая');
+        if ($target->dying || $target->hp <= 0) return Result::error('Цель мертва');
+
+        $cells = [];
+        for ($dr = -1; $dr <= 1; $dr++) {
+            for ($dc = -1; $dc <= 1; $dc++) {
+                if ($dr === 0 && $dc === 0) continue;
+                $r = $target->row + $dr;
+                $c = $target->col + $dc;
+                if ($r < 1 || $r > 6 || $c < 1 || $c > 5) continue;
+
+                $occupied = false;
+                foreach ($this->state->cards as $o) {
+                    if ($o->zone === CardInstance::ZONE_FIELD
+                        && $o->row === $r && $o->col === $c) {
+                        $occupied = true;
+                        break;
+                    }
+                }
+                if ($occupied) continue;
+                if (!empty($this->state->cell_markers["{$r}_{$c}"])) continue;
+
+                $cells[] = ['row' => $r, 'col' => $c];
+            }
+        }
+
+        if (empty($cells)) {
+            return Result::error('Нет свободных клеток рядом с целью');
+        }
+
+        if ($cost > 0) {
+            $attacker->coins -= $cost;
+            $this->engine->syncCoinBonus($attacker);
+        }
+
+        $this->state->battle['pending_dive'] = [
+            'owner'       => $playerKey,
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'action'      => $action,
+            'cells'       => $cells,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['dive_started']);
+    }
+
+    public function chooseDiveCell(string $playerKey, Command $cmd): Result
+    {
+        $pd = $this->state->battle['pending_dive'] ?? null;
+        if (!$pd) return Result::error('Нет ожидающего выбора');
+        if ($pd['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+
+        $row = (int) $cmd->get('row', 0);
+        $col = (int) $cmd->get('col', 0);
+
+        $valid = false;
+        foreach ($pd['cells'] as $c) {
+            if ($c['row'] === $row && $c['col'] === $col) { $valid = true; break; }
+        }
+        if (!$valid) return Result::error('Неверная клетка');
+
+        $attacker = $this->state->getCard($pd['attacker_id']);
+        $target   = $this->state->getCard($pd['target_id']);
+        if (!$attacker || !$target) return Result::error('Карта не найдена');
+
+        $action = $pd['action'];
+
+        // 1. Запоминаем где была цель
+        $oldRow = $target->row;
+        $oldCol = $target->col;
+
+        // 2. Перемещаем цель
+        $target->row = $row;
+        $target->col = $col;
+        $target->flags['moved_this_turn'] = true;
+
+        // 3. Кондор становится существом на освободившейся клетке
+        $zone = new ZoneManager($this->state);
+        $zone->toField($attacker, $oldRow, $oldCol);
+        $attacker->type     = 'creature';
+        $attacker->closed   = true;
+        $attacker->move     = 1;
+        $attacker->moveMax  = 1;
+        $attacker->flags['dive_used'] = true;
+
+        // 4. Кубик и урон
+        $dice  = random_int(1, 6);
+        $level = BattleHelper::diceToLevel($dice);
+        $val   = (int) ($action['strike'][$level] ?? 0);
+
+        $this->engine->applyDamage($this->state, $target, $val, 'tap', $attacker);
+
+        unset($this->state->battle['pending_dive']);
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'dive',
+            'action_name' => $action['name'] ?? 'Пикирование',
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => $target->instanceId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => $dice,
+            'defend_dice' => 0,
+            'result'      => ['attack' => $level, 'defend' => '', 'winner' => 'attack'],
+            'final'       => ['attack' => $level, 'defend' => '', 'decreased' => false],
+            'damage'      => $val,
+            'damage_total' => $val,
+            'confirmed'   => [],
+        ];
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(['dive_done']);
+    }
+
+    public function chooseForcedStrike(string $playerKey, Command $cmd): Result
+    {
+        $pf = $this->state->battle['pending_forced_strike'] ?? null;
+        if (!$pf) return Result::error('Нет ожидающего выбора');
+        if ($pf['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        if (!in_array($targetId, $pf['candidates'], true)) {
+            return Result::error('Неверная цель');
+        }
+
+        $attacker = $this->state->getCard($pf['attacker_id']);
+        if (!$attacker) return Result::error('Атакующий не найден');
+
+        unset($this->state->battle['pending_forced_strike']);
+
+        // Запускаем обычный strike
+        $strike = new StrikeResolver($this->state, $this->engine);
+        $strikeCmd = new Command('strike', [
+            'card_id'   => $attacker->instanceId,
+            'target_id' => $targetId,
+        ]);
+        return $strike->declare($playerKey, $strikeCmd);
+    }
+}

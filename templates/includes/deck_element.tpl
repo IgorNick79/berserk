@@ -1,0 +1,1 @@
+<span class="element element-{{code}}">{{code}}: {{count}}</span>
