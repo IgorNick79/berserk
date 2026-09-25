@@ -150,7 +150,7 @@ final class BattleHelper
         for ($r = 1; $r <= 6; $r++) {
             for ($c = 1; $c <= 5; $c++) {
                 if ($r === $card->row && $c === $card->col) continue;
-                if (!empty($state->cell_markers["{$r}_{$cc}"])) continue;
+                if (!empty($state->cell_markers["{$r}_{$c}"])) continue;
                 if (isset($occupied["{$r}_{$c}"])) continue;
 
                 $dist = abs($r - $card->row) + abs($c - $card->col);
