@@ -61,7 +61,7 @@ final class BattleHelper
      */
     public static function getMoveCells(GameState $state, CardInstance $card): array
     {
-        if ($card->closed || $card->move <= 0) {
+        if ($card->closed || $card->move <= 0 || isset($card->markers['rooted'])) {
             return [];
         }
 
@@ -123,7 +123,7 @@ final class BattleHelper
 
     public static function getJumpCells(GameState $state, CardInstance $card): array
     {
-        if ($card->closed || !empty($card->flags['moved_this_turn'])) {
+        if ($card->closed || !empty($card->flags['moved_this_turn']) || isset($card->markers['rooted'])) {
             return [];
         }
 
