@@ -47,6 +47,7 @@ final class ViewScreen
                     'ordinary'      => 0,
                     'elements_html' => '',
                     'cards_html'    => '',
+                    'preview_html'  => '',
                     'confirm_html'  => '',
                     'message'       => 'Дека не найдена',
                 ],
@@ -87,7 +88,7 @@ final class ViewScreen
             $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
         }
 
-        $panelHtml = $ui->panel($selectedCard, [], 'Выбери карту');
+        $previewHtml = $ui->preview($selectedCard, [], 'Выбери карту');
 
         return [
             'screen' => 'view',
@@ -98,7 +99,7 @@ final class ViewScreen
                 'ordinary'      => $deckInfo['ordinary'],
                 'elements_html' => $elementsHtml,
                 'cards_html'    => $cardsHtml,
-                'panel_html'    => $panelHtml,
+                'preview_html'  => $previewHtml,
                 'confirm_html'  => $confirmHtml,
                 'message'       => $message ?? '',
             ],

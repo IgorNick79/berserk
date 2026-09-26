@@ -170,25 +170,25 @@ final class PlaceScreen
             $confirmHtml = '<p class="wait">Осталось расставить: ' . $squadCount . '</p>';
         }
 
-        $panelCard = null;
-        $panelActions = [];
+        $previewCard = null;
+        $cardActions = [];
         if ($selectedCard) {
             $info = $cardsInfo[$selectedCard->ukid] ?? null;
             if ($info) {
-                $panelCard = [
+                $previewCard = [
                     'ukid'        => $selectedCard->ukid,
                     'instance_id' => $selectedCard->instanceId,
                     'info'        => $info,
                 ];
                 if (!$me->isConfirmed('place') && $selectedCard->zone === CardInstance::ZONE_FIELD) {
-                    $panelActions[] = [
+                    $cardActions[] = [
                         'label' => 'Убрать с поля',
                         'url'   => "{$baseUrl}&cmd=unplace_card&card_id={$selectedCard->instanceId}&card={$selectedCard->instanceId}",
                     ];
                 }
             }
         }
-        $panelHtml = $ui->panel($panelCard, $panelActions, 'Выбери карту отряда');
+        $previewHtml = $ui->preview($previewCard, $cardActions, 'Выбери карту отряда');
 
         return [
             'screen' => 'place',
@@ -196,7 +196,7 @@ final class PlaceScreen
                 'field_html'   => $fieldHtml,
                 'squad_html'   => $squadHtml,
                 'squad_count'  => $squadCount,
-                'panel_html'   => $panelHtml,
+                'preview_html' => $previewHtml,
                 'confirm_html' => $confirmHtml,
                 'message'      => $message ?? '',
             ],

@@ -51,7 +51,7 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 .prepare-card__stats { font-size: 12px; margin: 6px 0; }
 .prepare-card__price { font-size: 12px; color: #555; }
 
-.prepare-panel {
+.prepare-card-preview {
     display: flex;
     align-items: stretch;
     gap: 16px;
@@ -62,13 +62,13 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
     border-radius: 6px;
 }
 
-.prepare-panel--empty { color: #777; font-style: italic; }
-.prepare-panel__media { width: 120px; flex: 0 0 120px; }
-.prepare-panel__image { max-width: 100%; border-radius: 4px; display: block; }
-.prepare-panel__info { flex: 1; min-width: 180px; }
-.prepare-panel__info h3 { margin: 0 0 6px; }
-.prepare-panel__meta { color: #777; font-size: 12px; margin-bottom: 8px; }
-.prepare-panel__actions { min-width: 180px; display: flex; align-items: center; }
+.prepare-card-preview--empty { color: #777; font-style: italic; }
+.prepare-card-preview__media { width: 120px; flex: 0 0 120px; }
+.prepare-card-preview__image { max-width: 100%; border-radius: 4px; display: block; }
+.prepare-card-preview__info { flex: 1; min-width: 180px; }
+.prepare-card-preview__info h3 { margin: 0 0 6px; }
+.prepare-card-preview__meta { color: #777; font-size: 12px; margin-bottom: 8px; }
+.prepare-card-preview__actions { min-width: 180px; display: flex; align-items: center; }
 .prepare-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .prepare-action.disabled { background: #aaa; cursor: default; }
 
@@ -905,6 +905,16 @@ body { padding-bottom: 46vh; }
     align-items: flex-start;
     margin: 16px 0;
 }
+
+.draft-preview-slot {
+    width: 360px;
+    flex: 0 0 360px;
+}
+
+.draft-preview-slot .prepare-card-preview {
+    margin-top: 16px;
+}
+
 .draft-actions-bar {
     position: fixed;
     bottom: 0;

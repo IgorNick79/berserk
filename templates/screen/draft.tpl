@@ -14,6 +14,9 @@
         <div class="draft-grid">
             {{grid_html}}
         </div>
+        <div class="draft-preview-slot">
+            {{preview_html}}
+        </div>
     </div>
 
     <div class="draft-actions-bar">
@@ -29,7 +32,7 @@
             </div>
         </div>
         <div class="draft-actions">
-            {{panel_html}}
+            {{actions_html}}
         </div>
     </div>
 </div>

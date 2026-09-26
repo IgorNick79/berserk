@@ -41,10 +41,10 @@ final class PrepareUi
         ]);
     }
 
-    public function panel(?array $card, array $actions = [], string $emptyText = ''): string
+    public function preview(?array $card, array $actions = [], string $emptyText = ''): string
     {
         if ($card === null) {
-            return $emptyText === '' ? '' : '<div class="prepare-panel prepare-panel--empty">' . htmlspecialchars($emptyText, ENT_QUOTES) . '</div>';
+            return $emptyText === '' ? '' : '<div class="prepare-card-preview prepare-card-preview--empty">' . htmlspecialchars($emptyText, ENT_QUOTES) . '</div>';
         }
 
         $info = (array) ($card['info'] ?? []);
@@ -56,11 +56,16 @@ final class PrepareUi
         if ($ukid !== '') {
             $imageHtml = '<img src="/assets/cards/s1/' . htmlspecialchars($ukid, ENT_QUOTES) . '.jpg"'
                 . ' alt="' . htmlspecialchars($name, ENT_QUOTES) . '"'
-                . ' class="prepare-panel__image"'
+                . ' class="prepare-card-preview__image"'
                 . ' onerror="this.style.display=\'none\'">';
         }
 
-        return (string) $this->tpl->parse('includes/prepare_panel.tpl', [
+        $actionsHtml = $this->actions($actions);
+        if ($actionsHtml !== '') {
+            $actionsHtml = '<div class="prepare-card-preview__actions">' . $actionsHtml . '</div>';
+        }
+
+        return (string) $this->tpl->parse('includes/prepare_preview.tpl', [
             'image_html'  => $imageHtml,
             'name'        => htmlspecialchars($name, ENT_QUOTES),
             'ukid'        => htmlspecialchars($ukid, ENT_QUOTES),
@@ -73,7 +78,7 @@ final class PrepareUi
             'weak'        => htmlspecialchars((string) ($info['strike']['weak'] ?? '?'), ENT_QUOTES),
             'medium'      => htmlspecialchars((string) ($info['strike']['medium'] ?? '?'), ENT_QUOTES),
             'strong'      => htmlspecialchars((string) ($info['strike']['strong'] ?? '?'), ENT_QUOTES),
-            'actions_html'=> $this->actions($actions),
+            'actions_html'=> $actionsHtml,
         ]);
     }
 

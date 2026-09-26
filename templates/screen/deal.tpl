@@ -21,7 +21,7 @@
     {{reshuffle_html}}
 </div>
 
-{{panel_html}}
+{{preview_html}}
 
 <div class="confirm-block">
     {{confirm_html}}

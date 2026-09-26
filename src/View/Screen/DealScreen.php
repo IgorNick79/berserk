@@ -127,25 +127,25 @@ final class DealScreen
         }
 
         $selectedCard = null;
-        $panelActions = [];
+        $cardActions = [];
         if ($selectedUkid !== '') {
             $selectedInfo = $cardsInfo[$selectedUkid] ?? null;
             if ($selectedInfo) {
                 $selectedCard = ['ukid' => $selectedUkid, 'info' => $selectedInfo];
                 if (!$me->isConfirmed('deal') && $selectedZone === 'hand') {
-                    $panelActions[] = [
+                    $cardActions[] = [
                         'label' => 'В отряд',
                         'url'   => "{$baseUrl}&cmd=pick_card&ukid=" . urlencode($selectedUkid),
                     ];
                 } elseif (!$me->isConfirmed('deal') && $selectedZone === 'squad') {
-                    $panelActions[] = [
+                    $cardActions[] = [
                         'label' => 'Вернуть',
                         'url'   => "{$baseUrl}&cmd=unpick_card&ukid=" . urlencode($selectedUkid),
                     ];
                 }
             }
         }
-        $panelHtml = $ui->panel($selectedCard, $panelActions, 'Выбери карту');
+        $previewHtml = $ui->preview($selectedCard, $cardActions, 'Выбери карту');
 
         return [
             'screen' => 'deal',
@@ -160,7 +160,7 @@ final class DealScreen
                 'penalty'        => $penalty,
                 'elements_count' => $elementsCount,
                 'penalty_class'  => $penalty > 0 ? 'active' : '',
-                'panel_html'     => $panelHtml,
+                'preview_html'   => $previewHtml,
                 'confirm_html'   => $confirmHtml,
                 'reshuffle_html' => $reshuffleHtml,
                 'message'        => $message ?? '',

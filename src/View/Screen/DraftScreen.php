@@ -33,7 +33,7 @@ final class DraftScreen
                 'my_avg_price'  => 0,
                 'grid_html'     => '<p class="wait">Драфт не активен</p>',
                 'actions_html'  => '',
-                'panel_html'    => '',
+                'preview_html'  => '',
                 'message'       => $message ?? '',
             ]];
         }
@@ -93,7 +93,6 @@ final class DraftScreen
         }
 
         // ─── Кнопки действий ─────────────────────────────
-        $actionsHtml = '';
         $actions = [];
         if ($isMyTurn) {
             for ($r = 1; $r <= 3; $r++) {
@@ -113,7 +112,8 @@ final class DraftScreen
             $actions[] = ['label' => 'Ожидание хода оппонента...', 'url' => '#', 'enabled' => false];
         }
 
-        $panelHtml = $ui->panel($selectedCard, $actions, 'Выбери карту в сетке');
+        $actionsHtml = $ui->actions($actions);
+        $previewHtml = $ui->preview($selectedCard, [], 'Выбери карту в сетке');
 
         // ─── Статистика набранного пула ──────────────────
         $myPicked = $draft['picked'][$playerKey] ?? [];
@@ -169,7 +169,8 @@ final class DraftScreen
             'my_elements_html' => $elementsHtml,
 
             'grid_html'     => $gridHtml,
-            'panel_html'    => $panelHtml,
+            'preview_html'  => $previewHtml,
+            'actions_html'  => $actionsHtml,
             'message'       => $message ?? '',
         ]];
 
