@@ -12,6 +12,8 @@
     </div>
 </div>
 
+{{panel_html}}
+
 <div class="confirm-block">
     {{confirm_html}}
 </div>

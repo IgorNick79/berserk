@@ -8,6 +8,7 @@ namespace Berserk\View\Screen;
 use Berserk\Core\GameState;
 use Berserk\Core\DeckView;
 use Berserk\View\Template;
+use Berserk\View\Ui\PrepareUi;
 
 final class ViewScreen
 {
@@ -27,7 +28,9 @@ final class ViewScreen
         array $cardsInfo = []
     ): array {
         $linkParam = $role === 'host' ? 'first' : 'second';
+        $baseUrl   = "?{$linkParam}&game={$state->gameId}";
         $me = $state->getPlayer($playerKey);
+        $ui = new PrepareUi($this->tpl);
         if ($me->deckId) {
             $deckInfo = $this->deckView->forDeck($me->deckId);
         } else {
@@ -50,19 +53,22 @@ final class ViewScreen
             ];
         }
 
+        $selectedUkid = (string) ($_GET['card'] ?? '');
+        $selectedCard = null;
+
         $cardsHtml = '';
         foreach ($deckInfo['cards'] as $c) {
-            $cardsHtml .= $this->tpl->parse('includes/deck_card.tpl', [
-                'ukid'   => $c['ukid'],
-                'name'   => $c['name'],
-                'count'  => $c['count'],
-                'price'  => $c['price'],
-                'health' => $c['health'],
-                'move'   => $c['move'],
-                'weak'   => $c['strike']['weak'],
-                'medium' => $c['strike']['medium'],
-                'strong' => $c['strike']['strong'],
-                'elite'  => $c['elite'] ? 'elite' : '',
+            $ukid = (string) ($c['ukid'] ?? '');
+            if ($selectedUkid === $ukid) {
+                $selectedCard = ['ukid' => $ukid, 'info' => $c];
+            }
+
+            $cardsHtml .= $ui->card([
+                'ukid'     => $ukid,
+                'info'     => $c,
+                'count'    => (int) ($c['count'] ?? 1),
+                'link'     => "{$baseUrl}&card=" . urlencode($ukid),
+                'selected' => $selectedUkid === $ukid,
             ]);
         }
 
@@ -81,6 +87,8 @@ final class ViewScreen
             $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
         }
 
+        $panelHtml = $ui->panel($selectedCard, [], 'Выбери карту');
+
         return [
             'screen' => 'view',
             'data'   => [
@@ -90,6 +98,7 @@ final class ViewScreen
                 'ordinary'      => $deckInfo['ordinary'],
                 'elements_html' => $elementsHtml,
                 'cards_html'    => $cardsHtml,
+                'panel_html'    => $panelHtml,
                 'confirm_html'  => $confirmHtml,
                 'message'       => $message ?? '',
             ],

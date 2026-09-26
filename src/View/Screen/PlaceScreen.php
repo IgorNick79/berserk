@@ -9,6 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\CardInstance;
 use Berserk\Core\ZoneManager;
 use Berserk\View\Template;
+use Berserk\View\Ui\PrepareUi;
 
 final class PlaceScreen
 {
@@ -27,17 +28,23 @@ final class PlaceScreen
         $linkParam = $role === 'host' ? 'first' : 'second';
         $baseUrl   = "?{$linkParam}&game={$state->gameId}";
         $me        = $state->getPlayer($playerKey);
+        $ui        = new PrepareUi($this->tpl);
 
         $isHost   = ($playerKey === 'host');
         $rowOrder = $isHost ? [3, 2, 1] : [4, 5, 6];
         $colOrder = $isHost ? [1, 2, 3, 4, 5] : [5, 4, 3, 2, 1];
 
-        // Выбранная карта из ?sel
-        $selectedCardId = (int) ($_GET['sel'] ?? 0);
+        // Выбранная карта из ?card — временное UI-состояние, не GameState.
+        $selectedCardId = (int) ($_GET['card'] ?? 0);
+        $selectedCard = null;
         if ($selectedCardId > 0) {
             $c = $state->getCard($selectedCardId);
-            if (!$c || $c->owner !== $playerKey || $c->zone !== CardInstance::ZONE_SQUAD) {
+            if (!$c
+                || $c->owner !== $playerKey
+                || !in_array($c->zone, [CardInstance::ZONE_SQUAD, CardInstance::ZONE_FIELD], true)) {
                 $selectedCardId = 0;
+            } else {
+                $selectedCard = $c;
             }
         }
 
@@ -51,7 +58,7 @@ final class PlaceScreen
 
         // Разрешённые клетки
         $allowedCells = [];
-        if ($selectedCardId > 0) {
+        if ($selectedCard && $selectedCard->zone === CardInstance::ZONE_SQUAD) {
             $levels   = ZoneManager::cellLevels($playerKey);
             $occupied = [];
             foreach ($state->cards as $card) {
@@ -85,20 +92,30 @@ final class PlaceScreen
                     $card = $fieldMap[$key];
                     $info = $cardsInfo[$card->ukid] ?? null;
                     if ($info) {
-                        $eliteCls = $info['elite'] ? 'elite' : '';
-                        $nameHtml = htmlspecialchars($info['name'], ENT_QUOTES);
                         if ($card->owner === $playerKey) {
-                            $unplaceUrl  = "{$baseUrl}&cmd=unplace_card&card_id={$card->instanceId}";
-                            $cellContent = '<a class="card-link" href="' . $unplaceUrl . '">'
-                                . '<div class="card on-field ' . $eliteCls . '">' . $nameHtml . '</div></a>';
+                            $cellContent = $ui->card([
+                                'ukid'        => $card->ukid,
+                                'instance_id' => $card->instanceId,
+                                'info'        => $info,
+                                'link'        => "{$baseUrl}&card={$card->instanceId}",
+                                'selected'    => $selectedCardId === $card->instanceId,
+                                'class'       => 'prepare-card-link--field',
+                            ]);
                             $cellClass  .= ' placed';
                         } else {
-                            $cellContent = '<div class="card on-field ' . $eliteCls . '">' . $nameHtml . '</div>';
+                            $cellContent = $ui->card([
+                                'ukid'        => $card->ukid,
+                                'instance_id' => $card->instanceId,
+                                'info'        => $info,
+                                'link'        => '#',
+                                'disabled'    => true,
+                                'class'       => 'prepare-card-link--field',
+                            ]);
                             $cellClass  .= ' enemy';
                         }
                     }
                 } elseif ($selectedCardId > 0 && $isMine && isset($allowedCells[$key])) {
-                    $placeUrl    = "{$baseUrl}&cmd=place_card&card_id={$selectedCardId}&row={$r}&col={$c}&sel={$selectedCardId}";
+                    $placeUrl    = "{$baseUrl}&cmd=place_card&card_id={$selectedCardId}&row={$r}&col={$c}&card={$selectedCardId}";
                     $cellContent = '<a class="cell-link" href="' . $placeUrl . '"></a>';
                     $cellClass  .= ' allowed';
                 } elseif ($isMine) {
@@ -129,20 +146,16 @@ final class PlaceScreen
         foreach ($squadCards as $item) {
             $card  = $item['card'];
             $info  = $item['info'];
-            $selUrl = "{$baseUrl}&sel={$card->instanceId}";
+            $selUrl = "{$baseUrl}&card={$card->instanceId}";
             $isSel  = ($selectedCardId === $card->instanceId);
 
-            $squadHtml .= $this->tpl->parse('includes/place_squad_card.tpl', [
-                'name'     => $info['name'],
-                'price'    => $info['price'],
-                'health'   => $info['health'],
-                'move'     => $info['move'],
-                'weak'     => $info['strike']['weak'],
-                'medium'   => $info['strike']['medium'],
-                'strong'   => $info['strike']['strong'],
-                'elite'    => $info['elite'] ? 'elite' : '',
-                'link'     => $selUrl,
-                'selected' => $isSel ? 'selected' : '',
+            $squadHtml .= $ui->card([
+                'ukid'        => $card->ukid,
+                'instance_id' => $card->instanceId,
+                'info'        => $info,
+                'link'        => $selUrl,
+                'selected'    => $isSel,
+                'class'       => 'prepare-card-link--squad',
             ]);
         }
 
@@ -157,12 +170,33 @@ final class PlaceScreen
             $confirmHtml = '<p class="wait">Осталось расставить: ' . $squadCount . '</p>';
         }
 
+        $panelCard = null;
+        $panelActions = [];
+        if ($selectedCard) {
+            $info = $cardsInfo[$selectedCard->ukid] ?? null;
+            if ($info) {
+                $panelCard = [
+                    'ukid'        => $selectedCard->ukid,
+                    'instance_id' => $selectedCard->instanceId,
+                    'info'        => $info,
+                ];
+                if (!$me->isConfirmed('place') && $selectedCard->zone === CardInstance::ZONE_FIELD) {
+                    $panelActions[] = [
+                        'label' => 'Убрать с поля',
+                        'url'   => "{$baseUrl}&cmd=unplace_card&card_id={$selectedCard->instanceId}&card={$selectedCard->instanceId}",
+                    ];
+                }
+            }
+        }
+        $panelHtml = $ui->panel($panelCard, $panelActions, 'Выбери карту отряда');
+
         return [
             'screen' => 'place',
             'data'   => [
                 'field_html'   => $fieldHtml,
                 'squad_html'   => $squadHtml,
                 'squad_count'  => $squadCount,
+                'panel_html'   => $panelHtml,
                 'confirm_html' => $confirmHtml,
                 'message'      => $message ?? '',
             ],

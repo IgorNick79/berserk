@@ -9,6 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\CardInstance;
 use Berserk\Core\ResourceCalculator;
 use Berserk\View\Template;
+use Berserk\View\Ui\PrepareUi;
 
 final class DealScreen
 {
@@ -27,6 +28,17 @@ final class DealScreen
         $linkParam = $role === 'host' ? 'first' : 'second';
         $baseUrl   = "?{$linkParam}&game={$state->gameId}";
         $me        = $state->getPlayer($playerKey);
+        $ui        = new PrepareUi($this->tpl);
+        $selectedRaw = (string) ($_GET['card'] ?? '');
+        $selectedZone = '';
+        $selectedUkid = '';
+        if (str_contains($selectedRaw, ':')) {
+            [$selectedZone, $selectedUkid] = explode(':', $selectedRaw, 2);
+        }
+        if (!in_array($selectedZone, ['hand', 'squad'], true)) {
+            $selectedZone = '';
+            $selectedUkid = '';
+        }
 
         // Группируем руку по ukid
         $handGroups = [];
@@ -67,18 +79,12 @@ final class DealScreen
             $ukid = $item['ukid'];
             $info = $item['info'];
 
-            $handHtml .= $this->tpl->parse('includes/deal_card.tpl', [
-                'ukid'   => $ukid,
-                'name'   => $info['name'],
-                'count'  => $item['count'],
-                'price'  => $info['price'],
-                'health' => $info['health'],
-                'move'   => $info['move'],
-                'weak'   => $info['strike']['weak'],
-                'medium' => $info['strike']['medium'],
-                'strong' => $info['strike']['strong'],
-                'elite'  => $info['elite'] ? 'elite' : '',
-                'link'   => "{$baseUrl}&cmd=pick_card&ukid={$ukid}",
+            $handHtml .= $ui->card([
+                'ukid'     => $ukid,
+                'info'     => $info,
+                'count'    => $item['count'],
+                'link'     => "{$baseUrl}&card=hand:" . urlencode($ukid),
+                'selected' => $selectedZone === 'hand' && $selectedUkid === $ukid,
             ]);
         }
 
@@ -96,18 +102,12 @@ final class DealScreen
             $ukid = $item['ukid'];
             $info = $item['info'];
 
-            $squadHtml .= $this->tpl->parse('includes/deal_card.tpl', [
-                'ukid'   => $ukid,
-                'name'   => $info['name'],
-                'count'  => $item['count'],
-                'price'  => $info['price'],
-                'health' => $info['health'],
-                'move'   => $info['move'],
-                'weak'   => $info['strike']['weak'],
-                'medium' => $info['strike']['medium'],
-                'strong' => $info['strike']['strong'],
-                'elite'  => $info['elite'] ? 'elite' : '',
-                'link'   => "{$baseUrl}&cmd=unpick_card&ukid={$ukid}",
+            $squadHtml .= $ui->card([
+                'ukid'     => $ukid,
+                'info'     => $info,
+                'count'    => $item['count'],
+                'link'     => "{$baseUrl}&card=squad:" . urlencode($ukid),
+                'selected' => $selectedZone === 'squad' && $selectedUkid === $ukid,
             ]);
         }
 
@@ -126,6 +126,27 @@ final class DealScreen
             $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
         }
 
+        $selectedCard = null;
+        $panelActions = [];
+        if ($selectedUkid !== '') {
+            $selectedInfo = $cardsInfo[$selectedUkid] ?? null;
+            if ($selectedInfo) {
+                $selectedCard = ['ukid' => $selectedUkid, 'info' => $selectedInfo];
+                if (!$me->isConfirmed('deal') && $selectedZone === 'hand') {
+                    $panelActions[] = [
+                        'label' => 'В отряд',
+                        'url'   => "{$baseUrl}&cmd=pick_card&ukid=" . urlencode($selectedUkid),
+                    ];
+                } elseif (!$me->isConfirmed('deal') && $selectedZone === 'squad') {
+                    $panelActions[] = [
+                        'label' => 'Вернуть',
+                        'url'   => "{$baseUrl}&cmd=unpick_card&ukid=" . urlencode($selectedUkid),
+                    ];
+                }
+            }
+        }
+        $panelHtml = $ui->panel($selectedCard, $panelActions, 'Выбери карту');
+
         return [
             'screen' => 'deal',
             'data'   => [
@@ -139,6 +160,7 @@ final class DealScreen
                 'penalty'        => $penalty,
                 'elements_count' => $elementsCount,
                 'penalty_class'  => $penalty > 0 ? 'active' : '',
+                'panel_html'     => $panelHtml,
                 'confirm_html'   => $confirmHtml,
                 'reshuffle_html' => $reshuffleHtml,
                 'message'        => $message ?? '',

@@ -7,6 +7,7 @@ namespace Berserk\View\Screen;
 
 use Berserk\Core\GameState;
 use Berserk\View\Template;
+use Berserk\View\Ui\PrepareUi;
 
 final class DraftScreen
 {
@@ -40,8 +41,9 @@ final class DraftScreen
         $roleParam = ($role === 'host') ? 'first' : 'second';
         $baseUrl   = "?{$roleParam}&game={$state->gameId}";
         $isMyTurn  = ($draft['turn'] === $playerKey);
+        $ui         = new PrepareUi($this->tpl);
 
-        $selectedIdx = isset($_GET['sel']) ? (int) $_GET['sel'] : -1;
+        $selectedIdx = isset($_GET['card']) ? (int) $_GET['card'] : -1;
         if ($selectedIdx < 0 || $selectedIdx > 8) $selectedIdx = -1;
 
         // ─── Сетка 3×3 ───────────────────────────────────
@@ -50,38 +52,23 @@ final class DraftScreen
             $ukid = $draft['grid'][$i] ?? null;
 
             if ($ukid === null) {
-                $cells[] = $this->tpl->parse('includes/draft_card.tpl', [
-                    'link'       => $baseUrl,   // пустая — не кликабельна (вернёт на ту же страницу)
-                    'card_class' => 'empty',
-                    'elite'      => '',
-                    'name'       => '—',
-                    'element'    => '',
-                    'health'     => '',
-                    'move'       => '',
-                    'weak'       => '',
-                    'medium'     => '',
-                    'strong'     => '',
-                    'price'      => '',
+                $cells[] = $ui->card([
+                    'link'     => $baseUrl,
+                    'disabled' => true,
+                    'class'    => 'prepare-card-link--empty',
+                    'info'     => ['name' => '—', 'strike' => []],
                 ]);
                 continue;
             }
 
             $info = $cardsInfo[$ukid] ?? null;
-            $link = "{$baseUrl}&sel={$i}";
+            $link = "{$baseUrl}&card={$i}";
 
-            $info = $cardsInfo[$ukid] ?? null;
-            $cells[] = $this->tpl->parse('includes/draft_card.tpl', [
-                'link'       => $link,
-                'card_class' => '',
-                'elite'      => !empty($info['elite']) ? 'elite' : '',
-                'name'       => $info ? htmlspecialchars($info['name'], ENT_QUOTES) : $ukid,
-                'element'    => $info ? htmlspecialchars($info['element'] ?? '—', ENT_QUOTES) : '—',
-                'health'     => $info['health'] ?? '?',
-                'move'       => $info['move']   ?? '?',
-                'weak'       => $info['strike']['weak']   ?? '?',
-                'medium'     => $info['strike']['medium'] ?? '?',
-                'strong'     => $info['strike']['strong'] ?? '?',
-                'price'      => $info['price']  ?? '?',
+            $cells[] = $ui->card([
+                'ukid'     => $ukid,
+                'info'     => $info ?? ['name' => $ukid, 'strike' => []],
+                'link'     => $link,
+                'selected' => $selectedIdx === $i,
             ]);
         }
 
@@ -95,51 +82,38 @@ final class DraftScreen
         }
 
         // ─── Панель выбранной карты ──────────────────────
-        $panelHtml = '';
+        $selectedCard = null;
         if ($selectedIdx >= 0 && !empty($draft['grid'][$selectedIdx])) {
             $ukid = $draft['grid'][$selectedIdx];
             $info = $cardsInfo[$ukid] ?? null;
 
             if ($info) {
-                $imgHtml = '<img src="/assets/cards/s1/' . htmlspecialchars($ukid, ENT_QUOTES) . '.jpg"'
-                    . ' alt="' . htmlspecialchars($info['name'], ENT_QUOTES) . '"'
-                    . ' class="panel-card-img"'
-                    . ' onerror="this.style.display=\'none\'">';
-
-                $panelHtml = $this->tpl->parse('includes/draft_panel.tpl', [
-                    'image_html' => $imgHtml,
-                    'name'       => htmlspecialchars($info['name'], ENT_QUOTES),
-                    'hp'         => $info['health'] ?? '?',
-                    'hp_max'     => $info['health'] ?? '?',
-                ]);
+                $selectedCard = ['ukid' => $ukid, 'info' => $info];
             }
         }
 
         // ─── Кнопки действий ─────────────────────────────
         $actionsHtml = '';
+        $actions = [];
         if ($isMyTurn) {
-            $actionsHtml .= '<div class="draft-actions__rows">';
             for ($r = 1; $r <= 3; $r++) {
-                $actionsHtml .= '<a class="button" href="' . $baseUrl . '&cmd=draft_row&row=' . $r . '">Строка ' . $r . '</a> ';
+                $actions[] = ['label' => 'Строка ' . $r, 'url' => $baseUrl . '&cmd=draft_row&row=' . $r];
             }
-            $actionsHtml .= '</div>';
 
-            $actionsHtml .= '<div class="draft-actions__cols">';
             for ($c = 1; $c <= 3; $c++) {
-                $actionsHtml .= '<a class="button" href="' . $baseUrl . '&cmd=draft_col&col=' . $c . '">Колонка ' . $c . '</a> ';
+                $actions[] = ['label' => 'Колонка ' . $c, 'url' => $baseUrl . '&cmd=draft_col&col=' . $c];
             }
-            $actionsHtml .= '</div>';
 
-            $actionsHtml .= '<div class="draft-actions__pass">';
             if (!$draft['pass_blocked']) {
-                $actionsHtml .= '<a class="button skip" href="' . $baseUrl . '&cmd=draft_pass">Пас</a>';
+                $actions[] = ['label' => 'Пас', 'url' => $baseUrl . '&cmd=draft_pass', 'class' => 'skip'];
             } else {
-                $actionsHtml .= '<span class="button skip disabled">Пас недоступен</span>';
+                $actions[] = ['label' => 'Пас недоступен', 'url' => '#', 'class' => 'skip', 'enabled' => false];
             }
-            $actionsHtml .= '</div>';
         } else {
-            $actionsHtml = '<p class="wait">Ожидание хода оппонента...</p>';
+            $actions[] = ['label' => 'Ожидание хода оппонента...', 'url' => '#', 'enabled' => false];
         }
+
+        $panelHtml = $ui->panel($selectedCard, $actions, 'Выбери карту в сетке');
 
         // ─── Статистика набранного пула ──────────────────
         $myPicked = $draft['picked'][$playerKey] ?? [];
@@ -195,7 +169,6 @@ final class DraftScreen
             'my_elements_html' => $elementsHtml,
 
             'grid_html'     => $gridHtml,
-            'actions_html'  => $actionsHtml,
             'panel_html'    => $panelHtml,
             'message'       => $message ?? '',
         ]];

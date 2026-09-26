@@ -199,6 +199,9 @@ if ($commandType !== '') {
         if (isset($_GET['sel']) && $_GET['sel'] !== '') {
             $redirectUrl .= '&sel=' . (int) $_GET['sel'];
         }
+        if (isset($_GET['card']) && $_GET['card'] !== '') {
+            $redirectUrl .= '&card=' . urlencode((string) $_GET['card']);
+        }
 
         if (isset($_GET['pile']) && $_GET['pile'] !== '') {
             $redirectUrl .= '&pile=' . urlencode((string) $_GET['pile']);

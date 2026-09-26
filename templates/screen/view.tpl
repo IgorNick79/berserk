@@ -11,6 +11,8 @@
     {{cards_html}}
 </div>
 
+{{panel_html}}
+
 <div class="confirm-block">
     {{confirm_html}}
 </div>

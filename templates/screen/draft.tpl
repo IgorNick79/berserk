@@ -14,25 +14,22 @@
         <div class="draft-grid">
             {{grid_html}}
         </div>
-        <div class="draft-panel-slot">
-            {{panel_html}}
-        </div>
     </div>
 
     <div class="draft-actions-bar">
-    <div class="draft-stats">
-        <div class="draft-stats-row">
-            <span>Выбрано: <b>{{my_total}}</b></span>
-            <span>Золотых: <b>{{my_gold}}</b></span>
-            <span>Серебряных: <b>{{my_silver}}</b></span>
-            <span>Средняя цена: <b>{{my_avg_price}}</b></span>
+        <div class="draft-stats">
+            <div class="draft-stats-row">
+                <span>Выбрано: <b>{{my_total}}</b></span>
+                <span>Золотых: <b>{{my_gold}}</b></span>
+                <span>Серебряных: <b>{{my_silver}}</b></span>
+                <span>Средняя цена: <b>{{my_avg_price}}</b></span>
+            </div>
+            <div class="draft-elements">
+                {{my_elements_html}}
+            </div>
         </div>
-        <div class="draft-elements">
-            {{my_elements_html}}
+        <div class="draft-actions">
+            {{panel_html}}
         </div>
     </div>
-    <div class="draft-actions">
-        {{actions_html}}
-    </div>
-</div>
 </div>
