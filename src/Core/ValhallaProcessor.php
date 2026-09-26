@@ -13,7 +13,8 @@ final class ValhallaProcessor
 
     public function __construct(
         private GameState $state,
-        private Engine $engine,
+        private ?Engine $engine = null,
+        private ?DamageResolver $damage = null,
     ) {}
 
     public function markPending(CardInstance $card, string $attackType): void
@@ -121,7 +122,9 @@ final class ValhallaProcessor
         $this->applyAll($card, $playerKey, $target);
 
         if (!empty($this->state->battle['turn_phase'])) {
-            (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+            if ($this->engine !== null) {
+                (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+            }
         }
 
         $this->state->bumpVersion();
@@ -207,7 +210,11 @@ final class ValhallaProcessor
 
             case 'damage':
                 if (!$target) return;
-                $this->engine->applyDamage($this->state, $target, $value, 'impact');
+                if ($this->damage !== null) {
+                    $this->damage->applyDamage($target, $value, 'impact');
+                } elseif ($this->engine !== null) {
+                    $this->engine->applyDamage($this->state, $target, $value, 'impact');
+                }
                 break;
 
             case 'get_coins':
@@ -215,7 +222,11 @@ final class ValhallaProcessor
                 $max = (int) ($target->prop['coins']['max_value'] ?? 0);
                 $target->coins += $value;
                 if ($max > 0 && $target->coins > $max) $target->coins = $max;
-                $this->engine->syncCoinBonus($target);
+                if ($this->damage !== null) {
+                    $this->damage->syncCoinBonus($target);
+                } elseif ($this->engine !== null) {
+                    $this->engine->syncCoinBonus($target);
+                }
                 break;
 
             case 'heal':

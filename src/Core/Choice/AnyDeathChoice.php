@@ -8,6 +8,7 @@ namespace Berserk\Core\Choice;
 use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
+use Berserk\Core\DamageResolver;
 use Berserk\Core\Result;
 use Berserk\View\Ui\PanelSpec;
 
@@ -75,8 +76,6 @@ final class AnyDeathChoice implements ChoiceHandlerInterface
         string $playerKey,
         Command $cmd
     ): Result {
-        $refl = new \ReflectionMethod($engine, 'chooseAnyDeathTarget');
-        $refl->setAccessible(true);
-        return $refl->invoke($engine, $state, $playerKey, $cmd);
+        return (new DamageResolver($state))->chooseAnyDeathTarget($playerKey, $cmd);
     }
 }

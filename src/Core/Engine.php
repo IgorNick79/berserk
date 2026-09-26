@@ -81,11 +81,11 @@ final class Engine
             'end_turn'            => $turn->endTurn($playerKey, $cmd),
             'resign'              => $this->resign($state, $playerKey, $cmd),
             'gain_coin'               => $this->gainCoin($state, $playerKey, $cmd),
-            'choose_death_target'     => $this->chooseDeathTarget($state, $playerKey, $cmd),
+            'choose_death_target'     => (new DamageResolver($state))->chooseDeathTarget($playerKey, $cmd),
             'choose_auto_target'      => $this->chooseAutoTarget($state, $playerKey, $cmd),
             'choose_card_option'      => $turn->chooseCardOption($playerKey, $cmd),
             'choose_push_choice'      => $strike->choosePushChoice($playerKey, $cmd),
-            'choose_any_death_target' => $this->chooseAnyDeathTarget($state, $playerKey, $cmd),
+            'choose_any_death_target' => (new DamageResolver($state))->chooseAnyDeathTarget($playerKey, $cmd),
             'choose_transfer_donor'   => $action->chooseTransferDonor($playerKey, $cmd),
             'choose_transfer_amount'  => $action->chooseTransferAmount($playerKey, $cmd),
             'choose_incarnation_cell' => $turn->chooseIncarnationCell($playerKey, $cmd),
@@ -952,148 +952,7 @@ final class Engine
         ?CardInstance $attacker = null,
         bool $skipHunt = false
     ): void {
-        if ($val <= 0) return;
-
-        // Щит света — блокирует весь немагический урон
-        foreach ($target->modifiers as $m) {
-            if (($m['stat'] ?? '') === 'shield_light') {
-                $magicTypes = ['magic', 'cast', 'discharge', 'poison'];
-                if (!in_array($actionType, $magicTypes, true)) {
-                    return;
-                }
-                break;
-            }
-        }
-
-        // Броня
-        $armorIgnores = ['cast', 'magic', 'discharge', 'poison', 'heal'];
-        if (!in_array($actionType, $armorIgnores, true)) {
-            if ($target->armor > 0) {
-                if ($val <= $target->armor) {
-                    $target->armor -= $val;
-                    $val = 0;
-                } else {
-                    $val -= $target->armor;
-                    $target->armor = 0;
-                }
-            }
-        }
-
-        if ($val <= 0) return;
-
-        $hpBefore = $target->hp;
-        $target->hp -= $val;
-
-        $realDamage = $hpBefore - $target->hp;   // фактически списанное HP
-        if ($realDamage > 0) {
-            $target->flags['damage_taken_this_strike'] =
-                ((int) ($target->flags['damage_taken_this_strike'] ?? 0)) + $realDamage;
-        }
-        $target->flags['damage_taken_this_turn'] =
-            ((int) ($target->flags['damage_taken_this_turn'] ?? 0)) + $realDamage;
-
-
-        // Счётчик попаданий от выстрелов/метаний в этот ход (Мира)
-        if ($attacker
-            && $attacker->instanceId !== $target->instanceId
-            && in_array($actionType, ['shot', 'throw', 'uchr'], true)) {
-            $target->flags['ranged_hits_this_turn'] =
-                ((int) ($target->flags['ranged_hits_this_turn'] ?? 0)) + 1;
-        }
-
-        // Вампиризм — атакующий восстанавливает HP на величину нанесённого урона
-        $vampireTypes = ['strike', 'tap', 'magic', 'execute'];
-
-        if ($attacker
-            && !empty($attacker->prop['vampire'])
-            && in_array($actionType, $vampireTypes, true)
-            && $attacker->instanceId !== $target->instanceId
-            && $attacker->hp > 0) {
-
-            $offset = (int) ($attacker->prop['vampire_offset'] ?? 0);
-            $healAmount = $val + $offset;
-            if ($healAmount < 0) $healAmount = 0;
-
-            $maxHp = (int) ($attacker->prop['hp_max_override'] ?? $attacker->hpMax);
-            $heal = min($healAmount, $maxHp - $attacker->hp);
-
-            if ($heal > 0) {
-                $attacker->hp += $heal;
-
-                if (!empty($state->battle['strike'])) {
-                    $state->battle['strike']['vampire_heal'][] = [
-                        'instance_id' => $attacker->instanceId,
-                        'ukid'        => $attacker->ukid,
-                        'heal'        => $heal,
-                    ];
-                }
-            }
-        }
-
-        // Hunt-эффект — при любом ударе летуна по цели с маркером
-        if ($attacker 
-            && $attacker->type === 'fly' 
-            && isset($target->markers['hunt'])
-            && !$skipHunt) {
-
-            $huntBonus = (int) ($target->markers['hunt']['bonus'] ?? 2);
-            unset($target->markers['hunt']);
-
-            if (!empty($state->battle['strike'])) {
-                $state->battle['strike']['hunt_trigger'][] = [
-                    'target_id'   => $target->instanceId,
-                    'attacker_id' => $attacker->instanceId,
-                    'bonus'       => $huntBonus,
-                ];
-            }
-
-            $target->hp -= $huntBonus;
-        }
-
-        if ($target->hp <= 0) {
-            $target->hp = 0;
-            $target->dying = true;
-
-            (new ValhallaProcessor($state, $this))->markPending($target, $actionType);
-
-            $this->refreshArmor($state);
-            $this->clearRootedBySource($state, $target->instanceId);
-
-            // Трупоедство
-            if ($attacker
-                && !empty($attacker->prop['deadeat'])
-                && CardStats::isMeleeAction($actionType)
-                && $attacker->hp > 0) {
-
-                if (!empty($state->battle['strike'])) {
-                    // Откладываем — сражение ещё не закончилось
-                    $state->battle['strike']['deadeat_queue'][] = [
-                        'instance_id' => $attacker->instanceId,
-                    ];
-                } else {
-                    // Вне сражения — сразу
-                    if (!empty($attacker->prop['deadeat_hp_bonus'])) {
-                        $attacker->hpMax += (int) $attacker->prop['deadeat_hp_bonus'];
-                    }
-                    $attacker->hp = $attacker->hpMax;
-                }
-            }
-
-            $deathByAttack = in_array($actionType, 
-                ['strike', 'uchr', 'shot', 'throw', 'tap', 'discharge', 'answer'], 
-                true
-            );
-            $this->triggerOnAnyDeath($state, $target, $actionType);
-            if ($deathByAttack) {
-                $this->triggerOnDeath($state, $target);
-            }
-
-            if (empty($state->battle['strike'])) {
-                (new ZoneManager($state))->toGraveyard($target);
-            }
-        }
-
-        $this->checkGameOver($state);
+        (new DamageResolver($state))->applyDamage($target, $val, $actionType, $attacker, $skipHunt);
     }
 
     private function diceToLevel(int $dice): string
@@ -1126,28 +985,7 @@ final class Engine
 
     public function checkGameOver(GameState $state): void
     {
-        if ($state->winner !== null) return;
-
-        foreach (['host', 'player'] as $key) {
-            if (!$this->hasCreaturesOnField($state, $key)) {
-                $state->winner = $state->getOpponentKey($key);
-                $state->status = 'game_over';
-                return;
-            }
-        }
-    }
-
-    private function hasCreaturesOnField(GameState $state, string $playerKey): bool
-    {
-        foreach ($state->cards as $card) {
-            if ($card->owner !== $playerKey) continue;
-            if ($card->dying) continue;
-            if ($card->zone !== CardInstance::ZONE_FIELD 
-                && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->type !== 'creature' && $card->type !== 'fly') continue;
-            return true;
-        }
-        return false;
+        (new DamageResolver($state))->checkGameOver();
     }
 
     private function gainCoin(GameState $state, string $playerKey, Command $cmd): Result
@@ -1265,193 +1103,21 @@ final class Engine
 
     public function refreshArmor(GameState $state): void
     {
-        foreach ($state->cards as $card) {
-            if ($card->zone !== CardInstance::ZONE_FIELD
-                && $card->zone !== CardInstance::ZONE_FLYING) continue;
-
-            $newMax = CardStats::computeArmor($state, $card);
-
-            // Если максимум изменился — броня считается неиспользованной
-            if ($newMax !== $card->armorMax) {
-                $card->armorMax = $newMax;
-                $card->armor    = $newMax;
-            }
-        }
+        (new DamageResolver($state))->refreshArmor();
     }
 
     public function triggerOnDeath(GameState $state, CardInstance $died): void
     {
-        if (empty($died->prop['on_death'])) return;
-
-        foreach ($died->prop['on_death'] as $effect) {
-            $this->applyDeathEffect($state, $died, $effect);
-        }
+        (new DamageResolver($state))->triggerOnDeath($died);
     }
 
-    private function applyDeathEffect(GameState $state, CardInstance $died, array $effect): void
-    {
-        $targetType = $effect['target'] ?? 'near';
 
-        // Отложенный выбор цели — игрок решит, кого бить
-        if ($targetType === 'choice') {
-            $candidates = $this->findDeathTargets($state, $died, $effect);
-            if (empty($candidates)) return;
 
-            $state->battle['strike']['pending_choice'] = [
-                'source'     => 'on_death',
-                'died_ukid'  => $died->ukid,
-                'died_id'    => $died->instanceId,
-                'effect'     => $effect,
-                'candidates' => array_map(fn ($c) => $c->instanceId, $candidates),
-            ];
-            return;
-        }
 
-        // Автоматический эффект (near/killer) — как было
-        $type  = $effect['type'] ?? '';
-        $value = (int) ($effect['value'] ?? 0);
 
-        $targets = $this->findDeathTargets($state, $died, $effect);
-        if (empty($targets)) return;
 
-        $applied = [];
 
-        foreach ($targets as $target) {
-            $hpBefore = $target->hp;
 
-            switch ($type) {
-                case 'tap':
-                case 'damage':
-                    $this->applyDamage($state, $target, $value, 'tap');
-                    break;
-                case 'heal':
-                    $target->hp += $value;
-                    if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
-                    break;
-                case 'poison':
-                    $this->applyPoison($target, $value, $died->owner);
-                    break;
-            }
-
-            $applied[] = [
-                'target_id' => $target->instanceId,
-                'damage'    => max(0, $hpBefore - $target->hp),
-                'heal'      => max(0, $target->hp - $hpBefore),
-            ];
-        }
-
-        if (!empty($state->battle['strike'])) {
-            $state->battle['strike']['death_triggers'][] = [
-                'died_ukid' => $died->ukid,
-                'died_id'   => $died->instanceId,
-                'effect'    => $type,
-                'value'     => $value,
-                'targets'   => $applied,
-            ];
-        }
-    }
-
-    private function findDeathTargets(GameState $state, CardInstance $died, array $effect): array
-    {
-        $targetType = $effect['target'] ?? 'near';
-        $filter     = $effect['filter'] ?? null;
-
-        $result = [];
-
-        foreach ($state->cards as $card) {
-            if ($card->instanceId === $died->instanceId) continue;
-            if ($card->zone !== CardInstance::ZONE_FIELD
-                && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->owner === $died->owner) continue;
-
-            if ($filter && !$this->matchFilter($card, $filter)) continue;
-
-            // Для 'near' — проверяем близость, для 'choice' — нет
-            if ($targetType === 'near') {
-                if ($died->zone !== CardInstance::ZONE_FIELD) continue;
-                if ($card->zone !== CardInstance::ZONE_FIELD) continue;
-
-                $dr = abs($card->row - $died->row);
-                $dc = abs($card->col - $died->col);
-                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
-            }
-
-            $result[] = $card;
-        }
-
-        return $result;
-    }
-
-    private function matchFilter(CardInstance $card, string $filter): bool
-    {
-        return match ($filter) {
-            'enemy_creature_not_flying' => $card->type === 'creature',
-            'own_creature'              => true,
-            'own_yordling'              => $card->class === 'Йордлинг',
-            default                     => true,
-        };
-    }
-
-    private function chooseDeathTarget(GameState $state, string $playerKey, Command $cmd): Result
-    {
-        $strike = $state->battle['strike'] ?? null;
-        if (!$strike || empty($strike['pending_choice'])) {
-            return Result::error('Нет ожидающего выбора');
-        }
-
-        $pc = $strike['pending_choice'];
-        $candidates = $pc['candidates'] ?? [];
-
-        // Выбирает владелец умершей карты
-        $died = $state->getCard($pc['died_id']);
-        if (!$died || $playerKey !== $died->owner) {
-            return Result::error('Не ваш выбор');
-        }
-
-        $targetId = (int) $cmd->get('target_id', 0);
-        if (!in_array($targetId, $candidates, true)) {
-            return Result::error('Неверная цель');
-        }
-
-        $target = $state->getCard($targetId);
-        $effect = $pc['effect'];
-        $value  = (int) ($effect['value'] ?? 0);
-        $type   = $effect['type'] ?? '';
-
-        // Применяем эффект
-        $hpBefore = $target->hp;
-        switch ($type) {
-            case 'tap':
-            case 'damage':
-                $this->applyDamage($state, $target, $value, 'tap');
-                break;
-            case 'heal':
-                $target->hp += $value;
-                if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
-                break;
-            case 'poison':
-                $this->applyPoison($target, $value, $died->owner);
-                break;
-        }
-
-        // Пишем результат
-        $state->battle['strike']['death_triggers'][] = [
-            'died_ukid' => $pc['died_ukid'],
-            'died_id'   => $pc['died_id'],
-            'effect'    => $type,
-            'value'     => $value,
-            'targets'   => [[
-                'target_id' => $target->instanceId,
-                'damage'    => max(0, $hpBefore - $target->hp),
-                'heal'      => max(0, $target->hp - $hpBefore),
-            ]],
-        ];
-
-        unset($state->battle['strike']['pending_choice']);
-
-        $state->bumpVersion();
-        return Result::ok(["death_choice:{$targetId}"]);
-    }
 
     public function revealCard(GameState $state, CardInstance $card): void
     {
@@ -1507,31 +1173,7 @@ final class Engine
 
     public function flushDeadeatQueue(GameState $state): void
     {
-        if (empty($state->battle['strike']['deadeat_queue'])) return;
-
-        $queue = $state->battle['strike']['deadeat_queue'];
-
-        foreach ($queue as $item) {
-            $card = $state->getCard($item['instance_id']);
-            if (!$card) continue;
-            if ($card->hp <= 0) continue;
-
-            if (!empty($card->prop['deadeat_hp_bonus'])) {
-                $card->hpMax += (int) $card->prop['deadeat_hp_bonus'];
-            }
-
-            $hpBefore = $card->hp;
-            $card->hp = $card->hpMax;
-
-            if ($card->hp > $hpBefore) {
-                $state->battle['strike']['deadeat'][] = [
-                    'instance_id' => $card->instanceId,
-                    'ukid'        => $card->ukid,
-                    'heal'        => $card->hp - $hpBefore,
-                ];
-            }
-        }
-        unset($state->battle['strike']['deadeat_queue']);
+        (new DamageResolver($state))->flushDeadeatQueue();
     }
 
     public function applyAnswer(
@@ -1540,34 +1182,7 @@ final class Engine
         CardInstance $attacker,
         string $actionType
     ): void {
-        $answer = $defender->prop['answer'] ?? null;
-        if (!$answer || !is_array($answer)) return;
-
-        // Не срабатывает, если защитник уже мёртв
-        if ($defender->hp <= 0) return;
-
-        // Тип атаки должен подходить
-        $types = $answer['types'] ?? null;
-        if ($types !== null && !in_array($actionType, $types, true)) return;
-
-        // Наложение маркера на атакующего (Уриил)
-        if (!empty($answer['marker']['type'])) {
-            $this->applyMarker($attacker, $answer['marker'], $defender->owner);
-        }
-
-        // Урон
-        $val = (int) ($answer['value'] ?? 0);
-        if ($val > 0) {
-            $this->applyDamage($state, $attacker, $val, 'answer');
-
-            if (!empty($state->battle['strike'])) {
-                $state->battle['strike']['answer_damage'][] = [
-                    'defender_id' => $defender->instanceId,
-                    'attacker_id' => $attacker->instanceId,
-                    'value'       => $val,
-                ];
-            }
-        }
+        (new DamageResolver($state))->applyAnswer($defender, $attacker, $actionType);
     }
 
     public function openAutoChoice(GameState $state, CardInstance $attacker): bool
@@ -1710,18 +1325,7 @@ final class Engine
 
     public function clearRootedBySource(GameState $state, int $sourceId): void
     {
-        foreach ($state->cards as $card) {
-            if (!isset($card->markers['rooted'])) continue;
-
-            $sources = $card->markers['rooted']['sources'] ?? [];
-            $sources = array_values(array_filter($sources, fn($id) => $id !== $sourceId));
-
-            if (empty($sources)) {
-                unset($card->markers['rooted']);
-            } else {
-                $card->markers['rooted']['sources'] = $sources;
-            }
-        }
+        (new DamageResolver($state))->clearRootedBySource($sourceId);
     }
 
     public function getRegenerationAmount(CardInstance $card): int
@@ -1740,129 +1344,10 @@ final class Engine
 
     public function triggerOnAnyDeath(GameState $state, CardInstance $died, string $cause = 'any'): void
     {
-        $poisonValue = (int) ($died->markers['poison']['value'] ?? 0);
-
-        foreach ($state->cards as $seeder) {
-            if ($seeder->zone !== CardInstance::ZONE_FIELD
-                && $seeder->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($seeder->dying) continue;
-            if ($seeder->instanceId === $died->instanceId) continue;
-
-            $config = $seeder->prop['on_any_death'] ?? null;
-            if (!$config || !is_array($config)) continue;
-
-            $sideFilter = $config['side'] ?? 'enemy';
-            if ($sideFilter === 'enemy' && $seeder->owner === $died->owner) continue;
-
-            // Проверка причины смерти
-            $configCause = $config['cause'] ?? 'any';
-            if ($configCause === 'poison' && $cause !== 'poison') continue;
-            if ($configCause !== 'any' && $configCause !== 'poison' && $configCause !== $cause) continue;
-
-            if (!empty($seeder->flags['any_death_used_this_turn'])
-                && !empty($config['once_per_turn'])) continue;
-
-            // Эффект «получить монету» — сразу, без pending
-            $effect = $config['effect'] ?? null;
-            if ($effect === 'get_coin') {
-                $value = (int) ($config['value'] ?? 1);
-
-                $filter = $config['filter'] ?? 'any';
-                if ($filter === 'not_flying' && $died->type === 'fly') continue;
-
-                $max = (int) ($seeder->prop['coins']['max_value'] ?? 0);
-                $before = $seeder->coins;
-
-                $seeder->coins += $value;
-                if ($max > 0 && $seeder->coins > $max) $seeder->coins = $max;
-
-                if ($seeder->coins > $before) {
-                    $this->syncCoinBonus($seeder);
-                }
-
-                if (!empty($config['once_per_turn'])) {
-                    $seeder->flags['any_death_used_this_turn'] = true;
-                }
-                continue;
-            }
-
-            // Кандидаты (Сеятель хвори)
-            $candidates = [];
-            foreach ($state->cards as $t) {
-                if ($t->zone !== CardInstance::ZONE_FIELD) continue;
-                if ($t->instanceId === $died->instanceId) continue;
-                if ($t->dying) continue;
-                if ($t->owner === $seeder->owner) continue;
-
-                $dr = abs($t->row - $died->row);
-                $dc = abs($t->col - $died->col);
-                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
-
-                $filter = $config['filter'] ?? 'any';
-                if ($filter === 'not_flying' && $t->type === 'fly') continue;
-
-                $candidates[] = $t->instanceId;
-            }
-
-            if (empty($candidates)) continue;
-
-            if (!isset($state->battle['pending_any_death'])) {
-                $state->battle['pending_any_death'] = [];
-            }
-
-            $state->battle['pending_any_death'][] = [
-                'source_id'    => $seeder->instanceId,
-                'died_id'      => $died->instanceId,
-                'died_ukid'    => $died->ukid,
-                'candidates'   => $candidates,
-                'poison_value' => $poisonValue,
-            ];
-
-            if (!empty($config['once_per_turn'])) {
-                $seeder->flags['any_death_used_this_turn'] = true;
-            }
-        }
+        (new DamageResolver($state))->triggerOnAnyDeath($died, $cause);
     }
 
-    public function chooseAnyDeathTarget(GameState $state, string $playerKey, Command $cmd): Result
-    {
-        $queue = $state->battle['pending_any_death'] ?? [];
-        if (empty($queue)) {
-            return Result::error('Нет ожидающего выбора');
-        }
 
-        $item = $queue[0];
-        $sourceCard = $state->getCard($item['source_id']);
-        if (!$sourceCard || $sourceCard->owner !== $playerKey) {
-            return Result::error('Не ваш выбор');
-        }
-
-        $targetId = (int) $cmd->get('target_id', 0);
-
-        // Пропуск
-        if ($targetId === 0) {
-            array_shift($state->battle['pending_any_death']);
-            $state->bumpVersion();
-            return Result::ok(['any_death_skipped']);
-        }
-
-        if (!in_array($targetId, $item['candidates'], true)) {
-            return Result::error('Неверная цель');
-        }
-
-        $target = $state->getCard($targetId);
-        if (!$target) {
-            return Result::error('Цель не найдена');
-        }
-
-        $poisonValue = (int) $item['poison_value'];
-        $this->applyPoison($target, $poisonValue, $sourceCard->owner);
-
-        array_shift($state->battle['pending_any_death']);
-
-        $state->bumpVersion();
-        return Result::ok(["any_death_target:{$targetId}"]);
-    }
 
     public function tryProphecyBlock(
         GameState $state,
@@ -1920,6 +1405,4 @@ final class Engine
             'expire' => 'permanent',
         ];
     }
-
-
 }
