@@ -267,21 +267,13 @@ final class MovementEffectResolver
         if ($context->movementType !== MovementContext::TYPE_MOVE) return;
         if ($context->manhattanDistance() !== 1) return;
 
-        $direction = ForcedMovementResolver::relativeDirectionForDelta(
-            $card->owner,
-            $context->deltaRow(),
-            $context->deltaCol(),
-        );
-        if ($direction === null) return;
-
-        $distance = (int) ($config['distance'] ?? 1);
-        if ($distance <= 0) return;
-
         $responder = $this->state->getOpponentKey($card->owner);
         $forced = new ForcedMovementResolver($this->state, $this->engine);
         $fallback = (array) ($config['fallback'] ?? []);
+        $deltaRow = $context->deltaRow();
+        $deltaCol = $context->deltaCol();
 
-        if (empty($forced->eligibleTargets($responder, $direction, $distance))) {
+        if (empty($forced->eligibleTargets($responder, $deltaRow, $deltaCol))) {
             ForcedMovementResolver::applyFallback($card, $fallback);
             return;
         }
@@ -290,10 +282,8 @@ final class MovementEffectResolver
             'owner'              => $responder,
             'source_id'          => $card->instanceId,
             'source_owner'       => $card->owner,
-            'relative_direction' => $direction,
-            'distance'           => $distance,
-            'stage'              => 'card',
-            'selected_id'        => null,
+            'delta_row'          => $deltaRow,
+            'delta_col'          => $deltaCol,
             'fallback'           => $fallback,
         ];
     }

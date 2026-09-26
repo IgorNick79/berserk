@@ -12,6 +12,8 @@ use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\Movement\ForcedMovementResolver;
 use Berserk\Core\Movement\MovementResolver;
+use Berserk\View\Screen\Battle\InfoPanel;
+use Berserk\View\Template;
 
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
@@ -139,46 +141,48 @@ function fdmAssertNoPending(GameState $state, string $message): void
 }
 
 foreach ([
-    [GameState::PLAYER_HOST, 1, 0, 'forward', [1, 0], [-1, 0]],
-    [GameState::PLAYER_HOST, -1, 0, 'backward', [-1, 0], [1, 0]],
-    [GameState::PLAYER_HOST, 0, 1, 'right', [0, 1], [0, -1]],
-    [GameState::PLAYER_HOST, 0, -1, 'left', [0, -1], [0, 1]],
-    [GameState::PLAYER_PLAYER, -1, 0, 'forward', [-1, 0], [1, 0]],
-    [GameState::PLAYER_PLAYER, 1, 0, 'backward', [1, 0], [-1, 0]],
-    [GameState::PLAYER_PLAYER, 0, -1, 'right', [0, -1], [0, 1]],
-    [GameState::PLAYER_PLAYER, 0, 1, 'left', [0, 1], [0, -1]],
-] as [$owner, $dr, $dc, $direction, $sourceDelta, $opponentDelta]) {
+    [GameState::PLAYER_HOST, 3, 3, 3, 4, 4, 3, 4, 4],
+    [GameState::PLAYER_HOST, 3, 3, 3, 2, 4, 3, 4, 2],
+    [GameState::PLAYER_HOST, 3, 3, 4, 3, 4, 3, 5, 3],
+    [GameState::PLAYER_HOST, 3, 3, 2, 3, 4, 3, 3, 3],
+    [GameState::PLAYER_PLAYER, 4, 3, 4, 4, 2, 3, 2, 4],
+    [GameState::PLAYER_PLAYER, 4, 3, 4, 2, 2, 3, 2, 2],
+    [GameState::PLAYER_PLAYER, 4, 3, 5, 3, 2, 3, 3, 3],
+    [GameState::PLAYER_PLAYER, 4, 3, 3, 3, 2, 3, 1, 3],
+] as [$owner, $fromRow, $fromCol, $toRow, $toCol, $targetRow, $targetCol, $expectedRow, $expectedCol]) {
+    $deltaRow = $toRow - $fromRow;
+    $deltaCol = $toCol - $fromCol;
+    $source = fdmCard(['instanceId' => 101, 'owner' => $owner, 'row' => $fromRow, 'col' => $fromCol, 'prop' => fdmProp()]);
+    $targetOwner = $owner === GameState::PLAYER_HOST ? GameState::PLAYER_PLAYER : GameState::PLAYER_HOST;
+    $target = fdmCard(['instanceId' => 102, 'owner' => $targetOwner, 'row' => $targetRow, 'col' => $targetCol]);
+    $directionState = fdmState($source, $target);
+    $directionState->battle['active'] = $owner;
+
+    fdmMove($directionState, $source, $toRow, $toCol);
+    fdmApply($directionState, $targetOwner, new Command('choose_forced_directional_move', ['target_id' => 102]));
+
     fdmAssert(
-        ForcedMovementResolver::relativeDirectionForDelta($owner, $dr, $dc) === $direction,
-        "Relative direction should match {$owner} {$direction}."
-    );
-    fdmAssert(
-        ForcedMovementResolver::boardDeltaForPlayer($owner, $direction) === $sourceDelta,
-        "Source board delta should match {$owner} {$direction}."
-    );
-    $opponent = $owner === GameState::PLAYER_HOST ? GameState::PLAYER_PLAYER : GameState::PLAYER_HOST;
-    fdmAssert(
-        ForcedMovementResolver::boardDeltaForPlayer($opponent, $direction) === $opponentDelta,
-        "Opponent board delta should mirror {$owner} {$direction}."
+        $target->row === $expectedRow && $target->col === $expectedCol,
+        "Forced movement should preserve source board delta ({$deltaRow},{$deltaCol}) for {$owner}."
     );
 }
 
-$source = fdmCard(['instanceId' => 1, 'row' => 3, 'col' => 3, 'prop' => fdmProp()]);
-$target = fdmCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 4]);
+$source = fdmCard(['instanceId' => 1, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 3, 'prop' => fdmProp()]);
+$target = fdmCard(['instanceId' => 2, 'owner' => GameState::PLAYER_HOST, 'row' => 2, 'col' => 3]);
 $state = fdmState($source, $target);
-fdmMove($state, $source, 3, 4);
+$state->battle['active'] = GameState::PLAYER_PLAYER;
+fdmMove($state, $source, 4, 2);
 $pending = fdmPending($state);
-fdmAssert($pending['owner'] === GameState::PLAYER_PLAYER, 'Opponent should own the pending choice.');
-fdmAssert($pending['relative_direction'] === 'right', 'Host right move should be stored as relative right.');
+fdmAssert($pending['owner'] === GameState::PLAYER_HOST, 'Opponent should own the pending choice.');
+fdmAssert(($pending['delta_row'] ?? null) === 0 && ($pending['delta_col'] ?? null) === -1, 'Source board delta should be stored in pending.');
+fdmAssert(!isset($pending['stage']) && !isset($pending['selected_id']), 'Forced movement pending should be one-stage.');
 
 fdmApplyFails($state, GameState::PLAYER_HOST, new Command('end_turn'), 'Pending should block unrelated commands.');
-fdmApplyFails($state, GameState::PLAYER_PLAYER, new Command('choose_dice_choice', ['choice' => 'attack_plus']), 'Pending should block commands belonging to other ChoiceHandlers.');
-fdmApply($state, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['target_id' => 2]));
-$pending = fdmPending($state);
-fdmAssert($pending['stage'] === 'cell' && $pending['selected_id'] === 2, 'Stage 1 should select a card.');
-fdmApply($state, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['row' => 4, 'col' => 3]));
+fdmApplyFails($state, GameState::PLAYER_HOST, new Command('choose_dice_choice', ['choice' => 'attack_plus']), 'Pending should block commands belonging to other ChoiceHandlers.');
+fdmApply($state, GameState::PLAYER_HOST, new Command('choose_forced_directional_move', ['target_id' => 2]));
 fdmAssertNoPending($state, 'Successful forced movement should clear pending.');
-fdmAssert($target->row === 4 && $target->col === 3, 'Opponent target should move to mirrored right destination.');
+fdmAssert($target->row === 2 && $target->col === 2, 'Manual bug regression: target 2.3 should move to 2.2.');
+fdmAssert(!($target->row === 2 && $target->col === 4), 'Manual bug regression: target 2.3 must not move to 2.4.');
 fdmAssert($target->move === 3, 'Forced movement should not consume move.');
 fdmAssert(empty($target->flags['moved_this_turn']), 'Forced movement should not set moved_this_turn.');
 
@@ -211,18 +215,20 @@ fdmMove($normalState, $normalSource, 3, 4);
 fdmAssertNoPending($normalState, 'Card without prop should not trigger forced directional movement.');
 
 $closed = fdmCard(['instanceId' => 9, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 4, 'closed' => true]);
-$rooted = fdmCard(['instanceId' => 10, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 4, 'markers' => ['rooted' => ['sources' => [99]]]]);
+$rooted = fdmCard(['instanceId' => 10, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 5, 'markers' => ['rooted' => ['sources' => [99]]]]);
 $blocked = fdmCard(['instanceId' => 11, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 2]);
 $blocker = fdmCard(['instanceId' => 12, 'owner' => GameState::PLAYER_HOST, 'row' => 4, 'col' => 1]);
-$boundary = fdmCard(['instanceId' => 13, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 1]);
-$eligibilityState = fdmState($closed, $rooted, $blocked, $blocker, $boundary);
+$markerBlocked = fdmCard(['instanceId' => 13, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 4]);
+$boundary = fdmCard(['instanceId' => 14, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 1]);
+$eligibilityState = fdmState($closed, $rooted, $blocked, $blocker, $markerBlocked, $boundary);
 $eligibilityState->cell_markers['5_3'] = ['type' => 'test'];
 $resolver = new ForcedMovementResolver($eligibilityState, new Engine());
-$eligibleIds = array_map(fn(CardInstance $card) => $card->instanceId, $resolver->eligibleTargets(GameState::PLAYER_PLAYER, 'right'));
+$eligibleIds = array_map(fn(CardInstance $card) => $card->instanceId, $resolver->eligibleTargets(GameState::PLAYER_PLAYER, 0, -1));
 fdmAssert(in_array(9, $eligibleIds, true), 'Closed creature should be eligible.');
 fdmAssert(!in_array(10, $eligibleIds, true), 'Rooted creature should not be eligible.');
 fdmAssert(!in_array(11, $eligibleIds, true), 'Occupied destination should not be eligible.');
 fdmAssert(!in_array(13, $eligibleIds, true), 'Cell marker should prevent eligibility.');
+fdmAssert(!in_array(14, $eligibleIds, true), 'Field boundary should prevent eligibility.');
 
 $fallbackSource = fdmCard(['instanceId' => 14, 'row' => 3, 'col' => 3, 'prop' => fdmProp()]);
 $fallbackTarget = fdmCard(['instanceId' => 15, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 1]);
@@ -237,12 +243,11 @@ $invalidState = fdmState($invalidSource, $invalidTarget);
 fdmMove($invalidState, $invalidSource, 3, 4);
 fdmApplyFails($invalidState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['target_id' => 16]), 'Opponent cannot select another player card.');
 fdmApplyFails($invalidState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['target_id' => 999]), 'Invalid card id should be rejected.');
-fdmApply($invalidState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['target_id' => 17]));
-fdmApplyFails($invalidState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['row' => 4, 'col' => 4]), 'Wrong cell should be rejected.');
+fdmApplyFails($invalidState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['row' => 4, 'col' => 4]), 'Client-supplied cell without a target should be rejected.');
 
-$staleBlocker = fdmCard(['instanceId' => 18, 'owner' => GameState::PLAYER_HOST, 'row' => 4, 'col' => 3]);
+$staleBlocker = fdmCard(['instanceId' => 18, 'owner' => GameState::PLAYER_HOST, 'row' => 4, 'col' => 5]);
 $invalidState->addCard($staleBlocker);
-fdmApply($invalidState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['row' => 4, 'col' => 3]));
+fdmApply($invalidState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['target_id' => 17]));
 fdmAssertNoPending($invalidState, 'Stale target should clear pending.');
 fdmAssert(fdmModifierCount($invalidSource, 'next_action_bonus') === 1, 'Stale target should apply fallback.');
 
@@ -251,17 +256,9 @@ $declineTarget = fdmCard(['instanceId' => 20, 'owner' => GameState::PLAYER_PLAYE
 $declineState = fdmState($declineSource, $declineTarget);
 fdmMove($declineState, $declineSource, 3, 4);
 fdmApply($declineState, GameState::PLAYER_PLAYER, new Command('cancel_pending'));
-fdmAssert(fdmModifierCount($declineSource, 'next_action_bonus') === 1, 'Decline at card stage should apply fallback.');
+fdmAssert(fdmModifierCount($declineSource, 'next_action_bonus') === 1, 'Decline should apply fallback.');
 fdmApplyFails($declineState, GameState::PLAYER_PLAYER, new Command('cancel_pending'), 'Repeated cancel should not resolve again.');
 fdmAssert(fdmModifierCount($declineSource, 'next_action_bonus') === 1, 'Repeated cancel should not duplicate fallback.');
-
-$declineCellSource = fdmCard(['instanceId' => 21, 'row' => 3, 'col' => 3, 'prop' => fdmProp()]);
-$declineCellTarget = fdmCard(['instanceId' => 22, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 4]);
-$declineCellState = fdmState($declineCellSource, $declineCellTarget);
-fdmMove($declineCellState, $declineCellSource, 3, 4);
-fdmApply($declineCellState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['target_id' => 22]));
-fdmApply($declineCellState, GameState::PLAYER_PLAYER, new Command('cancel_pending'));
-fdmAssert(fdmModifierCount($declineCellSource, 'next_action_bonus') === 1, 'Decline at cell stage should apply fallback.');
 
 $effectSource = fdmCard(['instanceId' => 23, 'row' => 3, 'col' => 3, 'prop' => fdmProp()]);
 $effectTarget = fdmCard([
@@ -293,16 +290,15 @@ $effectTarget = fdmCard([
 $effectState = fdmState($effectSource, $effectTarget);
 fdmMove($effectState, $effectSource, 3, 4);
 fdmApply($effectState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['target_id' => 24]));
-fdmApply($effectState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['row' => 4, 'col' => 3]));
 fdmAssert(empty($effectTarget->flags['movement_direction_bonus']), 'Forced movement should not trigger movement_direction_bonus.');
 fdmAssert(empty($effectState->battle[ForcedMovementResolver::PENDING_KEY]), 'Forced movement should not recursively open this mechanic.');
 
-$airinSource = fdmCard(['instanceId' => 25, 'row' => 3, 'col' => 3, 'prop' => fdmProp()]);
+$airinSource = fdmCard(['instanceId' => 25, 'row' => 3, 'col' => 1, 'prop' => fdmProp()]);
 $magicalTarget = fdmCard([
     'instanceId' => 26,
     'owner' => GameState::PLAYER_PLAYER,
-    'row' => 4,
-    'col' => 4,
+    'row' => 5,
+    'col' => 3,
     'prop' => ['actions' => [['type' => 'magic']]],
 ]);
 $airin = fdmCard([
@@ -310,13 +306,12 @@ $airin = fdmCard([
     'ukid' => 'airin-like',
     'owner' => GameState::PLAYER_PLAYER,
     'row' => 3,
-    'col' => 2,
+    'col' => 3,
     'prop' => ['airin_trigger' => true],
 ]);
 $airinState = fdmState($airinSource, $magicalTarget, $airin);
-fdmMove($airinState, $airinSource, 3, 4);
+fdmMove($airinState, $airinSource, 2, 1);
 fdmApply($airinState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['target_id' => 26]));
-fdmApply($airinState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['row' => 4, 'col' => 3]));
 fdmAssert(($airin->flags['airin_triggered_this_turn'] ?? 0) === 1, 'Forced magical movement should trigger Airin.');
 
 $alreadyAirinSource = fdmCard(['instanceId' => 28, 'row' => 3, 'col' => 3, 'prop' => fdmProp()]);
@@ -338,7 +333,6 @@ $alreadyAirin = fdmCard([
 $alreadyAirinState = fdmState($alreadyAirinSource, $alreadyMagicalTarget, $alreadyAirin);
 fdmMove($alreadyAirinState, $alreadyAirinSource, 3, 4);
 fdmApply($alreadyAirinState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['target_id' => 29]));
-fdmApply($alreadyAirinState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['row' => 4, 'col' => 3]));
 fdmAssert(empty($alreadyAirin->flags['airin_triggered_this_turn']), 'Airin should not trigger when already adjacent.');
 
 $nonMagicalAirinSource = fdmCard(['instanceId' => 31, 'row' => 3, 'col' => 3, 'prop' => fdmProp()]);
@@ -354,7 +348,6 @@ $nonMagicalAirin = fdmCard([
 $nonMagicalAirinState = fdmState($nonMagicalAirinSource, $nonMagicalTarget, $nonMagicalAirin);
 fdmMove($nonMagicalAirinState, $nonMagicalAirinSource, 3, 4);
 fdmApply($nonMagicalAirinState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['target_id' => 32]));
-fdmApply($nonMagicalAirinState, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['row' => 4, 'col' => 3]));
 fdmAssert(empty($nonMagicalAirin->flags['airin_triggered_this_turn']), 'Airin should not trigger for non-magical forced movement.');
 
 $thrower = fdmCard([
@@ -381,6 +374,20 @@ $victim = fdmCard(['instanceId' => 35, 'owner' => GameState::PLAYER_PLAYER, 'row
 $throwState = fdmState($thrower, $victim);
 fdmApply($throwState, GameState::PLAYER_HOST, new Command('action', ['card_id' => 34, 'target_id' => 35, 'action_key' => 'throw']));
 fdmAssert(($throwState->battle['strike']['damage_total'] ?? 0) === 3, 'First throw should receive next_action_bonus.');
+fdmAssert(($throwState->battle['strike']['next_action_bonus'] ?? 0) === 2, 'Server result should expose applied next_action_bonus.');
+$throwHtml = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render(
+    $throwState,
+    GameState::PLAYER_HOST,
+    'host',
+    [
+        'fdm-card' => ['name' => 'Thrower'],
+    ],
+    '?first&game=4'
+);
+fdmAssert(
+    str_contains($throwHtml, '<p class="bonus">+2 к метанию</p>'),
+    'Throw result UI should display next_action_bonus using the existing bonus paragraph.'
+);
 fdmAssert(fdmModifierCount($thrower, 'next_action_bonus') === 0, 'Next throw bonus should be consumed.');
 $throwState->battle['strike'] = null;
 fdmApply($throwState, GameState::PLAYER_HOST, new Command('action', ['card_id' => 34, 'target_id' => 35, 'action_key' => 'throw']));

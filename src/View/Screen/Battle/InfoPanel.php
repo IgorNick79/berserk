@@ -922,6 +922,17 @@ final class InfoPanel
                 $shotBonusHtml = '<p class="bonus">+' . $strike['shot_bonus'] . ' к выстрелу</p>';
             }
 
+            $nextActionBonusHtml = '';
+            if (!empty($strike['next_action_bonus'])) {
+                $nextActionLabel = match ($kind) {
+                    'throw' => 'к метанию',
+                    'shot' => 'к выстрелу',
+                    default => 'к урону',
+                };
+                $nextActionBonusHtml = '<p class="bonus">+'
+                    . $strike['next_action_bonus'] . ' ' . $nextActionLabel . '</p>';
+            }
+
             $rowsBonusHtml = '';
             if (!empty($strike['rows_bonus'])) {
                 $rowsBonusHtml = '<p class="bonus">+' . $strike['rows_bonus'] . ' к урону (все ряды)</p>';
@@ -1095,7 +1106,7 @@ final class InfoPanel
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
                     'defend_dice_html' => $defendDiceHtml,
-                    'result_text'      => $summaryHtml . $resultText . $autoHtml . $pushHtml . $impactHtml . $huntHtml . $shotBonusHtml . $rowsBonusHtml . $clumsyHtml . $abilityBonusHtml . $coinBonusHtml . $reductionHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml,
+                    'result_text'      => $summaryHtml . $resultText . $autoHtml . $pushHtml . $impactHtml . $huntHtml . $shotBonusHtml . $nextActionBonusHtml . $rowsBonusHtml . $clumsyHtml . $abilityBonusHtml . $coinBonusHtml . $reductionHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml,
                     'confirm_html'     => $confirmHtml,
                 ]);
             } else {

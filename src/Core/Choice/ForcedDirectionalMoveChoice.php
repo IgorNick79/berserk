@@ -42,42 +42,13 @@ final class ForcedDirectionalMoveChoice implements ChoiceHandlerInterface
         }
 
         $forced = new ForcedMovementResolver($state, new Engine());
-        $direction = (string) ($pending['relative_direction'] ?? '');
-        $distance = (int) ($pending['distance'] ?? 1);
-        $stage = (string) ($pending['stage'] ?? 'card');
-
-        if ($stage === 'cell') {
-            $selected = $state->getCard((int) ($pending['selected_id'] ?? 0));
-            $destination = $selected
-                ? $forced->destination($selected, $direction, $distance)
-                : null;
-
-            $buttons = [];
-            if ($selected && $destination !== null) {
-                $name = $cardsInfo[$selected->ukid]['name'] ?? $selected->ukid;
-                $row = $destination['row'];
-                $col = $destination['col'];
-                $buttons[] = [
-                    'label' => $name . ' -> (' . $row . ',' . $col . ')',
-                    'url'   => "{$baseUrl}&cmd=choose_forced_directional_move&row={$row}&col={$col}",
-                ];
-            }
-            $buttons[] = [
-                'label' => 'Закрыть',
-                'url'   => "{$baseUrl}&cmd=cancel_pending",
-                'class' => 'skip',
-            ];
-
-            return new PanelSpec(
-                title: 'Подтвердите клетку перемещения',
-                buttons: $buttons,
-            );
-        }
+        $deltaRow = (int) ($pending['delta_row'] ?? 0);
+        $deltaCol = (int) ($pending['delta_col'] ?? 0);
 
         $buttons = [];
-        foreach ($forced->eligibleTargets($playerKey, $direction, $distance) as $card) {
+        foreach ($forced->eligibleTargets($playerKey, $deltaRow, $deltaCol) as $card) {
             $name = $cardsInfo[$card->ukid]['name'] ?? $card->ukid;
-            $destination = $forced->destination($card, $direction, $distance);
+            $destination = $forced->destination($card, $deltaRow, $deltaCol);
             if ($destination === null) continue;
 
             $buttons[] = [
@@ -112,49 +83,20 @@ final class ForcedDirectionalMoveChoice implements ChoiceHandlerInterface
         }
 
         $forced = new ForcedMovementResolver($state, $engine);
-        $direction = (string) ($pending['relative_direction'] ?? '');
-        $distance = (int) ($pending['distance'] ?? 1);
-        $stage = (string) ($pending['stage'] ?? 'card');
+        $deltaRow = (int) ($pending['delta_row'] ?? 0);
+        $deltaCol = (int) ($pending['delta_col'] ?? 0);
+        $targetId = (int) $cmd->get('target_id', 0);
+        $target = $state->getCard($targetId);
 
-        if ($stage === 'card') {
-            $targetId = (int) $cmd->get('target_id', 0);
-            $target = $state->getCard($targetId);
-            if (!$target || $target->owner !== $playerKey) {
-                return Result::error('Неверная цель');
-            }
-            if (!$forced->canMove($target, $direction, $distance)) {
-                return Result::error('Существо не может быть перемещено');
-            }
-
-            $state->battle[ForcedMovementResolver::PENDING_KEY]['stage'] = 'cell';
-            $state->battle[ForcedMovementResolver::PENDING_KEY]['selected_id'] = $targetId;
-            $state->bumpVersion();
-
-            return Result::ok(["forced_directional_move_selected:{$targetId}"]);
+        if (!$target || $target->owner !== $playerKey) {
+            return Result::error('Неверная цель');
         }
-
-        if ($stage !== 'cell') {
-            return Result::error('Неверная стадия выбора');
-        }
-
-        $target = $state->getCard((int) ($pending['selected_id'] ?? 0));
-        if (!$target || $target->owner !== $playerKey || !$forced->canMove($target, $direction, $distance)) {
+        if (!$forced->canMove($target, $deltaRow, $deltaCol)) {
             return $this->decline($state, $pending, 'forced_directional_move_impossible');
-        }
-
-        $destination = $forced->destination($target, $direction, $distance);
-        if ($destination === null) {
-            return $this->decline($state, $pending, 'forced_directional_move_impossible');
-        }
-
-        $row = (int) $cmd->get('row', 0);
-        $col = (int) $cmd->get('col', 0);
-        if ($row !== $destination['row'] || $col !== $destination['col']) {
-            return Result::error('Неверная клетка');
         }
 
         unset($state->battle[ForcedMovementResolver::PENDING_KEY]);
-        return $forced->move($target, $direction, $distance);
+        return $forced->move($target, $deltaRow, $deltaCol);
     }
 
     private function decline(GameState $state, array $pending, string $event = 'forced_directional_move_declined'): Result
