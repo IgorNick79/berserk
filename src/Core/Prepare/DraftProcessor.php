@@ -1,9 +1,15 @@
 <?php
-// src/Core/DraftProcessor.php
+// src/Core/Prepare/DraftProcessor.php
 
 declare(strict_types=1);
 
-namespace Berserk\Core;
+namespace Berserk\Core\Prepare;
+
+use Berserk\Core\BoosterGenerator;
+use Berserk\Core\Db;
+use Berserk\Core\GameSettings;
+use Berserk\Core\GameState;
+use Berserk\Core\Result;
 
 final class DraftProcessor
 {
@@ -12,12 +18,25 @@ final class DraftProcessor
         private Db $db,
     ) {}
 
-    public function start(): void
+    public function start(GameSettings $settings): Result
     {
+        if ($settings->draftType() !== GameSettings::DRAFT_TYPE_GRID) {
+            return Result::error('Неподдерживаемый тип драфта');
+        }
+        if ($settings->draftGridSize() !== 3) {
+            return Result::error('Неподдерживаемый размер сетки драфта');
+        }
+        if ($settings->draftBoosters() <= 0) {
+            return Result::error('Неверное количество бустеров');
+        }
+        if ($settings->draftBoosterProfile() !== GameSettings::BOOSTER_PROFILE_DEFAULT) {
+            return Result::error('Неподдерживаемый профиль бустера');
+        }
+
         $gen = new BoosterGenerator($this->db);
 
         $pool = [];
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < $settings->draftBoosters(); $i++) {
             foreach ($gen->generate() as $ukid) {
                 $pool[] = $ukid;
             }
@@ -38,6 +57,12 @@ final class DraftProcessor
             'passed'       => ['host' => false, 'player' => false],
             'pass_blocked' => false,
         ];
+
+        return Result::ok([
+            'draft_started',
+            'draft_grid:3',
+            'draft_boosters:' . $settings->draftBoosters(),
+        ]);
     }
 
     public function pickRow(string $playerKey, int $row): Result

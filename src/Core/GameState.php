@@ -23,6 +23,7 @@ final class GameState
     public int $playerId;
     public string $status = 'mode';
     public ?string $mode = null;
+    public GameSettings $settings;
     public ?array $draft = null;
     public ?string $firstPlayer = null;
     public int $nextInstanceId = 1;
@@ -46,6 +47,7 @@ final class GameState
         $this->gameId   = $gameId;
         $this->hostId   = $hostId;
         $this->playerId = $playerId;
+        $this->settings = GameSettings::defaults();
         $this->players  = [
             self::PLAYER_HOST   => new PlayerState($hostId),
             self::PLAYER_PLAYER => new PlayerState($playerId),
@@ -62,6 +64,8 @@ final class GameState
 
         $state->version        = (int) ($data['version'] ?? 0);
         $state->status         = (string) ($data['status'] ?? 'deck');
+        $state->mode           = isset($data['mode']) ? (string) $data['mode'] : null;
+        $state->settings       = GameSettings::fromArray((array) ($data['settings'] ?? []));
         $state->firstPlayer    = $data['first_player'] ?? null;
         $state->nextInstanceId = (int) ($data['next_instance_id'] ?? 1);
         $state->battle         = (array) ($data['battle'] ?? []);
@@ -101,6 +105,8 @@ final class GameState
             'host_id'          => $this->hostId,
             'player_id'        => $this->playerId,
             'status'           => $this->status,
+            'mode'             => $this->mode,
+            'settings'         => $this->settings->toArray(),
             'first_player'     => $this->firstPlayer,
             'next_instance_id' => $this->nextInstanceId,
             'players'          => $players,

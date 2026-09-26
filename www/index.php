@@ -288,6 +288,26 @@ switch ($state->status) {
         $screenData = $result['data'];
         break;
 
+    case 'settings':
+        $roleParam = ($role === 'host') ? 'first' : 'second';
+        if ($playerKey === 'host') {
+            $screenName = 'mode';
+            $screenData = [
+                'content_html' => '<p>Настройки по умолчанию готовы.</p>'
+                    . '<div class="mode-actions">'
+                    . '<a class="button wide" href="?' . $roleParam . '&game=' . $state->gameId . '&cmd=confirm_settings">Продолжить</a>'
+                    . '</div>',
+                'message' => $message ?? '',
+            ];
+        } else {
+            $screenName = 'mode';
+            $screenData = [
+                'content_html' => '<p class="wait">Ожидание, пока хост подтвердит настройки...</p>',
+                'message' => $message ?? '',
+            ];
+        }
+        break;
+
     case 'draft':
         $result = (new DraftScreen($tpl))
             ->prepare($state, $playerKey, $role, $message, $cardsInfo);

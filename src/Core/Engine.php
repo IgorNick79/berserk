@@ -6,6 +6,7 @@ declare(strict_types=1);
 namespace Berserk\Core;
 
 use Berserk\Core\Movement\MovementResolver;
+use Berserk\Core\Prepare\DraftProcessor;
 
 /**
  * Применяет команды к состоянию партии.
@@ -41,6 +42,7 @@ final class Engine
 
         return match ($cmd->type) {
             'choose_mode'  => $this->chooseMode($state, $playerKey, $cmd),
+            'confirm_settings' => $this->confirmSettings($state, $playerKey, $cmd),
             'draft_row'    => (new DraftProcessor($state, $this->db))->pickRow($playerKey, (int) $cmd->get('row', 0)),
             'draft_col'    => (new DraftProcessor($state, $this->db))->pickCol($playerKey, (int) $cmd->get('col', 0)),
             'draft_pass'   => (new DraftProcessor($state, $this->db))->pass($playerKey),
@@ -137,27 +139,95 @@ final class Engine
         }
 
         $mode = (string) $cmd->get('mode', '');
-        if (!in_array($mode, ['draft', 'system'], true)) {
+        if (!in_array($mode, [GameSettings::MODE_DRAFT, GameSettings::MODE_SYSTEM, GameSettings::MODE_SEALED], true)) {
             return Result::error('Неверный режим');
         }
 
         $state->mode = $mode;
-
-        if ($mode === 'draft') {
-            $state->status = 'draft';
-            if ($this->db === null) {
-                return Result::error('Db недоступен для драфта');
-            }
-            (new DraftProcessor($state, $this->db))->start();
-        } else {
-            $state->status = 'deck';
-        }
+        $state->settings = GameSettings::defaults();
+        $state->status = 'settings';
 
         $state->bumpVersion();
         return Result::ok([
             "mode_chosen:{$mode}",
             "stage_changed:{$state->status}",
         ]);
+    }
+
+    private function confirmSettings(GameState $state, string $playerKey, Command $cmd): Result
+    {
+        if ($state->status !== 'settings') {
+            return Result::error('Сейчас не стадия настроек');
+        }
+        if ($playerKey !== GameState::PLAYER_HOST) {
+            return Result::error('Настройки подтверждает только хост');
+        }
+        if ($state->mode === null) {
+            return Result::error('Режим не выбран');
+        }
+
+        $state->settings = $this->settingsFromCommand($state->settings, $cmd);
+
+        switch ($state->mode) {
+            case GameSettings::MODE_SYSTEM:
+                if ($state->settings->systemDeckSelection() !== GameSettings::SYSTEM_DECK_SELECTION_MANUAL) {
+                    return Result::error('Неподдерживаемый способ выбора деки');
+                }
+
+                $state->status = 'deck';
+                $state->bumpVersion();
+                return Result::ok(['settings_confirmed:system', 'stage_changed:deck']);
+
+            case GameSettings::MODE_DRAFT:
+                if ($this->db === null) {
+                    return Result::error('Db недоступен для драфта');
+                }
+
+                $result = (new DraftProcessor($state, $this->db))->start($state->settings);
+                if (!$result->success) {
+                    return $result;
+                }
+
+                $state->status = 'draft';
+                $state->bumpVersion();
+                return Result::ok(array_merge(['settings_confirmed:draft', 'stage_changed:draft'], $result->events));
+
+            case GameSettings::MODE_SEALED:
+                return Result::error('Sealed пока не реализован');
+
+            default:
+                return Result::error('Неверный режим');
+        }
+    }
+
+    private function settingsFromCommand(GameSettings $settings, Command $cmd): GameSettings
+    {
+        $data = $settings->toArray();
+        $payloadSettings = $cmd->get('settings');
+
+        if (is_array($payloadSettings)) {
+            $data = array_merge($data, $payloadSettings);
+        }
+
+        foreach (['deck_selection'] as $key) {
+            if ($cmd->get($key) !== null) {
+                $data['system'][$key] = $cmd->get($key);
+            }
+        }
+
+        foreach (['type' => 'draft_type', 'grid_size' => 'grid_size', 'boosters' => 'boosters', 'booster_profile' => 'booster_profile'] as $settingKey => $payloadKey) {
+            if ($cmd->get($payloadKey) !== null) {
+                $data['draft'][$settingKey] = $cmd->get($payloadKey);
+            }
+        }
+
+        foreach (['boosters' => 'sealed_boosters', 'booster_profile' => 'sealed_booster_profile'] as $settingKey => $payloadKey) {
+            if ($cmd->get($payloadKey) !== null) {
+                $data['sealed'][$settingKey] = $cmd->get($payloadKey);
+            }
+        }
+
+        return GameSettings::fromArray($data);
     }
     /**
      * Хост выбирает деку. Второй играет оставшейся.
