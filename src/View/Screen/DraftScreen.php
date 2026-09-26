@@ -94,6 +94,9 @@ final class DraftScreen
 
         // ─── Кнопки действий ─────────────────────────────
         $actions = [];
+        $hostPickedCount = count($draft['picked']['host'] ?? []);
+        $playerPickedCount = count($draft['picked']['player'] ?? []);
+
         if ($isMyTurn) {
             for ($r = 1; $r <= 3; $r++) {
                 $actions[] = ['label' => 'Строка ' . $r, 'url' => $baseUrl . '&cmd=draft_row&row=' . $r];
@@ -103,10 +106,10 @@ final class DraftScreen
                 $actions[] = ['label' => 'Колонка ' . $c, 'url' => $baseUrl . '&cmd=draft_col&col=' . $c];
             }
 
-            if (!$draft['pass_blocked']) {
-                $actions[] = ['label' => 'Пас', 'url' => $baseUrl . '&cmd=draft_pass', 'class' => 'skip'];
-            } else {
-                $actions[] = ['label' => 'Пас недоступен', 'url' => '#', 'class' => 'skip', 'enabled' => false];
+            $actions[] = ['label' => 'Пас', 'url' => $baseUrl . '&cmd=draft_pass', 'class' => 'skip'];
+
+            if ($hostPickedCount >= 30 && $playerPickedCount >= 30) {
+                $actions[] = ['label' => 'Закончить драфт', 'url' => $baseUrl . '&cmd=finish_draft'];
             }
         } else {
             $actions[] = ['label' => 'Ожидание хода оппонента...', 'url' => '#', 'enabled' => false];
@@ -158,8 +161,8 @@ final class DraftScreen
 
         return ['screen' => 'draft', 'data' => [
             'turn_label'    => $isMyTurn ? 'Твой ход' : 'Ход оппонента',
-            'host_picked'   => count($draft['picked']['host'] ?? []),
-            'player_picked' => count($draft['picked']['player'] ?? []),
+            'host_picked'   => $hostPickedCount,
+            'player_picked' => $playerPickedCount,
             'pool_left'     => count($draft['pool'] ?? []),
 
             'my_total'      => $totalCount,

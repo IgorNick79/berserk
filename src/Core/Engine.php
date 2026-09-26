@@ -55,6 +55,7 @@ final class Engine
             'draft_row'    => (new DraftProcessor($state, $this->db))->pickRow($playerKey, (int) $cmd->get('row', 0)),
             'draft_col'    => (new DraftProcessor($state, $this->db))->pickCol($playerKey, (int) $cmd->get('col', 0)),
             'draft_pass'   => (new DraftProcessor($state, $this->db))->pass($playerKey),
+            'finish_draft' => (new DraftProcessor($state, $this->db))->finish($playerKey),
             'select_deck'  => $this->selectDeck($state, $playerKey, $cmd),
             'confirm_view' => $this->confirmView($state, $playerKey, $cmd),
             'confirm_turn' => $this->confirmTurn($state, $playerKey, $cmd),

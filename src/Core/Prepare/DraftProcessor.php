@@ -13,6 +13,8 @@ use Berserk\Core\Result;
 
 final class DraftProcessor
 {
+    private const MIN_DRAFTED_CARDS_TO_FINISH = 30;
+
     public function __construct(
         private GameState $state,
         private Db $db,
@@ -50,12 +52,10 @@ final class DraftProcessor
         }
 
         $this->state->draft = [
-            'pool'         => $pool,
-            'grid'         => $grid,
-            'turn'         => 'host',
-            'picked'       => ['host' => [], 'player' => []],
-            'passed'       => ['host' => false, 'player' => false],
-            'pass_blocked' => false,
+            'pool'   => $pool,
+            'grid'   => $grid,
+            'turn'   => 'host',
+            'picked' => ['host' => [], 'player' => []],
         ];
 
         return Result::ok([
@@ -115,7 +115,6 @@ final class DraftProcessor
         }
 
         $this->state->draft['turn']   = $this->opponent($playerKey);
-        $this->state->draft['passed'] = ['host' => false, 'player' => false];
 
         return $this->checkEnd('picked:' . count($taken));
     }
@@ -125,18 +124,26 @@ final class DraftProcessor
         $draft = $this->state->draft ?? null;
         if (!$draft) return Result::error('Драфт не активен');
         if ($draft['turn'] !== $playerKey) return Result::error('Не ваш ход');
-        if ($draft['pass_blocked']) return Result::error('Пас больше недоступен');
-
-        $this->state->draft['passed'][$playerKey] = true;
-
-        if ($this->state->draft['passed']['host'] && $this->state->draft['passed']['player']) {
-            $this->state->draft['pass_blocked'] = true;
-            $this->state->draft['passed']       = ['host' => false, 'player' => false];
-        }
 
         $this->state->draft['turn'] = $this->opponent($playerKey);
 
         return $this->checkEnd('passed');
+    }
+
+    public function finish(string $playerKey): Result
+    {
+        if ($this->state->status !== 'draft') {
+            return Result::error('Сейчас не стадия драфта');
+        }
+
+        $draft = $this->state->draft ?? null;
+        if (!$draft) return Result::error('Драфт не активен');
+        if (($draft['turn'] ?? null) !== $playerKey) return Result::error('Не ваш ход');
+        if (!$this->canFinish($draft)) {
+            return Result::error('Недостаточно карт для завершения драфта');
+        }
+
+        return $this->finalize('draft_finished_manually');
     }
 
     private function checkEnd(string $event): Result
@@ -149,10 +156,19 @@ final class DraftProcessor
         }
 
         if ($allEmpty && empty($draft['pool'])) {
+            if (!$this->canFinish($draft)) {
+                return Result::error('Пул драфта исчерпан, но у игроков недостаточно карт');
+            }
             return $this->finalize($event);
         }
 
         return Result::ok([$event]);
+    }
+
+    private function canFinish(array $draft): bool
+    {
+        return count($draft['picked']['host'] ?? []) >= self::MIN_DRAFTED_CARDS_TO_FINISH
+            && count($draft['picked']['player'] ?? []) >= self::MIN_DRAFTED_CARDS_TO_FINISH;
     }
 
     private function finalize(string $event): Result
