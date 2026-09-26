@@ -1035,6 +1035,9 @@ final class ActionResolver
             $val += $shotBonus;
         }
 
+        $nextActionBonus = CardStats::getNextActionBonus($attacker, $type);
+        $val += $nextActionBonus;
+
         $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, $type);
         $val -= $reduction;
         if ($val < 0) $val = 0;
@@ -1057,6 +1060,7 @@ final class ActionResolver
         if ($reduction > 0) $this->state->battle['strike']['damage_reduction'] = $reduction;
         if ($abilityBonus > 0) $this->state->battle['strike']['ability_bonus'] = $abilityBonus;
         if ($shotBonus > 0) $this->state->battle['strike']['shot_bonus'] = $shotBonus;
+        if ($nextActionBonus > 0) $this->state->battle['strike']['next_action_bonus'] = $nextActionBonus;
         if ($coinBonus > 0) {
             $this->state->battle['strike']['coin_bonus'] = $coinBonus;
             $this->state->battle['strike']['coins_spent'] = $coinsSpent;
@@ -1077,6 +1081,8 @@ final class ActionResolver
             $attacker->closed = true;
         }
 
+        $this->consumeNextActionBonuses($attacker, $type);
+
         // Условие-действие: помечаем как использованное
         if (!empty($action['condition'])
             && ($action['condition']['type'] ?? '') === 'ally_price_near') {
@@ -1092,6 +1098,24 @@ final class ActionResolver
 
         $this->state->bumpVersion();
         return Result::ok(["action:{$playerKey}:{$type}:{$cardId}->{$targetId}:dmg={$val}"]);
+    }
+
+    private function consumeNextActionBonuses(CardInstance $card, string $actionType): void
+    {
+        $kept = [];
+        foreach ($card->modifiers as $m) {
+            if (($m['stat'] ?? '') !== 'next_action_bonus' || empty($m['consume'])) {
+                $kept[] = $m;
+                continue;
+            }
+
+            $types = $m['types'] ?? null;
+            if (is_array($types) && !in_array($actionType, $types, true)) {
+                $kept[] = $m;
+            }
+        }
+
+        $card->modifiers = $kept;
     }
 
     private function startTransfer(

@@ -6,6 +6,7 @@ declare(strict_types=1);
 namespace Berserk\Core;
 
 use Berserk\Core\Movement\MovementResolver;
+use Berserk\Core\Movement\ForcedMovementResolver;
 use Berserk\Core\Prepare\DraftProcessor;
 
 /**
@@ -27,9 +28,13 @@ final class Engine
     {
 
         // Реестр ChoiceHandler — новые команды
-        $handler = Choice\ChoiceRegistry::byCommandType($cmd->type);
+        $handler = Choice\ChoiceRegistry::byCommandType($cmd->type, $state);
         if ($handler !== null) {
             return $handler->apply($state, $this, $playerKey, $cmd);
+        }
+
+        if (!empty($state->battle[ForcedMovementResolver::PENDING_KEY])) {
+            return Result::error('Ожидается выбор обязательного перемещения');
         }
 
         $strike = new StrikeResolver($state, $this);

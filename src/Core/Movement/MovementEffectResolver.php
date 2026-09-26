@@ -28,7 +28,16 @@ final class MovementEffectResolver
 
         $this->engine->clearRootedBySource($this->state, $card->instanceId);
         $this->engine->refreshArmor($this->state);
+        $this->maybeOpenForcedDirectionalMove($context);
         $this->maybeOpenForcedStrike($card, $context->playerKey);
+    }
+
+    public function applyForcedPositionChange(MovementContext $context): void
+    {
+        $this->applyMovePenalty($context->card);
+        $this->engine->syncCoinBonus($context->card);
+        $this->applyAirinTriggers($context);
+        $this->engine->refreshArmor($this->state);
     }
 
     private function applyMovePenalty(CardInstance $card): void
@@ -247,6 +256,45 @@ final class MovementEffectResolver
             'owner'       => $playerKey,
             'attacker_id' => $card->instanceId,
             'candidates'  => $candidates,
+        ];
+    }
+
+    private function maybeOpenForcedDirectionalMove(MovementContext $context): void
+    {
+        $card = $context->card;
+        $config = $card->prop['force_opponent_directional_move'] ?? null;
+        if (!is_array($config)) return;
+        if ($context->movementType !== MovementContext::TYPE_MOVE) return;
+        if ($context->manhattanDistance() !== 1) return;
+
+        $direction = ForcedMovementResolver::relativeDirectionForDelta(
+            $card->owner,
+            $context->deltaRow(),
+            $context->deltaCol(),
+        );
+        if ($direction === null) return;
+
+        $distance = (int) ($config['distance'] ?? 1);
+        if ($distance <= 0) return;
+
+        $responder = $this->state->getOpponentKey($card->owner);
+        $forced = new ForcedMovementResolver($this->state, $this->engine);
+        $fallback = (array) ($config['fallback'] ?? []);
+
+        if (empty($forced->eligibleTargets($responder, $direction, $distance))) {
+            ForcedMovementResolver::applyFallback($card, $fallback);
+            return;
+        }
+
+        $this->state->battle[ForcedMovementResolver::PENDING_KEY] = [
+            'owner'              => $responder,
+            'source_id'          => $card->instanceId,
+            'source_owner'       => $card->owner,
+            'relative_direction' => $direction,
+            'distance'           => $distance,
+            'stage'              => 'card',
+            'selected_id'        => null,
+            'fallback'           => $fallback,
         ];
     }
 }

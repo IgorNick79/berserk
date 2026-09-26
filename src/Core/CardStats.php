@@ -160,6 +160,21 @@ final class CardStats
         return $bonus;
     }
 
+    public static function getNextActionBonus(CardInstance $card, string $actionType): int
+    {
+        $bonus = 0;
+        foreach ($card->modifiers as $m) {
+            if (($m['stat'] ?? '') !== 'next_action_bonus') continue;
+
+            $types = $m['types'] ?? null;
+            if (is_array($types) && !in_array($actionType, $types, true)) continue;
+
+            $bonus += (int) ($m['value'] ?? 0);
+        }
+
+        return $bonus;
+    }
+
     public static function getAbilityBonus(
         GameState $state,
         CardInstance $attacker,
@@ -774,6 +789,7 @@ final class CardStats
             'regeneration'   => 'реген',
             'move'           => 'Ход',
             'shot_bonus'     => 'Выстрел',
+            'next_action_bonus' => 'Действие',
             'zoal'           => 'ЗОАЛ',
             'damage_reduction' => 'Защита',
             'shield_light'      => 'Щит',

@@ -11,6 +11,7 @@ final class MovementContext
 {
     public const TYPE_MOVE = 'move';
     public const TYPE_JUMP = 'jump';
+    public const TYPE_FORCED_MOVE = 'forced_move';
 
     public function __construct(
         public readonly CardInstance $card,

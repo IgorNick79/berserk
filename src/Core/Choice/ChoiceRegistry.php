@@ -38,6 +38,7 @@ final class ChoiceRegistry
                 new TransferChoice(), 
                 new ReviveChoice(),
                 new GrezyChoice(),
+                new ForcedDirectionalMoveChoice(),
                 new ForcedStrikeChoice(),
                 // ─── Фаза хода ───────────────────────────────────────
                 new TurnAckChoice(),
@@ -57,8 +58,17 @@ final class ChoiceRegistry
         return null;
     }
 
-    public static function byCommandType(string $type): ?ChoiceHandlerInterface
+    public static function byCommandType(string $type, ?GameState $state = null): ?ChoiceHandlerInterface
     {
+        if ($type === 'cancel_pending' && $state !== null) {
+            foreach (self::all() as $h) {
+                $key = $h->pendingKey();
+                if (empty($state->battle[$key])) continue;
+                if (in_array($type, $h->commandTypes(), true)) return $h;
+            }
+            return null;
+        }
+
         foreach (self::all() as $h) {
             if (in_array($type, $h->commandTypes(), true)) return $h;
         }
