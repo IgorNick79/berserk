@@ -207,13 +207,9 @@ final class TurnProcessor
 
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $endingKey) continue;
-            if (empty($card->prop['riala_movement'])) continue;
+            if (empty($card->prop['movement_direction_bonus'])) continue;
 
-            unset(
-                $card->flags['riala_movement_dirs'],
-                $card->flags['riala_direct_granted_this_turn'],
-                $card->flags['riala_ova_granted_this_turn'],
-            );
+            unset($card->flags['movement_direction_bonus']);
         }
 
         // Тик маркеров клеток

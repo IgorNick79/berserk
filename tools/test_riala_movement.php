@@ -55,10 +55,37 @@ function rialaCard(array $overrides = []): CardInstance
         closed: $overrides['closed'] ?? false,
         move: $overrides['move'] ?? 6,
         moveMax: $overrides['moveMax'] ?? 6,
-        prop: $overrides['prop'] ?? ['riala_movement' => true],
+        prop: $overrides['prop'] ?? rialaMovementDirectionBonus(),
         markers: $overrides['markers'] ?? [],
         flags: $overrides['flags'] ?? [],
     );
+}
+
+function rialaMovementDirectionBonus(array $overrides = []): array
+{
+    $config = [
+        'same_direction' => [
+            'moves' => 2,
+            'modifier' => [
+                'stat' => 'direct',
+                'value' => true,
+            ],
+        ],
+        'different_directions' => [
+            'count' => 2,
+            'modifier' => [
+                'stat' => 'ova',
+                'value' => 2,
+            ],
+        ],
+        'expire' => 'end_of_turn',
+    ];
+
+    foreach ($overrides as $key => $value) {
+        $config[$key] = $value;
+    }
+
+    return ['movement_direction_bonus' => $config];
 }
 
 function rialaMove(GameState $state, CardInstance $card, int $row, int $col): void
@@ -89,7 +116,7 @@ function rialaModifierCount(CardInstance $card, string $stat): int
 {
     $count = 0;
     foreach ($card->modifiers as $modifier) {
-        if (($modifier['source'] ?? null) === 'riala_movement'
+        if (($modifier['source'] ?? null) === 'movement_direction_bonus'
             && ($modifier['stat'] ?? null) === $stat) {
             $count++;
         }
@@ -102,7 +129,7 @@ function rialaOvaValue(CardInstance $card): int
 {
     $value = 0;
     foreach ($card->modifiers as $modifier) {
-        if (($modifier['source'] ?? null) === 'riala_movement'
+        if (($modifier['source'] ?? null) === 'movement_direction_bonus'
             && ($modifier['stat'] ?? null) === 'ova') {
             $value += (int) ($modifier['value'] ?? 0);
         }
@@ -166,7 +193,7 @@ rialaAssertBonuses($rightLeftRight, 1, 1, 'Right, left, right should eventually 
 
 $jumpingRiala = rialaCard([
     'prop' => [
-        'riala_movement' => true,
+        'movement_direction_bonus' => rialaMovementDirectionBonus()['movement_direction_bonus'],
         'actions' => [['type' => 'jump', 'range' => 2]],
     ],
 ]);
@@ -174,7 +201,7 @@ $jumpingState = rialaState($jumpingRiala);
 rialaJump($jumpingState, $jumpingRiala, 3, 4);
 rialaAssertBonuses($jumpingRiala, 0, 0, 'Jump should not count for Riala movement.');
 rialaAssert(
-    empty($jumpingRiala->flags['riala_movement_dirs']),
+    empty($jumpingRiala->flags['movement_direction_bonus']),
     'Jump should not update Riala movement direction history.'
 );
 
@@ -194,8 +221,45 @@ rialaMove($normalState, $normalCard, 3, 4);
 rialaMove($normalState, $normalCard, 3, 5);
 rialaAssertBonuses($normalCard, 0, 0, 'Non-Riala cards should not receive Riala bonuses.');
 rialaAssert(
-    empty($normalCard->flags['riala_movement_dirs']),
+    empty($normalCard->flags['movement_direction_bonus']),
     'Non-Riala cards should not track Riala directions.'
+);
+
+$customConfig = rialaCard([
+    'col' => 2,
+    'prop' => rialaMovementDirectionBonus([
+        'same_direction' => [
+            'moves' => 3,
+            'modifier' => [
+                'stat' => 'ova',
+                'value' => 3,
+            ],
+        ],
+        'different_directions' => [
+            'count' => 3,
+            'modifier' => [
+                'stat' => 'ability_strike',
+                'value' => 4,
+            ],
+        ],
+    ]),
+]);
+$customConfigState = rialaState($customConfig);
+rialaMove($customConfigState, $customConfig, 3, 3);
+rialaMove($customConfigState, $customConfig, 3, 4);
+rialaAssert(
+    rialaModifierCount($customConfig, 'ova') === 0,
+    'Custom same-direction threshold should not trigger before configured move count.'
+);
+rialaMove($customConfigState, $customConfig, 3, 5);
+rialaAssert(
+    rialaModifierCount($customConfig, 'ova') === 1
+    && rialaOvaValue($customConfig) === 3,
+    'Custom same-direction modifier stat/value should come from configuration.'
+);
+rialaAssert(
+    rialaModifierCount($customConfig, 'ability_strike') === 0,
+    'Custom different-directions threshold should not trigger before configured direction count.'
 );
 
 $cleanup = rialaCard();
@@ -205,9 +269,7 @@ rialaMove($cleanupState, $cleanup, 3, 5);
 (new TurnProcessor($cleanupState, new Engine()))->afterEndPhase(GameState::PLAYER_HOST, GameState::PLAYER_PLAYER);
 rialaAssertBonuses($cleanup, 0, 0, 'End of turn should expire Riala bonuses.');
 rialaAssert(
-    empty($cleanup->flags['riala_movement_dirs'])
-    && empty($cleanup->flags['riala_direct_granted_this_turn'])
-    && empty($cleanup->flags['riala_ova_granted_this_turn']),
+    empty($cleanup->flags['movement_direction_bonus']),
     'End of turn should clear Riala movement runtime flags.'
 );
 

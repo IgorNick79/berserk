@@ -23,7 +23,7 @@ final class MovementEffectResolver
         $this->applyMovePenalty($card);
         $this->engine->syncCoinBonus($card);
         $this->applyOnMoveEffects($context);
-        $this->applyRialaMovement($context);
+        $this->applyMovementDirectionBonus($context);
         $this->applyAirinTriggers($context);
 
         $this->engine->clearRootedBySource($this->state, $card->instanceId);
@@ -91,10 +91,11 @@ final class MovementEffectResolver
         return $row >= 4 ? 'own' : 'enemy';
     }
 
-    private function applyRialaMovement(MovementContext $context): void
+    private function applyMovementDirectionBonus(MovementContext $context): void
     {
         $card = $context->card;
-        if (empty($card->prop['riala_movement'])) {
+        $config = $card->prop['movement_direction_bonus'] ?? null;
+        if (!is_array($config)) {
             return;
         }
         if ($context->movementType !== MovementContext::TYPE_MOVE) {
@@ -106,35 +107,56 @@ final class MovementEffectResolver
             return;
         }
 
-        $counts = $card->flags['riala_movement_dirs'] ?? [];
+        $state = $card->flags['movement_direction_bonus'] ?? [];
+        if (!is_array($state)) {
+            $state = [];
+        }
+
+        $counts = $state['directions'] ?? [];
         if (!is_array($counts)) {
             $counts = [];
         }
-
         $counts[$direction] = ((int) ($counts[$direction] ?? 0)) + 1;
-        $card->flags['riala_movement_dirs'] = $counts;
+        $state['directions'] = $counts;
 
-        if (empty($card->flags['riala_direct_granted_this_turn'])
-            && max($counts) >= 2) {
-            $card->modifiers[] = [
-                'stat'   => 'direct',
-                'value'  => true,
-                'expire' => 'end_of_turn',
-                'source' => 'riala_movement',
-            ];
-            $card->flags['riala_direct_granted_this_turn'] = true;
+        $sameDirection = $config['same_direction'] ?? null;
+        if (empty($state['same_direction_granted'])
+            && is_array($sameDirection)
+            && (int) ($sameDirection['moves'] ?? 0) > 0
+            && max($counts) >= (int) $sameDirection['moves']
+            && $this->grantConfiguredMovementModifier($card, $sameDirection['modifier'] ?? null, $config)) {
+            $state['same_direction_granted'] = true;
         }
 
-        if (empty($card->flags['riala_ova_granted_this_turn'])
-            && count(array_filter($counts, fn($count) => (int) $count > 0)) >= 2) {
-            $card->modifiers[] = [
-                'stat'   => 'ova',
-                'value'  => 2,
-                'expire' => 'end_of_turn',
-                'source' => 'riala_movement',
-            ];
-            $card->flags['riala_ova_granted_this_turn'] = true;
+        $differentDirections = $config['different_directions'] ?? null;
+        if (empty($state['different_directions_granted'])
+            && is_array($differentDirections)
+            && (int) ($differentDirections['count'] ?? 0) > 0
+            && count(array_filter($counts, fn($count) => (int) $count > 0)) >= (int) $differentDirections['count']
+            && $this->grantConfiguredMovementModifier($card, $differentDirections['modifier'] ?? null, $config)) {
+            $state['different_directions_granted'] = true;
         }
+
+        $card->flags['movement_direction_bonus'] = $state;
+    }
+
+    private function grantConfiguredMovementModifier(CardInstance $card, mixed $modifier, array $config): bool
+    {
+        if (!is_array($modifier) || empty($modifier['stat'])) {
+            return false;
+        }
+
+        $applied = [
+            'stat'   => (string) $modifier['stat'],
+            'value'  => array_key_exists('value', $modifier) ? $modifier['value'] : 1,
+            'source' => 'movement_direction_bonus',
+        ];
+        if (array_key_exists('expire', $config)) {
+            $applied['expire'] = $config['expire'];
+        }
+
+        $card->modifiers[] = $applied;
+        return true;
     }
 
     private function orthogonalDirection(MovementContext $context): ?string
