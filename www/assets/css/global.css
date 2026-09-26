@@ -63,7 +63,7 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 }
 
 .prepare-card-preview--empty { color: #777; font-style: italic; }
-.prepare-card-preview__media { width: 120px; flex: 0 0 120px; }
+.prepare-card-preview__media { min-width: 280px; flex: 0 0 280px; }
 .prepare-card-preview__image { max-width: 100%; border-radius: 4px; display: block; }
 .prepare-card-preview__info { flex: 1; min-width: 180px; }
 .prepare-card-preview__info h3 { margin: 0 0 6px; }
@@ -907,8 +907,8 @@ body { padding-bottom: 46vh; }
 }
 
 .draft-preview-slot {
-    width: 360px;
-    flex: 0 0 360px;
+    width: 560px;
+    flex: 0 0 560px;
 }
 
 .draft-preview-slot .prepare-card-preview {
