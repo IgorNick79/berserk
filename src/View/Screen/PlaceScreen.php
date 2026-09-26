@@ -188,7 +188,8 @@ final class PlaceScreen
                 }
             }
         }
-        $previewHtml = $ui->preview($previewCard, $cardActions, 'Выбери карту отряда');
+        $previewHtml = $ui->preview($previewCard, [], 'Выбери карту отряда');
+        $cardActionsHtml = $ui->actions($cardActions);
 
         return [
             'screen' => 'place',
@@ -197,6 +198,7 @@ final class PlaceScreen
                 'squad_html'   => $squadHtml,
                 'squad_count'  => $squadCount,
                 'preview_html' => $previewHtml,
+                'card_actions_html' => $cardActionsHtml,
                 'confirm_html' => $confirmHtml,
                 'message'      => $message ?? '',
             ],

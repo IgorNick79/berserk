@@ -72,6 +72,68 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 .prepare-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .prepare-action.disabled { background: #aaa; cursor: default; }
 
+.prepare-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    margin: 16px 0;
+}
+
+.prepare-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 620px;
+}
+
+.prepare-preview-slot {
+    width: 560px;
+    flex: 0 0 560px;
+}
+
+.prepare-preview-slot .prepare-card-preview {
+    margin-top: 16px;
+}
+
+.prepare-bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 1px solid #ddd;
+    color: #222;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    z-index: 100;
+}
+
+.prepare-bottom-summary {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 14px;
+    color: #444;
+}
+
+.prepare-bottom-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.prepare-bottom-actions .prepare-actions {
+    display: contents;
+}
+
+.screen-prepare {
+    padding-bottom: 90px;
+}
+
 .field-cell .prepare-card {
     width: 100%;
     min-height: 100%;

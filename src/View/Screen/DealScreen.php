@@ -145,7 +145,8 @@ final class DealScreen
                 }
             }
         }
-        $previewHtml = $ui->preview($selectedCard, $cardActions, 'Выбери карту');
+        $previewHtml = $ui->preview($selectedCard, [], 'Выбери карту');
+        $cardActionsHtml = $ui->actions($cardActions);
 
         return [
             'screen' => 'deal',
@@ -161,6 +162,7 @@ final class DealScreen
                 'elements_count' => $elementsCount,
                 'penalty_class'  => $penalty > 0 ? 'active' : '',
                 'preview_html'   => $previewHtml,
+                'card_actions_html' => $cardActionsHtml,
                 'confirm_html'   => $confirmHtml,
                 'reshuffle_html' => $reshuffleHtml,
                 'message'        => $message ?? '',
