@@ -205,6 +205,17 @@ final class TurnProcessor
             $card->modifiers = $kept;
         }
 
+        foreach ($this->state->cards as $card) {
+            if ($card->owner !== $endingKey) continue;
+            if (empty($card->prop['riala_movement'])) continue;
+
+            unset(
+                $card->flags['riala_movement_dirs'],
+                $card->flags['riala_direct_granted_this_turn'],
+                $card->flags['riala_ova_granted_this_turn'],
+            );
+        }
+
         // Тик маркеров клеток
         foreach ($this->state->cell_markers as $key => &$m) {
             if (!isset($m['expire'])) continue;

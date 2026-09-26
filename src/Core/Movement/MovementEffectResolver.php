@@ -23,6 +23,7 @@ final class MovementEffectResolver
         $this->applyMovePenalty($card);
         $this->engine->syncCoinBonus($card);
         $this->applyOnMoveEffects($context);
+        $this->applyRialaMovement($context);
         $this->applyAirinTriggers($context);
 
         $this->engine->clearRootedBySource($this->state, $card->instanceId);
@@ -88,6 +89,63 @@ final class MovementEffectResolver
         }
 
         return $row >= 4 ? 'own' : 'enemy';
+    }
+
+    private function applyRialaMovement(MovementContext $context): void
+    {
+        $card = $context->card;
+        if (empty($card->prop['riala_movement'])) {
+            return;
+        }
+        if ($context->movementType !== MovementContext::TYPE_MOVE) {
+            return;
+        }
+
+        $direction = $this->orthogonalDirection($context);
+        if ($direction === null) {
+            return;
+        }
+
+        $counts = $card->flags['riala_movement_dirs'] ?? [];
+        if (!is_array($counts)) {
+            $counts = [];
+        }
+
+        $counts[$direction] = ((int) ($counts[$direction] ?? 0)) + 1;
+        $card->flags['riala_movement_dirs'] = $counts;
+
+        if (empty($card->flags['riala_direct_granted_this_turn'])
+            && max($counts) >= 2) {
+            $card->modifiers[] = [
+                'stat'   => 'direct',
+                'value'  => true,
+                'expire' => 'end_of_turn',
+                'source' => 'riala_movement',
+            ];
+            $card->flags['riala_direct_granted_this_turn'] = true;
+        }
+
+        if (empty($card->flags['riala_ova_granted_this_turn'])
+            && count(array_filter($counts, fn($count) => (int) $count > 0)) >= 2) {
+            $card->modifiers[] = [
+                'stat'   => 'ova',
+                'value'  => 2,
+                'expire' => 'end_of_turn',
+                'source' => 'riala_movement',
+            ];
+            $card->flags['riala_ova_granted_this_turn'] = true;
+        }
+    }
+
+    private function orthogonalDirection(MovementContext $context): ?string
+    {
+        return match ([$context->deltaRow(), $context->deltaCol()]) {
+            [-1, 0] => 'up',
+            [1, 0] => 'down',
+            [0, -1] => 'left',
+            [0, 1] => 'right',
+            default => null,
+        };
     }
 
     private function applyAirinTriggers(MovementContext $context): void
