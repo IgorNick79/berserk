@@ -7,7 +7,10 @@ namespace Berserk\Core;
 
 final class DamageResolver
 {
-    public function __construct(private GameState $state) {}
+    public function __construct(
+        private GameState $state,
+        private ?\Closure $syncCoinBonus = null,
+    ) {}
 
     public function applyDamage(
         CardInstance $target,
@@ -472,7 +475,7 @@ final class DamageResolver
                 if ($max > 0 && $seeder->coins > $max) $seeder->coins = $max;
 
                 if ($seeder->coins > $before) {
-                    $this->syncCoinBonus($seeder);
+                    $this->syncCoinBonusViaOwner($seeder);
                 }
 
                 if (!empty($config['once_per_turn'])) {
@@ -557,24 +560,6 @@ final class DamageResolver
         return Result::ok(["any_death_target:{$targetId}"]);
     }
 
-    public function syncCoinBonus(CardInstance $card): void
-    {
-        if (empty($card->prop['coin_strike_bonus'])) return;
-
-        $card->modifiers = array_values(array_filter(
-            $card->modifiers,
-            fn($m) => ($m['stat'] ?? '') !== 'coin_strike_bonus'
-        ));
-
-        if ($card->coins <= 0) return;
-
-        $card->modifiers[] = [
-            'stat'   => 'coin_strike_bonus',
-            'value'  => (int) $card->coins,
-            'expire' => 'permanent',
-        ];
-    }
-
     private function applyPoison(CardInstance $target, int $value, string $sourceKey): void
     {
         if ($value <= 0) return;
@@ -616,5 +601,16 @@ final class DamageResolver
                 $target->markers[$type]['skip_first_tick'] = true;
             }
         }
+    }
+
+    private function syncCoinBonusViaOwner(CardInstance $card): void
+    {
+        if (empty($card->prop['coin_strike_bonus'])) return;
+
+        if ($this->syncCoinBonus === null) {
+            throw new \LogicException('Coin bonus synchronization is required for this damage lifecycle path');
+        }
+
+        ($this->syncCoinBonus)($card);
     }
 }

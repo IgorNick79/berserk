@@ -219,12 +219,15 @@ final class ValhallaProcessor
 
             case 'get_coins':
                 if (!$target) return;
+                if ($this->engine === null && !empty($target->prop['coin_strike_bonus'])) {
+                    throw new \LogicException('Valhalla get_coins requires Engine coin bonus synchronization');
+                }
+
                 $max = (int) ($target->prop['coins']['max_value'] ?? 0);
                 $target->coins += $value;
                 if ($max > 0 && $target->coins > $max) $target->coins = $max;
-                if ($this->damage !== null) {
-                    $this->damage->syncCoinBonus($target);
-                } elseif ($this->engine !== null) {
+
+                if ($this->engine !== null) {
                     $this->engine->syncCoinBonus($target);
                 }
                 break;

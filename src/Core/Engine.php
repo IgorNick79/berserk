@@ -81,11 +81,11 @@ final class Engine
             'end_turn'            => $turn->endTurn($playerKey, $cmd),
             'resign'              => $this->resign($state, $playerKey, $cmd),
             'gain_coin'               => $this->gainCoin($state, $playerKey, $cmd),
-            'choose_death_target'     => (new DamageResolver($state))->chooseDeathTarget($playerKey, $cmd),
+            'choose_death_target'     => $this->damageResolver($state)->chooseDeathTarget($playerKey, $cmd),
             'choose_auto_target'      => $this->chooseAutoTarget($state, $playerKey, $cmd),
             'choose_card_option'      => $turn->chooseCardOption($playerKey, $cmd),
             'choose_push_choice'      => $strike->choosePushChoice($playerKey, $cmd),
-            'choose_any_death_target' => (new DamageResolver($state))->chooseAnyDeathTarget($playerKey, $cmd),
+            'choose_any_death_target' => $this->damageResolver($state)->chooseAnyDeathTarget($playerKey, $cmd),
             'choose_transfer_donor'   => $action->chooseTransferDonor($playerKey, $cmd),
             'choose_transfer_amount'  => $action->chooseTransferAmount($playerKey, $cmd),
             'choose_incarnation_cell' => $turn->chooseIncarnationCell($playerKey, $cmd),
@@ -952,7 +952,7 @@ final class Engine
         ?CardInstance $attacker = null,
         bool $skipHunt = false
     ): void {
-        (new DamageResolver($state))->applyDamage($target, $val, $actionType, $attacker, $skipHunt);
+        $this->damageResolver($state)->applyDamage($target, $val, $actionType, $attacker, $skipHunt);
     }
 
     private function diceToLevel(int $dice): string
@@ -985,7 +985,7 @@ final class Engine
 
     public function checkGameOver(GameState $state): void
     {
-        (new DamageResolver($state))->checkGameOver();
+        $this->damageResolver($state)->checkGameOver();
     }
 
     private function gainCoin(GameState $state, string $playerKey, Command $cmd): Result
@@ -1103,12 +1103,12 @@ final class Engine
 
     public function refreshArmor(GameState $state): void
     {
-        (new DamageResolver($state))->refreshArmor();
+        $this->damageResolver($state)->refreshArmor();
     }
 
     public function triggerOnDeath(GameState $state, CardInstance $died): void
     {
-        (new DamageResolver($state))->triggerOnDeath($died);
+        $this->damageResolver($state)->triggerOnDeath($died);
     }
 
 
@@ -1173,7 +1173,7 @@ final class Engine
 
     public function flushDeadeatQueue(GameState $state): void
     {
-        (new DamageResolver($state))->flushDeadeatQueue();
+        $this->damageResolver($state)->flushDeadeatQueue();
     }
 
     public function applyAnswer(
@@ -1182,7 +1182,7 @@ final class Engine
         CardInstance $attacker,
         string $actionType
     ): void {
-        (new DamageResolver($state))->applyAnswer($defender, $attacker, $actionType);
+        $this->damageResolver($state)->applyAnswer($defender, $attacker, $actionType);
     }
 
     public function openAutoChoice(GameState $state, CardInstance $attacker): bool
@@ -1325,7 +1325,7 @@ final class Engine
 
     public function clearRootedBySource(GameState $state, int $sourceId): void
     {
-        (new DamageResolver($state))->clearRootedBySource($sourceId);
+        $this->damageResolver($state)->clearRootedBySource($sourceId);
     }
 
     public function getRegenerationAmount(CardInstance $card): int
@@ -1344,7 +1344,12 @@ final class Engine
 
     public function triggerOnAnyDeath(GameState $state, CardInstance $died, string $cause = 'any'): void
     {
-        (new DamageResolver($state))->triggerOnAnyDeath($died, $cause);
+        $this->damageResolver($state)->triggerOnAnyDeath($died, $cause);
+    }
+
+    private function damageResolver(GameState $state): DamageResolver
+    {
+        return new DamageResolver($state, \Closure::fromCallable([$this, 'syncCoinBonus']));
     }
 
 
