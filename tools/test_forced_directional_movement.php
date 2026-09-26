@@ -172,6 +172,7 @@ fdmAssert($pending['owner'] === GameState::PLAYER_PLAYER, 'Opponent should own t
 fdmAssert($pending['relative_direction'] === 'right', 'Host right move should be stored as relative right.');
 
 fdmApplyFails($state, GameState::PLAYER_HOST, new Command('end_turn'), 'Pending should block unrelated commands.');
+fdmApplyFails($state, GameState::PLAYER_PLAYER, new Command('choose_dice_choice', ['choice' => 'attack_plus']), 'Pending should block commands belonging to other ChoiceHandlers.');
 fdmApply($state, GameState::PLAYER_PLAYER, new Command('choose_forced_directional_move', ['target_id' => 2]));
 $pending = fdmPending($state);
 fdmAssert($pending['stage'] === 'cell' && $pending['selected_id'] === 2, 'Stage 1 should select a card.');
