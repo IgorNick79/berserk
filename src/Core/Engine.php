@@ -5,6 +5,8 @@ declare(strict_types=1);
 
 namespace Berserk\Core;
 
+use Berserk\Core\Movement\MovementResolver;
+
 /**
  * Применяет команды к состоянию партии.
  * Единая точка входа для игровой логики.
