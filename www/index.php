@@ -25,6 +25,7 @@ use Berserk\View\Screen\DealScreen;
 use Berserk\View\Screen\PlaceScreen;
 use Berserk\View\Screen\BattleScreen;
 use Berserk\View\Screen\DraftScreen;
+use Berserk\View\Screen\SettingsScreen;
 
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
@@ -289,23 +290,10 @@ switch ($state->status) {
         break;
 
     case 'settings':
-        $roleParam = ($role === 'host') ? 'first' : 'second';
-        if ($playerKey === 'host') {
-            $screenName = 'mode';
-            $screenData = [
-                'content_html' => '<p>Настройки по умолчанию готовы.</p>'
-                    . '<div class="mode-actions">'
-                    . '<a class="button wide" href="?' . $roleParam . '&game=' . $state->gameId . '&cmd=confirm_settings">Продолжить</a>'
-                    . '</div>',
-                'message' => $message ?? '',
-            ];
-        } else {
-            $screenName = 'mode';
-            $screenData = [
-                'content_html' => '<p class="wait">Ожидание, пока хост подтвердит настройки...</p>',
-                'message' => $message ?? '',
-            ];
-        }
+        $result = (new SettingsScreen())
+            ->prepare($state, $playerKey, $role, $message);
+        $screenName = $result['screen'];
+        $screenData = $result['data'];
         break;
 
     case 'draft':

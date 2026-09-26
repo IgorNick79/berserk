@@ -24,21 +24,18 @@ final class ModeScreen
         $isHost    = ($playerKey === 'host');
         $roleParam = ($role === 'host') ? 'first' : 'second';
         $baseUrl   = "?{$roleParam}&game={$state->gameId}";
-        $mode      = $state->mode;
 
         if (!$isHost) {
             $contentHtml = '<p class="wait">Ожидание, пока хост выберет режим игры...</p>';
-        } elseif ($mode !== null) {
-            $contentHtml = '<p>Режим: <b>' . htmlspecialchars($mode, ENT_QUOTES) . '</b></p>';
         } else {
             $draftUrl  = "{$baseUrl}&cmd=choose_mode&mode=draft";
             $systemUrl = "{$baseUrl}&cmd=choose_mode&mode=system";
 
             $contentHtml =
-                '<p>Хост, выбери режим игры:</p>'
+                '<h1>Режим игры</h1>'
                 . '<div class="mode-actions">'
-                . '<a class="button wide" href="' . $draftUrl . '">Драфт (5 бустеров, 3×3)</a>'
                 . '<a class="button wide" href="' . $systemUrl . '">Системные колоды</a>'
+                . '<a class="button wide" href="' . $draftUrl . '">Драфт</a>'
                 . '</div>';
         }
 

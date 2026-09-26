@@ -75,6 +75,17 @@ assertTrue(!$result->success, 'Unsupported grid size should be rejected');
 assertTrue($badGrid->status === 'settings', 'Rejected draft settings should stay in settings');
 assertTrue($badGrid->draft === null, 'Rejected draft settings should not initialize runtime draft');
 
+// Draft booster count payload is applied by confirm_settings before draft startup.
+$customBoosters = new GameState(7, 1, 2);
+apply($customBoosters, $engine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+$result = $engine->apply(
+    $customBoosters,
+    GameState::PLAYER_HOST,
+    new Command('confirm_settings', ['boosters' => 2])
+);
+assertTrue(!$result->success, 'Draft without Db should not start in this test section');
+assertTrue($customBoosters->settings->draftBoosters() === 2, 'Booster payload was not applied to settings');
+
 // Settings command outside settings stage is invalid.
 $invalidStage = new GameState(4, 1, 2);
 $result = $engine->apply($invalidStage, GameState::PLAYER_HOST, new Command('confirm_settings'));
@@ -101,15 +112,18 @@ $configPath = __DIR__ . '/../config/db.php';
 if (is_file($configPath)) {
     try {
         $db = new Db(require $configPath);
-        $draftState = new GameState(6, 1, 2);
-        $draftEngine = new Engine($db);
+        foreach ([2, 5] as $boosters) {
+            $draftState = new GameState(6 + $boosters, 1, 2);
+            $draftEngine = new Engine($db);
 
-        apply($draftState, $draftEngine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
-        apply($draftState, $draftEngine, GameState::PLAYER_HOST, 'confirm_settings');
+            apply($draftState, $draftEngine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+            apply($draftState, $draftEngine, GameState::PLAYER_HOST, 'confirm_settings', ['boosters' => $boosters]);
 
-        assertTrue($draftState->status === 'draft', 'Draft settings did not transition to draft');
-        assertTrue(is_array($draftState->draft), 'Draft runtime state was not initialized');
-        assertTrue(count($draftState->draft['grid'] ?? []) === 9, 'Default draft grid is not 3x3');
+            assertTrue($draftState->status === 'draft', 'Draft settings did not transition to draft');
+            assertTrue($draftState->settings->draftBoosters() === $boosters, 'Draft booster count was not stored');
+            assertTrue(is_array($draftState->draft), 'Draft runtime state was not initialized');
+            assertTrue(count($draftState->draft['grid'] ?? []) === 9, 'Default draft grid is not 3x3');
+        }
     } catch (Throwable $e) {
         echo "Skipping DB-backed draft initialization check: {$e->getMessage()}\n";
     }
