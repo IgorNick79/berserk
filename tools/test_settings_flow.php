@@ -63,15 +63,19 @@ assertTrue($restored->mode === GameSettings::MODE_DRAFT, 'Round-trip lost mode')
 assertTrue($restored->settings->draftBoosters() === 5, 'Round-trip lost draft boosters');
 assertTrue($restored->settings->draftGridSize() === 3, 'Round-trip lost draft grid size');
 assertTrue($restored->settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_MANUAL, 'Default draft pick mode should be manual');
+assertTrue($restored->settings->draftAutoSide() === GameSettings::DRAFT_AUTO_SIDE_BOTH, 'Default draft auto side should be both');
 
 $randomSettings = GameSettings::fromArray([
     'draft' => [
         'pick_mode' => GameSettings::DRAFT_PICK_MODE_RANDOM,
+        'auto_side' => GameSettings::DRAFT_AUTO_SIDE_PLAYER,
     ],
 ]);
 assertTrue($randomSettings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM, 'Random draft pick mode was not stored');
+assertTrue($randomSettings->draftAutoSide() === GameSettings::DRAFT_AUTO_SIDE_PLAYER, 'Random draft auto side was not stored');
 $randomRestored = GameSettings::fromArray($randomSettings->toArray());
 assertTrue($randomRestored->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM, 'Round-trip lost random draft pick mode');
+assertTrue($randomRestored->draftAutoSide() === GameSettings::DRAFT_AUTO_SIDE_PLAYER, 'Round-trip lost random draft auto side');
 
 // Unsupported draft grid size is rejected before DB access.
 $badGrid = new GameState(3, 1, 2);
@@ -96,6 +100,20 @@ $result = $engine->apply(
 assertTrue(!$result->success, 'Unknown draft pick mode should be rejected');
 assertTrue($badPickMode->status === 'settings', 'Rejected draft pick mode should stay in settings');
 assertTrue($badPickMode->settings->draftPickMode() === 'bogus', 'Rejected draft pick mode should still be visible in attempted settings');
+
+// Unknown draft auto side is rejected before DB access.
+$badAutoSide = new GameState(9, 1, 2);
+apply($badAutoSide, $engine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+$result = $engine->apply(
+    $badAutoSide,
+    GameState::PLAYER_HOST,
+    new Command('confirm_settings', [
+        'draft_pick_mode' => GameSettings::DRAFT_PICK_MODE_RANDOM,
+        'draft_auto_side' => 'bogus',
+    ])
+);
+assertTrue(!$result->success, 'Unknown draft auto side should be rejected');
+assertTrue($badAutoSide->status === 'settings', 'Rejected draft auto side should stay in settings');
 
 // Draft booster count payload is applied by confirm_settings before draft startup.
 $customBoosters = new GameState(7, 1, 2);

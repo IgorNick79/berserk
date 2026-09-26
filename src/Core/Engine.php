@@ -6,6 +6,9 @@ declare(strict_types=1);
 namespace Berserk\Core;
 
 use Berserk\Core\Movement\MovementResolver;
+use Berserk\Core\Prepare\DraftAutoPicker;
+use Berserk\Core\Prepare\DraftSelectionDataProvider;
+use Berserk\Core\Prepare\DraftSelectionEvaluator;
 use Berserk\Core\Prepare\DraftProcessor;
 use Berserk\Core\Prepare\RandomDraftProcessor;
 
@@ -53,9 +56,9 @@ final class Engine
         return match ($cmd->type) {
             'choose_mode'  => $this->chooseMode($state, $playerKey, $cmd),
             'confirm_settings' => $this->confirmSettings($state, $playerKey, $cmd),
-            'draft_row'    => (new DraftProcessor($state, $this->db))->pickRow($playerKey, (int) $cmd->get('row', 0)),
-            'draft_col'    => (new DraftProcessor($state, $this->db))->pickCol($playerKey, (int) $cmd->get('col', 0)),
-            'draft_pass'   => (new DraftProcessor($state, $this->db))->pass($playerKey),
+            'draft_row'    => $this->draftManualCommand($state, $playerKey, fn(DraftProcessor $p) => $p->pickRow($playerKey, (int) $cmd->get('row', 0))),
+            'draft_col'    => $this->draftManualCommand($state, $playerKey, fn(DraftProcessor $p) => $p->pickCol($playerKey, (int) $cmd->get('col', 0))),
+            'draft_pass'   => $this->draftManualCommand($state, $playerKey, fn(DraftProcessor $p) => $p->pass($playerKey)),
             'finish_draft' => (new DraftProcessor($state, $this->db))->finish($playerKey),
             'select_deck'  => $this->selectDeck($state, $playerKey, $cmd),
             'confirm_view' => $this->confirmView($state, $playerKey, $cmd),
@@ -196,6 +199,13 @@ final class Engine
                 ], true)) {
                     return Result::error('Неподдерживаемый способ драфта');
                 }
+                if (!in_array($state->settings->draftAutoSide(), [
+                    GameSettings::DRAFT_AUTO_SIDE_BOTH,
+                    GameSettings::DRAFT_AUTO_SIDE_HOST,
+                    GameSettings::DRAFT_AUTO_SIDE_PLAYER,
+                ], true)) {
+                    return Result::error('Неподдерживаемая сторона автовыбора');
+                }
 
                 if ($this->db === null) {
                     return Result::error('Db недоступен для драфта');
@@ -213,6 +223,26 @@ final class Engine
                         return Result::ok(array_merge(['settings_confirmed:draft', 'stage_changed:draft'], $result->events));
 
                     case GameSettings::DRAFT_PICK_MODE_RANDOM:
+                        if ($state->settings->draftAutoSide() !== GameSettings::DRAFT_AUTO_SIDE_BOTH) {
+                            $result = (new DraftProcessor($state, $this->db))->start($state->settings, true);
+                            if (!$result->success) {
+                                return $result;
+                            }
+
+                            $state->status = 'draft';
+                            $autoResult = $this->runDraftAutoTurns($state);
+                            if (!$autoResult->success) {
+                                return $autoResult;
+                            }
+
+                            $state->bumpVersion();
+                            return Result::ok(array_merge(
+                                ['settings_confirmed:draft', 'stage_changed:draft'],
+                                $result->events,
+                                $autoResult->events
+                            ));
+                        }
+
                         $result = (new RandomDraftProcessor($state, $this->db))->start($state->settings);
                         if (!$result->success) {
                             return $result;
@@ -251,6 +281,7 @@ final class Engine
         foreach ([
             'type' => 'draft_type',
             'pick_mode' => 'draft_pick_mode',
+            'auto_side' => 'draft_auto_side',
             'grid_size' => 'grid_size',
             'boosters' => 'boosters',
             'booster_profile' => 'booster_profile',
@@ -268,6 +299,102 @@ final class Engine
 
         return GameSettings::fromArray($data);
     }
+
+    private function draftManualCommand(GameState $state, string $playerKey, callable $apply): Result
+    {
+        if ($this->db === null) {
+            return Result::error('Db недоступен для драфта');
+        }
+        if ($this->isDraftAutoControlled($state, $playerKey)) {
+            return Result::error('Эта сторона выбирает автоматически');
+        }
+
+        $processor = new DraftProcessor($state, $this->db);
+        $result = $apply($processor);
+        if (!$result->success) {
+            return $result;
+        }
+
+        $autoResult = $this->runDraftAutoTurns($state);
+        if (!$autoResult->success) {
+            return $autoResult;
+        }
+
+        $state->bumpVersion();
+        return Result::ok(array_merge($result->events, $autoResult->events));
+    }
+
+    private function runDraftAutoTurns(GameState $state): Result
+    {
+        if ($this->db === null) {
+            return Result::error('Db недоступен для драфта');
+        }
+
+        $events = [];
+        $processor = new DraftProcessor($state, $this->db);
+        $autoPicker = $this->draftAutoPicker($state);
+
+        while ($state->status === 'draft' && $state->draft !== null) {
+            $turn = (string) ($state->draft['turn'] ?? '');
+            if (!$this->isDraftAutoControlled($state, $turn)) break;
+
+            $selection = $autoPicker->pick(
+                $processor->validSelections(),
+                $state->draft['picked'][$turn] ?? []
+            );
+            if ($selection === null) break;
+
+            $result = $processor->pickSelection($turn, $selection, 'auto_picked');
+            if (!$result->success) {
+                return $result;
+            }
+            $events = array_merge($events, $result->events);
+        }
+
+        return Result::ok($events);
+    }
+
+    private function draftAutoPicker(GameState $state): DraftAutoPicker
+    {
+        $ukids = [];
+        if ($state->draft !== null) {
+            foreach ($state->draft['grid'] ?? [] as $ukid) {
+                if ($ukid !== null) $ukids[] = (string) $ukid;
+            }
+            foreach ($state->draft['pool'] ?? [] as $ukid) {
+                if ($ukid !== null) $ukids[] = (string) $ukid;
+            }
+            foreach ($state->draft['picked']['host'] ?? [] as $ukid) {
+                $ukids[] = (string) $ukid;
+            }
+            foreach ($state->draft['picked']['player'] ?? [] as $ukid) {
+                $ukids[] = (string) $ukid;
+            }
+        }
+
+        $dataProvider = new DraftSelectionDataProvider($this->db);
+        $cardsByUkid = $dataProvider->loadCardsByUkid($ukids);
+
+        return new DraftAutoPicker(new DraftSelectionEvaluator(
+            $cardsByUkid,
+            $dataProvider->loadSynergyByPair($cardsByUkid),
+        ));
+    }
+
+    private function isDraftAutoControlled(GameState $state, string $playerKey): bool
+    {
+        if ($state->settings->draftPickMode() !== GameSettings::DRAFT_PICK_MODE_RANDOM) {
+            return false;
+        }
+
+        return match ($state->settings->draftAutoSide()) {
+            GameSettings::DRAFT_AUTO_SIDE_BOTH => true,
+            GameSettings::DRAFT_AUTO_SIDE_HOST => $playerKey === GameState::PLAYER_HOST,
+            GameSettings::DRAFT_AUTO_SIDE_PLAYER => $playerKey === GameState::PLAYER_PLAYER,
+            default => false,
+        };
+    }
+
     /**
      * Хост выбирает деку. Второй играет оставшейся.
      * Переход: deck → view.

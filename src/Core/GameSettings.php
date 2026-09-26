@@ -21,6 +21,9 @@ final class GameSettings
     public const DRAFT_TYPE_GRID = 'grid';
     public const DRAFT_PICK_MODE_MANUAL = 'manual';
     public const DRAFT_PICK_MODE_RANDOM = 'random';
+    public const DRAFT_AUTO_SIDE_BOTH = 'both';
+    public const DRAFT_AUTO_SIDE_HOST = 'host';
+    public const DRAFT_AUTO_SIDE_PLAYER = 'player';
     public const BOOSTER_PROFILE_DEFAULT = 'default';
 
     public function __construct(
@@ -28,6 +31,7 @@ final class GameSettings
         public array $draft = [
             'type'            => self::DRAFT_TYPE_GRID,
             'pick_mode'       => self::DRAFT_PICK_MODE_MANUAL,
+            'auto_side'       => self::DRAFT_AUTO_SIDE_BOTH,
             'grid_size'       => 3,
             'boosters'        => 5,
             'booster_profile' => self::BOOSTER_PROFILE_DEFAULT,
@@ -81,6 +85,11 @@ final class GameSettings
     public function draftPickMode(): string
     {
         return (string) ($this->draft['pick_mode'] ?? self::DRAFT_PICK_MODE_MANUAL);
+    }
+
+    public function draftAutoSide(): string
+    {
+        return (string) ($this->draft['auto_side'] ?? self::DRAFT_AUTO_SIDE_BOTH);
     }
 
     public function draftBoosters(): int

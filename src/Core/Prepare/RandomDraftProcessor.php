@@ -5,7 +5,6 @@ declare(strict_types=1);
 
 namespace Berserk\Core\Prepare;
 
-use Berserk\Core\BoosterGenerator;
 use Berserk\Core\Db;
 use Berserk\Core\GameSettings;
 use Berserk\Core\GameState;
@@ -25,6 +24,9 @@ final class RandomDraftProcessor
         if ($settings->draftPickMode() !== GameSettings::DRAFT_PICK_MODE_RANDOM) {
             return Result::error('Неподдерживаемый способ драфта');
         }
+        if ($settings->draftAutoSide() !== GameSettings::DRAFT_AUTO_SIDE_BOTH) {
+            return Result::error('Неподдерживаемая сторона автовыбора для полного автодрафта');
+        }
         if ($settings->draftType() !== GameSettings::DRAFT_TYPE_GRID) {
             return Result::error('Неподдерживаемый тип драфта');
         }
@@ -38,27 +40,32 @@ final class RandomDraftProcessor
             return Result::error('Неподдерживаемый профиль бустера');
         }
 
-        $pool = $this->generatePool($settings);
-        shuffle($pool);
+        $processor = new DraftProcessor($this->state, $this->db);
+        $result = $processor->start($settings, true);
+        if (!$result->success) return $result;
 
+        $autoPicker = $this->autoPicker();
+        $this->state->status = 'draft';
         $picked = ['host' => [], 'player' => []];
-        foreach ($pool as $i => $ukid) {
-            $picked[$i % 2 === 0 ? 'host' : 'player'][] = $ukid;
+        while ($this->state->draft !== null) {
+            $turn = (string) ($this->state->draft['turn'] ?? '');
+            $selection = $autoPicker->pick(
+                $processor->validSelections(),
+                $this->state->draft['picked'][$turn] ?? []
+            );
+            if ($selection === null) break;
+
+            $result = $processor->pickSelection($turn, $selection, 'auto_picked');
+            if (!$result->success) return $result;
+            foreach ($selection['cards'] as $ukid) {
+                $picked[$turn][] = $ukid;
+            }
         }
 
         if (count($picked['host']) < self::MIN_DRAFTED_CARDS
             || count($picked['player']) < self::MIN_DRAFTED_CARDS) {
             return Result::error('Недостаточно карт для автоматического драфта');
         }
-
-        $builder = new DraftDeckBuilder($this->db);
-        $this->state->getPlayer('host')->deckCards = $builder->buildDeckCards($picked['host']);
-        $this->state->getPlayer('player')->deckCards = $builder->buildDeckCards($picked['player']);
-        $this->state->getPlayer('host')->deckId = 0;
-        $this->state->getPlayer('player')->deckId = 0;
-
-        $this->state->draft = null;
-        $this->state->status = 'view';
 
         return Result::ok([
             'random_draft_started',
@@ -67,15 +74,22 @@ final class RandomDraftProcessor
         ]);
     }
 
-    private function generatePool(GameSettings $settings): array
+    private function autoPicker(): DraftAutoPicker
     {
-        $gen = new BoosterGenerator($this->db);
-        $pool = [];
-        for ($i = 0; $i < $settings->draftBoosters(); $i++) {
-            foreach ($gen->generate() as $ukid) {
-                $pool[] = $ukid;
-            }
+        $ukids = [];
+        foreach ($this->state->draft['grid'] ?? [] as $ukid) {
+            if ($ukid !== null) $ukids[] = (string) $ukid;
         }
-        return $pool;
+        foreach ($this->state->draft['pool'] ?? [] as $ukid) {
+            if ($ukid !== null) $ukids[] = (string) $ukid;
+        }
+
+        $dataProvider = new DraftSelectionDataProvider($this->db);
+        $cardsByUkid = $dataProvider->loadCardsByUkid($ukids);
+
+        return new DraftAutoPicker(new DraftSelectionEvaluator(
+            $cardsByUkid,
+            $dataProvider->loadSynergyByPair($cardsByUkid),
+        ));
     }
 }

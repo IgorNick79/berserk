@@ -7,6 +7,7 @@ namespace Berserk\View\Screen;
 
 use Berserk\Core\GameSettings;
 use Berserk\Core\GameState;
+use Berserk\View\Ui\Form;
 
 final class SettingsScreen
 {
@@ -64,6 +65,7 @@ final class SettingsScreen
         $settings = $state->settings;
         $boosters = $settings->draftBoosters();
         $isRandom = $settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM;
+        $autoSide = $settings->draftAutoSide();
 
         $contentHtml = '<div class="settings-list">'
             . '<div><b>Тип</b>: Grid</div>'
@@ -91,6 +93,20 @@ final class SettingsScreen
             . '<input type="checkbox" name="draft_pick_mode" value="' . GameSettings::DRAFT_PICK_MODE_RANDOM . '"'
                 . ($isRandom ? ' checked' : '') . '>'
             . '</label>'
+            . '<div class="settings-field">'
+            . '<span>Кто выбирает автоматически</span>'
+            . '<div class="choice-list">'
+            . Form::radio('draft_auto_side', GameSettings::DRAFT_AUTO_SIDE_BOTH, 'Оба', [
+                'checked' => $autoSide === GameSettings::DRAFT_AUTO_SIDE_BOTH,
+            ])
+            . Form::radio('draft_auto_side', GameSettings::DRAFT_AUTO_SIDE_HOST, 'Хост', [
+                'checked' => $autoSide === GameSettings::DRAFT_AUTO_SIDE_HOST,
+            ])
+            . Form::radio('draft_auto_side', GameSettings::DRAFT_AUTO_SIDE_PLAYER, 'Соперник', [
+                'checked' => $autoSide === GameSettings::DRAFT_AUTO_SIDE_PLAYER,
+            ])
+            . '</div>'
+            . '</div>'
             . '<button class="button wide" type="submit">Начать драфт</button>'
             . '</form>';
 

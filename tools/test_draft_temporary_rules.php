@@ -66,6 +66,46 @@ $result = $processor->pass(GameState::PLAYER_HOST);
 assertTrue($result->success, 'Host should be able to pass again after consecutive passes');
 assertTrue($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Repeated pass should keep alternating turns');
 
+// DraftProcessor exposes the same row/column selections for auto-pick logic.
+$state = stateWithDraft();
+$processor = processorWithoutDb($state);
+$selections = $processor->validSelections();
+assertTrue(count($selections) === 6, '3x3 full grid should expose 3 rows and 3 columns');
+$result = $processor->pickSelection(GameState::PLAYER_HOST, $selections[0], 'auto_picked');
+assertTrue($result->success, 'Auto selection should be applied through draft processor');
+assertTrue(count($state->draft['picked'][GameState::PLAYER_HOST]) === 3, 'Auto selection should pick three cards');
+assertTrue($state->draft['grid'][0] === 'a', 'Auto selection should refill first selected position from pool');
+assertTrue($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Auto selection should switch turn');
+
+// Valid auto selections are restricted to current rows/columns.
+$state = stateWithDraft();
+$processor = processorWithoutDb($state);
+$result = $processor->pickSelection(GameState::PLAYER_HOST, ['positions' => [0, 3, 6]], 'auto_picked');
+assertTrue($result->success, 'Valid auto column selection should be accepted');
+assertTrue(count($state->draft['picked'][GameState::PLAYER_HOST]) === 3, 'Valid column should pick three cards');
+assertTrue($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Valid column should switch turn');
+
+$state = stateWithDraft();
+$processor = processorWithoutDb($state);
+$before = $state->draft;
+$result = $processor->pickSelection(GameState::PLAYER_HOST, ['positions' => [0, 4, 8]], 'auto_picked');
+assertTrue(!$result->success, 'Diagonal auto selection should be rejected');
+assertTrue($state->draft === $before, 'Rejected diagonal selection should not mutate draft state');
+
+$state = stateWithDraft();
+$processor = processorWithoutDb($state);
+$before = $state->draft;
+$result = $processor->pickSelection(GameState::PLAYER_HOST, ['positions' => [0, 1, 4]], 'auto_picked');
+assertTrue(!$result->success, 'Arbitrary auto selection should be rejected');
+assertTrue($state->draft === $before, 'Rejected arbitrary selection should not mutate draft state');
+
+$state = stateWithDraft();
+$processor = processorWithoutDb($state);
+$before = $state->draft;
+$result = $processor->pickSelection(GameState::PLAYER_HOST, ['positions' => []], 'auto_picked');
+assertTrue(!$result->success, 'Empty auto selection should be rejected');
+assertTrue($state->draft === $before, 'Rejected empty selection should not mutate draft state');
+
 // Manual finish is rejected before both players have 30 drafted cards.
 $state = stateWithDraft(array_fill(0, 30, 'u1'), array_fill(0, 29, 'u1'));
 $processor = processorWithoutDb($state);

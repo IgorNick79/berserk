@@ -20,9 +20,10 @@ final class DraftProcessor
         private Db $db,
     ) {}
 
-    public function start(GameSettings $settings): Result
+    public function start(GameSettings $settings, bool $allowRandomPickMode = false): Result
     {
-        if ($settings->draftPickMode() !== GameSettings::DRAFT_PICK_MODE_MANUAL) {
+        if ($settings->draftPickMode() !== GameSettings::DRAFT_PICK_MODE_MANUAL
+            && !($allowRandomPickMode && $settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM)) {
             return Result::error('Неподдерживаемый способ драфта');
         }
         if ($settings->draftType() !== GameSettings::DRAFT_TYPE_GRID) {
@@ -90,7 +91,47 @@ final class DraftProcessor
         return $this->pickPositions($playerKey, $positions);
     }
 
-    private function pickPositions(string $playerKey, array $positions): Result
+    public function pickSelection(string $playerKey, array $selection, string $eventPrefix = 'picked'): Result
+    {
+        $positions = array_values(array_map('intval', $selection['positions'] ?? []));
+        if (!$this->isValidSelectionPositions($positions)) {
+            return Result::error('Неверный вариант драфта');
+        }
+
+        return $this->pickPositions($playerKey, $positions, $eventPrefix);
+    }
+
+    /**
+     * @return array<int,array{positions:int[],cards:string[]}>
+     */
+    public function validSelections(): array
+    {
+        $draft = $this->state->draft ?? null;
+        if (!$draft) return [];
+
+        $grid = $draft['grid'] ?? [];
+        $selections = [];
+
+        for ($row = 0; $row < 3; $row++) {
+            $positions = [$row * 3, $row * 3 + 1, $row * 3 + 2];
+            $cards = $this->cardsAt($grid, $positions);
+            if (!empty($cards)) {
+                $selections[] = ['positions' => $positions, 'cards' => $cards];
+            }
+        }
+
+        for ($col = 0; $col < 3; $col++) {
+            $positions = [$col, $col + 3, $col + 6];
+            $cards = $this->cardsAt($grid, $positions);
+            if (!empty($cards)) {
+                $selections[] = ['positions' => $positions, 'cards' => $cards];
+            }
+        }
+
+        return $selections;
+    }
+
+    private function pickPositions(string $playerKey, array $positions, string $eventPrefix = 'picked'): Result
     {
         $draft = $this->state->draft ?? null;
         if (!$draft) return Result::error('Драфт не активен');
@@ -119,7 +160,17 @@ final class DraftProcessor
 
         $this->state->draft['turn']   = $this->opponent($playerKey);
 
-        return $this->checkEnd('picked:' . count($taken));
+        return $this->checkEnd($eventPrefix . ':' . count($taken));
+    }
+
+    private function isValidSelectionPositions(array $positions): bool
+    {
+        foreach ($this->validSelections() as $validSelection) {
+            if ($positions === $validSelection['positions']) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public function pass(string $playerKey): Result
@@ -166,6 +217,17 @@ final class DraftProcessor
         }
 
         return Result::ok([$event]);
+    }
+
+    private function cardsAt(array $grid, array $positions): array
+    {
+        $cards = [];
+        foreach ($positions as $pos) {
+            if (($grid[$pos] ?? null) !== null) {
+                $cards[] = (string) $grid[$pos];
+            }
+        }
+        return $cards;
     }
 
     private function canFinish(array $draft): bool
