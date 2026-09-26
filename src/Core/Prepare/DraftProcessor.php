@@ -22,6 +22,9 @@ final class DraftProcessor
 
     public function start(GameSettings $settings): Result
     {
+        if ($settings->draftPickMode() !== GameSettings::DRAFT_PICK_MODE_MANUAL) {
+            return Result::error('Неподдерживаемый способ драфта');
+        }
         if ($settings->draftType() !== GameSettings::DRAFT_TYPE_GRID) {
             return Result::error('Неподдерживаемый тип драфта');
         }
@@ -175,9 +178,10 @@ final class DraftProcessor
     {
         $hostUkids   = $this->state->draft['picked']['host'];
         $playerUkids = $this->state->draft['picked']['player'];
+        $builder = new DraftDeckBuilder($this->db);
 
-        $this->state->getPlayer('host')->deckCards   = $this->buildDeckCards($hostUkids);
-        $this->state->getPlayer('player')->deckCards = $this->buildDeckCards($playerUkids);
+        $this->state->getPlayer('host')->deckCards   = $builder->buildDeckCards($hostUkids);
+        $this->state->getPlayer('player')->deckCards = $builder->buildDeckCards($playerUkids);
         $this->state->getPlayer('host')->deckId   = 0;
         $this->state->getPlayer('player')->deckId = 0;
 
@@ -185,55 +189,6 @@ final class DraftProcessor
         $this->state->status = 'view';
 
         return Result::ok([$event, 'draft_finished']);
-    }
-
-    private function buildDeckCards(array $ukids): array
-    {
-        if (empty($ukids)) return [];
-
-        $counts = [];
-        foreach ($ukids as $ukid) {
-            $counts[$ukid] = ($counts[$ukid] ?? 0) + 1;
-        }
-
-        $unique = array_keys($counts);
-        $in = "'" . implode("','", array_map(fn($u) => $this->db->escape($u), $unique)) . "'";
-
-        $elements = [];
-        foreach ($this->db->fetchAll("SELECT ind, code FROM elements") as $e) {
-            $elements[(int) $e['ind']] = $e['code'];
-        }
-
-        $rows = $this->db->fetchAll(
-            "SELECT ukid, price, health, move, elite, type, class,
-                    strike_weak, strike_medium, strike_strong, element_id, prop
-             FROM cards WHERE ukid IN ($in)"
-        );
-        $byUkid = [];
-        foreach ($rows as $r) $byUkid[$r['ukid']] = $r;
-
-        $result = [];
-        foreach ($counts as $ukid => $count) {
-            $r = $byUkid[$ukid] ?? null;
-            if (!$r) continue;
-
-            $result[] = [
-                'ukid'          => $ukid,
-                'count'         => $count,
-                'price'         => (int) $r['price'],
-                'elite'         => (bool) $r['elite'],
-                'element'       => $elements[(int) $r['element_id']] ?? 'neutral',
-                'health'        => (int) $r['health'],
-                'move'          => (int) $r['move'],
-                'strike_weak'   => (int) $r['strike_weak'],
-                'strike_medium' => (int) $r['strike_medium'],
-                'strike_strong' => (int) $r['strike_strong'],
-                'prop'          => $r['prop'] ? json_decode($r['prop'], true) : [],
-                'type'          => $r['type'] ?? 'creature',
-                'class'         => $r['class'] ?? '',
-            ];
-        }
-        return $result;
     }
 
     private function opponent(string $key): string

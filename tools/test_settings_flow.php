@@ -62,6 +62,16 @@ assertTrue($restored->status === 'settings', 'Round-trip lost status');
 assertTrue($restored->mode === GameSettings::MODE_DRAFT, 'Round-trip lost mode');
 assertTrue($restored->settings->draftBoosters() === 5, 'Round-trip lost draft boosters');
 assertTrue($restored->settings->draftGridSize() === 3, 'Round-trip lost draft grid size');
+assertTrue($restored->settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_MANUAL, 'Default draft pick mode should be manual');
+
+$randomSettings = GameSettings::fromArray([
+    'draft' => [
+        'pick_mode' => GameSettings::DRAFT_PICK_MODE_RANDOM,
+    ],
+]);
+assertTrue($randomSettings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM, 'Random draft pick mode was not stored');
+$randomRestored = GameSettings::fromArray($randomSettings->toArray());
+assertTrue($randomRestored->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM, 'Round-trip lost random draft pick mode');
 
 // Unsupported draft grid size is rejected before DB access.
 $badGrid = new GameState(3, 1, 2);
@@ -74,6 +84,18 @@ $result = $engine->apply(
 assertTrue(!$result->success, 'Unsupported grid size should be rejected');
 assertTrue($badGrid->status === 'settings', 'Rejected draft settings should stay in settings');
 assertTrue($badGrid->draft === null, 'Rejected draft settings should not initialize runtime draft');
+
+// Unknown draft pick mode is rejected before DB access.
+$badPickMode = new GameState(8, 1, 2);
+apply($badPickMode, $engine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+$result = $engine->apply(
+    $badPickMode,
+    GameState::PLAYER_HOST,
+    new Command('confirm_settings', ['draft_pick_mode' => 'bogus'])
+);
+assertTrue(!$result->success, 'Unknown draft pick mode should be rejected');
+assertTrue($badPickMode->status === 'settings', 'Rejected draft pick mode should stay in settings');
+assertTrue($badPickMode->settings->draftPickMode() === 'bogus', 'Rejected draft pick mode should still be visible in attempted settings');
 
 // Draft booster count payload is applied by confirm_settings before draft startup.
 $customBoosters = new GameState(7, 1, 2);
@@ -124,6 +146,35 @@ if (is_file($configPath)) {
             assertTrue(is_array($draftState->draft), 'Draft runtime state was not initialized');
             assertTrue(count($draftState->draft['grid'] ?? []) === 9, 'Default draft grid is not 3x3');
         }
+
+        $randomDraft = new GameState(20, 1, 2);
+        $draftEngine = new Engine($db);
+        apply($randomDraft, $draftEngine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+        apply($randomDraft, $draftEngine, GameState::PLAYER_HOST, 'confirm_settings', [
+            'boosters' => 5,
+            'draft_pick_mode' => GameSettings::DRAFT_PICK_MODE_RANDOM,
+        ]);
+
+        assertTrue($randomDraft->status === 'view', 'Random draft should transition directly to view');
+        assertTrue($randomDraft->draft === null, 'Random draft should not leave runtime draft state');
+        assertTrue($randomDraft->getPlayer(GameState::PLAYER_HOST)->deckId === 0, 'Random draft host deck id should be 0');
+        assertTrue($randomDraft->getPlayer(GameState::PLAYER_PLAYER)->deckId === 0, 'Random draft player deck id should be 0');
+        assertTrue(count($randomDraft->getPlayer(GameState::PLAYER_HOST)->deckCards) > 0, 'Random draft should build host deck cards');
+        assertTrue(count($randomDraft->getPlayer(GameState::PLAYER_PLAYER)->deckCards) > 0, 'Random draft should build player deck cards');
+
+        $smallRandomDraft = new GameState(21, 1, 2);
+        apply($smallRandomDraft, $draftEngine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+        $result = $draftEngine->apply(
+            $smallRandomDraft,
+            GameState::PLAYER_HOST,
+            new Command('confirm_settings', [
+                'boosters' => 1,
+                'draft_pick_mode' => GameSettings::DRAFT_PICK_MODE_RANDOM,
+            ])
+        );
+        assertTrue(!$result->success, 'Random draft should reject insufficient generated card supply');
+        assertTrue($smallRandomDraft->status === 'settings', 'Rejected random draft should stay in settings');
+        assertTrue($smallRandomDraft->draft === null, 'Rejected random draft should not initialize draft runtime state');
     } catch (Throwable $e) {
         echo "Skipping DB-backed draft initialization check: {$e->getMessage()}\n";
     }

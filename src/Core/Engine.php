@@ -7,6 +7,7 @@ namespace Berserk\Core;
 
 use Berserk\Core\Movement\MovementResolver;
 use Berserk\Core\Prepare\DraftProcessor;
+use Berserk\Core\Prepare\RandomDraftProcessor;
 
 /**
  * Применяет команды к состоянию партии.
@@ -189,18 +190,40 @@ final class Engine
                 return Result::ok(['settings_confirmed:system', 'stage_changed:deck']);
 
             case GameSettings::MODE_DRAFT:
+                if (!in_array($state->settings->draftPickMode(), [
+                    GameSettings::DRAFT_PICK_MODE_MANUAL,
+                    GameSettings::DRAFT_PICK_MODE_RANDOM,
+                ], true)) {
+                    return Result::error('Неподдерживаемый способ драфта');
+                }
+
                 if ($this->db === null) {
                     return Result::error('Db недоступен для драфта');
                 }
 
-                $result = (new DraftProcessor($state, $this->db))->start($state->settings);
-                if (!$result->success) {
-                    return $result;
-                }
+                switch ($state->settings->draftPickMode()) {
+                    case GameSettings::DRAFT_PICK_MODE_MANUAL:
+                        $result = (new DraftProcessor($state, $this->db))->start($state->settings);
+                        if (!$result->success) {
+                            return $result;
+                        }
 
-                $state->status = 'draft';
-                $state->bumpVersion();
-                return Result::ok(array_merge(['settings_confirmed:draft', 'stage_changed:draft'], $result->events));
+                        $state->status = 'draft';
+                        $state->bumpVersion();
+                        return Result::ok(array_merge(['settings_confirmed:draft', 'stage_changed:draft'], $result->events));
+
+                    case GameSettings::DRAFT_PICK_MODE_RANDOM:
+                        $result = (new RandomDraftProcessor($state, $this->db))->start($state->settings);
+                        if (!$result->success) {
+                            return $result;
+                        }
+
+                        $state->bumpVersion();
+                        return Result::ok(array_merge(['settings_confirmed:draft'], $result->events));
+
+                    default:
+                        return Result::error('Неподдерживаемый способ драфта');
+                }
 
             case GameSettings::MODE_SEALED:
                 return Result::error('Sealed пока не реализован');
@@ -225,7 +248,13 @@ final class Engine
             }
         }
 
-        foreach (['type' => 'draft_type', 'grid_size' => 'grid_size', 'boosters' => 'boosters', 'booster_profile' => 'booster_profile'] as $settingKey => $payloadKey) {
+        foreach ([
+            'type' => 'draft_type',
+            'pick_mode' => 'draft_pick_mode',
+            'grid_size' => 'grid_size',
+            'boosters' => 'boosters',
+            'booster_profile' => 'booster_profile',
+        ] as $settingKey => $payloadKey) {
             if ($cmd->get($payloadKey) !== null) {
                 $data['draft'][$settingKey] = $cmd->get($payloadKey);
             }

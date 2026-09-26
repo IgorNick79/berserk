@@ -19,12 +19,15 @@ final class GameSettings
     public const SYSTEM_DECK_SELECTION_MANUAL = 'manual';
 
     public const DRAFT_TYPE_GRID = 'grid';
+    public const DRAFT_PICK_MODE_MANUAL = 'manual';
+    public const DRAFT_PICK_MODE_RANDOM = 'random';
     public const BOOSTER_PROFILE_DEFAULT = 'default';
 
     public function __construct(
         public array $system = ['deck_selection' => self::SYSTEM_DECK_SELECTION_MANUAL],
         public array $draft = [
             'type'            => self::DRAFT_TYPE_GRID,
+            'pick_mode'       => self::DRAFT_PICK_MODE_MANUAL,
             'grid_size'       => 3,
             'boosters'        => 5,
             'booster_profile' => self::BOOSTER_PROFILE_DEFAULT,
@@ -73,6 +76,11 @@ final class GameSettings
     public function draftGridSize(): int
     {
         return (int) ($this->draft['grid_size'] ?? 3);
+    }
+
+    public function draftPickMode(): string
+    {
+        return (string) ($this->draft['pick_mode'] ?? self::DRAFT_PICK_MODE_MANUAL);
     }
 
     public function draftBoosters(): int

@@ -63,9 +63,13 @@ final class SettingsScreen
     {
         $settings = $state->settings;
         $boosters = $settings->draftBoosters();
+        $isRandom = $settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM;
 
         $contentHtml = '<div class="settings-list">'
             . '<div><b>Тип</b>: Grid</div>'
+            . '<div><b>Способ</b>: '
+                . ($isRandom ? 'Автоматический' : 'Ручной')
+                . '</div>'
             . '<div><b>Сетка</b>: ' . htmlspecialchars((string) $settings->draftGridSize(), ENT_QUOTES) . '×'
                 . htmlspecialchars((string) $settings->draftGridSize(), ENT_QUOTES) . '</div>'
             . '<div><b>Профиль бустера</b>: '
@@ -76,10 +80,16 @@ final class SettingsScreen
             . '<input type="hidden" name="' . htmlspecialchars($roleParam, ENT_QUOTES) . '" value="1">'
             . '<input type="hidden" name="game" value="' . (int) $state->gameId . '">'
             . '<input type="hidden" name="cmd" value="confirm_settings">'
+            . '<input type="hidden" name="draft_pick_mode" value="' . GameSettings::DRAFT_PICK_MODE_MANUAL . '">'
             . '<label class="settings-field">'
             . '<span>Бустеров</span>'
             . '<input type="number" name="boosters" min="1" max="10" step="1" value="'
                 . htmlspecialchars((string) $boosters, ENT_QUOTES) . '">'
+            . '</label>'
+            . '<label class="settings-field">'
+            . '<span>Автоматический драфт</span>'
+            . '<input type="checkbox" name="draft_pick_mode" value="' . GameSettings::DRAFT_PICK_MODE_RANDOM . '"'
+                . ($isRandom ? ' checked' : '') . '>'
             . '</label>'
             . '<button class="button wide" type="submit">Начать драфт</button>'
             . '</form>';
