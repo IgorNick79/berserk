@@ -58,7 +58,24 @@ function dealState(array $resources = ['gold' => 24, 'silver' => 22]): GameState
     return $state;
 }
 
+function addSquadPrices(GameState $state, array $prices, array $eliteByPrice = []): array
+{
+    $cards = [];
+    foreach ($prices as $i => $price) {
+        $cards[] = addDealCard(
+            $state,
+            GameState::PLAYER_HOST,
+            'cost_' . $price . '_' . $i,
+            CardInstance::ZONE_SQUAD,
+            (int) $price,
+            (bool) ($eliteByPrice[(int) $price] ?? false),
+        );
+    }
+    return $cards;
+}
+
 $marauderProp = ['deal' => ['resource_modifier' => ['elite_gold' => 1]]];
+$quartermasterProp = ['deal' => ['cost_modifier' => ['free_if_squad_has_costs' => [3, 4, 5, 6, 7, 8]]]];
 
 // Successful recruit: ordinary cost is paid from silver, then elite gold bonus is derived from squad.
 $state = dealState();
@@ -107,6 +124,81 @@ $processor = new PrepareProcessor($state);
 $result = $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 'bonus_elite']));
 assertTrue(!$result->success, 'Adding card own deal bonus must not pay its own recruit cost');
 assertTrue(ResourceCalculator::compute($state, GameState::PLAYER_HOST)['elite_gold_bonus'] === 0, 'Rejected card should stay out of derived bonus');
+
+// Deal cost_modifier: candidate is free only when the squad already has every required cost.
+$state = dealState();
+addSquadPrices($state, [3, 4, 5, 6, 7, 8]);
+$quartermaster = addDealCard($state, GameState::PLAYER_HOST, 'quartermaster', CardInstance::ZONE_HAND, 4, false, $quartermasterProp);
+assertTrue(ResourceCalculator::effectiveRecruitCost($state, GameState::PLAYER_HOST, $quartermaster) === 0, 'Full cost set should make Quartermaster free');
+assertTrue($quartermaster->price === 4, 'Effective cost must not mutate base CardInstance price');
+
+$state = dealState();
+addSquadPrices($state, [4, 5, 6, 7, 8]);
+$quartermaster = addDealCard($state, GameState::PLAYER_HOST, 'quartermaster', CardInstance::ZONE_HAND, 4, false, $quartermasterProp);
+assertTrue(ResourceCalculator::effectiveRecruitCost($state, GameState::PLAYER_HOST, $quartermaster) === 4, 'Missing 3 should keep base cost');
+
+$state = dealState();
+addSquadPrices($state, [3, 5, 6, 7, 8]);
+$quartermaster = addDealCard($state, GameState::PLAYER_HOST, 'quartermaster', CardInstance::ZONE_HAND, 4, false, $quartermasterProp);
+assertTrue(ResourceCalculator::effectiveRecruitCost($state, GameState::PLAYER_HOST, $quartermaster) === 4, 'Candidate price 4 must not satisfy its own missing 4 condition');
+
+$state = dealState();
+addSquadPrices($state, [3, 4, 5, 6, 8]);
+$quartermaster = addDealCard($state, GameState::PLAYER_HOST, 'quartermaster', CardInstance::ZONE_HAND, 4, false, $quartermasterProp);
+assertTrue(ResourceCalculator::effectiveRecruitCost($state, GameState::PLAYER_HOST, $quartermaster) === 4, 'Missing 7 should keep base cost');
+
+$state = dealState();
+addSquadPrices($state, [3, 4, 5, 6, 7]);
+$quartermaster = addDealCard($state, GameState::PLAYER_HOST, 'quartermaster', CardInstance::ZONE_HAND, 4, false, $quartermasterProp);
+assertTrue(ResourceCalculator::effectiveRecruitCost($state, GameState::PLAYER_HOST, $quartermaster) === 4, 'Missing 8 should keep base cost');
+
+$state = dealState();
+addSquadPrices($state, [3, 3, 4, 5, 6, 7, 8]);
+$quartermaster = addDealCard($state, GameState::PLAYER_HOST, 'quartermaster', CardInstance::ZONE_HAND, 4, false, $quartermasterProp);
+assertTrue(ResourceCalculator::effectiveRecruitCost($state, GameState::PLAYER_HOST, $quartermaster) === 0, 'Duplicate costs should still satisfy the required set');
+
+$state = dealState();
+addSquadPrices($state, [3, 4, 5, 6, 7, 8], [3 => true, 5 => true, 8 => true]);
+$quartermaster = addDealCard($state, GameState::PLAYER_HOST, 'quartermaster', CardInstance::ZONE_HAND, 4, false, $quartermasterProp);
+assertTrue(ResourceCalculator::effectiveRecruitCost($state, GameState::PLAYER_HOST, $quartermaster) === 0, 'Gold/silver mix should not affect required cost matching');
+
+$state = dealState();
+$cards = addSquadPrices($state, [3, 4, 5, 6, 7, 8]);
+$quartermaster = addDealCard($state, GameState::PLAYER_HOST, 'quartermaster', CardInstance::ZONE_HAND, 4, false, $quartermasterProp);
+assertTrue(ResourceCalculator::effectiveRecruitCost($state, GameState::PLAYER_HOST, $quartermaster) === 0, 'Quartermaster should start free before return');
+$processor = new PrepareProcessor($state);
+$result = $processor->unpickCard(GameState::PLAYER_HOST, new Command('unpick_card', ['ukid' => $cards[4]->ukid]));
+assertTrue($result->success, $result->error ?? 'Returning required price 7 card should succeed');
+assertTrue(ResourceCalculator::effectiveRecruitCost($state, GameState::PLAYER_HOST, $quartermaster) === 4, 'Returning a required price should restore Quartermaster base cost');
+
+$state = dealState(['gold' => 0, 'silver' => 33]);
+addSquadPrices($state, [3, 4, 5, 6, 7, 8]);
+addDealCard($state, GameState::PLAYER_HOST, 'quartermaster', CardInstance::ZONE_HAND, 4, false, $quartermasterProp);
+$processor = new PrepareProcessor($state);
+$result = $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 'quartermaster']));
+assertTrue($result->success, $result->error ?? 'Quartermaster should be recruitable with only enough resources for the existing squad');
+$calc = ResourceCalculator::compute($state, GameState::PLAYER_HOST);
+assertTrue($calc['silver_left'] === 0, 'Free Quartermaster should not spend silver');
+
+$state = dealState(['gold' => 0, 'silver' => 29]);
+addSquadPrices($state, [3, 5, 6, 7, 8]);
+addDealCard($state, GameState::PLAYER_HOST, 'quartermaster', CardInstance::ZONE_HAND, 4, false, $quartermasterProp);
+$processor = new PrepareProcessor($state);
+$result = $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 'quartermaster']));
+assertTrue(!$result->success, 'Missing required 4 should make Quartermaster unaffordable when only base squad resources are available');
+
+$state = dealState();
+addSquadPrices($state, [3, 4, 5, 6, 7, 8]);
+$ordinary = addDealCard($state, GameState::PLAYER_HOST, 'ordinary', CardInstance::ZONE_HAND, 4, false);
+assertTrue(ResourceCalculator::effectiveRecruitCost($state, GameState::PLAYER_HOST, $ordinary) === 4, 'Ordinary card without cost_modifier should keep base cost');
+
+$state = dealState();
+addSquadPrices($state, [3, 4, 5, 6, 7, 8]);
+addDealCard($state, GameState::PLAYER_HOST, 's1_171', CardInstance::ZONE_SQUAD, 3, false, $marauderProp);
+$quartermaster = addDealCard($state, GameState::PLAYER_HOST, 'quartermaster', CardInstance::ZONE_HAND, 4, false, $quartermasterProp);
+$calc = ResourceCalculator::compute($state, GameState::PLAYER_HOST, adding: $quartermaster);
+assertTrue($calc['elite_gold_bonus'] === 1, 'Marauder resource_modifier should still apply with cost_modifier candidate');
+assertTrue(ResourceCalculator::effectiveRecruitCost($state, GameState::PLAYER_HOST, $quartermaster) === 0, 'Marauder interaction should not prevent Quartermaster free cost');
 
 echo "Deal resource tests passed.\n";
 
@@ -183,5 +275,23 @@ assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Леса'), 'Deal
 assertTrue(!str_contains($screen['data']['bottom_panel_html'], 'plains'), 'Deal squad badges should not expose internal plains code');
 assertTrue(!str_contains($screen['data']['bottom_panel_html'], 'forests'), 'Deal squad badges should not expose internal forest code');
 assertTrue(str_contains($screen['data']['bottom_panel_html'], 'penalty active'), 'Element penalty should use existing active penalty style');
+
+$state = dealState();
+addSquadPrices($state, [3, 4, 5, 6, 7, 8]);
+addDealCard($state, GameState::PLAYER_HOST, 'quartermaster', CardInstance::ZONE_HAND, 4, false, $quartermasterProp);
+$_GET['card'] = 'hand:quartermaster';
+$screen = (new DealScreen($tpl))->prepare($state, GameState::PLAYER_HOST, 'host', null, [
+    'quartermaster' => [
+        'name' => 'Ведающий запасами',
+        'price' => 4,
+        'health' => 5,
+        'move' => 1,
+        'elite' => false,
+        'element' => 'Степи',
+        'strike' => ['weak' => 1, 'medium' => 1, 'strong' => 1],
+    ],
+], $elementLabels);
+assertTrue(str_contains($screen['data']['preview_html'], 'Цена: 0 (обычно 4)'), 'Deal preview should render effective free recruit cost');
+unset($_GET['card']);
 
 echo "Deal UI smoke tests passed.\n";

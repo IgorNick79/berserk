@@ -1,0 +1,20 @@
+{
+  "stage": "deal",
+  "host_side": 1,
+  "player_side": 2,
+  "deal_size": 1,
+  "cards": [
+    {"owner": "host", "ukid": "s1_1"},
+    {"owner": "host", "ukid": "s1_5"},
+    {"owner": "host", "ukid": "s1_11"},
+    {"owner": "host", "ukid": "s1_159"},
+    {"owner": "host", "ukid": "s1_164"},
+    {"owner": "host", "ukid": "s1_168"}
+  ],
+  "deck_host": [
+    {"ukid": "s1_172"}
+  ],
+  "deck_player": [
+    {"ukid": "s1_1"}
+  ]
+}

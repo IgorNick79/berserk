@@ -137,6 +137,7 @@ final class DealScreen
         if ($selectedUkid !== '') {
             $selectedInfo = $cardsInfo[$selectedUkid] ?? null;
             if ($selectedInfo) {
+                $selectedInfo = $this->selectedPreviewInfo($state, $playerKey, $selectedZone, $selectedUkid, $selectedInfo);
                 $selectedCard = ['ukid' => $selectedUkid, 'info' => $selectedInfo];
                 if (!$me->isConfirmed('deal') && $selectedZone === 'hand') {
                     $cardActions[] = [
@@ -203,5 +204,34 @@ final class DealScreen
 
         $spec = $activeChoice->panel($state, $playerKey, $baseUrl);
         return $spec === null ? '' : Panel::render($spec);
+    }
+
+    private function selectedPreviewInfo(
+        GameState $state,
+        string $playerKey,
+        string $selectedZone,
+        string $selectedUkid,
+        array $info
+    ): array {
+        if ($selectedZone !== 'hand') {
+            return $info;
+        }
+
+        foreach ($state->cards as $card) {
+            if ($card->owner !== $playerKey
+                || $card->zone !== CardInstance::ZONE_HAND
+                || $card->ukid !== $selectedUkid) {
+                continue;
+            }
+
+            $effectiveCost = ResourceCalculator::effectiveRecruitCost($state, $playerKey, $card);
+            $baseCost = (int) ($info['price'] ?? $card->price);
+            if ($effectiveCost !== $baseCost) {
+                $info['price'] = $effectiveCost . ' (обычно ' . $baseCost . ')';
+            }
+            break;
+        }
+
+        return $info;
     }
 }

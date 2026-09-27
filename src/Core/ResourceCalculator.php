@@ -39,10 +39,11 @@ final class ResourceCalculator
             if ($card->zone !== CardInstance::ZONE_SQUAD) continue;
             if ($removing && $card->instanceId === $removing->instanceId) continue;
 
+            $cost = self::effectiveRecruitCost($state, $playerKey, $card);
             if ($card->elite) {
-                $goldSpent += $card->price;
+                $goldSpent += $cost;
             } else {
-                $silverSpent += $card->price;
+                $silverSpent += $cost;
             }
 
             if ($card->element !== 'neutral' && $card->element !== '') {
@@ -53,10 +54,11 @@ final class ResourceCalculator
         }
 
         if ($adding) {
+            $cost = self::effectiveRecruitCost($state, $playerKey, $adding);
             if ($adding->elite) {
-                $goldSpent += $adding->price;
+                $goldSpent += $cost;
             } else {
-                $silverSpent += $adding->price;
+                $silverSpent += $cost;
             }
             if ($adding->element !== 'neutral' && $adding->element !== '') {
                 $elements[$adding->element] = ($elements[$adding->element] ?? 0) + 1;
@@ -91,8 +93,54 @@ final class ResourceCalculator
         ];
     }
 
+    public static function effectiveRecruitCost(GameState $state, string $playerKey, CardInstance $candidate): int
+    {
+        $baseCost = max(0, $candidate->price);
+        $requiredCosts = self::freeIfSquadHasCosts($candidate);
+        if (empty($requiredCosts)) {
+            return $baseCost;
+        }
+
+        $presentCosts = [];
+        foreach ($state->cards as $card) {
+            if ($card->owner !== $playerKey) continue;
+            if ($card->zone !== CardInstance::ZONE_SQUAD) continue;
+            if ($card->instanceId === $candidate->instanceId) continue;
+
+            $presentCosts[(int) $card->price] = true;
+        }
+
+        foreach ($requiredCosts as $cost) {
+            if (!isset($presentCosts[$cost])) {
+                return $baseCost;
+            }
+        }
+
+        return 0;
+    }
+
     private static function dealEliteGoldBonus(CardInstance $card): int
     {
         return max(0, (int) ($card->prop['deal']['resource_modifier']['elite_gold'] ?? 0));
+    }
+
+    /**
+     * @return int[]
+     */
+    private static function freeIfSquadHasCosts(CardInstance $card): array
+    {
+        $required = $card->prop['deal']['cost_modifier']['free_if_squad_has_costs'] ?? [];
+        if (!is_array($required)) {
+            return [];
+        }
+
+        $costs = [];
+        foreach ($required as $cost) {
+            if (is_numeric($cost)) {
+                $costs[] = max(0, (int) $cost);
+            }
+        }
+
+        return array_values(array_unique($costs));
     }
 }
