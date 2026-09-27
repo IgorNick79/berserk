@@ -17,7 +17,7 @@ final class ResourceCalculator
      *
      * @param CardInstance|null $adding    Карта, которую хотим добавить (для проверки)
      * @param CardInstance|null $removing  Карта, которую хотим убрать
-     * @return array{gold_left:int, silver_left:int, gold_total:int, silver_total:int, elite_gold_bonus:int, gold_spent:int, silver_spent:int, elements_count:int, elements:array<string,int>, penalty:int}
+     * @return array{gold_left:int, silver_left:int, gold_total:int, silver_total:int, elite_gold_bonus:int, gold_spent:int, silver_spent:int, silver_extra_spent:int, silver_extra_left:int, silver_extra_affordable:bool, elements_count:int, elements:array<string,int>, penalty:int}
      */
     public static function compute(
         GameState $state,
@@ -31,6 +31,7 @@ final class ResourceCalculator
 
         $goldSpent   = 0;
         $silverSpent = 0;
+        $silverExtraSpent = 0;
         $eliteGoldBonus = 0;
         $elements    = [];
 
@@ -51,21 +52,11 @@ final class ResourceCalculator
             if ($card->zone !== CardInstance::ZONE_SQUAD) continue;
             if ($removing && $card->instanceId === $removing->instanceId) continue;
 
-            $cost = self::effectiveRecruitCost($state, $playerKey, $card);
-            if ($card->elite) {
-                $goldSpent += $cost;
-            } else {
-                $silverSpent += $cost;
-            }
+            self::addRecruitCost($state, $playerKey, $card, $goldSpent, $silverSpent, $silverExtraSpent);
         }
 
         if ($adding) {
-            $cost = self::effectiveRecruitCost($state, $playerKey, $adding);
-            if ($adding->elite) {
-                $goldSpent += $cost;
-            } else {
-                $silverSpent += $cost;
-            }
+            self::addRecruitCost($state, $playerKey, $adding, $goldSpent, $silverSpent, $silverExtraSpent);
             if ($adding->element !== 'neutral' && $adding->element !== '') {
                 $elements[$adding->element] = ($elements[$adding->element] ?? 0) + 1;
             }
@@ -79,6 +70,8 @@ final class ResourceCalculator
         $goldTotal = $baseGoldTotal + $eliteGoldBonus;
         $goldLeft   = $goldTotal - $goldSpent;
         $silverLeft = $silverTotal - $silverSpent;
+        $silverExtraLeft = $silverTotal - $silverSpent;
+        $silverExtraAffordable = $silverExtraSpent === 0 || $silverExtraLeft >= 0;
 
         if ($silverLeft < 0) {
             $goldLeft   += $silverLeft;
@@ -93,6 +86,9 @@ final class ResourceCalculator
             'elite_gold_bonus' => $eliteGoldBonus,
             'gold_spent'     => $goldSpent,
             'silver_spent'   => $silverSpent,
+            'silver_extra_spent' => $silverExtraSpent,
+            'silver_extra_left' => $silverExtraLeft,
+            'silver_extra_affordable' => $silverExtraAffordable,
             'elements_count' => $elementsCount,
             'elements'       => $elements,
             'penalty'        => $penalty,
@@ -100,6 +96,12 @@ final class ResourceCalculator
     }
 
     public static function effectiveRecruitCost(GameState $state, string $playerKey, CardInstance $candidate): int
+    {
+        return self::effectiveBaseRecruitCost($state, $playerKey, $candidate)
+            + self::dealExtraRecruitCost($candidate);
+    }
+
+    private static function effectiveBaseRecruitCost(GameState $state, string $playerKey, CardInstance $candidate): int
     {
         $baseCost = max(0, $candidate->price);
         $requiredCosts = self::freeIfSquadHasCosts($candidate);
@@ -128,6 +130,45 @@ final class ResourceCalculator
     private static function dealEliteGoldBonus(CardInstance $card): int
     {
         return max(0, (int) ($card->prop['deal']['resource_modifier']['elite_gold'] ?? 0));
+    }
+
+    private static function dealExtraRecruitCost(CardInstance $card): int
+    {
+        return max(0, (int) ($card->flags['deal_variable_recruit']['extra_cost'] ?? 0));
+    }
+
+    private static function dealExtraRecruitResource(CardInstance $card): string
+    {
+        return (string) ($card->flags['deal_variable_recruit']['resource'] ?? 'elite_gold');
+    }
+
+    private static function addRecruitCost(
+        GameState $state,
+        string $playerKey,
+        CardInstance $card,
+        int &$goldSpent,
+        int &$silverSpent,
+        int &$silverExtraSpent,
+    ): void {
+        $baseCost = self::effectiveBaseRecruitCost($state, $playerKey, $card);
+        if ($card->elite) {
+            $goldSpent += $baseCost;
+        } else {
+            $silverSpent += $baseCost;
+        }
+
+        $extraCost = self::dealExtraRecruitCost($card);
+        if ($extraCost <= 0) {
+            return;
+        }
+
+        if (self::dealExtraRecruitResource($card) === 'silver') {
+            $silverSpent += $extraCost;
+            $silverExtraSpent += $extraCost;
+            return;
+        }
+
+        $goldSpent += $extraCost;
     }
 
     /**

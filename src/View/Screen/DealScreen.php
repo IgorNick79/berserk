@@ -171,7 +171,7 @@ final class DealScreen
                 . '</div>';
         }
 
-        $bottomPanelHtml = $this->pendingPanelHtml($state, $playerKey, $baseUrl);
+        $bottomPanelHtml = $this->pendingPanelHtml($state, $playerKey, $baseUrl, $role, $cardsInfo);
         if ($bottomPanelHtml === '') {
             $bottomPanelHtml = '<div class="prepare-bottom-summary prepare-bottom-summary--stack">'
                 . '<div class="prepare-bottom-row">'
@@ -197,12 +197,12 @@ final class DealScreen
         ];
     }
 
-    private function pendingPanelHtml(GameState $state, string $playerKey, string $baseUrl): string
+    private function pendingPanelHtml(GameState $state, string $playerKey, string $baseUrl, string $role, array $cardsInfo): string
     {
         $activeChoice = ChoiceRegistry::current($state);
         if ($activeChoice === null) return '';
 
-        $spec = $activeChoice->panel($state, $playerKey, $baseUrl);
+        $spec = $activeChoice->spec($state, $playerKey, $cardsInfo, $baseUrl, $role);
         return $spec === null ? '' : Panel::render($spec);
     }
 

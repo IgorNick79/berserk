@@ -373,6 +373,13 @@ final class PrepareProcessor
             return Result::error('Карта не найдена в раздаче');
         }
 
+        if ($this->dealVariableRecruitConfig($found) !== null
+            && empty($found->flags['deal_variable_recruit'])) {
+            $this->state->battle['pending_deal_variable_recruit'] = $this->dealVariableRecruitPending($playerKey, $found);
+            $this->state->bumpVersion();
+            return Result::ok(["deal_variable_recruit_pending:{$playerKey}:{$ukid}"]);
+        }
+
         $constraintError = $this->validateDealSquadConstraints($playerKey, $found);
         if ($constraintError !== null) {
             return Result::error($constraintError);
@@ -411,12 +418,84 @@ final class PrepareProcessor
                 && $card->zone === CardInstance::ZONE_SQUAD
                 && $card->ukid === $ukid) {
                 (new ZoneManager($this->state))->toHand($card);
+                $this->resetDealVariableRecruit($card);
                 $this->state->bumpVersion();
                 return Result::ok(["card_unpicked:{$playerKey}:{$ukid}"]);
             }
         }
 
         return Result::error('Карта не найдена в отряде');
+    }
+
+    public function chooseDealVariableRecruit(string $playerKey, Command $cmd): Result
+    {
+        if ($this->state->status !== 'deal') {
+            return Result::error('Сейчас не стадия выбора отряда');
+        }
+
+        $pending = $this->state->battle['pending_deal_variable_recruit'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
+            return Result::error('Нет ожидающего выбора');
+        }
+
+        $card = $this->state->getCard((int) ($pending['card_id'] ?? 0));
+        if (!$card || $card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_HAND) {
+            unset($this->state->battle['pending_deal_variable_recruit']);
+            return Result::error('Карта не найдена в раздаче');
+        }
+
+        $config = $this->dealVariableRecruitConfig($card);
+        if ($config === null) {
+            unset($this->state->battle['pending_deal_variable_recruit']);
+            return Result::error('Выбор недоступен');
+        }
+
+        $x = (int) $cmd->get('x', -1);
+        $minX = (int) $config['min_x'];
+        $maxX = (int) $config['max_x'];
+        if ($x < $minX || $x > $maxX) {
+            return Result::error('Недопустимое значение X');
+        }
+        if (!in_array(($config['resource'] ?? 'elite_gold'), ['elite_gold', 'silver'], true)) {
+            return Result::error('Неподдерживаемый ресурс выбора');
+        }
+
+        $this->applyDealVariableRecruit($card, $x, $config);
+
+        $constraintError = $this->validateDealSquadConstraints($playerKey, $card);
+        if ($constraintError !== null) {
+            $this->resetDealVariableRecruit($card);
+            return Result::error($constraintError);
+        }
+
+        $calc = ResourceCalculator::compute($this->state, $playerKey, adding: $card);
+        if (!$calc['silver_extra_affordable']) {
+            $this->resetDealVariableRecruit($card);
+            return Result::error('Не хватает серебра');
+        }
+        if ($calc['gold_left'] < 0) {
+            $this->resetDealVariableRecruit($card);
+            return Result::error('Не хватает золота');
+        }
+
+        (new ZoneManager($this->state))->toSquad($card);
+        unset($this->state->battle['pending_deal_variable_recruit']);
+        $this->state->bumpVersion();
+
+        return Result::ok(["card_picked:{$playerKey}:{$card->ukid}", "deal_variable_recruit:{$x}"]);
+    }
+
+    public function cancelDealVariableRecruit(string $playerKey): Result
+    {
+        $pending = $this->state->battle['pending_deal_variable_recruit'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
+            return Result::error('Нет ожидающего выбора');
+        }
+
+        unset($this->state->battle['pending_deal_variable_recruit']);
+        $this->state->bumpVersion();
+
+        return Result::ok(['deal_variable_recruit_cancelled']);
     }
 
     private function validateDealSquadConstraints(string $playerKey, CardInstance $adding): ?string
@@ -451,6 +530,99 @@ final class PrepareProcessor
         }
 
         return null;
+    }
+
+    private function dealVariableRecruitConfig(CardInstance $card): ?array
+    {
+        $config = $card->prop['deal']['recruit_choice'] ?? null;
+        if (!is_array($config)) {
+            return null;
+        }
+
+        $extraCost = $config['extra_cost'] ?? null;
+        $instanceBuff = $config['instance_buff'] ?? null;
+        if (!is_array($extraCost) || !is_array($instanceBuff)) {
+            return null;
+        }
+
+        $minX = max(0, (int) ($extraCost['min'] ?? 0));
+        $maxX = max($minX, (int) ($extraCost['max'] ?? $minX));
+
+        return [
+            'min_x' => $minX,
+            'max_x' => $maxX,
+            'resource' => (string) ($extraCost['resource'] ?? 'elite_gold'),
+            'attack_per_x' => max(0, (int) ($instanceBuff['attack_per_x'] ?? 0)),
+            'health' => max(0, (int) ($instanceBuff['health'] ?? 0)),
+        ];
+    }
+
+    private function dealVariableRecruitPending(string $playerKey, CardInstance $card): array
+    {
+        $config = $this->dealVariableRecruitConfig($card) ?? [];
+
+        return [
+            'owner' => $playerKey,
+            'card_id' => $card->instanceId,
+            'ukid' => $card->ukid,
+            'min_x' => (int) ($config['min_x'] ?? 0),
+            'max_x' => (int) ($config['max_x'] ?? 0),
+            'resource' => (string) ($config['resource'] ?? 'elite_gold'),
+            'attack_per_x' => (int) ($config['attack_per_x'] ?? 0),
+            'health' => (int) ($config['health'] ?? 0),
+        ];
+    }
+
+    private function applyDealVariableRecruit(CardInstance $card, int $x, array $config): void
+    {
+        $this->resetDealVariableRecruit($card);
+
+        $extraCost = $x;
+        $strikeBonus = $x * (int) $config['attack_per_x'];
+        $hpBonus = (int) $config['health'];
+
+        $card->flags['deal_variable_recruit'] = [
+            'x' => $x,
+            'extra_cost' => $extraCost,
+            'resource' => (string) ($config['resource'] ?? 'elite_gold'),
+            'strike_bonus' => $strikeBonus,
+            'hp_bonus' => $hpBonus,
+        ];
+
+        if ($strikeBonus > 0) {
+            $card->modifiers[] = [
+                'stat' => 'ability_strike',
+                'value' => $strikeBonus,
+                'expire' => 'permanent',
+                'source' => 'deal_variable_recruit',
+            ];
+        }
+
+        if ($hpBonus > 0) {
+            $card->hpMax += $hpBonus;
+            $card->hp += $hpBonus;
+        }
+    }
+
+    private function resetDealVariableRecruit(CardInstance $card): void
+    {
+        $applied = $card->flags['deal_variable_recruit'] ?? null;
+        if (!is_array($applied)) {
+            return;
+        }
+
+        $hpBonus = (int) ($applied['hp_bonus'] ?? 0);
+        if ($hpBonus > 0) {
+            $card->hpMax = max(0, $card->hpMax - $hpBonus);
+            $card->hp = min($card->hp, $card->hpMax);
+        }
+
+        $card->modifiers = array_values(array_filter(
+            $card->modifiers,
+            fn($modifier) => ($modifier['source'] ?? null) !== 'deal_variable_recruit'
+        ));
+
+        unset($card->flags['deal_variable_recruit']);
     }
 
     public function confirmDeal(string $playerKey): Result

@@ -20,6 +20,7 @@ final class ChoiceRegistry
         static $handlers = null;
         if ($handlers === null) {
             $handlers = [
+                new DealVariableRecruitChoice(),
                 new CoinSpendChoice(),
                 new DiceChoiceChoice(),
                 new CellMarkerChoice(),
