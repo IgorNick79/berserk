@@ -56,7 +56,7 @@ function dealState(array $resources = ['gold' => 24, 'silver' => 22]): GameState
     return $state;
 }
 
-$marauderProp = ['deal' => ['on_recruit' => ['elite_gold' => 1]]];
+$marauderProp = ['deal' => ['resource_modifier' => ['elite_gold' => 1]]];
 
 // Successful recruit: ordinary cost is paid from silver, then elite gold bonus is derived from squad.
 $state = dealState();

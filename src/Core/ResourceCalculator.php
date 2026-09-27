@@ -93,6 +93,6 @@ final class ResourceCalculator
 
     private static function dealEliteGoldBonus(CardInstance $card): int
     {
-        return max(0, (int) ($card->prop['deal']['on_recruit']['elite_gold'] ?? 0));
+        return max(0, (int) ($card->prop['deal']['resource_modifier']['elite_gold'] ?? 0));
     }
 }
