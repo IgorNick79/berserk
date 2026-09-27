@@ -137,14 +137,15 @@ final class DealScreen
         if ($selectedUkid !== '') {
             $selectedInfo = $cardsInfo[$selectedUkid] ?? null;
             if ($selectedInfo) {
-                $selectedInfo = $this->selectedPreviewInfo($state, $playerKey, $selectedZone, $selectedUkid, $selectedInfo);
+                $selectedInfo = $this->selectedPreviewInfo($state, $playerKey, $selectedZone, $selectedUkid, $selectedInfo, $cardsInfo);
                 $selectedCard = ['ukid' => $selectedUkid, 'info' => $selectedInfo];
                 if (!$me->isConfirmed('deal') && $selectedZone === 'hand') {
                     $cardActions[] = [
                         'label' => 'В отряд',
                         'url'   => "{$baseUrl}&cmd=pick_card&ukid=" . urlencode($selectedUkid),
                     ];
-                } elseif (!$me->isConfirmed('deal') && $selectedZone === 'squad') {
+                } elseif (!$me->isConfirmed('deal') && $selectedZone === 'squad'
+                    && !$this->selectedSquadCardIsLinkedCompanion($state, $playerKey, $selectedUkid)) {
                     $cardActions[] = [
                         'label' => 'Вернуть',
                         'url'   => "{$baseUrl}&cmd=unpick_card&ukid=" . urlencode($selectedUkid),
@@ -211,7 +212,8 @@ final class DealScreen
         string $playerKey,
         string $selectedZone,
         string $selectedUkid,
-        array $info
+        array $info,
+        array $cardsInfo
     ): array {
         foreach ($state->cards as $card) {
             if ($card->owner !== $playerKey
@@ -228,14 +230,14 @@ final class DealScreen
                 }
             }
 
-            $info['notes_html'] = $this->dealPreviewNotes($state, $playerKey, $card, $selectedZone);
+            $info['notes_html'] = $this->dealPreviewNotes($state, $playerKey, $card, $selectedZone, $cardsInfo);
             break;
         }
 
         return $info;
     }
 
-    private function dealPreviewNotes(GameState $state, string $playerKey, CardInstance $card, string $selectedZone): string
+    private function dealPreviewNotes(GameState $state, string $playerKey, CardInstance $card, string $selectedZone, array $cardsInfo): string
     {
         $notes = [];
 
@@ -253,6 +255,31 @@ final class DealScreen
             if (!empty($scout['requires_empty_squad'])
                 && count($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD)) > 0) {
                 $notes[] = 'Разведка доступна только в начале набора.';
+            }
+        }
+
+        $linkedRecruit = $card->prop['deal']['linked_recruit'] ?? null;
+        if (is_array($linkedRecruit) && $selectedZone === CardInstance::ZONE_HAND) {
+            $maxCost = max(0, (int) ($linkedRecruit['max_elite_cost'] ?? 7));
+            $notes[] = 'В начале набора можно выбрать золотое существо стоимостью до '
+                . $maxCost
+                . '. Оно набирается за ту же числовую стоимость серебром и становится связанным с этой картой.';
+
+            if (!empty($linkedRecruit['requires_empty_squad'])
+                && count($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD)) > 0) {
+                $notes[] = 'Совместный набор доступен только в начале набора.';
+            }
+        }
+
+        $appliedLink = $card->flags['deal_linked_recruit'] ?? null;
+        if (is_array($appliedLink) && $selectedZone === CardInstance::ZONE_SQUAD) {
+            $linked = $state->getCard((int) ($appliedLink['linked_instance_id'] ?? 0));
+            $linkedName = $linked ? ($cardsInfo[$linked->ukid]['name'] ?? $linked->ukid) : 'связанная карта';
+
+            if (($appliedLink['role'] ?? null) === 'source') {
+                $notes[] = 'Связана с ' . $linkedName . '. При возврате этой карты обе карты вернутся в руку.';
+            } elseif (($appliedLink['role'] ?? null) === 'companion') {
+                $notes[] = 'Связана с ' . $linkedName . '. Отдельно вернуть нельзя; в бою погибнет, когда связанная карта покинет поле боя.';
             }
         }
 
@@ -279,5 +306,20 @@ final class DealScreen
         }
 
         return $html;
+    }
+
+    private function selectedSquadCardIsLinkedCompanion(GameState $state, string $playerKey, string $selectedUkid): bool
+    {
+        foreach ($state->cards as $card) {
+            if ($card->owner !== $playerKey
+                || $card->zone !== CardInstance::ZONE_SQUAD
+                || $card->ukid !== $selectedUkid) {
+                continue;
+            }
+
+            return ($card->flags['deal_linked_recruit']['role'] ?? null) === 'companion';
+        }
+
+        return false;
     }
 }

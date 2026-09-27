@@ -377,6 +377,23 @@ final class PrepareProcessor
             return Result::error('Карта не найдена в раздаче');
         }
 
+        if ($this->dealLinkedRecruitConfig($found) !== null
+            && empty($found->flags['deal_linked_recruit'])) {
+            $beginningError = $this->validateDealLinkedRecruitBeginning($playerKey, $found);
+            if ($beginningError !== null) {
+                return Result::error($beginningError);
+            }
+
+            $pending = $this->dealLinkedRecruitPending($playerKey, $found);
+            if (empty($pending['candidate_ids'])) {
+                return Result::error('Нет подходящего существа для совместного набора');
+            }
+
+            $this->state->battle['pending_deal_linked_recruit'] = $pending;
+            $this->state->bumpVersion();
+            return Result::ok(["deal_linked_recruit_pending:{$playerKey}:{$ukid}"]);
+        }
+
         if ($this->dealScoutRecruitConfig($found) !== null
             && empty($found->flags['deal_scout_recruit'])) {
             $beginningError = $this->validateDealScoutBeginning($playerKey, $found);
@@ -433,6 +450,14 @@ final class PrepareProcessor
             if ($card->owner === $playerKey
                 && $card->zone === CardInstance::ZONE_SQUAD
                 && $card->ukid === $ukid) {
+                if (($card->flags['deal_linked_recruit']['role'] ?? null) === 'companion') {
+                    return Result::error('Связанное существо нельзя вернуть отдельно');
+                }
+
+                if (($card->flags['deal_linked_recruit']['role'] ?? null) === 'source') {
+                    return $this->returnDealLinkedRecruitSource($playerKey, $card);
+                }
+
                 if (!empty($card->flags['deal_scout_recruit']['return_locked'])) {
                     return Result::error('Лазутчицу нельзя вернуть после разведки');
                 }
@@ -445,6 +470,84 @@ final class PrepareProcessor
         }
 
         return Result::error('Карта не найдена в отряде');
+    }
+
+    public function chooseDealLinkedRecruit(string $playerKey, Command $cmd): Result
+    {
+        if ($this->state->status !== 'deal') {
+            return Result::error('Сейчас не стадия выбора отряда');
+        }
+
+        $pending = $this->state->battle['pending_deal_linked_recruit'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
+            return Result::error('Нет ожидающего совместного набора');
+        }
+
+        $source = $this->state->getCard((int) ($pending['source_id'] ?? 0));
+        if (!$source || $source->owner !== $playerKey || $source->zone !== CardInstance::ZONE_HAND) {
+            unset($this->state->battle['pending_deal_linked_recruit']);
+            return Result::error('Карта не найдена в раздаче');
+        }
+
+        $config = $this->dealLinkedRecruitConfig($source);
+        if ($config === null) {
+            unset($this->state->battle['pending_deal_linked_recruit']);
+            return Result::error('Совместный набор недоступен');
+        }
+
+        $beginningError = $this->validateDealLinkedRecruitBeginning($playerKey, $source);
+        if ($beginningError !== null) {
+            return Result::error($beginningError);
+        }
+
+        $companionId = (int) $cmd->get('companion_id', 0);
+        $companion = $this->state->getCard($companionId);
+        if (!$companion) {
+            return Result::error('Существо не найдено');
+        }
+
+        $candidateError = $this->validateDealLinkedRecruitCompanion($playerKey, $source, $companion, $config);
+        if ($candidateError !== null) {
+            return Result::error($candidateError);
+        }
+
+        $this->applyDealLinkedRecruit($source, $companion, $config);
+
+        $constraintError = $this->validateDealSquadConstraintsForAdditions($playerKey, [$source, $companion]);
+        if ($constraintError !== null) {
+            $this->resetDealLinkedRecruitPair($source, $companion);
+            return Result::error($constraintError);
+        }
+
+        $calc = ResourceCalculator::compute($this->state, $playerKey, additions: [$source, $companion]);
+        if ($calc['gold_left'] < 0) {
+            $this->resetDealLinkedRecruitPair($source, $companion);
+            return Result::error('Не хватает золота');
+        }
+
+        (new ZoneManager($this->state))->toSquad($source);
+        (new ZoneManager($this->state))->toSquad($companion);
+        unset($this->state->battle['pending_deal_linked_recruit']);
+        $this->state->bumpVersion();
+
+        return Result::ok([
+            "card_picked:{$playerKey}:{$source->ukid}",
+            "card_picked:{$playerKey}:{$companion->ukid}",
+            "deal_linked_recruit:{$source->instanceId}:{$companion->instanceId}",
+        ]);
+    }
+
+    public function cancelDealLinkedRecruit(string $playerKey): Result
+    {
+        $pending = $this->state->battle['pending_deal_linked_recruit'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
+            return Result::error('Нет ожидающего совместного набора');
+        }
+
+        unset($this->state->battle['pending_deal_linked_recruit']);
+        $this->state->bumpVersion();
+
+        return Result::ok(['deal_linked_recruit_cancelled']);
     }
 
     public function confirmDealScoutRecruit(string $playerKey): Result
@@ -653,6 +756,14 @@ final class PrepareProcessor
 
     private function validateDealSquadConstraints(string $playerKey, CardInstance $adding): ?string
     {
+        return $this->validateDealSquadConstraintsForAdditions($playerKey, [$adding]);
+    }
+
+    /**
+     * @param CardInstance[] $additions
+     */
+    private function validateDealSquadConstraintsForAdditions(string $playerKey, array $additions): ?string
+    {
         $resultingSquad = [];
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $playerKey) continue;
@@ -660,7 +771,9 @@ final class PrepareProcessor
 
             $resultingSquad[] = $card;
         }
-        $resultingSquad[] = $adding;
+        foreach ($additions as $adding) {
+            $resultingSquad[] = $adding;
+        }
 
         foreach ($resultingSquad as $card) {
             $constraint = $card->prop['deal']['squad_constraint'] ?? [];
@@ -683,6 +796,142 @@ final class PrepareProcessor
         }
 
         return null;
+    }
+
+    private function dealLinkedRecruitConfig(CardInstance $card): ?array
+    {
+        $config = $card->prop['deal']['linked_recruit'] ?? null;
+        if (!is_array($config)) {
+            return null;
+        }
+
+        $paymentResource = (string) ($config['companion_payment_resource'] ?? 'silver');
+        if ($paymentResource !== 'silver') {
+            return null;
+        }
+
+        return [
+            'max_elite_cost' => max(0, (int) ($config['max_elite_cost'] ?? 7)),
+            'companion_payment_resource' => $paymentResource,
+            'requires_empty_squad' => !empty($config['requires_empty_squad']),
+        ];
+    }
+
+    private function validateDealLinkedRecruitBeginning(string $playerKey, CardInstance $source): ?string
+    {
+        $config = $this->dealLinkedRecruitConfig($source);
+        if ($config === null || !$config['requires_empty_squad']) {
+            return null;
+        }
+
+        foreach ($this->state->cards as $card) {
+            if ($card->owner === $playerKey && $card->zone === CardInstance::ZONE_SQUAD) {
+                return 'Совместный набор доступен только в начале набора';
+            }
+        }
+
+        return null;
+    }
+
+    private function dealLinkedRecruitPending(string $playerKey, CardInstance $source): array
+    {
+        $config = $this->dealLinkedRecruitConfig($source) ?? [];
+        $candidates = [];
+        foreach ($this->state->cards as $card) {
+            if ($this->validateDealLinkedRecruitCompanion($playerKey, $source, $card, $config) !== null) {
+                continue;
+            }
+            if ($this->validateDealSquadConstraintsForAdditions($playerKey, [$source, $card]) !== null) {
+                continue;
+            }
+            $candidates[] = $card->instanceId;
+        }
+
+        return [
+            'owner' => $playerKey,
+            'source_id' => $source->instanceId,
+            'ukid' => $source->ukid,
+            'candidate_ids' => $candidates,
+            'max_elite_cost' => (int) ($config['max_elite_cost'] ?? 7),
+            'companion_payment_resource' => (string) ($config['companion_payment_resource'] ?? 'silver'),
+            'requires_empty_squad' => !empty($config['requires_empty_squad']),
+        ];
+    }
+
+    private function validateDealLinkedRecruitCompanion(
+        string $playerKey,
+        CardInstance $source,
+        CardInstance $candidate,
+        array $config,
+    ): ?string {
+        if ($candidate->instanceId === $source->instanceId) {
+            return 'Нельзя выбрать саму карту';
+        }
+        if ($candidate->owner !== $playerKey) {
+            return 'Существо должно принадлежать игроку';
+        }
+        if ($candidate->zone !== CardInstance::ZONE_HAND) {
+            return 'Существо должно быть в раздаче';
+        }
+        if (!in_array($candidate->type, ['creature', 'fly'], true)) {
+            return 'Можно выбрать только существо';
+        }
+        if (!$candidate->elite) {
+            return 'Можно выбрать только золотое существо';
+        }
+        if ($candidate->price > (int) ($config['max_elite_cost'] ?? 7)) {
+            return 'Стоимость существа слишком велика';
+        }
+
+        return null;
+    }
+
+    private function applyDealLinkedRecruit(CardInstance $source, CardInstance $companion, array $config): void
+    {
+        $this->resetDealLinkedRecruitPair($source, $companion);
+
+        $source->flags['deal_linked_recruit'] = [
+            'role' => 'source',
+            'linked_instance_id' => $companion->instanceId,
+        ];
+
+        $companion->flags['deal_linked_recruit'] = [
+            'role' => 'companion',
+            'linked_instance_id' => $source->instanceId,
+            'payment_resource' => (string) ($config['companion_payment_resource'] ?? 'silver'),
+            'converted_cost' => max(0, $companion->price),
+        ];
+    }
+
+    private function resetDealLinkedRecruitPair(CardInstance $source, CardInstance $companion): void
+    {
+        unset($source->flags['deal_linked_recruit']);
+        unset($companion->flags['deal_linked_recruit']);
+    }
+
+    private function returnDealLinkedRecruitSource(string $playerKey, CardInstance $source): Result
+    {
+        $linkedId = (int) ($source->flags['deal_linked_recruit']['linked_instance_id'] ?? 0);
+        $companion = $this->state->getCard($linkedId);
+        if (!$companion
+            || $companion->owner !== $playerKey
+            || $companion->zone !== CardInstance::ZONE_SQUAD
+            || ($companion->flags['deal_linked_recruit']['role'] ?? null) !== 'companion'
+            || (int) ($companion->flags['deal_linked_recruit']['linked_instance_id'] ?? 0) !== $source->instanceId) {
+            return Result::error('Связанное существо не найдено в отряде');
+        }
+
+        $this->resetDealLinkedRecruitPair($source, $companion);
+        $zone = new ZoneManager($this->state);
+        $zone->toHand($source);
+        $zone->toHand($companion);
+        $this->state->bumpVersion();
+
+        return Result::ok([
+            "card_unpicked:{$playerKey}:{$source->ukid}",
+            "card_unpicked:{$playerKey}:{$companion->ukid}",
+            "deal_linked_recruit_returned:{$source->instanceId}:{$companion->instanceId}",
+        ]);
     }
 
     private function dealScoutRecruitConfig(CardInstance $card): ?array

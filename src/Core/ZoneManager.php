@@ -20,18 +20,21 @@ final class ZoneManager
 
     public function toHand(CardInstance $card): void
     {
+        $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_HAND;
     }
 
     public function toSquad(CardInstance $card): void
     {
+        $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_SQUAD;
     }
 
     public function toDeck(CardInstance $card): void
     {
+        $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_DECK;
     }
@@ -73,6 +76,7 @@ final class ZoneManager
      */
     public function toGraveyard(CardInstance $card): void
     {
+        $this->handleLinkedRecruitSourceLeavingBattlefield($card);
 
         // Уже инкарнировалась → в изгнание (не удаляем)
         if (!empty($card->flags['incarnated'])) {
@@ -118,6 +122,7 @@ final class ZoneManager
 
     public function toExile(CardInstance $card): void
     {
+        $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $card->zone      = CardInstance::ZONE_EXILE;
         $card->dying     = false;
         $card->closed    = true;
@@ -241,5 +246,46 @@ final class ZoneManager
         $card->row  = null;
         $card->col  = null;
         $card->slot = 0;
+    }
+
+    private function handleLinkedRecruitSourceLeavingBattlefield(CardInstance $card): void
+    {
+        if ($card->zone !== CardInstance::ZONE_FIELD
+            && $card->zone !== CardInstance::ZONE_FLYING) {
+            return;
+        }
+        if (($card->flags['deal_linked_recruit']['role'] ?? null) !== 'source') {
+            return;
+        }
+
+        $companionId = (int) ($card->flags['deal_linked_recruit']['linked_instance_id'] ?? 0);
+        if ($companionId <= 0) {
+            return;
+        }
+
+        $companion = $this->state->getCard($companionId);
+        if (!$companion) {
+            return;
+        }
+        if (($companion->flags['deal_linked_recruit']['role'] ?? null) !== 'companion') {
+            return;
+        }
+        if ((int) ($companion->flags['deal_linked_recruit']['linked_instance_id'] ?? 0) !== $card->instanceId) {
+            return;
+        }
+        if ($companion->zone !== CardInstance::ZONE_FIELD
+            && $companion->zone !== CardInstance::ZONE_FLYING) {
+            return;
+        }
+        if ($companion->dying || $companion->hp <= 0) {
+            return;
+        }
+
+        $companion->hp = 0;
+        $companion->dying = true;
+
+        if (empty($this->state->battle['strike'])) {
+            $this->toGraveyard($companion);
+        }
     }
 }

@@ -16,6 +16,7 @@ final class ResourceCalculator
      * Считает остатки с учётом карт в отряде.
      *
      * @param CardInstance|null $adding    Карта, которую хотим добавить (для проверки)
+     * @param CardInstance[]    $additions Карты, которые хотим добавить вместе (для атомарной проверки)
      * @param CardInstance|null $removing  Карта, которую хотим убрать
      * @return array{gold_left:int, silver_left:int, gold_total:int, silver_total:int, elite_gold_bonus:int, gold_spent:int, silver_spent:int, silver_extra_spent:int, silver_extra_left:int, silver_extra_affordable:bool, elements_count:int, elements:array<string,int>, penalty:int}
      */
@@ -23,6 +24,7 @@ final class ResourceCalculator
         GameState $state,
         string $playerKey,
         ?CardInstance $adding = null,
+        array $additions = [],
         ?CardInstance $removing = null,
     ): array {
         $player = $state->getPlayer($playerKey);
@@ -59,6 +61,12 @@ final class ResourceCalculator
             self::addRecruitCost($state, $playerKey, $adding, $goldSpent, $silverSpent, $silverExtraSpent);
             if ($adding->element !== 'neutral' && $adding->element !== '') {
                 $elements[$adding->element] = ($elements[$adding->element] ?? 0) + 1;
+            }
+        }
+        foreach ($additions as $addition) {
+            self::addRecruitCost($state, $playerKey, $addition, $goldSpent, $silverSpent, $silverExtraSpent);
+            if ($addition->element !== 'neutral' && $addition->element !== '') {
+                $elements[$addition->element] = ($elements[$addition->element] ?? 0) + 1;
             }
         }
 
@@ -151,6 +159,15 @@ final class ResourceCalculator
         return max(0, (int) ($card->flags['deal_scout_recruit']['silver_discount'] ?? 0));
     }
 
+    private static function dealLinkedRecruitPaymentResource(CardInstance $card): ?string
+    {
+        if (($card->flags['deal_linked_recruit']['role'] ?? null) !== 'companion') {
+            return null;
+        }
+
+        return (string) ($card->flags['deal_linked_recruit']['payment_resource'] ?? 'silver');
+    }
+
     private static function effectiveBaseRecruitCostAfterDealDiscount(
         GameState $state,
         string $playerKey,
@@ -173,7 +190,10 @@ final class ResourceCalculator
         int &$silverExtraSpent,
     ): void {
         $baseCost = self::effectiveBaseRecruitCostAfterDealDiscount($state, $playerKey, $card);
-        if ($card->elite) {
+        $linkedPaymentResource = self::dealLinkedRecruitPaymentResource($card);
+        if ($linkedPaymentResource === 'silver') {
+            $silverSpent += $baseCost;
+        } elseif ($card->elite) {
             $goldSpent += $baseCost;
         } else {
             $silverSpent += $baseCost;

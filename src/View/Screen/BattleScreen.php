@@ -552,6 +552,7 @@ final class BattleScreen
                 $statusHtml = '<p>Кликни по существу оппонента для атаки.</p>';
             }
         }
+        $statusHtml .= $this->linkedRecruitBattleHint($state, $c, $cardsInfo);
 
         $coinsLine = '';
         if (!empty($c->prop['save_coins']) || $c->coins > 0) {
@@ -570,6 +571,31 @@ final class BattleScreen
             'coins_line'   => $coinsLine,
             'status_html'  => $statusHtml,
         ]);
+    }
+
+    private function linkedRecruitBattleHint(GameState $state, CardInstance $card, array $cardsInfo): string
+    {
+        $link = $card->flags['deal_linked_recruit'] ?? null;
+        if (!is_array($link)) {
+            return '';
+        }
+
+        $linked = $state->getCard((int) ($link['linked_instance_id'] ?? 0));
+        $linkedName = $linked ? ($cardsInfo[$linked->ukid]['name'] ?? $linked->ukid) : 'связанная карта';
+
+        if (($link['role'] ?? null) === 'source') {
+            return '<p class="bonus">Связь: если эта карта покинет поле боя, '
+                . htmlspecialchars($linkedName, ENT_QUOTES)
+                . ' погибнет.</p>';
+        }
+
+        if (($link['role'] ?? null) === 'companion') {
+            return '<p class="bonus">Связь: погибает, когда '
+                . htmlspecialchars($linkedName, ENT_QUOTES)
+                . ' покидает поле боя.</p>';
+        }
+
+        return '';
     }
 
 
