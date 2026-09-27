@@ -255,8 +255,10 @@ $ukids = array_unique($ukids);
 
 // Стихии — один раз
 $elements = [];
-foreach ($db->fetchAll("SELECT ind, name FROM elements") as $e) {
+$elementLabels = [];
+foreach ($db->fetchAll("SELECT ind, code, name FROM elements") as $e) {
     $elements[(int) $e['ind']] = (string) $e['name'];
+    $elementLabels[(string) $e['code']] = (string) $e['name'];
 }
 
 if (!empty($ukids)) {
@@ -301,7 +303,7 @@ switch ($state->status) {
 
     case 'draft':
         $result = (new DraftScreen($tpl))
-            ->prepare($state, $playerKey, $role, $message, $cardsInfo);
+            ->prepare($state, $playerKey, $role, $message, $cardsInfo, $elementLabels);
         $screenName = $result['screen'];
         $screenData = $result['data'];
         break;
@@ -336,7 +338,7 @@ switch ($state->status) {
 
     case 'deal':
         $result = (new DealScreen($tpl))
-            ->prepare($state, $playerKey, $role, $message, $cardsInfo);
+            ->prepare($state, $playerKey, $role, $message, $cardsInfo, $elementLabels);
         $screenName = $result['screen'];
         $screenData = $result['data'];
         break;

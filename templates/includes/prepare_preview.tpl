@@ -9,6 +9,6 @@
         <div>HP {{health}}/{{hp_max}} | MV {{move}}</div>
         <div>Удары: {{weak}}/{{medium}}/{{strong}}</div>
         <div>Цена: {{price}}</div>
+        {{actions_html}}
     </div>
-    {{actions_html}}
 </div>

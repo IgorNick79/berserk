@@ -61,9 +61,6 @@ final class PrepareUi
         }
 
         $actionsHtml = $this->actions($actions);
-        if ($actionsHtml !== '') {
-            $actionsHtml = '<div class="prepare-card-preview__actions">' . $actionsHtml . '</div>';
-        }
 
         return (string) $this->tpl->parse('includes/prepare_preview.tpl', [
             'image_html'  => $imageHtml,

@@ -68,7 +68,6 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 .prepare-card-preview__info { flex: 1; min-width: 180px; }
 .prepare-card-preview__info h3 { margin: 0 0 6px; }
 .prepare-card-preview__meta { color: #777; font-size: 12px; margin-bottom: 8px; }
-.prepare-card-preview__actions { min-width: 180px; display: flex; align-items: center; }
 .prepare-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .prepare-action.disabled { background: #aaa; cursor: default; }
 

@@ -10,6 +10,7 @@ use Berserk\Core\CardInstance;
 use Berserk\Core\Choice\ChoiceRegistry;
 use Berserk\Core\ResourceCalculator;
 use Berserk\View\Template;
+use Berserk\View\Ui\ElementLabels;
 use Berserk\View\Ui\Panel;
 use Berserk\View\Ui\PrepareUi;
 
@@ -25,7 +26,8 @@ final class DealScreen
         string $playerKey,
         string $role,
         ?string $message,
-        array $cardsInfo = []
+        array $cardsInfo = [],
+        array $elementLabels = []
     ): array {
         $linkParam = $role === 'host' ? 'first' : 'second';
         $baseUrl   = "?{$linkParam}&game={$state->gameId}";
@@ -152,8 +154,9 @@ final class DealScreen
         $previewHtml = $ui->preview($selectedCard, $cardActions, 'Выбери карту');
 
         $elementsHtml = '';
-        foreach ((array) ($calc['elements'] ?? []) as $name => $count) {
+        foreach ((array) ($calc['elements'] ?? []) as $code => $count) {
             if ($count <= 0) continue;
+            $name = ElementLabels::label((string) $code, $elementLabels);
             $elementsHtml .= '<span class="draft-element">'
                 . htmlspecialchars((string) $name, ENT_QUOTES)
                 . ': <b>' . (int) $count . '</b>'
@@ -163,7 +166,7 @@ final class DealScreen
         $penaltyHtml = '';
         if ($penalty > 0) {
             $penaltyHtml = '<div class="draft-stats-row">'
-                . '<span>Штраф за стихии: <b>−' . (int) $penalty . ' золото</b></span>'
+                . '<span class="penalty active">Штраф за стихии: <b>−' . (int) $penalty . ' золото</b></span>'
                 . '</div>';
         }
 

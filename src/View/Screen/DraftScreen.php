@@ -7,6 +7,7 @@ namespace Berserk\View\Screen;
 
 use Berserk\Core\GameState;
 use Berserk\View\Template;
+use Berserk\View\Ui\ElementLabels;
 use Berserk\View\Ui\PrepareUi;
 
 final class DraftScreen
@@ -18,7 +19,8 @@ final class DraftScreen
         string $playerKey,
         string $role,
         ?string $message,
-        array $cardsInfo
+        array $cardsInfo,
+        array $elementLabels = []
     ): array {
         $draft = $state->draft ?? null;
         if (!$draft) {
@@ -140,7 +142,7 @@ final class DraftScreen
                 $priceCount++;
             }
 
-            $el = $info['element'] ?? null;
+            $el = isset($info['element']) ? ElementLabels::label((string) $info['element'], $elementLabels) : null;
             if ($el && $el !== '—') {
                 $elementCounts[$el] = ($elementCounts[$el] ?? 0) + 1;
             }

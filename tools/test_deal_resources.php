@@ -32,6 +32,7 @@ function addDealCard(
     int $price,
     bool $elite,
     array $prop = [],
+    string $element = 'neutral',
 ): CardInstance {
     $card = new CardInstance(
         instanceId: $state->nextInstanceId(),
@@ -40,6 +41,7 @@ function addDealCard(
         zone: $zone,
         hp: 5,
         hpMax: 5,
+        element: $element,
         price: $price,
         elite: $elite,
         prop: $prop,
@@ -113,6 +115,7 @@ $_GET['card'] = 'hand:s1_171';
 $state = dealState();
 addDealCard($state, GameState::PLAYER_HOST, 's1_171', CardInstance::ZONE_HAND, 3, false, $marauderProp);
 $tpl = new Template(__DIR__ . '/../templates/');
+$elementLabels = ['plains' => 'Степи', 'forests' => 'Леса'];
 $screen = (new DealScreen($tpl))->prepare($state, GameState::PLAYER_HOST, 'host', null, [
     's1_171' => [
         'name' => 'Мародер',
@@ -123,14 +126,62 @@ $screen = (new DealScreen($tpl))->prepare($state, GameState::PLAYER_HOST, 'host'
         'element' => 'Степи',
         'strike' => ['weak' => 1, 'medium' => 1, 'strong' => 2],
     ],
-]);
+], $elementLabels);
 
 assertTrue(str_contains($screen['data']['preview_html'], 'В отряд'), 'Recruit action should be rendered in card preview');
+assertTrue(!str_contains($screen['data']['preview_html'], 'prepare-card-preview__actions'), 'Preview action should render inside card info');
 assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Выбрано:'), 'Bottom panel should render selected count');
 assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Золото:'), 'Bottom panel should render gold resources');
 assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Серебро:'), 'Bottom panel should render silver resources');
 assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Степи') === false, 'Hand-only element should not appear in squad badges');
 assertTrue(!str_contains($screen['data']['bottom_panel_html'], 'В отряд'), 'Recruit action should not be rendered in bottom panel');
 unset($_GET['card']);
+
+$_GET['card'] = 'squad:s1_171';
+$state = dealState();
+addDealCard($state, GameState::PLAYER_HOST, 's1_171', CardInstance::ZONE_SQUAD, 3, false, $marauderProp, 'plains');
+$screen = (new DealScreen($tpl))->prepare($state, GameState::PLAYER_HOST, 'host', null, [
+    's1_171' => [
+        'name' => 'Мародер',
+        'price' => 3,
+        'health' => 5,
+        'move' => 1,
+        'elite' => false,
+        'element' => 'Степи',
+        'strike' => ['weak' => 1, 'medium' => 1, 'strong' => 2],
+    ],
+], $elementLabels);
+assertTrue(str_contains($screen['data']['preview_html'], 'Вернуть'), 'Return action should be rendered in card preview');
+assertTrue(!str_contains($screen['data']['preview_html'], 'prepare-card-preview__actions'), 'Return action should render inside card info');
+unset($_GET['card']);
+
+$state = dealState();
+addDealCard($state, GameState::PLAYER_HOST, 'plains_unit', CardInstance::ZONE_SQUAD, 1, false, [], 'plains');
+addDealCard($state, GameState::PLAYER_HOST, 'forest_unit', CardInstance::ZONE_SQUAD, 1, false, [], 'forests');
+$screen = (new DealScreen($tpl))->prepare($state, GameState::PLAYER_HOST, 'host', null, [
+    'plains_unit' => [
+        'name' => 'Степной боец',
+        'price' => 1,
+        'health' => 5,
+        'move' => 1,
+        'elite' => false,
+        'element' => 'Степи',
+        'strike' => ['weak' => 1, 'medium' => 1, 'strong' => 1],
+    ],
+    'forest_unit' => [
+        'name' => 'Лесной боец',
+        'price' => 1,
+        'health' => 5,
+        'move' => 1,
+        'elite' => false,
+        'element' => 'Леса',
+        'strike' => ['weak' => 1, 'medium' => 1, 'strong' => 1],
+    ],
+], $elementLabels);
+assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Степи'), 'Deal squad badges should render human-readable plains label');
+assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Леса'), 'Deal squad badges should render human-readable forest label');
+assertTrue(!str_contains($screen['data']['bottom_panel_html'], 'plains'), 'Deal squad badges should not expose internal plains code');
+assertTrue(!str_contains($screen['data']['bottom_panel_html'], 'forests'), 'Deal squad badges should not expose internal forest code');
+assertTrue(str_contains($screen['data']['bottom_panel_html'], 'penalty active'), 'Element penalty should use existing active penalty style');
 
 echo "Deal UI smoke tests passed.\n";
