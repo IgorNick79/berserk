@@ -9,6 +9,7 @@ use Berserk\Core\Autoloader;
 use Berserk\Core\CardInstance;
 use Berserk\Core\CardStats;
 use Berserk\Core\Command;
+use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\Prepare\PrepareProcessor;
 use Berserk\Core\ResourceCalculator;
@@ -34,14 +35,15 @@ function addDealCard(
     bool $elite,
     array $prop = [],
     string $element = 'neutral',
+    int $health = 5,
 ): CardInstance {
     $card = new CardInstance(
         instanceId: $state->nextInstanceId(),
         ukid: $ukid,
         owner: $owner,
         zone: $zone,
-        hp: 5,
-        hpMax: 5,
+        hp: $health,
+        hpMax: $health,
         element: $element,
         price: $price,
         elite: $elite,
@@ -317,7 +319,7 @@ $result = $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', 
 assertTrue(!$result->success, 'Teech elemental limit should be read from prop value');
 
 $state = dealState(['gold' => 20, 'silver' => 20]);
-$warrior = addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp);
+$warrior = addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp, 'neutral', 3);
 $processor = new PrepareProcessor($state);
 $result = $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 's1_190']));
 assertTrue($result->success, $result->error ?? 'Free Warrior recruit should open pending choice');
@@ -328,7 +330,7 @@ assertTrue($result->success, $result->error ?? 'Free Warrior X choice should rec
 assertTrue($warrior->zone === CardInstance::ZONE_SQUAD, 'Free Warrior should move to squad after X confirmation');
 assertTrue(($warrior->flags['deal_variable_recruit']['x'] ?? null) === 3, 'Free Warrior should store chosen X on the instance');
 assertTrue(($warrior->flags['deal_variable_recruit']['extra_cost'] ?? null) === 3, 'Free Warrior should store extra recruit cost');
-assertTrue($warrior->hpMax === 7 && $warrior->hp === 7, 'Free Warrior should gain +2 HP on the instance');
+assertTrue($warrior->hpMax === 5 && $warrior->hp === 5, 'Free Warrior should gain +2 full HP on the instance');
 assertTrue(!empty(array_filter($warrior->modifiers, fn($m) => ($m['source'] ?? null) === 'deal_variable_recruit' && ($m['stat'] ?? null) === 'ability_strike' && (int) ($m['value'] ?? 0) === 3)), 'Free Warrior should gain a permanent strike modifier');
 $calc = ResourceCalculator::compute($state, GameState::PLAYER_HOST);
 assertTrue($calc['gold_left'] === 18, 'Free Warrior should spend only base elite cost from gold');
@@ -338,7 +340,7 @@ $result = $processor->unpickCard(GameState::PLAYER_HOST, new Command('unpick_car
 assertTrue($result->success, $result->error ?? 'Free Warrior return should succeed');
 assertTrue($warrior->zone === CardInstance::ZONE_HAND, 'Returned Free Warrior should go back to hand');
 assertTrue(empty($warrior->flags['deal_variable_recruit']), 'Returned Free Warrior should forget chosen X');
-assertTrue($warrior->hpMax === 5 && $warrior->hp === 5, 'Returned Free Warrior should lose Deal HP bonus');
+assertTrue($warrior->hpMax === 3 && $warrior->hp === 3, 'Returned Free Warrior should restore base full HP');
 assertTrue(empty(array_filter($warrior->modifiers, fn($m) => ($m['source'] ?? null) === 'deal_variable_recruit')), 'Returned Free Warrior should lose Deal strike modifier');
 
 $result = $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 's1_190']));
@@ -346,11 +348,12 @@ assertTrue($result->success, 'Free Warrior should open pending choice again afte
 $result = $processor->chooseDealVariableRecruit(GameState::PLAYER_HOST, new Command('choose_deal_variable_recruit', ['x' => 1]));
 assertTrue($result->success, $result->error ?? 'Free Warrior should be recruitable again with a new X');
 assertTrue(($warrior->flags['deal_variable_recruit']['x'] ?? null) === 1, 'Free Warrior should store the new X after re-recruit');
+assertTrue($warrior->hpMax === 5 && $warrior->hp === 5, 'Free Warrior re-recruit should reapply +2 full HP without stacking');
 $calc = ResourceCalculator::compute($state, GameState::PLAYER_HOST);
 assertTrue($calc['gold_left'] === 18 && $calc['silver_left'] === 19, 'Free Warrior re-recruit should spend only the new silver X');
 
 $state = dealState(['gold' => 20, 'silver' => 20]);
-$warrior = addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp);
+$warrior = addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp, 'neutral', 3);
 $processor = new PrepareProcessor($state);
 $result = $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 's1_190']));
 assertTrue($result->success, 'Free Warrior should open pending before cancellation');
@@ -359,7 +362,7 @@ assertTrue($result->success, $result->error ?? 'Free Warrior pending should be c
 assertTrue($warrior->zone === CardInstance::ZONE_HAND && empty($warrior->flags['deal_variable_recruit']), 'Cancelled Free Warrior should remain unchanged in hand');
 
 $state = dealState(['gold' => 20, 'silver' => 3]);
-addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp);
+addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp, 'neutral', 3);
 $processor = new PrepareProcessor($state);
 $result = $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 's1_190']));
 assertTrue($result->success, 'Free Warrior should open pending before affordability check');
@@ -372,32 +375,33 @@ assertTrue(zoneCount($state, GameState::PLAYER_HOST, CardInstance::ZONE_HAND) ==
 assertTrue(empty(findCardByUkid($state, 's1_190')->flags['deal_variable_recruit']), 'Failed Free Warrior recruit should not persist choice buff');
 
 $state = dealState(['gold' => 100, 'silver' => 3]);
-addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp);
+addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp, 'neutral', 3);
 $processor = new PrepareProcessor($state);
 $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 's1_190']));
 $result = $processor->chooseDealVariableRecruit(GameState::PLAYER_HOST, new Command('choose_deal_variable_recruit', ['x' => 4]));
 assertTrue(!$result->success, 'Large elite gold should not compensate missing silver extra cost');
 
 $state = dealState(['gold' => 20, 'silver' => 20]);
-$warrior = addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp);
+$warrior = addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp, 'neutral', 3);
 $processor = new PrepareProcessor($state);
 $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 's1_190']));
 $result = $processor->chooseDealVariableRecruit(GameState::PLAYER_HOST, new Command('choose_deal_variable_recruit', ['x' => 0]));
 assertTrue($result->success, $result->error ?? 'Free Warrior X=0 should be valid');
-assertTrue($warrior->hpMax === 7 && $warrior->hp === 7, 'Free Warrior X=0 should still grant +2 HP');
+assertTrue($warrior->hpMax === 5 && $warrior->hp === 5, 'Free Warrior X=0 should still grant +2 full HP');
 assertTrue(empty(array_filter($warrior->modifiers, fn($m) => ($m['source'] ?? null) === 'deal_variable_recruit')), 'Free Warrior X=0 should not add a zero attack modifier');
 assertTrue(ResourceCalculator::compute($state, GameState::PLAYER_HOST)['gold_left'] === 18, 'Free Warrior X=0 should spend only effective base cost');
 $calc = ResourceCalculator::compute($state, GameState::PLAYER_HOST);
 assertTrue($calc['silver_left'] === 20 && $calc['silver_extra_spent'] === 0, 'Free Warrior X=0 should not spend silver extra cost');
 
 $state = dealState(['gold' => 20, 'silver' => 20]);
-$warrior = addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp);
+$warrior = addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp, 'neutral', 3);
 $processor = new PrepareProcessor($state);
 $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 's1_190']));
 $result = $processor->chooseDealVariableRecruit(GameState::PLAYER_HOST, new Command('choose_deal_variable_recruit', ['x' => 4]));
 assertTrue($result->success, $result->error ?? 'Free Warrior X=4 should be valid');
 assertTrue(($warrior->flags['deal_variable_recruit']['x'] ?? null) === 4, 'Free Warrior X=4 should be stored');
 assertTrue(!empty(array_filter($warrior->modifiers, fn($m) => ($m['source'] ?? null) === 'deal_variable_recruit' && (int) ($m['value'] ?? 0) === 4)), 'Free Warrior X=4 should grant +4 attack modifier');
+assertTrue($warrior->hpMax === 5 && $warrior->hp === 5, 'Free Warrior X=4 should still grant exactly +2 full HP');
 $calc = ResourceCalculator::compute($state, GameState::PLAYER_HOST);
 assertTrue($calc['gold_left'] === 18, 'Free Warrior X=4 should spend only base cost from gold');
 assertTrue($calc['silver_left'] === 16 && $calc['silver_extra_spent'] === 4, 'Free Warrior X=4 should spend four silver extra cost');
@@ -405,7 +409,7 @@ assertTrue($calc['silver_left'] === 16 && $calc['silver_extra_spent'] === 4, 'Fr
 $restored = GameState::fromArray($state->toArray());
 $restoredWarrior = findCardByUkid($restored, 's1_190');
 assertTrue(($restoredWarrior->flags['deal_variable_recruit']['x'] ?? null) === 4, 'Free Warrior choice should survive GameState serialization');
-assertTrue($restoredWarrior->hpMax === 7 && $restoredWarrior->hp === 7, 'Free Warrior HP buff should survive GameState serialization');
+assertTrue($restoredWarrior->hpMax === 5 && $restoredWarrior->hp === 5, 'Free Warrior full HP buff should survive GameState serialization');
 assertTrue(!empty(array_filter($restoredWarrior->modifiers, fn($m) => ($m['source'] ?? null) === 'deal_variable_recruit' && (int) ($m['value'] ?? 0) === 4)), 'Free Warrior attack buff should survive GameState serialization');
 
 $state = dealState(['gold' => 100, 'silver' => 40]);
@@ -429,7 +433,7 @@ addDealCard($state, GameState::PLAYER_HOST, 's1_199', CardInstance::ZONE_SQUAD, 
 addDealCard($state, GameState::PLAYER_HOST, 'elemental_a', CardInstance::ZONE_SQUAD, 3, false, [], 'plains');
 addDealCard($state, GameState::PLAYER_HOST, 'elemental_b', CardInstance::ZONE_SQUAD, 3, false, [], 'forests');
 addDealCard($state, GameState::PLAYER_HOST, 'elemental_c', CardInstance::ZONE_SQUAD, 3, false, [], 'mountains');
-$warrior = addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp, 'forests');
+$warrior = addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp, 'forests', 3);
 $processor = new PrepareProcessor($state);
 $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 's1_190']));
 $result = $processor->chooseDealVariableRecruit(GameState::PLAYER_HOST, new Command('choose_deal_variable_recruit', ['x' => 2]));
@@ -437,9 +441,10 @@ assertTrue(!$result->success, 'Free Warrior choice should not bypass squad const
 assertTrue($warrior->zone === CardInstance::ZONE_HAND && empty($warrior->flags['deal_variable_recruit']), 'Constraint rejection should leave Free Warrior unchanged in hand');
 
 $state = dealState(['gold' => 20, 'silver' => 20]);
-$warrior = addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp);
+$warrior = addDealCard($state, GameState::PLAYER_HOST, 's1_190', CardInstance::ZONE_HAND, 2, true, $freeWarriorProp, 'neutral', 3);
 $target = addDealCard($state, GameState::PLAYER_PLAYER, 'target', CardInstance::ZONE_FIELD, 1, false);
 $processor = new PrepareProcessor($state);
+$engine = new Engine();
 $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 's1_190']));
 $processor->chooseDealVariableRecruit(GameState::PLAYER_HOST, new Command('choose_deal_variable_recruit', ['x' => 4]));
 $processor->confirmDeal(GameState::PLAYER_HOST);
@@ -447,13 +452,16 @@ $processor->confirmDeal(GameState::PLAYER_PLAYER);
 assertTrue($state->status === 'place', 'Deal confirmations should move to place');
 $result = $processor->placeCard(GameState::PLAYER_HOST, new Command('place_card', ['card_id' => $warrior->instanceId, 'row' => 1, 'col' => 2]));
 assertTrue($result->success, $result->error ?? 'Free Warrior should be placeable after Deal');
-$result = $processor->confirmPlace(GameState::PLAYER_HOST);
+$result = $engine->apply($state, GameState::PLAYER_HOST, new Command('confirm_place'));
 assertTrue($result->success, $result->error ?? 'Host placement confirmation should succeed');
-$result = $processor->confirmPlace(GameState::PLAYER_PLAYER);
+$result = $engine->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_place'));
 assertTrue($result->success, $result->error ?? 'Player placement confirmation should succeed');
 assertTrue($state->status === 'battle', 'Place confirmations should move to battle');
-assertTrue($warrior->hpMax === 7 && $warrior->hp === 7, 'Free Warrior HP buff should survive Deal to Battle transition');
+assertTrue($warrior->hpMax === 5 && $warrior->hp === 5, 'Free Warrior full HP buff should survive Deal to Battle transition');
 assertTrue(CardStats::getAbilityBonus($state, $warrior, $target, 'strike') === 4, 'Free Warrior attack buff should affect battle ability bonus');
+$warrior->hp = 2;
+$engine->applyInstantEffect($state, ['type' => 'heal', 'value' => 10], null, $warrior, GameState::PLAYER_HOST);
+assertTrue($warrior->hp === 5 && $warrior->hpMax === 5, 'Existing healing logic should heal Free Warrior up to buffed full HP');
 
 echo "Deal resource tests passed.\n";
 
