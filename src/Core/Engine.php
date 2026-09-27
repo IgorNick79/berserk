@@ -373,6 +373,13 @@ final class Engine
         $this->damageResolver($state)->checkGameOver();
     }
 
+    public function finalizeDying(GameState $state): void
+    {
+        (new ZoneManager($state))->flushDying();
+        $this->refreshArmor($state);
+        $this->checkGameOver($state);
+    }
+
     private function gainCoin(GameState $state, string $playerKey, Command $cmd): Result
     {
         if ($state->status !== 'battle') {
@@ -661,11 +668,8 @@ final class Engine
         if ($targetId === 0) {
             unset($state->battle['strike']['pending_auto']);
 
-            // Переносим dying + закрываем
-            (new ZoneManager($state))->flushDying();
-
             $state->battle['strike'] = null;
-            $this->refreshArmor($state);
+            $this->finalizeDying($state);
 
             $state->bumpVersion();
             return Result::ok(['auto_skipped']);
@@ -697,12 +701,9 @@ final class Engine
 
         unset($state->battle['strike']['pending_auto']);
 
-        // Переносим dying
-        (new ZoneManager($state))->flushDying();
-
         // Закрываем сражение
         $state->battle['strike'] = null;
-        $this->refreshArmor($state);
+        $this->finalizeDying($state);
 
         $state->bumpVersion();
         return Result::ok(["auto_target:{$targetId}"]);

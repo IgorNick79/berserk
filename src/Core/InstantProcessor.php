@@ -401,13 +401,8 @@ final class InstantProcessor
         unset($strike['instant_phase']);
 
         if ($phase === 'after') {
-            foreach ($this->state->cards as $card) {
-                if ($card->dying) {
-                    (new ZoneManager($this->state))->flushDying();
-                }
-            }
             $this->state->battle['strike'] = null;
-            $this->engine->refreshArmor($this->state);
+            $this->engine->finalizeDying($this->state);
             return;
         }
 
@@ -441,13 +436,8 @@ final class InstantProcessor
                 && $attacker->zone !== CardInstance::ZONE_FLYING) $cancelled = true;
 
             if ($cancelled) {
-                foreach ($this->state->cards as $card) {
-                    if ($card->dying) {
-                        (new ZoneManager($this->state))->flushDying();
-                    }
-                }
                 $this->state->battle['strike'] = null;
-                $this->engine->refreshArmor($this->state);
+                $this->engine->finalizeDying($this->state);
                 return;
             }
         }

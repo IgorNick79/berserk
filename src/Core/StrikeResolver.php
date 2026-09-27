@@ -754,13 +754,8 @@ final class StrikeResolver
             $this->state->battle['strike']['confirmed'] = $confirmed;
 
             if (count($confirmed) >= 2) {
-                foreach ($this->state->cards as $card) {
-                    if ($card->dying) {
-                        (new ZoneManager($this->state))->flushDying();
-                    }
-                }
                 $this->state->battle['strike'] = null;
-                $this->engine->refreshArmor($this->state);
+                $this->engine->finalizeDying($this->state);
             }
 
             $this->state->bumpVersion();
@@ -832,13 +827,8 @@ final class StrikeResolver
             }
 
             // Закрываем как раньше
-            foreach ($this->state->cards as $card) {
-                if ($card->dying) {
-                    (new ZoneManager($this->state))->flushDying();
-                }
-            }
             $this->state->battle['strike'] = null;
-            $this->engine->refreshArmor($this->state);
+            $this->engine->finalizeDying($this->state);
 
         }
 

@@ -287,4 +287,56 @@ assertTrue($gobrah->zone === CardInstance::ZONE_FIELD && $gobrah->dying, 'During
 (new ZoneManager($state))->flushDying();
 assertTrue($gobrah->zone === CardInstance::ZONE_GRAVEYARD && !$gobrah->dying, 'flushDying should move linked companion through canonical graveyard transition without recursion');
 
+// Linked death should be included in stabilized battle finalization and can cause game over.
+$state = dealState();
+$state->status = 'battle';
+$engine = new Engine();
+$linnet = addCardForLinkedTest($state, GameState::PLAYER_HOST, 'linnet', CardInstance::ZONE_FIELD, 2, false, linkedRecruitProp());
+$gobrah = addCardForLinkedTest($state, GameState::PLAYER_HOST, 'gobrah', CardInstance::ZONE_FIELD, 6, true);
+$enemy = addCardForLinkedTest($state, GameState::PLAYER_PLAYER, 'enemy', CardInstance::ZONE_FIELD, 1, false);
+$linnet->flags['deal_linked_recruit'] = ['role' => 'source', 'linked_instance_id' => $gobrah->instanceId];
+$gobrah->flags['deal_linked_recruit'] = ['role' => 'companion', 'linked_instance_id' => $linnet->instanceId, 'payment_resource' => 'silver', 'converted_cost' => 6];
+$state->battle['strike'] = [
+    'state' => 'results',
+    'confirmed' => [],
+    'attacker_id' => $enemy->instanceId,
+];
+(new ZoneManager($state))->toGraveyard($linnet);
+assertTrue($state->winner === null, 'Game over should not be checked before linked death cascade is finalized');
+$engine->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike'));
+$engine->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike'));
+assertTrue($gobrah->zone === CardInstance::ZONE_GRAVEYARD, 'Linked companion should be flushed to graveyard during strike finalization');
+assertTrue($state->status === 'game_over' && $state->winner === GameState::PLAYER_PLAYER, 'Linked companion cascade death should trigger game over after stabilized finalization');
+
+// If another creature remains after the linked cascade, the game continues.
+$state = dealState();
+$state->status = 'battle';
+$engine = new Engine();
+$linnet = addCardForLinkedTest($state, GameState::PLAYER_HOST, 'linnet', CardInstance::ZONE_FIELD, 2, false, linkedRecruitProp());
+$gobrah = addCardForLinkedTest($state, GameState::PLAYER_HOST, 'gobrah', CardInstance::ZONE_FIELD, 6, true);
+$ally = addCardForLinkedTest($state, GameState::PLAYER_HOST, 'ally', CardInstance::ZONE_FIELD, 1, false);
+$enemy = addCardForLinkedTest($state, GameState::PLAYER_PLAYER, 'enemy', CardInstance::ZONE_FIELD, 1, false);
+$linnet->flags['deal_linked_recruit'] = ['role' => 'source', 'linked_instance_id' => $gobrah->instanceId];
+$gobrah->flags['deal_linked_recruit'] = ['role' => 'companion', 'linked_instance_id' => $linnet->instanceId, 'payment_resource' => 'silver', 'converted_cost' => 6];
+$state->battle['strike'] = [
+    'state' => 'results',
+    'confirmed' => [],
+    'attacker_id' => $enemy->instanceId,
+];
+(new ZoneManager($state))->toGraveyard($linnet);
+$engine->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike'));
+$engine->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike'));
+assertTrue($gobrah->zone === CardInstance::ZONE_GRAVEYARD, 'Linked companion should still die when another ally remains');
+assertTrue($ally->zone === CardInstance::ZONE_FIELD && $state->winner === null && $state->status === 'battle', 'Game should continue when stabilized battlefield still has an allied creature');
+
+// Ordinary death path still performs game-over evaluation through DamageResolver.
+$state = dealState();
+$state->status = 'battle';
+$engine = new Engine();
+$victim = addCardForLinkedTest($state, GameState::PLAYER_HOST, 'victim', CardInstance::ZONE_FIELD, 1, false, [], 'creature', 1);
+addCardForLinkedTest($state, GameState::PLAYER_PLAYER, 'enemy', CardInstance::ZONE_FIELD, 1, false);
+$engine->applyDamage($state, $victim, 1, 'tap');
+assertTrue($victim->zone === CardInstance::ZONE_GRAVEYARD, 'Ordinary lethal damage should move victim to graveyard');
+assertTrue($state->status === 'game_over' && $state->winner === GameState::PLAYER_PLAYER, 'Ordinary death should still trigger game over');
+
 echo "Deal linked recruit tests passed.\n";
