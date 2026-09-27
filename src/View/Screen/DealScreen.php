@@ -157,7 +157,7 @@ final class DealScreen
         foreach ((array) ($calc['elements'] ?? []) as $code => $count) {
             if ($count <= 0) continue;
             $name = ElementLabels::label((string) $code, $elementLabels);
-            $elementsHtml .= '<span class="draft-element">'
+            $elementsHtml .= '<span class="prepare-element">'
                 . htmlspecialchars((string) $name, ENT_QUOTES)
                 . ': <b>' . (int) $count . '</b>'
                 . '</span>';
@@ -165,23 +165,23 @@ final class DealScreen
 
         $penaltyHtml = '';
         if ($penalty > 0) {
-            $penaltyHtml = '<div class="draft-stats-row">'
+            $penaltyHtml = '<div class="prepare-bottom-row">'
                 . '<span class="penalty active">Штраф за стихии: <b>−' . (int) $penalty . ' золото</b></span>'
                 . '</div>';
         }
 
         $bottomPanelHtml = $this->pendingPanelHtml($state, $playerKey, $baseUrl);
         if ($bottomPanelHtml === '') {
-            $bottomPanelHtml = '<div class="draft-stats">'
-                . '<div class="draft-stats-row">'
+            $bottomPanelHtml = '<div class="prepare-bottom-summary prepare-bottom-summary--stack">'
+                . '<div class="prepare-bottom-row">'
                 . '<span>Выбрано: <b>' . $selectedCount . '</b></span>'
                 . '<span class="gold ' . htmlspecialchars($goldClass, ENT_QUOTES) . '">Золото: <b>' . $goldLeft . '</b>/' . $goldTotal . '</span>'
                 . '<span>Серебро: <b>' . $silverLeft . '</b>/' . $silverTotal . '</span>'
                 . '</div>'
                 . $penaltyHtml
-                . '<div class="draft-elements">' . $elementsHtml . '</div>'
+                . '<div class="prepare-elements">' . $elementsHtml . '</div>'
                 . '</div>'
-                . '<div class="draft-actions">' . $confirmHtml . $reshuffleHtml . '</div>';
+                . '<div class="prepare-bottom-actions">' . $confirmHtml . $reshuffleHtml . '</div>';
         }
 
         return [

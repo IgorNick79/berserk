@@ -20,7 +20,7 @@
         </div>
     </div>
 
-    <div class="draft-actions-bar">
+    <div class="prepare-bottom-bar">
         {{bottom_panel_html}}
     </div>
 </div>

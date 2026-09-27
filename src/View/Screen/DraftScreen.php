@@ -154,7 +154,7 @@ final class DraftScreen
         $elementsHtml = '';
         foreach ($elementCounts as $name => $cnt) {
             if ($cnt <= 0) continue;
-            $elementsHtml .= '<span class="draft-element">'
+            $elementsHtml .= '<span class="prepare-element">'
                 . htmlspecialchars($name, ENT_QUOTES)
                 . ': <b>' . $cnt . '</b>'
                 . '</span>';

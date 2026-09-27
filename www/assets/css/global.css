@@ -117,6 +117,37 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
     color: #444;
 }
 
+.prepare-bottom-summary--stack {
+    flex-direction: column;
+    gap: 6px;
+}
+
+.prepare-bottom-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.prepare-elements {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: #555;
+}
+
+.prepare-element {
+    padding: 2px 8px;
+    background: #e8e8e8;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.prepare-element b {
+    color: #000;
+}
+
 .prepare-bottom-actions {
     display: flex;
     gap: 8px;
@@ -173,7 +204,7 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 
 .resources .negative { color: #c33; }
 .resources .penalty { margin-left: 20px; color: #888; }
-.resources .penalty.active { color: #c33; font-weight: bold; }
+.penalty.active { color: #c33; font-weight: bold; }
 
 .button.reshuffle { background: #48a; }
 .actions { margin-top: 20px; }
@@ -974,62 +1005,6 @@ body { padding-bottom: 46vh; }
 
 .draft-preview-slot .prepare-card-preview {
     margin-top: 16px;
-}
-
-.draft-actions-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: #fff;
-    border-top: 1px solid #ddd;
-    color: #222;
-    padding: 10px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    z-index: 100;
-}
-
-.draft-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-size: 14px;
-    color: #444;
-}
-
-.draft-stats-row {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-
-.draft-elements {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    font-size: 13px;
-    color: #555;
-}
-
-.draft-element {
-    padding: 2px 8px;
-    background: #e8e8e8;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    white-space: nowrap;
-}
-
-.draft-element b {
-    color: #000;
-}
-
-.draft-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
 }
 
 /* Чтобы контент не залезал под фиксированную панель */

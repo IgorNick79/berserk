@@ -19,19 +19,19 @@
         </div>
     </div>
 
-    <div class="draft-actions-bar">
-        <div class="draft-stats">
-            <div class="draft-stats-row">
+    <div class="prepare-bottom-bar">
+        <div class="prepare-bottom-summary prepare-bottom-summary--stack">
+            <div class="prepare-bottom-row">
                 <span>Выбрано: <b>{{my_total}}</b></span>
                 <span>Золотых: <b>{{my_gold}}</b></span>
                 <span>Серебряных: <b>{{my_silver}}</b></span>
                 <span>Средняя цена: <b>{{my_avg_price}}</b></span>
             </div>
-            <div class="draft-elements">
+            <div class="prepare-elements">
                 {{my_elements_html}}
             </div>
         </div>
-        <div class="draft-actions">
+        <div class="prepare-bottom-actions">
             {{actions_html}}
         </div>
     </div>
