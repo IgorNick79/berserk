@@ -100,7 +100,7 @@ function findCardByUkid(GameState $state, string $ukid): CardInstance
 $marauderProp = ['deal' => ['resource_modifier' => ['elite_gold' => 1]]];
 $quartermasterProp = ['deal' => ['cost_modifier' => ['free_if_squad_has_costs' => [3, 4, 5, 6, 7, 8]]]];
 $teechProp = ['deal' => ['resource_modifier' => ['elite_gold' => 2], 'squad_constraint' => ['max_elemental_cards' => 3]]];
-$freeWarriorProp = ['deal' => ['recruit_choice' => ['extra_cost' => ['min' => 0, 'max' => 4, 'resource' => 'silver'], 'instance_buff' => ['attack_per_x' => 1, 'health' => 2]]]];
+$freeWarriorProp = ['ova' => 1, 'armor' => 1, 'deal' => ['recruit_choice' => ['extra_cost' => ['min' => 0, 'max' => 4, 'resource' => 'silver'], 'instance_buff' => ['attack_per_x' => 1, 'health' => 2]]]];
 
 // Successful recruit: ordinary cost is paid from silver, then elite gold bonus is derived from squad.
 $state = dealState();

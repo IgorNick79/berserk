@@ -1,0 +1,26 @@
+{
+  "stage": "deal",
+  "host_side": 1,
+  "player_side": 2,
+  "deal_size": 15,
+  "deck_host": [
+    {"ukid": "s1_190"},
+    {"ukid": "s1_171"},
+    {"ukid": "s1_172"},
+    {"ukid": "s1_199"},
+    {"ukid": "s1_1"},
+    {"ukid": "s1_5"},
+    {"ukid": "s1_11"},
+    {"ukid": "s1_17"},
+    {"ukid": "s1_19"},
+    {"ukid": "s1_20"},
+    {"ukid": "s1_21"},
+    {"ukid": "s1_24"},
+    {"ukid": "s1_29"},
+    {"ukid": "s1_30"},
+    {"ukid": "s1_33"}
+  ],
+  "deck_player": [
+    {"ukid": "s1_1"}
+  ]
+}
