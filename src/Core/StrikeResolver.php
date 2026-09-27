@@ -533,6 +533,7 @@ final class StrikeResolver
 
             $this->engine->applyDamage($this->state, $defendCard, $val, 'strike', $attacker);
             $this->state->battle['strike']['damage_total'] = $val;
+            $this->applyStrongStrikeFollowUpEffects($attacker, $defendCard, $attackStrike);
 
             // Наложение маркера при попадании (Владыка небес)
             if ($val > 0 && !empty($attacker->prop['on_hit_marker'])) {
@@ -648,6 +649,51 @@ final class StrikeResolver
 
 
         $this->engine->flushDeadeatQueue($this->state);
+    }
+
+    private function applyStrongStrikeFollowUpEffects(
+        CardInstance $attacker,
+        CardInstance $target,
+        string $attackStrike
+    ): void {
+        foreach ($attacker->prop['strike_effects'] ?? [] as $effect) {
+            if (empty($effect['wound_target_by_behind_weak_strike'])) continue;
+
+            $levels = $effect['levels'] ?? ['strong'];
+            if (!in_array($attackStrike, $levels, true)) continue;
+
+            $behind = $this->getBehindStrikeTargetCard($attacker, $target);
+            if ($behind === null) continue;
+
+            $damage = CardStats::getStrikeValue($this->state, $behind, $target, 'weak');
+            if ($damage <= 0) continue;
+
+            $this->engine->applyDamage($this->state, $target, $damage, 'impact', $attacker);
+            $this->state->battle['strike']['behind_weak_strike_damage'] = [
+                'source_id' => $behind->instanceId,
+                'target_id' => $target->instanceId,
+                'damage' => $damage,
+            ];
+        }
+    }
+
+    private function getBehindStrikeTargetCard(CardInstance $attacker, CardInstance $target): ?CardInstance
+    {
+        if ($attacker->row === null || $attacker->col === null
+            || $target->row === null || $target->col === null) {
+            return null;
+        }
+
+        $dRow = ($target->row - $attacker->row) <=> 0;
+        $dCol = ($target->col - $attacker->col) <=> 0;
+        if ($dRow === 0 && $dCol === 0) {
+            return null;
+        }
+
+        return (new ZoneManager($this->state))->getFieldCard(
+            $target->row + $dRow,
+            $target->col + $dCol
+        );
     }
 
     public function chooseStrikeMode(string $playerKey, Command $cmd): Result

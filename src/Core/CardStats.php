@@ -27,6 +27,23 @@ final class CardStats
         return in_array($type, ['strike', 'tap', 'magic', 'execute'], true);
     }
 
+    public static function getStrikeValue(
+        GameState $state,
+        CardInstance $attacker,
+        CardInstance $target,
+        string $level
+    ): int {
+        $base = match ($level) {
+            'weak' => $attacker->strikeWeak,
+            'medium' => $attacker->strikeMedium,
+            'strong' => $attacker->strikeStrong,
+            default => 0,
+        };
+
+        $value = $base + self::getAbilityBonus($state, $attacker, $target, 'strike', $level);
+        return max(0, $value);
+    }
+
     // ─── Кубик: ova / ovz ────────────────────────────────────
 
     public static function getOva(GameState $state, CardInstance $card, ?CardInstance $target = null): int
