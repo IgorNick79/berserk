@@ -1003,6 +1003,22 @@ final class InfoPanel
                 }
             }
 
+            $behindWeakStrikeHtml = '';
+            if (!empty($strike['behind_weak_strike_damage'])) {
+                $bribe = $strike['behind_weak_strike_damage'];
+                $source = $state->getCard((int) ($bribe['source_id'] ?? 0));
+                $target = $state->getCard((int) ($bribe['target_id'] ?? 0));
+
+                $sourceInfo = $source ? ($cardsInfo[$source->ukid] ?? null) : null;
+                $targetInfo = $target ? ($cardsInfo[$target->ukid] ?? null) : null;
+                $sourceName = $sourceInfo ? htmlspecialchars($sourceInfo['name'], ENT_QUOTES) : '?';
+                $targetName = $targetInfo ? htmlspecialchars($targetInfo['name'], ENT_QUOTES) : '?';
+                $damage = (int) ($bribe['damage'] ?? 0);
+
+                $behindWeakStrikeHtml = '<p class="bonus">Коварный подкуп: слабый удар <b>'
+                    . $sourceName . '</b> — +' . $damage . ' урона по <b>' . $targetName . '</b></p>';
+            }
+
             $abilityBonusHtml = '';
             if (!empty($strike['ability_bonus'])) {
                 $abilityBonusHtml = '<p class="bonus">+'
@@ -1106,7 +1122,7 @@ final class InfoPanel
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
                     'defend_dice_html' => $defendDiceHtml,
-                    'result_text'      => $summaryHtml . $resultText . $autoHtml . $pushHtml . $impactHtml . $huntHtml . $shotBonusHtml . $nextActionBonusHtml . $rowsBonusHtml . $clumsyHtml . $abilityBonusHtml . $coinBonusHtml . $reductionHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml,
+                    'result_text'      => $summaryHtml . $resultText . $autoHtml . $pushHtml . $impactHtml . $huntHtml . $behindWeakStrikeHtml . $shotBonusHtml . $nextActionBonusHtml . $rowsBonusHtml . $clumsyHtml . $abilityBonusHtml . $coinBonusHtml . $reductionHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml,
                     'confirm_html'     => $confirmHtml,
                 ]);
             } else {
