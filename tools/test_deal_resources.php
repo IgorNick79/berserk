@@ -74,8 +74,20 @@ function addSquadPrices(GameState $state, array $prices, array $eliteByPrice = [
     return $cards;
 }
 
+function zoneCount(GameState $state, string $owner, string $zone): int
+{
+    $count = 0;
+    foreach ($state->cards as $card) {
+        if ($card->owner === $owner && $card->zone === $zone) {
+            $count++;
+        }
+    }
+    return $count;
+}
+
 $marauderProp = ['deal' => ['resource_modifier' => ['elite_gold' => 1]]];
 $quartermasterProp = ['deal' => ['cost_modifier' => ['free_if_squad_has_costs' => [3, 4, 5, 6, 7, 8]]]];
+$teechProp = ['deal' => ['resource_modifier' => ['elite_gold' => 2], 'squad_constraint' => ['max_elemental_cards' => 3]]];
 
 // Successful recruit: ordinary cost is paid from silver, then elite gold bonus is derived from squad.
 $state = dealState();
@@ -199,6 +211,97 @@ $quartermaster = addDealCard($state, GameState::PLAYER_HOST, 'quartermaster', Ca
 $calc = ResourceCalculator::compute($state, GameState::PLAYER_HOST, adding: $quartermaster);
 assertTrue($calc['elite_gold_bonus'] === 1, 'Marauder resource_modifier should still apply with cost_modifier candidate');
 assertTrue(ResourceCalculator::effectiveRecruitCost($state, GameState::PLAYER_HOST, $quartermaster) === 0, 'Marauder interaction should not prevent Quartermaster free cost');
+
+// Teech: +2 elite gold, and while Teech is in squad the resulting squad may not exceed three elemental cards besides Teech.
+$state = dealState(['gold' => 20, 'silver' => 20]);
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_a', CardInstance::ZONE_SQUAD, 3, false, [], 'plains');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_b', CardInstance::ZONE_SQUAD, 3, false, [], 'forests');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_c', CardInstance::ZONE_SQUAD, 3, false, [], 'mountains');
+addDealCard($state, GameState::PLAYER_HOST, 's1_199', CardInstance::ZONE_HAND, 7, true, $teechProp, 'swamps');
+$processor = new PrepareProcessor($state);
+$result = $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 's1_199']));
+assertTrue($result->success, $result->error ?? 'Teech recruit should succeed when the resulting squad has Teech plus three elemental cards');
+$calc = ResourceCalculator::compute($state, GameState::PLAYER_HOST);
+assertTrue($calc['elite_gold_bonus'] === 2, 'Teech should grant two elite gold with three elemental cards besides Teech');
+assertTrue($calc['gold_total'] === 22, 'Teech should increase elite gold total by two');
+
+$state = dealState(['gold' => 20, 'silver' => 20]);
+addDealCard($state, GameState::PLAYER_HOST, 's1_199', CardInstance::ZONE_SQUAD, 7, true, $teechProp, 'swamps');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_a', CardInstance::ZONE_SQUAD, 3, false, [], 'plains');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_b', CardInstance::ZONE_SQUAD, 3, false, [], 'forests');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_c', CardInstance::ZONE_SQUAD, 3, false, [], 'mountains');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_d', CardInstance::ZONE_HAND, 3, false, [], 'forests');
+$beforeSquad = zoneCount($state, GameState::PLAYER_HOST, CardInstance::ZONE_SQUAD);
+$beforeHand = zoneCount($state, GameState::PLAYER_HOST, CardInstance::ZONE_HAND);
+$beforeCalc = ResourceCalculator::compute($state, GameState::PLAYER_HOST);
+$processor = new PrepareProcessor($state);
+$result = $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 'elemental_d']));
+assertTrue(!$result->success, 'Teech should reject recruiting a fourth elemental card');
+assertTrue(zoneCount($state, GameState::PLAYER_HOST, CardInstance::ZONE_SQUAD) === $beforeSquad, 'Failed fourth elemental recruit should leave squad unchanged');
+assertTrue(zoneCount($state, GameState::PLAYER_HOST, CardInstance::ZONE_HAND) === $beforeHand, 'Failed fourth elemental recruit should leave candidate in hand');
+$afterCalc = ResourceCalculator::compute($state, GameState::PLAYER_HOST);
+assertTrue($afterCalc['gold_left'] === $beforeCalc['gold_left'] && $afterCalc['silver_left'] === $beforeCalc['silver_left'], 'Failed fourth elemental recruit should leave resources unchanged');
+assertTrue($afterCalc['elite_gold_bonus'] === 2, 'Failed fourth elemental recruit should not disable Teech bonus');
+
+$state = dealState(['gold' => 20, 'silver' => 20]);
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_a', CardInstance::ZONE_SQUAD, 3, false, [], 'plains');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_b', CardInstance::ZONE_SQUAD, 3, false, [], 'forests');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_c', CardInstance::ZONE_SQUAD, 3, false, [], 'mountains');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_d', CardInstance::ZONE_SQUAD, 3, false, [], 'forests');
+addDealCard($state, GameState::PLAYER_HOST, 's1_199', CardInstance::ZONE_HAND, 7, true, $teechProp, 'swamps');
+$processor = new PrepareProcessor($state);
+$result = $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 's1_199']));
+assertTrue(!$result->success, 'Recruiting Teech should be rejected when resulting squad already has too many elemental cards');
+
+$state = dealState(['gold' => 20, 'silver' => 20]);
+addDealCard($state, GameState::PLAYER_HOST, 's1_199', CardInstance::ZONE_SQUAD, 7, true, $teechProp, 'swamps');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_a', CardInstance::ZONE_SQUAD, 3, false, [], 'plains');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_b', CardInstance::ZONE_SQUAD, 3, false, [], 'forests');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_c', CardInstance::ZONE_SQUAD, 3, false, [], 'mountains');
+addDealCard($state, GameState::PLAYER_HOST, 'neutral_a', CardInstance::ZONE_HAND, 3, false, [], 'neutral');
+$processor = new PrepareProcessor($state);
+$result = $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 'neutral_a']));
+assertTrue($result->success, $result->error ?? 'Teech should allow recruiting a neutral card at three elemental cards');
+$calc = ResourceCalculator::compute($state, GameState::PLAYER_HOST);
+assertTrue($calc['elite_gold_bonus'] === 2, 'Neutral recruit should not remove Teech bonus');
+
+$state = dealState(['gold' => 20, 'silver' => 20]);
+addDealCard($state, GameState::PLAYER_HOST, 's1_199', CardInstance::ZONE_SQUAD, 7, true, $teechProp, 'swamps');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_a', CardInstance::ZONE_SQUAD, 3, false, [], 'plains');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_b', CardInstance::ZONE_SQUAD, 3, false, [], 'forests');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_c', CardInstance::ZONE_SQUAD, 3, false, [], 'mountains');
+$processor = new PrepareProcessor($state);
+$result = $processor->unpickCard(GameState::PLAYER_HOST, new Command('unpick_card', ['ukid' => 's1_199']));
+assertTrue($result->success, $result->error ?? 'Returning Teech should succeed');
+$calc = ResourceCalculator::compute($state, GameState::PLAYER_HOST);
+assertTrue($calc['elite_gold_bonus'] === 0, 'Returning Teech should remove his elite gold bonus');
+
+$state = dealState(['gold' => 20, 'silver' => 20]);
+addDealCard($state, GameState::PLAYER_HOST, 's1_199', CardInstance::ZONE_SQUAD, 7, true, $teechProp, 'swamps');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_a', CardInstance::ZONE_SQUAD, 3, false, [], 'plains');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_b', CardInstance::ZONE_SQUAD, 3, false, [], 'forests');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_c', CardInstance::ZONE_SQUAD, 3, false, [], 'mountains');
+$processor = new PrepareProcessor($state);
+$result = $processor->unpickCard(GameState::PLAYER_HOST, new Command('unpick_card', ['ukid' => 'elemental_b']));
+assertTrue($result->success, $result->error ?? 'Returning an elemental card should not be blocked by Teech constraint');
+$calc = ResourceCalculator::compute($state, GameState::PLAYER_HOST);
+assertTrue($calc['elite_gold_bonus'] === 2, 'Returning an elemental card should keep Teech bonus while Teech remains in squad');
+
+$state = dealState(['gold' => 20, 'silver' => 20]);
+addDealCard($state, GameState::PLAYER_HOST, 's1_199', CardInstance::ZONE_SQUAD, 7, true, $teechProp, 'swamps');
+addDealCard($state, GameState::PLAYER_HOST, 's1_171', CardInstance::ZONE_SQUAD, 3, false, $marauderProp, 'neutral');
+$calc = ResourceCalculator::compute($state, GameState::PLAYER_HOST);
+assertTrue($calc['elite_gold_bonus'] === 3, 'Marauder and Teech resource modifiers should stack');
+
+$state = dealState(['gold' => 20, 'silver' => 20]);
+$strictTeechProp = ['deal' => ['resource_modifier' => ['elite_gold' => 2], 'squad_constraint' => ['max_elemental_cards' => 2]]];
+addDealCard($state, GameState::PLAYER_HOST, 's1_199', CardInstance::ZONE_SQUAD, 7, true, $strictTeechProp, 'swamps');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_a', CardInstance::ZONE_SQUAD, 3, false, [], 'plains');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_b', CardInstance::ZONE_SQUAD, 3, false, [], 'forests');
+addDealCard($state, GameState::PLAYER_HOST, 'elemental_b', CardInstance::ZONE_HAND, 3, false, [], 'forests');
+$processor = new PrepareProcessor($state);
+$result = $processor->pickCard(GameState::PLAYER_HOST, new Command('pick_card', ['ukid' => 'elemental_b']));
+assertTrue(!$result->success, 'Teech elemental limit should be read from prop value');
 
 echo "Deal resource tests passed.\n";
 

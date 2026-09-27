@@ -39,18 +39,24 @@ final class ResourceCalculator
             if ($card->zone !== CardInstance::ZONE_SQUAD) continue;
             if ($removing && $card->instanceId === $removing->instanceId) continue;
 
+            if ($card->element !== 'neutral' && $card->element !== '') {
+                $elements[$card->element] = ($elements[$card->element] ?? 0) + 1;
+            }
+
+            $eliteGoldBonus += self::dealEliteGoldBonus($card);
+        }
+
+        foreach ($state->cards as $card) {
+            if ($card->owner !== $playerKey) continue;
+            if ($card->zone !== CardInstance::ZONE_SQUAD) continue;
+            if ($removing && $card->instanceId === $removing->instanceId) continue;
+
             $cost = self::effectiveRecruitCost($state, $playerKey, $card);
             if ($card->elite) {
                 $goldSpent += $cost;
             } else {
                 $silverSpent += $cost;
             }
-
-            if ($card->element !== 'neutral' && $card->element !== '') {
-                $elements[$card->element] = ($elements[$card->element] ?? 0) + 1;
-            }
-
-            $eliteGoldBonus += self::dealEliteGoldBonus($card);
         }
 
         if ($adding) {

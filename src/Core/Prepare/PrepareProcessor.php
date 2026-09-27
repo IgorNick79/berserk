@@ -373,6 +373,11 @@ final class PrepareProcessor
             return Result::error('Карта не найдена в раздаче');
         }
 
+        $constraintError = $this->validateDealSquadConstraints($playerKey, $found);
+        if ($constraintError !== null) {
+            return Result::error($constraintError);
+        }
+
         $calc = ResourceCalculator::compute($this->state, $playerKey, adding: $found);
 
         if ($calc['gold_left'] < 0) {
@@ -412,6 +417,40 @@ final class PrepareProcessor
         }
 
         return Result::error('Карта не найдена в отряде');
+    }
+
+    private function validateDealSquadConstraints(string $playerKey, CardInstance $adding): ?string
+    {
+        $resultingSquad = [];
+        foreach ($this->state->cards as $card) {
+            if ($card->owner !== $playerKey) continue;
+            if ($card->zone !== CardInstance::ZONE_SQUAD) continue;
+
+            $resultingSquad[] = $card;
+        }
+        $resultingSquad[] = $adding;
+
+        foreach ($resultingSquad as $card) {
+            $constraint = $card->prop['deal']['squad_constraint'] ?? [];
+            if (!is_array($constraint)) {
+                continue;
+            }
+
+            $elementalCards = 0;
+            foreach ($resultingSquad as $otherCard) {
+                if ($otherCard->instanceId === $card->instanceId) continue;
+                if ($otherCard->element !== 'neutral' && $otherCard->element !== '') {
+                    $elementalCards++;
+                }
+            }
+
+            if (isset($constraint['max_elemental_cards'])
+                && $elementalCards > (int) $constraint['max_elemental_cards']) {
+                return 'Нарушено ограничение состава отряда';
+            }
+        }
+
+        return null;
     }
 
     public function confirmDeal(string $playerKey): Result
