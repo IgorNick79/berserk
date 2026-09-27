@@ -7,8 +7,10 @@ namespace Berserk\View\Screen;
 
 use Berserk\Core\GameState;
 use Berserk\Core\CardInstance;
+use Berserk\Core\Choice\ChoiceRegistry;
 use Berserk\Core\ResourceCalculator;
 use Berserk\View\Template;
+use Berserk\View\Ui\Panel;
 use Berserk\View\Ui\PrepareUi;
 
 final class DealScreen
@@ -58,10 +60,10 @@ final class DealScreen
         $calc = ResourceCalculator::compute($state, $playerKey);
         $goldLeft      = $calc['gold_left'];
         $silverLeft    = $calc['silver_left'];
-        $goldTotal     = (int) ($me->resources['gold'] ?? 0);
-        $silverTotal   = (int) ($me->resources['silver'] ?? 0);
+        $goldTotal     = (int) ($calc['gold_total'] ?? ($me->resources['gold'] ?? 0));
+        $silverTotal   = (int) ($calc['silver_total'] ?? ($me->resources['silver'] ?? 0));
         $penalty       = $calc['penalty'];
-        $elementsCount = $calc['elements_count'];
+        $selectedCount = count($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD));
 
         $goldClass = $goldLeft < 0 ? 'negative' : '';
 
@@ -115,13 +117,15 @@ final class DealScreen
         $reshuffleHtml = '';
         if (!$me->isConfirmed('deal') && $me->reshuffles < 3) {
             $reshuffleUrl  = "{$baseUrl}&cmd=reshuffle";
-            $reshuffleHtml = '<a class="button reshuffle" href="' . $reshuffleUrl . '">'
+            $reshuffleHtml = '<a class="button reshuffle" href="' . $reshuffleUrl . '"'
+                . ' onclick="return confirm(\'Пересдать карты?\')">'
                 . 'Пересдать (штраф 1 золото, осталось ' . (3 - $me->reshuffles) . ')'
                 . '</a>';
         }
 
         if (!$me->isConfirmed('deal')) {
-            $confirmHtml = '<a class="button" href="' . $baseUrl . '&cmd=confirm_deal">Подтвердить отряд</a>';
+            $confirmHtml = '<a class="button" href="' . $baseUrl . '&cmd=confirm_deal"'
+                . ' onclick="return confirm(\'Подтвердить отряд?\')">Подтвердить отряд</a>';
         } else {
             $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
         }
@@ -145,28 +149,56 @@ final class DealScreen
                 }
             }
         }
-        $previewHtml = $ui->preview($selectedCard, [], 'Выбери карту');
-        $cardActionsHtml = $ui->actions($cardActions);
+        $previewHtml = $ui->preview($selectedCard, $cardActions, 'Выбери карту');
+
+        $elementsHtml = '';
+        foreach ((array) ($calc['elements'] ?? []) as $name => $count) {
+            if ($count <= 0) continue;
+            $elementsHtml .= '<span class="draft-element">'
+                . htmlspecialchars((string) $name, ENT_QUOTES)
+                . ': <b>' . (int) $count . '</b>'
+                . '</span>';
+        }
+
+        $penaltyHtml = '';
+        if ($penalty > 0) {
+            $penaltyHtml = '<div class="draft-stats-row">'
+                . '<span>Штраф за стихии: <b>−' . (int) $penalty . ' золото</b></span>'
+                . '</div>';
+        }
+
+        $bottomPanelHtml = $this->pendingPanelHtml($state, $playerKey, $baseUrl);
+        if ($bottomPanelHtml === '') {
+            $bottomPanelHtml = '<div class="draft-stats">'
+                . '<div class="draft-stats-row">'
+                . '<span>Выбрано: <b>' . $selectedCount . '</b></span>'
+                . '<span class="gold ' . htmlspecialchars($goldClass, ENT_QUOTES) . '">Золото: <b>' . $goldLeft . '</b>/' . $goldTotal . '</span>'
+                . '<span>Серебро: <b>' . $silverLeft . '</b>/' . $silverTotal . '</span>'
+                . '</div>'
+                . $penaltyHtml
+                . '<div class="draft-elements">' . $elementsHtml . '</div>'
+                . '</div>'
+                . '<div class="draft-actions">' . $confirmHtml . $reshuffleHtml . '</div>';
+        }
 
         return [
             'screen' => 'deal',
             'data'   => [
                 'hand_html'      => $handHtml,
                 'squad_html'     => $squadHtml,
-                'gold_left'      => $goldLeft,
-                'silver_left'    => $silverLeft,
-                'gold_total'     => $goldTotal,
-                'silver_total'   => $silverTotal,
-                'gold_class'     => $goldClass,
-                'penalty'        => $penalty,
-                'elements_count' => $elementsCount,
-                'penalty_class'  => $penalty > 0 ? 'active' : '',
                 'preview_html'   => $previewHtml,
-                'card_actions_html' => $cardActionsHtml,
-                'confirm_html'   => $confirmHtml,
-                'reshuffle_html' => $reshuffleHtml,
+                'bottom_panel_html' => $bottomPanelHtml,
                 'message'        => $message ?? '',
             ],
         ];
+    }
+
+    private function pendingPanelHtml(GameState $state, string $playerKey, string $baseUrl): string
+    {
+        $activeChoice = ChoiceRegistry::current($state);
+        if ($activeChoice === null) return '';
+
+        $spec = $activeChoice->panel($state, $playerKey, $baseUrl);
+        return $spec === null ? '' : Panel::render($spec);
     }
 }

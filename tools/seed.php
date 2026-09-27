@@ -9,6 +9,7 @@ use Berserk\Core\Db;
 use Berserk\Core\GameRepository;
 use Berserk\Core\CardInstance;
 use Berserk\Core\Engine;
+use Berserk\Core\GameState;
 use Berserk\Core\TurnProcessor;
 
 Autoloader::register();
@@ -39,12 +40,19 @@ $db   = new Db($config);
 $repo = new GameRepository($db);
 
 $state = $repo->create(1, 2);
-$state->status      = $scenario['stage'] ?? 'battle';
+$stage = $scenario['stage'] ?? 'battle';
+$state->status      = $stage;
 $state->firstPlayer = $scenario['first_player'] ?? 'host';
 $state->getPlayer('host')->side   = (int) ($scenario['host_side'] ?? 1);
 $state->getPlayer('player')->side = (int) ($scenario['player_side'] ?? 2);
 
-$ukids = array_unique(array_map(fn ($c) => $c['ukid'], $scenario['cards'] ?? []));
+$ukids = array_map(fn ($c) => $c['ukid'], $scenario['cards'] ?? []);
+foreach (['host', 'player'] as $owner) {
+    foreach ($scenario['deck_' . $owner] ?? [] as $forced) {
+        if (!empty($forced['ukid'])) $ukids[] = (string) $forced['ukid'];
+    }
+}
+$ukids = array_unique($ukids);
 
 $elements = [];
 foreach ($db->fetchAll("SELECT ind, code FROM elements") as $e) {
@@ -52,30 +60,7 @@ foreach ($db->fetchAll("SELECT ind, code FROM elements") as $e) {
 }
 
 $info = [];
-if (!empty($ukids)) {
-    $in = "'" . implode("','", array_map(fn ($u) => $db->escape($u), $ukids)) . "'";
-    $rows = $db->fetchAll(
-        "SELECT ukid, name, price, health, move, elite, type, class,
-                strike_weak, strike_medium, strike_strong,
-                element_id, prop
-         FROM cards WHERE ukid IN ($in)"
-    );
-    foreach ($rows as $r) {
-        $info[$r['ukid']] = [
-            'price'   => (int) $r['price'],
-            'health'  => (int) $r['health'],
-            'move'    => (int) $r['move'],
-            'elite'   => (bool) $r['elite'],
-            'type'    => $r['type'] ?? 'creature',
-            'class'   => $r['class'] ?? '',
-            'element' => $elements[(int) $r['element_id']] ?? 'neutral',
-            'sw'      => (int) $r['strike_weak'],
-            'sm'      => (int) $r['strike_medium'],
-            'ss'      => (int) $r['strike_strong'],
-            'prop'    => $r['prop'] ? json_decode($r['prop'], true) : [],
-        ];
-    }
-}
+$info = seedLoadCardInfo($db, $ukids, $elements);
 
 foreach ($scenario['cards'] ?? [] as $c) {
     $u = $c['ukid'];
@@ -112,7 +97,28 @@ foreach ($scenario['cards'] ?? [] as $c) {
     ));
 }
 
-if (($scenario['stage'] ?? 'battle') === 'battle') {
+if ($stage === 'deal') {
+    $dealSize = (int) ($scenario['deal_size'] ?? 15);
+
+    foreach ([GameState::PLAYER_HOST, GameState::PLAYER_PLAYER] as $owner) {
+        $player = $state->getPlayer($owner);
+        if ($player->side === 2) {
+            $player->resources = ['gold' => 25, 'silver' => 23];
+        } else {
+            $player->resources = ['gold' => 24, 'silver' => 22];
+        }
+
+        $cards = seedBuildDealCards($db, $scenario['deck_' . $owner] ?? [], $dealSize, $elements);
+        $player->deckId = 0;
+        $player->deckCards = seedDeckCardsFromList($cards);
+
+        foreach ($cards as $cardInfo) {
+            seedAddCardInstance($state, $owner, CardInstance::ZONE_HAND, $cardInfo);
+        }
+    }
+}
+
+if ($stage === 'battle') {
     $deckSize = (int) ($scenario['deck_size'] ?? 15);
 
     foreach (['host', 'player'] as $owner) {
@@ -216,3 +222,127 @@ $repo->save($state);
 echo "Created game #{$state->gameId}\n";
 echo "  host:   ?first&game={$state->gameId}\n";
 echo "  player: ?second&game={$state->gameId}\n";
+
+function seedLoadCardInfo(Db $db, array $ukids, array $elements): array
+{
+    $ukids = array_values(array_unique(array_filter(array_map('strval', $ukids))));
+    if (empty($ukids)) return [];
+
+    $in = "'" . implode("','", array_map(fn ($u) => $db->escape($u), $ukids)) . "'";
+    $rows = $db->fetchAll(
+        "SELECT ukid, name, price, health, move, elite, type, class,
+                strike_weak, strike_medium, strike_strong,
+                element_id, prop
+         FROM cards WHERE ukid IN ($in)"
+    );
+
+    $info = [];
+    foreach ($rows as $r) {
+        $info[$r['ukid']] = seedCardInfoFromRow($r, $elements);
+    }
+    return $info;
+}
+
+function seedCardInfoFromRow(array $r, array $elements): array
+{
+    return [
+        'ukid'    => (string) $r['ukid'],
+        'price'   => (int) $r['price'],
+        'health'  => (int) $r['health'],
+        'move'    => (int) $r['move'],
+        'elite'   => (bool) $r['elite'],
+        'type'    => $r['type'] ?? 'creature',
+        'class'   => $r['class'] ?? '',
+        'element' => $elements[(int) $r['element_id']] ?? 'neutral',
+        'sw'      => (int) $r['strike_weak'],
+        'sm'      => (int) $r['strike_medium'],
+        'ss'      => (int) $r['strike_strong'],
+        'prop'    => $r['prop'] ? json_decode($r['prop'], true) : [],
+    ];
+}
+
+function seedBuildDealCards(Db $db, array $forced, int $targetSize, array $elements): array
+{
+    $forcedUkids = [];
+    foreach ($forced as $f) {
+        if (!empty($f['ukid'])) $forcedUkids[] = (string) $f['ukid'];
+    }
+
+    $forcedInfo = seedLoadCardInfo($db, $forcedUkids, $elements);
+    $cards = [];
+    foreach ($forcedUkids as $ukid) {
+        if (isset($forcedInfo[$ukid])) {
+            $cards[] = $forcedInfo[$ukid];
+        }
+    }
+    $restSize = $targetSize - count($cards);
+    if ($restSize <= 0) {
+        return array_slice($cards, 0, $targetSize);
+    }
+
+    $rows = $db->fetchAll(
+        "SELECT ukid, price, health, move, elite, type, class,
+                strike_weak, strike_medium, strike_strong,
+                element_id, prop
+         FROM cards
+         WHERE type IN ('creature','fly')
+         ORDER BY RAND()
+         LIMIT $restSize"
+    );
+
+    foreach ($rows as $r) {
+        $cards[] = seedCardInfoFromRow($r, $elements);
+    }
+
+    return $cards;
+}
+
+function seedDeckCardsFromList(array $cards): array
+{
+    $deckCards = [];
+    foreach ($cards as $card) {
+        $ukid = $card['ukid'];
+        if (!isset($deckCards[$ukid])) {
+            $deckCards[$ukid] = [
+                'ukid'          => $ukid,
+                'count'         => 0,
+                'price'         => $card['price'],
+                'elite'         => $card['elite'],
+                'element'       => $card['element'],
+                'health'        => $card['health'],
+                'move'          => $card['move'],
+                'strike_weak'   => $card['sw'],
+                'strike_medium' => $card['sm'],
+                'strike_strong' => $card['ss'],
+                'prop'          => $card['prop'],
+                'type'          => $card['type'],
+                'class'         => $card['class'],
+            ];
+        }
+        $deckCards[$ukid]['count']++;
+    }
+    return array_values($deckCards);
+}
+
+function seedAddCardInstance(GameState $state, string $owner, string $zone, array $i): void
+{
+    $state->addCard(new CardInstance(
+        instanceId:   $state->nextInstanceId(),
+        ukid:         $i['ukid'],
+        owner:        $owner,
+        zone:         $zone,
+        hp:           $i['health'],
+        hpMax:        $i['health'],
+        price:        $i['price'],
+        elite:        $i['elite'],
+        element:      $i['element'],
+        move:         $i['move'],
+        moveMax:      $i['move'],
+        strikeWeak:   $i['sw'],
+        strikeMedium: $i['sm'],
+        strikeStrong: $i['ss'],
+        prop:         $i['prop'],
+        type:         $i['type'],
+        class:        $i['class'],
+    ));
+}

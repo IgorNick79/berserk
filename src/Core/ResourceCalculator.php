@@ -17,7 +17,7 @@ final class ResourceCalculator
      *
      * @param CardInstance|null $adding    Карта, которую хотим добавить (для проверки)
      * @param CardInstance|null $removing  Карта, которую хотим убрать
-     * @return array{gold_left:int, silver_left:int, gold_spent:int, silver_spent:int}
+     * @return array{gold_left:int, silver_left:int, gold_total:int, silver_total:int, elite_gold_bonus:int, gold_spent:int, silver_spent:int, elements_count:int, elements:array<string,int>, penalty:int}
      */
     public static function compute(
         GameState $state,
@@ -26,11 +26,12 @@ final class ResourceCalculator
         ?CardInstance $removing = null,
     ): array {
         $player = $state->getPlayer($playerKey);
-        $goldTotal   = (int) ($player->resources['gold'] ?? 0);
+        $baseGoldTotal = (int) ($player->resources['gold'] ?? 0);
         $silverTotal = (int) ($player->resources['silver'] ?? 0);
 
         $goldSpent   = 0;
         $silverSpent = 0;
+        $eliteGoldBonus = 0;
         $elements    = [];
 
         foreach ($state->cards as $card) {
@@ -45,8 +46,10 @@ final class ResourceCalculator
             }
 
             if ($card->element !== 'neutral' && $card->element !== '') {
-                $elements[$card->element] = true;
+                $elements[$card->element] = ($elements[$card->element] ?? 0) + 1;
             }
+
+            $eliteGoldBonus += self::dealEliteGoldBonus($card);
         }
 
         if ($adding) {
@@ -56,7 +59,7 @@ final class ResourceCalculator
                 $silverSpent += $adding->price;
             }
             if ($adding->element !== 'neutral' && $adding->element !== '') {
-                $elements[$adding->element] = true;
+                $elements[$adding->element] = ($elements[$adding->element] ?? 0) + 1;
             }
         }
 
@@ -65,6 +68,7 @@ final class ResourceCalculator
         $penalty = $elementsCount > 1 ? $elementsCount - 1 : 0;
         $goldSpent += $penalty;
 
+        $goldTotal = $baseGoldTotal + $eliteGoldBonus;
         $goldLeft   = $goldTotal - $goldSpent;
         $silverLeft = $silverTotal - $silverSpent;
 
@@ -76,10 +80,19 @@ final class ResourceCalculator
         return [
             'gold_left'      => $goldLeft,
             'silver_left'    => $silverLeft,
+            'gold_total'     => $goldTotal,
+            'silver_total'   => $silverTotal,
+            'elite_gold_bonus' => $eliteGoldBonus,
             'gold_spent'     => $goldSpent,
             'silver_spent'   => $silverSpent,
             'elements_count' => $elementsCount,
+            'elements'       => $elements,
             'penalty'        => $penalty,
         ];
+    }
+
+    private static function dealEliteGoldBonus(CardInstance $card): int
+    {
+        return max(0, (int) ($card->prop['deal']['on_recruit']['elite_gold'] ?? 0));
     }
 }
