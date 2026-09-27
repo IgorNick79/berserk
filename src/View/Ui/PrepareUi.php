@@ -76,6 +76,7 @@ final class PrepareUi
             'medium'      => htmlspecialchars((string) ($info['strike']['medium'] ?? '?'), ENT_QUOTES),
             'strong'      => htmlspecialchars((string) ($info['strike']['strong'] ?? '?'), ENT_QUOTES),
             'actions_html'=> $actionsHtml,
+            'notes_html'  => (string) ($info['notes_html'] ?? ''),
         ]);
     }
 

@@ -97,7 +97,7 @@ final class ResourceCalculator
 
     public static function effectiveRecruitCost(GameState $state, string $playerKey, CardInstance $candidate): int
     {
-        return self::effectiveBaseRecruitCost($state, $playerKey, $candidate)
+        return self::effectiveBaseRecruitCostAfterDealDiscount($state, $playerKey, $candidate)
             + self::dealExtraRecruitCost($candidate);
     }
 
@@ -142,6 +142,28 @@ final class ResourceCalculator
         return (string) ($card->flags['deal_variable_recruit']['resource'] ?? 'elite_gold');
     }
 
+    private static function dealScoutSilverDiscount(CardInstance $card): int
+    {
+        if (($card->flags['deal_scout_recruit']['discount_resource'] ?? null) !== 'silver') {
+            return 0;
+        }
+
+        return max(0, (int) ($card->flags['deal_scout_recruit']['silver_discount'] ?? 0));
+    }
+
+    private static function effectiveBaseRecruitCostAfterDealDiscount(
+        GameState $state,
+        string $playerKey,
+        CardInstance $card,
+    ): int {
+        $baseCost = self::effectiveBaseRecruitCost($state, $playerKey, $card);
+        if ($card->elite) {
+            return $baseCost;
+        }
+
+        return max(0, $baseCost - self::dealScoutSilverDiscount($card));
+    }
+
     private static function addRecruitCost(
         GameState $state,
         string $playerKey,
@@ -150,7 +172,7 @@ final class ResourceCalculator
         int &$silverSpent,
         int &$silverExtraSpent,
     ): void {
-        $baseCost = self::effectiveBaseRecruitCost($state, $playerKey, $card);
+        $baseCost = self::effectiveBaseRecruitCostAfterDealDiscount($state, $playerKey, $card);
         if ($card->elite) {
             $goldSpent += $baseCost;
         } else {

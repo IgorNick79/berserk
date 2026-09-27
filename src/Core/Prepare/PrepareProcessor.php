@@ -333,6 +333,10 @@ final class PrepareProcessor
             return Result::error('Не хватает золота на пересдачу');
         }
 
+        if ($this->hasDealScoutRecruitLock($playerKey)) {
+            return Result::error('Лазутчица уже обязана остаться в отряде');
+        }
+
         $player->resources['gold']--;
         $player->reshuffles++;
 
@@ -371,6 +375,18 @@ final class PrepareProcessor
 
         if (!$found) {
             return Result::error('Карта не найдена в раздаче');
+        }
+
+        if ($this->dealScoutRecruitConfig($found) !== null
+            && empty($found->flags['deal_scout_recruit'])) {
+            $beginningError = $this->validateDealScoutBeginning($playerKey, $found);
+            if ($beginningError !== null) {
+                return Result::error($beginningError);
+            }
+
+            $this->state->battle['pending_deal_scout_recruit'] = $this->dealScoutRecruitPending($playerKey, $found);
+            $this->state->bumpVersion();
+            return Result::ok(["deal_scout_recruit_pending:{$playerKey}:{$ukid}"]);
         }
 
         if ($this->dealVariableRecruitConfig($found) !== null
@@ -417,6 +433,10 @@ final class PrepareProcessor
             if ($card->owner === $playerKey
                 && $card->zone === CardInstance::ZONE_SQUAD
                 && $card->ukid === $ukid) {
+                if (!empty($card->flags['deal_scout_recruit']['return_locked'])) {
+                    return Result::error('Лазутчицу нельзя вернуть после разведки');
+                }
+
                 (new ZoneManager($this->state))->toHand($card);
                 $this->resetDealVariableRecruit($card);
                 $this->state->bumpVersion();
@@ -425,6 +445,139 @@ final class PrepareProcessor
         }
 
         return Result::error('Карта не найдена в отряде');
+    }
+
+    public function confirmDealScoutRecruit(string $playerKey): Result
+    {
+        if ($this->state->status !== 'deal') {
+            return Result::error('Сейчас не стадия выбора отряда');
+        }
+
+        $pending = $this->state->battle['pending_deal_scout_recruit'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
+            return Result::error('Нет ожидающей разведки');
+        }
+        if (($pending['step'] ?? 'confirm') !== 'confirm') {
+            return Result::error('Разведка уже подтверждена');
+        }
+
+        $card = $this->state->getCard((int) ($pending['card_id'] ?? 0));
+        if (!$card || $card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_HAND) {
+            unset($this->state->battle['pending_deal_scout_recruit']);
+            return Result::error('Карта не найдена в раздаче');
+        }
+
+        $config = $this->dealScoutRecruitConfig($card);
+        if ($config === null) {
+            unset($this->state->battle['pending_deal_scout_recruit']);
+            return Result::error('Разведка недоступна');
+        }
+
+        $beginningError = $this->validateDealScoutBeginning($playerKey, $card);
+        if ($beginningError !== null) {
+            return Result::error($beginningError);
+        }
+
+        $opponentKey = $this->state->getOpponentKey($playerKey);
+        $opponentHand = [];
+        foreach ($this->state->cards as $otherCard) {
+            if ($otherCard->owner === $opponentKey && $otherCard->zone === CardInstance::ZONE_HAND) {
+                $opponentHand[] = $otherCard;
+            }
+        }
+
+        $revealCount = (int) $config['reveal_count'];
+        if (count($opponentHand) < $revealCount) {
+            return Result::error('Недостаточно карт у оппонента для разведки');
+        }
+
+        shuffle($opponentHand);
+        $revealed = array_slice($opponentHand, 0, $revealCount);
+        $revealedIds = array_map(fn(CardInstance $revealedCard) => $revealedCard->instanceId, $revealed);
+        $eliteCount = 0;
+        foreach ($revealed as $revealedCard) {
+            if ($revealedCard->elite) {
+                $eliteCount++;
+            }
+        }
+
+        $discount = $eliteCount * (int) $config['discount_per_elite'];
+
+        $this->state->battle['pending_deal_scout_recruit'] = array_merge($pending, [
+            'step' => 'reveal',
+            'revealed_ids' => $revealedIds,
+            'elite_count' => $eliteCount,
+            'discount' => $discount,
+            'discount_resource' => (string) $config['discount_resource'],
+            'lock_return_after_recruit' => (bool) $config['lock_return_after_recruit'],
+        ]);
+        $this->state->bumpVersion();
+
+        return Result::ok(["deal_scout_recruit_revealed:{$playerKey}:{$card->ukid}:elite={$eliteCount}:discount={$discount}"]);
+    }
+
+    public function closeDealScoutRecruit(string $playerKey): Result
+    {
+        if ($this->state->status !== 'deal') {
+            return Result::error('Сейчас не стадия выбора отряда');
+        }
+
+        $pending = $this->state->battle['pending_deal_scout_recruit'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
+            return Result::error('Нет ожидающей разведки');
+        }
+        if (($pending['step'] ?? 'confirm') !== 'reveal') {
+            return Result::error('Сначала подтвердите разведку');
+        }
+
+        $card = $this->state->getCard((int) ($pending['card_id'] ?? 0));
+        if (!$card || $card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_HAND) {
+            return Result::error('Лазутчица должна быть в руке');
+        }
+
+        $config = $this->dealScoutRecruitConfig($card);
+        if ($config === null) {
+            return Result::error('Разведка недоступна');
+        }
+
+        $this->applyDealScoutRecruit($card, $pending);
+
+        $constraintError = $this->validateDealSquadConstraints($playerKey, $card);
+        if ($constraintError !== null) {
+            $this->resetDealScoutRecruit($card);
+            return Result::error($constraintError);
+        }
+
+        $calc = ResourceCalculator::compute($this->state, $playerKey, adding: $card);
+        if ($calc['gold_left'] < 0) {
+            $this->resetDealScoutRecruit($card);
+            return Result::error('Не хватает золота');
+        }
+
+        (new ZoneManager($this->state))->toSquad($card);
+        unset($this->state->battle['pending_deal_scout_recruit']);
+        $this->state->bumpVersion();
+
+        return Result::ok([
+            "card_picked:{$playerKey}:{$card->ukid}",
+            "deal_scout_recruit:elite=" . (int) ($pending['elite_count'] ?? 0),
+        ]);
+    }
+
+    public function cancelDealScoutRecruit(string $playerKey): Result
+    {
+        $pending = $this->state->battle['pending_deal_scout_recruit'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
+            return Result::error('Нет ожидающей разведки');
+        }
+        if (($pending['step'] ?? 'confirm') !== 'confirm') {
+            return Result::error('Разведку уже нельзя отменить');
+        }
+
+        unset($this->state->battle['pending_deal_scout_recruit']);
+        $this->state->bumpVersion();
+
+        return Result::ok(['deal_scout_recruit_cancelled']);
     }
 
     public function chooseDealVariableRecruit(string $playerKey, Command $cmd): Result
@@ -530,6 +683,92 @@ final class PrepareProcessor
         }
 
         return null;
+    }
+
+    private function dealScoutRecruitConfig(CardInstance $card): ?array
+    {
+        $config = $card->prop['deal']['scout_recruit'] ?? null;
+        if (!is_array($config)) {
+            return null;
+        }
+
+        $revealCount = max(1, (int) ($config['reveal_count'] ?? 2));
+        $discountPerElite = max(0, (int) ($config['discount_per_elite'] ?? 1));
+        $discountResource = (string) ($config['discount_resource'] ?? 'silver');
+        if ($discountResource !== 'silver') {
+            return null;
+        }
+
+        return [
+            'reveal_count' => $revealCount,
+            'discount_per_elite' => $discountPerElite,
+            'discount_resource' => $discountResource,
+            'requires_empty_squad' => !empty($config['requires_empty_squad']),
+            'lock_return_after_recruit' => !empty($config['lock_return_after_recruit']),
+        ];
+    }
+
+    private function validateDealScoutBeginning(string $playerKey, CardInstance $card): ?string
+    {
+        $config = $this->dealScoutRecruitConfig($card);
+        if ($config === null || !$config['requires_empty_squad']) {
+            return null;
+        }
+
+        foreach ($this->state->cards as $otherCard) {
+            if ($otherCard->owner === $playerKey && $otherCard->zone === CardInstance::ZONE_SQUAD) {
+                return 'Разведка доступна только в начале набора';
+            }
+        }
+
+        return null;
+    }
+
+    private function dealScoutRecruitPending(string $playerKey, CardInstance $card): array
+    {
+        $config = $this->dealScoutRecruitConfig($card) ?? [];
+
+        return [
+            'owner' => $playerKey,
+            'step' => 'confirm',
+            'card_id' => $card->instanceId,
+            'ukid' => $card->ukid,
+            'reveal_count' => (int) ($config['reveal_count'] ?? 2),
+            'discount_per_elite' => (int) ($config['discount_per_elite'] ?? 1),
+            'discount_resource' => (string) ($config['discount_resource'] ?? 'silver'),
+            'requires_empty_squad' => !empty($config['requires_empty_squad']),
+            'lock_return_after_recruit' => !empty($config['lock_return_after_recruit']),
+        ];
+    }
+
+    private function applyDealScoutRecruit(CardInstance $card, array $pending): void
+    {
+        $card->flags['deal_scout_recruit'] = [
+            'confirmed' => true,
+            'return_locked' => !empty($pending['lock_return_after_recruit']),
+            'revealed_ids' => array_map('intval', (array) ($pending['revealed_ids'] ?? [])),
+            'elite_count' => max(0, (int) ($pending['elite_count'] ?? 0)),
+            'discount_resource' => (string) ($pending['discount_resource'] ?? 'silver'),
+            'silver_discount' => max(0, (int) ($pending['discount'] ?? 0)),
+        ];
+    }
+
+    private function resetDealScoutRecruit(CardInstance $card): void
+    {
+        unset($card->flags['deal_scout_recruit']);
+    }
+
+    private function hasDealScoutRecruitLock(string $playerKey): bool
+    {
+        foreach ($this->state->cards as $card) {
+            if ($card->owner === $playerKey
+                && $card->zone === CardInstance::ZONE_SQUAD
+                && !empty($card->flags['deal_scout_recruit']['return_locked'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function dealVariableRecruitConfig(CardInstance $card): ?array

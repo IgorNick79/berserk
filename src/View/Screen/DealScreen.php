@@ -213,25 +213,71 @@ final class DealScreen
         string $selectedUkid,
         array $info
     ): array {
-        if ($selectedZone !== 'hand') {
-            return $info;
-        }
-
         foreach ($state->cards as $card) {
             if ($card->owner !== $playerKey
-                || $card->zone !== CardInstance::ZONE_HAND
+                || $card->zone !== $selectedZone
                 || $card->ukid !== $selectedUkid) {
                 continue;
             }
 
-            $effectiveCost = ResourceCalculator::effectiveRecruitCost($state, $playerKey, $card);
-            $baseCost = (int) ($info['price'] ?? $card->price);
-            if ($effectiveCost !== $baseCost) {
-                $info['price'] = $effectiveCost . ' (обычно ' . $baseCost . ')';
+            if ($selectedZone === 'hand') {
+                $effectiveCost = ResourceCalculator::effectiveRecruitCost($state, $playerKey, $card);
+                $baseCost = (int) ($info['price'] ?? $card->price);
+                if ($effectiveCost !== $baseCost) {
+                    $info['price'] = $effectiveCost . ' (обычно ' . $baseCost . ')';
+                }
             }
+
+            $info['notes_html'] = $this->dealPreviewNotes($state, $playerKey, $card, $selectedZone);
             break;
         }
 
         return $info;
+    }
+
+    private function dealPreviewNotes(GameState $state, string $playerKey, CardInstance $card, string $selectedZone): string
+    {
+        $notes = [];
+
+        $scout = $card->prop['deal']['scout_recruit'] ?? null;
+        if (is_array($scout) && $selectedZone === CardInstance::ZONE_HAND) {
+            $revealCount = max(1, (int) ($scout['reveal_count'] ?? 2));
+            $discountPerElite = max(0, (int) ($scout['discount_per_elite'] ?? 1));
+
+            $notes[] = 'В начале набора можно раскрыть '
+                . $revealCount
+                . ' карты оппонента. Каждая золотая карта уменьшает серебряную стоимость на '
+                . $discountPerElite
+                . '. После подтверждения набор обязателен.';
+
+            if (!empty($scout['requires_empty_squad'])
+                && count($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD)) > 0) {
+                $notes[] = 'Разведка доступна только в начале набора.';
+            }
+        }
+
+        $appliedScout = $card->flags['deal_scout_recruit'] ?? null;
+        if (is_array($appliedScout) && $selectedZone === CardInstance::ZONE_SQUAD) {
+            $notes[] = 'Разведка: золотых карт раскрыто '
+                . (int) ($appliedScout['elite_count'] ?? 0)
+                . ', скидка к серебряной стоимости −'
+                . (int) ($appliedScout['silver_discount'] ?? 0)
+                . '.';
+
+            if (!empty($appliedScout['return_locked'])) {
+                $notes[] = 'После разведки эту карту нельзя вернуть.';
+            }
+        }
+
+        if (empty($notes)) {
+            return '';
+        }
+
+        $html = '';
+        foreach ($notes as $note) {
+            $html .= '<p class="bonus">' . htmlspecialchars($note, ENT_QUOTES) . '</p>';
+        }
+
+        return $html;
     }
 }
