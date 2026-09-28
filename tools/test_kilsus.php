@@ -15,6 +15,8 @@ use Berserk\Core\StrikeResolver;
 use Berserk\Core\TurnProcessor;
 use Berserk\Core\Choice\ChoiceRegistry;
 use Berserk\Core\Movement\MovementResolver;
+use Berserk\View\Screen\Battle\InfoPanel;
+use Berserk\View\Template;
 
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
@@ -246,7 +248,7 @@ assertTrue($kilsus->hp === 9, 'Normal strike damage should wound Kilsus.');
 $engine->applyDamage($state, $kilsus, 2, 'answer', $enemy);
 assertTrue($kilsus->hp === 9, 'Answer strike damage should be blocked by block_strike_answer.');
 
-$state = kilsusState(kilsusCard(), enemyCard(2, 4, 3, 20));
+$state = kilsusState(kilsusCard(), enemyCard(2, 4, 3, 20, ['prop' => ['ovz' => ['value' => 2]]]));
 $result = (new StrikeResolver($state, new Engine()))->declare(GameState::PLAYER_HOST, new Command('strike', [
     'card_id' => 1,
     'target_id' => 2,
@@ -254,5 +256,22 @@ $result = (new StrikeResolver($state, new Engine()))->declare(GameState::PLAYER_
 assertTrue($result->success, $result->error ?? 'Kilsus strike should be declared.');
 assertTrue(($state->battle['strike']['defend_dice'] ?? null) === 1, 'block_strike_answer should not make Kilsus unanswerable.');
 assertTrue(CardStats::getOva($state, $state->getCard(1), $state->getCard(2)) === 1, 'Kilsus OVA 1 should be active.');
+$result = (new StrikeResolver($state, new Engine()))->chooseStrikeMode(GameState::PLAYER_HOST, new Command('choose_strike_mode', [
+    'mode' => 'normal',
+]));
+assertTrue($result->success, $result->error ?? 'Kilsus strike mode choice should apply.');
+assertTrue(($state->battle['strike']['defend_damage_total'] ?? null) === 0, 'Blocked answer strike should report zero actual damage.');
+$html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render(
+    $state,
+    GameState::PLAYER_HOST,
+    'host',
+    [
+        's1_18' => ['name' => 'Килсус'],
+        'enemy_2' => ['name' => 'Защитник'],
+    ],
+    '/battle?game=18&first='
+);
+assertTrue(str_contains($html, 'Килсус'), 'InfoPanel should name Kilsus in answer block message.');
+assertTrue(str_contains($html, 'ответный удар заблокирован'), 'InfoPanel should show answer strike block message.');
 
 echo "Kilsus regression tests passed.\n";

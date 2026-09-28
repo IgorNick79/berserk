@@ -920,6 +920,17 @@ final class InfoPanel
                         . '</p>';
                 }
             }
+            if (!empty($strike['answer_blocked'])) {
+                foreach ($strike['answer_blocked'] as $a) {
+                    $blockedCard = $state->getCard((int) ($a['target_id'] ?? 0));
+                    $blockedInfo = $blockedCard ? ($cardsInfo[$blockedCard->ukid] ?? null) : null;
+                    $blockedName = $blockedInfo ? htmlspecialchars($blockedInfo['name'], ENT_QUOTES) : '?';
+
+                    $answerHtml .= '<p class="answer">'
+                        . '<b>' . $blockedName . '</b>: ответный удар заблокирован'
+                        . '</p>';
+                }
+            }
 
             $shotBonusHtml = '';
             if (!empty($strike['shot_bonus'])) {

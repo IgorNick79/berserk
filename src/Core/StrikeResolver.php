@@ -597,7 +597,12 @@ final class StrikeResolver
                 $this->state->battle['strike']['defend_blocked_by_weak'] = true;
             }
 
+            $blockedAnswersBefore = count((array) ($this->state->battle['strike']['answer_blocked'] ?? []));
             $this->engine->applyDamage($this->state, $attacker, $val, 'answer', $defendCard);
+            $blockedAnswersAfter = count((array) ($this->state->battle['strike']['answer_blocked'] ?? []));
+            if ($blockedAnswersAfter > $blockedAnswersBefore) {
+                $val = 0;
+            }
             $this->state->battle['strike']['defend_damage_total'] = $val;
 
             if ($val > 0 && !empty($attacker->prop['on_hit_gain'])) {

@@ -20,7 +20,7 @@ final class WhipChoice implements ChoiceHandlerInterface
 
     public function commandTypes(): array
     {
-        return ['choose_whip_target'];
+        return ['choose_whip_target', 'cancel_pending'];
     }
 
     public function spec(
@@ -76,6 +76,9 @@ final class WhipChoice implements ChoiceHandlerInterface
         Command $cmd
     ): Result {
         $ar = new \Berserk\Core\ActionResolver($state, $engine);
+        if ($cmd->type === 'cancel_pending') {
+            return $ar->cancelPending($playerKey, $cmd);
+        }
         return $ar->chooseWhipTarget($playerKey, $cmd);
     }
 }
