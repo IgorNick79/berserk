@@ -150,6 +150,7 @@ final class DamageResolver
                 ['strike', 'uchr', 'shot', 'throw', 'tap', 'discharge', 'answer'],
                 true
             );
+            $this->triggerLineDeathNextStrikeBonus($target);
             $this->triggerOnAnyDeath($target, $actionType);
             if ($deathByAttack) {
                 $this->triggerOnDeath($target);
@@ -161,6 +162,58 @@ final class DamageResolver
         }
 
         $this->checkGameOver();
+    }
+
+    private function triggerLineDeathNextStrikeBonus(CardInstance $died): void
+    {
+        if (!CardStats::hasLine($died)) return;
+
+        $activeKey = $this->state->battle['active'] ?? null;
+        if ($activeKey === null || $activeKey === $died->owner) return;
+
+        $lineGroup = CardStats::getLineGroup($this->state, $died);
+        if (count($lineGroup) <= 1) return;
+
+        $recipientIds = [];
+        foreach ($lineGroup as $participant) {
+            if ($participant->instanceId === $died->instanceId) continue;
+            if ($participant->dying || $participant->hp <= 0) continue;
+            $recipientIds[] = $participant->instanceId;
+        }
+        if (empty($recipientIds)) return;
+
+        foreach ($this->state->cards as $source) {
+            if ($source->owner !== $died->owner) continue;
+            if ($source->zone !== CardInstance::ZONE_FIELD
+                && $source->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($source->instanceId !== $died->instanceId && $source->dying) continue;
+
+            $config = $source->prop['line_death_next_strike_bonus'] ?? null;
+            if (!is_array($config)) continue;
+
+            $value = (int) ($config['value'] ?? 0);
+            if ($value <= 0) continue;
+
+            foreach ($recipientIds as $targetId) {
+                $target = $this->state->getCard($targetId);
+                if (!$target) continue;
+
+                $target->modifiers[] = [
+                    'stat' => 'next_strike_bonus',
+                    'value' => $value,
+                    'source' => $source->instanceId,
+                ];
+
+                if (!empty($this->state->battle['strike'])) {
+                    $this->state->battle['strike']['line_death_next_strike_bonus'][] = [
+                        'source_id' => $source->instanceId,
+                        'died_id' => $died->instanceId,
+                        'target_id' => $target->instanceId,
+                        'value' => $value,
+                    ];
+                }
+            }
+        }
     }
 
     public function checkGameOver(): void

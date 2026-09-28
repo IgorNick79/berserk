@@ -514,6 +514,8 @@ final class StrikeResolver
             }
             $abilityBonus = CardStats::getAbilityBonus($this->state, $attacker, $defendCard, 'strike', $attackStrike);
             $val += $abilityBonus;
+            $nextStrikeBonus = CardStats::getNextStrikeBonus($attacker);
+            $val += $nextStrikeBonus;
             $reduction = CardStats::getDamageReduction($this->state, $attacker, $defendCard, 'strike');
             $val -= $reduction;
             if ($val < 0) $val = 0;
@@ -542,6 +544,10 @@ final class StrikeResolver
             $this->state->battle['strike']['attack_reduction'] = $reduction;
             if ($abilityBonus > 0) {
                 $this->state->battle['strike']['ability_bonus'] = $abilityBonus;
+            }
+            if ($nextStrikeBonus > 0) {
+                $this->state->battle['strike']['next_strike_bonus'] = $nextStrikeBonus;
+                $this->consumeNextStrikeBonuses($attacker);
             }
 
             $this->triggerStrikeProphecy($attacker, $defendCard);
@@ -699,6 +705,14 @@ final class StrikeResolver
             $target->row + $dRow,
             $target->col + $dCol
         );
+    }
+
+    private function consumeNextStrikeBonuses(CardInstance $card): void
+    {
+        $card->modifiers = array_values(array_filter(
+            $card->modifiers,
+            fn($modifier) => ($modifier['stat'] ?? '') !== 'next_strike_bonus'
+        ));
     }
 
     public function chooseStrikeMode(string $playerKey, Command $cmd): Result

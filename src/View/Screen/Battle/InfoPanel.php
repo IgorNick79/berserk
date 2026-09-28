@@ -1040,6 +1040,12 @@ final class InfoPanel
                     . $strike['ability_bonus'] . ' к урону (способность)</p>';
             }
 
+            $nextStrikeBonusHtml = '';
+            if (!empty($strike['next_strike_bonus'])) {
+                $nextStrikeBonusHtml = '<p class="bonus">+'
+                    . $strike['next_strike_bonus'] . ' к урону (следующий удар)</p>';
+            }
+
             $clumsyHtml = '';
             $clumsy = $strike['attack_clumsy'] ?? $strike['clumsy'] ?? 0;
             if ($clumsy > 0) {
@@ -1073,6 +1079,22 @@ final class InfoPanel
                         }
                     }
                     $deathHtml .= '</div>';
+                }
+            }
+            if (!empty($strike['line_death_next_strike_bonus'])) {
+                foreach ($strike['line_death_next_strike_bonus'] as $trigger) {
+                    $source = $state->getCard((int) ($trigger['source_id'] ?? 0));
+                    $target = $state->getCard((int) ($trigger['target_id'] ?? 0));
+                    $sourceInfo = $source ? ($cardsInfo[$source->ukid] ?? null) : null;
+                    $targetInfo = $target ? ($cardsInfo[$target->ukid] ?? null) : null;
+                    $sourceName = $sourceInfo ? htmlspecialchars($sourceInfo['name'], ENT_QUOTES) : '?';
+                    $targetName = $targetInfo ? htmlspecialchars($targetInfo['name'], ENT_QUOTES) : '?';
+                    $value = (int) ($trigger['value'] ?? 0);
+
+                    $deathHtml .= '<div class="death-trigger">'
+                        . '<b>' . $sourceName . '</b>: ' . $targetName
+                        . ' получает +' . $value . ' к следующему удару'
+                        . '</div>';
                 }
             }
 
@@ -1137,7 +1159,7 @@ final class InfoPanel
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
                     'defend_dice_html' => $defendDiceHtml,
-                    'result_text'      => $summaryHtml . $resultText . $autoHtml . $pushHtml . $impactHtml . $huntHtml . $behindWeakStrikeHtml . $shotBonusHtml . $nextActionBonusHtml . $rowsBonusHtml . $clumsyHtml . $abilityBonusHtml . $coinBonusHtml . $reductionHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml,
+                    'result_text'      => $summaryHtml . $resultText . $autoHtml . $pushHtml . $impactHtml . $huntHtml . $behindWeakStrikeHtml . $shotBonusHtml . $nextActionBonusHtml . $nextStrikeBonusHtml . $rowsBonusHtml . $clumsyHtml . $abilityBonusHtml . $coinBonusHtml . $reductionHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml,
                     'confirm_html'     => $confirmHtml,
                 ]);
             } else {

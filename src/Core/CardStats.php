@@ -262,6 +262,18 @@ final class CardStats
         return $bonus;
     }
 
+    public static function getNextStrikeBonus(CardInstance $card): int
+    {
+        $bonus = 0;
+        foreach ($card->modifiers as $m) {
+            if (($m['stat'] ?? '') === 'next_strike_bonus') {
+                $bonus += (int) ($m['value'] ?? 0);
+            }
+        }
+
+        return $bonus;
+    }
+
     public static function getEffectiveRange(GameState $state, CardInstance $card, array $action): int
     {
         $range = (int) ($action['range'] ?? 0);
@@ -601,6 +613,53 @@ final class CardStats
             if ($dr + $dc === 1) return true;
         }
         return false;
+    }
+
+    /**
+     * @return CardInstance[]
+     */
+    public static function getLineGroup(GameState $state, CardInstance $card): array
+    {
+        if ($card->zone !== CardInstance::ZONE_FIELD) return [];
+        if ($card->type === 'fly') return [];
+        if (!self::hasLine($card)) return [];
+
+        $byId = [];
+        foreach ($state->cards as $candidate) {
+            if ($candidate->owner !== $card->owner) continue;
+            if ($candidate->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($candidate->type === 'fly') continue;
+            if ($candidate->instanceId !== $card->instanceId && $candidate->dying) continue;
+            if (!self::hasLine($candidate)) continue;
+            $byId[$candidate->instanceId] = $candidate;
+        }
+
+        if (!isset($byId[$card->instanceId])) return [];
+
+        $result = [];
+        $queue = [$card->instanceId];
+        $seen = [];
+
+        while (!empty($queue)) {
+            $id = array_shift($queue);
+            if (isset($seen[$id])) continue;
+            $seen[$id] = true;
+
+            $current = $byId[$id] ?? null;
+            if (!$current) continue;
+            $result[] = $current;
+
+            foreach ($byId as $otherId => $other) {
+                if (isset($seen[$otherId])) continue;
+                $dr = abs($other->row - $current->row);
+                $dc = abs($other->col - $current->col);
+                if ($dr + $dc === 1) {
+                    $queue[] = $otherId;
+                }
+            }
+        }
+
+        return $result;
     }
 
     private static function checkLineCondition(GameState $state, CardInstance $card, array $prop): bool

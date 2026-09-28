@@ -38,6 +38,7 @@ final class Badge
         'move'              => ['class' => 'move',   'showExpire' => false, 'plus' => true],
         'coin_strike_bonus' => ['class' => 'strike', 'showExpire' => false, 'plus' => true],
         'next_action_bonus' => ['class' => 'strike', 'showExpire' => false, 'plus' => true],
+        'next_strike_bonus' => ['class' => 'strike', 'showExpire' => false, 'plus' => true],
     ];
 
     public static function forCard(CardInstance $card, ?GameState $state = null): string
