@@ -262,6 +262,44 @@ final class CardStats
         return $bonus;
     }
 
+    public static function getEffectiveRange(GameState $state, CardInstance $card, array $action): int
+    {
+        $range = (int) ($action['range'] ?? 0);
+        if ($range <= 0) {
+            return $range;
+        }
+
+        return $range + self::getColumnRangeAuraBonus($state, $card, (string) ($action['type'] ?? ''));
+    }
+
+    public static function getColumnRangeAuraBonus(GameState $state, CardInstance $card, string $actionType): int
+    {
+        if ($actionType === '') return 0;
+        if ($card->zone !== CardInstance::ZONE_FIELD) return 0;
+        if ($card->dying || $card->hp <= 0) return 0;
+
+        $bonus = 0;
+        foreach ($state->cards as $source) {
+            if ($source->dying || $source->hp <= 0) continue;
+            if ($source->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($source->col !== $card->col) continue;
+
+            $aura = $source->prop['column_range_aura'] ?? null;
+            if (!is_array($aura)) continue;
+
+            $target = (string) ($aura['target'] ?? 'ally');
+            if ($target === 'ally' && $source->owner !== $card->owner) continue;
+            if ($target === 'enemy' && $source->owner === $card->owner) continue;
+
+            $types = $aura['types'] ?? [];
+            if (!is_array($types) || !in_array($actionType, $types, true)) continue;
+
+            $bonus += (int) ($aura['value'] ?? 1);
+        }
+
+        return $bonus;
+    }
+
     public static function getAbilityBonus(
         GameState $state,
         CardInstance $attacker,

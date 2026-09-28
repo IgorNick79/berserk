@@ -545,7 +545,7 @@ final class ActionResolver
             $dcol = abs($target->col - $attacker->col);
             $dist = $drow + $dcol;
 
-            $range = (int) ($action['range'] ?? 0);
+            $range = CardStats::getEffectiveRange($this->state, $attacker, $action);
             if ($range > 0) {
                 if ($dist > $range) {
                     return Result::error('Превышена дальность');
@@ -640,7 +640,7 @@ final class ActionResolver
                 if ($maxd <= 1 && empty($action['near_shot'])) {
                     return Result::error('Дальняя атака невозможна по соседней клетке');
                 }
-                $range = (int) ($action['range'] ?? 0);
+                $range = CardStats::getEffectiveRange($this->state, $attacker, $action);
                 if ($range > 0 && $dist > $range) {
                     return Result::error('Превышена дальность');
                 }

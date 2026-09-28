@@ -284,7 +284,7 @@ final class BattleHelper
                     $dc = abs($target->col - $card->col);
                     $dist = $dr + $dc;
 
-                    $range = (int) ($action['range'] ?? 0);
+                    $range = CardStats::getEffectiveRange($state, $card, $action);
                     if ($range > 0) {
                         if ($dist > $range) continue;
                         if ($dist === 0) continue;
@@ -381,7 +381,7 @@ final class BattleHelper
 
                         if ($maxd <= 1 && empty($action['near_shot'])) continue;
 
-                        $range = (int) ($action['range'] ?? 0);
+                        $range = CardStats::getEffectiveRange($state, $card, $action);
                         if ($range > 0 && $dist > $range) continue;
                     }
                 }
