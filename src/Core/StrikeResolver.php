@@ -597,7 +597,7 @@ final class StrikeResolver
                 $this->state->battle['strike']['defend_blocked_by_weak'] = true;
             }
 
-            $this->engine->applyDamage($this->state, $attacker, $val, 'strike', $defendCard);
+            $this->engine->applyDamage($this->state, $attacker, $val, 'answer', $defendCard);
             $this->state->battle['strike']['defend_damage_total'] = $val;
 
             if ($val > 0 && !empty($attacker->prop['on_hit_gain'])) {
@@ -826,14 +826,108 @@ final class StrikeResolver
                 }
             }
 
-            // Закрываем как раньше
+            // Закрываем сражение перед возможным обязательным добиванием после удара.
             $this->state->battle['strike'] = null;
             $this->engine->finalizeDying($this->state);
+
+            if ($this->openAfterStrikeExecute($strike)) {
+                $this->state->bumpVersion();
+                return Result::ok(['after_strike_execute']);
+            }
 
         }
 
         $this->state->bumpVersion();
         return Result::ok(['strike_confirmed']);
+    }
+
+    public function chooseAfterStrikeExecute(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_after_strike_execute'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
+            return Result::error('Нет выбора добивания');
+        }
+
+        $source = $this->state->getCard((int) ($pending['source_id'] ?? 0));
+        if (!$source) {
+            unset($this->state->battle['pending_after_strike_execute']);
+            return Result::error('Источник добивания не найден');
+        }
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        $candidates = array_map('intval', (array) ($pending['candidate_ids'] ?? []));
+        if (!in_array($targetId, $candidates, true)) {
+            return Result::error('Нельзя выбрать эту цель');
+        }
+
+        $value = (int) ($pending['value'] ?? 0);
+        $target = $this->state->getCard($targetId);
+        if (!$target || !CardStats::canExecuteTarget($this->state, $source, $target, $value)) {
+            unset($this->state->battle['pending_after_strike_execute']);
+            return Result::error('Цель добивания больше недоступна');
+        }
+
+        unset($this->state->battle['pending_after_strike_execute']);
+        $this->markAfterStrikeExecuteUsed($source);
+
+        $result = (new ActionResolver($this->state, $this->engine))->executeForced(
+            $playerKey,
+            $source->instanceId,
+            $targetId,
+            $value,
+            ($pending['source_name'] ?? 'Карта') . ': добивание'
+        );
+
+        $this->state->bumpVersion();
+        return $result;
+    }
+
+    private function openAfterStrikeExecute(array $strike): bool
+    {
+        if (empty($strike['strike_hit'])) return false;
+        if (($strike['final']['attack'] ?? '') === '') return false;
+
+        $source = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+        if (!$source) return false;
+        if (!array_key_exists('execute', $source->prop)) return false;
+
+        $value = CardStats::getStat($source, 'execute');
+        if ($value <= 0) return false;
+
+        $limit = (int) ($source->prop['after_strike_execute_limit'] ?? 2);
+        if ($limit > 0 && (int) ($source->flags['after_strike_execute_used_this_turn'] ?? 0) >= $limit) {
+            return false;
+        }
+
+        $targets = CardStats::findExecuteTargets($this->state, $source, $value);
+        if (empty($targets)) return false;
+
+        if (count($targets) === 1) {
+            $this->markAfterStrikeExecuteUsed($source);
+            (new ActionResolver($this->state, $this->engine))->executeForced(
+                $source->owner,
+                $source->instanceId,
+                $targets[0]->instanceId,
+                $value,
+                'Добивание'
+            );
+            return true;
+        }
+
+        $this->state->battle['pending_after_strike_execute'] = [
+            'owner' => $source->owner,
+            'source_id' => $source->instanceId,
+            'source_ukid' => $source->ukid,
+            'value' => $value,
+            'candidate_ids' => array_map(fn(CardInstance $target) => $target->instanceId, $targets),
+        ];
+        return true;
+    }
+
+    private function markAfterStrikeExecuteUsed(CardInstance $source): void
+    {
+        $source->flags['after_strike_execute_used_this_turn'] =
+            ((int) ($source->flags['after_strike_execute_used_this_turn'] ?? 0)) + 1;
     }
 
     private function hasAnyStrike(CardInstance $card): bool

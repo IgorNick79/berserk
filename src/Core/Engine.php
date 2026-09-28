@@ -75,6 +75,7 @@ final class Engine
             'choose_redirect'       => $strike->chooseRedirect($playerKey, $cmd),
             'confirm_strike'      => $strike->confirmStrike($playerKey, $cmd),
             'choose_strike_mode'  => $strike->chooseStrikeMode($playerKey, $cmd),
+            'choose_after_strike_execute' => $strike->chooseAfterStrikeExecute($playerKey, $cmd),
             'choose_forced_strike' => $action->chooseForcedStrike($playerKey, $cmd),
             'uchr'                => $action->uchr($playerKey, $cmd),
             'action'              => $action->handle($playerKey, $cmd),

@@ -292,6 +292,7 @@ final class TurnProcessor
                     $card->flags['no_close_this_turn'] = false;
                     $card->flags['shot_used_this_turn'] = false;
                     $card->flags['attacks_used_this_turn'] = 0;
+                    $card->flags['after_strike_execute_used_this_turn'] = 0;
                     unset($card->flags['first_attack_target_id']);
                 }
             }

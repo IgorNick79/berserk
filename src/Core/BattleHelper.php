@@ -270,16 +270,13 @@ final class BattleHelper
                         if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
                     }
                 } elseif ($type === 'execute') {
-                    if ($target->owner === $playerKey) continue;
-                    if ($target->type === 'fly') continue;
-                    if (!empty($target->prop['incorporeal'])) continue;
-                    if ($target->hp > (int) ($action['value'] ?? 0)) continue;
-
-                    if (!empty($action['near'])) {
-                        $dr = abs($target->row - $card->row);
-                        $dc = abs($target->col - $card->col);
-                        if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
-                    }
+                    if (!CardStats::canExecuteTarget(
+                        $state,
+                        $card,
+                        $target,
+                        (int) ($action['value'] ?? 0),
+                        !empty($action['near'])
+                    )) continue;
                 } elseif ($type === 'magic') {
                     if ($target->owner === $playerKey) continue;
 

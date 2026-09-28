@@ -24,7 +24,77 @@ final class CardStats
 
     public static function isMeleeAction(string $type): bool
     {
-        return in_array($type, ['strike', 'tap', 'magic', 'execute'], true);
+        return in_array($type, ['strike', 'answer', 'tap', 'magic', 'execute'], true);
+    }
+
+    public static function getStat(CardInstance $card, string $stat): int
+    {
+        $value = 0;
+        $prop = $card->prop[$stat] ?? null;
+
+        if (is_numeric($prop)) {
+            $value = (int) $prop;
+        } elseif (is_array($prop)) {
+            $value = (int) ($prop['value'] ?? 0);
+        }
+
+        foreach ($card->modifiers as $modifier) {
+            if (($modifier['stat'] ?? '') === $stat) {
+                $value += (int) ($modifier['value'] ?? 0);
+            }
+        }
+
+        return $value;
+    }
+
+    public static function canExecuteTarget(
+        GameState $state,
+        CardInstance $attacker,
+        CardInstance $target,
+        int $value,
+        bool $near = false
+    ): bool {
+        if ($target->zone !== CardInstance::ZONE_FIELD
+            && $target->zone !== CardInstance::ZONE_FLYING) {
+            return false;
+        }
+        if ($target->dying || $target->hp <= 0) return false;
+        if ($target->owner === $attacker->owner) return false;
+        if ($target->type === 'fly') return false;
+        if (!empty($target->prop['incorporeal'])) return false;
+        if ($target->hp > $value) return false;
+
+        if ($near) {
+            $dr = abs($target->row - $attacker->row);
+            $dc = abs($target->col - $attacker->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return CardInstance[]
+     */
+    public static function findExecuteTargets(
+        GameState $state,
+        CardInstance $attacker,
+        int $value,
+        bool $near = false
+    ): array {
+        if ($value <= 0) return [];
+
+        $targets = [];
+        foreach ($state->cards as $target) {
+            if ($target->instanceId === $attacker->instanceId) continue;
+            if (self::canExecuteTarget($state, $attacker, $target, $value, $near)) {
+                $targets[] = $target;
+            }
+        }
+
+        return $targets;
     }
 
     public static function getStrikeValue(

@@ -498,6 +498,9 @@ final class ActionResolver
             if ($target->type === 'fly') {
                 return Result::error('Нельзя добить летающего');
             }
+            if (!empty($target->prop['incorporeal'])) {
+                return Result::error('Нельзя добить бестелесного');
+            }
             if ($target->hp > (int) ($action['value'] ?? 0)) {
                 return Result::error('У цели слишком много HP');
             }
@@ -644,6 +647,37 @@ final class ActionResolver
             }
         }
         return null;
+    }
+
+    public function executeForced(
+        string $playerKey,
+        int $cardId,
+        int $targetId,
+        int $value,
+        string $name = 'Добивание'
+    ): Result {
+        $attacker = $this->state->getCard($cardId);
+        if (!$attacker || $attacker->owner !== $playerKey) {
+            return Result::error('Атакующий не найден');
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target) {
+            return Result::error('Цель не найдена');
+        }
+
+        if (!CardStats::canExecuteTarget($this->state, $attacker, $target, $value)) {
+            return Result::error('Нельзя добить эту цель');
+        }
+
+        return $this->resolveExecute(
+            $attacker,
+            $target,
+            ['type' => 'execute', 'value' => $value, 'name' => $name],
+            $cardId,
+            $targetId,
+            $playerKey
+        );
     }
 
     // ─── Особые пути ──────────────────────────────────────────

@@ -25,6 +25,7 @@ final class ChoiceRegistry
                 new DealVariableRecruitChoice(),
                 new CoinSpendChoice(),
                 new DiceChoiceChoice(),
+                new AfterStrikeExecuteChoice(),
                 new CellMarkerChoice(),
                 new InstantPickChoice(),
                 new CombatPickChoice(),

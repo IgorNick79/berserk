@@ -21,6 +21,16 @@ final class DamageResolver
     ): void {
         if ($val <= 0) return;
 
+        if ($actionType === 'answer' && !empty($target->prop['block_strike_answer'])) {
+            if (!empty($this->state->battle['strike'])) {
+                $this->state->battle['strike']['answer_blocked'][] = [
+                    'target_id' => $target->instanceId,
+                    'attacker_id' => $attacker?->instanceId,
+                ];
+            }
+            return;
+        }
+
         foreach ($target->modifiers as $m) {
             if (($m['stat'] ?? '') === 'shield_light') {
                 $magicTypes = ['magic', 'cast', 'discharge', 'poison'];
