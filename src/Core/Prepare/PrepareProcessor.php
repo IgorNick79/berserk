@@ -230,6 +230,9 @@ final class PrepareProcessor
         if ($player->isConfirmed('view')) {
             return Result::error('Уже подтверждено');
         }
+        if ($this->isDraftDeck($playerKey) && $this->zoneCount($playerKey, CardInstance::ZONE_DECK) > GameSettings::DECK_LIMIT) {
+            return Result::error('Убери лишние карты в сайдборд');
+        }
 
         $player->confirm('view');
         $this->state->bumpVersion();
@@ -251,6 +254,59 @@ final class PrepareProcessor
         }
 
         return Result::ok($events);
+    }
+
+    public function moveViewCardToSideboard(string $playerKey, Command $cmd): Result
+    {
+        if ($this->state->status !== 'view') {
+            return Result::error('Сейчас не стадия просмотра деки');
+        }
+        if (!$this->isDraftDeck($playerKey)) {
+            return Result::error('Сайдборд доступен только для драфта');
+        }
+
+        $player = $this->state->getPlayer($playerKey);
+        if ($player->isConfirmed('view')) {
+            return Result::error('Дека уже подтверждена');
+        }
+        if ($this->zoneCount($playerKey, CardInstance::ZONE_DECK) <= GameSettings::DECK_LIMIT) {
+            return Result::error('В колоде уже допустимое количество карт');
+        }
+
+        $card = $this->state->getCard((int) $cmd->get('card_id', 0));
+        if (!$card || $card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_DECK) {
+            return Result::error('Карта не найдена в колоде');
+        }
+
+        (new ZoneManager($this->state))->toSideboard($card);
+        $this->state->bumpVersion();
+
+        return Result::ok(["view_card_sideboarded:{$playerKey}:{$card->instanceId}"]);
+    }
+
+    public function moveViewCardToDeck(string $playerKey, Command $cmd): Result
+    {
+        if ($this->state->status !== 'view') {
+            return Result::error('Сейчас не стадия просмотра деки');
+        }
+        if (!$this->isDraftDeck($playerKey)) {
+            return Result::error('Сайдборд доступен только для драфта');
+        }
+
+        $player = $this->state->getPlayer($playerKey);
+        if ($player->isConfirmed('view')) {
+            return Result::error('Дека уже подтверждена');
+        }
+
+        $card = $this->state->getCard((int) $cmd->get('card_id', 0));
+        if (!$card || $card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_SIDEBOARD) {
+            return Result::error('Карта не найдена в сайдборде');
+        }
+
+        (new ZoneManager($this->state))->toDeck($card);
+        $this->state->bumpVersion();
+
+        return Result::ok(["view_card_decked:{$playerKey}:{$card->instanceId}"]);
     }
 
     public function confirmTurn(string $playerKey): Result
@@ -1403,6 +1459,24 @@ final class PrepareProcessor
     {
         $player = $this->state->getPlayer($playerKey);
 
+        if ($this->isDraftDeck($playerKey)) {
+            $zone = new ZoneManager($this->state);
+            foreach ($this->state->cards as $card) {
+                if ($card->owner === $playerKey
+                    && in_array($card->zone, [CardInstance::ZONE_HAND, CardInstance::ZONE_SQUAD], true)) {
+                    $this->resetDealState($card);
+                    $zone->toDeck($card);
+                }
+            }
+
+            $pool = $this->state->getCardsInZone($playerKey, CardInstance::ZONE_DECK);
+            shuffle($pool);
+            foreach (array_slice($pool, 0, 15) as $card) {
+                $zone->toHand($card);
+            }
+            return;
+        }
+
         foreach ($this->state->cards as $id => $card) {
             if ($card->owner === $playerKey
                 && in_array($card->zone, [CardInstance::ZONE_HAND, CardInstance::ZONE_SQUAD], true)) {
@@ -1456,5 +1530,22 @@ final class PrepareProcessor
                 class:        $item['class'],
             ));
         }
+    }
+
+    private function isDraftDeck(string $playerKey): bool
+    {
+        return $this->state->getPlayer($playerKey)->deckId === 0;
+    }
+
+    private function zoneCount(string $playerKey, string $zone): int
+    {
+        return count($this->state->getCardsInZone($playerKey, $zone));
+    }
+
+    private function resetDealState(CardInstance $card): void
+    {
+        unset($card->flags['deal_linked_recruit']);
+        $this->resetDealScoutRecruit($card);
+        $this->resetDealVariableRecruit($card);
     }
 }

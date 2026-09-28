@@ -6,7 +6,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/../src/Core/Autoloader.php';
 
 use Berserk\Core\Autoloader;
+use Berserk\Core\CardInstance;
 use Berserk\Core\Db;
+use Berserk\Core\GameSettings;
 use Berserk\Core\GameState;
 use Berserk\Core\Prepare\DraftProcessor;
 
@@ -106,16 +108,18 @@ $result = $processor->pickSelection(GameState::PLAYER_HOST, ['positions' => []],
 assertTrue(!$result->success, 'Empty auto selection should be rejected');
 assertTrue($state->draft === $before, 'Rejected empty selection should not mutate draft state');
 
-// Manual finish is rejected before both players have 30 drafted cards.
-$state = stateWithDraft(array_fill(0, 30, 'u1'), array_fill(0, 29, 'u1'));
+$deckLimit = GameSettings::DECK_LIMIT;
+
+// Manual finish is rejected before both players have enough drafted cards.
+$state = stateWithDraft(array_fill(0, $deckLimit, 'u1'), array_fill(0, $deckLimit - 1, 'u1'));
 $processor = processorWithoutDb($state);
 $result = $processor->finish(GameState::PLAYER_HOST);
-assertTrue(!$result->success, 'finish_draft should be rejected below 30 cards for both players');
+assertTrue(!$result->success, 'finish_draft should be rejected below deck limit for both players');
 assertTrue($state->status === 'draft', 'Rejected finish_draft should keep draft status');
 assertTrue($state->draft !== null, 'Rejected finish_draft should keep draft runtime state');
 
 // Manual finish is restricted to the active draft player.
-$state = stateWithDraft(array_fill(0, 30, 'u1'), array_fill(0, 30, 'u1'), GameState::PLAYER_HOST);
+$state = stateWithDraft(array_fill(0, $deckLimit, 'u1'), array_fill(0, $deckLimit, 'u1'), GameState::PLAYER_HOST);
 $processor = processorWithoutDb($state);
 $result = $processor->finish(GameState::PLAYER_PLAYER);
 assertTrue(!$result->success, 'finish_draft should be rejected when it is not the requester turn');
@@ -140,15 +144,17 @@ if (is_file($configPath)) {
         assertTrue($row !== null && !empty($row['ukid']), 'DB-backed draft test needs at least one card');
         $ukid = (string) $row['ukid'];
 
-        $state = stateWithDraft(array_fill(0, 30, $ukid), array_fill(0, 30, $ukid));
+        $state = stateWithDraft(array_fill(0, $deckLimit, $ukid), array_fill(0, $deckLimit, $ukid));
         $result = (new DraftProcessor($state, $db))->finish(GameState::PLAYER_HOST);
-        assertTrue($result->success, 'finish_draft should succeed once both players have 30 cards');
+        assertTrue($result->success, 'finish_draft should succeed once both players have deck limit cards');
         assertTrue($state->status === 'view', 'Valid finish_draft should transition to view');
         assertTrue($state->draft === null, 'Valid finish_draft should clear draft runtime state');
         assertTrue(count($state->getPlayer(GameState::PLAYER_HOST)->deckCards) > 0, 'Finalized draft should build host deck cards');
         assertTrue(count($state->getPlayer(GameState::PLAYER_PLAYER)->deckCards) > 0, 'Finalized draft should build player deck cards');
+        assertTrue(count($state->getCardsInZone(GameState::PLAYER_HOST, CardInstance::ZONE_DECK)) === $deckLimit, 'Finalized draft should create host deck instances');
+        assertTrue(count($state->getCardsInZone(GameState::PLAYER_PLAYER, CardInstance::ZONE_DECK)) === $deckLimit, 'Finalized draft should create player deck instances');
 
-        $state = stateWithDraft(array_fill(0, 30, $ukid), array_fill(0, 30, $ukid));
+        $state = stateWithDraft(array_fill(0, $deckLimit, $ukid), array_fill(0, $deckLimit, $ukid));
         $state->draft['pool'] = [];
         $state->draft['grid'] = array_fill(0, 9, null);
         $result = (new DraftProcessor($state, $db))->pass(GameState::PLAYER_HOST);

@@ -59,6 +59,8 @@ final class Engine
             'finish_draft' => $prepare->finishDraft($playerKey),
             'select_deck'  => $prepare->selectDeck($playerKey, $cmd),
             'confirm_view' => $prepare->confirmView($playerKey),
+            'view_to_sideboard' => $prepare->moveViewCardToSideboard($playerKey, $cmd),
+            'view_to_deck' => $prepare->moveViewCardToDeck($playerKey, $cmd),
             'confirm_turn' => $prepare->confirmTurn($playerKey),
             'choose_side'  => $prepare->chooseSide($playerKey, $cmd),
             'pick_card'    => $prepare->pickCard($playerKey, $cmd),

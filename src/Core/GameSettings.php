@@ -25,6 +25,7 @@ final class GameSettings
     public const DRAFT_AUTO_SIDE_HOST = 'host';
     public const DRAFT_AUTO_SIDE_PLAYER = 'player';
     public const BOOSTER_PROFILE_DEFAULT = 'default';
+    public const DECK_LIMIT = 30;
 
     public function __construct(
         public array $system = ['deck_selection' => self::SYSTEM_DECK_SELECTION_MANUAL],

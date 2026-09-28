@@ -12,8 +12,6 @@ use Berserk\Core\Result;
 
 final class RandomDraftProcessor
 {
-    private const MIN_DRAFTED_CARDS = 30;
-
     public function __construct(
         private GameState $state,
         private Db $db,
@@ -62,8 +60,8 @@ final class RandomDraftProcessor
             }
         }
 
-        if (count($picked['host']) < self::MIN_DRAFTED_CARDS
-            || count($picked['player']) < self::MIN_DRAFTED_CARDS) {
+        if (count($picked['host']) < GameSettings::DECK_LIMIT
+            || count($picked['player']) < GameSettings::DECK_LIMIT) {
             return Result::error('Недостаточно карт для автоматического драфта');
         }
 

@@ -39,6 +39,13 @@ final class ZoneManager
         $card->zone = CardInstance::ZONE_DECK;
     }
 
+    public function toSideboard(CardInstance $card): void
+    {
+        $this->handleLinkedRecruitSourceLeavingBattlefield($card);
+        $this->clearPosition($card);
+        $card->zone = CardInstance::ZONE_SIDEBOARD;
+    }
+
     public function toField(CardInstance $card, int $row, int $col): void
     {
         $card->zone = CardInstance::ZONE_FIELD;

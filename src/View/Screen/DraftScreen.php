@@ -6,6 +6,7 @@ declare(strict_types=1);
 namespace Berserk\View\Screen;
 
 use Berserk\Core\GameState;
+use Berserk\Core\GameSettings;
 use Berserk\View\Template;
 use Berserk\View\Ui\ElementLabels;
 use Berserk\View\Ui\PrepareUi;
@@ -110,7 +111,7 @@ final class DraftScreen
 
             $actions[] = ['label' => 'Пас', 'url' => $baseUrl . '&cmd=draft_pass', 'class' => 'skip'];
 
-            if ($hostPickedCount >= 30 && $playerPickedCount >= 30) {
+            if ($hostPickedCount >= GameSettings::DECK_LIMIT && $playerPickedCount >= GameSettings::DECK_LIMIT) {
                 $actions[] = ['label' => 'Закончить драфт', 'url' => $baseUrl . '&cmd=finish_draft'];
             }
         } else {

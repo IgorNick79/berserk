@@ -6,6 +6,7 @@ declare(strict_types=1);
 namespace Berserk\Core\Prepare;
 
 use Berserk\Core\BoosterGenerator;
+use Berserk\Core\CardInstance;
 use Berserk\Core\Db;
 use Berserk\Core\GameSettings;
 use Berserk\Core\GameState;
@@ -13,8 +14,6 @@ use Berserk\Core\Result;
 
 final class DraftProcessor
 {
-    private const MIN_DRAFTED_CARDS_TO_FINISH = 30;
-
     public function __construct(
         private GameState $state,
         private Db $db,
@@ -232,8 +231,8 @@ final class DraftProcessor
 
     private function canFinish(array $draft): bool
     {
-        return count($draft['picked']['host'] ?? []) >= self::MIN_DRAFTED_CARDS_TO_FINISH
-            && count($draft['picked']['player'] ?? []) >= self::MIN_DRAFTED_CARDS_TO_FINISH;
+        return count($draft['picked']['host'] ?? []) >= GameSettings::DECK_LIMIT
+            && count($draft['picked']['player'] ?? []) >= GameSettings::DECK_LIMIT;
     }
 
     private function finalize(string $event): Result
@@ -242,10 +241,15 @@ final class DraftProcessor
         $playerUkids = $this->state->draft['picked']['player'];
         $builder = new DraftDeckBuilder($this->db);
 
-        $this->state->getPlayer('host')->deckCards   = $builder->buildDeckCards($hostUkids);
-        $this->state->getPlayer('player')->deckCards = $builder->buildDeckCards($playerUkids);
+        $hostDeckCards = $builder->buildDeckCards($hostUkids);
+        $playerDeckCards = $builder->buildDeckCards($playerUkids);
+
+        $this->state->getPlayer('host')->deckCards   = $hostDeckCards;
+        $this->state->getPlayer('player')->deckCards = $playerDeckCards;
         $this->state->getPlayer('host')->deckId   = 0;
         $this->state->getPlayer('player')->deckId = 0;
+        $this->createDraftDeckInstances('host', $hostDeckCards);
+        $this->createDraftDeckInstances('player', $playerDeckCards);
 
         $this->state->draft  = null;
         $this->state->status = 'view';
@@ -256,5 +260,43 @@ final class DraftProcessor
     private function opponent(string $key): string
     {
         return $key === 'host' ? 'player' : 'host';
+    }
+
+    private function createDraftDeckInstances(string $owner, array $deckCards): void
+    {
+        foreach ($this->state->cards as $id => $card) {
+            if ($card->owner === $owner
+                && in_array($card->zone, [CardInstance::ZONE_DECK, CardInstance::ZONE_SIDEBOARD], true)) {
+                unset($this->state->cards[$id]);
+            }
+        }
+
+        foreach ($deckCards as $item) {
+            $count = max(0, (int) ($item['count'] ?? 1));
+            for ($i = 0; $i < $count; $i++) {
+                $health = (int) ($item['health'] ?? 0);
+                $move = (int) ($item['move'] ?? 0);
+                $id = $this->state->nextInstanceId();
+                $this->state->addCard(new CardInstance(
+                    instanceId: $id,
+                    ukid: (string) ($item['ukid'] ?? ''),
+                    owner: $owner,
+                    zone: CardInstance::ZONE_DECK,
+                    hp: $health,
+                    hpMax: $health,
+                    price: (int) ($item['price'] ?? 0),
+                    elite: (bool) ($item['elite'] ?? false),
+                    type: (string) ($item['type'] ?? 'creature'),
+                    element: (string) ($item['element'] ?? 'neutral'),
+                    class: (string) ($item['class'] ?? ''),
+                    move: $move,
+                    moveMax: $move,
+                    strikeWeak: (int) ($item['strike_weak'] ?? 0),
+                    strikeMedium: (int) ($item['strike_medium'] ?? 0),
+                    strikeStrong: (int) ($item['strike_strong'] ?? 0),
+                    prop: (array) ($item['prop'] ?? []),
+                ));
+            }
+        }
     }
 }

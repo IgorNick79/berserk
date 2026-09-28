@@ -12,6 +12,7 @@ namespace Berserk\Core;
 final class CardInstance
 {
     public const ZONE_DECK      = 'deck';
+    public const ZONE_SIDEBOARD = 'sideboard';
     public const ZONE_HAND      = 'hand';
     public const ZONE_SQUAD     = 'squad';
     public const ZONE_FIELD     = 'field';
