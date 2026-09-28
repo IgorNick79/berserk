@@ -1992,12 +1992,12 @@ final class ActionResolver
 
         $config = $card->prop['on_successful_hit'];
         if (!is_array($config) || ($config['type'] ?? '') !== 'optional_heal') return false;
-        if (($config['value_from'] ?? '') !== 'opposite_creature_strike_weak') return false;
+        if (($config['value_from'] ?? '') !== 'opposite_creature_strike_medium') return false;
 
         $opposite = $this->getOppositeFieldCard($card);
         if (!$opposite || $opposite->dying || $opposite->hp <= 0) return false;
 
-        $value = CardStats::getStrikeValue($this->state, $opposite, $card, 'weak');
+        $value = CardStats::getStrikeValue($this->state, $opposite, $card, 'medium');
         if ($value <= 0) return false;
 
         $this->state->battle['pending_kobold_heal'] = [

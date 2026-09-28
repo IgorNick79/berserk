@@ -46,7 +46,7 @@ final class KoboldHealChoice implements ChoiceHandlerInterface
 
         return new PanelSpec(
             title: $name . ' может излечиться на ' . $value,
-            text: ['Слабый удар существа напротив.'],
+            text: ['Средний удар существа напротив.'],
             buttons: [
                 [
                     'label' => 'Излечиться на ' . $value,

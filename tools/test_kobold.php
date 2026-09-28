@@ -32,7 +32,7 @@ function koboldProp(): array
         'actions' => [['type' => 'uchr', 'value' => 1]],
         'on_successful_hit' => [
             'type' => 'optional_heal',
-            'value_from' => 'opposite_creature_strike_weak',
+            'value_from' => 'opposite_creature_strike_medium',
         ],
     ];
 }
@@ -146,7 +146,7 @@ koboldStrike($state);
 koboldAssert(($state->battle['strike']['damage_total'] ?? null) === 3, 'Kobold normal strike should resolve.');
 $pending = koboldPending($state);
 koboldAssert(is_array($pending), 'Successful normal strike should open optional heal pending.');
-koboldAssert(($pending['value'] ?? null) === 3, 'Heal value should equal opposite weak strike, not medium or strong.');
+koboldAssert(($pending['value'] ?? null) === 8, 'Heal value should equal opposite medium strike, not weak or strong.');
 $html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render(
     $state,
     GameState::PLAYER_HOST,
@@ -154,14 +154,14 @@ $html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render(
     koboldCardsInfo(),
     '/battle?game=92&first='
 );
-koboldAssert(str_contains($html, 'Кобольд может излечиться на 3'), 'InfoPanel should explain Kobold heal value.');
+koboldAssert(str_contains($html, 'Кобольд может излечиться на 8'), 'InfoPanel should explain Kobold heal value.');
 koboldApply($state, GameState::PLAYER_HOST, new Command('choose_kobold_heal'));
-koboldAssert($state->getCard(1)->hp === 8, 'Accepting heal should heal by X.');
+koboldAssert($state->getCard(1)->hp === 11, 'Accepting heal should heal by X.');
 koboldAssert(empty(koboldPending($state)), 'Accepted heal should clear pending.');
 
 $state = koboldState(
     koboldCard(['hp' => 10]),
-    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeWeak' => 5]),
+    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeWeak' => 5, 'strikeMedium' => 5]),
     koboldCreature(3, GameState::PLAYER_PLAYER, 2, 4)
 );
 koboldStrike($state);
@@ -170,7 +170,7 @@ koboldAssert($state->getCard(1)->hp === 11, 'Kobold heal should be capped by max
 
 $state = koboldState(
     koboldCard(['hp' => 5]),
-    koboldCreature(2, GameState::PLAYER_PLAYER, 3, 3, ['strikeWeak' => 4]),
+    koboldCreature(2, GameState::PLAYER_PLAYER, 3, 3, ['strikeWeak' => 1, 'strikeMedium' => 4, 'strikeStrong' => 9]),
     koboldCreature(3, GameState::PLAYER_PLAYER, 2, 4)
 );
 koboldStrike($state);
@@ -182,7 +182,7 @@ koboldAssert(!empty($state->battle['strike']) && ($state->battle['strike']['stat
 
 $state = koboldState(
     koboldCard(['hp' => 5]),
-    koboldCreature(2, GameState::PLAYER_HOST, 3, 4, ['strikeWeak' => 6]),
+    koboldCreature(2, GameState::PLAYER_HOST, 3, 4, ['strikeWeak' => 1, 'strikeMedium' => 6]),
     koboldCreature(3, GameState::PLAYER_PLAYER, 2, 4)
 );
 koboldStrike($state);
@@ -197,7 +197,7 @@ koboldAssert(empty(koboldPending($state)), 'Empty opposite cell should not open 
 
 $state = koboldState(
     koboldCard(['hp' => 11]),
-    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeWeak' => 3]),
+    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeMedium' => 3]),
     koboldCreature(3, GameState::PLAYER_PLAYER, 2, 4)
 );
 koboldStrike($state);
@@ -205,7 +205,7 @@ koboldAssert(empty(koboldPending($state)), 'Full HP Kobold should not open meani
 
 $state = koboldState(
     koboldCard(['hp' => 5]),
-    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeWeak' => 3]),
+    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeMedium' => 3]),
     koboldCreature(3, GameState::PLAYER_PLAYER, 2, 4, ['prop' => ['zoa' => true]])
 );
 $result = (new StrikeResolver($state, new Engine()))->declare(GameState::PLAYER_HOST, new Command('strike', [
@@ -217,7 +217,7 @@ koboldAssert(empty(koboldPending($state)), 'Pre-result blocked strike should not
 
 $state = koboldState(
     koboldCard(['hp' => 5, 'prop' => koboldProp() + ['ability' => ['value' => 9]]]),
-    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeWeak' => 3]),
+    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeWeak' => 1, 'strikeMedium' => 3, 'strikeStrong' => 8]),
     koboldCreature(3, GameState::PLAYER_PLAYER, 2, 4, ['hp' => 1, 'hpMax' => 12])
 );
 koboldStrike($state);
@@ -225,15 +225,15 @@ koboldAssert((koboldPending($state)['value'] ?? null) === 3, 'Heal value should 
 
 $state = koboldState(
     koboldCard(['hp' => 5]),
-    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeWeak' => 2, 'modifiers' => [['stat' => 'ability_strike', 'value' => 2]]]),
+    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeWeak' => 1, 'strikeMedium' => 2, 'modifiers' => [['stat' => 'ability_strike', 'value' => 2]]]),
     koboldCreature(3, GameState::PLAYER_PLAYER, 2, 4)
 );
 koboldStrike($state);
-koboldAssert((koboldPending($state)['value'] ?? null) === 4, 'Modified effective weak strike should be used for heal value.');
+koboldAssert((koboldPending($state)['value'] ?? null) === 4, 'Modified effective medium strike should be used for heal value.');
 
 $state = koboldState(
     koboldCard(['hp' => 5]),
-    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeWeak' => 3]),
+    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeWeak' => 1, 'strikeMedium' => 3]),
     koboldCreature(3, GameState::PLAYER_PLAYER, 4, 3)
 );
 koboldApply($state, GameState::PLAYER_HOST, new Command('uchr', ['card_id' => 1, 'target_id' => 3]));
@@ -243,7 +243,7 @@ koboldApply($state, GameState::PLAYER_HOST, new Command('cancel_pending'));
 
 $state = koboldState(
     koboldCard(['hp' => 5, 'row' => 4, 'col' => 3, 'owner' => GameState::PLAYER_PLAYER]),
-    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeWeak' => 4]),
+    koboldCreature(2, GameState::PLAYER_HOST, 3, 3, ['strikeWeak' => 1, 'strikeMedium' => 4]),
     koboldCreature(3, GameState::PLAYER_HOST, 4, 4)
 );
 $state->battle['active'] = GameState::PLAYER_PLAYER;
