@@ -624,38 +624,19 @@ final class CardStats
         if ($card->type === 'fly') return [];
         if (!self::hasLine($card)) return [];
 
-        $byId = [];
+        $result = [$card];
         foreach ($state->cards as $candidate) {
+            if ($candidate->instanceId === $card->instanceId) continue;
             if ($candidate->owner !== $card->owner) continue;
             if ($candidate->zone !== CardInstance::ZONE_FIELD) continue;
             if ($candidate->type === 'fly') continue;
-            if ($candidate->instanceId !== $card->instanceId && $candidate->dying) continue;
+            if ($candidate->dying) continue;
             if (!self::hasLine($candidate)) continue;
-            $byId[$candidate->instanceId] = $candidate;
-        }
 
-        if (!isset($byId[$card->instanceId])) return [];
-
-        $result = [];
-        $queue = [$card->instanceId];
-        $seen = [];
-
-        while (!empty($queue)) {
-            $id = array_shift($queue);
-            if (isset($seen[$id])) continue;
-            $seen[$id] = true;
-
-            $current = $byId[$id] ?? null;
-            if (!$current) continue;
-            $result[] = $current;
-
-            foreach ($byId as $otherId => $other) {
-                if (isset($seen[$otherId])) continue;
-                $dr = abs($other->row - $current->row);
-                $dc = abs($other->col - $current->col);
-                if ($dr + $dc === 1) {
-                    $queue[] = $otherId;
-                }
+            $dr = abs($candidate->row - $card->row);
+            $dc = abs($candidate->col - $card->col);
+            if ($dr + $dc === 1) {
+                $result[] = $candidate;
             }
         }
 

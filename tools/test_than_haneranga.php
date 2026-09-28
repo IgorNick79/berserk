@@ -135,13 +135,41 @@ thanAssert(CardStats::getDamageReduction($state, $enemy, $tan, 'magic') === 1, '
 thanAssert(CardStats::getDamageReduction($state, $enemy, $tan, 'discharge') === 1, 'Than should reduce discharge damage by 1 while in line.');
 thanAssert(CardStats::getDamageReduction($state, $enemy, $tan, 'strike') === 0, 'Than should not reduce normal strike damage.');
 
+$caster = thanEnemy(5, 4, 3, [
+    'prop' => ['actions' => [['key' => 'magic', 'type' => 'magic', 'value' => 2]]],
+]);
+$magicState = thanState(
+    thanCard(['instanceId' => 6, 'row' => 3, 'col' => 3]),
+    thanLineCard(7, 3, 4),
+    $caster
+);
+$magicState->battle['active'] = GameState::PLAYER_PLAYER;
+thanApply($magicState, GameState::PLAYER_PLAYER, new Command('action', [
+    'card_id' => 5,
+    'target_id' => 6,
+    'action_key' => 'magic',
+]));
+thanAssert(($magicState->battle['strike']['damage_total'] ?? null) === 1, 'Magic action should apply Than damage reduction.');
+$magicHtml = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render(
+    $magicState,
+    GameState::PLAYER_HOST,
+    'host',
+    [
+        's1_52' => ['name' => 'Тан Ханеранга'],
+        'line_7' => ['name' => 'Сосед'],
+        'enemy_5' => ['name' => 'Циклоп'],
+    ],
+    '/battle?game=52&first='
+);
+thanAssert(str_contains($magicHtml, 'Урон снижен на 1'), 'InfoPanel should show damage reduction for magic action.');
+
 $isolated = thanCard(['instanceId' => 4, 'row' => 1, 'col' => 1]);
 $isolatedState = thanState($isolated, $enemy);
 thanAssert(CardStats::getDamageReduction($isolatedState, $enemy, $isolated, 'magic') === 0, 'Than should not reduce magic damage outside line.');
 
 $tan = thanCard(['instanceId' => 10, 'row' => 1, 'col' => 5]);
-$survivorA = thanLineCard(11, 3, 2);
-$diedB = thanLineCard(12, 3, 1);
+$survivorA = thanLineCard(11, 3, 1);
+$diedB = thanLineCard(12, 3, 2);
 $survivorC = thanLineCard(13, 3, 3);
 $otherLineD = thanLineCard(14, 5, 1);
 $otherLineE = thanLineCard(15, 5, 2);
@@ -180,16 +208,19 @@ $state->battle['active'] = GameState::PLAYER_HOST;
 (new Engine())->applyDamage($state, $ownTurnDied, 99, 'magic', $state->getCard(33));
 thanAssert(thanModifierValue($ownTurnAlly, 'next_strike_bonus') === 0, 'Line death on own turn should not trigger Than bonus.');
 
-$tan = thanCard(['instanceId' => 40, 'row' => 3, 'col' => 2]);
-$selfDeathAllyA = thanLineCard(41, 3, 1);
-$selfDeathAllyB = thanLineCard(42, 3, 3);
-$selfDeathOther = thanLineCard(43, 5, 5);
-$state = thanState($tan, $selfDeathAllyA, $selfDeathAllyB, $selfDeathOther, thanEnemy(44, 6, 6));
+$tan = thanCard(['instanceId' => 40, 'row' => 3, 'col' => 3]);
+$selfDeathAllyA = thanLineCard(41, 3, 2);
+$selfDeathAllyB = thanLineCard(42, 2, 3);
+$selfDeathDiagonal = thanLineCard(43, 2, 2);
+$selfDeathOther = thanLineCard(45, 5, 5);
+$state = thanState($tan, $selfDeathAllyA, $selfDeathAllyB, $selfDeathDiagonal, $selfDeathOther, thanEnemy(44, 6, 6));
 $state->battle['active'] = GameState::PLAYER_PLAYER;
+thanAssert(CardStats::isInLine($state, $selfDeathDiagonal), 'Diagonal card should still be in line through other cards.');
 (new Engine())->applyDamage($state, $tan, 99, 'magic', $state->getCard(44));
 thanAssert($tan->zone === CardInstance::ZONE_GRAVEYARD, 'Than self death should be finalized outside strike.');
 thanAssert(thanModifierValue($selfDeathAllyA, 'next_strike_bonus') === 2, 'Than self death should buff his former line ally.');
 thanAssert(thanModifierValue($selfDeathAllyB, 'next_strike_bonus') === 2, 'Than self death should buff every former line ally.');
+thanAssert(thanModifierValue($selfDeathDiagonal, 'next_strike_bonus') === 0, 'Than self death should not buff diagonal line card that was not directly in line with him.');
 thanAssert(thanModifierValue($selfDeathOther, 'next_strike_bonus') === 0, 'Than self death should not buff another line.');
 
 $tan = thanCard(['instanceId' => 50, 'row' => 1, 'col' => 5]);

@@ -1154,16 +1154,22 @@ final class InfoPanel
                 $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
             }
 
+            $extraResultHtml = $autoHtml . $pushHtml . $impactHtml . $huntHtml
+                . $behindWeakStrikeHtml . $shotBonusHtml . $nextActionBonusHtml
+                . $nextStrikeBonusHtml . $rowsBonusHtml . $clumsyHtml
+                . $abilityBonusHtml . $coinBonusHtml . $reductionHtml
+                . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml;
+
             $noDiceKinds = ['heal', 'modifier', 'execute', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly'];
             if (!in_array($kind, $noDiceKinds, true)) {
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
                     'defend_dice_html' => $defendDiceHtml,
-                    'result_text'      => $summaryHtml . $resultText . $autoHtml . $pushHtml . $impactHtml . $huntHtml . $behindWeakStrikeHtml . $shotBonusHtml . $nextActionBonusHtml . $nextStrikeBonusHtml . $rowsBonusHtml . $clumsyHtml . $abilityBonusHtml . $coinBonusHtml . $reductionHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml,
+                    'result_text'      => $summaryHtml . $resultText . $extraResultHtml,
                     'confirm_html'     => $confirmHtml,
                 ]);
             } else {
-                $contentHtml = '<p>' . $resultText . $impactHtml . '</p>' . $confirmHtml;
+                $contentHtml = '<p>' . $summaryHtml . $resultText . $extraResultHtml . '</p>' . $confirmHtml;
             }
         }
 
