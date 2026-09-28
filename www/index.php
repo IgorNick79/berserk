@@ -317,7 +317,7 @@ switch ($state->status) {
 
     case 'view':
         $result = (new ViewScreen($deckView, $tpl))
-            ->prepare($state, $playerKey, $role, $message, $cardsInfo);
+            ->prepare($state, $playerKey, $role, $message, $cardsInfo, $elementLabels);
         $screenName = $result['screen'];
         $screenData = $result['data'];
         break;

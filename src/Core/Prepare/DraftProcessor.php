@@ -231,8 +231,8 @@ final class DraftProcessor
 
     private function canFinish(array $draft): bool
     {
-        return count($draft['picked']['host'] ?? []) >= GameSettings::DECK_LIMIT
-            && count($draft['picked']['player'] ?? []) >= GameSettings::DECK_LIMIT;
+        return count($draft['picked']['host'] ?? []) >= GameSettings::MIN_DECK_SIZE
+            && count($draft['picked']['player'] ?? []) >= GameSettings::MIN_DECK_SIZE;
     }
 
     private function finalize(string $event): Result

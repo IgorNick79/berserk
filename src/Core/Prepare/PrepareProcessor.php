@@ -230,8 +230,14 @@ final class PrepareProcessor
         if ($player->isConfirmed('view')) {
             return Result::error('Уже подтверждено');
         }
-        if ($this->isDraftDeck($playerKey) && $this->zoneCount($playerKey, CardInstance::ZONE_DECK) > GameSettings::DECK_LIMIT) {
-            return Result::error('Убери лишние карты в сайдборд');
+        if ($this->isDraftDeck($playerKey)) {
+            $deckCount = $this->zoneCount($playerKey, CardInstance::ZONE_DECK);
+            if ($deckCount < GameSettings::MIN_DECK_SIZE) {
+                return Result::error('Недостаточно карт в колоде');
+            }
+            if ($deckCount > GameSettings::MAX_DECK_SIZE) {
+                return Result::error('Слишком много карт в колоде');
+            }
         }
 
         $player->confirm('view');
@@ -269,8 +275,8 @@ final class PrepareProcessor
         if ($player->isConfirmed('view')) {
             return Result::error('Дека уже подтверждена');
         }
-        if ($this->zoneCount($playerKey, CardInstance::ZONE_DECK) <= GameSettings::DECK_LIMIT) {
-            return Result::error('В колоде уже допустимое количество карт');
+        if ($this->zoneCount($playerKey, CardInstance::ZONE_DECK) <= GameSettings::MIN_DECK_SIZE) {
+            return Result::error('Нельзя уменьшить колоду ниже минимума');
         }
 
         $card = $this->state->getCard((int) $cmd->get('card_id', 0));

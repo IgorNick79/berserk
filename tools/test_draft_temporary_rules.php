@@ -108,7 +108,7 @@ $result = $processor->pickSelection(GameState::PLAYER_HOST, ['positions' => []],
 assertTrue(!$result->success, 'Empty auto selection should be rejected');
 assertTrue($state->draft === $before, 'Rejected empty selection should not mutate draft state');
 
-$deckLimit = GameSettings::DECK_LIMIT;
+$deckLimit = GameSettings::MIN_DECK_SIZE;
 
 // Manual finish is rejected before both players have enough drafted cards.
 $state = stateWithDraft(array_fill(0, $deckLimit, 'u1'), array_fill(0, $deckLimit - 1, 'u1'));

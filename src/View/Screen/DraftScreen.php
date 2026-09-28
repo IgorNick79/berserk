@@ -111,7 +111,7 @@ final class DraftScreen
 
             $actions[] = ['label' => 'Пас', 'url' => $baseUrl . '&cmd=draft_pass', 'class' => 'skip'];
 
-            if ($hostPickedCount >= GameSettings::DECK_LIMIT && $playerPickedCount >= GameSettings::DECK_LIMIT) {
+            if ($hostPickedCount >= GameSettings::MIN_DECK_SIZE && $playerPickedCount >= GameSettings::MIN_DECK_SIZE) {
                 $actions[] = ['label' => 'Закончить драфт', 'url' => $baseUrl . '&cmd=finish_draft'];
             }
         } else {

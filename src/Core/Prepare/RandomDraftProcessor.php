@@ -60,8 +60,8 @@ final class RandomDraftProcessor
             }
         }
 
-        if (count($picked['host']) < GameSettings::DECK_LIMIT
-            || count($picked['player']) < GameSettings::DECK_LIMIT) {
+        if (count($picked['host']) < GameSettings::MIN_DECK_SIZE
+            || count($picked['player']) < GameSettings::MIN_DECK_SIZE) {
             return Result::error('Недостаточно карт для автоматического драфта');
         }
 

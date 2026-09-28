@@ -10,6 +10,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\GameSettings;
 use Berserk\Core\DeckView;
 use Berserk\View\Template;
+use Berserk\View\Ui\ElementLabels;
 use Berserk\View\Ui\PrepareUi;
 
 final class ViewScreen
@@ -27,7 +28,8 @@ final class ViewScreen
         string $playerKey,
         string $role,
         ?string $message,
-        array $cardsInfo = []
+        array $cardsInfo = [],
+        array $elementLabels = []
     ): array {
         $linkParam = $role === 'host' ? 'first' : 'second';
         $baseUrl   = "?{$linkParam}&game={$state->gameId}";
@@ -66,7 +68,7 @@ final class ViewScreen
                     'elements_html' => '',
                     'cards_html'    => '',
                     'sideboard_html'=> '',
-                    'view_stats_html' => '',
+                    'bottom_panel_html' => '',
                     'preview_html'  => '',
                     'confirm_html'  => '',
                     'message'       => 'Дека не найдена',
@@ -132,16 +134,14 @@ final class ViewScreen
 
         $deckCount = (int) ($deckInfo['total'] ?? 0);
         $sideboardCount = (int) ($sideboardInfo['total'] ?? 0);
-        $isOversized = $isDraftDeck && $deckCount > GameSettings::DECK_LIMIT;
-        $viewStatsHtml = $isDraftDeck
-            ? '<div class="prepare-view-stats">'
-                . '<span>Колода: <b>' . $deckCount . '</b> / ' . GameSettings::DECK_LIMIT . '</span>'
-                . '<span>Сайдборд: <b>' . $sideboardCount . '</b></span>'
-                . '</div>'
-            : '';
+        $isBelowMinimum = $isDraftDeck && $deckCount < GameSettings::MIN_DECK_SIZE;
+        $isAboveMaximum = $isDraftDeck && $deckCount > GameSettings::MAX_DECK_SIZE;
+        $canSideboard = $isDraftDeck && $deckCount > GameSettings::MIN_DECK_SIZE;
 
-        if (!$me->isConfirmed('view') && $isOversized) {
-            $confirmHtml = '<span class="button disabled">Убери лишние карты</span>';
+        if (!$me->isConfirmed('view') && $isBelowMinimum) {
+            $confirmHtml = '<span class="button disabled">Недостаточно карт</span>';
+        } elseif (!$me->isConfirmed('view') && $isAboveMaximum) {
+            $confirmHtml = '<span class="button disabled">Слишком много карт</span>';
         } elseif (!$me->isConfirmed('view')) {
             $confirmUrl  = "?{$linkParam}&game={$state->gameId}&cmd=confirm_view";
             $confirmHtml = '<a class="button" href="' . $confirmUrl . '">Подтвердить</a>';
@@ -152,7 +152,7 @@ final class ViewScreen
         $actions = [];
         if ($selectedCard !== null && !$me->isConfirmed('view') && $isDraftDeck) {
             $selectedInstanceId = (int) ($selectedCard['instance_id'] ?? 0);
-            if ($selectedZone === CardInstance::ZONE_DECK && $isOversized) {
+            if ($selectedZone === CardInstance::ZONE_DECK && $canSideboard) {
                 $actions[] = [
                     'label' => 'В сайдборд',
                     'url' => "{$baseUrl}&cmd=view_to_sideboard&card_id={$selectedInstanceId}&card=" . urlencode($selectedToken),
@@ -166,6 +166,15 @@ final class ViewScreen
         }
 
         $previewHtml = $ui->preview($selectedCard, $actions, 'Выбери карту');
+        $bottomPanelHtml = '<div class="prepare-bottom-summary prepare-bottom-summary--stack">'
+            . '<div class="prepare-bottom-row">'
+            . '<span>Колода: <b>' . $deckCount . '</b></span>'
+            . '<span>Сайдборд: <b>' . $sideboardCount . '</b></span>'
+            . ($isDraftDeck ? '<span>Минимум: <b>' . GameSettings::MIN_DECK_SIZE . '</b></span>' : '')
+            . '</div>'
+            . '<div class="prepare-elements">' . $this->elementBadgesHtml($deckInfo['elements'], $elementLabels) . '</div>'
+            . '</div>'
+            . '<div class="prepare-bottom-actions">' . $confirmHtml . '</div>';
 
         return [
             'screen' => 'view',
@@ -177,12 +186,26 @@ final class ViewScreen
                 'elements_html' => $elementsHtml,
                 'cards_html'    => $cardsHtml,
                 'sideboard_html'=> $sideboardHtml,
-                'view_stats_html' => $viewStatsHtml,
+                'bottom_panel_html' => $bottomPanelHtml,
                 'preview_html'  => $previewHtml,
                 'confirm_html'  => $confirmHtml,
                 'message'       => $message ?? '',
             ],
         ];
+    }
+
+    private function elementBadgesHtml(array $elements, array $elementLabels): string
+    {
+        $html = '';
+        foreach ($elements as $code => $count) {
+            if ($count <= 0) continue;
+            $name = ElementLabels::label((string) $code, $elementLabels);
+            $html .= '<span class="prepare-element">'
+                . htmlspecialchars((string) $name, ENT_QUOTES)
+                . ': <b>' . (int) $count . '</b>'
+                . '</span>';
+        }
+        return $html;
     }
 
     private function buildFromInstances(array $instances, array $cardsInfo, string $name): ?array
