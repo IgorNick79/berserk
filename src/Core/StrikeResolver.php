@@ -537,7 +537,9 @@ final class StrikeResolver
                 $this->state->battle['strike']['blocked_by_weak'] = true;
             }
 
+            $hpBeforeStrikeDamage = $defendCard->hp;
             $this->engine->applyDamage($this->state, $defendCard, $val, 'strike', $attacker);
+            $woundsDealt = max(0, $hpBeforeStrikeDamage - $defendCard->hp);
             $this->state->battle['strike']['damage_total'] = $val;
             $this->applyStrongStrikeFollowUpEffects($attacker, $defendCard, $attackStrike);
 
@@ -557,6 +559,10 @@ final class StrikeResolver
             $this->triggerStrikeProphecy($attacker, $defendCard);
             $this->engine->applyAnswer($this->state, $defendCard, $attacker, 'strike');
             $this->state->battle['strike']['strike_hit'] = true;
+            if ($attackStrike === 'strong' && $woundsDealt > 0) {
+                (new ActionResolver($this->state, $this->engine))
+                    ->triggerTalionIncarnationToken($attacker);
+            }
             if (!$hitWasBlocked) {
                 (new ActionResolver($this->state, $this->engine))->openSuccessfulHitOptionalHeal($attacker);
             }

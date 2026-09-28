@@ -1129,6 +1129,26 @@ final class InfoPanel
                         . '</div>';
                 }
             }
+            if (!empty($strike['talion_incarnation_token'])) {
+                foreach ($strike['talion_incarnation_token'] as $t) {
+                    $source = $state->getCard((int) ($t['source_id'] ?? 0));
+                    $target = $state->getCard((int) ($t['target_id'] ?? 0));
+                    $sourceInfo = $source ? ($cardsInfo[$source->ukid] ?? null) : null;
+                    $targetInfo = $target ? ($cardsInfo[$target->ukid] ?? null) : null;
+                    $sourceName = $sourceInfo ? htmlspecialchars($sourceInfo['name'], ENT_QUOTES) : '?';
+                    $targetName = $targetInfo ? htmlspecialchars($targetInfo['name'], ENT_QUOTES) : '?';
+                    $value = (int) ($t['value'] ?? 0);
+                    $threshold = (int) ($t['threshold'] ?? 0);
+                    $suffix = !empty($t['has_incarnation']) && $threshold > 0
+                        ? ' (' . $value . '/' . $threshold . ')'
+                        : ' (без Инкарнации: ' . $value . ')';
+
+                    $vampireHtml .= '<div class="vampire">'
+                        . '<b>' . $sourceName . '</b>: ' . $targetName
+                        . ' получает жетон инкарнации' . $suffix
+                        . '</div>';
+                }
+            }
 
             // Кнопка подтверждения / отложенный выбор
             $confirmed = $strike['confirmed'] ?? [];

@@ -34,6 +34,7 @@ final class ChoiceRegistry
                 new AnyDeathChoice(),
                 new WhipChoice(),
                 new KoboldHealChoice(),
+                new TalionIncarnationChoice(),
                 new WoundTransferChoice(),
                 new MultiHealChoice(),
                 new MultiDischargeChoice(),

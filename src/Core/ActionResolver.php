@@ -2054,6 +2054,123 @@ final class ActionResolver
         return (new ZoneManager($this->state))->getFieldCard($card->row + $step, $card->col);
     }
 
+    public function triggerTalionIncarnationToken(CardInstance $source): bool
+    {
+        $config = $source->prop['on_strong_strike'] ?? null;
+        if (!is_array($config) || ($config['type'] ?? '') !== 'incarnation_token_graveyard') {
+            return false;
+        }
+
+        $candidateIds = $this->talionIncarnationCandidates($source->owner);
+        if (empty($candidateIds)) return false;
+
+        if (count($candidateIds) === 1) {
+            $target = $this->state->getCard($candidateIds[0]);
+            if (!$target) return false;
+            $this->addIncarnationToken($target);
+            $this->recordTalionIncarnationToken($source, $target);
+            return true;
+        }
+
+        $this->state->battle['pending_talion_incarnation'] = [
+            'owner' => $source->owner,
+            'source_id' => $source->instanceId,
+            'candidate_ids' => $candidateIds,
+        ];
+
+        return true;
+    }
+
+    public function chooseTalionIncarnation(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_talion_incarnation'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
+            return Result::error('Нет выбора жетона инкарнации');
+        }
+
+        $source = $this->state->getCard((int) ($pending['source_id'] ?? 0));
+        if (!$source || $source->owner !== $playerKey) {
+            unset($this->state->battle['pending_talion_incarnation']);
+            return Result::error('Источник жетона недоступен');
+        }
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        $candidateIds = array_map('intval', (array) ($pending['candidate_ids'] ?? []));
+        if (!in_array($targetId, $candidateIds, true)) {
+            return Result::error('Нельзя выбрать эту карту');
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target || !$this->isTalionIncarnationCandidate($target, $playerKey)) {
+            unset($this->state->battle['pending_talion_incarnation']);
+            return Result::error('Цель больше недоступна');
+        }
+
+        unset($this->state->battle['pending_talion_incarnation']);
+        $this->addIncarnationToken($target);
+        $this->recordTalionIncarnationToken($source, $target);
+
+        $this->state->bumpVersion();
+        return Result::ok(["talion_incarnation:{$source->instanceId}:{$target->instanceId}"]);
+    }
+
+    private function talionIncarnationCandidates(string $owner): array
+    {
+        $ids = [];
+        foreach ($this->state->cards as $card) {
+            if ($this->isTalionIncarnationCandidate($card, $owner)) {
+                $ids[] = $card->instanceId;
+            }
+        }
+
+        return $ids;
+    }
+
+    private function isTalionIncarnationCandidate(CardInstance $card, string $owner): bool
+    {
+        if ($card->owner !== $owner) return false;
+        if ($card->zone !== CardInstance::ZONE_GRAVEYARD) return false;
+        return $card->type === 'creature' || $card->type === 'fly';
+    }
+
+    private function addIncarnationToken(CardInstance $card): void
+    {
+        if (!isset($card->markers['incarnation'])) {
+            $inc = $card->prop['incarnation'] ?? null;
+            $threshold = 0;
+            $open = false;
+
+            if (is_array($inc)) {
+                $threshold = (int) ($inc['turns'] ?? 0);
+                $open = !empty($inc['open']);
+            } elseif ($inc !== null) {
+                $threshold = (int) $inc;
+            }
+
+            $card->markers['incarnation'] = [
+                'value' => 0,
+                'threshold' => $threshold,
+                'open' => $open,
+            ];
+        }
+
+        $card->markers['incarnation']['value'] =
+            (int) ($card->markers['incarnation']['value'] ?? 0) + 1;
+    }
+
+    private function recordTalionIncarnationToken(CardInstance $source, CardInstance $target): void
+    {
+        if (empty($this->state->battle['strike'])) return;
+
+        $this->state->battle['strike']['talion_incarnation_token'][] = [
+            'source_id' => $source->instanceId,
+            'target_id' => $target->instanceId,
+            'value' => (int) ($target->markers['incarnation']['value'] ?? 0),
+            'threshold' => (int) ($target->markers['incarnation']['threshold'] ?? 0),
+            'has_incarnation' => array_key_exists('incarnation', $target->prop),
+        ];
+    }
+
     private function startRevive(
         CardInstance $attacker, array $action, int $cardId, string $playerKey
     ): Result {

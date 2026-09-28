@@ -349,6 +349,7 @@ final class TurnProcessor
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $activeKey) continue;
             if ($card->zone !== CardInstance::ZONE_GRAVEYARD) continue;
+            if (!array_key_exists('incarnation', $card->prop)) continue;
             if (!empty($card->flags['incarnation_ready'])) continue;
             if (empty($card->markers['incarnation'])) continue;
 
@@ -376,6 +377,7 @@ final class TurnProcessor
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $activeKey) continue;
             if ($card->zone !== CardInstance::ZONE_GRAVEYARD) continue;
+            if (!array_key_exists('incarnation', $card->prop)) continue;
             if (empty($card->flags['incarnation_ready'])) continue;
 
             $inc     = $card->prop['incarnation'] ?? null;
@@ -402,6 +404,7 @@ final class TurnProcessor
             foreach ($this->state->cards as $card) {
                 if ($card->owner !== $activeKey) continue;
                 if ($card->zone !== CardInstance::ZONE_GRAVEYARD) continue;
+                if (!array_key_exists('incarnation', $card->prop)) continue;
                 if (empty($card->flags['incarnation_ready'])) continue;
 
                 $inc     = $card->prop['incarnation'] ?? null;
