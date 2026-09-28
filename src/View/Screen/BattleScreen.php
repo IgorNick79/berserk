@@ -79,6 +79,8 @@ final class BattleScreen
             }
         }
 
+        $pendingDefenderTargets = $this->pendingDefenderTargets($state, $playerKey, $baseUrl);
+
         // Порядок осей
         $rowOrder = $isHost ? [6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6];
         $colOrder = $isHost ? [1, 2, 3, 4, 5] : [5, 4, 3, 2, 1];
@@ -95,11 +97,11 @@ final class BattleScreen
         $fieldHtml      = $this->buildField(
             $state, $playerKey, $rowOrder, $colOrder, $fieldMap,
             $cardsInfo, $selectedCardId, $mode, $baseUrl,
-            $moveCells, $jumpCells, $attackTargets
+            $moveCells, $jumpCells, $attackTargets, $pendingDefenderTargets
         );
         $flyZonesHtml   = $this->buildFlyZones(
             $state, $playerKey, $oppKey, $flyMap, $cardsInfo,
-            $selectedCardId, $mode, $baseUrl, $attackTargets
+            $selectedCardId, $mode, $baseUrl, $attackTargets, $pendingDefenderTargets
         );
         $pilesHtml = $this->buildPiles($state, $playerKey, $oppKey, $baseUrl);
         $panelHtml      = $this->buildPanel(
@@ -147,7 +149,8 @@ final class BattleScreen
         string $baseUrl,
         array $moveCells,
         array $jumpCells,
-        array $attackTargets
+        array $attackTargets,
+        array $pendingDefenderTargets
     ): string {
         $html = '';
         foreach ($rowOrder as $r) {
@@ -197,7 +200,10 @@ final class BattleScreen
                         . $armorBadge
                         . '</div>';
 
-                    if (isset($attackTargets[$card->instanceId]) && $selectedCardId > 0 && $card->instanceId !== $selectedCardId) {
+                    if (isset($pendingDefenderTargets[$card->instanceId])) {
+                        $cellClass  .= ' attack-target pending-defender-target';
+                        $cellContent = '<a class="card-link" href="' . $pendingDefenderTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                    } elseif (isset($attackTargets[$card->instanceId]) && $selectedCardId > 0 && $card->instanceId !== $selectedCardId) {
                         if (str_starts_with($mode, 'action:')) {
                             $actionKey = substr($mode, 7);
                             $atkUrl = "{$baseUrl}&cmd=action&action_key={$actionKey}&card_id={$selectedCardId}&target_id={$card->instanceId}&sel={$selectedCardId}&mode={$mode}";
@@ -248,7 +254,8 @@ final class BattleScreen
         int $selectedCardId,
         string $mode,
         string $baseUrl,
-        array $attackTargets
+        array $attackTargets,
+        array $pendingDefenderTargets
     ): string {
         $html = '';
         foreach (['opp', 'own'] as $who) {
@@ -288,7 +295,10 @@ final class BattleScreen
                         . $armorBadge
                         . '</div>';
 
-                    if (isset($attackTargets[$card->instanceId]) && $selectedCardId > 0 && $card->instanceId !== $selectedCardId) {
+                    if (isset($pendingDefenderTargets[$card->instanceId])) {
+                        $cellClass  .= ' attack-target pending-defender-target';
+                        $cellContent = '<a class="card-link" href="' . $pendingDefenderTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                    } elseif (isset($attackTargets[$card->instanceId]) && $selectedCardId > 0 && $card->instanceId !== $selectedCardId) {
                         if (str_starts_with($mode, 'action:')) {
                             $actionKey = substr($mode, 7);
                             $atkUrl = "{$baseUrl}&cmd=action&action_key={$actionKey}&card_id={$selectedCardId}&target_id={$card->instanceId}&sel={$selectedCardId}&mode={$mode}";
@@ -351,6 +361,36 @@ final class BattleScreen
     private function buildCardBadges(CardInstance $card, GameState $state): string
     {
         return Badge::forCard($card, $state);
+    }
+
+    /**
+     * @return array<int,string>
+     */
+    private function pendingDefenderTargets(GameState $state, string $playerKey, string $baseUrl): array
+    {
+        $strike = $state->battle['strike'] ?? null;
+        if (!is_array($strike) || ($strike['state'] ?? null) !== 'waiting_defender') {
+            return [];
+        }
+
+        $attacker = $state->getCard((int) ($strike['attacker_id'] ?? 0));
+        if (!$attacker) {
+            return [];
+        }
+
+        if ($playerKey !== $state->getOpponentKey($attacker->owner)) {
+            return [];
+        }
+
+        $targets = [];
+        foreach ($strike['defenders'] ?? [] as $defenderId) {
+            $defenderId = (int) $defenderId;
+            if ($state->getCard($defenderId)) {
+                $targets[$defenderId] = $baseUrl . '&cmd=choose_defender&defender_id=' . $defenderId;
+            }
+        }
+
+        return $targets;
     }
 
     // ─── Панель выбранной карты ──────────────────────────────

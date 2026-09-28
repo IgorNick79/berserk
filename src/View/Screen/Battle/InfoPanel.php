@@ -18,6 +18,7 @@ use Berserk\View\Template;
 use Berserk\View\Ui\Form;
 use Berserk\View\Ui\TaskCard;
 use Berserk\View\Ui\Panel;
+use Berserk\View\Ui\CardButton;
 
 use Berserk\View\Screen\Battle\Choice\RadioChoice;
 use Berserk\View\Screen\Battle\Choice\CheckboxChoice;
@@ -339,12 +340,15 @@ final class InfoPanel
                 $defButtons = '';
                 foreach ($strike['defenders'] ?? [] as $defId) {
                     $dc = $state->getCard($defId);
-                    $di = $cardsInfo[$dc->ukid] ?? null;
-                    $dn = $di ? htmlspecialchars($di['name'], ENT_QUOTES) : '?';
-                    $defButtons .= $this->tpl->parse('includes/battle/defender_button.tpl', [
-                        'name' => $dn,
-                        'link' => "{$baseUrl}&cmd=choose_defender&defender_id={$defId}",
-                    ]);
+                    if (!$dc) continue;
+                    $di = $cardsInfo[$dc->ukid] ?? [];
+                    $defButtons .= CardButton::battle(
+                        $this->tpl,
+                        $dc,
+                        $di,
+                        "{$baseUrl}&cmd=choose_defender&defender_id={$defId}",
+                        $playerKey
+                    );
                 }
                 $defButtons .= $this->tpl->parse('includes/battle/defender_button.tpl', [
                     'name'  => 'Без защитника',
