@@ -42,6 +42,12 @@ final class InstantProcessor
 
             foreach ($card->prop['instants'] as $inst) {
                 if (($inst['trigger'] ?? '') !== $type) continue;
+                $key = (string) ($inst['key'] ?? ($inst['name'] ?? 'instant'));
+                $limit = (int) ($inst['uses_per_turn'] ?? 1);
+                if ($limit > 0) {
+                    $used = (int) ($card->flags['instant_uses_this_turn'][$key] ?? 0);
+                    if ($used >= $limit) continue;
+                }
 
                 if ($type === 'turn' && $phase === 'before' && !empty($inst['aftermath'])) continue;
 
@@ -68,6 +74,7 @@ final class InstantProcessor
                             if ($target === 'enemy' && $c->owner === $card->owner) continue;
                             if ($target === 'ally'  && $c->owner !== $card->owner) continue;
                             if ($condition === 'target_not_moved' && !empty($c->flags['moved_this_turn'])) continue;
+                            if ($condition === 'target_closed' && !$c->closed) continue;
                             $hasAny = true;
                             break;
                         }
@@ -492,6 +499,7 @@ final class InstantProcessor
                 'target'  => $i['payload']['target'] ?? 'self',
                 'effect'  => $i['payload']['effect'] ?? [],
                 'cost'    => $i['cost'],
+                'uses_per_turn' => (int) ($i['payload']['uses_per_turn'] ?? 1),
             ];
         }
 
@@ -529,6 +537,11 @@ final class InstantProcessor
             return Result::error('Карта не ваша');
         }
         if ($card->closed) return Result::error('Карта закрыта');
+        $limit = (int) ($found['uses_per_turn'] ?? 1);
+        $useKey = (string) ($found['key'] ?? '');
+        if ($limit > 0 && (int) ($card->flags['instant_uses_this_turn'][$useKey] ?? 0) >= $limit) {
+            return Result::error('Уже использовано в этот ход');
+        }
 
         $target = $found['target'] ?? 'self';
         $cost   = (int) ($found['cost'] ?? 0);
@@ -543,6 +556,8 @@ final class InstantProcessor
             }
             $card->closed = true;
             $this->engine->applyInstantEffect($this->state, $found['effect'], $card, $card, $playerKey);
+            $this->engine->finalizeDying($this->state);
+            $this->markInstantUsed($card, $useKey);
 
             $this->removeTurnInstant($cardId, $key);
 
@@ -602,9 +617,24 @@ final class InstantProcessor
             && $target->zone !== CardInstance::ZONE_FLYING) {
             return Result::error('Цель не на поле');
         }
+        $condition = $pi['effect']['condition'] ?? null;
+        if ($condition === 'target_closed' && !$target->closed) {
+            return Result::error('Цель должна быть закрыта');
+        }
 
         $source = $this->state->getCard($pi['card_id']);
         if ($source) {
+            $key = (string) ($pi['list_key'] ?? '');
+            $limit = 1;
+            foreach ($source->prop['instants'] ?? [] as $inst) {
+                if (($inst['key'] ?? '') === $key) {
+                    $limit = (int) ($inst['uses_per_turn'] ?? 1);
+                    break;
+                }
+            }
+            if ($limit > 0 && (int) ($source->flags['instant_uses_this_turn'][$key] ?? 0) >= $limit) {
+                return Result::error('Уже использовано в этот ход');
+            }
             $cost = (int) ($pi['cost'] ?? 0);
             if ($cost > 0 && $source->coins < $cost) {
                 return Result::error('Не хватает монет');
@@ -614,9 +644,11 @@ final class InstantProcessor
                 $this->engine->syncCoinBonus($source);
             }
             $source->closed = true;
+            $this->markInstantUsed($source, $key);
         }
 
         $this->engine->applyInstantEffect($this->state, $pi['effect'], $source, $target, $playerKey);
+        $this->engine->finalizeDying($this->state);
         unset($this->state->battle['pending_instant_pick']);
 
         $src     = $pi['source'] ?? 'phase';
@@ -651,5 +683,15 @@ final class InstantProcessor
 
         $this->state->bumpVersion();
         return Result::ok(['instant_applied']);
+    }
+
+    private function markInstantUsed(CardInstance $card, string $key): void
+    {
+        if ($key === '') return;
+        if (!isset($card->flags['instant_uses_this_turn']) || !is_array($card->flags['instant_uses_this_turn'])) {
+            $card->flags['instant_uses_this_turn'] = [];
+        }
+        $card->flags['instant_uses_this_turn'][$key] =
+            ((int) ($card->flags['instant_uses_this_turn'][$key] ?? 0)) + 1;
     }
 }

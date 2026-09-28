@@ -117,6 +117,22 @@ final class InfoPanel
             return $this->renderDiveChoice();
         }
 
+        $instantResultHtml = '';
+        if (!empty($state->battle['instant_result'])) {
+            $instantResultHtml = '<div class="info-box">';
+            foreach ((array) $state->battle['instant_result'] as $r) {
+                if (($r['type'] ?? '') !== 'open_damage') continue;
+                $target = $state->getCard((int) ($r['target_id'] ?? 0));
+                $info = $target ? ($cardsInfo[$target->ukid] ?? null) : null;
+                $name = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
+                $died = !empty($r['died']);
+                $instantResultHtml .= '<p><b>' . $name . '</b> '
+                    . ($died ? 'получает 1 рану и погибает' : 'открыта и получает 1 рану')
+                    . '</p>';
+            }
+            $instantResultHtml .= '</div>';
+        }
+
         // Ничего не показали — показываем кнопки хода
         if ($state->winner !== null) {
             return '';
@@ -134,7 +150,7 @@ final class InfoPanel
                 $instantBtn = '<span style="flex: 1"><a class="button instant" href="' . $baseUrl . '&cmd=open_turn_instants">Сыграть инстант</a></span>';
             }
 
-            return '<div class="info-actions">'
+            return $instantResultHtml . '<div class="info-actions">'
                 . '<a class="button wide" href="' . $baseUrl . '&cmd=end_turn">Завершить ход</a>'
                 . $instantBtn
                 . '<a class="button wide resign" href="' . $baseUrl . '&cmd=resign" '
@@ -142,7 +158,7 @@ final class InfoPanel
                 . '</div>';
         }
 
-        return '';
+        return $instantResultHtml;
 
     }
 
@@ -1146,6 +1162,21 @@ final class InfoPanel
                     $vampireHtml .= '<div class="vampire">'
                         . '<b>' . $sourceName . '</b>: ' . $targetName
                         . ' получает жетон инкарнации' . $suffix
+                        . '</div>';
+                }
+            }
+            if (!empty($strike['holvert_open'])) {
+                foreach ($strike['holvert_open'] as $h) {
+                    $source = $state->getCard((int) ($h['source_id'] ?? 0));
+                    $target = $state->getCard((int) ($h['target_id'] ?? 0));
+                    $sourceInfo = $source ? ($cardsInfo[$source->ukid] ?? null) : null;
+                    $targetInfo = $target ? ($cardsInfo[$target->ukid] ?? null) : null;
+                    $sourceName = $sourceInfo ? htmlspecialchars($sourceInfo['name'], ENT_QUOTES) : '?';
+                    $targetName = $targetInfo ? htmlspecialchars($targetInfo['name'], ENT_QUOTES) : '?';
+
+                    $vampireHtml .= '<div class="vampire">'
+                        . '<b>' . $sourceName . '</b>: ' . $targetName
+                        . ' открыта и не может атаковать до конца хода'
                         . '</div>';
                 }
             }

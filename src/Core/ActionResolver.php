@@ -57,6 +57,9 @@ final class ActionResolver
         }
 
         $type = $action['type'] ?? '';
+        if (CardStats::hasCannotAttack($attacker) && CardStats::isOffensiveAction($type)) {
+            return Result::error('Карта не может атаковать до конца хода');
+        }
 
         if ($type === 'place_cell_marker') {
             return $this->startPlaceCellMarker($attacker, $action, $cardId, $playerKey);
@@ -64,6 +67,10 @@ final class ActionResolver
 
         if ($type === 'become_fly') {
             return $this->resolveBecomeFly($attacker, $action, $cardId, $playerKey);
+        }
+
+        if ($type === 'grant_prop') {
+            return $this->resolveGrantProp($attacker, $action, $cardId, $playerKey);
         }
         
         if ($type === 'steal_coin') {
@@ -294,6 +301,9 @@ final class ActionResolver
         }
         if ($attacker->closed) {
             return Result::error('Атакующий закрыт');
+        }
+        if (CardStats::hasCannotAttack($attacker)) {
+            return Result::error('Карта не может атаковать до конца хода');
         }
         if (!$target || $target->zone !== CardInstance::ZONE_FIELD) {
             return Result::error('Цель не на поле');
@@ -2171,6 +2181,98 @@ final class ActionResolver
         ];
     }
 
+    public function triggerLineOpenOnStrike(CardInstance $source): bool
+    {
+        $config = $source->prop['on_successful_strike'] ?? null;
+        if (!is_array($config) || ($config['type'] ?? '') !== 'open_line_ally_cannot_attack') {
+            return false;
+        }
+        if (!CardStats::isInLine($this->state, $source)) return false;
+
+        $key = (string) ($config['key'] ?? 'open_line_ally_cannot_attack');
+        $limit = (int) ($config['uses_per_turn'] ?? 1);
+        $flag = 'trigger_used_this_turn:' . $key;
+        if ($limit > 0 && (int) ($source->flags[$flag] ?? 0) >= $limit) {
+            return false;
+        }
+
+        $candidateIds = [];
+        foreach (CardStats::getLineGroup($this->state, $source) as $card) {
+            if ($card->instanceId === $source->instanceId) continue;
+            if ($card->dying || $card->hp <= 0) continue;
+            $candidateIds[] = $card->instanceId;
+        }
+
+        if (empty($candidateIds)) return false;
+
+        if (count($candidateIds) === 1) {
+            $target = $this->state->getCard($candidateIds[0]);
+            if (!$target) return false;
+            $this->resolveLineOpenOnStrike($source, $target, $flag);
+            return true;
+        }
+
+        $this->state->battle['pending_holvert_open'] = [
+            'owner' => $source->owner,
+            'source_id' => $source->instanceId,
+            'candidate_ids' => $candidateIds,
+            'flag' => $flag,
+        ];
+
+        return true;
+    }
+
+    public function chooseHolvertOpen(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_holvert_open'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
+            return Result::error('Нет выбора открытия');
+        }
+
+        $source = $this->state->getCard((int) ($pending['source_id'] ?? 0));
+        if (!$source || $source->owner !== $playerKey) {
+            unset($this->state->battle['pending_holvert_open']);
+            return Result::error('Источник недоступен');
+        }
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        $candidateIds = array_map('intval', (array) ($pending['candidate_ids'] ?? []));
+        if (!in_array($targetId, $candidateIds, true)) {
+            return Result::error('Нельзя выбрать эту карту');
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target || !in_array($target, CardStats::getLineGroup($this->state, $source), true)) {
+            unset($this->state->battle['pending_holvert_open']);
+            return Result::error('Цель больше недоступна');
+        }
+
+        unset($this->state->battle['pending_holvert_open']);
+        $this->resolveLineOpenOnStrike($source, $target, (string) ($pending['flag'] ?? 'trigger_used_this_turn:open_line_ally_cannot_attack'));
+
+        $this->state->bumpVersion();
+        return Result::ok(["holvert_open:{$source->instanceId}:{$target->instanceId}"]);
+    }
+
+    private function resolveLineOpenOnStrike(CardInstance $source, CardInstance $target, string $flag): void
+    {
+        $this->engine->openCard($target);
+        $target->modifiers[] = [
+            'stat' => 'cannot_attack',
+            'value' => 1,
+            'expire' => 'end_of_turn',
+            'source' => $source->owner,
+        ];
+        $source->flags[$flag] = ((int) ($source->flags[$flag] ?? 0)) + 1;
+
+        if (!empty($this->state->battle['strike'])) {
+            $this->state->battle['strike']['holvert_open'][] = [
+                'source_id' => $source->instanceId,
+                'target_id' => $target->instanceId,
+            ];
+        }
+    }
+
     private function startRevive(
         CardInstance $attacker, array $action, int $cardId, string $playerKey
     ): Result {
@@ -2998,6 +3100,40 @@ final class ActionResolver
 
         $this->state->bumpVersion();
         return Result::ok(["give_coin:{$playerKey}:{$cardId}->{$targetId}:{$cost}"]);
+    }
+
+    private function resolveGrantProp(
+        CardInstance $attacker, array $action, int $cardId, string $playerKey
+    ): Result {
+        $propKey = (string) ($action['prop'] ?? '');
+        if ($propKey === '') {
+            return Result::error('Свойство не задано');
+        }
+
+        $attacker->prop[$propKey] = true;
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'modifier',
+            'action_name' => $action['name'] ?? 'Свойство',
+            'attacker_id' => $cardId,
+            'target_id'   => $cardId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'granted_prop' => [
+                'target_id' => $cardId,
+                'prop' => $propKey,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(["grant_prop:{$playerKey}:{$cardId}:{$propKey}"]);
     }
 
     private function resolveStealCoin(

@@ -55,6 +55,7 @@ final class InstantPickChoice implements ChoiceHandlerInterface
             if (($pi['target'] ?? 'enemy') === 'enemy' && $c->owner === $playerKey) continue;
             if (($pi['target'] ?? 'enemy') === 'ally'  && $c->owner !== $playerKey) continue;
             if ($condition === 'target_not_moved' && !empty($c->flags['moved_this_turn'])) continue;
+            if ($condition === 'target_closed' && !$c->closed) continue;
 
             $name = $cardsInfo[$c->ukid]['name'] ?? '?';
             $coords = $c->zone === CardInstance::ZONE_FIELD

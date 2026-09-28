@@ -151,6 +151,9 @@ final class StrikeResolver
         if ($attacker->closed) {
             return Result::error('Атакующий закрыт');
         }
+        if (CardStats::hasCannotAttack($attacker)) {
+            return Result::error('Карта не может атаковать до конца хода');
+        }
 
         $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
         $attacksUsed = (int) ($attacker->flags['attacks_used_this_turn'] ?? 0);
@@ -559,9 +562,12 @@ final class StrikeResolver
             $this->triggerStrikeProphecy($attacker, $defendCard);
             $this->engine->applyAnswer($this->state, $defendCard, $attacker, 'strike');
             $this->state->battle['strike']['strike_hit'] = true;
-            if ($attackStrike === 'strong' && $woundsDealt > 0) {
-                (new ActionResolver($this->state, $this->engine))
-                    ->triggerTalionIncarnationToken($attacker);
+            if ($woundsDealt > 0) {
+                $actionResolver = new ActionResolver($this->state, $this->engine);
+                if ($attackStrike === 'strong') {
+                    $actionResolver->triggerTalionIncarnationToken($attacker);
+                }
+                $actionResolver->triggerLineOpenOnStrike($attacker);
             }
             if (!$hitWasBlocked) {
                 (new ActionResolver($this->state, $this->engine))->openSuccessfulHitOptionalHeal($attacker);
@@ -616,13 +622,20 @@ final class StrikeResolver
                 $this->state->battle['strike']['defend_blocked_by_weak'] = true;
             }
 
+            $hpBeforeAnswerDamage = $attacker->hp;
             $blockedAnswersBefore = count((array) ($this->state->battle['strike']['answer_blocked'] ?? []));
             $this->engine->applyDamage($this->state, $attacker, $val, 'answer', $defendCard);
             $blockedAnswersAfter = count((array) ($this->state->battle['strike']['answer_blocked'] ?? []));
             if ($blockedAnswersAfter > $blockedAnswersBefore) {
                 $val = 0;
             }
+            $answerWoundsDealt = max(0, $hpBeforeAnswerDamage - $attacker->hp);
             $this->state->battle['strike']['defend_damage_total'] = $val;
+
+            if ($answerWoundsDealt > 0) {
+                (new ActionResolver($this->state, $this->engine))
+                    ->triggerLineOpenOnStrike($defendCard);
+            }
 
             if ($val > 0 && !empty($attacker->prop['on_hit_gain'])) {
                 foreach ($attacker->prop['on_hit_gain'] as $m) {

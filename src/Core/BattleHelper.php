@@ -175,6 +175,9 @@ final class BattleHelper
         if ($card->closed) {
             return [];
         }
+        if (!str_starts_with($mode, 'action:') && CardStats::hasCannotAttack($card)) {
+            return [];
+        }
 
         $attackLimit = (int) ($card->prop['attacks_per_turn'] ?? 1);
         $attacksUsed = (int) ($card->flags['attacks_used_this_turn'] ?? 0);
@@ -200,6 +203,9 @@ final class BattleHelper
             if (!$action) return [];
 
             $type = $action['type'] ?? '';
+            if (CardStats::hasCannotAttack($card) && CardStats::isOffensiveAction($type)) {
+                return [];
+            }
 
             // Перехват летающих для любых атакующих действий
             if ($card->zone === CardInstance::ZONE_FLYING

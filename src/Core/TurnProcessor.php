@@ -279,6 +279,12 @@ final class TurnProcessor
                 if ($card->zone !== CardInstance::ZONE_FIELD
                     && $card->zone !== CardInstance::ZONE_FLYING) continue;
 
+                foreach (array_keys($card->flags) as $flagKey) {
+                    if (str_starts_with((string) $flagKey, 'trigger_used_this_turn:')) {
+                        unset($card->flags[$flagKey]);
+                    }
+                }
+
                 if ($card->owner === $activeKey) {
                     if (!isset($card->markers['stun'])) {
                         $card->closed = false;
@@ -293,6 +299,7 @@ final class TurnProcessor
                     $card->flags['shot_used_this_turn'] = false;
                     $card->flags['attacks_used_this_turn'] = 0;
                     $card->flags['after_strike_execute_used_this_turn'] = 0;
+                    $card->flags['instant_uses_this_turn'] = [];
                     unset($card->flags['first_attack_target_id']);
                 }
             }

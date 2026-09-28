@@ -586,6 +586,19 @@ final class CardStats
         return self::hasLineDeep($card->prop);
     }
 
+    public static function hasCannotAttack(CardInstance $card): bool
+    {
+        foreach ($card->modifiers as $m) {
+            if (($m['stat'] ?? '') === 'cannot_attack') return true;
+        }
+        return false;
+    }
+
+    public static function isOffensiveAction(string $type): bool
+    {
+        return in_array($type, ['strike', 'uchr', 'shot', 'throw', 'discharge', 'magic', 'cast', 'tap', 'impact', 'execute', 'dissonance', 'sand_claws'], true);
+    }
+
     private static function hasLineDeep(array $arr): bool
     {
         foreach ($arr as $key => $val) {

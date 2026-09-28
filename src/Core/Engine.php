@@ -105,6 +105,7 @@ final class Engine
             'choose_whip_target'      => $action->chooseWhipTarget($playerKey, $cmd),
             'choose_kobold_heal'      => $action->chooseKoboldHeal($playerKey, $cmd),
             'choose_talion_incarnation' => $action->chooseTalionIncarnation($playerKey, $cmd),
+            'choose_holvert_open'     => $action->chooseHolvertOpen($playerKey, $cmd),
             'choose_dive_cell'        => $action->chooseDiveCell($playerKey, $cmd),
             'turn_task'               => $turnPhase->runTask($playerKey, $cmd),
             'turn_sub'                => $turnPhase->runSub($playerKey, $cmd),
@@ -309,6 +310,20 @@ final class Engine
         $type = $effect['type'] ?? '';
 
         switch ($type) {
+            case 'open':
+                $this->openCard($target);
+                $damage = (int) ($effect['damage'] ?? 0);
+                if ($damage > 0) {
+                    $this->applyDamage($state, $target, $damage, 'impact', $source);
+                    $state->battle['instant_result'][] = [
+                        'type' => 'open_damage',
+                        'source_id' => $source?->instanceId,
+                        'target_id' => $target->instanceId,
+                        'damage' => $damage,
+                        'died' => $target->hp <= 0 || $target->dying,
+                    ];
+                }
+                break;
             case 'damage':
                 $value = (int) ($effect['value'] ?? 1);
                 $this->applyDamage($state, $target, $value, 'impact', $source);
@@ -332,6 +347,15 @@ final class Engine
                 $this->applyMarker($target, $effect['marker'] ?? [], $ownerKey);
                 break;
         }
+    }
+
+    public function openCard(CardInstance $card): void
+    {
+        $card->closed = false;
+        $card->flags['attacks_used_this_turn'] = 0;
+        $card->flags['shot_used_this_turn'] = false;
+        $card->flags['after_strike_execute_used_this_turn'] = 0;
+        unset($card->flags['first_attack_target_id']);
     }
 
     public function applyDamage(
