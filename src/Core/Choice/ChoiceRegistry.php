@@ -33,6 +33,7 @@ final class ChoiceRegistry
                 new ValhallaPickChoice(),
                 new AnyDeathChoice(),
                 new WhipChoice(),
+                new KoboldHealChoice(),
                 new WoundTransferChoice(),
                 new MultiHealChoice(),
                 new MultiDischargeChoice(),

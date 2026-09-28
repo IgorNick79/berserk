@@ -1119,6 +1119,16 @@ final class InfoPanel
                         . '</div>';
                 }
             }
+            if (!empty($strike['kobold_heal'])) {
+                foreach ($strike['kobold_heal'] as $h) {
+                    $card = $state->getCard((int) ($h['card_id'] ?? 0));
+                    $info = $card ? ($cardsInfo[$card->ukid] ?? null) : null;
+                    $name = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
+                    $vampireHtml .= '<div class="vampire">'
+                        . '<b>' . $name . '</b> излечивается на ' . (int) ($h['heal'] ?? 0)
+                        . '</div>';
+                }
+            }
 
             // Кнопка подтверждения / отложенный выбор
             $confirmed = $strike['confirmed'] ?? [];

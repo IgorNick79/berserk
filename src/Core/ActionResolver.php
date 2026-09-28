@@ -387,8 +387,11 @@ final class ActionResolver
         $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, 'uchr');
         $val -= $reduction;
         if ($val < 0) $val = 0;
-        if (CardStats::hasDefense($this->state, $target, 'uchr', $attacker)) {
+        $successfulHit = $val > 0;
+        $defended = CardStats::hasDefense($this->state, $target, 'uchr', $attacker);
+        if ($defended) {
             $val = 0;
+            $this->state->battle['strike']['defended'] = true;
         }
 
         $this->engine->applyDamage($this->state, $target, $val, 'uchr', $attacker);
@@ -417,6 +420,9 @@ final class ActionResolver
         }
 
         $this->engine->flushDeadeatQueue($this->state);
+        if ($successfulHit && !$defended) {
+            $this->openSuccessfulHitOptionalHeal($attacker);
+        }
         $attacker->closed = true;
 
         $this->state->bumpVersion();
@@ -1788,6 +1794,14 @@ final class ActionResolver
             }
         }
 
+        if (!empty($state->battle['pending_kobold_heal'])) {
+            $pkh = $state->battle['pending_kobold_heal'];
+            if (($pkh['owner'] ?? null) === $playerKey) {
+                unset($state->battle['pending_kobold_heal']);
+                $cancelled[] = 'kobold_heal';
+            }
+        }
+
         // multi_heal — монеты/ресурсы не тратились
         if (!empty($state->battle['pending_multi_heal'])) {
             $pmh  = $state->battle['pending_multi_heal'];
@@ -1967,6 +1981,77 @@ final class ActionResolver
 
         $state->bumpVersion();
         return Result::ok(['cancelled:' . implode(',', $cancelled)]);
+    }
+
+    public function openSuccessfulHitOptionalHeal(CardInstance $card): bool
+    {
+        if (empty($card->prop['on_successful_hit'])) return false;
+        if ($card->zone !== CardInstance::ZONE_FIELD) return false;
+        if ($card->dying || $card->hp <= 0) return false;
+        if ($card->hp >= $card->hpMax) return false;
+
+        $config = $card->prop['on_successful_hit'];
+        if (!is_array($config) || ($config['type'] ?? '') !== 'optional_heal') return false;
+        if (($config['value_from'] ?? '') !== 'opposite_creature_strike_weak') return false;
+
+        $opposite = $this->getOppositeFieldCard($card);
+        if (!$opposite || $opposite->dying || $opposite->hp <= 0) return false;
+
+        $value = CardStats::getStrikeValue($this->state, $opposite, $card, 'weak');
+        if ($value <= 0) return false;
+
+        $this->state->battle['pending_kobold_heal'] = [
+            'owner' => $card->owner,
+            'card_id' => $card->instanceId,
+            'opposite_id' => $opposite->instanceId,
+            'value' => $value,
+        ];
+
+        return true;
+    }
+
+    public function chooseKoboldHeal(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_kobold_heal'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
+            return Result::error('Нет выбора излечения');
+        }
+
+        $card = $this->state->getCard((int) ($pending['card_id'] ?? 0));
+        if (!$card || $card->owner !== $playerKey || $card->hp <= 0 || $card->dying) {
+            unset($this->state->battle['pending_kobold_heal']);
+            return Result::error('Карта недоступна');
+        }
+
+        $value = (int) ($pending['value'] ?? 0);
+        if ($value <= 0 || $card->hp >= $card->hpMax) {
+            unset($this->state->battle['pending_kobold_heal']);
+            return Result::error('Излечение недоступно');
+        }
+
+        $hpBefore = $card->hp;
+        $card->hp = min($card->hpMax, $card->hp + $value);
+        $healed = max(0, $card->hp - $hpBefore);
+
+        unset($this->state->battle['pending_kobold_heal']);
+
+        if (!empty($this->state->battle['strike'])) {
+            $this->state->battle['strike']['kobold_heal'][] = [
+                'card_id' => $card->instanceId,
+                'value' => $value,
+                'heal' => $healed,
+            ];
+        }
+
+        $this->state->bumpVersion();
+        return Result::ok(["kobold_heal:{$card->instanceId}:{$healed}"]);
+    }
+
+    private function getOppositeFieldCard(CardInstance $card): ?CardInstance
+    {
+        if ($card->row === null || $card->col === null) return null;
+        $step = $card->owner === GameState::PLAYER_HOST ? 1 : -1;
+        return (new ZoneManager($this->state))->getFieldCard($card->row + $step, $card->col);
     }
 
     private function startRevive(

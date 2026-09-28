@@ -523,13 +523,17 @@ final class StrikeResolver
                 $val = min($val, (int) $strike['damage_cap']);
             }
 
+            $hitWasBlocked = false;
+
             // Защита цели
             if (CardStats::hasDefense($this->state, $defendCard, 'strike', $attacker)) {
                 $val = 0;
+                $hitWasBlocked = true;
             }
 
             if ($attackStrike === 'weak' && !empty($defendCard->prop['block_weak_strike'])) {
                 $val = 0;
+                $hitWasBlocked = true;
                 $this->state->battle['strike']['blocked_by_weak'] = true;
             }
 
@@ -553,6 +557,9 @@ final class StrikeResolver
             $this->triggerStrikeProphecy($attacker, $defendCard);
             $this->engine->applyAnswer($this->state, $defendCard, $attacker, 'strike');
             $this->state->battle['strike']['strike_hit'] = true;
+            if (!$hitWasBlocked) {
+                (new ActionResolver($this->state, $this->engine))->openSuccessfulHitOptionalHeal($attacker);
+            }
 
             // Реакция цели на попадание
             if ($val > 0 && !empty($defendCard->prop['on_hit_gain'])) {

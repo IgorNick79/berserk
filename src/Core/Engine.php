@@ -101,6 +101,7 @@ final class Engine
             'grezy_continue'          => $action->grezyContinue($playerKey, $cmd),
             'grezy_pick'              => $action->grezyPick($playerKey, $cmd),
             'choose_whip_target'      => $action->chooseWhipTarget($playerKey, $cmd),
+            'choose_kobold_heal'      => $action->chooseKoboldHeal($playerKey, $cmd),
             'choose_dive_cell'        => $action->chooseDiveCell($playerKey, $cmd),
             'turn_task'               => $turnPhase->runTask($playerKey, $cmd),
             'turn_sub'                => $turnPhase->runSub($playerKey, $cmd),
