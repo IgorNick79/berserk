@@ -9,7 +9,7 @@ namespace Berserk\Core;
  * Переходы карт между зонами и запросы по зонам.
  * Все переходы — через этот класс; он же отвечает за инварианты:
  *  - кладбище: полный сброс (маркеры, модификаторы, монеты, броня, позиция);
- *  - летающие: авто-выделение слота;
+ *  - летающие: авто-выделение и нормализация слотов;
  *  - поле: проверки занятости и разрешённых клеток при расстановке.
  */
 final class ZoneManager
@@ -20,38 +20,48 @@ final class ZoneManager
 
     public function toHand(CardInstance $card): void
     {
+        $flyingOwner = $this->flyingOwnerBeforeTransition($card);
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_HAND;
+        $this->normalizeFlyingSlots($flyingOwner);
     }
 
     public function toSquad(CardInstance $card): void
     {
+        $flyingOwner = $this->flyingOwnerBeforeTransition($card);
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_SQUAD;
+        $this->normalizeFlyingSlots($flyingOwner);
     }
 
     public function toDeck(CardInstance $card): void
     {
+        $flyingOwner = $this->flyingOwnerBeforeTransition($card);
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_DECK;
+        $this->normalizeFlyingSlots($flyingOwner);
     }
 
     public function toSideboard(CardInstance $card): void
     {
+        $flyingOwner = $this->flyingOwnerBeforeTransition($card);
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_SIDEBOARD;
+        $this->normalizeFlyingSlots($flyingOwner);
     }
 
     public function toField(CardInstance $card, int $row, int $col): void
     {
+        $flyingOwner = $this->flyingOwnerBeforeTransition($card);
         $card->zone = CardInstance::ZONE_FIELD;
         $card->row  = $row;
         $card->col  = $col;
         $card->slot = 0;
+        $this->normalizeFlyingSlots($flyingOwner);
 
         // Воскрешение снимает готовность Вальхаллы
         unset($card->flags['valhalla_active']);
@@ -60,21 +70,17 @@ final class ZoneManager
 
     public function toFlying(CardInstance $card): void
     {
-        $used = [];
-        foreach ($this->state->cards as $c) {
-            if ($c->zone === CardInstance::ZONE_FLYING
-                && $c->owner === $card->owner) {
-                $used[$c->slot] = true;
-            }
+        if ($card->zone === CardInstance::ZONE_FLYING) {
+            $this->normalizeFlyingSlots($card->owner);
+            return;
         }
-
-        $slot = 1;
-        while (isset($used[$slot])) $slot++;
 
         $card->zone = CardInstance::ZONE_FLYING;
         $card->row  = null;
         $card->col  = null;
-        $card->slot = $slot;
+        $card->slot = $this->nextFlyingSlot($card->owner);
+
+        $this->normalizeFlyingSlots($card->owner);
     }
 
     /**
@@ -83,6 +89,7 @@ final class ZoneManager
      */
     public function toGraveyard(CardInstance $card): void
     {
+        $flyingOwner = $this->flyingOwnerBeforeTransition($card);
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
 
         // Уже инкарнировалась → в изгнание (не удаляем)
@@ -125,10 +132,13 @@ final class ZoneManager
                 $card->markers['valhalla'] = ['value' => 1];
             }
         }
+
+        $this->normalizeFlyingSlots($flyingOwner);
     }
 
     public function toExile(CardInstance $card): void
     {
+        $flyingOwner = $this->flyingOwnerBeforeTransition($card);
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $card->zone      = CardInstance::ZONE_EXILE;
         $card->dying     = false;
@@ -142,6 +152,7 @@ final class ZoneManager
         $card->markers   = [];
         $card->flags     = [];
         $this->clearPosition($card);
+        $this->normalizeFlyingSlots($flyingOwner);
     }
 
     public function flushDying(): void
@@ -247,6 +258,52 @@ final class ZoneManager
     }
 
     // ─── Внутреннее ──────────────────────────────────────────
+
+    private function normalizeFlyingSlots(?string $owner = null): void
+    {
+        if ($owner === null) {
+            foreach ([GameState::PLAYER_HOST, GameState::PLAYER_PLAYER] as $playerKey) {
+                $this->normalizeFlyingSlots($playerKey);
+            }
+            return;
+        }
+
+        $cards = [];
+        foreach ($this->state->cards as $card) {
+            if ($card->owner === $owner && $card->zone === CardInstance::ZONE_FLYING) {
+                $cards[] = $card;
+            }
+        }
+
+        usort($cards, static function (CardInstance $a, CardInstance $b): int {
+            $aSlot = $a->slot > 0 ? $a->slot : PHP_INT_MAX;
+            $bSlot = $b->slot > 0 ? $b->slot : PHP_INT_MAX;
+            return [$aSlot, $a->instanceId] <=> [$bSlot, $b->instanceId];
+        });
+
+        $slot = 1;
+        foreach ($cards as $card) {
+            $card->row = null;
+            $card->col = null;
+            $card->slot = $slot++;
+        }
+    }
+
+    private function flyingOwnerBeforeTransition(CardInstance $card): ?string
+    {
+        return $card->zone === CardInstance::ZONE_FLYING ? $card->owner : null;
+    }
+
+    private function nextFlyingSlot(string $owner): int
+    {
+        $max = 0;
+        foreach ($this->state->cards as $card) {
+            if ($card->owner === $owner && $card->zone === CardInstance::ZONE_FLYING) {
+                $max = max($max, $card->slot);
+            }
+        }
+        return $max + 1;
+    }
 
     private function clearPosition(CardInstance $card): void
     {

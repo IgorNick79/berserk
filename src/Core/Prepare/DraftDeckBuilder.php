@@ -29,7 +29,7 @@ final class DraftDeckBuilder
         }
 
         $rows = $this->db->fetchAll(
-            "SELECT ukid, price, health, move, elite, type, class,
+            "SELECT ukid, price, health, move, elite, single, type, class,
                     strike_weak, strike_medium, strike_strong, element_id, prop
              FROM cards WHERE ukid IN ($in)"
         );
@@ -46,6 +46,7 @@ final class DraftDeckBuilder
                 'count'         => $count,
                 'price'         => (int) $r['price'],
                 'elite'         => (bool) $r['elite'],
+                'single'        => (bool) $r['single'],
                 'element'       => $elements[(int) $r['element_id']] ?? 'neutral',
                 'health'        => (int) $r['health'],
                 'move'          => (int) $r['move'],

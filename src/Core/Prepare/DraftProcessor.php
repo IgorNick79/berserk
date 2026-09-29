@@ -286,6 +286,7 @@ final class DraftProcessor
                     hpMax: $health,
                     price: (int) ($item['price'] ?? 0),
                     elite: (bool) ($item['elite'] ?? false),
+                    single: (bool) ($item['single'] ?? false),
                     type: (string) ($item['type'] ?? 'creature'),
                     element: (string) ($item['element'] ?? 'neutral'),
                     class: (string) ($item['class'] ?? ''),

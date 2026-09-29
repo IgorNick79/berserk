@@ -826,6 +826,11 @@ final class PrepareProcessor
      */
     private function validateDealSquadConstraintsForAdditions(string $playerKey, array $additions): ?string
     {
+        $globalError = SquadRules::validate($this->state, $playerKey, $additions);
+        if ($globalError !== null) {
+            return $globalError;
+        }
+
         $resultingSquad = [];
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $playerKey) continue;
@@ -1498,6 +1503,7 @@ final class PrepareProcessor
                     'ukid'    => $item['ukid'],
                     'price'   => (int) ($item['price'] ?? 0),
                     'elite'   => (bool) ($item['elite'] ?? false),
+                    'single'  => (bool) ($item['single'] ?? false),
                     'element' => (string) ($item['element'] ?? 'neutral'),
                     'health'  => (int) ($item['health'] ?? 0),
                     'move'    => (int) ($item['move'] ?? 0),
@@ -1525,6 +1531,7 @@ final class PrepareProcessor
                 hpMax:        $item['health'],
                 price:        $item['price'],
                 elite:        $item['elite'],
+                single:       $item['single'],
                 element:      $item['element'],
                 move:         $item['move'],
                 moveMax:      $item['move'],

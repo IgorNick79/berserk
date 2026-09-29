@@ -8,6 +8,7 @@ namespace Berserk\View\Screen;
 use Berserk\Core\GameState;
 use Berserk\Core\CardInstance;
 use Berserk\Core\Choice\ChoiceRegistry;
+use Berserk\Core\Prepare\SquadRules;
 use Berserk\Core\ResourceCalculator;
 use Berserk\View\Template;
 use Berserk\View\Ui\ElementLabels;
@@ -66,6 +67,7 @@ final class DealScreen
         $silverTotal   = (int) ($calc['silver_total'] ?? ($me->resources['silver'] ?? 0));
         $penalty       = $calc['penalty'];
         $selectedCount = count($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD));
+        $flyingCost = SquadRules::flyingCost($state, $playerKey);
 
         $goldClass = $goldLeft < 0 ? 'negative' : '';
 
@@ -137,12 +139,18 @@ final class DealScreen
         if ($selectedUkid !== '') {
             $selectedInfo = $cardsInfo[$selectedUkid] ?? null;
             if ($selectedInfo) {
+                $recruitError = null;
                 $selectedInfo = $this->selectedPreviewInfo($state, $playerKey, $selectedZone, $selectedUkid, $selectedInfo, $cardsInfo);
                 $selectedCard = ['ukid' => $selectedUkid, 'info' => $selectedInfo];
                 if (!$me->isConfirmed('deal') && $selectedZone === 'hand') {
+                    $candidate = $this->selectedCardInstance($state, $playerKey, $selectedZone, $selectedUkid);
+                    if ($candidate !== null) {
+                        $recruitError = SquadRules::validate($state, $playerKey, [$candidate]);
+                    }
                     $cardActions[] = [
                         'label' => 'В отряд',
                         'url'   => "{$baseUrl}&cmd=pick_card&ukid=" . urlencode($selectedUkid),
+                        'enabled' => $recruitError === null,
                     ];
                 } elseif (!$me->isConfirmed('deal') && $selectedZone === 'squad'
                     && !$this->selectedSquadCardIsLinkedCompanion($state, $playerKey, $selectedUkid)) {
@@ -179,6 +187,7 @@ final class DealScreen
                 . '<span>Выбрано: <b>' . $selectedCount . '</b></span>'
                 . '<span class="gold ' . htmlspecialchars($goldClass, ENT_QUOTES) . '">Золото: <b>' . $goldLeft . '</b>/' . $goldTotal . '</span>'
                 . '<span>Серебро: <b>' . $silverLeft . '</b>/' . $silverTotal . '</span>'
+                . '<span>Летающие: <b>' . $flyingCost . '</b>/' . SquadRules::FLYING_COST_LIMIT . '</span>'
                 . '</div>'
                 . $penaltyHtml
                 . '<div class="prepare-elements">' . $elementsHtml . '</div>'
@@ -228,13 +237,33 @@ final class DealScreen
                 if ($effectiveCost !== $baseCost) {
                     $info['price'] = $effectiveCost . ' (обычно ' . $baseCost . ')';
                 }
+
+                $squadError = SquadRules::validate($state, $playerKey, [$card]);
+                if ($squadError !== null) {
+                    $info['notes_html'] = '<p class="bonus">Нельзя взять в отряд: '
+                        . htmlspecialchars($squadError, ENT_QUOTES)
+                        . '.</p>';
+                }
             }
 
-            $info['notes_html'] = $this->dealPreviewNotes($state, $playerKey, $card, $selectedZone, $cardsInfo);
+            $info['notes_html'] = ($info['notes_html'] ?? '')
+                . $this->dealPreviewNotes($state, $playerKey, $card, $selectedZone, $cardsInfo);
             break;
         }
 
         return $info;
+    }
+
+    private function selectedCardInstance(GameState $state, string $playerKey, string $selectedZone, string $selectedUkid): ?CardInstance
+    {
+        foreach ($state->cards as $card) {
+            if ($card->owner === $playerKey
+                && $card->zone === $selectedZone
+                && $card->ukid === $selectedUkid) {
+                return $card;
+            }
+        }
+        return null;
     }
 
     private function dealPreviewNotes(GameState $state, string $playerKey, CardInstance $card, string $selectedZone, array $cardsInfo): string

@@ -52,6 +52,7 @@ final class CardInstance
         public array $modifiers = [],
         public array $markers = [],
         public array $flags = [],
+        public bool $single = false,
     ) {}
 
     public static function fromArray(array $data): self
@@ -87,6 +88,7 @@ final class CardInstance
             modifiers:    (array) ($data['modifiers'] ?? []),
             markers:      (array) ($data['markers'] ?? []),
             flags:        (array) ($data['flags'] ?? []),
+            single:       (bool) ($data['single'] ?? false),
         );
     }
 
@@ -123,6 +125,7 @@ final class CardInstance
             'modifiers'     => $this->modifiers,
             'markers'       => $this->markers,
             'flags'         => $this->flags,
+            'single'        => $this->single,
         ];
     }
 

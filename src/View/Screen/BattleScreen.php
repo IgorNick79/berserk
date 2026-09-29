@@ -261,56 +261,53 @@ final class BattleScreen
         foreach (['opp', 'own'] as $who) {
             $ownerKey = $who === 'opp' ? $oppKey : $playerKey;
 
+            ksort($flyMap[$ownerKey]);
             $slotsHtml = '';
-            for ($slot = 1; $slot <= 3; $slot++) {
-                $card        = $flyMap[$ownerKey][$slot] ?? null;
+            foreach ($flyMap[$ownerKey] as $card) {
                 $cellContent = '';
                 $cellClass   = 'fly-slot';
 
-                if ($card) {
-                    $info     = $cardsInfo[$card->ukid] ?? null;
-                    $nameHtml = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
-                    $hpText   = $card->hp . '/' . $card->hpMax;
-                    $ownerClass = $card->owner === $playerKey ? 'own' : 'enemy';
-                    $cellClass .= ' ' . $ownerClass;
-                    if ($card->closed) {
-                        $cellClass .= ' closed';
-                    }
+                $info     = $cardsInfo[$card->ukid] ?? null;
+                $nameHtml = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
+                $hpText   = $card->hp . '/' . $card->hpMax;
+                $ownerClass = $card->owner === $playerKey ? 'own' : 'enemy';
+                $cellClass .= ' ' . $ownerClass;
+                if ($card->closed) {
+                    $cellClass .= ' closed';
+                }
 
-                    $coinsBadge = $card->coins > 0 ? '<div class="bcoins">' . $card->coins . '</div>' : '';
+                $coinsBadge = $card->coins > 0 ? '<div class="bcoins">' . $card->coins . '</div>' : '';
 
-                    $armorBadge = '';
-                    if ($card->armor > 0) {
-                        $armorBadge = '<div class="barmor">' . $card->armor . '</div>';
-                    }
+                $armorBadge = '';
+                if ($card->armor > 0) {
+                    $armorBadge = '<div class="barmor">' . $card->armor . '</div>';
+                }
 
-                    // Маркеры
-                    $markersHtml = $this->buildCardBadges($card, $state);
+                $markersHtml = $this->buildCardBadges($card, $state);
 
-                    $cardBody = '<div class="battle-card">'
-                        . '<div class="bname">' . $nameHtml . '</div>'
-                        . '<div class="bhp">' . $hpText . '</div>'
-                        . $coinsBadge
-                        . $markersHtml
-                        . $armorBadge
-                        . '</div>';
+                $cardBody = '<div class="battle-card">'
+                    . '<div class="bname">' . $nameHtml . '</div>'
+                    . '<div class="bhp">' . $hpText . '</div>'
+                    . $coinsBadge
+                    . $markersHtml
+                    . $armorBadge
+                    . '</div>';
 
-                    if (isset($pendingDefenderTargets[$card->instanceId])) {
-                        $cellClass  .= ' attack-target pending-defender-target';
-                        $cellContent = '<a class="card-link" href="' . $pendingDefenderTargets[$card->instanceId] . '">' . $cardBody . '</a>';
-                    } elseif (isset($attackTargets[$card->instanceId]) && $selectedCardId > 0 && $card->instanceId !== $selectedCardId) {
-                        if (str_starts_with($mode, 'action:')) {
-                            $actionKey = substr($mode, 7);
-                            $atkUrl = "{$baseUrl}&cmd=action&action_key={$actionKey}&card_id={$selectedCardId}&target_id={$card->instanceId}&sel={$selectedCardId}&mode={$mode}";
-                        } else {
-                            $atkUrl = "{$baseUrl}&cmd={$mode}&card_id={$selectedCardId}&target_id={$card->instanceId}&sel={$selectedCardId}&mode={$mode}";
-                        }
-                        $cellClass  .= ' attack-target';
-                        $cellContent = '<a class="card-link" href="' . $atkUrl . '">' . $cardBody . '</a>';
+                if (isset($pendingDefenderTargets[$card->instanceId])) {
+                    $cellClass  .= ' attack-target pending-defender-target';
+                    $cellContent = '<a class="card-link" href="' . $pendingDefenderTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                } elseif (isset($attackTargets[$card->instanceId]) && $selectedCardId > 0 && $card->instanceId !== $selectedCardId) {
+                    if (str_starts_with($mode, 'action:')) {
+                        $actionKey = substr($mode, 7);
+                        $atkUrl = "{$baseUrl}&cmd=action&action_key={$actionKey}&card_id={$selectedCardId}&target_id={$card->instanceId}&sel={$selectedCardId}&mode={$mode}";
                     } else {
-                        $selUrl      = "{$baseUrl}&sel={$card->instanceId}";
-                        $cellContent = '<a class="card-link" href="' . $selUrl . '">' . $cardBody . '</a>';
+                        $atkUrl = "{$baseUrl}&cmd={$mode}&card_id={$selectedCardId}&target_id={$card->instanceId}&sel={$selectedCardId}&mode={$mode}";
                     }
+                    $cellClass  .= ' attack-target';
+                    $cellContent = '<a class="card-link" href="' . $atkUrl . '">' . $cardBody . '</a>';
+                } else {
+                    $selUrl      = "{$baseUrl}&sel={$card->instanceId}";
+                    $cellContent = '<a class="card-link" href="' . $selUrl . '">' . $cardBody . '</a>';
                 }
 
                 $slotsHtml .= $this->tpl->parse('includes/battle_cell.tpl', [

@@ -132,8 +132,8 @@ if ($stage === 'battle') {
             if (!isset($info[$u])) {
                 $in = "'" . $db->escape($u) . "'";
                 $rows = $db->fetchAll(
-                    "SELECT ukid, price, health, move, elite, type, class
-                            strike_weak, strike_medium, strike_strong,
+                    "SELECT ukid, price, health, move, elite, single, type, class,
+                        strike_weak, strike_medium, strike_strong,
                             element_id, prop
                      FROM cards WHERE ukid IN ($in)"
                 );
@@ -144,6 +144,7 @@ if ($stage === 'battle') {
                     'health'  => (int) $r['health'],
                     'move'    => (int) $r['move'],
                     'elite'   => (bool) $r['elite'],
+                    'single'  => (bool) $r['single'],
                     'type'    => $r['type'] ?? 'creature',
                     'class'   => (string) ($r['class'] ?? ''),
                     'element' => $elements[(int) $r['element_id']] ?? 'neutral',
@@ -164,6 +165,7 @@ if ($stage === 'battle') {
                 hpMax:        $i['health'],
                 price:        $i['price'],
                 elite:        $i['elite'],
+                single:       $i['single'],
                 element:      $i['element'],
                 move:         $i['move'],
                 moveMax:      $i['move'],
@@ -180,7 +182,7 @@ if ($stage === 'battle') {
         $restSize = $deckSize - count($forced);
         if ($restSize > 0) {
             $rows = $db->fetchAll(
-                "SELECT ukid, price, health, move, elite, type,
+                "SELECT ukid, price, health, move, elite, single, type,
                         strike_weak, strike_medium, strike_strong,
                         element_id, prop
                  FROM cards
@@ -198,6 +200,7 @@ if ($stage === 'battle') {
                     hpMax:        (int) $r['health'],
                     price:        (int) $r['price'],
                     elite:        (bool) $r['elite'],
+                    single:       (bool) $r['single'],
                     element:      $elements[(int) $r['element_id']] ?? 'neutral',
                     move:         (int) $r['move'],
                     moveMax:      (int) $r['move'],
@@ -230,7 +233,7 @@ function seedLoadCardInfo(Db $db, array $ukids, array $elements): array
 
     $in = "'" . implode("','", array_map(fn ($u) => $db->escape($u), $ukids)) . "'";
     $rows = $db->fetchAll(
-        "SELECT ukid, name, price, health, move, elite, type, class,
+        "SELECT ukid, name, price, health, move, elite, single, type, class,
                 strike_weak, strike_medium, strike_strong,
                 element_id, prop
          FROM cards WHERE ukid IN ($in)"
@@ -251,6 +254,7 @@ function seedCardInfoFromRow(array $r, array $elements): array
         'health'  => (int) $r['health'],
         'move'    => (int) $r['move'],
         'elite'   => (bool) $r['elite'],
+        'single'  => (bool) ($r['single'] ?? false),
         'type'    => $r['type'] ?? 'creature',
         'class'   => $r['class'] ?? '',
         'element' => $elements[(int) $r['element_id']] ?? 'neutral',
@@ -281,7 +285,7 @@ function seedBuildDealCards(Db $db, array $forced, int $targetSize, array $eleme
     }
 
     $rows = $db->fetchAll(
-        "SELECT ukid, price, health, move, elite, type, class,
+        "SELECT ukid, price, health, move, elite, single, type, class,
                 strike_weak, strike_medium, strike_strong,
                 element_id, prop
          FROM cards
@@ -308,6 +312,7 @@ function seedDeckCardsFromList(array $cards): array
                 'count'         => 0,
                 'price'         => $card['price'],
                 'elite'         => $card['elite'],
+                'single'        => $card['single'],
                 'element'       => $card['element'],
                 'health'        => $card['health'],
                 'move'          => $card['move'],
@@ -335,6 +340,7 @@ function seedAddCardInstance(GameState $state, string $owner, string $zone, arra
         hpMax:        $i['health'],
         price:        $i['price'],
         elite:        $i['elite'],
+        single:       $i['single'],
         element:      $i['element'],
         move:         $i['move'],
         moveMax:      $i['move'],
