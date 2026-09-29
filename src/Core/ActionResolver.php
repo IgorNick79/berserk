@@ -865,8 +865,7 @@ final class ActionResolver
         }
 
         if (!empty($action['self_destroy'])) {
-            $attacker->hp = 0;
-            $attacker->dying = true;
+            $this->engine->forceDeath($this->state, $attacker, 'self_destroy', $attacker);
         }
 
         $attacker->closed = true;
@@ -902,22 +901,10 @@ final class ActionResolver
             'confirmed'   => [],
         ];
 
-        $target->hp = 0;
-        $target->dying = true;
-        $this->engine->refreshArmor($this->state);
-
-        // Трупоедство
-        if (!empty($attacker->prop['deadeat']) && $attacker->hp > 0) {
-            $this->state->battle['strike']['deadeat_queue'][] = [
-                'instance_id' => $attacker->instanceId,
-            ];
-        }
-
-        $this->engine->triggerOnDeath($this->state, $target);
+        $this->engine->forceDeath($this->state, $target, 'execute', $attacker);
 
         $attacker->closed = true;
 
-        $this->engine->checkGameOver($this->state);
         $this->engine->flushDeadeatQueue($this->state);
 
         $this->state->bumpVersion();
@@ -1271,12 +1258,6 @@ final class ActionResolver
         $donor->hp += $amount;
         if ($donor->hp > $donor->hpMax) $donor->hp = $donor->hpMax;
 
-        $attacker->hp -= $amount;
-        if ($attacker->hp <= 0) {
-            $attacker->hp = 0;
-            $attacker->dying = true;
-        }
-
         $attacker->closed = true;
 
         $this->state->battle['strike'] = [
@@ -1301,6 +1282,7 @@ final class ActionResolver
 
         unset($this->state->battle['pending_transfer']);
 
+        $this->engine->applyDamage($this->state, $attacker, $amount, 'transfer_wounds', $donor);
         $this->engine->checkGameOver($this->state);
 
         $this->state->bumpVersion();
@@ -1402,22 +1384,8 @@ final class ActionResolver
         $action = $psw['action'];
         $attacker->closed = true;
 
-        // Себе раны
-        $attacker->hp -= $amount;
-
         $damage   = 0;
         $diedSelf = false;
-
-        if ($attacker->hp <= 0) {
-            $attacker->hp    = 0;
-            $attacker->dying = true;
-            $diedSelf        = true;
-        } else {
-            $damage = max(0, $amount - 1);
-            if ($damage > 0) {
-                $this->engine->applyDamage($this->state, $target, $damage, 'tap', $attacker);
-            }
-        }
 
         $this->state->battle['strike'] = [
             'kind'        => 'self_wound',
@@ -1439,9 +1407,19 @@ final class ActionResolver
             'confirmed'   => [],
         ];
 
-        if ($diedSelf) {
-            (new ZoneManager($this->state))->toGraveyard($attacker);
+        $this->engine->applyDamage($this->state, $attacker, $amount, 'self_wound', $attacker);
+        $diedSelf = $attacker->dying || $attacker->hp <= 0;
+
+        if (!$diedSelf) {
+            $damage = max(0, $amount - 1);
+            if ($damage > 0) {
+                $this->engine->applyDamage($this->state, $target, $damage, 'tap', $attacker);
+            }
         }
+
+        $this->state->battle['strike']['damage'] = $damage;
+        $this->state->battle['strike']['self_wound']['damage'] = $damage;
+        $this->state->battle['strike']['self_wound']['died_self'] = $diedSelf;
 
         $this->engine->checkGameOver($this->state);
 
@@ -2604,17 +2582,9 @@ final class ActionResolver
 
         $value = (int) $pw['value'];
 
-        // Рана
-        $hpBefore  = $target->hp;
-        $target->hp -= $value;
-
-        $died = false;
-        if ($target->hp <= 0) {
-            $target->hp    = 0;
-            $target->dying = true;
-            $died = true;
-            $this->engine->refreshArmor($this->state);
-        } else {
+        $this->engine->applyDamage($this->state, $target, $value, 'whip', $source);
+        $died = $target->dying || $target->hp <= 0;
+        if (!$died) {
             // Не погиб — +1 move до конца хода
             $target->modifiers[] = [
                 'stat'   => 'move',
@@ -2630,12 +2600,6 @@ final class ActionResolver
         $targetName = $target->ukid;
 
         unset($this->state->battle['pending_whip']);
-
-        // Если умер — в могилу
-        if ($died) {
-            (new ZoneManager($this->state))->toGraveyard($target);
-            $this->engine->checkGameOver($this->state);
-        }
 
         // Продолжаем фазу
         if (!empty($this->state->battle['turn_phase'])) {
@@ -2699,17 +2663,7 @@ final class ActionResolver
 
         unset($this->state->battle['pending_blood_tap']);
 
-        $attacker->hp -= $x;
         $attacker->closed = true;
-
-        if ($attacker->hp <= 0) {
-            $attacker->hp = 0;
-            $attacker->dying = true;
-        }
-
-        if (!$attacker->dying) {
-            $this->engine->applyDamage($this->state, $target, $x, 'discharge', $attacker);
-        }
 
         $this->state->battle['strike'] = [
             'kind'        => 'blood_tap',
@@ -2727,8 +2681,10 @@ final class ActionResolver
             'confirmed'   => [],
         ];
 
-        if ($attacker->dying) {
-            (new ZoneManager($this->state))->toGraveyard($attacker);
+        $this->engine->applyDamage($this->state, $attacker, $x, 'blood_tap', $attacker);
+
+        if (!$attacker->dying) {
+            $this->engine->applyDamage($this->state, $target, $x, 'discharge', $attacker);
         }
 
         $this->engine->checkGameOver($this->state);

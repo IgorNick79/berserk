@@ -295,11 +295,7 @@ final class Engine
                 }
 
                 foreach ($hits as $t) {
-                    $t->hp -= $damage;
-                    if ($t->hp <= 0) {
-                        $t->hp    = 0;
-                        $t->dying = true;
-                    }
+                    $this->applyDamage($state, $t, $damage, 'damage_on_dice', $source);
                 }
                 return null;
         }
@@ -368,6 +364,15 @@ final class Engine
         bool $skipHunt = false
     ): void {
         $this->damageResolver($state)->applyDamage($target, $val, $actionType, $attacker, $skipHunt);
+    }
+
+    public function forceDeath(
+        GameState $state,
+        CardInstance $target,
+        string $cause,
+        ?CardInstance $source = null
+    ): void {
+        $this->damageResolver($state)->forceDeath($target, $cause, $source);
     }
 
     private function diceToLevel(int $dice): string

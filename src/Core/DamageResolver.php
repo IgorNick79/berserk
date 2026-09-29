@@ -33,7 +33,11 @@ final class DamageResolver
 
         foreach ($target->modifiers as $m) {
             if (($m['stat'] ?? '') === 'shield_light') {
-                $magicTypes = ['magic', 'cast', 'discharge', 'poison'];
+                $magicTypes = [
+                    'magic', 'cast', 'discharge', 'poison',
+                    'damage_on_dice', 'self_wound', 'transfer_wounds',
+                    'wound_transfer', 'whip', 'blood_tap',
+                ];
                 if (!in_array($actionType, $magicTypes, true)) {
                     return;
                 }
@@ -41,7 +45,11 @@ final class DamageResolver
             }
         }
 
-        $armorIgnores = ['cast', 'magic', 'discharge', 'poison', 'heal'];
+        $armorIgnores = [
+            'cast', 'magic', 'discharge', 'poison', 'heal',
+            'damage_on_dice', 'self_wound', 'transfer_wounds',
+            'wound_transfer', 'whip', 'blood_tap',
+        ];
         if (!in_array($actionType, $armorIgnores, true)) {
             if ($target->armor > 0) {
                 if ($val <= $target->armor) {
@@ -121,47 +129,73 @@ final class DamageResolver
         }
 
         if ($target->hp <= 0) {
-            $target->hp = 0;
-            $target->dying = true;
-
-            (new ValhallaProcessor($this->state, damage: $this))->markPending($target, $actionType);
-
-            $this->refreshArmor();
-            $this->clearRootedBySource($target->instanceId);
-
-            if ($attacker
-                && !empty($attacker->prop['deadeat'])
-                && CardStats::isMeleeAction($actionType)
-                && $attacker->hp > 0) {
-
-                if (!empty($this->state->battle['strike'])) {
-                    $this->state->battle['strike']['deadeat_queue'][] = [
-                        'instance_id' => $attacker->instanceId,
-                    ];
-                } else {
-                    if (!empty($attacker->prop['deadeat_hp_bonus'])) {
-                        $attacker->hpMax += (int) $attacker->prop['deadeat_hp_bonus'];
-                    }
-                    $attacker->hp = $attacker->hpMax;
-                }
-            }
-
-            $deathByAttack = in_array($actionType,
-                ['strike', 'uchr', 'shot', 'throw', 'tap', 'discharge', 'answer'],
-                true
-            );
-            $this->triggerLineDeathNextStrikeBonus($target);
-            $this->triggerOnAnyDeath($target, $actionType);
-            if ($deathByAttack) {
-                $this->triggerOnDeath($target);
-            }
-
-            if (empty($this->state->battle['strike'])) {
-                (new ZoneManager($this->state))->toGraveyard($target);
-            }
+            $this->resolveDeath($target, $actionType, $attacker);
         }
 
         $this->checkGameOver();
+    }
+
+    public function forceDeath(CardInstance $target, string $cause, ?CardInstance $source = null): void
+    {
+        $this->resolveDeath($target, $cause, $source);
+        $this->checkGameOver();
+    }
+
+    private function resolveDeath(CardInstance $target, string $cause, ?CardInstance $source = null): void
+    {
+        if ($target->dying) return;
+        if ($target->zone !== CardInstance::ZONE_FIELD
+            && $target->zone !== CardInstance::ZONE_FLYING) {
+            return;
+        }
+
+        $target->hp = 0;
+        $target->dying = true;
+
+        (new ValhallaProcessor($this->state, damage: $this))->markPending($target, $cause);
+
+        $this->refreshArmor();
+        $this->clearRootedBySource($target->instanceId);
+
+        if ($source
+            && !empty($source->prop['deadeat'])
+            && $this->shouldTriggerDeadeat($cause)
+            && $source->hp > 0) {
+
+            if (!empty($this->state->battle['strike'])) {
+                $this->state->battle['strike']['deadeat_queue'][] = [
+                    'instance_id' => $source->instanceId,
+                ];
+            } else {
+                if (!empty($source->prop['deadeat_hp_bonus'])) {
+                    $source->hpMax += (int) $source->prop['deadeat_hp_bonus'];
+                }
+                $source->hp = $source->hpMax;
+            }
+        }
+
+        $this->triggerLineDeathNextStrikeBonus($target);
+        $this->triggerOnAnyDeath($target, $cause);
+        if ($this->shouldTriggerOnDeath($cause)) {
+            $this->triggerOnDeath($target);
+        }
+
+        if (empty($this->state->battle['strike'])) {
+            (new ZoneManager($this->state))->toGraveyard($target);
+        }
+    }
+
+    private function shouldTriggerDeadeat(string $cause): bool
+    {
+        return CardStats::isMeleeAction($cause);
+    }
+
+    private function shouldTriggerOnDeath(string $cause): bool
+    {
+        return in_array($cause,
+            ['strike', 'uchr', 'shot', 'throw', 'tap', 'discharge', 'answer', 'execute', 'self_destroy'],
+            true
+        );
     }
 
     private function triggerLineDeathNextStrikeBonus(CardInstance $died): void

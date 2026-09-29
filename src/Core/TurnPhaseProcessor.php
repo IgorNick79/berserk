@@ -634,19 +634,8 @@ final class TurnPhaseProcessor
             $poison = (int) $card->markers['poison']['value'];
             if ($poison <= 0) continue;
 
-            $hpBefore   = $card->hp;
-            $card->hp  -= $poison;
-
-            if ($card->hp <= 0) {
-                $card->hp    = 0;
-                $card->dying = true;
-                $this->engine->refreshArmor($this->state);
-                $this->engine->triggerOnAnyDeath($this->state, $card, 'poison');
-                if (empty($this->state->battle['strike'])) {
-                    (new ZoneManager($this->state))->toGraveyard($card);
-                }
-                $this->engine->checkGameOver($this->state);
-            }
+            $hpBefore = $card->hp;
+            $this->engine->applyDamage($this->state, $card, $poison, 'poison');
 
             $affected[] = ['instance_id' => $card->instanceId, 'delta' => -($hpBefore - $card->hp)];
         }

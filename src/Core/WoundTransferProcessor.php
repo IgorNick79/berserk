@@ -242,12 +242,7 @@ final class WoundTransferProcessor
             $target = $this->state->getCard($t['target_id']);
             if (!$target) continue;
 
-            $target->hp -= (int) $t['amount'];
-            if ($target->hp <= 0) {
-                $target->hp = 0;
-                $target->dying = true;
-                (new ZoneManager($this->state))->toGraveyard($target);
-            }
+            $this->engine->applyDamage($this->state, $target, (int) $t['amount'], 'wound_transfer', $source);
         }
 
         // Закрываем источник только для after-инстанта (для main_phase уже закрыт в start)
