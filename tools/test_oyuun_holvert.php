@@ -310,6 +310,26 @@ ohAssert(!$result->success || $result->error !== 'Карта не может а�
 
 $state = ohState(
     holvert(),
+    ohCard(['instanceId' => 2, 'ukid' => 'card_2', 'row' => 3, 'col' => 4, 'closed' => false, 'prop' => ['has_line' => true]]),
+    ohEnemy(5)
+);
+ohStrikeApply($state, 15, 5, 'strong');
+ohAssert(empty($state->battle['pending_holvert_open']), 'Holvert should ignore open line allies.');
+ohAssert(!CardStats::hasCannotAttack($state->getCard(2)), 'Holvert should not debuff an already open line ally.');
+
+$state = ohState(
+    holvert(),
+    ohCard(['instanceId' => 2, 'ukid' => 'card_2', 'row' => 3, 'col' => 4, 'closed' => false, 'prop' => ['has_line' => true]]),
+    ohCard(['instanceId' => 3, 'ukid' => 'card_3', 'row' => 2, 'col' => 3, 'closed' => true, 'prop' => ['has_line' => true]]),
+    ohEnemy(5)
+);
+ohStrikeApply($state, 15, 5, 'strong');
+ohAssert($state->getCard(2)->closed === false, 'Holvert should leave open ally unchanged when another closed candidate exists.');
+ohAssert(!CardStats::hasCannotAttack($state->getCard(2)), 'Holvert should not debuff open ally when another closed candidate exists.');
+ohAssert(!$state->getCard(3)->closed && CardStats::hasCannotAttack($state->getCard(3)), 'Holvert should auto-open the only closed line ally.');
+
+$state = ohState(
+    holvert(),
     ohCard(['instanceId' => 2, 'ukid' => 'card_2', 'row' => 3, 'col' => 4, 'closed' => true, 'prop' => ['has_line' => true]]),
     ohEnemy(5, 4, 3, ['prop' => ['damage_reduction' => [['types' => ['strike'], 'value' => 99]]]])
 );

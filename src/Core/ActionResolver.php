@@ -2178,6 +2178,7 @@ final class ActionResolver
         foreach (CardStats::getLineGroup($this->state, $source) as $card) {
             if ($card->instanceId === $source->instanceId) continue;
             if ($card->dying || $card->hp <= 0) continue;
+            if (!$card->closed) continue;
             $candidateIds[] = $card->instanceId;
         }
 
@@ -2222,6 +2223,7 @@ final class ActionResolver
         $target = $this->state->getCard($targetId);
         if (!$target
             || $target->instanceId === $source->instanceId
+            || !$target->closed
             || !in_array($target, CardStats::getLineGroup($this->state, $source), true)) {
             unset($this->state->battle['pending_holvert_open']);
             return Result::error('Цель больше недоступна');
