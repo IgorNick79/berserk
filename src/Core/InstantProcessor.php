@@ -655,9 +655,7 @@ final class InstantProcessor
         $listKey = $pi['list_key'] ?? null;
 
         if ($src === 'turn_instants') {
-            if ($listKey !== null) {
-                $this->removeTurnInstant($pi['card_id'], $listKey);
-            }
+            unset($this->state->battle['pending_turn_instants']);
         } else {
             // Убираем подзадачу из turn_phase
             if (!empty($this->state->battle['turn_phase']['sub']['pending_id'])) {

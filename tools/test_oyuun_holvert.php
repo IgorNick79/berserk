@@ -14,6 +14,7 @@ use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\InstantProcessor;
 use Berserk\Core\StrikeResolver;
+use Berserk\Core\TurnPhaseProcessor;
 use Berserk\Core\TurnProcessor;
 use Berserk\View\Screen\Battle\InfoPanel;
 use Berserk\View\Template;
@@ -227,15 +228,28 @@ ohAssert($result->success, $result->error ?? 'Oyuun should open instant target p
 $html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render($state, GameState::PLAYER_HOST, 'host', ohCardsInfo(), '/battle?game=315&first=');
 ohAssert(str_contains($html, 'Союзник A'), 'Oyuun picker should include own closed creature.');
 ohAssert(!str_contains($html, 'Враг'), 'Oyuun picker should not include enemy creatures.');
+$result = ohApply($state, GameState::PLAYER_HOST, new Command('cancel_pending'));
+ohAssert($result->success, $result->error ?? 'Oyuun instant target picker should be cancellable.');
+ohAssert(empty($state->battle['pending_instant_pick']), 'Oyuun cancel should clear instant target pending.');
+ohAssert(!$state->getCard(31)->closed, 'Oyuun cancel should not close Oyuun.');
+ohAssert(empty($state->getCard(31)->flags['instant_uses_this_turn']['battle_frenzy']), 'Oyuun cancel should not spend uses_per_turn.');
+ohAssert($state->getCard(2)->closed && $state->getCard(2)->hp === 3, 'Oyuun cancel should not open or wound target.');
+$result = ohApply($state, GameState::PLAYER_HOST, new Command('open_turn_instants'));
+ohAssert($result->success, $result->error ?? 'Oyuun instant window should reopen after cancel.');
+$result = ohApply($state, GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 31, 'instant_key' => 'battle_frenzy']));
+ohAssert($result->success, $result->error ?? 'Oyuun should be playable again after cancel.');
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 2]));
 ohAssert($result->success, $result->error ?? 'Oyuun battle frenzy should resolve.');
 ohAssert($state->getCard(31)->closed, 'Oyuun should close as instant cost.');
 ohAssert(!$state->getCard(2)->closed, 'Oyuun target should open.');
 ohAssert($state->getCard(2)->hp === 2, 'Oyuun target should take 1 wound.');
 ohAssert((int) ($state->getCard(2)->flags['attacks_used_this_turn'] ?? -1) === 0, 'Oyuun open should reset target usage.');
+$html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render($state, GameState::PLAYER_HOST, 'host', ohCardsInfo(), '/battle?game=315&first=');
+ohAssert(substr_count($html, 'открыта и получает 1 рану') === 1, 'Oyuun wound message should appear once after one use.');
 unset($state->battle['pending_turn_instants']);
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('strike', ['card_id' => 2, 'target_id' => 5]));
 ohAssert($result->success, $result->error ?? 'Oyuun-opened target should be able to attack without restrictions.');
+ohAssert(empty($state->battle['instant_result']), 'Oyuun instant result should be cleared by the next independent command.');
 
 $state->battle['strike'] = null;
 $state->getCard(2)->closed = true;
@@ -261,13 +275,21 @@ ohAssert(empty($state->getCard(31)->flags['instant_uses_this_turn']), 'Oyuun ins
 
 $state = ohState(
     oyuun(),
-    ohCard(['instanceId' => 2, 'ukid' => 'card_2', 'closed' => true, 'hp' => 1, 'hpMax' => 1])
+    ohCard(['instanceId' => 2, 'ukid' => 'card_2', 'closed' => true, 'hp' => 1, 'hpMax' => 1]),
+    ohEnemy(5)
 );
 ohApply($state, GameState::PLAYER_HOST, new Command('open_turn_instants'));
 ohApply($state, GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 31, 'instant_key' => 'battle_frenzy']));
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 2]));
 ohAssert($result->success, $result->error ?? 'Lethal Oyuun frenzy should resolve.');
 ohAssert($state->getCard(2)->zone === CardInstance::ZONE_GRAVEYARD, 'Lethal Oyuun wound should send target to graveyard.');
+$html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render($state, GameState::PLAYER_HOST, 'host', ohCardsInfo(), '/battle?game=315&first=');
+ohAssert(substr_count($html, 'получает 1 рану и погибает') === 1, 'Lethal Oyuun wound message should appear once.');
+
+$state = ohState(holvert(), ohEnemy(5));
+ohStrikeApply($state, 15, 5, 'strong');
+ohAssert(empty($state->battle['pending_holvert_open']), 'Holvert should not create pending with only self in line group.');
+ohAssert(empty($state->battle['strike']['holvert_open']), 'Holvert should not open himself.');
 
 $state = ohState(
     holvert(),
@@ -311,6 +333,7 @@ $state = ohState(
 );
 ohStrikeApply($state, 15, 5, 'strong');
 ohAssert(!empty($state->battle['pending_holvert_open']), 'Holvert should open mandatory pending with multiple line targets.');
+ohAssert(!in_array(15, $state->battle['pending_holvert_open']['candidate_ids'] ?? [], true), 'Holvert pending should not include Holvert himself.');
 $html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render($state, GameState::PLAYER_HOST, 'host', ohCardsInfo(), '/battle?game=315&first=');
 ohAssert(str_contains($html, 'выберите существо в строю'), 'Holvert pending should explain line target choice.');
 ohAssert(!str_contains($html, 'cancel_pending'), 'Holvert mandatory pending should not show cancel.');
@@ -327,5 +350,38 @@ $state->getCard(3)->closed = true;
 ohAssert(CardStats::hasCannotAttack($state->getCard(3)), 'Oyuun/openCard should not clear Holvert cannot_attack.');
 (new TurnProcessor($state, new Engine()))->afterEndPhase(GameState::PLAYER_HOST, GameState::PLAYER_PLAYER);
 ohAssert(!CardStats::hasCannotAttack($state->getCard(3)), 'cannot_attack expire=end_of_turn should clear at end of current turn.');
+
+$state = ohState(
+    oyuun(['owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 2]),
+    ohCard(['instanceId' => 2, 'ukid' => 'card_2', 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 3, 'closed' => true, 'hp' => 3, 'hpMax' => 3])
+);
+(new TurnPhaseProcessor($state, new Engine()))->beginStartPhase(GameState::PLAYER_HOST);
+ohAssert(($state->battle['turn_phase']['sub']['parent_type'] ?? null) === 'instants', 'Passive player should get start-phase instant subwindow.');
+$result = ohApply($state, GameState::PLAYER_PLAYER, new Command('turn_sub', ['sub_id' => 'instant_31_battle_frenzy']));
+ohAssert($result->success, $result->error ?? 'Passive player should be able to declare start-phase instant.');
+ohAssert(!empty($state->battle['pending_instant_pick']), 'Passive start-phase instant should open target picker.');
+$result = ohApply($state, GameState::PLAYER_PLAYER, new Command('cancel_pending'));
+ohAssert($result->success, $result->error ?? 'Passive start-phase instant target picker should be cancellable.');
+ohAssert(empty($state->battle['pending_instant_pick']), 'Passive cancel should clear instant picker.');
+ohAssert(!$state->getCard(31)->closed && $state->getCard(2)->closed && $state->getCard(2)->hp === 3, 'Passive cancel should not pay costs or apply effect.');
+$result = ohApply($state, GameState::PLAYER_PLAYER, new Command('turn_sub', ['sub_id' => 'instant_31_battle_frenzy']));
+ohAssert($result->success, $result->error ?? 'Passive player should be able to redeclare after cancel.');
+$result = ohApply($state, GameState::PLAYER_PLAYER, new Command('choose_instant_pick', ['target_id' => 2]));
+ohAssert($result->success, $result->error ?? 'Passive start-phase instant should resolve.');
+ohAssert($state->getCard(31)->closed && !$state->getCard(2)->closed && $state->getCard(2)->hp === 2, 'Passive start-phase instant should close source, open target, and wound it.');
+
+$state = ohState(
+    oyuun(['owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 2]),
+    ohCard(['instanceId' => 2, 'ukid' => 'card_2', 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 3, 'closed' => true, 'hp' => 3, 'hpMax' => 3])
+);
+(new TurnPhaseProcessor($state, new Engine()))->beginEndPhase(GameState::PLAYER_HOST);
+ohAssert(($state->battle['turn_phase']['sub']['parent_type'] ?? null) === 'instants', 'Passive player should get end-phase instant subwindow.');
+$result = ohApply($state, GameState::PLAYER_PLAYER, new Command('turn_sub', ['sub_id' => 'instant_31_battle_frenzy']));
+ohAssert($result->success, $result->error ?? 'Passive player should be able to declare end-phase instant.');
+$result = ohApply($state, GameState::PLAYER_PLAYER, new Command('choose_instant_pick', ['target_id' => 2]));
+ohAssert($result->success, $result->error ?? 'Passive end-phase instant should resolve.');
+ohAssert(!$state->getCard(2)->closed, 'Passive end-phase instant should open target.');
+ohAssert($state->getCard(2)->hp === 2, 'Passive end-phase instant should wound target.');
+ohAssert(empty($state->battle['turn_phase']), 'Passive end-phase instant should let the end phase complete without a hanging pending.');
 
 echo "Oyuun and Holvert regression tests passed.\n";

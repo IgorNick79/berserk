@@ -317,29 +317,7 @@ final class TurnPhaseProcessor
         $queue = array_merge($queue, $this->buildTurnStartTasks($otsCards, 'opponent_turn_start'));
 
         // Turn-инстанты — одна задача с подочередью
-        $instants = [];
-        foreach ($this->state->cards as $card) {
-            if ($card->owner !== $passiveKey) continue;
-            if ($card->zone !== CardInstance::ZONE_FIELD
-                && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || $card->closed) continue;
-            if (empty($card->prop['instants'])) continue;
-
-            foreach ($card->prop['instants'] as $inst) {
-                if (($inst['trigger'] ?? '') !== 'turn') continue;
-                if (!empty($inst['aftermath'])) continue;
-
-                $instants[] = [
-                    'id'      => 'instant_' . $card->instanceId . '_' . ($inst['key'] ?? ''),
-                    'card_id' => $card->instanceId,
-                    'ukid'    => $card->ukid,
-                    'row'     => $card->row,
-                    'col'     => $card->col,
-                    'label'   => $inst['name'] ?? 'Инстант',
-                    'payload' => $inst,
-                ];
-            }
-        }
+        $instants = $this->buildInstantSubTasks($passiveKey);
 
         if (!empty($instants)) {
             array_unshift($queue, [
@@ -359,29 +337,7 @@ final class TurnPhaseProcessor
         $queue = [];
 
         // Turn-инстанты — в самом конце очереди
-        $instants = [];
-        foreach ($this->state->cards as $card) {
-            if ($card->owner !== $activeKey) continue;
-            if ($card->zone !== CardInstance::ZONE_FIELD
-                && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || $card->closed) continue;
-            if (empty($card->prop['instants'])) continue;
-
-            foreach ($card->prop['instants'] as $inst) {
-                if (($inst['trigger'] ?? '') !== 'turn') continue;
-                if (!empty($inst['aftermath'])) continue;
-                
-                $instants[] = [
-                    'id'      => 'instant_' . $card->instanceId . '_' . ($inst['key'] ?? ''),
-                    'card_id' => $card->instanceId,
-                    'ukid'    => $card->ukid,
-                    'row'     => $card->row,
-                    'col'     => $card->col,
-                    'label'   => $inst['name'] ?? 'Инстант',
-                    'payload' => $inst,
-                ];
-            }
-        }
+        $instants = $this->buildInstantSubTasks($activeKey);
 
         if (!empty($instants)) {
             $queue[] = [
@@ -481,6 +437,27 @@ final class TurnPhaseProcessor
         $queue = array_merge($queue, $this->buildTurnStartTasks($tsCards, 'turn_start'));
 
         return $queue;
+    }
+
+    private function buildInstantSubTasks(string $ownerKey): array
+    {
+        $instants = [];
+        foreach ((new InstantProcessor($this->state, $this->engine))->getInstants($ownerKey, 'before', 'turn') as $inst) {
+            $payload = $inst['payload'] ?? [];
+            if (!empty($payload['aftermath'])) continue;
+
+            $instants[] = [
+                'id'      => 'instant_' . $inst['card_id'] . '_' . ($payload['key'] ?? ''),
+                'card_id' => $inst['card_id'],
+                'ukid'    => $inst['ukid'],
+                'row'     => $inst['row'],
+                'col'     => $inst['col'],
+                'label'   => $inst['label'],
+                'payload' => $payload,
+            ];
+        }
+
+        return $instants;
     }
 
     /**
@@ -587,11 +564,21 @@ final class TurnPhaseProcessor
             $ownerKey = $card->owner;   // ← владелец карты, не активный хода
 
             $inst   = $subTask['payload'] ?? [];
+            $key    = (string) ($inst['key'] ?? '');
             $target = $inst['target'] ?? 'self';
+            if (!$this->instantStillAvailable($ownerKey, $card->instanceId, $key)) return;
 
             if ($target === 'self') {
+                $cost = (int) ($inst['coins'] ?? 0);
+                if ($cost > 0) {
+                    if ($card->coins < $cost) return;
+                    $card->coins -= $cost;
+                    $this->engine->syncCoinBonus($card);
+                }
                 $card->closed = true;
                 $this->engine->applyInstantEffect($this->state, $inst['effect'] ?? [], $card, $card, $ownerKey);
+                $this->engine->finalizeDying($this->state);
+                $this->markInstantUsed($card, $key);
                 return;
             }
 
@@ -608,8 +595,30 @@ final class TurnPhaseProcessor
                 'effect'  => $inst['effect'] ?? [],
                 'label'   => $subTask['label'] ?? 'Инстант',
                 'cost'    => $cost,
+                'source'   => 'phase',
+                'list_key' => $key,
             ];
         }
+    }
+
+    private function instantStillAvailable(string $ownerKey, int $cardId, string $key): bool
+    {
+        foreach ((new InstantProcessor($this->state, $this->engine))->getInstants($ownerKey, 'before', 'turn') as $inst) {
+            if ((int) $inst['card_id'] === $cardId && (string) ($inst['payload']['key'] ?? '') === $key) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function markInstantUsed(CardInstance $card, string $key): void
+    {
+        if ($key === '') return;
+        if (!isset($card->flags['instant_uses_this_turn']) || !is_array($card->flags['instant_uses_this_turn'])) {
+            $card->flags['instant_uses_this_turn'] = [];
+        }
+        $card->flags['instant_uses_this_turn'][$key] =
+            ((int) ($card->flags['instant_uses_this_turn'][$key] ?? 0)) + 1;
     }
 
     private function executePoison(string $activeKey): array
@@ -989,29 +998,7 @@ final class TurnPhaseProcessor
         $queue = [];
 
         // Turn-инстанты — в начале очереди
-        $instants = [];
-        foreach ($this->state->cards as $card) {
-            if ($card->owner !== $passiveKey) continue;
-            if ($card->zone !== CardInstance::ZONE_FIELD
-                && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || $card->closed) continue;
-            if (empty($card->prop['instants'])) continue;
-
-            foreach ($card->prop['instants'] as $inst) {
-                if (($inst['trigger'] ?? '') !== 'turn') continue;
-                if (!empty($inst['aftermath'])) continue;
-
-                $instants[] = [
-                    'id'      => 'instant_' . $card->instanceId . '_' . ($inst['key'] ?? ''),
-                    'card_id' => $card->instanceId,
-                    'ukid'    => $card->ukid,
-                    'row'     => $card->row,
-                    'col'     => $card->col,
-                    'label'   => $inst['name'] ?? 'Инстант',
-                    'payload' => $inst,
-                ];
-            }
-        }
+        $instants = $this->buildInstantSubTasks($passiveKey);
         if (!empty($instants)) {
             $queue[] = [
                 'id'        => 'instants',

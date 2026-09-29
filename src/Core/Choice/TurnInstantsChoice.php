@@ -15,7 +15,7 @@ use Berserk\View\Ui\TaskCard;
 final class TurnInstantsChoice implements ChoiceHandlerInterface
 {
     public function pendingKey(): string { return 'pending_turn_instants'; }
-    public function commandTypes(): array { return ['play_turn_instant']; }
+    public function commandTypes(): array { return ['play_turn_instant', 'cancel_pending']; }
 
     public function isActive(GameState $state): bool
     {
@@ -72,6 +72,9 @@ final class TurnInstantsChoice implements ChoiceHandlerInterface
         string $playerKey,
         Command $cmd
     ): Result {
+        if ($cmd->type === 'cancel_pending') {
+            return (new \Berserk\Core\ActionResolver($state, $engine))->cancelPending($playerKey, $cmd);
+        }
         $ar = new \Berserk\Core\ActionResolver($state, $engine);
         return $ar->playTurnInstant($playerKey, $cmd);
     }

@@ -21,7 +21,7 @@ final class InstantPickChoice implements ChoiceHandlerInterface
 
     public function commandTypes(): array
     {
-        return ['choose_instant_pick'];
+        return ['choose_instant_pick', 'cancel_pending'];
     }
 
     public function spec(
@@ -85,6 +85,9 @@ final class InstantPickChoice implements ChoiceHandlerInterface
         string $playerKey,
         Command $cmd
     ): Result {
+        if ($cmd->type === 'cancel_pending') {
+            return (new \Berserk\Core\ActionResolver($state, $engine))->cancelPending($playerKey, $cmd);
+        }
         $turn = new \Berserk\Core\TurnPhaseProcessor($state, $engine);
         return $turn->chooseInstantPick($playerKey, $cmd);
     }

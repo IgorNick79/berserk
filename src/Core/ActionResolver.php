@@ -2242,7 +2242,9 @@ final class ActionResolver
         }
 
         $target = $this->state->getCard($targetId);
-        if (!$target || !in_array($target, CardStats::getLineGroup($this->state, $source), true)) {
+        if (!$target
+            || $target->instanceId === $source->instanceId
+            || !in_array($target, CardStats::getLineGroup($this->state, $source), true)) {
             unset($this->state->battle['pending_holvert_open']);
             return Result::error('Цель больше недоступна');
         }
