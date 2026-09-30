@@ -738,62 +738,145 @@ final class BattleScreen
         $lines[] = 'active: ' . ($state->battle['active'] ?? '?');
         $lines[] = 'turn: ' . ($state->battle['turn'] ?? '?');
         $lines[] = 'version: ' . $state->version;
+        $lines[] = 'status: ' . $state->status;
+        $lines[] = 'winner: ' . ($state->winner ?? '—');
+        $lines[] = 'first_player: ' . ($state->getFirstPlayerKey() ?? '?');
+
+        // ─── Все карты на поле / в полёте ────────────────────
         $lines[] = '';
-
-        // Все карты с модификаторами / маркерами / монетами
+        $lines[] = '--- cards on field ---';
         foreach ($state->cards as $card) {
-            $zone = $card->zone;
-            if (!in_array($zone, ['field', 'flying'], true)) continue;
+            if ($card->zone !== CardInstance::ZONE_FIELD
+                && $card->zone !== CardInstance::ZONE_FLYING) continue;
 
-            $interesting = !empty($card->modifiers)
-                || !empty($card->markers)
-                || $card->coins > 0
-                || $card->armor > 0;
+            $pos = $card->zone === CardInstance::ZONE_FLYING
+                ? "fly#{$card->slot}"
+                : "({$card->row},{$card->col})";
 
-            if (!$interesting) continue;
-
-            $pos = $zone === 'flying' ? "fly(#{ $card->slot })" : "({$card->row},{$card->col})";
-            $lines[] = "#{$card->instanceId} {$card->ukid} [{$card->owner}] {$pos}";
-
-            if ($card->coins > 0)   $lines[] = "  coins: {$card->coins}";
-            if ($card->armor > 0)   $lines[] = "  armor: {$card->armor}/{$card->armorMax}";
-
-            foreach ($card->modifiers as $i => $m) {
-                $lines[] = '  mod[' . $i . ']: ' . json_encode($m, JSON_UNESCAPED_UNICODE);
+            $flags = [];
+            foreach (['damage_taken_this_turn', 'damage_taken_this_strike',
+                      'ranged_hits_this_turn', 'attacks_used_this_turn',
+                      'moved_this_turn', 'any_death_used_this_turn'] as $fk) {
+                $v = $card->flags[$fk] ?? null;
+                if ($v !== null && $v !== false && $v !== 0) {
+                    $flags[] = "{$fk}={$v}";
+                }
             }
-            foreach ($card->markers as $type => $m) {
-                $lines[] = "  marker[{$type}]: " . json_encode($m, JSON_UNESCAPED_UNICODE);
+
+            $line = "#{$card->instanceId} {$card->ukid} [{$card->owner}] {$pos}"
+                . " hp={$card->hp}/{$card->hpMax}";
+
+            if ($card->coins > 0)      $line .= " coins={$card->coins}";
+            if ($card->armor > 0)      $line .= " armor={$card->armor}";
+            if ($card->closed)         $line .= " closed";
+            if (!$card->revealed)      $line .= " hidden";
+            if ($card->dying)          $line .= " DYING";
+
+            if (!empty($flags))        $line .= ' | ' . implode(' ', $flags);
+            if (!empty($card->markers)) {
+                $mk = [];
+                foreach ($card->markers as $t => $m) {
+                    $v = $m['value'] ?? '?';
+                    $mk[] = "{$t}={$v}";
+                }
+                $line .= ' | mk:' . implode(',', $mk);
+            }
+            if (!empty($card->modifiers)) {
+                $line .= ' | mods=' . count($card->modifiers);
+            }
+
+            $lines[] = $line;
+        }
+
+        // ─── Пайлы ─────────────────────────────────────────
+        $counts = ['deck' => [], 'graveyard' => [], 'exile' => []];
+        foreach ($state->cards as $card) {
+            if (isset($counts[$card->zone])) {
+                $counts[$card->zone][$card->owner] =
+                    ($counts[$card->zone][$card->owner] ?? 0) + 1;
+            }
+        }
+        $lines[] = '';
+        $lines[] = '--- piles ---';
+        foreach (['deck', 'graveyard', 'exile'] as $zone) {
+            $host = $counts[$zone]['host']   ?? 0;
+            $plr  = $counts[$zone]['player'] ?? 0;
+            $lines[] = "{$zone}: host={$host} player={$plr}";
+        }
+
+        // ─── Cell markers ──────────────────────────────────
+        if (!empty($state->cell_markers)) {
+            $lines[] = '';
+            $lines[] = '--- cell_markers ---';
+            foreach ($state->cell_markers as $key => $m) {
+                $lines[] = "  {$key}: " . json_encode($m, JSON_UNESCAPED_UNICODE);
             }
         }
 
+        // ─── Strike ────────────────────────────────────────
         if ($strike) {
             $lines[] = '';
             $lines[] = '--- strike ---';
             $lines[] = json_encode([
-                'kind'        => $strike['kind'] ?? 'strike',
-                'state'       => $strike['state'] ?? '?',
+                'kind'        => $strike['kind']        ?? 'strike',
+                'state'       => $strike['state']       ?? '?',
                 'attacker_id' => $strike['attacker_id'] ?? null,
-                'target_id'   => $strike['target_id'] ?? null,
+                'target_id'   => $strike['target_id']   ?? null,
                 'defender_id' => $strike['defender_id'] ?? null,
+                'attack_dice' => $strike['attack_dice'] ?? null,
+                'defend_dice' => $strike['defend_dice'] ?? null,
+                'final'       => $strike['final']       ?? null,
             ], JSON_UNESCAPED_UNICODE);
         }
 
-        $pending = [];
-        foreach (['pending_coin_spend', 'pending_transfer', 'pending_any_death', 'pending_card_choice'] as $key) {
-            if (!empty($state->battle[$key])) {
-                $pending[$key] = $state->battle[$key];
+        // ─── Turn phase ────────────────────────────────────
+        if (!empty($state->battle['turn_phase'])) {
+            $tp = $state->battle['turn_phase'];
+            $lines[] = '';
+            $lines[] = '--- turn_phase ---';
+            $lines[] = 'phase=' . ($tp['phase'] ?? '?')
+                . ' side=' . ($tp['side'] ?? '?')
+                . ' active=' . ($tp['active_key'] ?? '?')
+                . ' passive=' . ($tp['passive_key'] ?? '?');
+
+            foreach (['passive_queue', 'active_queue'] as $qk) {
+                if (empty($tp[$qk])) continue;
+                $lines[] = "  {$qk}:";
+                foreach ($tp[$qk] as $task) {
+                    $lines[] = '    - ' . ($task['type'] ?? '?')
+                        . ' id=' . ($task['id'] ?? '?')
+                        . ' label=' . ($task['label'] ?? '');
+                }
+            }
+            if (!empty($tp['sub'])) {
+                $sub = $tp['sub'];
+                $lines[] = '  sub: parent=' . ($sub['parent_type'] ?? '?')
+                    . ' remaining=' . count($sub['remaining'] ?? []);
+            }
+            if (!empty($tp['pending_ack'])) {
+                $lines[] = '  pending_ack: ' . json_encode(
+                    $tp['pending_ack'], JSON_UNESCAPED_UNICODE
+                );
             }
         }
-        if ($pending) {
-            $lines[] = '';
-            $lines[] = '--- pending ---';
-            $lines[] = json_encode($pending, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+        // ─── Все pending_* ─────────────────────────────────
+        $lines[] = '';
+        $lines[] = '--- pending ---';
+        $anyPending = false;
+        foreach ($state->battle as $key => $val) {
+            if (!str_starts_with((string) $key, 'pending_')) continue;
+            if (empty($val)) continue;
+            $anyPending = true;
+            $lines[] = "{$key}: " . json_encode($val, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         }
-        if (!empty($card->flags['ranged_hits_this_turn'])) {
-            $lines[] = "  ranged_hits: {$card->flags['ranged_hits_this_turn']}";
+        if (!$anyPending) {
+            $lines[] = '  (нет)';
         }
 
-        return '<pre class="debug-panel">' . htmlspecialchars(implode("\n", $lines), ENT_QUOTES) . '</pre>';
+        return '<pre class="debug-panel">'
+            . htmlspecialchars(implode("\n", $lines), ENT_QUOTES)
+            . '</pre>';
     }
 
     
