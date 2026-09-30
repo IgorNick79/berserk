@@ -54,13 +54,20 @@ final class MovementEffectResolver
         $effects = $card->prop['on_move'] ?? [];
         if (is_array($effects)) {
             foreach ($effects as $effect) {
-                if (($effect['type'] ?? '') === 'modifier') {
-                    $card->modifiers[] = [
-                        'stat'   => $effect['stat'] ?? 'ability_strike',
-                        'value'  => (int) ($effect['value'] ?? 1),
-                        'expire' => $effect['expire'] ?? 'end_of_turn',
-                    ];
+                if (($effect['type'] ?? '') !== 'modifier') continue;
+
+                $modifier = $effect;
+                unset($modifier['type']);
+                if (empty($modifier['stat'])) {
+                    $modifier['stat'] = 'ability_strike';
                 }
+                if (!isset($modifier['value'])) {
+                    $modifier['value'] = 1;
+                }
+                if (empty($modifier['expire'])) {
+                    $modifier['expire'] = 'end_of_turn';
+                }
+                $card->modifiers[] = $modifier;
             }
         }
 

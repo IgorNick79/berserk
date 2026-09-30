@@ -281,7 +281,26 @@ final class CardStats
             return $range;
         }
 
-        return $range + self::getColumnRangeAuraBonus($state, $card, (string) ($action['type'] ?? ''));
+        $actionType = (string) ($action['type'] ?? '');
+        return $range
+            + self::getColumnRangeAuraBonus($state, $card, $actionType)
+            + self::getActionRangeBonus($card, $actionType);
+    }
+
+    public static function getActionRangeBonus(CardInstance $card, string $actionType): int
+    {
+        if ($actionType === '') return 0;
+
+        $bonus = 0;
+        foreach ($card->modifiers as $m) {
+            if (($m['stat'] ?? '') !== 'action_range') continue;
+
+            $types = $m['types'] ?? null;
+            if (is_array($types) && !in_array($actionType, $types, true)) continue;
+
+            $bonus += (int) ($m['value'] ?? 0);
+        }
+        return $bonus;
     }
 
     public static function getColumnRangeAuraBonus(GameState $state, CardInstance $card, string $actionType): int
@@ -1001,10 +1020,11 @@ final class CardStats
             'move'           => 'Ход',
             'shot_bonus'     => 'Выстрел',
             'next_action_bonus' => 'Действие',
-            'zoal'           => 'ЗОАЛ',
-            'damage_reduction' => 'Защита',
+            'zoal'              => 'ЗОАЛ',
+            'damage_reduction'  => 'Защита',
             'shield_light'      => 'Щит',
             'coin_strike_bonus' => 'Атака',
+            'action_range'      => 'Дальность',
             default             => $stat,
         };
     }

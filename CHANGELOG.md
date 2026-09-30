@@ -237,3 +237,28 @@ markdown
 с отравлением (Ундина, Сеятель, Хеди, Арацент, Ноками).
 
 **Откат:** `git revert <sha>`.
+
+## feat/card-s1_24 — 2026-XX-XX
+
+**Карта:** Посвященный Дзара (s1_24, Тоа-Дан, цена 5, элита).
+9 HP, move 2, удар 1-1-2.
+
+**Механики:**
+1. Разряд на 2-3-4, дальность 1.
+2. При перемещении — +1 к дальности разряда до конца хода.
+
+**Изменения:**
+- `CardStats::getEffectiveRange` — учитывает модификатор `action_range`
+  с фильтром по `types`. Новый публичный метод `getActionRangeBonus`.
+- `CardStats::statLabel` — метка «Дальность» для `action_range`.
+- `MovementEffectResolver::applyOnMoveEffects` — модификаторы из `on_move`
+  сохраняют все поля (в т.ч. `types`), а не только `stat/value/expire`.
+- SQL s1_24 — prop: discharge + on_move modifier.
+
+**Как проверить:**
+Сценарий `debug/scenarious/card_s1_24_dzara.json`:
+1. Дзара (3,2) — цель (3,5) недосягаема (dist 3, range 1).
+2. Move Дзара (3,2) → (3,3) — в debug появляется modifier `action_range`.
+3. Цель (3,5) доступна (dist 2, range 2). Разряд 2-3-4.
+
+**Откат:** `git revert <sha>` + откат SQL.
