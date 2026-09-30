@@ -456,52 +456,12 @@ final class Engine
 
     public function applyMarker(CardInstance $target, array $marker, string $sourceKey): void
     {
-        $type   = $marker['type'];
-        $timing = $marker['timing'] ?? 'source_turn';
-
-        if (!isset($target->markers[$type])) {
-            $target->markers[$type] = [
-                'value'  => 1,
-                'expire' => $marker['expire'] ?? null,
-                'source' => $sourceKey,
-                'timing' => $timing,
-            ];
-
-            if (!empty($marker['skip_first_tick'])) {
-                $target->markers[$type]['skip_first_tick'] = true;
-            }
-        } else {
-            $target->markers[$type]['value']++;
-            if (isset($marker['expire'])) {
-                $target->markers[$type]['expire'] = $marker['expire'];
-            }
-            if (!empty($marker['skip_first_tick'])) {
-                $target->markers[$type]['skip_first_tick'] = true;
-            }
-        }
+        $this->damageResolver($this->state)->applyMarker($target, $marker, $sourceKey);
     }
 
     public function applyPoison(CardInstance $target, int $value, string $sourceKey): void
     {
-        if ($value <= 0) return;
-
-        // zoo — защита от отравлений
-        if (!empty($target->prop['zoo'])) {
-            return;
-        }
-
-        if (!isset($target->markers['poison'])) {
-            $target->markers['poison'] = [
-                'value'  => $value,
-                'source' => $sourceKey,
-                'timing' => 'permanent',
-            ];
-        } else {
-            // Замещение: ставим большее
-            if ($value > $target->markers['poison']['value']) {
-                $target->markers['poison']['value'] = $value;
-            }
-        }
+        $this->damageResolver($this->state)->applyPoison($target, $value, $sourceKey);
     }
 
     public function applyRegeneration(CardInstance $card): void
