@@ -334,3 +334,24 @@ markdown
 3. Союзник излечивается на 2, удар идёт в Бьерна.
 
 **Откат:** `git revert <sha>` + откат SQL.
+
+## refactor/cancel-pending-table — 2026-XX-XX
+
+**Проблема:**
+`ActionResolver::cancelPending` — 15 почти одинаковых блоков `if (!empty(...))`.
+Каждый новый pending требовал копипасты ~8 строк. Внутри был дубль
+`pending_dice_choice`.
+
+**Изменения:**
+- `cancelPending` переписан на три группы:
+  - простые (unset при owner === playerKey) — таблица `[key, ownerField]`;
+  - card-owned (unset при карте игрока) — таблица `[key, cardIdField]`;
+  - спец (возврат монет, reopen) — через `cancelWithRefund` или свой блок.
+- Дубль `pending_dice_choice` устранён.
+- Логика ответов и resume `turn_phase` — без изменений.
+
+**Как проверить:**
+Отмена на 4 разных pending: whip (Смотритель стойла),
+wound_transfer (Волхв), coin_spend (Пустотник), self_wound (Центурион).
+
+**Откат:** `git revert <sha>`.

@@ -1645,156 +1645,71 @@ final class ActionResolver
     public function cancelPending(string $playerKey, Command $cmd): Result
     {
         $state = $this->state;
-        $cancelled = [];
 
         if (!empty($state->battle['pending_forced_strike'])) {
             return Result::error('Обязательная атака — отмена невозможна');
         }
 
-        if (!empty($state->battle['pending_whip'])) {
-            $pw = $state->battle['pending_whip'];
-            if ($pw['owner'] === $playerKey) {
-                unset($state->battle['pending_whip']);
-                $cancelled[] = 'whip';
-            }
+        $cancelled = [];
+
+        // Простые: unset если owner === playerKey
+        // [pendingKey, ownerField]
+        $simple = [
+            ['pending_whip',                    'owner'],
+            ['pending_kobold_heal',             'owner'],
+            ['pending_valhalla_pick',           'owner'],
+            ['pending_instant_pick',            'owner'],
+            ['pending_cell_marker_pick',        'owner'],
+            ['pending_dice_choice',             'owner'],
+            ['pending_combat_pick',             'owner'],
+            ['pending_turn_instants',           'owner'],
+            ['pending_forced_directional_move', 'owner'],
+        ];
+        foreach ($simple as [$key, $field]) {
+            $p = $state->battle[$key] ?? null;
+            if (!$p) continue;
+            if (($p[$field] ?? null) !== $playerKey) continue;
+            unset($state->battle[$key]);
+            $cancelled[] = substr($key, strlen('pending_'));
         }
 
-        if (!empty($state->battle['pending_kobold_heal'])) {
-            $pkh = $state->battle['pending_kobold_heal'];
-            if (($pkh['owner'] ?? null) === $playerKey) {
-                unset($state->battle['pending_kobold_heal']);
-                $cancelled[] = 'kobold_heal';
-            }
+        // Card-owned: unset если карта игрока
+        // [pendingKey, cardIdField]
+        $cardOwned = [
+            ['pending_multi_heal',      'attacker_id'],
+            ['pending_multi_discharge', 'attacker_id'],
+            ['pending_coin_spend',      'attacker_id'],
+            ['pending_blood_tap',       'attacker_id'],
+        ];
+        foreach ($cardOwned as [$key, $field]) {
+            $p = $state->battle[$key] ?? null;
+            if (!$p) continue;
+            $card = $state->getCard((int) ($p[$field] ?? 0));
+            if (!$card || $card->owner !== $playerKey) continue;
+            unset($state->battle[$key]);
+            $cancelled[] = substr($key, strlen('pending_'));
         }
 
-        // multi_heal — монеты/ресурсы не тратились
-        if (!empty($state->battle['pending_multi_heal'])) {
-            $pmh  = $state->battle['pending_multi_heal'];
-            $card = $state->getCard($pmh['attacker_id']);
-            if ($card && $card->owner === $playerKey) {
-                unset($state->battle['pending_multi_heal']);
-                $cancelled[] = 'multi_heal';
-            }
+        // Спец: возврат монет
+        if ($this->cancelWithRefund($state, $playerKey, 'pending_self_wound', 'attacker_id',
+                fn($p) => (int) ($p['action']['coins'] ?? 0))) {
+            $cancelled[] = 'self_wound';
+        }
+        if ($this->cancelWithRefund($state, $playerKey, 'pending_revive', 'healer_id',
+                fn($p) => (int) ($p['cost'] ?? 0))) {
+            $cancelled[] = 'revive';
+        }
+        if ($this->cancelWithRefund($state, $playerKey, 'pending_dive', 'attacker_id',
+                fn($p) => (int) ($p['action']['coins'] ?? 0))) {
+            $cancelled[] = 'dive';
         }
 
-        // multi_discharge — то же
-        if (!empty($state->battle['pending_multi_discharge'])) {
-            $pmd  = $state->battle['pending_multi_discharge'];
-            $card = $state->getCard($pmd['attacker_id']);
-            if ($card && $card->owner === $playerKey) {
-                unset($state->battle['pending_multi_discharge']);
-                $cancelled[] = 'multi_discharge';
-            }
-        }
-
-        // coin_spend — монеты ещё НЕ списаны
-        if (!empty($state->battle['pending_coin_spend'])) {
-            $pcs  = $state->battle['pending_coin_spend'];
-            $card = $state->getCard($pcs['attacker_id']);
-            if ($card && $card->owner === $playerKey) {
-                unset($state->battle['pending_coin_spend']);
-                $cancelled[] = 'coin_spend';
-            }
-        }
-
-        // self_wound — монеты УЖЕ списаны, возвращаем
-        if (!empty($state->battle['pending_self_wound'])) {
-            $psw  = $state->battle['pending_self_wound'];
-            $card = $state->getCard($psw['attacker_id']);
-            if ($card && $card->owner === $playerKey) {
-                $cost = (int) ($psw['action']['coins'] ?? 0);
-                $card->coins += $cost;
-                $this->engine->syncCoinBonus($card);
-                unset($state->battle['pending_self_wound']);
-                $cancelled[] = 'self_wound';
-            }
-        }
-
-        // revive — монеты уже списаны, возвращаем
-        if (!empty($state->battle['pending_revive'])) {
-            $pr   = $state->battle['pending_revive'];
-            $card = $state->getCard($pr['healer_id']);
-            if ($card && $card->owner === $playerKey) {
-                $card->coins += (int) ($pr['cost'] ?? 0);
-                unset($state->battle['pending_revive']);
-                $cancelled[] = 'revive';
-            }
-        }
-
-        if (!empty($state->battle['pending_blood_tap'])) {
-            $pb   = $state->battle['pending_blood_tap'];
-            $card = $state->getCard($pb['attacker_id']);
-            if ($card && $card->owner === $playerKey) {
-                unset($state->battle['pending_blood_tap']);
-                $cancelled[] = 'blood_tap';
-            }
-        }
-
-        if (!empty($state->battle['pending_valhalla_pick'])) {
-            $pv = $state->battle['pending_valhalla_pick'];
-            if ($pv['owner'] === $playerKey) {
-                unset($state->battle['pending_valhalla_pick']);
-                $cancelled[] = 'valhalla_pick';
-            }
-        }
-
-        if (!empty($state->battle['pending_instant_pick'])) {
-            $pi = $state->battle['pending_instant_pick'];
-            if ($pi['owner'] === $playerKey) {
-                unset($state->battle['pending_instant_pick']);
-                $cancelled[] = 'instant_pick';
-
-                // Возврат в подочередь инстантов
-                if (!empty($state->battle['turn_phase'])) {
-                    (new TurnPhaseProcessor($state, $this->engine))->resume();
-                }
-            }
-        }
-
-        if (!empty($state->battle['pending_cell_marker_pick'])) {
-            $pm = $state->battle['pending_cell_marker_pick'];
-            if ($pm['owner'] === $playerKey) {
-                unset($state->battle['pending_cell_marker_pick']);
-                $cancelled[] = 'cell_marker';
-            }
-        }
-
-        if (!empty($state->battle['pending_dice_choice'])) {
-            $dc = $state->battle['pending_dice_choice'];
-            if ($dc['owner'] === $playerKey) {
-                unset($state->battle['pending_dice_choice']);
-                $cancelled[] = 'dice_choice';
-            }
-        }
-
-        if (!empty($state->battle['pending_combat_pick'])) {
-            $pc = $state->battle['pending_combat_pick'];
-            if ($pc['owner'] === $playerKey) {
-                unset($state->battle['pending_combat_pick']);
-                $cancelled[] = 'combat_pick';
-            }
-        }
-
-        if (!empty($state->battle['pending_turn_instants'])) {
-            $ti = $state->battle['pending_turn_instants'];
-            if ($ti['owner'] === $playerKey) {
-                unset($state->battle['pending_turn_instants']);
-                $cancelled[] = 'turn_instants';
-            }
-        }
-        if (!empty($state->battle['pending_dice_choice'])) {
-            $dc = $state->battle['pending_dice_choice'];
-            if ($dc['owner'] === $playerKey) {
-                unset($state->battle['pending_dice_choice']);
-                $cancelled[] = 'dice_choice';
-            }
-        }
-
+        // Спец: wound_transfer — возврат монет + reopen источника
         if (!empty($state->battle['pending_wound_transfer'])) {
-            $pw = $state->battle['pending_wound_transfer'];
-            if ($pw['owner'] === $playerKey) {
-                $cost = (int) ($pw['options']['coins_cost'] ?? 0);
-                $src = $state->getCard($pw['source_id']);
+            $p = $state->battle['pending_wound_transfer'];
+            if (($p['owner'] ?? null) === $playerKey) {
+                $cost = (int) ($p['options']['coins_cost'] ?? 0);
+                $src = $state->getCard((int) ($p['source_id'] ?? 0));
                 if ($src) {
                     if ($cost > 0) {
                         $src->coins += $cost;
@@ -1808,33 +1723,38 @@ final class ActionResolver
             }
         }
 
-        if (!empty($state->battle['pending_dive'])) {
-            $pd = $state->battle['pending_dive'];
-            if ($pd['owner'] === $playerKey) {
-                $attacker = $state->getCard($pd['attacker_id']);
-                if ($attacker) {
-                    $cost = (int) ($pd['action']['coins'] ?? 0);
-                    if ($cost > 0) {
-                        $attacker->coins += $cost;
-                        $this->engine->syncCoinBonus($attacker);
-                    }
-                }
-                unset($state->battle['pending_dive']);
-                $cancelled[] = 'dive';
-            }
-        }
-
         if (empty($cancelled)) {
             return Result::error('Нечего отменять');
         }
 
-        // Если мы внутри фазы хода и был отменён её pending — возобновляем
         if (!empty($state->battle['turn_phase'])) {
             (new TurnPhaseProcessor($state, $this->engine))->resume();
         }
 
         $state->bumpVersion();
         return Result::ok(['cancelled:' . implode(',', $cancelled)]);
+    }
+
+    private function cancelWithRefund(
+        GameState $state,
+        string $playerKey,
+        string $key,
+        string $cardField,
+        callable $costFn
+    ): bool {
+        $p = $state->battle[$key] ?? null;
+        if (!$p) return false;
+
+        $card = $state->getCard((int) ($p[$cardField] ?? 0));
+        if (!$card || $card->owner !== $playerKey) return false;
+
+        $cost = $costFn($p);
+        if ($cost > 0) {
+            $card->coins += $cost;
+            $this->engine->syncCoinBonus($card);
+        }
+        unset($state->battle[$key]);
+        return true;
     }
 
     public function openSuccessfulHitOptionalHeal(CardInstance $card): bool
