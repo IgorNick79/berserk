@@ -256,10 +256,10 @@ final class TurnProcessor
                     && $card->zone !== CardInstance::ZONE_FLYING) continue;
 
                 // Сброс «ран этого хода» у ВСЕХ карт (не только активного)
-                foreach ($this->state->cards as $card) {
-                    if ($card->zone !== CardInstance::ZONE_FIELD
-                        && $card->zone !== CardInstance::ZONE_FLYING) continue;
-                    $card->flags['damage_taken_this_turn'] = 0;
+                foreach ($this->state->cards as $c) {
+                    if ($c->zone !== CardInstance::ZONE_FIELD
+                        && $c->zone !== CardInstance::ZONE_FLYING) continue;
+                    $c->flags['damage_taken_this_turn'] = 0;
                 }
                 $card->flags['ranged_hits_this_turn'] = 0;
             }
