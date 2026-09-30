@@ -632,6 +632,7 @@ final class ActionResolver
                 }
             }
 
+
             // Перехват (только shot / throw / disacharge)
             if (in_array($type, ['shot', 'throw', 'discharge'], true)) {
                 $interceptors = CardStats::getRangedInterceptors($this->state, $playerKey, $type);

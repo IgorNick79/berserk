@@ -230,6 +230,7 @@ final class StrikeResolver
         if (!CardStats::hasAnyStrike($attacker)) {
             return Result::error('Карта не может атаковать');
         }
+        
 
         // Обязательная атака
         $forced = CardStats::getForcedStrikeTarget($this->state, $attacker);
