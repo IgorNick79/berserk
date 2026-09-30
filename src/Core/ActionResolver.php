@@ -965,6 +965,16 @@ final class ActionResolver
                 $wounds = min($wounds, $cap);
             }
             $val = $wounds;
+        } elseif (($action['value'] ?? null) === 'adjacent_ally_weak_sum') {
+            $val = 0;
+            foreach ($this->state->cards as $c) {
+                if ($c->owner !== $attacker->owner) continue;
+                if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+                if ($c->dying || $c->hp <= 0) continue;
+                if ($c->row !== $attacker->row) continue;
+                if (abs($c->col - $attacker->col) !== 1) continue;
+                $val += $c->strikeWeak;
+            }
         } elseif (isset($action['value'])) {
             $val = (int) $action['value'];
         }
