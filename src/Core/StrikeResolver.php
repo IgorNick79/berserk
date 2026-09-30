@@ -211,7 +211,7 @@ final class StrikeResolver
 
                 $isAdjacent = ($drow <= 1 && $dcol <= 1 && $dist > 0);
 
-                $isRowExtreme = !empty($attacker->prop['row_strike'])
+                $isRowExtreme = !empty($attacker->prop['row_extreme'])
                     && $target->row === $attacker->row
                     && (($attacker->col === 1 && $target->col === 5)
                         || ($attacker->col === 5 && $target->col === 1));
