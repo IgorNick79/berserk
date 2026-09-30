@@ -150,3 +150,12 @@ text
 - `WoundTransferProcessor::chooseAmount` — при `target_filter: source` сразу
   записывает transfer и вызывает `finish()`, минуя шаг `target_amount`.
   Убирает лишний экран подтверждения для Осклизга и Рэккена.
+- SQL s1_110 (Рэккен) — убран `donor_near`, т.к. текст карты
+  не требует «рядом» (в отличие от Осклизга).
+- `WoundTransferProcessor::start` — источник больше не закрывается сразу
+  при клике. Закрытие перенесено в `finish()` (для `on_finish: main_phase`
+  тоже).
+- `ActionResolver::cancelPending` — источник открывается всегда, монеты
+  возвращаются только если были потрачены.
+
+

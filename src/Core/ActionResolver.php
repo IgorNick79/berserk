@@ -1776,13 +1776,14 @@ final class ActionResolver
             $pw = $state->battle['pending_wound_transfer'];
             if ($pw['owner'] === $playerKey) {
                 $cost = (int) ($pw['options']['coins_cost'] ?? 0);
-                if ($cost > 0) {
-                    $src = $state->getCard($pw['source_id']);
-                    if ($src) {
+                $src = $state->getCard($pw['source_id']);
+                if ($src) {
+                    if ($cost > 0) {
                         $src->coins += $cost;
-                        $src->closed = false; 
                         $this->engine->syncCoinBonus($src);
                     }
+                    $src->closed = false;
+                    unset($src->flags['in_stack']);
                 }
                 unset($state->battle['pending_wound_transfer']);
                 $cancelled[] = 'wound_transfer';

@@ -59,10 +59,6 @@ final class WoundTransferProcessor
             $this->engine->syncCoinBonus($source);
         }
 
-        if ($onFinish === 'main_phase') {
-            $source->closed = true;
-        }
-
         $this->state->battle['pending_wound_transfer'] = [
             'owner'     => $playerKey,
             'source_id' => $source->instanceId,
@@ -275,7 +271,7 @@ final class WoundTransferProcessor
 
         // Закрываем источник только для after-инстанта (для main_phase уже закрыт в start)
         $onFinish = $pw['options']['on_finish'] ?? 'main_phase';
-        if ($source && in_array($onFinish, ['strike_after', 'combat'], true)) {
+        if ($source && in_array($onFinish, ['strike_after', 'combat', 'main_phase'], true)) {
             $source->closed = true;
             unset($source->flags['in_stack']);
         }
