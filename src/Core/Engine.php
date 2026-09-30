@@ -455,12 +455,50 @@ final class Engine
 
     public function applyMarker(CardInstance $target, array $marker, string $sourceKey): void
     {
-        $this->damageResolver($this->state)->applyMarker($target, $marker, $sourceKey);
+        $type   = $marker['type'];
+        $timing = $marker['timing'] ?? 'source_turn';
+
+        if (!isset($target->markers[$type])) {
+            $target->markers[$type] = [
+                'value'  => 1,
+                'expire' => $marker['expire'] ?? null,
+                'source' => $sourceKey,
+                'timing' => $timing,
+            ];
+
+            if (!empty($marker['skip_first_tick'])) {
+                $target->markers[$type]['skip_first_tick'] = true;
+            }
+        } else {
+            $target->markers[$type]['value']++;
+            if (isset($marker['expire'])) {
+                $target->markers[$type]['expire'] = $marker['expire'];
+            }
+            if (!empty($marker['skip_first_tick'])) {
+                $target->markers[$type]['skip_first_tick'] = true;
+            }
+        }
     }
 
     public function applyPoison(CardInstance $target, int $value, string $sourceKey): void
     {
-        $this->damageResolver($this->state)->applyPoison($target, $value, $sourceKey);
+        if ($value <= 0) return;
+
+        if (!empty($target->prop['zoo'])) {
+            return;
+        }
+
+        if (!isset($target->markers['poison'])) {
+            $target->markers['poison'] = [
+                'value'  => $value,
+                'source' => $sourceKey,
+                'timing' => 'permanent',
+            ];
+        } else {
+            if ($value > $target->markers['poison']['value']) {
+                $target->markers['poison']['value'] = $value;
+            }
+        }
     }
 
     public function applyRegeneration(CardInstance $card): void
@@ -728,55 +766,6 @@ final class Engine
     private function damageResolver(GameState $state): DamageResolver
     {
         return new DamageResolver($state, \Closure::fromCallable([$this, 'syncCoinBonus']));
-    }
-
-
-    public function applyMarker(CardInstance $target, array $marker, string $sourceKey): void
-    {
-        $type   = $marker['type'];
-        $timing = $marker['timing'] ?? 'source_turn';
-
-        if (!isset($target->markers[$type])) {
-            $target->markers[$type] = [
-                'value'  => 1,
-                'expire' => $marker['expire'] ?? null,
-                'source' => $sourceKey,
-                'timing' => $timing,
-            ];
-
-            if (!empty($marker['skip_first_tick'])) {
-                $target->markers[$type]['skip_first_tick'] = true;
-            }
-        } else {
-            $target->markers[$type]['value']++;
-            if (isset($marker['expire'])) {
-                $target->markers[$type]['expire'] = $marker['expire'];
-            }
-            if (!empty($marker['skip_first_tick'])) {
-                $target->markers[$type]['skip_first_tick'] = true;
-            }
-        }
-    }
-
-    public function applyPoison(CardInstance $target, int $value, string $sourceKey): void
-    {
-        if ($value <= 0) return;
-
-        if (!empty($target->prop['zoo'])) {
-            return;
-        }
-
-        if (!isset($target->markers['poison'])) {
-            $target->markers['poison'] = [
-                'value'  => $value,
-                'source' => $sourceKey,
-                'timing' => 'permanent',
-            ];
-        } else {
-            if ($value > $target->markers['poison']['value']) {
-                $target->markers['poison']['value'] = $value;
-            }
-        }
     }
 
     public function tryProphecyBlock(
