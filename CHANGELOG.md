@@ -219,25 +219,6 @@ markdown
 
 **Откат:** `git revert <sha>`.
 
-## refactor/apply-marker-poison — 2026-XX-XX
-
-**Проблема:**
-`applyMarker` и `applyPoison` дублировались в `Engine` и `DamageResolver`
-с идентичными телами. Правка в одном месте не долетала до другого.
-
-**Изменения:**
-- `DamageResolver::applyMarker` и `applyPoison` — стали public.
-- `Engine::applyMarker` и `applyPoison` — делегируют в `DamageResolver`
-  через существующий фабричный метод `damageResolver($state)`.
-
-**Как проверить:**
-Регрессии быть не должно — оба пути и раньше были идентичны.
-Проверить работу: любая карта, кладущая маркер (Хозяйка прайда — sand_claws,
-Борг — stun, Мира — ничего, Василиск — rooted, Гиррит — hunt) и любая карта
-с отравлением (Ундина, Сеятель, Хеди, Арацент, Ноками).
-
-**Откат:** `git revert <sha>`.
-
 ## feat/card-s1_24 — 2026-XX-XX
 
 **Карта:** Посвященный Дзара (s1_24, Тоа-Дан, цена 5, элита).

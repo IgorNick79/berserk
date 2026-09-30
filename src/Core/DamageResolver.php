@@ -665,7 +665,7 @@ final class DamageResolver
         return Result::ok(["any_death_target:{$targetId}"]);
     }
 
-    public function applyPoison(CardInstance $target, int $value, string $sourceKey): void
+    private function applyPoison(CardInstance $target, int $value, string $sourceKey): void
     {
         if ($value <= 0) return;
         if (!empty($target->prop['zoo'])) return;
@@ -681,7 +681,7 @@ final class DamageResolver
         }
     }
 
-    public function applyMarker(CardInstance $target, array $marker, string $sourceKey): void
+    private function applyMarker(CardInstance $target, array $marker, string $sourceKey): void
     {
         $type = $marker['type'];
         $timing = $marker['timing'] ?? 'source_turn';
