@@ -358,10 +358,9 @@ final class Engine
         CardInstance $target,
         int $val,
         string $actionType = 'strike',
-        ?CardInstance $attacker = null,
-        bool $skipHunt = false
+        ?CardInstance $attacker = null
     ): void {
-        $this->damageResolver($state)->applyDamage($target, $val, $actionType, $attacker, $skipHunt);
+        $this->damageResolver($state)->applyDamage($target, $val, $actionType, $attacker);
     }
 
     public function forceDeath(

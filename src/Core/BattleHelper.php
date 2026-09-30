@@ -452,8 +452,6 @@ final class BattleHelper
                 }
 
                 $result[$target->instanceId] = true;
-
-                $result[$target->instanceId] = true;
             }
         } elseif ($mode === 'uchr') {
             foreach ($state->cards as $target) {

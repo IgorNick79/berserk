@@ -946,33 +946,6 @@ final class TurnPhaseProcessor
         return false;
     }
 
-    private function executeInstant(array $task, string $activeKey)
-    {
-        $card = $this->state->getCard($task['card_id']);
-        if (!$card) return '';
-
-        $inst   = $task['payload'] ?? [];
-        $target = $inst['target'] ?? 'self';
-
-        // Self-эффект — применяем сразу
-        if ($target === 'self') {
-            $card->closed = true;
-            $this->engine->applyInstantEffect($this->state, $inst['effect'] ?? [], $card, $card, $activeKey);
-            return ['label' => $task['label'], 'items' => []];
-        }
-
-        // Нужен выбор цели
-        $this->state->battle['pending_instant_pick'] = [
-            'owner'   => $activeKey,
-            'card_id' => $task['card_id'],
-            'target'  => $target,
-            'effect'  => $inst['effect'] ?? [],
-            'label'   => $task['label'] ?? 'Инстант',
-        ];
-
-        return '';
-    }
-
     public function chooseInstantPick(string $playerKey, Command $cmd): Result
     {
         return (new InstantProcessor($this->state, $this->engine))->chooseTurnTarget($playerKey, $cmd);

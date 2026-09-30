@@ -16,8 +16,7 @@ final class DamageResolver
         CardInstance $target,
         int $val,
         string $actionType = 'strike',
-        ?CardInstance $attacker = null,
-        bool $skipHunt = false
+        ?CardInstance $attacker = null
     ): void {
         if ($val <= 0) return;
 

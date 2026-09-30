@@ -1138,28 +1138,6 @@ final class StrikeResolver
         $pp->commit($attacker->owner, $attacker, $peeked, 'strike', $title, $actions);
     }
 
-    private function hasCombatInstants(string $ownerKey, string $phase = 'before'): bool
-    {
-        return !empty($this->getCombatInstants($ownerKey, $phase));
-    }
-
-    private function hasCombatInstantsType(string $ownerKey, string $type): bool
-    {
-        foreach ($this->state->cards as $card) {
-            if ($card->owner !== $ownerKey) continue;
-            if ($card->zone !== CardInstance::ZONE_FIELD
-                && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || $card->closed) continue;
-            if (!empty($card->flags['in_stack'])) continue;
-            if (empty($card->prop['instants'])) continue;
-
-            foreach ($card->prop['instants'] as $inst) {
-                if (($inst['trigger'] ?? '') === $type) return true;
-            }
-        }
-        return false;
-    }
-
     public function recalcTable(): void
     {
         $strike = &$this->state->battle['strike'];

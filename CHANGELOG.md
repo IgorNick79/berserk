@@ -262,3 +262,28 @@ markdown
 3. Цель (3,5) доступна (dist 2, range 2). Разряд 2-3-4.
 
 **Откат:** `git revert <sha>` + откат SQL.
+
+## refactor/dead-code — 2026-XX-XX
+
+**Проблема:**
+Мёртвые методы и дубли, оставшиеся с прошлых итераций. Не влияют на поведение,
+но зашумляют код и путают при чтении.
+
+**Изменения:**
+- `StrikeResolver` — удалены `hasCombatInstants`, `hasCombatInstantsType`
+  (0 вызовов). `getCombatInstants` оставлен (public, используется в `InfoPanel`).
+- `TurnPhaseProcessor` — удалён `executeInstant` (0 вызовов, дублировал
+  логику `executeSub`).
+- `TurnProcessor` — удалены `applyTurnStartEffect` и `findOpposite`
+  (0 вызовов, дублировали `TurnPhaseProcessor::executeTurnStartEffect`).
+- `BattleHelper::getAttackTargets` — удалён дубликат строки
+  `$result[$target->instanceId] = true;` в ветке `strike`.
+- `DamageResolver::applyDamage` и `Engine::applyDamage` — удалён параметр
+  `$skipHunt` (всегда передавался `false`).
+
+**Как проверить:**
+Регрессии быть не должно — удалённые методы не вызывались.
+Прогнать боевой сценарий с hunt-механикой (Гиррит стреляет — цель получает
+маркер `hunt`, летун добивает — цель получает +2 урона).
+
+**Откат:** `git revert <sha>`.

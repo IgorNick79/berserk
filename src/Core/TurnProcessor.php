@@ -539,55 +539,6 @@ final class TurnProcessor
 
     // ─── Триггеры начала хода ───────────────────────────────
 
-    private function applyTurnStartEffect(CardInstance $card, string $activeKey): void
-    {
-        $effects = $card->prop['turn_start'] ?? [];
-        if (!is_array($effects)) return;
-
-        foreach ($effects as $effect) {
-            $scope = $effect['scope'] ?? 'own';
-            if ($scope === 'own' && $card->owner !== $activeKey) continue;
-
-            $type       = $effect['type'] ?? '';
-            $targetType = $effect['target'] ?? '';
-
-            if ($targetType === 'opposite') {
-                $target = $this->findOpposite($card);
-                if (!$target) continue;
-
-                $value = (int) ($effect['value'] ?? 0);
-
-                if (isset($effect['value_if_not_moved'])) {
-                    $moved = $target->flags['moved_last_turn'] ?? false;
-                    if (!$moved) {
-                        $value = (int) $effect['value_if_not_moved'];
-                    }
-                }
-
-                if ($type === 'damage') {
-                    $this->engine->applyDamage($this->state, $target, $value, 'impact');
-                }
-            }
-
-            if ($type === 'position_modifier') {
-                $this->applyPositionModifier($card, $effect);
-            }
-
-            if ($type === 'get_coins') {
-                if (!empty($effect['line']) && !CardStats::isInLine($this->state, $card)) {
-                    continue;
-                }
-
-                $coins = (int) ($effect['coins'] ?? 1);
-                $max = (int) ($card->prop['coins']['max_value'] ?? 0);
-
-                $card->coins += $coins;
-                if ($max > 0 && $card->coins > $max) {
-                    $card->coins = $max;
-                }
-            }
-        }
-    }
 
     private function applyPositionModifier(CardInstance $card, array $effect): void
     {
@@ -606,20 +557,6 @@ final class TurnProcessor
                 'expire' => 'end_of_turn',
             ];
         }
-    }
-
-    private function findOpposite(CardInstance $card): ?CardInstance
-    {
-        $oppositeRow = 7 - $card->row;
-
-        foreach ($this->state->cards as $c) {
-            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
-            if ($c->owner === $card->owner) continue;
-            if ($c->row === $oppositeRow && $c->col === $card->col) {
-                return $c;
-            }
-        }
-        return null;
     }
 
     public function chooseIncarnationCell(string $playerKey, Command $cmd): Result
