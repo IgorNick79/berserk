@@ -90,8 +90,6 @@ final class Engine
             'choose_card_option'      => $turn->chooseCardOption($playerKey, $cmd),
             'choose_push_choice'      => $strike->choosePushChoice($playerKey, $cmd),
             'choose_any_death_target' => $this->damageResolver($state)->chooseAnyDeathTarget($playerKey, $cmd),
-            'choose_transfer_donor'   => $action->chooseTransferDonor($playerKey, $cmd),
-            'choose_transfer_amount'  => $action->chooseTransferAmount($playerKey, $cmd),
             'choose_incarnation_cell' => $turn->chooseIncarnationCell($playerKey, $cmd),
             'choose_self_wound'       => $action->chooseSelfWound($playerKey, $cmd),
             'choose_multi_heal'       => $action->chooseMultiHeal($playerKey, $cmd),

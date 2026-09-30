@@ -114,3 +114,34 @@
 3. В начале нового хода у всех карт активного игрока `ranged_hits_this_turn = 0`.
 
 **Откат:** `git revert <sha>`.
+
+## refactor/wound-transfer-unified — 2026-XX-XX
+
+**Проблема:**
+Перераспределение ран жило на двух путях: старый `pending_transfer` (Осклизг)
+и новый `pending_wound_transfer` / `WoundTransferProcessor` (Волхв, Отшельница).
+Осклизг через старый путь не умел ни фильтр по элементу, ни «на себя» без цели.
+Рэккен в prop был нерабочим (`impact` без `transfer_wounds`).
+
+**Изменения:**
+- `WoundTransferProcessor` — в `collectDonors` добавлены фильтры `donor_element`,
+  `donor_near`, исключение источника; `chooseAmount` при `target_filter: source`
+  сразу переходит к `target_amount` (пропускает выбор цели).
+- `ActionResolver::handle` — расширена ветка `wound_transfer` (проброс `kind`,
+  `donor_element`, `donor_near`, `on_finish`); удалена ветка `impact.transfer_wounds`.
+- Удалены методы `startTransfer`, `chooseTransferDonor`, `chooseTransferAmount`
+  и блок `pending_transfer` в `cancelPending`.
+- Удалён `src/Core/Choice/TransferChoice.php` и его регистрация в `ChoiceRegistry`.
+- `Engine::doApply` — удалены команды `choose_transfer_donor`, `choose_transfer_amount`.
+- SQL s1_109 (Осклизг) — prop на `wound_transfer`.
+- SQL s1_110 (Рэккен) — prop: Рэккендум на `wound_transfer`, throw остался.
+
+**Как проверить:**
+1. Осклизг рядом с раненым болотным союзником. Клик по «Эликсиры Ракштольна».
+2. Окно: выбор донора → количество HP → подтвердить. Пропускает шаг цели.
+3. Осклизг получает раны, донор лечится. Осклизг закрыт, монета списана.
+4. Отмена на любом шаге — монета возвращается, Осклизг открывается.
+5. Рэккендум (Рэккен) — аналогично, max 2 HP, без монет.
+6. Волхв и Отшельница — работают как раньше.
+
+**Откат:** `git revert <sha>` + откат SQL.

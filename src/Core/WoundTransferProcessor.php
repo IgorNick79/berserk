@@ -31,7 +31,6 @@ final class WoundTransferProcessor
     public function start(string $playerKey, CardInstance $source, array $options): Result
     {
         $kind         = (string) ($options['kind'] ?? 'hermit');
-        $donorFilter  = (string) ($options['donor_filter'] ?? 'wounded');
         $maxTransfer  = (int) ($options['max_transfer'] ?? 0);
         $cost         = (int) ($options['coins_cost'] ?? 0);
         $onFinish     = (string) ($options['on_finish'] ?? 'main_phase');
@@ -50,7 +49,7 @@ final class WoundTransferProcessor
             return Result::error('Не хватает монет');
         }
 
-        $donors = $this->collectDonors($playerKey, $donorFilter, $maxTransfer);
+        $donors = $this->collectDonors($playerKey, $options, $source->instanceId);
         if (empty($donors)) {
             return Result::error('Нет подходящих доноров');
         }
@@ -82,14 +81,29 @@ final class WoundTransferProcessor
         return Result::ok(['wt_started:' . $kind]);
     }
 
-    private function collectDonors(string $playerKey, string $filter, int $maxTransfer): array
+    private function collectDonors(string $playerKey, array $options, int $sourceId): array
     {
+        $filter      = (string) ($options['donor_filter'] ?? 'wounded');
+        $maxTransfer = (int)    ($options['max_transfer'] ?? 0);
+        $nearOnly    = !empty($options['donor_near']);
+        $element     = $options['donor_element'] ?? null;
+
+        $source = $sourceId > 0 ? $this->state->getCard($sourceId) : null;
+
         $donors = [];
         foreach ($this->state->cards as $c) {
             if ($c->owner !== $playerKey) continue;
             if ($c->dying || $c->hp <= 0) continue;
             if ($c->zone !== CardInstance::ZONE_FIELD
                 && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->instanceId === $sourceId) continue;
+            if ($element !== null && $c->element !== $element) continue;
+
+            if ($nearOnly && $source !== null) {
+                $dr = abs($c->row - $source->row);
+                $dc = abs($c->col - $source->col);
+                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+            }
 
             $max = match ($filter) {
                 'damaged_this_strike' => (int) ($c->flags['damage_taken_this_strike'] ?? 0),
@@ -139,9 +153,15 @@ final class WoundTransferProcessor
             return Result::error('Неверное количество');
         }
 
-        $this->state->battle['pending_wound_transfer']['amount']    = $amount;
-        $this->state->battle['pending_wound_transfer']['remaining'] = $amount;
-        $this->state->battle['pending_wound_transfer']['step']      = 'target';
+        $targetFilter = $this->state->battle['pending_wound_transfer']['options']['target_filter'] ?? 'own';
+        if ($targetFilter === 'source') {
+            $this->state->battle['pending_wound_transfer']['target_id'] =
+                $this->state->battle['pending_wound_transfer']['source_id'];
+            $this->state->battle['pending_wound_transfer']['step'] = 'target_amount';
+        } else {
+            $this->state->battle['pending_wound_transfer']['step'] = 'target';
+        }
+        
         $this->state->bumpVersion();
         return Result::ok(['wt_amount_chosen']);
     }

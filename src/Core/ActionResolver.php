@@ -96,14 +96,18 @@ final class ActionResolver
         // ── Перераспределение ран (Волхв) ──────────────────────
         if ($type === 'wound_transfer') {
             $proc = new WoundTransferProcessor($this->state, $this->engine);
-            return $proc->start($playerKey, $attacker, [
-                'kind'          => 'volkhv',
+            $options = [
+                'kind'          => (string) ($action['kind']          ?? 'volkhv'),
                 'donor_filter'  => (string) ($action['donor_filter']  ?? 'wounded'),
                 'target_filter' => (string) ($action['target_filter'] ?? 'enemy'),
                 'max_transfer'  => (int)    ($action['max_transfer']  ?? 2),
                 'coins_cost'    => (int)    ($action['coins']         ?? 0),
-                'on_finish'     => 'main_phase',
-            ]);
+                'on_finish'     => (string) ($action['on_finish']     ?? 'main_phase'),
+            ];
+            if (isset($action['donor_element'])) $options['donor_element'] = (string) $action['donor_element'];
+            if (!empty($action['donor_near']))   $options['donor_near']    = true;
+
+            return $proc->start($playerKey, $attacker, $options);
         }
 
         // Грезы Архааля
@@ -177,18 +181,6 @@ final class ActionResolver
 
             $this->state->bumpVersion();
             return Result::ok(['self_wound_started']);
-        }
-
-        // transfer_wounds — особый путь, без цели
-        if ($type === 'impact' && !empty($action['transfer_wounds'])) {
-            $cost = (int) ($action['coins'] ?? 0);
-            if ($cost > 0) {
-                if ($attacker->coins < $cost) {
-                    return Result::error('Не хватает монет');
-                }
-                $attacker->coins -= $cost;
-            }
-            return $this->startTransfer($attacker, $action, $cardId, $playerKey);
         }
 
         $target = $this->state->getCard($targetId);
@@ -1156,140 +1148,6 @@ final class ActionResolver
         $card->modifiers = $kept;
     }
 
-    private function startTransfer(
-        CardInstance $attacker, array $action,
-        int $cardId, string $playerKey
-    ): Result {
-        $tw = $action['transfer_wounds'];
-        $from = $tw['from'] ?? [];
-        $maxValue = (int) ($tw['value'] ?? 0);
-
-        $candidates = [];
-        foreach ($this->state->cards as $t) {
-            if ($t->zone !== CardInstance::ZONE_FIELD) continue;
-            if ($t->instanceId === $attacker->instanceId) continue;
-
-            if (!empty($from['owner']) && $from['owner'] === 'own') {
-                if ($t->owner !== $playerKey) continue;
-            }
-            if (!empty($from['near'])) {
-                $dr = abs($t->row - $attacker->row);
-                $dc = abs($t->col - $attacker->col);
-                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
-            }
-            if (!empty($from['element']) && $t->element !== $from['element']) continue;
-
-            $wounds = $t->hpMax - $t->hp;
-            if ($wounds <= 0) continue;
-
-            $candidates[] = $t->instanceId;
-        }
-
-        if (empty($candidates)) {
-            return Result::error('Нет целей для снятия ран');
-        }
-
-        $this->state->battle['pending_transfer'] = [
-            'attacker_id' => $cardId,
-            'action_name' => $action['name'] ?? 'Перераспределение',
-            'max_value'   => $maxValue,
-            'candidates'  => $candidates,
-            'donor_id'    => null,
-            'cost'        => (int) ($action['coins'] ?? 0),
-        ];
-
-        $this->state->bumpVersion();
-        return Result::ok(['transfer_started']);
-    }
-
-    public function chooseTransferDonor(string $playerKey, Command $cmd): Result
-    {
-        $pt = $this->state->battle['pending_transfer'] ?? null;
-        if (!$pt) {
-            return Result::error('Нет ожидающего выбора');
-        }
-
-        $attacker = $this->state->getCard($pt['attacker_id']);
-        if (!$attacker || $attacker->owner !== $playerKey) {
-            return Result::error('Не ваш выбор');
-        }
-
-        $donorId = (int) $cmd->get('donor_id', 0);
-        if (!in_array($donorId, $pt['candidates'], true)) {
-            return Result::error('Неверный донор');
-        }
-
-        $donor = $this->state->getCard($donorId);
-        if (!$donor) {
-            return Result::error('Донор не найден');
-        }
-
-        $wounds = $donor->hpMax - $donor->hp;
-        if ($wounds <= 0) {
-            return Result::error('Нет ран');
-        }
-
-        $pt['donor_id'] = $donorId;
-        $pt['wounds_available'] = min($wounds, $pt['max_value']);
-        $this->state->battle['pending_transfer'] = $pt;
-
-        $this->state->bumpVersion();
-        return Result::ok(['transfer_donor']);
-    }
-
-    public function chooseTransferAmount(string $playerKey, Command $cmd): Result
-    {
-        $pt = $this->state->battle['pending_transfer'] ?? null;
-        if (!$pt || empty($pt['donor_id'])) {
-            return Result::error('Нет ожидающего выбора');
-        }
-
-        $attacker = $this->state->getCard($pt['attacker_id']);
-        $donor = $this->state->getCard($pt['donor_id']);
-        if (!$attacker || $attacker->owner !== $playerKey || !$donor) {
-            return Result::error('Не ваш выбор');
-        }
-
-        $amount = (int) $cmd->get('amount', 0);
-        $maxAmount = (int) $pt['wounds_available'];
-        if ($amount < 1 || $amount > $maxAmount) {
-            return Result::error('Неверное количество');
-        }
-
-        $donor->hp += $amount;
-        if ($donor->hp > $donor->hpMax) $donor->hp = $donor->hpMax;
-
-        $attacker->closed = true;
-
-        $this->state->battle['strike'] = [
-            'kind'        => 'transfer_wounds',
-            'action_name' => $pt['action_name'],
-            'attacker_id' => $pt['attacker_id'],
-            'target_id'   => $pt['donor_id'],
-            'defender_id' => null,
-            'state'       => 'results',
-            'attack_dice' => 0,
-            'defend_dice' => 0,
-            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
-            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
-            'damage'      => 0,
-            'transfer'    => [
-                'value'   => $amount,
-                'from_id' => $donor->instanceId,
-                'to_id'   => $attacker->instanceId,
-            ],
-            'confirmed'   => [],
-        ];
-
-        unset($this->state->battle['pending_transfer']);
-
-        $this->engine->applyDamage($this->state, $attacker, $amount, 'transfer_wounds', $donor);
-        $this->engine->checkGameOver($this->state);
-
-        $this->state->bumpVersion();
-        return Result::ok(["transfer_amount:{$amount}"]);
-    }
-
     private function startCoinSpendChoice(
         CardInstance $attacker, array $action, string $type,
         int $cardId, int $targetId, string $playerKey
@@ -1831,18 +1689,6 @@ final class ActionResolver
                 $this->engine->syncCoinBonus($card);
                 unset($state->battle['pending_self_wound']);
                 $cancelled[] = 'self_wound';
-            }
-        }
-
-        // transfer — монеты УЖЕ списаны, возвращаем (если сохранён cost)
-        if (!empty($state->battle['pending_transfer'])) {
-            $pt   = $state->battle['pending_transfer'];
-            $card = $state->getCard($pt['attacker_id']);
-            if ($card && $card->owner === $playerKey) {
-                $cost = (int) ($pt['cost'] ?? 0);
-                $card->coins += $cost;
-                unset($state->battle['pending_transfer']);
-                $cancelled[] = 'transfer';
             }
         }
 
