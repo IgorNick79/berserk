@@ -346,6 +346,27 @@ final class StrikeResolver
             $defender = $this->state->getCard($defenderId);
             if ($defender && !empty($defender->prop['on_become_defender'])) {
                 foreach ($defender->prop['on_become_defender'] as $m) {
+                    // Спец-эффект: излечить защищаемого (Бьерн)
+                    if (($m['type'] ?? '') === 'heal_target') {
+                        $targetId = (int) ($this->state->battle['strike']['target_id'] ?? 0);
+                        $target = $this->state->getCard($targetId);
+                        if ($target && !$target->dying && $target->hp > 0) {
+                            $healValue = (int) ($m['value'] ?? 0);
+                            $before = $target->hp;
+                            $target->hp = min($target->hpMax, $target->hp + $healValue);
+                            $healed = $target->hp - $before;
+                            if ($healed > 0) {
+                                $this->state->battle['strike']['defender_heal'][] = [
+                                    'card_id' => $target->instanceId,
+                                    'heal'    => $healed,
+                                ];
+                            }
+                        }
+                        continue;
+                    }
+
+                    // Обычный модификатор (Клаэр)
+                    if (empty($m['stat'])) continue;
                     $defender->modifiers[] = [
                         'stat'   => $m['stat'],
                         'value'  => (int) ($m['value'] ?? 1),

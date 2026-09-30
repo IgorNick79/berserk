@@ -1145,6 +1145,16 @@ final class InfoPanel
                         . '</div>';
                 }
             }
+            if (!empty($strike['defender_heal'])) {
+                foreach ($strike['defender_heal'] as $h) {
+                    $card = $state->getCard((int) ($h['card_id'] ?? 0));
+                    $info = $card ? ($cardsInfo[$card->ukid] ?? null) : null;
+                    $name = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
+                    $vampireHtml .= '<div class="vampire">'
+                        . '<b>' . $name . '</b> излечивается на ' . (int) ($h['heal'] ?? 0)
+                        . ' (Бьерн)</div>';
+                }
+            }
             if (!empty($strike['talion_incarnation_token'])) {
                 foreach ($strike['talion_incarnation_token'] as $t) {
                     $source = $state->getCard((int) ($t['source_id'] ?? 0));
