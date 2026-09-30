@@ -48,25 +48,42 @@ final class AnyDeathChoice implements ChoiceHandlerInterface
             );
         }
 
-        $buttons = [];
+        $items = [];
+        $first = true;
         foreach ($item['candidates'] as $tid) {
             $tc = $state->getCard($tid);
             if (!$tc) continue;
             $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-            $buttons[] = [
-                'label' => $tn,
-                'url'   => "{$baseUrl}&cmd=choose_any_death_target&target_id={$tid}",
+
+            $label = $tn . ' (' . $tc->row . ';' . $tc->col . ')';
+            if ($tc->owner === $playerKey) {
+                $label .= ' — моё существо';
+            }
+
+            $items[] = [
+                'value'   => (int) $tid,
+                'label'   => $label,
+                'checked' => $first,
             ];
+            $first = false;
         }
-        $buttons[] = [
-            'label' => 'Пропустить',
-            'url'   => "{$baseUrl}&cmd=choose_any_death_target&target_id=0",
-            'class' => 'skip',
-        ];
+
+        $roleParam = $role === 'host' ? 'first' : 'second';
 
         return new PanelSpec(
-            title: $srcName . ': ' . $diedName . ' погиб от яда. Отравить на ' . $item['poison_value'] . ':',
-            buttons: $buttons,
+            title: $srcName . ': ' . $diedName . ' погиб от яда. Отравить на ' . $item['poison_value'] . '?',
+            form: [
+                'type'   => 'radio',
+                'name'   => 'target_id',
+                'items'  => $items,
+                'hidden' => [
+                    $roleParam => '',
+                    'game'     => $state->gameId,
+                    'cmd'      => 'choose_any_death_target',
+                ],
+                'submit' => 'Отравить',
+                'cancel' => $baseUrl . '&cmd=choose_any_death_target&target_id=0',
+            ],
         );
     }
 

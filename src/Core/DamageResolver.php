@@ -586,7 +586,7 @@ final class DamageResolver
                 if ($t->zone !== CardInstance::ZONE_FIELD) continue;
                 if ($t->instanceId === $died->instanceId) continue;
                 if ($t->dying) continue;
-                if ($t->owner === $seeder->owner) continue;
+                // if ($t->owner === $seeder->owner) continue;
 
                 $dr = abs($t->row - $died->row);
                 $dc = abs($t->col - $died->col);
@@ -635,6 +635,10 @@ final class DamageResolver
 
         if ($targetId === 0) {
             array_shift($this->state->battle['pending_any_death']);
+            if (empty($this->state->battle['pending_any_death'])
+                && !empty($this->state->battle['turn_phase'])) {
+                (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+            }
             $this->state->bumpVersion();
             return Result::ok(['any_death_skipped']);
         }
@@ -651,6 +655,11 @@ final class DamageResolver
         $poisonValue = (int) $item['poison_value'];
         $this->applyPoison($target, $poisonValue, $sourceCard->owner);
 
+        if (empty($this->state->battle['pending_any_death'])
+            && !empty($this->state->battle['turn_phase'])) {
+            (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+        }
+        
         array_shift($this->state->battle['pending_any_death']);
 
         $this->state->bumpVersion();
