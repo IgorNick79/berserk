@@ -179,3 +179,20 @@ text
 - `WoundTransferChoice::commandTypes` — добавлен `cancel_pending`;
   в `apply` он маршрутизируется в `ActionResolver::cancelPending`.
   Без этого отмена не работала — реестр отклонял команду с «Ожидается выбор».
+
+markdown
+## fix/rekken-self-wounds — 2026-XX-XX
+
+**Проблема:**
+Рэккен (s1_110), метание «ритуального ножа» — `value: "self_wounds"`.
+В `resolveDamage` приведение к `(int)` давало 0, метание никогда не наносило урон.
+
+**Изменения:**
+- `ActionResolver::resolveDamage` — поддержана `value: "self_wounds"`.
+  X = hpMax − hp метателя, cap `max_value` (у Рэккена 4).
+
+**Как проверить:**
+1. Рэккен ранен (hp < hpMax) — метание в цель даёт X урона, X = число ран (max 4).
+2. Рэккен полный (hp = hpMax) — метание даёт 0 урона, действие завершается.
+
+**Откат:** `git revert <sha>`.

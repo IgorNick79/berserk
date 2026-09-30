@@ -957,6 +957,14 @@ final class ActionResolver
         $val = 0;
         if (isset($action['strike']) && is_array($action['strike'])) {
             $val = (int) ($action['strike'][$level] ?? 0);
+        } elseif (($action['value'] ?? null) === 'self_wounds') {
+            // Рэккен: метание на X, где X — число ран на самом метателе (максимум max_value)
+            $wounds = max(0, $attacker->hpMax - $attacker->hp);
+            $cap    = (int) ($action['max_value'] ?? 0);
+            if ($cap > 0) {
+                $wounds = min($wounds, $cap);
+            }
+            $val = $wounds;
         } elseif (isset($action['value'])) {
             $val = (int) $action['value'];
         }
