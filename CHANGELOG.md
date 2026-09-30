@@ -157,5 +157,8 @@ text
   тоже).
 - `ActionResolver::cancelPending` — источник открывается всегда, монеты
   возвращаются только если были потрачены.
+- `WoundTransferChoice::commandTypes` — добавлен `cancel_pending`;
+  в `apply` он маршрутизируется в `ActionResolver::cancelPending`.
+  Без этого отмена не работала — реестр отклонял команду с «Ожидается выбор».
 
 
