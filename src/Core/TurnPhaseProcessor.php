@@ -857,14 +857,10 @@ final class TurnPhaseProcessor
 
     private function findOpposite(CardInstance $card): ?CardInstance
     {
-        $step = $card->owner === 'host' ? 1 : -1;
-        $row  = $card->row + $step;
-        foreach ($this->state->cards as $c) {
-            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
-            if ($c->owner === $card->owner) continue;
-            if ($c->row === $row && $c->col === $card->col) return $c;
-        }
-        return null;
+        $opposite = CardStats::getOppositeFieldCard($this->state, $card);
+        if ($opposite === null) return null;
+        if ($opposite->owner === $card->owner) return null;
+        return $opposite;
     }
 
     // ─── Вспомогательное ─────────────────────────────────────

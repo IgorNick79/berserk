@@ -1838,7 +1838,7 @@ final class ActionResolver
         if (!is_array($config) || ($config['type'] ?? '') !== 'optional_heal') return false;
         if (($config['value_from'] ?? '') !== 'opposite_creature_strike_medium') return false;
 
-        $opposite = $this->getOppositeFieldCard($card);
+        $opposite = CardStats::getOppositeFieldCard($this->state, $card);
         if (!$opposite || $opposite->dying || $opposite->hp <= 0) return false;
 
         $value = CardStats::getStrikeValue($this->state, $opposite, $card, 'medium');
@@ -1889,13 +1889,6 @@ final class ActionResolver
 
         $this->state->bumpVersion();
         return Result::ok(["kobold_heal:{$card->instanceId}:{$healed}"]);
-    }
-
-    private function getOppositeFieldCard(CardInstance $card): ?CardInstance
-    {
-        if ($card->row === null || $card->col === null) return null;
-        $step = $card->owner === GameState::PLAYER_HOST ? 1 : -1;
-        return (new ZoneManager($this->state))->getFieldCard($card->row + $step, $card->col);
     }
 
     public function triggerTalionIncarnationToken(CardInstance $source): bool

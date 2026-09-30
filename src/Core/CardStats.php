@@ -849,6 +849,39 @@ final class CardStats
         }
         return false;
     }
+
+    /**
+     * Координаты клетки напротив карты (тот же столбец, +1 ряд в сторону врага).
+     * @return ?array{row:int, col:int}
+     */
+    public static function oppositeCell(CardInstance $card): ?array
+    {
+        if ($card->row === null || $card->col === null) return null;
+        if ($card->zone !== CardInstance::ZONE_FIELD) return null;
+
+        $step = $card->owner === 'host' ? 1 : -1;
+        $row  = $card->row + $step;
+
+        if ($row < 1 || $row > 6) return null;
+        return ['row' => $row, 'col' => $card->col];
+    }
+
+    /**
+     * Карта, стоящая напротив (любая — своя или чужая). Либо null.
+     */
+    public static function getOppositeFieldCard(GameState $state, CardInstance $card): ?CardInstance
+    {
+        $cell = self::oppositeCell($card);
+        if ($cell === null) return null;
+
+        foreach ($state->cards as $c) {
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->row === $cell['row'] && $c->col === $cell['col']) {
+                return $c;
+            }
+        }
+        return null;
+    }
     
     /**
      * Проверяет, что target стоит строго напротив attacker.

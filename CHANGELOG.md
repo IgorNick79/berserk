@@ -196,3 +196,25 @@ markdown
 2. Рэккен полный (hp = hpMax) — метание даёт 0 урона, действие завершается.
 
 **Откат:** `git revert <sha>`.
+
+## refactor/opposite-helper — 2026-XX-XX
+
+**Проблема:**
+Три разных реализации «карта напротив»:
+- `ActionResolver::getOppositeFieldCard` (owner ± 1)
+- `TurnPhaseProcessor::findOpposite` (owner ± 1)
+- `TurnProcessor::findOpposite` (`7 - row`) — неверно для задних рядов
+
+**Изменения:**
+- `CardStats` — новые методы `oppositeCell()` и `getOppositeFieldCard()`.
+- `ActionResolver` — удалён приватный `getOppositeFieldCard`, вызов идёт через `CardStats`.
+- `TurnPhaseProcessor::findOpposite` — делегирует в `CardStats::getOppositeFieldCard`
+  + проверка владельца.
+- `TurnProcessor` — удалены мёртвые `applyTurnStartEffect` и `findOpposite`.
+
+**Как проверить:**
+1. Кобольд (s1_92) бьёт врага напротив — предложение излечиться.
+2. Гном-поджигатель (s1_35) в начале хода ранит врага напротив, своих не трогает.
+3. То же для Гнома на краю поля (row 1 host / row 6 player).
+
+**Откат:** `git revert <sha>`.
