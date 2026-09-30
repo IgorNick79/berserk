@@ -740,7 +740,7 @@ final class BattleScreen
         $lines[] = 'version: ' . $state->version;
         $lines[] = 'status: ' . $state->status;
         $lines[] = 'winner: ' . ($state->winner ?? '—');
-        $lines[] = 'first_player: ' . ($state->firstPlayerKey ?? '?');
+        $lines[] = 'first_player: ' . ($state->getFirstPlayerKey() ?? '?');
 
         // ─── Все карты на поле / в полёте ────────────────────
         $lines[] = '';
