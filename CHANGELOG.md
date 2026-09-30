@@ -145,3 +145,8 @@
 6. Волхв и Отшельница — работают как раньше.
 
 **Откат:** `git revert <sha>` + откат SQL.
+
+text
+- `WoundTransferProcessor::chooseAmount` — при `target_filter: source` сразу
+  записывает transfer и вызывает `finish()`, минуя шаг `target_amount`.
+  Убирает лишний экран подтверждения для Осклизга и Рэккена.

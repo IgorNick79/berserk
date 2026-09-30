@@ -153,15 +153,23 @@ final class WoundTransferProcessor
             return Result::error('Неверное количество');
         }
 
+        $this->state->battle['pending_wound_transfer']['amount']    = $amount;
+        $this->state->battle['pending_wound_transfer']['remaining'] = $amount;
+
         $targetFilter = $this->state->battle['pending_wound_transfer']['options']['target_filter'] ?? 'own';
+
+        // Цель — сам источник (Осклизг, Рэккен): финализируем сразу
         if ($targetFilter === 'source') {
-            $this->state->battle['pending_wound_transfer']['target_id'] =
-                $this->state->battle['pending_wound_transfer']['source_id'];
-            $this->state->battle['pending_wound_transfer']['step'] = 'target_amount';
-        } else {
-            $this->state->battle['pending_wound_transfer']['step'] = 'target';
+            $this->state->battle['pending_wound_transfer']['transfers'][] = [
+                'target_id' => $pw['source_id'],
+                'amount'    => $amount,
+            ];
+            $this->state->battle['pending_wound_transfer']['remaining'] = 0;
+
+            return $this->finish($playerKey);
         }
-        
+
+        $this->state->battle['pending_wound_transfer']['step'] = 'target';
         $this->state->bumpVersion();
         return Result::ok(['wt_amount_chosen']);
     }
