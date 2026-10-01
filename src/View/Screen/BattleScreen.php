@@ -234,9 +234,12 @@ final class BattleScreen
                     $cellContent = '<a class="cell-link" href="' . $jumpUrl . '"></a>';
                 }
 
-                // Оверлей не-блокирующего маркера (бомба) на пустой клетке
-                if ($card === null && !empty($state->cell_markers[$key])) {
-                    $cellContent .= $this->buildCellMarkerOverlay($state, $key);
+                // ─── ОВЕРЛЕЙ: всегда в конце, на уровне клетки ───
+                if (!empty($state->cell_markers[$key])) {
+                    $cm = $state->cell_markers[$key];
+                    if (!ZoneManager::markerBlocksMovement($cm)) {
+                        $cellContent .= $this->buildCellMarkerOverlay($state, $key);
+                    }
                 }
 
                 $rowCells .= $this->tpl->parse('includes/battle_cell.tpl', [
