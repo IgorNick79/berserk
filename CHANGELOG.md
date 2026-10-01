@@ -336,3 +336,25 @@ markdown
 wound_transfer (Волхв), coin_spend (Пустотник), self_wound (Центурион).
 
 **Откат:** `git revert <sha>`.
+
+## refactor/multi-target-pick — 2026-XX-XX
+
+**Проблема:**
+`chooseMultiHeal` и `chooseMultiDischarge` дублировали ~30 строк
+валидации: чтение pending, проверка владельца, парсинг `target_ids`,
+дедуп, лимит `max_targets`, наличие в `candidates`.
+
+**Изменения:**
+- `ActionResolver::parseMultiPick($playerKey, $cmd, $pendingKey)` —
+  общий валидатор. Возвращает `[attacker, targetIds, config]` или `Result`.
+- `chooseMultiHeal` и `chooseMultiDischarge` используют его.
+  Бизнес-логика (лечение vs урон) остаётся раздельной.
+- Сигнатуры public-методов не менялись, вызывающие
+  (`Engine::doApply`, `MultiHealChoice`, `MultiDischargeChoice`) не затронуты.
+
+**Как проверить:**
+Аколит Дзара (s1_10) — тройной разряд по 3 целям.
+Фея леса (s1_72) — излечение 3 лесных союзников.
+Негативные: 0 целей, 4 цели (больше max_targets), невалидный target_id.
+
+**Откат:** `git revert <sha>`.

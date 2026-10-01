@@ -1337,12 +1337,17 @@ final class ActionResolver
         return Result::ok(['multi_heal_started']);
     }
 
-    public function chooseMultiHeal(string $playerKey, Command $cmd): Result
+    /**
+     * Общий разбор pending_multi_* и списка целей.
+     *
+     * @return array{attacker: CardInstance, targetIds: int[], config: array}|Result
+     */
+    private function parseMultiPick(string $playerKey, Command $cmd, string $pendingKey): array|Result
     {
-        $pmh = $this->state->battle['pending_multi_heal'] ?? null;
-        if (!$pmh) return Result::error('Нет ожидающего выбора');
+        $pending = $this->state->battle[$pendingKey] ?? null;
+        if (!$pending) return Result::error('Нет ожидающего выбора');
 
-        $attacker = $this->state->getCard($pmh['attacker_id']);
+        $attacker = $this->state->getCard($pending['attacker_id']);
         if (!$attacker || $attacker->owner !== $playerKey) {
             return Result::error('Не ваш выбор');
         }
@@ -1350,7 +1355,7 @@ final class ActionResolver
         $raw = $cmd->get('target_ids', []);
         if (!is_array($raw)) $raw = [$raw];
         $targetIds  = array_values(array_unique(array_map('intval', $raw)));
-        $maxTargets = (int) $pmh['max_targets'];
+        $maxTargets = (int) $pending['max_targets'];
 
         if (empty($targetIds)) {
             return Result::error('Выберите хотя бы одну цель');
@@ -1360,12 +1365,28 @@ final class ActionResolver
         }
 
         foreach ($targetIds as $tid) {
-            if (!in_array($tid, $pmh['candidates'], true)) {
+            if (!in_array($tid, $pending['candidates'], true)) {
                 return Result::error('Неверная цель');
             }
         }
 
-        unset($this->state->battle['pending_multi_heal']);
+        unset($this->state->battle[$pendingKey]);
+
+        return [
+            'attacker'  => $attacker,
+            'targetIds' => $targetIds,
+            'config'    => $pending,
+        ];
+    }
+
+    public function chooseMultiHeal(string $playerKey, Command $cmd): Result
+    {
+        $parsed = $this->parseMultiPick($playerKey, $cmd, 'pending_multi_heal');
+        if ($parsed instanceof Result) return $parsed;
+
+        $attacker  = $parsed['attacker'];
+        $targetIds = $parsed['targetIds'];
+        $pmh       = $parsed['config'];
 
         $value  = (int) $pmh['value'];
         $healed = [];
@@ -1566,33 +1587,12 @@ final class ActionResolver
 
     public function chooseMultiDischarge(string $playerKey, Command $cmd): Result
     {
-        $pmd = $this->state->battle['pending_multi_discharge'] ?? null;
-        if (!$pmd) return Result::error('Нет ожидающего выбора');
+        $parsed = $this->parseMultiPick($playerKey, $cmd, 'pending_multi_discharge');
+        if ($parsed instanceof Result) return $parsed;
 
-        $attacker = $this->state->getCard($pmd['attacker_id']);
-        if (!$attacker || $attacker->owner !== $playerKey) {
-            return Result::error('Не ваш выбор');
-        }
-
-        $raw = $cmd->get('target_ids', []);
-        if (!is_array($raw)) $raw = [$raw];
-        $targetIds  = array_values(array_unique(array_map('intval', $raw)));
-        $maxTargets = (int) $pmd['max_targets'];
-
-        if (empty($targetIds)) {
-            return Result::error('Выберите хотя бы одну цель');
-        }
-        if (count($targetIds) > $maxTargets) {
-            return Result::error('Слишком много целей (макс. ' . $maxTargets . ')');
-        }
-
-        foreach ($targetIds as $tid) {
-            if (!in_array($tid, $pmd['candidates'], true)) {
-                return Result::error('Неверная цель');
-            }
-        }
-
-        unset($this->state->battle['pending_multi_discharge']);
+        $attacker  = $parsed['attacker'];
+        $targetIds = $parsed['targetIds'];
+        $pmd       = $parsed['config'];
 
         $value   = (int) $pmd['value'];
         $results = [];
@@ -1603,9 +1603,7 @@ final class ActionResolver
 
             $hpBefore = $target->hp;
 
-            // Защита от разряда
-            $defended = CardStats::hasDefense($this->state, $target, 'discharge', $attacker);
-            if ($defended) {
+            if (CardStats::hasDefense($this->state, $target, 'discharge', $attacker)) {
                 $results[] = ['target_id' => $tid, 'damage' => 0, 'defended' => true];
                 continue;
             }
