@@ -72,6 +72,10 @@ final class ActionResolver
         if ($type === 'grant_prop') {
             return $this->resolveGrantProp($attacker, $action, $cardId, $playerKey);
         }
+
+        if ($type === 'bomb_shot') {
+            return $this->resolveBombShot($attacker, $action, $cardId, $targetId, $playerKey);
+        }
         
         if ($type === 'steal_coin') {
             return $this->resolveStealCoin($attacker, $action, $cardId, $targetId, $playerKey);
@@ -2992,6 +2996,78 @@ final class ActionResolver
 
         $this->state->bumpVersion();
         return Result::ok(['dive_started']);
+    }
+
+    private function resolveBombShot(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        $target = $this->state->getCard($targetId);
+        if (!$target) return Result::error('Цель не найдена');
+        if ($target->owner === $playerKey) return Result::error('Только на врага');
+        if ($target->zone !== CardInstance::ZONE_FIELD) {
+            return Result::error('Цель не на земле');
+        }
+        if ($target->dying || $target->hp <= 0) return Result::error('Цель мертва');
+
+        $dr = abs($target->row - $attacker->row);
+        $dc = abs($target->col - $attacker->col);
+        $dist = $dr + $dc;
+        if ($dist === 0) return Result::error('Цель не соседняя');
+
+        $range = CardStats::getEffectiveRange($this->state, $attacker, $action);
+        if ($range > 0 && $dist > $range) {
+            return Result::error('Превышена дальность');
+        }
+
+        $cellKey = "{$target->row}_{$target->col}";
+        if (!empty($this->state->cell_markers[$cellKey])) {
+            return Result::error('Клетка уже помечена');
+        }
+
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0) {
+            if ($attacker->coins < $cost) return Result::error('Не хватает монет');
+            $attacker->coins -= $cost;
+        }
+
+        $value      = (int) ($action['value'] ?? 1);
+        $bombDamage = (int) ($action['bomb_damage'] ?? 2);
+
+        $hpBefore = $target->hp;
+        $this->engine->applyDamage($this->state, $target, $value, 'shot', $attacker);
+        $realDamage = max(0, $hpBefore - $target->hp);
+
+        $this->state->cell_markers[$cellKey] = [
+            'type'   => 'bomb',
+            'source' => $playerKey,
+            'damage' => $bombDamage,
+            'label'  => $action['name'] ?? 'Бомба',
+        ];
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'bomb_shot',
+            'action_name' => $action['name'] ?? 'Бомба',
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => $realDamage,
+            'bomb'        => [
+                'row'    => $target->row,
+                'col'    => $target->col,
+                'damage' => $bombDamage,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $attacker->closed = true;
+        $this->state->bumpVersion();
+        return Result::ok(["bomb_shot:{$playerKey}:{$cardId}->{$targetId}"]);
     }
 
     public function chooseDiveCell(string $playerKey, Command $cmd): Result

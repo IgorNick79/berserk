@@ -419,7 +419,12 @@ final class TurnPhaseProcessor
             $queue[] = ['id' => 'coins', 'type' => 'get_coins', 'label' => 'Монеты'];
         }
 
-        // 6. turn_start-абилки (кроме get_coins)
+        // 6. Бомбы (Орк-бомбардир)
+        if ($this->wouldExplodeBombs($activeKey)) {
+            $queue[] = ['id' => 'bombs', 'type' => 'bombs', 'label' => 'Бомба'];
+        }
+
+        // 7. turn_start-абилки (кроме get_coins)
         $tsCards = [];
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $activeKey) continue;
@@ -531,6 +536,7 @@ final class TurnPhaseProcessor
             'opponent_turn_end'   => $this->executeTurnEndEffect($task, $passiveKey),
             'prophecy'            => ['label' => 'Пророчество', 'items' => []],
             'valhalla'            => ['label' => 'Вальхалла', 'items' => []],
+            'bombs'               => $this->executeBombs($activeKey),
             default               => ['label' => $task['label'] ?? '', 'items' => []],
         };
     }
@@ -876,6 +882,7 @@ final class TurnPhaseProcessor
             if (!empty($battle['pending_whip'])) return true;
         }
         if ($base === 'instant' && !empty($battle['pending_instant_pick'])) return true;
+        if ($base === 'bombs' && !empty($battle['pending_any_death'])) return true;
 
         return false;
     }
@@ -985,6 +992,55 @@ final class TurnPhaseProcessor
         }
 
         return $queue;
+    }
+
+    private function wouldExplodeBombs(string $activeKey): bool
+    {
+        foreach ($this->state->cell_markers as $m) {
+            if (($m['type'] ?? '') !== 'bomb') continue;
+            if (($m['source'] ?? null) !== $activeKey) continue;
+            return true;
+        }
+        return false;
+    }
+
+    private function executeBombs(string $activeKey): array
+    {
+        $events = [];
+
+        foreach ($this->state->cell_markers as $key => $m) {
+            if (($m['type'] ?? '') !== 'bomb') continue;
+            if (($m['source'] ?? null) !== $activeKey) continue;
+
+            [$row, $col] = explode('_', $key);
+            $row    = (int) $row;
+            $col    = (int) $col;
+            $damage = (int) ($m['damage'] ?? 2);
+
+            $events[] = [
+                'standalone_text' => "взорвалась на клетке ({$row};{$col})",
+            ];
+
+            foreach ($this->state->cards as $c) {
+                if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+                if ($c->row !== $row || $c->col !== $col) continue;
+                if ($c->dying || $c->hp <= 0) continue;
+
+                $hpBefore = $c->hp;
+                $this->engine->applyDamage($this->state, $c, $damage, 'impact');
+                $realDamage = max(0, $hpBefore - $c->hp);
+
+                $events[] = [
+                    'instance_id' => $c->instanceId,
+                    'delta'       => -$realDamage,
+                ];
+                break;
+            }
+
+            unset($this->state->cell_markers[$key]);
+        }
+
+        return ['label' => 'Бомба', 'items' => $events];
     }
 
     private function buildActiveQueueEnd(string $activeKey): array

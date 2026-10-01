@@ -871,6 +871,19 @@ final class InfoPanel
                 } else {
                     $resultText .= ' (' . $damage . ' урона)';
                 }
+            } elseif ($kind === 'bomb_shot') {
+                $name = $strike['action_name'] ?? 'Бомба';
+                $bomb = $strike['bomb'] ?? null;
+                if ($bomb) {
+                    $tName = $state->getCard($strike['target_id']);
+                    $tInfo = $tName ? ($cardsInfo[$tName->ukid] ?? null) : null;
+                    $tn2 = $tInfo ? htmlspecialchars($tInfo['name'], ENT_QUOTES) : '?';
+                    $resultText = $name . ': ' . $tn2 . ' получает '
+                        . $strike['damage'] . ' урона. Бомба поставлена на клетку ('
+                        . $bomb['row'] . ';' . $bomb['col'] . ').';
+                } else {
+                    $resultText = $name;
+                }
             } elseif ($kind === 'dive') {
                 $name = $strike['action_name'] ?? 'Пикирование';
                 $resultText = $name . ': ' . BattleHelper::strikeName($fin['attack'])
@@ -1231,7 +1244,7 @@ final class InfoPanel
                 . $abilityBonusHtml . $coinBonusHtml . $reductionHtml
                 . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml;
 
-            $noDiceKinds = ['heal', 'modifier', 'execute', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly'];
+            $noDiceKinds = ['heal', 'modifier', 'execute', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot'];
             if (!in_array($kind, $noDiceKinds, true)) {
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
@@ -1262,7 +1275,8 @@ final class InfoPanel
         if ($kind === 'give_coin') $headerText = 'Передача монеты';
         if ($kind === 'become_fly') $headerText = 'Полёт';
         if ($kind === 'dive') $headerText = 'Пикирование';
-    
+        if ($kind === 'bomb_shot') $headerText = 'Бомба';
+
         if (($strike['state'] ?? '') === 'waiting_instant') {
             $phase = $strike['instant_phase'] ?? 'before';
             $headerText = match ($phase) {
@@ -1439,6 +1453,10 @@ final class InfoPanel
 
             $parts = [];
             foreach ($items as $it) {
+                if (isset($it['standalone_text'])) {
+                    $parts[] = $it['standalone_text'];
+                    continue;
+                }
                 $card = $state->getCard($it['instance_id']);
                 if (!$card) continue;
                 $name = $cardsInfo[$card->ukid]['name'] ?? $card->ukid;

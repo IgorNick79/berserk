@@ -615,7 +615,7 @@ final class CardStats
 
     public static function isOffensiveAction(string $type): bool
     {
-        return in_array($type, ['strike', 'uchr', 'shot', 'throw', 'discharge', 'magic', 'cast', 'tap', 'impact', 'execute', 'dissonance', 'sand_claws'], true);
+        return in_array($type, ['strike', 'uchr', 'shot', 'throw', 'discharge', 'magic', 'cast', 'tap', 'impact', 'execute', 'dissonance', 'sand_claws', 'bomb_shot'], true);
     }
 
     private static function hasLineDeep(array $arr): bool

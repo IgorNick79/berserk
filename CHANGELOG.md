@@ -358,3 +358,36 @@ wound_transfer (Волхв), coin_spend (Пустотник), self_wound (Цен
 Негативные: 0 целей, 4 цели (больше max_targets), невалидный target_id.
 
 **Откат:** `git revert <sha>`.
+
+## feat/card-s1_22 — 2026-XX-XX
+
+**Карта:** Орк-бомбардир (s1_22, Орк, элита).
+10 HP, move 1, удар 2-2-3.
+
+**Механика:**
+`<tap>`: метание бомбы на 1 по врагу в пределах 3. На следующий
+ход владельца — бомба взрывается, 2 урона всем на клетке.
+
+**Изменения:**
+- `ActionResolver::resolveBombShot` — новый метод, обрабатывает
+  `type: bomb_shot`. Наносит 1 урона, ставит `cell_markers[X_Y]`
+  типа `bomb` с `source` = владелец, `damage` = 2.
+- `ActionResolver::handle` — новая ветка `bomb_shot`.
+- `CardStats::isOffensiveAction` — `bomb_shot` в списке.
+- `TurnPhaseProcessor::buildActiveQueue` — новая bulk-задача `bombs`,
+  если есть бомбы владельца.
+- `TurnPhaseProcessor::executeBombs` — сканирует `cell_markers`,
+  наносит `impact` урон карте на клетке, удаляет маркер.
+  Возвращает `standalone_text` «взорвалась на клетке (X;Y)».
+- `TurnPhaseProcessor::hasPendingFromTask` — `bombs` + `pending_any_death`.
+- `InfoPanel::renderStartAck` — поддержка `standalone_text` в items.
+- `InfoPanel::renderStrike` — отображение результата `bomb_shot`.
+- `BattleScreen::buildPanel` — метка `bomb_shot` → «Бомба».
+- SQL s1_22 — prop: action `bomb_shot`.
+
+**Как проверить:**
+Сценарий `debug/scenarious/card_s1_22_bombardier.json`.
+1. Ход 1: бомба в Кочевника → −1 HP, маркер на клетке.
+2. Ход 2 владельца: взрыв → −2 HP, маркер снят.
+
+**Откат:** `git revert <sha>` + откат SQL.
