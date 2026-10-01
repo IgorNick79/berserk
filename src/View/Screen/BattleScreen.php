@@ -218,7 +218,8 @@ final class BattleScreen
                     } else {
                         $cellContent = $cardBody;
                     }
-                } elseif (!empty($state->cell_markers[$key])) {
+                } elseif (!empty($state->cell_markers[$key])
+                    && ZoneManager::markerBlocksMovement($state->cell_markers[$key])) {
                     $marker = $state->cell_markers[$key];
                     $label  = $marker['type'] === 'bonfire' ? '🔥' : '●';
                     $cellClass = 'cell-marker cell-marker-' . htmlspecialchars($marker['type'], ENT_QUOTES);
@@ -231,6 +232,11 @@ final class BattleScreen
                     $jumpUrl     = "{$baseUrl}&cmd=jump&card_id={$selectedCardId}&row={$r}&col={$c}&sel={$selectedCardId}";
                     $cellClass   = 'jump-target';
                     $cellContent = '<a class="cell-link" href="' . $jumpUrl . '"></a>';
+                }
+
+                // Оверлей не-блокирующего маркера (бомба) на пустой клетке
+                if ($card === null && !empty($state->cell_markers[$key])) {
+                    $cellContent .= $this->buildCellMarkerOverlay($state, $key);
                 }
 
                 $rowCells .= $this->tpl->parse('includes/battle_cell.tpl', [
@@ -360,22 +366,16 @@ final class BattleScreen
         return Badge::forCard($card, $state);
     }
 
-    private function buildCellMarkerOverlay(GameState $state, string $key): string
-    {
-        if (empty($state->cell_markers[$key])) return '';
-        $m    = $state->cell_markers[$key];
-        $type = $m['type'] ?? '';
+        private function buildCellMarkerOverlay(GameState $state, string $key): string
+        {
+            if (empty($state->cell_markers[$key])) return '';
+            $m    = $state->cell_markers[$key];
+            $type = (string) ($m['type'] ?? '');
+            if (ZoneManager::markerBlocksMovement($m)) return ''; // костёр и др. — не оверлей
 
-        $icon = match ($type) {
-            'bonfire' => '🔥',
-            'bomb'    => '💥',
-            default   => '●',
-        };
-
-        return '<div class="cell-marker-overlay cell-marker-'
-            . htmlspecialchars($type, ENT_QUOTES) . '">'
-            . $icon . '</div>';
-    }
+            return '<div class="cell-marker-overlay cell-marker-overlay-'
+                . htmlspecialchars($type, ENT_QUOTES) . '"></div>';
+        }
 
     /**
      * @return array<int,string>

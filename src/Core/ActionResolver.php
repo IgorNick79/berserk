@@ -2971,7 +2971,8 @@ final class ActionResolver
                     }
                 }
                 if ($occupied) continue;
-                if (!empty($this->state->cell_markers["{$r}_{$c}"])) continue;
+                $cm = $this->state->cell_markers["{$r}_{$c}"] ?? null;
+                if ($cm !== null && ZoneManager::markerBlocksMovement($cm)) continue;
 
                 $cells[] = ['row' => $r, 'col' => $c];
             }

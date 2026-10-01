@@ -68,7 +68,8 @@ final class ForcedMovementResolver
         if ($zone->isFieldOccupied($row, $col)) {
             return null;
         }
-        if (!empty($this->state->cell_markers["{$row}_{$col}"])) {
+        $cm = $this->state->cell_markers["{$row}_{$col}"] ?? null;
+        if ($cm !== null && ZoneManager::markerBlocksMovement($cm)) {
             return null;
         }
 

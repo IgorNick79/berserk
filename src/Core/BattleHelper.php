@@ -86,7 +86,8 @@ final class BattleHelper
             $r  = $card->row + $dr;
             $cc = $card->col + $dc;
             if ($r < 1 || $r > 6 || $cc < 1 || $cc > 5) continue;
-            if (!empty($state->cell_markers["{$r}_{$cc}"])) continue;
+            $cm = $state->cell_markers["{$r}_{$cc}"] ?? null;
+            if ($cm !== null && ZoneManager::markerBlocksMovement($cm)) continue;
             if (isset($occupied["{$r}_{$cc}"])) continue;
 
              // Басаарг: нельзя уходить от обязательной цели
@@ -113,7 +114,8 @@ final class BattleHelper
             $targetCol = ($card->col === 1) ? 5 : 1;
             $key       = "{$card->row}_{$targetCol}";
 
-            if (empty($state->cell_markers[$key]) && !isset($occupied[$key])) {
+            $cm = $state->cell_markers[$key] ?? null;
+            if (($cm === null || !ZoneManager::markerBlocksMovement($cm)) && !isset($occupied[$key])) {
                 $result[$key] = true;
             }
         }
@@ -150,7 +152,8 @@ final class BattleHelper
         for ($r = 1; $r <= 6; $r++) {
             for ($c = 1; $c <= 5; $c++) {
                 if ($r === $card->row && $c === $card->col) continue;
-                if (!empty($state->cell_markers["{$r}_{$c}"])) continue;
+                $cm = $state->cell_markers["{$r}_{$c}"] ?? null;
+                if ($cm !== null && ZoneManager::markerBlocksMovement($cm)) continue;
                 if (isset($occupied["{$r}_{$c}"])) continue;
 
                 $dist = abs($r - $card->row) + abs($c - $card->col);
