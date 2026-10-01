@@ -1034,7 +1034,6 @@ final class TurnPhaseProcessor
                     'instance_id' => $c->instanceId,
                     'delta'       => -$realDamage,
                 ];
-                break;
             }
 
             unset($this->state->cell_markers[$key]);

@@ -360,6 +360,23 @@ final class BattleScreen
         return Badge::forCard($card, $state);
     }
 
+    private function buildCellMarkerOverlay(GameState $state, string $key): string
+    {
+        if (empty($state->cell_markers[$key])) return '';
+        $m    = $state->cell_markers[$key];
+        $type = $m['type'] ?? '';
+
+        $icon = match ($type) {
+            'bonfire' => '🔥',
+            'bomb'    => '💥',
+            default   => '●',
+        };
+
+        return '<div class="cell-marker-overlay cell-marker-'
+            . htmlspecialchars($type, ENT_QUOTES) . '">'
+            . $icon . '</div>';
+    }
+
     /**
      * @return array<int,string>
      */

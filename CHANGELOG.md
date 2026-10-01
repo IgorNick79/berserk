@@ -391,3 +391,13 @@ wound_transfer (Волхв), coin_spend (Пустотник), self_wound (Цен
 2. Ход 2 владельца: взрыв → −2 HP, маркер снят.
 
 **Откат:** `git revert <sha>` + откат SQL.
+
+- `ZoneManager::markerBlocksMovement` — статический хелпер: бомба не блокирует
+  клетку, остальные маркеры (костёр) — блокируют.
+- Правки в `MovementResolver::validateDestination`, `BattleHelper::getMoveCells`
+  и `getJumpCells`, `ForcedMovementResolver::destination`, `ActionResolver::startDive` —
+  проверка через новый хелпер.
+- `BattleScreen::buildField` — маркер клетки показывается поверх карты
+  (иконка бомбы 💥 / костра 🔥). Новый метод `buildCellMarkerOverlay`.
+- `global.css` — стиль `.cell-marker-overlay`.
+- `executeBombs` — убран `break`, взрыв бьёт все карты на клетке.

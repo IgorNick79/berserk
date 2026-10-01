@@ -166,6 +166,12 @@ final class ZoneManager
 
     // ─── Запросы по полю ─────────────────────────────────────
 
+    public static function markerBlocksMovement(array $marker): bool
+    {
+        // Клетку блокирует только костёр. Остальные маркеры (бомба и т.д.) — нет.
+        return ($marker['type'] ?? '') === 'bonfire';
+    }
+
     public function isCellMarked(int $row, int $col): bool
     {
         $key = "{$row}_{$col}";

@@ -1081,3 +1081,18 @@ body { padding-bottom: 46vh; }
 .instant-summary li.instant-summary__item--skip {
     color: #888;
 }
+
+.battle-card {
+    position: relative;
+}
+
+.cell-marker-overlay {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    font-size: 18px;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 10;
+    text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 3px #000;
+}
