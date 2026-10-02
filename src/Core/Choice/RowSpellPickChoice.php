@@ -63,7 +63,7 @@ final class RowSpellPickChoice implements ChoiceHandlerInterface
             title: $srcName . ': выбери ровно ' . $x . ' цел' . ($x === 1 ? 'ь' : 'и'),
             form: [
                 'type'   => 'checkbox',
-                'name'   => 'target_ids',
+                'name'   => 'target_ids[]',
                 'items'  => $items,
                 'hidden' => [
                     $roleParam => '',
