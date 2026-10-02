@@ -439,14 +439,11 @@ final class StrikeResolver
             ? $this->state->getCard($defenderId)
             : $this->state->getCard($targetId);
 
-        $attackDice = random_int(1, 6);
+        $attackDice = Dice::roll();
 
         $noDefendDice = $defendCard->closed 
             || CardStats::hasUnanswer($this->state, $attacker, $defendCard);
-        $defendDice = $noDefendDice ? 0 : random_int(1, 6);
-
-        $attackDice = 6;
-        if ($defendDice > 0) $defendDice = 1;
+        $defendDice = $noDefendDice ? 0 : Dice::roll();
 
         $attackMod = CardStats::getOva($this->state, $attacker, $defendCard) 
              -   CardStats::getClumsyPenalty($attacker);

@@ -241,8 +241,8 @@ final class Engine
                 $sr = new StrikeResolver($state, $this);
 
                 if ($op === 'reroll') {
-                    $strike['attack_dice'] = random_int(1, 6);
-                    $strike['defend_dice'] = random_int(1, 6);
+                    $strike['attack_dice'] = Dice::roll();
+                    $strike['defend_dice'] = Dice::roll();
                     $sr->recalcTable();
                     return null;
                 }

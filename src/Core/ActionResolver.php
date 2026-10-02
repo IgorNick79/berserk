@@ -368,8 +368,7 @@ final class ActionResolver
             }
         }
 
-        $dice   = random_int(1, 6);
-        if ($dice < 1) $dice = 1;
+        $dice   = Dice::roll();
         $level  = BattleHelper::diceToLevel($dice);
 
         $val = 0;
@@ -957,9 +956,7 @@ final class ActionResolver
         string $type, int $cardId, int $targetId, string $playerKey,
         ?int $forcedCoinSpend = null
     ): Result {
-        $dice   = random_int(1, 6);
-        $dice = 6;
-        if ($dice < 1) $dice = 1;
+        $dice   = Dice::roll();
         $level  = BattleHelper::diceToLevel($dice);
 
         $val = 0;
@@ -3142,7 +3139,7 @@ final class ActionResolver
         $attacker->flags['dive_used'] = true;
 
         // 4. Кубик и урон
-        $dice  = random_int(1, 6);
+        $dice  = Dice::roll();
         $level = BattleHelper::diceToLevel($dice);
         $val   = (int) ($action['strike'][$level] ?? 0);
 
@@ -3268,7 +3265,7 @@ final class ActionResolver
         // Один бросок кубика
         $action = $p['action'] ?? [];
 
-        $dice  = random_int(1, 6);
+        $dice  = Dice::roll();
         $level = BattleHelper::diceToLevel($dice);
         $val   = (int) ($action['strike'][$level] ?? 0);
 
