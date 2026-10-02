@@ -894,8 +894,11 @@ final class InfoPanel
                         $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
                         $parts[] = $tn . ' −' . $t['damage'];
                     }
-                    $resultText = $name . ': ' . BattleHelper::strikeName($rs['level'])
-                        . ' — ' . implode(', ', $parts);
+                    $resultText = $name
+                        . ': кубик ' . $rs['dice']
+                        . ' → ' . BattleHelper::strikeName($rs['level'])
+                        . ' (' . $rs['damage_per_target'] . ' урона): '
+                        . implode(', ', $parts);
                 } else {
                     $resultText = $name;
                 }
@@ -1259,7 +1262,7 @@ final class InfoPanel
                 . $abilityBonusHtml . $coinBonusHtml . $reductionHtml
                 . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml;
 
-            $noDiceKinds = ['heal', 'modifier', 'execute', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot', 'row_spell'];
+            $noDiceKinds = ['heal', 'modifier', 'execute', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot'];
             if (!in_array($kind, $noDiceKinds, true)) {
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
