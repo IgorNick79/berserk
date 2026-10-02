@@ -156,6 +156,13 @@ final class StrikeResolver
         }
 
         $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
+
+        // Берсерк: движение после атаки снимает вторую атаку
+        if (!empty($attacker->prop['strike_consecutive'])
+            && !empty($attacker->flags['strike_chain_broken'])) {
+            $attackLimit = 1;
+        }
+
         $attacksUsed = (int) ($attacker->flags['attacks_used_this_turn'] ?? 0);
         if ($attacksUsed >= $attackLimit) {
             return Result::error('Уже атаковал в этот ход');

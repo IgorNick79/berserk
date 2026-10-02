@@ -180,6 +180,12 @@ final class BattleHelper
         }
 
         $attackLimit = (int) ($card->prop['attacks_per_turn'] ?? 1);
+
+        if (!empty($card->prop['strike_consecutive'])
+            && !empty($card->flags['strike_chain_broken'])) {
+            $attackLimit = 1;
+        }
+
         $attacksUsed = (int) ($card->flags['attacks_used_this_turn'] ?? 0);
         if ($attacksUsed >= $attackLimit) return [];
 

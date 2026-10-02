@@ -428,3 +428,26 @@ wound_transfer (Волхв), coin_spend (Пустотник), self_wound (Цен
 3. Ход владельца бомбы — взрыв, иконка бомбы исчезает, костёр остаётся.
 
 **Откат:** `git revert <sha>`.
+
+## feat/berserk-strike-consecutive — 2026-XX-XX
+
+**Карта:** Берсерк (s1_195).
+**Механика:** Две атаки за ход, только подряд. Движение после первой
+атаки снимает вторую.
+
+**Изменения:**
+- `MovementResolver::move` и `jump` — если карта с `strike_consecutive`
+  двигается после того, как уже атаковала (`attacks_used_this_turn > 0`),
+  ставится флаг `strike_chain_broken`.
+- `StrikeResolver::declare` и `BattleHelper::getAttackTargets` — при
+  `strike_chain_broken` лимит атак снижается до 1.
+- `TurnProcessor::continueStartTurn` — флаг `strike_chain_broken`
+  сбрасывается в начале хода владельца.
+- SQL s1_195 — в prop добавлен `strike_consecutive: true`.
+
+**Как проверить:**
+A. Стоит или двинулся до атак — 2 атаки.
+B. Ударил, двинулся — вторая атака недоступна.
+C. Ударил, ударил — обе прошли, движение после ок.
+
+**Откат:** `git revert <sha>` + откат SQL.

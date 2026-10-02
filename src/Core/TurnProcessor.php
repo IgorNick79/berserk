@@ -315,6 +315,7 @@ final class TurnProcessor
                     $card->flags['after_strike_execute_used_this_turn'] = 0;
                     $card->flags['instant_uses_this_turn'] = [];
                     unset($card->flags['first_attack_target_id']);
+                    unset($card->flags['strike_chain_broken']);
                 }
             }
 
