@@ -546,6 +546,7 @@ final class BattleScreen
                     || ($a['type'] ?? '') === 'place_cell_marker'
                     || ($a['type'] ?? '') === 'wound_transfer'
                     || ($a['type'] ?? '') === 'become_fly'
+                    || ($a['type'] ?? '') === 'row_spell'
                     || !empty($a['max_targets']);
 
                 if ($immediate) {
