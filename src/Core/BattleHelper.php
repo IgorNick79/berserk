@@ -407,6 +407,13 @@ final class BattleHelper
             $attackerIsFlying = ($card->zone === CardInstance::ZONE_FLYING);
             $canAttackFlying  = CardStats::canAttackFlying($state, $card);
 
+            // Берсерк: вторая атака — только по другой цели.
+            // Первую цель не подсвечиваем, чтобы UI не расходился с declare.
+            $alreadyHitId = 0;
+            if (!empty($card->prop['strike_targets_unique']) && $attacksUsed > 0) {
+                $alreadyHitId = (int) ($card->flags['first_attack_target_id'] ?? 0);
+            }
+
             // Перехват летающих: только Пауки противника
             if ($attackerIsFlying) {
                 $interceptors = CardStats::getAirInterceptors($state, $playerKey);
@@ -419,6 +426,7 @@ final class BattleHelper
             }
 
             foreach ($state->cards as $target) {
+                if ($alreadyHitId > 0 && $target->instanceId === $alreadyHitId) continue;
                 if ($target->zone !== CardInstance::ZONE_FIELD
                     && $target->zone !== CardInstance::ZONE_FLYING) continue;
                 if ($target->owner === $playerKey) continue;
