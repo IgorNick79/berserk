@@ -465,6 +465,7 @@ final class BattleScreen
                 'become_fly' => 'Получить полёт',
                 'dive' => 'Пикирование',
                 'bomb_shot' => 'Бомба',
+                'row_spell' => 'Цветущие руны',
             ];
 
             foreach ($c->prop['actions'] ?? [] as $a) {

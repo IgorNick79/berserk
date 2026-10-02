@@ -97,6 +97,10 @@ final class ActionResolver
             return $this->startDive($attacker, $action, $cardId, $targetId, $playerKey);
         }
 
+        if ($type === 'row_spell') {
+            return $this->startRowSpell($attacker, $action, $cardId, $playerKey);
+        }
+
         // ── Перераспределение ран (Волхв) ──────────────────────
         if ($type === 'wound_transfer') {
             $proc = new WoundTransferProcessor($this->state, $this->engine);
@@ -1666,6 +1670,7 @@ final class ActionResolver
             ['pending_combat_pick',             'owner'],
             ['pending_turn_instants',           'owner'],
             ['pending_forced_directional_move', 'owner'],
+            ['pending_row_pick',                'owner'],
         ];
         foreach ($simple as [$key, $field]) {
             $p = $state->battle[$key] ?? null;
@@ -2931,6 +2936,33 @@ final class ActionResolver
         return Result::ok(["steal_coin:{$playerKey}:{$cardId}->{$targetId}:{$stolen}"]);
     }
 
+    private function startRowSpell(
+        CardInstance $attacker, array $action,
+        int $cardId, string $playerKey
+    ): Result {
+        if ($attacker->closed) {
+            return Result::error('Карта закрыта');
+        }
+
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0 && $attacker->coins < $cost) {
+            return Result::error('Не хватает монет');
+        }
+        if ($cost > 0) {
+            $attacker->coins -= $cost;
+            $this->engine->syncCoinBonus($attacker);
+        }
+
+        $this->state->battle['pending_row_pick'] = [
+            'owner'   => $playerKey,
+            'card_id' => $cardId,
+            'action'  => $action,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['row_pick_started']);
+    }
+
     private function startDive(
         CardInstance $attacker, array $action,
         int $cardId, int $targetId, string $playerKey
@@ -3162,5 +3194,118 @@ final class ActionResolver
             'target_id' => $targetId,
         ]);
         return $strike->declare($playerKey, $strikeCmd);
+    }
+
+    public function chooseRow(string $playerKey, Command $cmd): Result
+    {
+        $p = $this->state->battle['pending_row_pick'] ?? null;
+        if (!$p || $p['owner'] !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $uiRow = (int) $cmd->get('row', 0);
+        if ($uiRow < 1 || $uiRow > 6) {
+            return Result::error('Неверный ряд');
+        }
+
+        $card = $this->state->getCard($p['card_id']);
+        if (!$card || $card->owner !== $playerKey) {
+            unset($this->state->battle['pending_row_pick']);
+            return Result::error('Карта недоступна');
+        }
+
+        // UI-номер → физический row (зеркалирование для player)
+        $isHost = $playerKey === 'host';
+        $physicalRow = $isHost ? $uiRow : (7 - $uiRow);
+
+        // 5 маркеров на клетки ряда
+        for ($col = 1; $col <= 5; $col++) {
+            $key = "{$physicalRow}_{$col}";
+            ZoneManager::addMarker($this->state, $key, [
+                'type'   => 'row_spell',
+                'source' => $playerKey,
+            ]);
+        }
+
+        $card->flags['row_spell_pending'] = [
+            'row' => $physicalRow,
+            'action' => $p['action'] ?? [],
+        ];
+        $card->closed = true;
+
+        unset($this->state->battle['pending_row_pick']);
+
+        $this->state->bumpVersion();
+        return Result::ok(["row_chosen:{$uiRow}->{$physicalRow}"]);
+    }
+
+    public function chooseRowSpellTargets(string $playerKey, Command $cmd): Result
+    {
+        $p = $this->state->battle['pending_row_spell_pick'] ?? null;
+        if (!$p || $p['owner'] !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $raw = $cmd->get('target_ids', []);
+        if (!is_array($raw)) $raw = [$raw];
+        $targetIds = array_values(array_unique(array_map('intval', $raw)));
+
+        $x = (int) $p['x'];
+
+        if (count($targetIds) !== $x) {
+            return Result::error('Нужно выбрать ровно ' . $x . ' цел' . ($x === 1 ? 'ь' : 'и'));
+        }
+
+        foreach ($targetIds as $tid) {
+            if (!in_array($tid, $p['candidates'], true)) {
+                return Result::error('Неверная цель');
+            }
+        }
+
+        $source = $this->state->getCard((int) $p['source_id']);
+        unset($this->state->battle['pending_row_spell_pick']);
+
+        // Один бросок кубика
+        $action = $p['action'] ?? [];
+
+        $dice  = random_int(1, 6);
+        $level = BattleHelper::diceToLevel($dice);
+        $val   = (int) ($action['strike'][$level] ?? 0);
+
+        $results = [];
+        foreach ($targetIds as $tid) {
+            $target = $this->state->getCard($tid);
+            if (!$target) continue;
+            $hpBefore = $target->hp;
+            $this->engine->applyDamage($this->state, $target, $val, 'discharge', $source);
+            $results[] = [
+                'target_id' => $tid,
+                'damage'    => max(0, $hpBefore - $target->hp),
+            ];
+        }
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'row_spell',
+            'action_name' => 'Цветущие руны',
+            'attacker_id' => $source?->instanceId ?? 0,
+            'target_id'   => $targetIds[0] ?? 0,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => $dice,
+            'defend_dice' => 0,
+            'result'      => ['attack' => $level, 'defend' => '', 'winner' => 'attack'],
+            'final'       => ['attack' => $level, 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'row_spell'   => ['dice' => $dice, 'level' => $level, 'damage_per_target' => $val, 'targets' => $results],
+            'confirmed'   => [],
+        ];
+
+         if (!empty($this->state->battle['turn_phase'])) {
+            (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+        }
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(['row_spell_done']);
     }
 }

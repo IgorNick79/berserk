@@ -120,6 +120,8 @@ final class Engine
             'play_turn_instant'       => $action->playTurnInstant($playerKey, $cmd),
             'choose_close_or_damage'  => $strike->chooseCloseOrDamage($playerKey, $cmd),
             'choose_ally_modifier'    => $strike->chooseAllyModifier($playerKey, $cmd),
+            'choose_row'                => $action->chooseRow($playerKey, $cmd),
+            'choose_row_spell_targets'  => $action->chooseRowSpellTargets($playerKey, $cmd),
             'reorder_start'           => (new ProphecyProcessor($state, $this))->startReorder($playerKey),
             'reorder_card_up'         => (new ProphecyProcessor($state, $this))->reorderCard(
                 $playerKey, (int) $cmd->get('card_id', 0), 'top'

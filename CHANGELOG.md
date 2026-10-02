@@ -492,3 +492,35 @@ UI расходился с логикой.
    пока pending не завершён или не отменён.
 
 **Откат:** `git revert <sha>`.
+
+## feat/card-s1_96 — 2026-XX-XX
+
+**Карта:** Тергала (s1_96, Эльф).
+**Механика:** `<tap>`: выбрать ряд. В начале своего следующего хода —
+ранить X чужих на 1-2-2, X = свои без ран в выбранном ряду.
+Если чужих < X — не срабатывает.
+
+**Изменения:**
+- `ActionResolver::startRowSpell` и `chooseRow` — выбор ряда через
+  `pending_row_pick`. UI-номер конвертируется в физический row
+  (host: 1→1, player: 1→6). Хранится в `card->flags['row_spell_pending']`.
+- `Choice/RowPickChoice` — 6 кнопок + отмена.
+- `TurnPhaseProcessor::buildActiveQueue` — задача `row_spell` для карт с
+  флагом. `executeRowSpell` — считает X, проверяет чужих, при достаточном
+  числе открывает `pending_row_spell_pick`.
+- `Choice/RowSpellPickChoice` — чекбоксы выбора ровно X целей.
+- `ActionResolver::chooseRowSpellTargets` — один бросок кубика, урон
+  1/2/2 всем выбранным.
+- `Engine::doApply` — команды `choose_row`, `choose_row_spell_targets`.
+- `InfoPanel`, `BattleScreen` — метка и отображение `row_spell`.
+- SQL s1_96 — prop с actions.
+
+**Как проверить:**
+1. Тергала `<tap>` → кнопки «Ряд 1…Ряд 6» + Отмена.
+2. Выбор ряда → карта закрыта, флаг.
+3. Следующий свой ход — ack «Цветущие руны: ряд N, X = …».
+4. Если чужих хватает — pending с чекбоксами, выбрать ровно X.
+5. Урон 1/2/2 по броску.
+6. Если чужих < X — только текст «не срабатывает».
+
+**Откат:** `git revert <sha>` + откат SQL.

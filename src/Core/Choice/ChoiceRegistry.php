@@ -46,6 +46,8 @@ final class ChoiceRegistry
                 new GrezyChoice(),
                 new ForcedDirectionalMoveChoice(),
                 new ForcedStrikeChoice(),
+                new RowPickChoice(),
+                new RowSpellPickChoice(),
                 // ─── Фаза хода ───────────────────────────────────────
                 new TurnAckChoice(),
                 new TurnInstantsChoice(),

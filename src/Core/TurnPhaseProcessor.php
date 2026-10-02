@@ -424,6 +424,19 @@ final class TurnPhaseProcessor
             $queue[] = ['id' => 'bombs', 'type' => 'bombs', 'label' => 'Бомба'];
         }
 
+        // Цветущие руны (Тергала)
+        foreach ($this->state->cards as $card) {
+            if ($card->owner !== $activeKey) continue;
+            if (empty($card->flags['row_spell_pending'])) continue;
+            if ($card->dying || $card->hp <= 0) continue;
+            $queue[] = [
+                'id'      => 'row_spell_' . $card->instanceId,
+                'type'    => 'row_spell',
+                'card_id' => $card->instanceId,
+                'label'   => 'Цветущие руны',
+            ];
+        }
+
         // 7. turn_start-абилки (кроме get_coins)
         $tsCards = [];
         foreach ($this->state->cards as $card) {
@@ -537,6 +550,7 @@ final class TurnPhaseProcessor
             'prophecy'            => ['label' => 'Пророчество', 'items' => []],
             'valhalla'            => ['label' => 'Вальхалла', 'items' => []],
             'bombs'               => $this->executeBombs($activeKey),
+            'row_spell'           => $this->executeRowSpell($task, $activeKey),
             default               => ['label' => $task['label'] ?? '', 'items' => []],
         };
     }
@@ -883,6 +897,7 @@ final class TurnPhaseProcessor
         }
         if ($base === 'instant' && !empty($battle['pending_instant_pick'])) return true;
         if ($base === 'bombs' && !empty($battle['pending_any_death'])) return true;
+        if ($base === 'row_spell' && !empty($battle['pending_row_spell_pick'])) return true;
 
         return false;
     }
@@ -1047,6 +1062,73 @@ final class TurnPhaseProcessor
         }
 
         return ['label' => 'Бомба', 'items' => $events];
+    }
+
+    private function executeRowSpell(array $task, string $activeKey): array
+    {
+        $card = $this->state->getCard((int) $task['card_id']);
+        if (!$card) return ['label' => 'Цветущие руны', 'items' => []];
+
+        $data   = $card->flags['row_spell_pending'] ?? null;
+        if (!$data) return ['label' => 'Цветущие руны', 'items' => []];
+        $row    = (int) ($data['row'] ?? 0);
+        $action = $data['action'] ?? [];
+        unset($card->flags['row_spell_pending']);
+
+        // снять маркеры ряда
+        for ($col = 1; $col <= 5; $col++) {
+            ZoneManager::removeMarkersByType(
+                $this->state, "{$row}_{$col}", 'row_spell', $activeKey
+            );
+        }
+
+        // Считаем X — свои без ран в этом ряду
+        $x = 0;
+        foreach ($this->state->cards as $c) {
+            if ($c->owner !== $activeKey) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->row !== $row) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            if ($c->hp < $c->hpMax) continue;   // есть раны — не считается
+            $x++;
+        }
+
+        $events = [
+            ['standalone_text' => "Цветущие руны: ряд {$row}, X = {$x}"],
+        ];
+
+        if ($x === 0) {
+            $events[] = ['standalone_text' => 'Ваших существ без ран в этом ряду нет — заклинание не срабатывает'];
+            return ['label' => 'Цветущие руны', 'items' => $events];
+        }
+
+        // Собираем всех чужих на поле
+        $enemies = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->owner === $activeKey) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            $enemies[] = $c->instanceId;
+        }
+
+        if (count($enemies) < $x) {
+            $events[] = ['standalone_text' =>
+                "Чужих на поле меньше {$x} — заклинание не срабатывает"];
+            return ['label' => 'Цветущие руны', 'items' => $events];
+        }
+
+        // Открываем pending выбора X целей
+        $this->state->battle['pending_row_spell_pick'] = [
+            'owner'      => $activeKey,
+            'source_id'  => $card->instanceId,
+            'x'          => $x,
+            'candidates' => $enemies,
+            'action'     => $action,
+        ];
+
+        return ['label' => 'Цветущие руны', 'items' => $events];
     }
 
     private function buildActiveQueueEnd(string $activeKey): array
