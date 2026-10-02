@@ -1101,6 +1101,10 @@ body { padding-bottom: 46vh; }
 .cell-marker-bomb {
     background-image: url("/assets/images/bomb.png");
 }
+.cell-marker-row_spell {
+    background-image: url("/assets/images/flower.png");
+}
+
 
 /* Костёр: пока юникод 🔥 через псевдоэлемент */
 .cell-marker-bonfire {
