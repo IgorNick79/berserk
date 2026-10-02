@@ -409,7 +409,7 @@ final class ProphecyProcessor
         for ($r = 1; $r <= 6; $r++) {
             for ($c = 1; $c <= 5; $c++) {
                 if ($this->isFieldOccupied($r, $c)) continue;
-                if (!empty($this->state->cell_markers["{$r}_{$c}"])) continue;
+                if (ZoneManager::hasBlockingMarker($state, "{$r}_{$c}")) continue;
                 if (!$this->hasNeighborCreature($r, $c)) continue;
                 $cells[] = "{$r}_{$c}";
             }

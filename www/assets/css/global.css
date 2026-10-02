@@ -880,16 +880,6 @@ body { padding-bottom: 46vh; }
     border-color: #44a;
 }
 
-.cell-marker-content {
-    font-size: 24px;
-    text-align: center;
-}
-
-.cell-marker-bonfire {
-    background: rgba(255, 100, 0, 0.3);
-    border-color: #f60;
-}
-
 .task-card--instant {
     background: #eef;
     border-color: #66a;
@@ -1087,14 +1077,21 @@ body { padding-bottom: 46vh; }
     position: relative;
 }
 
-.cell-marker-overlay {
+/* Контейнер маркеров — в правом верхнем углу клетки, иконки идут в ряд */
+.cell-markers {
     position: absolute;
     bottom: 4px;
     right: 4px;
+    display: flex;
+    gap: 4px;
+    z-index: 20;
+    pointer-events: none;
+}
+
+/* Одна иконка */
+.cell-marker {
     width: 22px;
     height: 22px;
-    z-index: 10;
-    pointer-events: none;
     border-radius: 3px;
     background-size: contain;
     background-repeat: no-repeat;
@@ -1103,4 +1100,18 @@ body { padding-bottom: 46vh; }
 
 .cell-marker-overlay-bomb {
     background-image: url("../images/bomb.png");
+}
+
+/* Костёр: пока юникод 🔥 через псевдоэлемент */
+.cell-marker-bonfire {
+    background-color: rgba(255, 100, 0, 0.7);
+}
+.cell-marker-bonfire::after {
+    content: '🔥';
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 16px;
 }

@@ -996,10 +996,12 @@ final class TurnPhaseProcessor
 
     private function wouldExplodeBombs(string $activeKey): bool
     {
-        foreach ($this->state->cell_markers as $m) {
-            if (($m['type'] ?? '') !== 'bomb') continue;
-            if (($m['source'] ?? null) !== $activeKey) continue;
-            return true;
+        foreach (array_keys($this->state->cell_markers) as $key) {
+            foreach (ZoneManager::markersAt($this->state, $key) as $m) {
+                if (($m['type'] ?? '') !== 'bomb') continue;
+                if (($m['source'] ?? null) !== $activeKey) continue;
+                return true;
+            }
         }
         return false;
     }
@@ -1008,35 +1010,40 @@ final class TurnPhaseProcessor
     {
         $events = [];
 
-        foreach ($this->state->cell_markers as $key => $m) {
-            if (($m['type'] ?? '') !== 'bomb') continue;
-            if (($m['source'] ?? null) !== $activeKey) continue;
+        foreach (array_keys($this->state->cell_markers) as $key) {
+            $markers = ZoneManager::markersAt($this->state, $key);
 
-            [$row, $col] = explode('_', $key);
-            $row    = (int) $row;
-            $col    = (int) $col;
-            $damage = (int) ($m['damage'] ?? 2);
+            foreach ($markers as $m) {
+                if (($m['type'] ?? '') !== 'bomb') continue;
+                if (($m['source'] ?? null) !== $activeKey) continue;
 
-            $events[] = [
-                'standalone_text' => "взорвалась на клетке ({$row};{$col})",
-            ];
-
-            foreach ($this->state->cards as $c) {
-                if ($c->zone !== CardInstance::ZONE_FIELD) continue;
-                if ($c->row !== $row || $c->col !== $col) continue;
-                if ($c->dying || $c->hp <= 0) continue;
-
-                $hpBefore = $c->hp;
-                $this->engine->applyDamage($this->state, $c, $damage, 'impact');
-                $realDamage = max(0, $hpBefore - $c->hp);
+                [$row, $col] = explode('_', $key);
+                $row    = (int) $row;
+                $col    = (int) $col;
+                $damage = (int) ($m['damage'] ?? 2);
 
                 $events[] = [
-                    'instance_id' => $c->instanceId,
-                    'delta'       => -$realDamage,
+                    'standalone_text' => "взорвалась на клетке ({$row};{$col})",
                 ];
-            }
 
-            unset($this->state->cell_markers[$key]);
+                foreach ($this->state->cards as $c) {
+                    if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+                    if ($c->row !== $row || $c->col !== $col) continue;
+                    if ($c->dying || $c->hp <= 0) continue;
+
+                    $hpBefore = $c->hp;
+                    $this->engine->applyDamage($this->state, $c, $damage, 'impact');
+                    $realDamage = max(0, $hpBefore - $c->hp);
+
+                    $events[] = [
+                        'instance_id' => $c->instanceId,
+                        'delta'       => -$realDamage,
+                    ];
+                }
+
+                ZoneManager::removeMarkersByType($this->state, $key, 'bomb', $activeKey);
+                break;   // бомбы одного источника на клетке только одна
+            }
         }
 
         return ['label' => 'Бомба', 'items' => $events];

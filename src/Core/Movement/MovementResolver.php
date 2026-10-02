@@ -195,8 +195,7 @@ final class MovementResolver
         if ($zone->isFieldOccupied($row, $col)) {
             return Result::error('Клетка занята');
         }
-        $cm = $this->state->cell_markers["{$row}_{$col}"] ?? null;
-        if ($cm !== null && ZoneManager::markerBlocksMovement($cm)) {
+        if (ZoneManager::hasBlockingMarker($this->state, "{$row}_{$col}")) {
             return Result::error('На клетке маркер');
         }
 

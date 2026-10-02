@@ -166,6 +166,53 @@ final class ZoneManager
 
     // ─── Запросы по полю ─────────────────────────────────────
 
+        /** @return array<int, array> */
+    public static function markersAt(GameState $state, string $key): array
+    {
+        $m = $state->cell_markers[$key] ?? null;
+        if (empty($m)) return [];
+        // Старый формат: один маркер ['type' => ...]
+        if (isset($m['type'])) return [$m];
+        // Новый формат: список маркеров
+        return is_array($m) ? $m : [];
+    }
+
+    public static function hasMarker(GameState $state, string $key): bool
+    {
+        return !empty(self::markersAt($state, $key));
+    }
+
+    public static function hasBlockingMarker(GameState $state, string $key): bool
+    {
+        foreach (self::markersAt($state, $key) as $m) {
+            if (self::markerBlocksMovement($m)) return true;
+        }
+        return false;
+    }
+
+    public static function addMarker(GameState $state, string $key, array $marker): void
+    {
+        $list = self::markersAt($state, $key);
+        $list[] = $marker;
+        $state->cell_markers[$key] = $list;
+    }
+
+    /** Удалить только маркеры с указанным type (и при необходимости source). */
+    public static function removeMarkersByType(GameState $state, string $key, string $type, ?string $source = null): void
+    {
+        $list = self::markersAt($state, $key);
+        $list = array_values(array_filter($list, function ($m) use ($type, $source) {
+            if (($m['type'] ?? '') !== $type) return true;
+            if ($source !== null && ($m['source'] ?? null) !== $source) return true;
+            return false;
+        }));
+        if (empty($list)) {
+            unset($state->cell_markers[$key]);
+        } else {
+            $state->cell_markers[$key] = $list;
+        }
+    }
+
     public static function markerBlocksMovement(array $marker): bool
     {
         // Клетку блокирует только костёр. Остальные маркеры (бомба и т.д.) — нет.
@@ -174,25 +221,34 @@ final class ZoneManager
 
     public function isCellMarked(int $row, int $col): bool
     {
-        $key = "{$row}_{$col}";
-        return !empty($this->state->cell_markers[$key]);
+        return self::hasBlockingMarker($this->state, "{$row}_{$col}");
     }
 
-    public function getCellMarker(int $row, int $col): ?array
-    {
+    public function setCellMarker(
+        int $row, int $col, string $type,
+        int $expire, string $timing, string $source
+    ): void {
         $key = "{$row}_{$col}";
-        return $this->state->cell_markers[$key] ?? null;
-    }
+        $existing = self::markersAt($this->state, $key);
 
-    public function setCellMarker(int $row, int $col, string $type, int $expire, string $timing, string $source): void
-    {
-        $key = "{$row}_{$col}";
-        $this->state->cell_markers[$key] = [
+        // Ищем маркер того же типа от того же источника — обновляем
+        foreach ($existing as $i => $m) {
+            if (($m['type'] ?? '') === $type && ($m['source'] ?? '') === $source) {
+                $existing[$i]['expire'] = $expire;
+                $existing[$i]['timing'] = $timing;
+                $this->state->cell_markers[$key] = $existing;
+                return;
+            }
+        }
+
+        // Иначе — добавляем
+        $existing[] = [
             'type'   => $type,
             'expire' => $expire,
             'timing' => $timing,
             'source' => $source,
         ];
+        $this->state->cell_markers[$key] = $existing;
     }
     
     public function isFieldOccupied(int $row, int $col): bool

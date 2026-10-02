@@ -218,12 +218,6 @@ final class BattleScreen
                     } else {
                         $cellContent = $cardBody;
                     }
-                } elseif (!empty($state->cell_markers[$key])
-                    && ZoneManager::markerBlocksMovement($state->cell_markers[$key])) {
-                    $marker = $state->cell_markers[$key];
-                    $label  = $marker['type'] === 'bonfire' ? '🔥' : '●';
-                    $cellClass = 'cell-marker cell-marker-' . htmlspecialchars($marker['type'], ENT_QUOTES);
-                    $cellContent = '<div class="cell-marker-content">' . $label . '</div>';
                 } elseif (isset($moveCells[$key])) {
                     $moveUrl     = "{$baseUrl}&cmd=move&card_id={$selectedCardId}&row={$r}&col={$c}&sel={$selectedCardId}";
                     $cellClass   = 'move-target';
@@ -235,12 +229,7 @@ final class BattleScreen
                 }
 
                 // ─── ОВЕРЛЕЙ: всегда в конце, на уровне клетки ───
-                if (!empty($state->cell_markers[$key])) {
-                    $cm = $state->cell_markers[$key];
-                    if (!ZoneManager::markerBlocksMovement($cm)) {
-                        $cellContent .= $this->buildCellMarkerOverlay($state, $key);
-                    }
-                }
+                $cellContent .= $this->buildCellMarkersOverlay($state, $key);
 
                 $rowCells .= $this->tpl->parse('includes/battle_cell.tpl', [
                     'cl'      => $cellClass,
@@ -368,17 +357,6 @@ final class BattleScreen
     {
         return Badge::forCard($card, $state);
     }
-
-        private function buildCellMarkerOverlay(GameState $state, string $key): string
-        {
-            if (empty($state->cell_markers[$key])) return '';
-            $m    = $state->cell_markers[$key];
-            $type = (string) ($m['type'] ?? '');
-            if (ZoneManager::markerBlocksMovement($m)) return ''; // костёр и др. — не оверлей
-
-            return '<div class="cell-marker-overlay cell-marker-overlay-'
-                . htmlspecialchars($type, ENT_QUOTES) . '"></div>';
-        }
 
     /**
      * @return array<int,string>
@@ -829,8 +807,11 @@ final class BattleScreen
         if (!empty($state->cell_markers)) {
             $lines[] = '';
             $lines[] = '--- cell_markers ---';
-            foreach ($state->cell_markers as $key => $m) {
-                $lines[] = "  {$key}: " . json_encode($m, JSON_UNESCAPED_UNICODE);
+            foreach (array_keys($state->cell_markers) as $key) {
+                $list = ZoneManager::markersAt($state, $key);
+                foreach ($list as $m) {
+                    $lines[] = "  {$key}: " . json_encode($m, JSON_UNESCAPED_UNICODE);
+                }
             }
         }
 
@@ -900,6 +881,19 @@ final class BattleScreen
             . '</pre>';
     }
 
-    
+    private function buildCellMarkersOverlay(GameState $state, string $key): string
+    {
+        $markers = ZoneManager::markersAt($state, $key);
+        if (empty($markers)) return '';
+
+        $html = '<div class="cell-markers">';
+        foreach ($markers as $m) {
+            $type = htmlspecialchars((string) ($m['type'] ?? ''), ENT_QUOTES);
+            $html .= '<div class="cell-marker cell-marker-' . $type . '"></div>';
+        }
+        $html .= '</div>';
+
+        return $html;
+    }
 
 }

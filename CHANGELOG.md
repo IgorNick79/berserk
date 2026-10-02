@@ -401,3 +401,30 @@ wound_transfer (Волхв), coin_spend (Пустотник), self_wound (Цен
   (иконка бомбы 💥 / костра 🔥). Новый метод `buildCellMarkerOverlay`.
 - `global.css` — стиль `.cell-marker-overlay`.
 - `executeBombs` — убран `break`, взрыв бьёт все карты на клетке.
+
+## feat/cell-marker-stack — 2026-XX-XX
+
+**Проблема:**
+Костёр рисовался как отдельная ветка рендера клетки, бомба — как оверлей.
+Оба маркера хранились как один объект в `cell_markers[X_Y]` — второй
+затирал первый.
+
+**Изменения:**
+- `cell_markers[X_Y]` — теперь массив маркеров. Старый формат
+  (один объект с `type`) читается через `markersAt()` для совместимости.
+- `ZoneManager` — новые методы: `markersAt`, `hasMarker`, `hasBlockingMarker`,
+  `addMarker`, `removeMarkersByType`. `setCellMarker` обновляет/добавляет в список.
+- Все проверки блокировки движения — через `hasBlockingMarker` (только костёр).
+- `resolveBombShot` — через `ZoneManager::addMarker`.
+- `executeBombs` — удаляет только бомбы своего источника, другие маркеры остаются.
+- `TurnProcessor::afterEndPhase` — тик маркеров работает со списком.
+- `BattleScreen::buildCellMarkersOverlay` — контейнер `.cell-markers`
+  с иконками `.cell-marker-<type>` в ряд.
+- CSS: `.cell-markers` — flex-контейнер в углу клетки; иконки 22×22.
+
+**Как проверить:**
+1. Бомба + костёр на одной клетке — две иконки в углу.
+2. Клетка блокирована (костёр).
+3. Ход владельца бомбы — взрыв, иконка бомбы исчезает, костёр остаётся.
+
+**Откат:** `git revert <sha>`.

@@ -213,26 +213,40 @@ final class TurnProcessor
         }
 
         // Тик маркеров клеток
-        foreach ($this->state->cell_markers as $key => &$m) {
-            if (!isset($m['expire'])) continue;
-            $timing = $m['timing'] ?? 'source_turn';
-            $source = $m['source'] ?? null;
+        foreach ($this->state->cell_markers as $key => $markers) {
+            $list = ZoneManager::markersAt($this->state, $key);
+            $changed = false;
 
-            $shouldTick = false;
-            if ($timing === 'end_of_opponent_turn' && $source !== $endingKey) {
-                $shouldTick = true;
-            } elseif ($timing === 'end_of_turn' && $source === $endingKey) {
-                $shouldTick = true;
+            foreach ($list as $i => $m) {
+                if (!isset($m['expire'])) continue;
+                $timing = $m['timing'] ?? 'source_turn';
+                $source = $m['source'] ?? null;
+
+                $shouldTick = false;
+                if ($timing === 'end_of_opponent_turn' && $source !== $endingKey) {
+                    $shouldTick = true;
+                } elseif ($timing === 'end_of_turn' && $source === $endingKey) {
+                    $shouldTick = true;
+                }
+
+                if ($shouldTick) {
+                    $list[$i]['expire']--;
+                    $changed = true;
+                    if ($list[$i]['expire'] <= 0) {
+                        unset($list[$i]);
+                    }
+                }
             }
 
-            if ($shouldTick) {
-                $m['expire']--;
-                if ($m['expire'] <= 0) {
+            if ($changed) {
+                $list = array_values($list);
+                if (empty($list)) {
                     unset($this->state->cell_markers[$key]);
+                } else {
+                    $this->state->cell_markers[$key] = $list;
                 }
             }
         }
-        unset($m);
 
         // Pre-turn choice (Оборотень и подобные) — до фазы начала хода
         if ($this->checkCardChoice($nextActiveKey)) {
@@ -581,7 +595,7 @@ final class TurnProcessor
         if ($zone->isFieldOccupied($row, $col)) {
             return Result::error('Клетка занята');
         }
-        if (!empty($this->state->cell_markers["{$row}_{$col}"])) {
+        if (ZoneManager::hasBlockingMarker($this->state, "{$row}_{$col}")) {
             return Result::error('На клетке маркер');
         }
 

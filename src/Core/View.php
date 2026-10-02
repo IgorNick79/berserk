@@ -119,11 +119,11 @@ final class View
     private function cellMarkers(bool $isHost): array
     {
         $result = [];
-        foreach ($this->state->cellMarkers as $key => $value) {
+        foreach (array_keys($this->state->cell_markers) as $key) {
             [$row, $col] = explode('_', $key);
             $newRow = $this->flipRow((int) $row, $isHost);
             $newCol = $this->flipCol((int) $col, $isHost);
-            $result["{$newRow}_{$newCol}"] = $value;
+            $result["{$newRow}_{$newCol}"] = ZoneManager::markersAt($this->state, $key);
         }
         return $result;
     }

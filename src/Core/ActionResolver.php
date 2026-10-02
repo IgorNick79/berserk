@@ -2971,8 +2971,7 @@ final class ActionResolver
                     }
                 }
                 if ($occupied) continue;
-                $cm = $this->state->cell_markers["{$r}_{$c}"] ?? null;
-                if ($cm !== null && ZoneManager::markerBlocksMovement($cm)) continue;
+                if (ZoneManager::hasBlockingMarker($this->state, "{$r}_{$c}")) continue;
 
                 $cells[] = ['row' => $r, 'col' => $c];
             }
@@ -3022,7 +3021,7 @@ final class ActionResolver
         }
 
         $cellKey = "{$target->row}_{$target->col}";
-        if (!empty($this->state->cell_markers[$cellKey])) {
+        if (ZoneManager::hasMarker($this->state, $cellKey)) {
             return Result::error('Клетка уже помечена');
         }
 
@@ -3039,12 +3038,12 @@ final class ActionResolver
         $this->engine->applyDamage($this->state, $target, $value, 'shot', $attacker);
         $realDamage = max(0, $hpBefore - $target->hp);
 
-        $this->state->cell_markers[$cellKey] = [
+        ZoneManager::addMarker($this->state, $cellKey, [
             'type'   => 'bomb',
             'source' => $playerKey,
             'damage' => $bombDamage,
             'label'  => $action['name'] ?? 'Бомба',
-        ];
+        ]);
 
         $this->state->battle['strike'] = [
             'kind'        => 'bomb_shot',
