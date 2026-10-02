@@ -316,6 +316,7 @@ final class TurnProcessor
                     $card->flags['instant_uses_this_turn'] = [];
                     unset($card->flags['first_attack_target_id']);
                     unset($card->flags['strike_chain_broken']);
+                    unset($card->flags['teleport_adjacent_bonus_used']);
                 }
             }
 

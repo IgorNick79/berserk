@@ -25,6 +25,7 @@ final class MovementEffectResolver
         $this->applyOnMoveEffects($context);
         $this->applyMovementDirectionBonus($context);
         $this->applyAirinTriggers($context);
+        $this->applyTeleportAdjacentBonus($context);
 
         $this->engine->clearRootedBySource($this->state, $card->instanceId);
         $this->engine->refreshArmor($this->state);
@@ -186,6 +187,61 @@ final class MovementEffectResolver
         };
     }
 
+    private function applyTeleportAdjacentBonus(MovementContext $context): void
+    {
+        if ($context->movementType !== MovementContext::TYPE_JUMP) return;
+
+        $moved = $context->card;
+        $playerKey = $moved->owner;
+
+        // Только телепортация (jump с большим range)
+        $jumpRange = 0;
+        foreach ($moved->prop['actions'] ?? [] as $a) {
+            if (($a['type'] ?? '') === 'jump') {
+                $jumpRange = (int) ($a['range'] ?? 0);
+                break;
+            }
+        }
+        if ($jumpRange < 10) return;
+
+        // Только со своей половины на чужую
+        $fromHalf = $this->halfOf($playerKey, $context->fromRow);
+        $toHalf   = $this->halfOf($playerKey, $context->toRow);
+        if ($fromHalf !== 'own' || $toHalf !== 'enemy') return;
+
+        foreach ($this->state->cards as $imp) {
+            if ($imp->owner !== $playerKey) continue;
+            if ($imp->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($imp->dying || $imp->hp <= 0) continue;
+
+            $config = $imp->prop['on_teleport_adjacent_bonus'] ?? null;
+            if (!is_array($config)) continue;
+
+            // Стартовая клетка прыжка должна быть соседней с Импом
+            $dr = abs($context->fromRow - $imp->row);
+            $dc = abs($context->fromCol - $imp->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            // Уже получал бонус в этот ход?
+            if (!empty($imp->flags['teleport_adjacent_bonus_used'])) continue;
+
+            $value = (int) ($config['value'] ?? 1);
+            $types = $config['types'] ?? null;
+
+            $mod = [
+                'stat'    => 'next_action_bonus',
+                'value'   => $value,
+                'expire'  => 'end_of_turn',
+                'source'  => 'imp_teleport_bonus',
+                'consume' => true,
+            ];
+            if (is_array($types)) $mod['types'] = $types;
+
+            $imp->modifiers[] = $mod;
+            $imp->flags['teleport_adjacent_bonus_used'] = true;
+        }
+    }
+    
     private function applyAirinTriggers(MovementContext $context): void
     {
         $moved = $context->card;
