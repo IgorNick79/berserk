@@ -554,3 +554,30 @@ UI расходился с логикой.
 4. Два телепорта рядом за ход → всё равно +1 (флаг блокирует).
 
 **Откат:** `git revert <sha>` + откат SQL.
+
+## feat/card-s1_145-envy-demon — 2026-XX-XX
+
+**Карта:** Демон зависти (s1_145, Демон, цена 5).
+
+**Механика:**
+- Телепортация (`jump range 99`).
+- +1 к простому удару, пока рядом 2+ существа противника с `strikeWeak >= 3`.
+- `<tap>: Магический удар на 3`, доступен только при 2+ существах
+  противника с магией (discharge / magic / cast) рядом.
+
+**Изменения:**
+- `CardStats::checkCondition` — принимает и строку, и массив.
+  Тип `enemies_near` с параметрами `count`, `weak_min`, `has_magic`.
+- `CardStats::countEnemiesNearMatching`, `matchesEnemyFilter`, `enemyHasMagic`.
+- `BattleHelper::getAttackTargets`, `ActionResolver::handle`,
+  `BattleScreen::buildPanel` — универсальная проверка `action.condition`
+  (и строка, и массив).
+- SQL s1_145 — prop: actions + ability с параметризованным condition.
+
+**Как проверить:**
+Сценарий `debug/scenarious/card_s1_145_envy_demon.json`.
+1. 2 врага рядом с weak 3+ → +1 к простому удару.
+2. 2 врага рядом с магией → кнопка «Магический удар» активна.
+3. Параметры (count, weak_min, has_magic) задаются в prop, код не меняется.
+
+**Откат:** `git revert <sha>` + откат SQL.

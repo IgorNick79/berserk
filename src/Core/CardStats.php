@@ -704,15 +704,30 @@ final class CardStats
         return false;
     }
 
-    public static function checkCondition(?string $condition, GameState $state, CardInstance $card): bool
+    public static function checkCondition($condition, GameState $state, CardInstance $card): bool
     {
-        return match ($condition) {
-            'enemy_front_row_empty'        => self::isEnemyFrontRowEmpty($state, $card),
-            'ally_opposite_no_wounds'      => self::hasAllyOppositeNoWounds($state, $card),
-            'more_ally_near_than_enemy'    => self::hasMoreAlliesNearThanEnemies($state, $card),
-            'line_count_2_plus'            => self::countLineNeighbors($state, $card) >= 2,
-            default                        => true,
-        };
+        if ($condition === null || $condition === '') return true;
+
+        if (is_string($condition)) {
+            return match ($condition) {
+                'enemy_front_row_empty'     => self::isEnemyFrontRowEmpty($state, $card),
+                'ally_opposite_no_wounds'   => self::hasAllyOppositeNoWounds($state, $card),
+                'more_ally_near_than_enemy' => self::hasMoreAlliesNearThanEnemies($state, $card),
+                'line_count_2_plus'         => self::countLineNeighbors($state, $card) >= 2,
+                default                     => true,
+            };
+        }
+
+        if (is_array($condition)) {
+            $type = $condition['type'] ?? '';
+            return match ($type) {
+                'enemies_near' => self::countEnemiesNearMatching($state, $card, $condition)
+                    >= (int) ($condition['count'] ?? 1),
+                default => true,
+            };
+        }
+
+        return true;
     }
 
     public static function isEnemyFrontRowEmpty(GameState $state, CardInstance $card): bool
@@ -1230,5 +1245,44 @@ final class CardStats
             $count++;
         }
         return $count;
+    }
+
+    private static function countEnemiesNearMatching(
+        GameState $state, CardInstance $card, array $condition
+    ): int {
+        $count = 0;
+        foreach ($state->cards as $c) {
+            if ($c->owner === $card->owner) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $dr = abs($c->row - $card->row);
+            $dc = abs($c->col - $card->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            if (!self::matchesEnemyFilter($c, $condition)) continue;
+            $count++;
+        }
+        return $count;
+    }
+
+    private static function matchesEnemyFilter(CardInstance $c, array $condition): bool
+    {
+        if (isset($condition['weak_min']) && $c->strikeWeak < (int) $condition['weak_min']) {
+            return false;
+        }
+        if (!empty($condition['has_magic']) && !self::enemyHasMagic($c)) {
+            return false;
+        }
+        return true;
+    }
+
+    public static function enemyHasMagic(CardInstance $card): bool
+    {
+        foreach ($card->prop['actions'] ?? [] as $a) {
+            $t = $a['type'] ?? '';
+            if (in_array($t, ['discharge', 'magic', 'cast'], true)) return true;
+        }
+        return false;
     }
 }

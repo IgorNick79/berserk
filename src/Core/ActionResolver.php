@@ -230,6 +230,13 @@ final class ActionResolver
             }
         }
 
+         // Общее строковое условие (Демон зависти и др.)
+        if (!empty($action['condition'])
+            && is_string($action['condition'])
+            && !CardStats::checkCondition($action['condition'], $this->state, $attacker)) {
+            return Result::error('Условие действия не выполнено');
+        }
+
         // Выбор количества монет
         $coinConfig = $attacker->prop['coins'][$type] ?? null;
         if (is_array($coinConfig)

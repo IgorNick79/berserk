@@ -213,6 +213,11 @@ final class BattleHelper
                 return [];
             }
 
+            if (!empty($action['condition'])
+                && !CardStats::checkCondition($action['condition'], $state, $card)) {
+                return [];
+            }
+            
             // Перехват летающих для любых атакующих действий
             if ($card->zone === CardInstance::ZONE_FLYING
                 && in_array($type, ['shot', 'throw', 'discharge', 'magic', 'cast', 'tap'], true)) {
