@@ -317,6 +317,7 @@ final class TurnProcessor
                     unset($card->flags['first_attack_target_id']);
                     unset($card->flags['strike_chain_broken']);
                     unset($card->flags['teleport_adjacent_bonus_used']);
+                    unset($card->flags['on_heal_open_used_this_turn']);
                 }
             }
 

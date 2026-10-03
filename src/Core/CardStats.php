@@ -535,6 +535,7 @@ final class CardStats
                 if (isset($r['element']) && $attacker->element !== $r['element']) continue;
                 if (isset($r['attacker_type']) && $attacker->type !== $r['attacker_type']) continue;
                 if (!empty($r['line']) && !self::isInLine($state, $target)) continue;
+                if (isset($r['attacker_move_min']) && (int) $attacker->moveMax < (int) $r['attacker_move_min']) continue;
 
                 if (!empty($r['attacker_direct'])) {
                     if (!self::isDirectStrike($state, $attacker, $target)) continue;

@@ -604,3 +604,34 @@ UI расходился с логикой.
 3. base strike_strong = 0, урон формируется только из ability.
 
 **Откат:** `git revert <sha>` + откат SQL.
+
+## feat/card-s1_83-serk — 2026-XX-XX
+
+**Карта:** Серк (s1_83, Дитя Кронга, цена 5).
+9 HP, move 2, удар 2-2-3.
+
+**Механика:**
+- ZOT (защита от метания).
+- -1 от атак существ с move 2+.
+- Пока не имеет ран (hp == hpMax): при попытке излечения — вместо
+  этого открывается (1 раз за ход).
+
+**Изменения:**
+- `CardStats::getDamageReduction` — поддержан фильтр `attacker_move_min`
+  (базовый `moveMax` атакующего).
+- `ActionResolver::resolveHeal` — переработан: если у цели есть
+  `on_heal_instead_open` и hp == hpMax (и флаг не выставлен) — цель
+  открывается через `openCard`, heal не применяется, ставится флаг.
+- `TurnProcessor::continueStartTurn` — сброс флага
+  `on_heal_open_used_this_turn` в начале своего хода.
+- `InfoPanel::renderStrike` — отображение «открывается вместо излечения».
+- SQL s1_83 — prop: zot, on_heal_instead_open, damage_reduction.
+
+**Как проверить:**
+Сценарий `debug/scenarious/card_s1_83_serk.json`.
+1. Друид лечит полного Серка → открытие вместо heal.
+2. Друид лечит раненого Серка → +2 HP.
+3. Смотритель стойла (move 2) бьёт Серка → -1 урон.
+4. Бронтобей (move 2) бьёт Серка → -1 урон.
+
+**Откат:** `git revert <sha>` + откат SQL.

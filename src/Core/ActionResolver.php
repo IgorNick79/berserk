@@ -745,24 +745,44 @@ final class ActionResolver
         CardInstance $attacker, CardInstance $target, array $action,
         int $cardId, int $targetId, string $playerKey
     ): Result {
-        $healRaw = $action['value'] ?? 0;
-        if ($healRaw === 'full') {
-            $healValue = $target->hpMax - $target->hp;
-        } else {
-            $healValue = (int) $healRaw;
-        }
-        $target->hp += $healValue;
-        if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
+        // Серк и подобные: при полном hp вместо излечения — открыться
+        $insteadOpen  = $target->prop['on_heal_instead_open'] ?? null;
+        $openedInstead = false;
 
+        if (is_array($insteadOpen)) {
+            $oncePerTurn = !empty($insteadOpen['once_per_turn']);
+            $alreadyUsed = !empty($target->flags['on_heal_open_used_this_turn']);
+            $fullHp      = ($target->hp >= $target->hpMax);
+
+            if ($fullHp && (!$oncePerTurn || !$alreadyUsed)) {
+                $this->engine->openCard($target);
+                $target->flags['on_heal_open_used_this_turn'] = true;
+                $openedInstead = true;
+            }
+        }
+
+        $healValue     = 0;
         $poisonRemoved = false;
-        if (!empty($action['heal_poison']) && isset($target->markers['poison'])) {
-            unset($target->markers['poison']);
-            $poisonRemoved = true;
+
+        if (!$openedInstead) {
+            $healRaw = $action['value'] ?? 0;
+            if ($healRaw === 'full') {
+                $healValue = $target->hpMax - $target->hp;
+            } else {
+                $healValue = (int) $healRaw;
+            }
+            $target->hp += $healValue;
+            if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
+
+            if (!empty($action['heal_poison']) && isset($target->markers['poison'])) {
+                unset($target->markers['poison']);
+                $poisonRemoved = true;
+            }
         }
 
         $attacker->closed = true;
 
-        $this->state->battle['strike'] = [
+        $strike = [
             'kind'           => 'heal',
             'action_name'    => $action['name'] ?? 'Излечение',
             'attacker_id'    => $cardId,
@@ -778,6 +798,12 @@ final class ActionResolver
             'poison_removed' => $poisonRemoved,
             'confirmed'      => [],
         ];
+
+        if ($openedInstead) {
+            $strike['heal_instead_open'] = ['target_id' => $target->instanceId];
+        }
+
+        $this->state->battle['strike'] = $strike;
 
         $this->state->bumpVersion();
         return Result::ok(["heal:{$playerKey}:{$cardId}->{$targetId}:value={$healValue}"]);

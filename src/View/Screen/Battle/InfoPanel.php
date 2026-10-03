@@ -786,9 +786,16 @@ final class InfoPanel
                 }
             } elseif ($kind === 'heal') {
                 $name = $strike['action_name'] ?? 'Излечение';
-                $resultText = $name . ': +' . ($strike['heal'] ?? 0) . ' HP';
-                if (!empty($strike['poison_removed'])) {
-                    $resultText .= ' (яд снят)';
+                if (!empty($strike['heal_instead_open'])) {
+                    $t  = $state->getCard((int) $strike['heal_instead_open']['target_id']);
+                    $tn = $t ? ($cardsInfo[$t->ukid]['name'] ?? '?') : '?';
+                    $resultText = $name . ': ' . htmlspecialchars($tn, ENT_QUOTES)
+                        . ' открывается вместо излечения';
+                } else {
+                    $resultText = $name . ': +' . ($strike['heal'] ?? 0) . ' HP';
+                    if (!empty($strike['poison_removed'])) {
+                        $resultText .= ' (яд снят)';
+                    }
                 }
             } elseif ($kind === 'sand_claws') {
                 $name = $strike['action_name'] ?? 'Песчаные когти';
