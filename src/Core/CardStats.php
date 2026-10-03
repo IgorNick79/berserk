@@ -1218,6 +1218,32 @@ final class CardStats
             if ($val > 0) $result['regeneration'] = $val;
         }
 
+        // Ability — условные бонусы к удару
+        $abilities = $card->prop['ability'] ?? null;
+        if ($abilities !== null) {
+            if (isset($abilities['value'])) $abilities = [$abilities];
+
+            $abilityStrikeBonus = 0;
+            foreach ($abilities as $a) {
+                if (!is_array($a)) continue;
+                $val = (int) ($a['value'] ?? 0);
+                if ($val === 0) continue;
+
+                // Только strike — прочие типы (magic/discharge/throw) не показываем
+                if (!empty($a['only']) && !in_array('strike', $a['only'], true)) continue;
+                if (!empty($a['types'])) continue;
+
+                if (!empty($a['condition'])
+                    && !self::checkCondition($a['condition'], $state, $card)) continue;
+
+                $abilityStrikeBonus += $val;
+            }
+
+            if ($abilityStrikeBonus !== 0) {
+                $result['ability_strike'] = $abilityStrikeBonus;
+            }
+        }
+
         return $result;
     }
 

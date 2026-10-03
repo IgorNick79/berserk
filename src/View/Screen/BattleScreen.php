@@ -515,20 +515,12 @@ final class BattleScreen
                     }
                 }
 
-                // Универсальное условие действия
+                // Универсальное условие действия — просто disabled
                 if (!empty($a['condition'])
                     && !CardStats::checkCondition($a['condition'], $state, $c)) {
 
-                    $cond   = $a['condition'];
-                    $hint   = 'условие не выполнено';
-                    if (($cond['type'] ?? '') === 'enemies_near') {
-                        $hint = 'нужно ' . ($cond['count'] ?? 1) . '+ врагов рядом';
-                        if (isset($cond['weak_min'])) $hint .= ' с ударом ' . $cond['weak_min'] . '+';
-                        if (!empty($cond['has_magic'])) $hint .= ' с магией';
-                    }
-
                     $modeButtons .= '<span class="button small disabled">'
-                        . htmlspecialchars($label . ' (' . $hint . ')', ENT_QUOTES)
+                        . htmlspecialchars($label, ENT_QUOTES)
                         . '</span> ';
                     continue;
                 }
