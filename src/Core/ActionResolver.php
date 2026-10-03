@@ -1701,6 +1701,7 @@ final class ActionResolver
             ['pending_turn_instants',           'owner'],
             ['pending_forced_directional_move', 'owner'],
             ['pending_row_pick',                'owner'],
+            ['pending_gate_pick',               'owner'],
         ];
         foreach ($simple as [$key, $field]) {
             $p = $state->battle[$key] ?? null;
@@ -2630,6 +2631,48 @@ final class ActionResolver
 
         $this->state->bumpVersion();
         return Result::ok(['cell_marker_started']);
+    }
+
+    public function chooseGate(string $playerKey, Command $cmd): Result
+    {
+        $p = $this->state->battle['pending_gate_pick'] ?? null;
+        if (!$p || $p['owner'] !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $row = (int) $cmd->get('row', 0);
+        $col = (int) $cmd->get('col', 0);
+        $key = "{$row}_{$col}";
+
+        if (!in_array($key, $p['candidates'], true)) {
+            return Result::error('Неверная клетка');
+        }
+
+        $this->state->battle['pending_gate_pick']['chosen'][] = $key;
+        $this->state->battle['pending_gate_pick']['candidates'] = array_values(
+            array_diff($p['candidates'], [$key])
+        );
+
+        $chosenCount = count($this->state->battle['pending_gate_pick']['chosen']);
+        $need        = (int) $p['count'];
+
+        if ($chosenCount >= $need) {
+            foreach ($this->state->battle['pending_gate_pick']['chosen'] as $k) {
+                ZoneManager::addMarker($this->state, $k, [
+                    'type'   => 'gate',
+                    'source' => $playerKey,
+                    'timing' => 'end_of_opponent_turn',
+                ]);
+            }
+            unset($this->state->battle['pending_gate_pick']);
+
+            if (!empty($this->state->battle['turn_phase'])) {
+                (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+            }
+        }
+
+        $this->state->bumpVersion();
+        return Result::ok(['gate_chosen']);
     }
 
     public function chooseCellMarker(string $playerKey, Command $cmd): Result

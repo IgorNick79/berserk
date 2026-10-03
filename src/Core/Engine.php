@@ -122,6 +122,7 @@ final class Engine
             'choose_ally_modifier'    => $strike->chooseAllyModifier($playerKey, $cmd),
             'choose_row'                => $action->chooseRow($playerKey, $cmd),
             'choose_row_spell_targets'  => $action->chooseRowSpellTargets($playerKey, $cmd),
+            'choose_gate'             => $action->chooseGate($playerKey, $cmd),
             'reorder_start'           => (new ProphecyProcessor($state, $this))->startReorder($playerKey),
             'reorder_card_up'         => (new ProphecyProcessor($state, $this))->reorderCard(
                 $playerKey, (int) $cmd->get('card_id', 0), 'top'

@@ -797,6 +797,42 @@ final class TurnPhaseProcessor
                 }
                 return ['label' => $label, 'items' => $items];
 
+            case 'place_gates':
+                $occupied = [];
+                foreach ($this->state->cards as $c) {
+                    if ($c->zone === CardInstance::ZONE_FIELD && $c->row !== null) {
+                        $occupied["{$c->row}_{$c->col}"] = true;
+                    }
+                }
+
+                $candidates = [];
+                for ($row = 1; $row <= 6; $row++) {
+                    for ($col = 1; $col <= 5; $col++) {
+                        $k = "{$row}_{$col}";
+                        if (isset($occupied[$k])) continue;
+                        if (ZoneManager::hasBlockingMarker($this->state, $k)) continue;
+                        if (ZoneManager::hasMarker($this->state, $k)) continue; // любой маркер мешает
+                        $candidates[] = $k;
+                    }
+                }
+
+                $need = (int) ($eff['count'] ?? 3);
+                if (count($candidates) < $need) {
+                    return ['label' => $label, 'items' => [
+                        ['standalone_text' => 'недостаточно свободных клеток для врат'],
+                    ]];
+                }
+
+                $this->state->battle['pending_gate_pick'] = [
+                    'owner'      => $ownerKey,
+                    'source_id'  => $card->instanceId,
+                    'count'      => $need,
+                    'chosen'     => [],
+                    'candidates' => $candidates,
+                ];
+
+                return ['label' => $label, 'items' => []];
+
             case 'modifier':
                 $stat  = (string) ($eff['stat'] ?? 'ova');
                 $value = (int) ($eff['value'] ?? 1);
@@ -858,6 +894,74 @@ final class TurnPhaseProcessor
                     'source' => $ownerKey,
                 ];
                 $items[] = ['instance_id' => $card->instanceId, 'text' => CardStats::statLabel($eff['stat'] ?? 'ova') . ' +' . (int) ($eff['value'] ?? 1)];
+            } elseif ($type === 'greed_teleport') {
+                // Найти gate этого владельца
+                $gates = [];
+                foreach (array_keys($this->state->cell_markers) as $k) {
+                    foreach (ZoneManager::markersAt($this->state, $k) as $m) {
+                        if (($m['type'] ?? '') === 'gate' && ($m['source'] ?? null) === $ownerKey) {
+                            $gates[] = $k;
+                            break;
+                        }
+                    }
+                }
+
+                // Найти свободную клетку с gate
+                $targetKey = null;
+                foreach ($gates as $k) {
+                    [$r, $c] = explode('_', $k);
+                    $r = (int) $r; $c = (int) $c;
+                    $blocked = false;
+                    foreach ($this->state->cards as $other) {
+                        if ($other->zone !== CardInstance::ZONE_FIELD) continue;
+                        if ($other->row === $r && $other->col === $c && $other->instanceId !== $card->instanceId) {
+                            $blocked = true;
+                            break;
+                        }
+                    }
+                    if (!$blocked) { $targetKey = $k; break; }
+                }
+
+                if ($targetKey === null) {
+                    $value = (int) ($eff['self_damage'] ?? 3);
+                    $hpBefore = $card->hp;
+                    $this->engine->applyDamage($this->state, $card, $value, 'impact', null);
+                    $items[] = [
+                        'instance_id' => $card->instanceId,
+                        'delta'       => -(max(0, $hpBefore - $card->hp)),
+                    ];
+                } else {
+                    [$r, $c] = explode('_', $targetKey);
+                    $r = (int) $r; $c = (int) $c;
+                    $card->row = $r;
+                    $card->col = $c;
+
+                    $damage = (int) ($eff['damage'] ?? 2);
+                    foreach ($this->state->cards as $other) {
+                        if ($other->owner === $ownerKey) continue;
+                        if ($other->zone !== CardInstance::ZONE_FIELD) continue;
+                        if ($other->dying || $other->hp <= 0) continue;
+                        if ($other->instanceId === $card->instanceId) continue;
+
+                        $dr = abs($other->row - $r);
+                        $dc = abs($other->col - $c);
+                        if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+                        $hpBefore = $other->hp;
+                        $this->engine->applyDamage($this->state, $other, $damage, 'impact', $card);
+                        $items[] = [
+                            'instance_id' => $other->instanceId,
+                            'delta'       => -(max(0, $hpBefore - $other->hp)),
+                        ];
+                    }
+
+                    $items[] = ['standalone_text' => "телепортировался на ({$r};{$c})"];
+                }
+
+                // Убрать все gates
+                foreach ($gates as $k) {
+                    ZoneManager::removeMarkersByType($this->state, $k, 'gate', $ownerKey);
+                }
             }
         }
 
@@ -894,6 +998,7 @@ final class TurnPhaseProcessor
         if ($base === 'incarnation' && !empty($battle['pending_incarnation'])) return true;
         if ($base === 'turn_start' || $base === 'opponent_turn_start') {
             if (!empty($battle['pending_whip'])) return true;
+            if (!empty($battle['pending_gate_pick'])) return true;
         }
         if ($base === 'instant' && !empty($battle['pending_instant_pick'])) return true;
         if ($base === 'bombs' && !empty($battle['pending_any_death'])) return true;

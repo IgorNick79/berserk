@@ -48,6 +48,7 @@ final class ChoiceRegistry
                 new ForcedStrikeChoice(),
                 new RowPickChoice(),
                 new RowSpellPickChoice(),
+                new GatePickChoice(),
                 // ─── Фаза хода ───────────────────────────────────────
                 new TurnAckChoice(),
                 new TurnInstantsChoice(),

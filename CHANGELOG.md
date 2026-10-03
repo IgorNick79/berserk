@@ -635,3 +635,44 @@ UI расходился с логикой.
 4. Бронтобей (move 2) бьёт Серка → -1 урон.
 
 **Откат:** `git revert <sha>` + откат SQL.
+
+## feat/card-s1_170-greed-demon — 2026-XX-XX
+
+**Карта:** Демон жадности (s1_170, Демон, ультраредкая, цена 9).
+16 HP, move 1, удар 3-4-6. OVA 1.
+
+**Механика:**
+- В начале хода противника игрок выбирает 3 свободные клетки — на них
+  ставятся маркеры «врата» (не блокируют движение, истекают в конце хода
+  противника).
+- В конце хода противника Демон обязан телепортироваться на клетку с
+  вратами, раня всех врагов рядом (8 клеток) на 2 (impact). Если нет
+  свободной клетки с вратами — получает 3 impact.
+
+**Изменения:**
+- `TurnPhaseProcessor::executeTurnStartEffect` — новый case `place_gates`.
+  Находит свободные клетки (без карт, без блокирующих маркеров, без
+  других маркеров), открывает `pending_gate_pick` с owner = владелец карты.
+- `TurnPhaseProcessor::executeTurnEndEffect` — новый case `greed_teleport`.
+  Ищет gate владельца, телепортирует на первую свободную, AoE impact 2
+  по врагам (8 клеток), убирает все gates. Если свободных нет — 3 impact
+  самому.
+- `TurnPhaseProcessor::hasPendingFromTask` — учитывает `pending_gate_pick`.
+- `ActionResolver::chooseGate` — новый метод: выбор клетки по одной, с
+  проверкой минимума кандидатов и резюмом turn_phase.
+- `ActionResolver::cancelPending` — `pending_gate_pick` в таблице простых.
+- `Choice/GatePickChoice` — новый UI-хендлер. Кнопки с координатами,
+  зеркалирование для player.
+- `ChoiceRegistry` — регистрация.
+- `Engine::doApply` — команда `choose_gate`.
+- SQL s1_170 — prop.
+
+**Как проверить:**
+Сценарий `debug/scenarious/card_s1_170_greed_demon.json`.
+1. Ход host → end_turn. Ход player → у host окно выбора 3 клеток.
+2. Клик по 3 клеткам → gates поставлены.
+3. Ход player → end_turn → Демон телепортируется, ранит рядом на 2.
+4. Занять все gates → Демон получает 3 impact.
+5. Убить Демона → gates истекают без эффекта.
+
+**Откат:** `git revert <sha>` + откат SQL.
