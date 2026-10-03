@@ -375,6 +375,11 @@ final class CardStats
 
             $value = (int) ($ability['value'] ?? 0);
 
+            // value_from — динамическое значение (Уордак и др.)
+            if (($ability['value_from'] ?? '') === 'target_hp_half') {
+                $value = (int) floor($target->hp / 2);
+            }
+            
             if (!$conditionOk || !$onlyOk || !$levelOk || $value === 0) continue;
 
             // Специальные фильтры

@@ -581,3 +581,26 @@ UI расходился с логикой.
 3. Параметры (count, weak_min, has_magic) задаются в prop, код не меняется.
 
 **Откат:** `git revert <sha>` + откат SQL.
+
+## feat/card-s1_158-urdak — 2026-XX-XX
+
+**Карта:** Уордак (s1_158, Нежить, цена 5, элита).
+12 HP, move 2, удар 2-3-0.
+
+**Механика:**
+- `OVA 1`.
+- Трупоедство.
+- Сильный удар: `+floor(текущее HP цели / 2)` (ability dynamic).
+
+**Изменения:**
+- `CardStats::getAbilityBonus` — поддержана динамическая подстановка
+  `ability.value_from`. Значение `target_hp_half` = `floor($target->hp / 2)`.
+- SQL s1_158 — prop: ova, deadeat, ability с level+value_from.
+
+**Как проверить:**
+Сценарий `debug/scenarious/card_s1_158_urdak.json`.
+1. Strong удар (`?debug_roll=6`) → ability_bonus = floor(hp/2).
+2. HP цели 8 → +4, 7 → +3, 1 → +0.
+3. base strike_strong = 0, урон формируется только из ability.
+
+**Откат:** `git revert <sha>` + откат SQL.
