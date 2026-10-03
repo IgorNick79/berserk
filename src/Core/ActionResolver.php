@@ -3381,4 +3381,78 @@ final class ActionResolver
         $this->state->bumpVersion();
         return Result::ok(['row_spell_done']);
     }
+
+    public function chooseGreedTeleport(string $playerKey, Command $cmd): Result
+    {
+        $p = $this->state->battle['pending_greed_teleport'] ?? null;
+        if (!$p || $p['owner'] !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $row = (int) $cmd->get('row', 0);
+        $col = (int) $cmd->get('col', 0);
+        $key = "{$row}_{$col}";
+
+        if (!in_array($key, $p['free_gates'], true)) {
+            return Result::error('Неверная клетка');
+        }
+
+        $card = $this->state->getCard((int) $p['source_id']);
+        if (!$card || $card->owner !== $playerKey) {
+            unset($this->state->battle['pending_greed_teleport']);
+            return Result::error('Карта недоступна');
+        }
+
+        $damage     = (int) $p['damage'];
+        $gates      = $p['gates'];
+        $ownerKey   = $playerKey;
+
+        unset($this->state->battle['pending_greed_teleport']);
+
+        // Телепорт
+        $card->row = $row;
+        $card->col = $col;
+
+        // AoE 8 клеток
+        $hits = [];
+        foreach ($this->state->cards as $other) {
+            if ($other->owner === $ownerKey) continue;
+            if ($other->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($other->dying || $other->hp <= 0) continue;
+            if ($other->instanceId === $card->instanceId) continue;
+
+            $dr = abs($other->row - $row);
+            $dc = abs($other->col - $col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            $hpBefore = $other->hp;
+            $this->engine->applyDamage($this->state, $other, $damage, 'impact', $card);
+            $hits[] = [
+                'instance_id' => $other->instanceId,
+                'delta'       => -(max(0, $hpBefore - $other->hp)),
+            ];
+        }
+
+        // Снять все gate владельца
+        foreach ($gates as $k) {
+            ZoneManager::removeMarkersByType($this->state, $k, 'gate', $ownerKey);
+        }
+
+        // Результат — записать в текущий turn_phase pending_ack
+        if (!empty($this->state->battle['turn_phase'])) {
+            $this->state->battle['turn_phase']['pending_ack'] = [
+                'label' => 'Демон жадности',
+                'items' => array_merge(
+                    [['standalone_text' => "телепортировался на ({$row};{$col})"]],
+                    $hits
+                ),
+            ];
+
+            (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+        }
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(["greed_teleport:{$row}_{$col}"]);
+    }
 }
