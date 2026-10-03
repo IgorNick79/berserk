@@ -3447,8 +3447,8 @@ final class ActionResolver
                     $hits
                 ),
             ];
-
-            (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+            // НЕ resume — ждём подтверждения игрока через turn_ack.
+            // Кнопка «Продолжить» → ackPending() → advance → finish.
         }
 
         $this->engine->flushDeadeatQueue($this->state);
