@@ -191,7 +191,7 @@ final class DamageResolver
     private function shouldTriggerOnDeath(string $cause): bool
     {
         return in_array($cause,
-            ['strike', 'uchr', 'shot', 'throw', 'tap', 'discharge', 'answer', 'execute', 'self_destroy'],
+            ['strike', 'uchr', 'shot', 'throw', 'tap', 'discharge', 'answer', 'execute', 'self_destroy', 'destroy'],
             true
         );
     }

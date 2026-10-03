@@ -101,6 +101,10 @@ final class ActionResolver
             return $this->startRowSpell($attacker, $action, $cardId, $playerKey);
         }
 
+        if ($type === 'destroy_self_and_target') {
+            return $this->startDestroySelfAndTarget($attacker, $action, $cardId, $playerKey);
+        }
+
         // ── Перераспределение ран (Волхв) ──────────────────────
         if ($type === 'wound_transfer') {
             $proc = new WoundTransferProcessor($this->state, $this->engine);
@@ -1702,6 +1706,7 @@ final class ActionResolver
             ['pending_forced_directional_move', 'owner'],
             ['pending_row_pick',                'owner'],
             ['pending_gate_pick',               'owner'],
+            ['pending_destroy_self_and_target',  'owner'],
         ];
         foreach ($simple as [$key, $field]) {
             $p = $state->battle[$key] ?? null;
@@ -2429,6 +2434,141 @@ final class ActionResolver
         return Result::ok([
             "whip:{$target->instanceId}:" . ($died ? 'died' : 'move+1'),
         ]);
+    }
+
+    private function startDestroySelfAndTarget(
+        CardInstance $attacker, array $action, int $cardId, string $playerKey
+    ): Result {
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0 && $attacker->coins < $cost) {
+            return Result::error('Не хватает монет');
+        }
+
+        $targets = $this->getDestroySelfAndTargetCandidates($attacker);
+        if (empty($targets)) {
+            return Result::error('Нет доступных целей');
+        }
+
+        $this->state->battle['pending_destroy_self_and_target'] = [
+            'owner'       => $playerKey,
+            'source_id'   => $cardId,
+            'action'      => $action,
+            'target_ids'  => $targets,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(["destroy_self_and_target_started:{$cardId}"]);
+    }
+
+    public function chooseDestroySelfAndTarget(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_destroy_self_and_target'] ?? null;
+        if (!$pending) return Result::error('Нет ожидающего выбора');
+        if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+
+        $sourceId = (int) ($pending['source_id'] ?? 0);
+        $source = $this->state->getCard($sourceId);
+        if (!$source || $source->owner !== $playerKey) {
+            unset($this->state->battle['pending_destroy_self_and_target']);
+            return Result::error('Источник недоступен');
+        }
+        if ($source->closed) {
+            unset($this->state->battle['pending_destroy_self_and_target']);
+            return Result::error('Карта закрыта');
+        }
+        if ($source->zone !== CardInstance::ZONE_FIELD
+            && $source->zone !== CardInstance::ZONE_FLYING) {
+            unset($this->state->battle['pending_destroy_self_and_target']);
+            return Result::error('Источник не на поле');
+        }
+
+        $action = is_array($pending['action'] ?? null) ? $pending['action'] : [];
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0 && $source->coins < $cost) {
+            unset($this->state->battle['pending_destroy_self_and_target']);
+            return Result::error('Не хватает монет');
+        }
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        if ($targetId === $sourceId) {
+            return Result::error('Нельзя выбрать источник');
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$this->isDestroySelfAndTargetCandidate($source, $target)) {
+            return Result::error('Неверная цель');
+        }
+
+        $sourceName = $source->ukid;
+        $targetName = $target->ukid;
+
+        unset($this->state->battle['pending_destroy_self_and_target']);
+
+        if ($cost > 0) {
+            $source->coins -= $cost;
+            if ($source->coins < 0) $source->coins = 0;
+            $this->engine->syncCoinBonus($source);
+        }
+        $source->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'destroy_self_and_target',
+            'action_name' => $action['name'] ?? 'Последний путь',
+            'attacker_id' => $sourceId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'destroyed'   => [
+                'source_id'   => $sourceId,
+                'source_ukid' => $source->ukid,
+                'source_name' => $sourceName,
+                'target_id'   => $targetId,
+                'target_ukid' => $target->ukid,
+                'target_name' => $targetName,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $this->engine->forceDeath($this->state, $source, 'destroy', $source);
+        $targetAfterSourceDeath = $this->state->getCard($targetId);
+        if ($targetAfterSourceDeath && !$targetAfterSourceDeath->dying) {
+            $this->engine->forceDeath($this->state, $targetAfterSourceDeath, 'destroy', $source);
+        }
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->engine->finalizeDying($this->state);
+
+        $this->state->bumpVersion();
+        return Result::ok(["destroy_self_and_target:{$sourceId}:{$targetId}"]);
+    }
+
+    /** @return int[] */
+    private function getDestroySelfAndTargetCandidates(CardInstance $source): array
+    {
+        $ids = [];
+        foreach ($this->state->cards as $card) {
+            if ($this->isDestroySelfAndTargetCandidate($source, $card)) {
+                $ids[] = $card->instanceId;
+            }
+        }
+        return $ids;
+    }
+
+    private function isDestroySelfAndTargetCandidate(CardInstance $source, ?CardInstance $target): bool
+    {
+        if (!$target) return false;
+        if ($target->instanceId === $source->instanceId) return false;
+        if ($target->zone !== CardInstance::ZONE_FIELD
+            && $target->zone !== CardInstance::ZONE_FLYING) {
+            return false;
+        }
+        if ($target->dying || $target->hp <= 0) return false;
+        return $target->type === 'creature' || $target->type === 'fly';
     }
 
     private function startBloodTap(

@@ -50,6 +50,7 @@ final class ChoiceRegistry
                 new RowSpellPickChoice(),
                 new GatePickChoice(),
                 new GreedTeleportChoice(),
+                new DestroySelfAndTargetChoice(),
                 // ─── Фаза хода ───────────────────────────────────────
                 new TurnAckChoice(),
                 new TurnInstantsChoice(),

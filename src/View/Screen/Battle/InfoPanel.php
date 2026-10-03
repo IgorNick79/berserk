@@ -916,6 +916,22 @@ final class InfoPanel
             } elseif ($kind === 'execute') {
                 $name = $strike['action_name'] ?? 'Добивание';
                 $resultText = $name . ': цель уничтожена';
+            } elseif ($kind === 'destroy_self_and_target') {
+                $name = $strike['action_name'] ?? 'Последний путь';
+                $destroyed = $strike['destroyed'] ?? [];
+                $sourceName = '?';
+                $targetName = '?';
+                if (!empty($destroyed['source_ukid'])) {
+                    $sourceName = $cardsInfo[$destroyed['source_ukid']]['name'] ?? $destroyed['source_ukid'];
+                }
+                if (!empty($destroyed['target_ukid'])) {
+                    $targetName = $cardsInfo[$destroyed['target_ukid']]['name'] ?? $destroyed['target_ukid'];
+                }
+                $sourceEsc = htmlspecialchars($sourceName, ENT_QUOTES);
+                $targetEsc = htmlspecialchars($targetName, ENT_QUOTES);
+                $nameEsc = htmlspecialchars($name, ENT_QUOTES);
+                $resultText = $sourceEsc . ' использует «' . $nameEsc
+                    . '»: ' . $sourceEsc . ' и ' . $targetEsc . ' уничтожены';
             } elseif ($kind === 'impact') {
                 $name = $strike['action_name'] ?? 'Воздействие';
                 $resultText = $name;
@@ -1269,7 +1285,7 @@ final class InfoPanel
                 . $abilityBonusHtml . $coinBonusHtml . $reductionHtml
                 . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml;
 
-            $noDiceKinds = ['heal', 'modifier', 'execute', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot'];
+            $noDiceKinds = ['heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot'];
             if (!in_array($kind, $noDiceKinds, true)) {
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
