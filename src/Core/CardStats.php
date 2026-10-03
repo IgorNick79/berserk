@@ -281,7 +281,26 @@ final class CardStats
             return $range;
         }
 
-        return $range + self::getColumnRangeAuraBonus($state, $card, (string) ($action['type'] ?? ''));
+        $actionType = (string) ($action['type'] ?? '');
+        return $range
+            + self::getColumnRangeAuraBonus($state, $card, $actionType)
+            + self::getActionRangeBonus($card, $actionType);
+    }
+
+    public static function getActionRangeBonus(CardInstance $card, string $actionType): int
+    {
+        if ($actionType === '') return 0;
+
+        $bonus = 0;
+        foreach ($card->modifiers as $m) {
+            if (($m['stat'] ?? '') !== 'action_range') continue;
+
+            $types = $m['types'] ?? null;
+            if (is_array($types) && !in_array($actionType, $types, true)) continue;
+
+            $bonus += (int) ($m['value'] ?? 0);
+        }
+        return $bonus;
     }
 
     public static function getColumnRangeAuraBonus(GameState $state, CardInstance $card, string $actionType): int
@@ -337,8 +356,9 @@ final class CardStats
         $abilities = $attacker->prop['ability'] ?? null;
         if (!$abilities) return $result;
 
-        if (isset($abilities['value'])) {
-            // Одиночный объект
+        // Список или одиночный объект?
+        if (!array_is_list($abilities)) {
+            // Одиночный объект — оборачиваем
             $abilities = [$abilities];
         }
 
@@ -355,6 +375,11 @@ final class CardStats
                 || ($level !== null && in_array($level, $ability['level'], true));
 
             $value = (int) ($ability['value'] ?? 0);
+
+            // value_from — динамическое значение (Уордак и др.)
+            if (($ability['value_from'] ?? '') === 'target_hp_half') {
+                $value = (int) floor($target->hp / 2);
+            }
 
             if (!$conditionOk || !$onlyOk || !$levelOk || $value === 0) continue;
 
@@ -510,6 +535,7 @@ final class CardStats
                 if (isset($r['element']) && $attacker->element !== $r['element']) continue;
                 if (isset($r['attacker_type']) && $attacker->type !== $r['attacker_type']) continue;
                 if (!empty($r['line']) && !self::isInLine($state, $target)) continue;
+                if (isset($r['attacker_move_min']) && (int) $attacker->moveMax < (int) $r['attacker_move_min']) continue;
 
                 if (!empty($r['attacker_direct'])) {
                     if (!self::isDirectStrike($state, $attacker, $target)) continue;
@@ -596,7 +622,7 @@ final class CardStats
 
     public static function isOffensiveAction(string $type): bool
     {
-        return in_array($type, ['strike', 'uchr', 'shot', 'throw', 'discharge', 'magic', 'cast', 'tap', 'impact', 'execute', 'dissonance', 'sand_claws'], true);
+        return in_array($type, ['strike', 'uchr', 'shot', 'throw', 'discharge', 'magic', 'cast', 'tap', 'impact', 'execute', 'dissonance', 'sand_claws', 'bomb_shot'], true);
     }
 
     private static function hasLineDeep(array $arr): bool
@@ -685,15 +711,30 @@ final class CardStats
         return false;
     }
 
-    public static function checkCondition(?string $condition, GameState $state, CardInstance $card): bool
+    public static function checkCondition($condition, GameState $state, CardInstance $card): bool
     {
-        return match ($condition) {
-            'enemy_front_row_empty'        => self::isEnemyFrontRowEmpty($state, $card),
-            'ally_opposite_no_wounds'      => self::hasAllyOppositeNoWounds($state, $card),
-            'more_ally_near_than_enemy'    => self::hasMoreAlliesNearThanEnemies($state, $card),
-            'line_count_2_plus'            => self::countLineNeighbors($state, $card) >= 2,
-            default                        => true,
-        };
+        if ($condition === null || $condition === '') return true;
+
+        if (is_string($condition)) {
+            return match ($condition) {
+                'enemy_front_row_empty'     => self::isEnemyFrontRowEmpty($state, $card),
+                'ally_opposite_no_wounds'   => self::hasAllyOppositeNoWounds($state, $card),
+                'more_ally_near_than_enemy' => self::hasMoreAlliesNearThanEnemies($state, $card),
+                'line_count_2_plus'         => self::countLineNeighbors($state, $card) >= 2,
+                default                     => true,
+            };
+        }
+
+        if (is_array($condition)) {
+            $type = $condition['type'] ?? '';
+            return match ($type) {
+                'enemies_near' => self::countEnemiesNearMatching($state, $card, $condition)
+                    >= (int) ($condition['count'] ?? 1),
+                default => true,
+            };
+        }
+
+        return true;
     }
 
     public static function isEnemyFrontRowEmpty(GameState $state, CardInstance $card): bool
@@ -849,6 +890,39 @@ final class CardStats
         }
         return false;
     }
+
+    /**
+     * Координаты клетки напротив карты (тот же столбец, +1 ряд в сторону врага).
+     * @return ?array{row:int, col:int}
+     */
+    public static function oppositeCell(CardInstance $card): ?array
+    {
+        if ($card->row === null || $card->col === null) return null;
+        if ($card->zone !== CardInstance::ZONE_FIELD) return null;
+
+        $step = $card->owner === 'host' ? 1 : -1;
+        $row  = $card->row + $step;
+
+        if ($row < 1 || $row > 6) return null;
+        return ['row' => $row, 'col' => $card->col];
+    }
+
+    /**
+     * Карта, стоящая напротив (любая — своя или чужая). Либо null.
+     */
+    public static function getOppositeFieldCard(GameState $state, CardInstance $card): ?CardInstance
+    {
+        $cell = self::oppositeCell($card);
+        if ($cell === null) return null;
+
+        foreach ($state->cards as $c) {
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->row === $cell['row'] && $c->col === $cell['col']) {
+                return $c;
+            }
+        }
+        return null;
+    }
     
     /**
      * Проверяет, что target стоит строго напротив attacker.
@@ -968,10 +1042,11 @@ final class CardStats
             'move'           => 'Ход',
             'shot_bonus'     => 'Выстрел',
             'next_action_bonus' => 'Действие',
-            'zoal'           => 'ЗОАЛ',
-            'damage_reduction' => 'Защита',
+            'zoal'              => 'ЗОАЛ',
+            'damage_reduction'  => 'Защита',
             'shield_light'      => 'Щит',
             'coin_strike_bonus' => 'Атака',
+            'action_range'      => 'Дальность',
             default             => $stat,
         };
     }
@@ -1150,6 +1225,32 @@ final class CardStats
             if ($val > 0) $result['regeneration'] = $val;
         }
 
+        // Ability — условные бонусы к удару
+        $abilities = $card->prop['ability'] ?? null;
+        if ($abilities !== null) {
+            if (isset($abilities['value'])) $abilities = [$abilities];
+
+            $abilityStrikeBonus = 0;
+            foreach ($abilities as $a) {
+                if (!is_array($a)) continue;
+                $val = (int) ($a['value'] ?? 0);
+                if ($val === 0) continue;
+
+                // Только strike — прочие типы (magic/discharge/throw) не показываем
+                if (!empty($a['only']) && !in_array('strike', $a['only'], true)) continue;
+                if (!empty($a['types'])) continue;
+
+                if (!empty($a['condition'])
+                    && !self::checkCondition($a['condition'], $state, $card)) continue;
+
+                $abilityStrikeBonus += $val;
+            }
+
+            if ($abilityStrikeBonus !== 0) {
+                $result['ability_strike'] = $abilityStrikeBonus;
+            }
+        }
+
         return $result;
     }
 
@@ -1177,5 +1278,44 @@ final class CardStats
             $count++;
         }
         return $count;
+    }
+
+    private static function countEnemiesNearMatching(
+        GameState $state, CardInstance $card, array $condition
+    ): int {
+        $count = 0;
+        foreach ($state->cards as $c) {
+            if ($c->owner === $card->owner) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $dr = abs($c->row - $card->row);
+            $dc = abs($c->col - $card->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            if (!self::matchesEnemyFilter($c, $condition)) continue;
+            $count++;
+        }
+        return $count;
+    }
+
+    private static function matchesEnemyFilter(CardInstance $c, array $condition): bool
+    {
+        if (isset($condition['weak_min']) && $c->strikeWeak < (int) $condition['weak_min']) {
+            return false;
+        }
+        if (!empty($condition['has_magic']) && !self::enemyHasMagic($c)) {
+            return false;
+        }
+        return true;
+    }
+
+    public static function enemyHasMagic(CardInstance $card): bool
+    {
+        foreach ($card->prop['actions'] ?? [] as $a) {
+            $t = $a['type'] ?? '';
+            if (in_array($t, ['discharge', 'magic', 'cast'], true)) return true;
+        }
+        return false;
     }
 }

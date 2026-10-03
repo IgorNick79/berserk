@@ -220,6 +220,7 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
     position: relative;
     font-size: 11px; text-align: center;
     overflow: hidden;
+    position: relative;
 }
 .field-cell.own { border-color: #8c8; }
 .field-cell.opp { background: #f8f8f8; }
@@ -879,16 +880,6 @@ body { padding-bottom: 46vh; }
     border-color: #44a;
 }
 
-.cell-marker-content {
-    font-size: 24px;
-    text-align: center;
-}
-
-.cell-marker-bonfire {
-    background: rgba(255, 100, 0, 0.3);
-    border-color: #f60;
-}
-
 .task-card--instant {
     background: #eef;
     border-color: #66a;
@@ -1080,4 +1071,68 @@ body { padding-bottom: 46vh; }
 }
 .instant-summary li.instant-summary__item--skip {
     color: #888;
+}
+
+.battle-card {
+    position: relative;
+}
+
+/* Контейнер маркеров — в правом верхнем углу клетки, иконки идут в ряд */
+.cell-markers {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    display: flex;
+    gap: 4px;
+    z-index: 20;
+    pointer-events: none;
+}
+
+/* Одна иконка */
+.cell-marker {
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.cell-marker-bomb {
+    background-image: url("/assets/images/bomb.png");
+}
+.cell-marker-row_spell {
+    background-image: url("/assets/images/flower.png");
+}
+
+
+/* Костёр: пока юникод 🔥 через псевдоэлемент */
+.cell-marker-bonfire {
+    background-color: rgba(255, 100, 0, 0.7);
+}
+.cell-marker-bonfire::after {
+    content: '🔥';
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 16px;
+}
+
+/* Врата (Демон жадности) */
+.cell-marker-gate {
+    background-color: rgba(150, 50, 200, 0.85);
+    border: 1px solid #fff;
+    /* background-image: url('/assets/icons/gate.png'); */
+}
+.cell-marker-gate::after {
+    content: '⛩';
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 14px;
+    color: #fff;
 }

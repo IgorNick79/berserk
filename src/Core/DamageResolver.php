@@ -16,8 +16,7 @@ final class DamageResolver
         CardInstance $target,
         int $val,
         string $actionType = 'strike',
-        ?CardInstance $attacker = null,
-        bool $skipHunt = false
+        ?CardInstance $attacker = null
     ): void {
         if ($val <= 0) return;
 
@@ -111,8 +110,7 @@ final class DamageResolver
 
         if ($attacker
             && $attacker->type === 'fly'
-            && isset($target->markers['hunt'])
-            && !$skipHunt) {
+            && isset($target->markers['hunt'])) {
 
             $huntBonus = (int) ($target->markers['hunt']['bonus'] ?? 2);
             unset($target->markers['hunt']);
@@ -586,7 +584,7 @@ final class DamageResolver
                 if ($t->zone !== CardInstance::ZONE_FIELD) continue;
                 if ($t->instanceId === $died->instanceId) continue;
                 if ($t->dying) continue;
-                if ($t->owner === $seeder->owner) continue;
+                // if ($t->owner === $seeder->owner) continue;
 
                 $dr = abs($t->row - $died->row);
                 $dc = abs($t->col - $died->col);
@@ -635,6 +633,10 @@ final class DamageResolver
 
         if ($targetId === 0) {
             array_shift($this->state->battle['pending_any_death']);
+            if (empty($this->state->battle['pending_any_death'])
+                && !empty($this->state->battle['turn_phase'])) {
+                (new TurnPhaseProcessor($this->state, new Engine()))->resume();
+            }
             $this->state->bumpVersion();
             return Result::ok(['any_death_skipped']);
         }
@@ -652,6 +654,11 @@ final class DamageResolver
         $this->applyPoison($target, $poisonValue, $sourceCard->owner);
 
         array_shift($this->state->battle['pending_any_death']);
+
+        if (empty($this->state->battle['pending_any_death'])
+            && !empty($this->state->battle['turn_phase'])) {
+            (new TurnPhaseProcessor($this->state, new Engine()))->resume();
+        }
 
         $this->state->bumpVersion();
         return Result::ok(["any_death_target:{$targetId}"]);

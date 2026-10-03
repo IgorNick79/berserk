@@ -80,6 +80,11 @@ final class MovementResolver
         $card->move--;
         $card->flags['moved_this_turn'] = true;
 
+        if (!empty($card->prop['strike_consecutive'])
+            && (int) ($card->flags['attacks_used_this_turn'] ?? 0) > 0) {
+            $card->flags['strike_chain_broken'] = true;
+        }
+
         $context = new MovementContext(
             card: $card,
             playerKey: $playerKey,
@@ -154,6 +159,12 @@ final class MovementResolver
         $card->move = 0;
         $card->flags['moved_this_turn'] = true;
 
+        // Берсерк: движение после атаки ломает цепочку
+        if (!empty($card->prop['strike_consecutive'])
+            && (int) ($card->flags['attacks_used_this_turn'] ?? 0) > 0) {
+            $card->flags['strike_chain_broken'] = true;
+        }
+
         $context = new MovementContext(
             card: $card,
             playerKey: $playerKey,
@@ -195,7 +206,7 @@ final class MovementResolver
         if ($zone->isFieldOccupied($row, $col)) {
             return Result::error('Клетка занята');
         }
-        if (!empty($this->state->cell_markers["{$row}_{$col}"])) {
+        if (ZoneManager::hasBlockingMarker($this->state, "{$row}_{$col}")) {
             return Result::error('На клетке маркер');
         }
 

@@ -786,9 +786,16 @@ final class InfoPanel
                 }
             } elseif ($kind === 'heal') {
                 $name = $strike['action_name'] ?? 'Излечение';
-                $resultText = $name . ': +' . ($strike['heal'] ?? 0) . ' HP';
-                if (!empty($strike['poison_removed'])) {
-                    $resultText .= ' (яд снят)';
+                if (!empty($strike['heal_instead_open'])) {
+                    $t  = $state->getCard((int) $strike['heal_instead_open']['target_id']);
+                    $tn = $t ? ($cardsInfo[$t->ukid]['name'] ?? '?') : '?';
+                    $resultText = $name . ': ' . htmlspecialchars($tn, ENT_QUOTES)
+                        . ' открывается вместо излечения';
+                } else {
+                    $resultText = $name . ': +' . ($strike['heal'] ?? 0) . ' HP';
+                    if (!empty($strike['poison_removed'])) {
+                        $resultText .= ' (яд снят)';
+                    }
                 }
             } elseif ($kind === 'sand_claws') {
                 $name = $strike['action_name'] ?? 'Песчаные когти';
@@ -870,6 +877,37 @@ final class InfoPanel
                     $resultText .= ' — защита сработала (0 урона)';
                 } else {
                     $resultText .= ' (' . $damage . ' урона)';
+                }
+            } elseif ($kind === 'bomb_shot') {
+                $name = $strike['action_name'] ?? 'Бомба';
+                $bomb = $strike['bomb'] ?? null;
+                if ($bomb) {
+                    $tName = $state->getCard($strike['target_id']);
+                    $tInfo = $tName ? ($cardsInfo[$tName->ukid] ?? null) : null;
+                    $tn2 = $tInfo ? htmlspecialchars($tInfo['name'], ENT_QUOTES) : '?';
+                    $resultText = $name . ': ' . $tn2 . ' получает '
+                        . $strike['damage'] . ' урона. Бомба поставлена на клетку ('
+                        . $bomb['row'] . ';' . $bomb['col'] . ').';
+                } else {
+                    $resultText = $name;
+                }
+            } elseif ($kind === 'row_spell') {
+                $rs = $strike['row_spell'] ?? null;
+                $name = $strike['action_name'] ?? 'Цветущие руны';
+                if ($rs) {
+                    $parts = [];
+                    foreach ($rs['targets'] as $t) {
+                        $tc = $state->getCard($t['target_id']);
+                        $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
+                        $parts[] = $tn . ' −' . $t['damage'];
+                    }
+                    $resultText = $name
+                        . ': кубик ' . $rs['dice']
+                        . ' → ' . BattleHelper::strikeName($rs['level'])
+                        . ' (' . $rs['damage_per_target'] . ' урона): '
+                        . implode(', ', $parts);
+                } else {
+                    $resultText = $name;
                 }
             } elseif ($kind === 'dive') {
                 $name = $strike['action_name'] ?? 'Пикирование';
@@ -1145,6 +1183,16 @@ final class InfoPanel
                         . '</div>';
                 }
             }
+            if (!empty($strike['defender_heal'])) {
+                foreach ($strike['defender_heal'] as $h) {
+                    $card = $state->getCard((int) ($h['card_id'] ?? 0));
+                    $info = $card ? ($cardsInfo[$card->ukid] ?? null) : null;
+                    $name = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
+                    $vampireHtml .= '<div class="vampire">'
+                        . '<b>' . $name . '</b> излечивается на ' . (int) ($h['heal'] ?? 0)
+                        . ' (Бьерн)</div>';
+                }
+            }
             if (!empty($strike['talion_incarnation_token'])) {
                 foreach ($strike['talion_incarnation_token'] as $t) {
                     $source = $state->getCard((int) ($t['source_id'] ?? 0));
@@ -1221,7 +1269,7 @@ final class InfoPanel
                 . $abilityBonusHtml . $coinBonusHtml . $reductionHtml
                 . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml;
 
-            $noDiceKinds = ['heal', 'modifier', 'execute', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly'];
+            $noDiceKinds = ['heal', 'modifier', 'execute', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot'];
             if (!in_array($kind, $noDiceKinds, true)) {
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
@@ -1252,7 +1300,9 @@ final class InfoPanel
         if ($kind === 'give_coin') $headerText = 'Передача монеты';
         if ($kind === 'become_fly') $headerText = 'Полёт';
         if ($kind === 'dive') $headerText = 'Пикирование';
-    
+        if ($kind === 'bomb_shot') $headerText = 'Бомба';
+        if ($kind === 'row_spell') $headerText = 'Цветущие руны';
+
         if (($strike['state'] ?? '') === 'waiting_instant') {
             $phase = $strike['instant_phase'] ?? 'before';
             $headerText = match ($phase) {
@@ -1429,6 +1479,10 @@ final class InfoPanel
 
             $parts = [];
             foreach ($items as $it) {
+                if (isset($it['standalone_text'])) {
+                    $parts[] = $it['standalone_text'];
+                    continue;
+                }
                 $card = $state->getCard($it['instance_id']);
                 if (!$card) continue;
                 $name = $cardsInfo[$card->ukid]['name'] ?? $card->ukid;

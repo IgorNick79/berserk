@@ -50,7 +50,7 @@ final class TurnAckChoice implements ChoiceHandlerInterface
             $label = (string) ($ack['label'] ?? '');
 
             if (!empty($ack['source_id'])) {
-                $srcCard = $state->getCard($ack['source_id']);
+                $srcCard = $state->getCard((int) $ack['source_id']);
                 if ($srcCard) {
                     $label = $cardsInfo[$srcCard->ukid]['name'] ?? $srcCard->ukid;
                 }
@@ -59,7 +59,15 @@ final class TurnAckChoice implements ChoiceHandlerInterface
             $items = $ack['items'] ?? [];
             $parts = [];
             foreach ($items as $it) {
-                $card = $state->getCard($it['instance_id']);
+                // Строки без карты (события-сообщения, «бомба взорвалась на (3;3)»)
+                if (isset($it['standalone_text'])) {
+                    $parts[] = $it['standalone_text'];
+                    continue;
+                }
+
+                if (!isset($it['instance_id'])) continue;
+
+                $card = $state->getCard((int) $it['instance_id']);
                 if (!$card) continue;
                 $name = $cardsInfo[$card->ukid]['name'] ?? $card->ukid;
 

@@ -44,10 +44,16 @@ if (isset($_GET['debug']) && $_GET['debug'] === '0') {
     unset($_SESSION['debug']);
 }
 
-file_put_contents(__DIR__ . '/../debug.log', 
-    date('[Y-m-d H:i:s] ') . 'URI=' . ($_SERVER['REQUEST_URI'] ?? '') . "\n", 
-    FILE_APPEND
-);
+// Debug roll: ?debug_roll=6,1,4 или ?debug_roll=6* или ?debug_roll=off
+if (isset($_GET['debug_roll'])) {
+    $v = (string) $_GET['debug_roll'];
+    if ($v === '' || $v === 'off') {
+        unset($_SESSION['debug_roll']);
+    } else {
+        $_SESSION['debug_roll'] = $v;
+    }
+}
+\Berserk\Core\Dice::init();
 
 $db      = new Db($config);
 $repo    = new GameRepository($db);
@@ -176,16 +182,6 @@ if ($commandType !== '') {
 
     $cmd = new Command($commandType, $payload);
     $result = $engine->apply($state, $playerKey, $cmd);
-
-    file_put_contents(
-        __DIR__ . '/../debug.log',
-        date('[Y-m-d H:i:s] ') . 'RESULT: success=' . ($result->success ? 'Y' : 'N') 
-            . ' err=' . ($result->error ?? '-') 
-            . ' events=' . json_encode($result->events) 
-            . ' has_pending=' . (!empty($state->battle['pending_cell_marker_pick']) ? 'Y' : 'N')
-            . "\n",
-        FILE_APPEND
-    );
 
     if ($result->success) {
         $repo->save($state);

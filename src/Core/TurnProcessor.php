@@ -213,26 +213,40 @@ final class TurnProcessor
         }
 
         // Тик маркеров клеток
-        foreach ($this->state->cell_markers as $key => &$m) {
-            if (!isset($m['expire'])) continue;
-            $timing = $m['timing'] ?? 'source_turn';
-            $source = $m['source'] ?? null;
+        foreach ($this->state->cell_markers as $key => $markers) {
+            $list = ZoneManager::markersAt($this->state, $key);
+            $changed = false;
 
-            $shouldTick = false;
-            if ($timing === 'end_of_opponent_turn' && $source !== $endingKey) {
-                $shouldTick = true;
-            } elseif ($timing === 'end_of_turn' && $source === $endingKey) {
-                $shouldTick = true;
+            foreach ($list as $i => $m) {
+                if (!isset($m['expire'])) continue;
+                $timing = $m['timing'] ?? 'source_turn';
+                $source = $m['source'] ?? null;
+
+                $shouldTick = false;
+                if ($timing === 'end_of_opponent_turn' && $source !== $endingKey) {
+                    $shouldTick = true;
+                } elseif ($timing === 'end_of_turn' && $source === $endingKey) {
+                    $shouldTick = true;
+                }
+
+                if ($shouldTick) {
+                    $list[$i]['expire']--;
+                    $changed = true;
+                    if ($list[$i]['expire'] <= 0) {
+                        unset($list[$i]);
+                    }
+                }
             }
 
-            if ($shouldTick) {
-                $m['expire']--;
-                if ($m['expire'] <= 0) {
+            if ($changed) {
+                $list = array_values($list);
+                if (empty($list)) {
                     unset($this->state->cell_markers[$key]);
+                } else {
+                    $this->state->cell_markers[$key] = $list;
                 }
             }
         }
-        unset($m);
 
         // Pre-turn choice (Оборотень и подобные) — до фазы начала хода
         if ($this->checkCardChoice($nextActiveKey)) {
@@ -256,10 +270,10 @@ final class TurnProcessor
                     && $card->zone !== CardInstance::ZONE_FLYING) continue;
 
                 // Сброс «ран этого хода» у ВСЕХ карт (не только активного)
-                foreach ($this->state->cards as $card) {
-                    if ($card->zone !== CardInstance::ZONE_FIELD
-                        && $card->zone !== CardInstance::ZONE_FLYING) continue;
-                    $card->flags['damage_taken_this_turn'] = 0;
+                foreach ($this->state->cards as $c) {
+                    if ($c->zone !== CardInstance::ZONE_FIELD
+                        && $c->zone !== CardInstance::ZONE_FLYING) continue;
+                    $c->flags['damage_taken_this_turn'] = 0;
                 }
                 $card->flags['ranged_hits_this_turn'] = 0;
             }
@@ -301,6 +315,9 @@ final class TurnProcessor
                     $card->flags['after_strike_execute_used_this_turn'] = 0;
                     $card->flags['instant_uses_this_turn'] = [];
                     unset($card->flags['first_attack_target_id']);
+                    unset($card->flags['strike_chain_broken']);
+                    unset($card->flags['teleport_adjacent_bonus_used']);
+                    unset($card->flags['on_heal_open_used_this_turn']);
                 }
             }
 
@@ -539,55 +556,6 @@ final class TurnProcessor
 
     // ─── Триггеры начала хода ───────────────────────────────
 
-    private function applyTurnStartEffect(CardInstance $card, string $activeKey): void
-    {
-        $effects = $card->prop['turn_start'] ?? [];
-        if (!is_array($effects)) return;
-
-        foreach ($effects as $effect) {
-            $scope = $effect['scope'] ?? 'own';
-            if ($scope === 'own' && $card->owner !== $activeKey) continue;
-
-            $type       = $effect['type'] ?? '';
-            $targetType = $effect['target'] ?? '';
-
-            if ($targetType === 'opposite') {
-                $target = $this->findOpposite($card);
-                if (!$target) continue;
-
-                $value = (int) ($effect['value'] ?? 0);
-
-                if (isset($effect['value_if_not_moved'])) {
-                    $moved = $target->flags['moved_last_turn'] ?? false;
-                    if (!$moved) {
-                        $value = (int) $effect['value_if_not_moved'];
-                    }
-                }
-
-                if ($type === 'damage') {
-                    $this->engine->applyDamage($this->state, $target, $value, 'impact');
-                }
-            }
-
-            if ($type === 'position_modifier') {
-                $this->applyPositionModifier($card, $effect);
-            }
-
-            if ($type === 'get_coins') {
-                if (!empty($effect['line']) && !CardStats::isInLine($this->state, $card)) {
-                    continue;
-                }
-
-                $coins = (int) ($effect['coins'] ?? 1);
-                $max = (int) ($card->prop['coins']['max_value'] ?? 0);
-
-                $card->coins += $coins;
-                if ($max > 0 && $card->coins > $max) {
-                    $card->coins = $max;
-                }
-            }
-        }
-    }
 
     private function applyPositionModifier(CardInstance $card, array $effect): void
     {
@@ -606,20 +574,6 @@ final class TurnProcessor
                 'expire' => 'end_of_turn',
             ];
         }
-    }
-
-    private function findOpposite(CardInstance $card): ?CardInstance
-    {
-        $oppositeRow = 7 - $card->row;
-
-        foreach ($this->state->cards as $c) {
-            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
-            if ($c->owner === $card->owner) continue;
-            if ($c->row === $oppositeRow && $c->col === $card->col) {
-                return $c;
-            }
-        }
-        return null;
     }
 
     public function chooseIncarnationCell(string $playerKey, Command $cmd): Result
@@ -644,7 +598,7 @@ final class TurnProcessor
         if ($zone->isFieldOccupied($row, $col)) {
             return Result::error('Клетка занята');
         }
-        if (!empty($this->state->cell_markers["{$row}_{$col}"])) {
+        if (ZoneManager::hasBlockingMarker($this->state, "{$row}_{$col}")) {
             return Result::error('На клетке маркер');
         }
 

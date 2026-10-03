@@ -143,7 +143,7 @@ function fdmAssertNoPending(GameState $state, string $message): void
 foreach ([
     [GameState::PLAYER_HOST, 3, 3, 3, 4, 4, 3, 4, 4],
     [GameState::PLAYER_HOST, 3, 3, 3, 2, 4, 3, 4, 2],
-    [GameState::PLAYER_HOST, 3, 3, 4, 3, 4, 3, 5, 3],
+    [GameState::PLAYER_HOST, 3, 3, 4, 3, 5, 3, 6, 3],
     [GameState::PLAYER_HOST, 3, 3, 2, 3, 4, 3, 3, 3],
     [GameState::PLAYER_PLAYER, 4, 3, 4, 4, 2, 3, 2, 4],
     [GameState::PLAYER_PLAYER, 4, 3, 4, 2, 2, 3, 2, 2],
@@ -221,17 +221,17 @@ $blocker = fdmCard(['instanceId' => 12, 'owner' => GameState::PLAYER_HOST, 'row'
 $markerBlocked = fdmCard(['instanceId' => 13, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 4]);
 $boundary = fdmCard(['instanceId' => 14, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 1]);
 $eligibilityState = fdmState($closed, $rooted, $blocked, $blocker, $markerBlocked, $boundary);
-$eligibilityState->cell_markers['5_3'] = ['type' => 'test'];
+$eligibilityState->cell_markers['5_3'] = ['type' => 'bonfire'];
 $resolver = new ForcedMovementResolver($eligibilityState, new Engine());
 $eligibleIds = array_map(fn(CardInstance $card) => $card->instanceId, $resolver->eligibleTargets(GameState::PLAYER_PLAYER, 0, -1));
 fdmAssert(in_array(9, $eligibleIds, true), 'Closed creature should be eligible.');
 fdmAssert(!in_array(10, $eligibleIds, true), 'Rooted creature should not be eligible.');
 fdmAssert(!in_array(11, $eligibleIds, true), 'Occupied destination should not be eligible.');
-fdmAssert(!in_array(13, $eligibleIds, true), 'Cell marker should prevent eligibility.');
+fdmAssert(!in_array(13, $eligibleIds, true), 'Blocking cell marker should prevent eligibility.');
 fdmAssert(!in_array(14, $eligibleIds, true), 'Field boundary should prevent eligibility.');
 
 $fallbackSource = fdmCard(['instanceId' => 14, 'row' => 3, 'col' => 3, 'prop' => fdmProp()]);
-$fallbackTarget = fdmCard(['instanceId' => 15, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 1]);
+$fallbackTarget = fdmCard(['instanceId' => 15, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 5]);
 $fallbackState = fdmState($fallbackSource, $fallbackTarget);
 fdmMove($fallbackState, $fallbackSource, 3, 4);
 fdmAssertNoPending($fallbackState, 'No legal targets should avoid meaningless pending.');

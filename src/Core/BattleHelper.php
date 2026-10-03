@@ -86,7 +86,7 @@ final class BattleHelper
             $r  = $card->row + $dr;
             $cc = $card->col + $dc;
             if ($r < 1 || $r > 6 || $cc < 1 || $cc > 5) continue;
-            if (!empty($state->cell_markers["{$r}_{$cc}"])) continue;
+            if (ZoneManager::hasBlockingMarker($state, "{$r}_{$cc}")) continue;
             if (isset($occupied["{$r}_{$cc}"])) continue;
 
              // Басаарг: нельзя уходить от обязательной цели
@@ -113,7 +113,7 @@ final class BattleHelper
             $targetCol = ($card->col === 1) ? 5 : 1;
             $key       = "{$card->row}_{$targetCol}";
 
-            if (empty($state->cell_markers[$key]) && !isset($occupied[$key])) {
+            if (!ZoneManager::hasBlockingMarker($state, $key) && !isset($occupied[$key])) {
                 $result[$key] = true;
             }
         }
@@ -150,7 +150,7 @@ final class BattleHelper
         for ($r = 1; $r <= 6; $r++) {
             for ($c = 1; $c <= 5; $c++) {
                 if ($r === $card->row && $c === $card->col) continue;
-                if (!empty($state->cell_markers["{$r}_{$c}"])) continue;
+                if (ZoneManager::hasBlockingMarker($state, "{$r}_{$c}")) continue;
                 if (isset($occupied["{$r}_{$c}"])) continue;
 
                 $dist = abs($r - $card->row) + abs($c - $card->col);
@@ -180,6 +180,12 @@ final class BattleHelper
         }
 
         $attackLimit = (int) ($card->prop['attacks_per_turn'] ?? 1);
+
+        if (!empty($card->prop['strike_consecutive'])
+            && !empty($card->flags['strike_chain_broken'])) {
+            $attackLimit = 1;
+        }
+
         $attacksUsed = (int) ($card->flags['attacks_used_this_turn'] ?? 0);
         if ($attacksUsed >= $attackLimit) return [];
 
@@ -204,6 +210,11 @@ final class BattleHelper
 
             $type = $action['type'] ?? '';
             if (CardStats::hasCannotAttack($card) && CardStats::isOffensiveAction($type)) {
+                return [];
+            }
+
+            if (!empty($action['condition'])
+                && !CardStats::checkCondition($action['condition'], $state, $card)) {
                 return [];
             }
 
@@ -365,7 +376,7 @@ final class BattleHelper
                                 }
                             }
                             if ($occupied) continue;
-                            if (!empty($state->cell_markers["{$r}_{$c}"])) continue;
+                            if (ZoneManager::hasBlockingMarker($state, "{$r}_{$c}")) continue;
 
                             $hasFree = true;
                             break 2;
@@ -401,6 +412,13 @@ final class BattleHelper
             $attackerIsFlying = ($card->zone === CardInstance::ZONE_FLYING);
             $canAttackFlying  = CardStats::canAttackFlying($state, $card);
 
+            // Берсерк: вторая атака — только по другой цели.
+            // Первую цель не подсвечиваем, чтобы UI не расходился с declare.
+            $alreadyHitId = 0;
+            if (!empty($card->prop['strike_targets_unique']) && $attacksUsed > 0) {
+                $alreadyHitId = (int) ($card->flags['first_attack_target_id'] ?? 0);
+            }
+
             // Перехват летающих: только Пауки противника
             if ($attackerIsFlying) {
                 $interceptors = CardStats::getAirInterceptors($state, $playerKey);
@@ -413,6 +431,7 @@ final class BattleHelper
             }
 
             foreach ($state->cards as $target) {
+                if ($alreadyHitId > 0 && $target->instanceId === $alreadyHitId) continue;
                 if ($target->zone !== CardInstance::ZONE_FIELD
                     && $target->zone !== CardInstance::ZONE_FLYING) continue;
                 if ($target->owner === $playerKey) continue;
@@ -450,8 +469,6 @@ final class BattleHelper
                         if (!$isAdjacent && !$isRowExtreme && !$isLineRange) continue;
                     }
                 }
-
-                $result[$target->instanceId] = true;
 
                 $result[$target->instanceId] = true;
             }

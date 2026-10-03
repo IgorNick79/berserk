@@ -31,6 +31,10 @@ final class InstantProcessor
             $activeKey = $attacker ? $attacker->owner : null;
         }
 
+        $strikeAttackerId = $strike !== null
+            ? (int) ($strike['attacker_id'] ?? 0)
+            : 0;
+
         $result = [];
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $ownerKey) continue;
@@ -39,6 +43,17 @@ final class InstantProcessor
             if ($card->dying || $card->closed) continue;
             if (!empty($card->flags['in_stack'])) continue;
             if (empty($card->prop['instants'])) continue;
+
+            // Атакующий уже объявил действие (strike/shot/...) — свои инстанты
+            // в этом сражении не играет, даже если это тот же владелец.
+            if ($strikeAttackerId > 0 && $strikeAttackerId === $card->instanceId) {
+                continue;
+            }
+            // Карта в активном pending — тоже занята: отменить и только потом
+            // играть инстанты. Даже если pending отменяемый.
+            if ($this->isCardInPending($card)) {
+                continue;
+            }
 
             foreach ($card->prop['instants'] as $inst) {
                 if (($inst['trigger'] ?? '') !== $type) continue;
@@ -691,5 +706,20 @@ final class InstantProcessor
         }
         $card->flags['instant_uses_this_turn'][$key] =
             ((int) ($card->flags['instant_uses_this_turn'][$key] ?? 0)) + 1;
+    }
+
+    private function isCardInPending(CardInstance $card): bool
+    {
+        foreach ($this->state->battle as $key => $val) {
+            if (!is_string($key) || !str_starts_with($key, 'pending_')) continue;
+            if (!is_array($val)) continue;
+
+            foreach (['attacker_id', 'card_id', 'source_id', 'healer_id'] as $field) {
+                if ((int) ($val[$field] ?? 0) === $card->instanceId) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

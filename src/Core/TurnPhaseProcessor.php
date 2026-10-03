@@ -419,7 +419,25 @@ final class TurnPhaseProcessor
             $queue[] = ['id' => 'coins', 'type' => 'get_coins', 'label' => 'Монеты'];
         }
 
-        // 6. turn_start-абилки (кроме get_coins)
+        // 6. Бомбы (Орк-бомбардир)
+        if ($this->wouldExplodeBombs($activeKey)) {
+            $queue[] = ['id' => 'bombs', 'type' => 'bombs', 'label' => 'Бомба'];
+        }
+
+        // Цветущие руны (Тергала)
+        foreach ($this->state->cards as $card) {
+            if ($card->owner !== $activeKey) continue;
+            if (empty($card->flags['row_spell_pending'])) continue;
+            if ($card->dying || $card->hp <= 0) continue;
+            $queue[] = [
+                'id'      => 'row_spell_' . $card->instanceId,
+                'type'    => 'row_spell',
+                'card_id' => $card->instanceId,
+                'label'   => 'Цветущие руны',
+            ];
+        }
+
+        // 7. turn_start-абилки (кроме get_coins)
         $tsCards = [];
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $activeKey) continue;
@@ -531,6 +549,8 @@ final class TurnPhaseProcessor
             'opponent_turn_end'   => $this->executeTurnEndEffect($task, $passiveKey),
             'prophecy'            => ['label' => 'Пророчество', 'items' => []],
             'valhalla'            => ['label' => 'Вальхалла', 'items' => []],
+            'bombs'               => $this->executeBombs($activeKey),
+            'row_spell'           => $this->executeRowSpell($task, $activeKey),
             default               => ['label' => $task['label'] ?? '', 'items' => []],
         };
     }
@@ -777,6 +797,42 @@ final class TurnPhaseProcessor
                 }
                 return ['label' => $label, 'items' => $items];
 
+            case 'place_gates':
+                $occupied = [];
+                foreach ($this->state->cards as $c) {
+                    if ($c->zone === CardInstance::ZONE_FIELD && $c->row !== null) {
+                        $occupied["{$c->row}_{$c->col}"] = true;
+                    }
+                }
+
+                $candidates = [];
+                for ($row = 1; $row <= 6; $row++) {
+                    for ($col = 1; $col <= 5; $col++) {
+                        $k = "{$row}_{$col}";
+                        if (isset($occupied[$k])) continue;
+                        if (ZoneManager::hasBlockingMarker($this->state, $k)) continue;
+                        if (ZoneManager::hasMarker($this->state, $k)) continue; // любой маркер мешает
+                        $candidates[] = $k;
+                    }
+                }
+
+                $need = (int) ($eff['count'] ?? 3);
+                if (count($candidates) < $need) {
+                    return ['label' => $label, 'items' => [
+                        ['standalone_text' => 'недостаточно свободных клеток для врат'],
+                    ]];
+                }
+
+                $this->state->battle['pending_gate_pick'] = [
+                    'owner'      => $ownerKey,
+                    'source_id'  => $card->instanceId,
+                    'count'      => $need,
+                    'chosen'     => [],
+                    'candidates' => $candidates,
+                ];
+
+                return ['label' => $label, 'items' => []];
+
             case 'modifier':
                 $stat  = (string) ($eff['stat'] ?? 'ova');
                 $value = (int) ($eff['value'] ?? 1);
@@ -838,6 +894,60 @@ final class TurnPhaseProcessor
                     'source' => $ownerKey,
                 ];
                 $items[] = ['instance_id' => $card->instanceId, 'text' => CardStats::statLabel($eff['stat'] ?? 'ova') . ' +' . (int) ($eff['value'] ?? 1)];
+            } elseif ($type === 'greed_teleport') {
+                // Все gate владельца
+                $gates = [];
+                foreach (array_keys($this->state->cell_markers) as $k) {
+                    foreach (ZoneManager::markersAt($this->state, $k) as $m) {
+                        if (($m['type'] ?? '') === 'gate' && ($m['source'] ?? null) === $ownerKey) {
+                            $gates[] = $k;
+                            break;
+                        }
+                    }
+                }
+
+                // Свободные клетки с gate (без других карт)
+                $freeGates = [];
+                foreach ($gates as $k) {
+                    [$r, $c] = explode('_', $k);
+                    $r = (int) $r; $c = (int) $c;
+                    $blocked = false;
+                    foreach ($this->state->cards as $other) {
+                        if ($other->zone !== CardInstance::ZONE_FIELD) continue;
+                        if ($other->row === $r && $other->col === $c
+                            && $other->instanceId !== $card->instanceId) {
+                            $blocked = true;
+                            break;
+                        }
+                    }
+                    if (!$blocked) $freeGates[] = $k;
+                }
+
+                // Нет свободных — сразу 3 impact, gates убираем
+                if (empty($freeGates)) {
+                    $selfDamage = (int) ($eff['self_damage'] ?? 3);
+                    $hpBefore = $card->hp;
+                    $this->engine->applyDamage($this->state, $card, $selfDamage, 'impact', null);
+                    $items[] = [
+                        'instance_id' => $card->instanceId,
+                        'delta'       => -(max(0, $hpBefore - $card->hp)),
+                    ];
+                    $items[] = ['standalone_text' => 'не может телепортироваться — получает ' . $selfDamage . ' урона'];
+
+                    foreach ($gates as $k) {
+                        ZoneManager::removeMarkersByType($this->state, $k, 'gate', $ownerKey);
+                    }
+                } else {
+                    // Открываем окно выбора клетки
+                    $this->state->battle['pending_greed_teleport'] = [
+                        'owner'       => $ownerKey,
+                        'source_id'   => $card->instanceId,
+                        'damage'      => (int) ($eff['damage'] ?? 2),
+                        'self_damage' => (int) ($eff['self_damage'] ?? 3),
+                        'gates'       => $gates,         // все gate — снять после
+                        'free_gates'  => $freeGates,     // только свободные — для выбора
+                    ];
+                }
             }
         }
 
@@ -857,14 +967,10 @@ final class TurnPhaseProcessor
 
     private function findOpposite(CardInstance $card): ?CardInstance
     {
-        $step = $card->owner === 'host' ? 1 : -1;
-        $row  = $card->row + $step;
-        foreach ($this->state->cards as $c) {
-            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
-            if ($c->owner === $card->owner) continue;
-            if ($c->row === $row && $c->col === $card->col) return $c;
-        }
-        return null;
+        $opposite = CardStats::getOppositeFieldCard($this->state, $card);
+        if ($opposite === null) return null;
+        if ($opposite->owner === $card->owner) return null;
+        return $opposite;
     }
 
     // ─── Вспомогательное ─────────────────────────────────────
@@ -878,8 +984,12 @@ final class TurnPhaseProcessor
         if ($base === 'incarnation' && !empty($battle['pending_incarnation'])) return true;
         if ($base === 'turn_start' || $base === 'opponent_turn_start') {
             if (!empty($battle['pending_whip'])) return true;
+            if (!empty($battle['pending_gate_pick'])) return true;
+            if (!empty($battle['pending_greed_teleport'])) return true;
         }
         if ($base === 'instant' && !empty($battle['pending_instant_pick'])) return true;
+        if ($base === 'bombs' && !empty($battle['pending_any_death'])) return true;
+        if ($base === 'row_spell' && !empty($battle['pending_row_spell_pick'])) return true;
 
         return false;
     }
@@ -950,33 +1060,6 @@ final class TurnPhaseProcessor
         return false;
     }
 
-    private function executeInstant(array $task, string $activeKey)
-    {
-        $card = $this->state->getCard($task['card_id']);
-        if (!$card) return '';
-
-        $inst   = $task['payload'] ?? [];
-        $target = $inst['target'] ?? 'self';
-
-        // Self-эффект — применяем сразу
-        if ($target === 'self') {
-            $card->closed = true;
-            $this->engine->applyInstantEffect($this->state, $inst['effect'] ?? [], $card, $card, $activeKey);
-            return ['label' => $task['label'], 'items' => []];
-        }
-
-        // Нужен выбор цели
-        $this->state->battle['pending_instant_pick'] = [
-            'owner'   => $activeKey,
-            'card_id' => $task['card_id'],
-            'target'  => $target,
-            'effect'  => $inst['effect'] ?? [],
-            'label'   => $task['label'] ?? 'Инстант',
-        ];
-
-        return '';
-    }
-
     public function chooseInstantPick(string $playerKey, Command $cmd): Result
     {
         return (new InstantProcessor($this->state, $this->engine))->chooseTurnTarget($playerKey, $cmd);
@@ -1016,6 +1099,128 @@ final class TurnPhaseProcessor
         }
 
         return $queue;
+    }
+
+    private function wouldExplodeBombs(string $activeKey): bool
+    {
+        foreach (array_keys($this->state->cell_markers) as $key) {
+            foreach (ZoneManager::markersAt($this->state, $key) as $m) {
+                if (($m['type'] ?? '') !== 'bomb') continue;
+                if (($m['source'] ?? null) !== $activeKey) continue;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function executeBombs(string $activeKey): array
+    {
+        $events = [];
+
+        foreach (array_keys($this->state->cell_markers) as $key) {
+            $markers = ZoneManager::markersAt($this->state, $key);
+
+            foreach ($markers as $m) {
+                if (($m['type'] ?? '') !== 'bomb') continue;
+                if (($m['source'] ?? null) !== $activeKey) continue;
+
+                [$row, $col] = explode('_', $key);
+                $row    = (int) $row;
+                $col    = (int) $col;
+                $damage = (int) ($m['damage'] ?? 2);
+
+                $events[] = [
+                    'standalone_text' => "взорвалась на клетке ({$row};{$col})",
+                ];
+
+                foreach ($this->state->cards as $c) {
+                    if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+                    if ($c->row !== $row || $c->col !== $col) continue;
+                    if ($c->dying || $c->hp <= 0) continue;
+
+                    $hpBefore = $c->hp;
+                    $this->engine->applyDamage($this->state, $c, $damage, 'impact');
+                    $realDamage = max(0, $hpBefore - $c->hp);
+
+                    $events[] = [
+                        'instance_id' => $c->instanceId,
+                        'delta'       => -$realDamage,
+                    ];
+                }
+
+                ZoneManager::removeMarkersByType($this->state, $key, 'bomb', $activeKey);
+                break;   // бомбы одного источника на клетке только одна
+            }
+        }
+
+        return ['label' => 'Бомба', 'items' => $events];
+    }
+
+    private function executeRowSpell(array $task, string $activeKey): array
+    {
+        $card = $this->state->getCard((int) $task['card_id']);
+        if (!$card) return ['label' => 'Цветущие руны', 'items' => []];
+
+        $data   = $card->flags['row_spell_pending'] ?? null;
+        if (!$data) return ['label' => 'Цветущие руны', 'items' => []];
+        $row    = (int) ($data['row'] ?? 0);
+        $action = $data['action'] ?? [];
+        unset($card->flags['row_spell_pending']);
+
+        // снять маркеры ряда
+        for ($col = 1; $col <= 5; $col++) {
+            ZoneManager::removeMarkersByType(
+                $this->state, "{$row}_{$col}", 'row_spell', $activeKey
+            );
+        }
+
+        // Считаем X — свои без ран в этом ряду
+        $x = 0;
+        foreach ($this->state->cards as $c) {
+            if ($c->owner !== $activeKey) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->row !== $row) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            if ($c->hp < $c->hpMax) continue;   // есть раны — не считается
+            $x++;
+        }
+
+        $events = [
+            ['standalone_text' => "Цветущие руны: ряд {$row}, X = {$x}"],
+        ];
+
+        if ($x === 0) {
+            $events[] = ['standalone_text' => 'Ваших существ без ран в этом ряду нет — заклинание не срабатывает'];
+            return ['label' => 'Цветущие руны', 'items' => $events];
+        }
+
+        // Собираем всех чужих на поле
+        $enemies = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->owner === $activeKey) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            $enemies[] = $c->instanceId;
+        }
+
+        if (count($enemies) < $x) {
+            $events[] = ['standalone_text' =>
+                "Чужих на поле меньше {$x} — заклинание не срабатывает"];
+            return ['label' => 'Цветущие руны', 'items' => $events];
+        }
+
+        // Открываем pending выбора X целей
+        $this->state->battle['pending_row_spell_pick'] = [
+            'owner'      => $activeKey,
+            'source_id'  => $card->instanceId,
+            'x'          => $x,
+            'candidates' => $enemies,
+            'action'     => $action,
+        ];
+
+        return ['label' => 'Цветущие руны', 'items' => $events];
     }
 
     private function buildActiveQueueEnd(string $activeKey): array

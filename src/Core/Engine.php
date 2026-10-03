@@ -90,8 +90,6 @@ final class Engine
             'choose_card_option'      => $turn->chooseCardOption($playerKey, $cmd),
             'choose_push_choice'      => $strike->choosePushChoice($playerKey, $cmd),
             'choose_any_death_target' => $this->damageResolver($state)->chooseAnyDeathTarget($playerKey, $cmd),
-            'choose_transfer_donor'   => $action->chooseTransferDonor($playerKey, $cmd),
-            'choose_transfer_amount'  => $action->chooseTransferAmount($playerKey, $cmd),
             'choose_incarnation_cell' => $turn->chooseIncarnationCell($playerKey, $cmd),
             'choose_self_wound'       => $action->chooseSelfWound($playerKey, $cmd),
             'choose_multi_heal'       => $action->chooseMultiHeal($playerKey, $cmd),
@@ -122,6 +120,10 @@ final class Engine
             'play_turn_instant'       => $action->playTurnInstant($playerKey, $cmd),
             'choose_close_or_damage'  => $strike->chooseCloseOrDamage($playerKey, $cmd),
             'choose_ally_modifier'    => $strike->chooseAllyModifier($playerKey, $cmd),
+            'choose_row'                => $action->chooseRow($playerKey, $cmd),
+            'choose_row_spell_targets'  => $action->chooseRowSpellTargets($playerKey, $cmd),
+            'choose_gate'             => $action->chooseGate($playerKey, $cmd),
+            'choose_greed_teleport'   => $action->chooseGreedTeleport($playerKey, $cmd),
             'reorder_start'           => (new ProphecyProcessor($state, $this))->startReorder($playerKey),
             'reorder_card_up'         => (new ProphecyProcessor($state, $this))->reorderCard(
                 $playerKey, (int) $cmd->get('card_id', 0), 'top'
@@ -241,8 +243,8 @@ final class Engine
                 $sr = new StrikeResolver($state, $this);
 
                 if ($op === 'reroll') {
-                    $strike['attack_dice'] = random_int(1, 6);
-                    $strike['defend_dice'] = random_int(1, 6);
+                    $strike['attack_dice'] = Dice::roll();
+                    $strike['defend_dice'] = Dice::roll();
                     $sr->recalcTable();
                     return null;
                 }
@@ -360,10 +362,9 @@ final class Engine
         CardInstance $target,
         int $val,
         string $actionType = 'strike',
-        ?CardInstance $attacker = null,
-        bool $skipHunt = false
+        ?CardInstance $attacker = null
     ): void {
-        $this->damageResolver($state)->applyDamage($target, $val, $actionType, $attacker, $skipHunt);
+        $this->damageResolver($state)->applyDamage($target, $val, $actionType, $attacker);
     }
 
     public function forceDeath(
@@ -487,7 +488,6 @@ final class Engine
     {
         if ($value <= 0) return;
 
-        // zoo — защита от отравлений
         if (!empty($target->prop['zoo'])) {
             return;
         }
@@ -499,7 +499,6 @@ final class Engine
                 'timing' => 'permanent',
             ];
         } else {
-            // Замещение: ставим большее
             if ($value > $target->markers['poison']['value']) {
                 $target->markers['poison']['value'] = $value;
             }
@@ -772,8 +771,6 @@ final class Engine
     {
         return new DamageResolver($state, \Closure::fromCallable([$this, 'syncCoinBonus']));
     }
-
-
 
     public function tryProphecyBlock(
         GameState $state,

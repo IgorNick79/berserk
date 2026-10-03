@@ -9,6 +9,7 @@ use Berserk\Core\Autoloader;
 use Berserk\Core\CardInstance;
 use Berserk\Core\CardStats;
 use Berserk\Core\Command;
+use Berserk\Core\Dice;
 use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\StrikeResolver;
@@ -184,6 +185,8 @@ thanAssert(thanModifierValue($otherLineE, 'next_strike_bonus') === 0, 'Separate 
 $state->battle['active'] = GameState::PLAYER_HOST;
 $state->getCard(16)->row = 4;
 $state->getCard(16)->col = 2;
+$_SESSION['debug_roll'] = '6,1';
+Dice::init();
 $result = (new StrikeResolver($state, new Engine()))->declare(GameState::PLAYER_HOST, new Command('strike', [
     'card_id' => 11,
     'target_id' => 16,
@@ -273,6 +276,8 @@ $striker = thanCard([
 $defender = thanEnemy(71, 4, 3);
 $state = thanState($striker, $defender);
 $resolver = new StrikeResolver($state, new Engine());
+$_SESSION['debug_roll'] = '6,1';
+Dice::init();
 $result = $resolver->declare(GameState::PLAYER_HOST, new Command('strike', [
     'card_id' => 70,
     'target_id' => 71,
@@ -299,6 +304,8 @@ $lineAlly = thanLineCard(82, 4, 4);
 $attacker = thanEnemy(83, 3, 3, ['strikeWeak' => 1, 'strikeMedium' => 1, 'strikeStrong' => 1]);
 $state = thanState($tan, $lineVictim, $lineAlly, $attacker);
 $state->battle['active'] = GameState::PLAYER_PLAYER;
+$_SESSION['debug_roll'] = '6,1';
+Dice::init();
 $result = (new StrikeResolver($state, new Engine()))->declare(GameState::PLAYER_PLAYER, new Command('strike', [
     'card_id' => 83,
     'target_id' => 81,

@@ -22,7 +22,7 @@ final class WoundTransferChoice implements ChoiceHandlerInterface
 
     public function commandTypes(): array
     {
-        return ['wt_source', 'wt_amount', 'wt_target', 'wt_target_amount'];
+        return ['wt_source', 'wt_amount', 'wt_target', 'wt_target_amount', 'cancel_pending'];
     }
 
     public function spec(
@@ -200,6 +200,11 @@ final class WoundTransferChoice implements ChoiceHandlerInterface
         string $playerKey,
         Command $cmd
     ): Result {
+        if ($cmd->type === 'cancel_pending') {
+            return (new \Berserk\Core\ActionResolver($state, $engine))
+                ->cancelPending($playerKey, $cmd);
+        }
+
         $proc = new WoundTransferProcessor($state, $engine);
         return match ($cmd->type) {
             'wt_source'        => $proc->chooseSource($playerKey, $cmd),

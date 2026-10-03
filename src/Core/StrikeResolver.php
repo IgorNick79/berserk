@@ -156,6 +156,13 @@ final class StrikeResolver
         }
 
         $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
+
+        // Берсерк: движение после атаки снимает вторую атаку
+        if (!empty($attacker->prop['strike_consecutive'])
+            && !empty($attacker->flags['strike_chain_broken'])) {
+            $attackLimit = 1;
+        }
+
         $attacksUsed = (int) ($attacker->flags['attacks_used_this_turn'] ?? 0);
         if ($attacksUsed >= $attackLimit) {
             return Result::error('Уже атаковал в этот ход');
@@ -211,7 +218,7 @@ final class StrikeResolver
 
                 $isAdjacent = ($drow <= 1 && $dcol <= 1 && $dist > 0);
 
-                $isRowExtreme = !empty($attacker->prop['row_strike'])
+                $isRowExtreme = !empty($attacker->prop['row_extreme'])
                     && $target->row === $attacker->row
                     && (($attacker->col === 1 && $target->col === 5)
                         || ($attacker->col === 5 && $target->col === 1));
@@ -230,6 +237,7 @@ final class StrikeResolver
         if (!CardStats::hasAnyStrike($attacker)) {
             return Result::error('Карта не может атаковать');
         }
+
 
         // Обязательная атака
         $forced = CardStats::getForcedStrikeTarget($this->state, $attacker);
@@ -345,6 +353,27 @@ final class StrikeResolver
             $defender = $this->state->getCard($defenderId);
             if ($defender && !empty($defender->prop['on_become_defender'])) {
                 foreach ($defender->prop['on_become_defender'] as $m) {
+                    // Спец-эффект: излечить защищаемого (Бьерн)
+                    if (($m['type'] ?? '') === 'heal_target') {
+                        $targetId = (int) ($this->state->battle['strike']['target_id'] ?? 0);
+                        $target = $this->state->getCard($targetId);
+                        if ($target && !$target->dying && $target->hp > 0) {
+                            $healValue = (int) ($m['value'] ?? 0);
+                            $before = $target->hp;
+                            $target->hp = min($target->hpMax, $target->hp + $healValue);
+                            $healed = $target->hp - $before;
+                            if ($healed > 0) {
+                                $this->state->battle['strike']['defender_heal'][] = [
+                                    'card_id' => $target->instanceId,
+                                    'heal'    => $healed,
+                                ];
+                            }
+                        }
+                        continue;
+                    }
+
+                    // Обычный модификатор (Клаэр)
+                    if (empty($m['stat'])) continue;
                     $defender->modifiers[] = [
                         'stat'   => $m['stat'],
                         'value'  => (int) ($m['value'] ?? 1),
@@ -410,14 +439,11 @@ final class StrikeResolver
             ? $this->state->getCard($defenderId)
             : $this->state->getCard($targetId);
 
-        $attackDice = random_int(1, 6);
+        $attackDice = Dice::roll();
 
         $noDefendDice = $defendCard->closed 
             || CardStats::hasUnanswer($this->state, $attacker, $defendCard);
-        $defendDice = $noDefendDice ? 0 : random_int(1, 6);
-
-        $attackDice = 6;
-        if ($defendDice > 0) $defendDice = 1;
+        $defendDice = $noDefendDice ? 0 : Dice::roll();
 
         $attackMod = CardStats::getOva($this->state, $attacker, $defendCard) 
              -   CardStats::getClumsyPenalty($attacker);
@@ -1135,28 +1161,6 @@ final class StrikeResolver
         $actions = [['label' => 'Закрыть', 'cmd' => 'close_prophecy', 'class' => 'skip']];
 
         $pp->commit($attacker->owner, $attacker, $peeked, 'strike', $title, $actions);
-    }
-
-    private function hasCombatInstants(string $ownerKey, string $phase = 'before'): bool
-    {
-        return !empty($this->getCombatInstants($ownerKey, $phase));
-    }
-
-    private function hasCombatInstantsType(string $ownerKey, string $type): bool
-    {
-        foreach ($this->state->cards as $card) {
-            if ($card->owner !== $ownerKey) continue;
-            if ($card->zone !== CardInstance::ZONE_FIELD
-                && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || $card->closed) continue;
-            if (!empty($card->flags['in_stack'])) continue;
-            if (empty($card->prop['instants'])) continue;
-
-            foreach ($card->prop['instants'] as $inst) {
-                if (($inst['trigger'] ?? '') === $type) return true;
-            }
-        }
-        return false;
     }
 
     public function recalcTable(): void
