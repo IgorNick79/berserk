@@ -10,6 +10,10 @@ use Berserk\Core\CardInstance;
 use Berserk\Core\Command;
 use Berserk\Core\Engine;
 use Berserk\Core\GameState;
+use Berserk\Core\Choice\ChoiceRegistry;
+use Berserk\View\Screen\BattleScreen;
+use Berserk\View\Template;
+use Berserk\View\Ui\Panel;
 
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
@@ -102,6 +106,53 @@ function chStart(GameState $state): \Berserk\Core\Result
     ]));
 }
 
+function chCardsInfo(): array
+{
+    $raw = [
+        's1_150' => ['name' => 'Харон'],
+        'imp' => ['name' => 'Огненный имп'],
+        'demon' => ['name' => 'Рогатый демон'],
+        'ally' => ['name' => 'Союзник'],
+        'enemy_fly' => ['name' => 'Вражеский летун'],
+        'own_fly' => ['name' => 'Свой летун'],
+        'victim' => ['name' => 'Жертва'],
+        'card_2' => ['name' => 'Цель'],
+        'card_3' => ['name' => 'Свидетель'],
+        'card_4' => ['name' => 'Склеп'],
+    ];
+
+    foreach ($raw as &$info) {
+        $info += [
+            'health' => 5,
+            'move' => 1,
+            'strike_weak' => 1,
+            'strike_medium' => 1,
+            'strike_strong' => 1,
+        ];
+    }
+    unset($info);
+
+    return $raw;
+}
+
+function chSpec(GameState $state, string $side = 'enemy'): \Berserk\View\Ui\PanelSpec
+{
+    $_GET = ['target_side' => $side];
+    $handler = ChoiceRegistry::current($state);
+    chAssert($handler !== null, 'ChoiceRegistry should expose current Charon pending.');
+    $spec = $handler->spec($state, GameState::PLAYER_HOST, chCardsInfo(), '?first&game=150', 'host');
+    chAssert($spec !== null, 'Charon pending should render a PanelSpec.');
+    return $spec;
+}
+
+function chRenderBattle(GameState $state): array
+{
+    $_GET = ['sel' => 1];
+    $_SESSION = [];
+    $screen = new BattleScreen(new Template(__DIR__ . '/../templates'));
+    return $screen->prepare($state, GameState::PLAYER_HOST, 'host', null, chCardsInfo())['data'];
+}
+
 foreach ([0, 1, 2] as $coins) {
     $charon = chCharon(['coins' => $coins]);
     $target = chCard([
@@ -123,6 +174,17 @@ $result = chStart($state);
 chAssert($result->success, $result->error ?? 'Last Journey should start with 3 coins.');
 chAssert(!empty($state->battle['pending_destroy_self_and_target']), 'Last Journey should create pending.');
 chAssert(!empty($charon->prop['save_coins']), 'Charon prop should preserve coins between turns.');
+chAssert(($state->battle['pending_destroy_self_and_target']['default_side'] ?? null) === 'enemy', 'Last Journey should default UI side to enemy.');
+
+$battleHtml = chRenderBattle(chState(
+    chCharon(['coins' => 3]),
+    chCard(['instanceId' => 2, 'ukid' => 'imp', 'owner' => GameState::PLAYER_PLAYER, 'row' => 6, 'col' => 5])
+));
+chAssert(
+    str_contains($battleHtml['panel_html'], 'cmd=action&action_key=last_journey')
+        && str_contains($battleHtml['panel_html'], 'target_id=1'),
+    'Last Journey action button should start pending immediately without choosing a board target.'
+);
 
 $closed = chCharon(['coins' => 3, 'closed' => true]);
 $state = chState($closed, $target);
@@ -158,6 +220,97 @@ $result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('cho
     'target_id' => 1,
 ]));
 chAssert(!$result->success, 'Server should reject Charon as his own target.');
+
+$uiCharon = chCharon(['coins' => 3, 'row' => 3, 'col' => 1]);
+$enemyA = chCard(['instanceId' => 2, 'ukid' => 'imp', 'owner' => GameState::PLAYER_PLAYER, 'row' => 6, 'col' => 5]);
+$enemyB = chCard(['instanceId' => 6, 'ukid' => 'demon', 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 4]);
+$enemyC = chCard(['instanceId' => 7, 'ukid' => 'demon', 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 3]);
+$ownA = chCard(['instanceId' => 3, 'ukid' => 'ally', 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 2]);
+$enemyFlyUi = chCard([
+    'instanceId' => 4,
+    'ukid' => 'enemy_fly',
+    'owner' => GameState::PLAYER_PLAYER,
+    'zone' => CardInstance::ZONE_FLYING,
+    'type' => 'fly',
+    'slot' => 2,
+]);
+$ownFlyUi = chCard([
+    'instanceId' => 5,
+    'ukid' => 'own_fly',
+    'owner' => GameState::PLAYER_HOST,
+    'zone' => CardInstance::ZONE_FLYING,
+    'type' => 'fly',
+    'slot' => 1,
+]);
+$state = chState($uiCharon, $enemyA, $enemyB, $enemyC, $ownA, $enemyFlyUi, $ownFlyUi);
+$result = chStart($state);
+chAssert($result->success, $result->error ?? 'Last Journey should start for UI tests.');
+
+$enemySpec = chSpec($state, 'enemy');
+$enemyLabels = array_column($enemySpec->form['items'] ?? [], 'label');
+$enemyValues = array_column($enemySpec->form['items'] ?? [], 'value');
+chAssert(in_array(2, $enemyValues, true) && in_array(6, $enemyValues, true), 'Enemy UI should include enemy creatures.');
+chAssert(!in_array(3, $enemyValues, true), 'Enemy UI should not display own creatures.');
+chAssert(in_array(4, $enemyValues, true), 'Enemy UI should include enemy flyers.');
+chAssert(in_array('Огненный имп [6:5]', $enemyLabels, true), 'Enemy label should use numeric row:col coordinates.');
+chAssert(in_array('Рогатый демон [5:4]', $enemyLabels, true), 'Duplicate enemy label should include coordinates.');
+chAssert(in_array('Рогатый демон [5:3]', $enemyLabels, true), 'Second duplicate enemy label should include different coordinates.');
+chAssert(in_array('Вражеский летун [летун 2]', $enemyLabels, true), 'Flying enemy should use a clear flying-zone position.');
+foreach ($enemyLabels as $label) {
+    chAssert(!str_contains($label, '#'), 'Target label should not expose instance ids.');
+}
+chAssert(($enemySpec->form['type'] ?? null) === 'radio', 'Target selection should render as radio.');
+chAssert(($enemySpec->form['name'] ?? null) === 'target_id', 'Radio should submit target_id.');
+chAssert(($enemySpec->form['submit'] ?? null) === 'Выбрать', 'Radio form should have choose submit.');
+chAssert(str_contains($enemySpec->form['cancel'] ?? '', 'cmd=cancel_pending'), 'Radio form should have cancel link.');
+chAssert(in_array(6, $enemyValues, true), 'Radio value should be the real instance_id.');
+
+$ownSpec = chSpec($state, 'own');
+$ownLabels = array_column($ownSpec->form['items'] ?? [], 'label');
+$ownValues = array_column($ownSpec->form['items'] ?? [], 'value');
+chAssert(in_array(3, $ownValues, true), 'Own UI should include own creatures.');
+chAssert(in_array(5, $ownValues, true), 'Own UI should include own flyers.');
+chAssert(!in_array(1, $ownValues, true), 'Own UI should exclude Charon himself.');
+chAssert(!in_array(2, $ownValues, true), 'Own UI should not display enemy creatures.');
+chAssert(in_array('Союзник [3:2]', $ownLabels, true), 'Own field creature should use numeric coordinates.');
+chAssert(in_array('Свой летун [летун 1]', $ownLabels, true), 'Own flyer should use flying-zone position.');
+
+$enemySpecAgain = chSpec($state, 'enemy');
+chAssert(array_column($enemySpecAgain->form['items'] ?? [], 'value') === $enemyValues, 'Switching back to enemy should keep the same pending and targets.');
+chAssert(!empty($state->battle['pending_destroy_self_and_target']), 'Switching side should not clear pending.');
+chAssert(!$uiCharon->closed, 'Switching side should not close Charon.');
+chAssert($uiCharon->coins === 3, 'Switching side should not spend coins.');
+foreach ([$uiCharon, $enemyA, $enemyB, $enemyC, $ownA, $enemyFlyUi, $ownFlyUi] as $card) {
+    chAssert($card->zone === CardInstance::ZONE_FIELD || $card->zone === CardInstance::ZONE_FLYING, 'Switching side should not destroy cards.');
+}
+chAssert(str_contains(Panel::render($enemySpec), 'type="radio"'), 'Rendered pending should contain radio inputs.');
+chAssert(str_contains(Panel::render($enemySpec), 'value="6"'), 'Rendered radio should submit instance_id.');
+
+$result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('choose_destroy_self_and_target'));
+chAssert(!$result->success, 'Submitting without a selected radio should not resolve Last Journey.');
+chAssert(!empty($state->battle['pending_destroy_self_and_target']), 'Rejected empty submit should leave pending intact.');
+$result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('choose_destroy_self_and_target', [
+    'target_id' => 999,
+]));
+chAssert(!$result->success, 'Server should reject fake target_id.');
+chAssert(!empty($state->battle['pending_destroy_self_and_target']), 'Rejected fake target should leave pending intact.');
+
+$cancelOwnCharon = chCharon(['coins' => 3]);
+$cancelOwnTarget = chCard(['instanceId' => 3, 'ukid' => 'ally', 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 2]);
+$state = chState(
+    $cancelOwnCharon,
+    chCard(['instanceId' => 2, 'ukid' => 'imp', 'owner' => GameState::PLAYER_PLAYER, 'row' => 6, 'col' => 5]),
+    $cancelOwnTarget,
+);
+$result = chStart($state);
+chAssert($result->success, $result->error ?? 'Last Journey should start before own-tab cancel.');
+chSpec($state, 'own');
+$result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('cancel_pending'));
+chAssert($result->success, $result->error ?? 'Cancel after switching to own should work.');
+chAssert(empty($state->battle['pending_destroy_self_and_target']), 'Cancel after own tab should clear pending.');
+chAssert(!$cancelOwnCharon->closed, 'Cancel after own tab should leave Charon open.');
+chAssert($cancelOwnCharon->coins === 3, 'Cancel after own tab should not spend coins.');
+chAssert($cancelOwnTarget->zone === CardInstance::ZONE_FIELD, 'Cancel after own tab should not destroy own target.');
 
 $charon = chCharon(['coins' => 3]);
 $target = chCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 6, 'col' => 5]);

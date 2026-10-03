@@ -11,6 +11,7 @@ use Berserk\Core\Command;
 use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\Result;
+use Berserk\View\Ui\BattlefieldPosition;
 use Berserk\View\Ui\PanelSpec;
 
 final class DestroySelfAndTargetChoice implements ChoiceHandlerInterface
@@ -47,7 +48,7 @@ final class DestroySelfAndTargetChoice implements ChoiceHandlerInterface
             );
         }
 
-        $side = (string) ($_GET['target_side'] ?? 'enemy');
+        $side = (string) ($_GET['target_side'] ?? ($pending['default_side'] ?? 'enemy'));
         if ($side !== 'own') $side = 'enemy';
 
         $buttons = [
@@ -63,6 +64,7 @@ final class DestroySelfAndTargetChoice implements ChoiceHandlerInterface
             ],
         ];
 
+        $items = [];
         foreach ((array) ($pending['target_ids'] ?? []) as $id) {
             $card = $state->getCard((int) $id);
             if (!$card) continue;
@@ -72,23 +74,30 @@ final class DestroySelfAndTargetChoice implements ChoiceHandlerInterface
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
 
-            $name = $cardsInfo[$card->ukid]['name'] ?? $card->ukid;
-            $zone = $card->zone === CardInstance::ZONE_FLYING ? ' (летит)' : '';
-            $buttons[] = [
-                'label' => $name . $zone . ' #' . $card->instanceId,
-                'url'   => "{$baseUrl}&cmd=choose_destroy_self_and_target&target_id={$card->instanceId}",
+            $items[] = [
+                'value' => $card->instanceId,
+                'label' => $this->targetLabel($card, $cardsInfo, $playerKey),
             ];
         }
 
-        $buttons[] = [
-            'label' => 'Отмена',
-            'url'   => $baseUrl . '&cmd=cancel_pending',
-            'class' => 'skip',
-        ];
+        $roleParam = $role === 'host' ? 'first' : 'second';
 
         return new PanelSpec(
             title: $sourceName . ': «' . $actionName . '» — выберите существо',
             buttons: $buttons,
+            form: [
+                'type' => 'radio',
+                'name' => 'target_id',
+                'items' => $items,
+                'hidden' => [
+                    $roleParam => '',
+                    'game' => $state->gameId,
+                    'cmd' => 'choose_destroy_self_and_target',
+                    'target_side' => $side,
+                ],
+                'submit' => 'Выбрать',
+                'cancel' => $baseUrl . '&target_side=' . $side . '&cmd=cancel_pending',
+            ],
         );
     }
 
@@ -110,5 +119,17 @@ final class DestroySelfAndTargetChoice implements ChoiceHandlerInterface
         return $playerKey === GameState::PLAYER_HOST
             ? GameState::PLAYER_PLAYER
             : GameState::PLAYER_HOST;
+    }
+
+    private function targetLabel(CardInstance $card, array $cardsInfo, string $viewerKey): string
+    {
+        $name = (string) ($cardsInfo[$card->ukid]['name'] ?? $card->ukid);
+        if ($card->zone === CardInstance::ZONE_FLYING) {
+            $slot = $card->slot > 0 ? $card->slot : 1;
+            return $name . ' [летун ' . $slot . ']';
+        }
+
+        $position = BattlefieldPosition::label($card->row, $card->col, $viewerKey);
+        return $position === '' ? $name : $name . ' ' . $position;
     }
 }

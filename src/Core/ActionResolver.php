@@ -2454,6 +2454,7 @@ final class ActionResolver
             'source_id'   => $cardId,
             'action'      => $action,
             'target_ids'  => $targets,
+            'default_side' => 'enemy',
         ];
 
         $this->state->bumpVersion();
