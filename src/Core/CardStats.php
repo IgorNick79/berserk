@@ -356,8 +356,9 @@ final class CardStats
         $abilities = $attacker->prop['ability'] ?? null;
         if (!$abilities) return $result;
 
-        if (isset($abilities['value'])) {
-            // Одиночный объект
+        // Список или одиночный объект?
+        if (!array_is_list($abilities)) {
+            // Одиночный объект — оборачиваем
             $abilities = [$abilities];
         }
 
