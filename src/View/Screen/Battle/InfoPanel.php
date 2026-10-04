@@ -1534,9 +1534,9 @@ final class InfoPanel
         $phaseLabels = [
             'redirect' => 'REDIRECT',
             'dice' => 'DICE',
-            'power' => 'STRENGTH',
-            'value' => 'DIRECT_DAMAGE',
-            'setter' => 'DAMAGE_CAP',
+            'power' => 'POWER',
+            'value' => 'VALUE',
+            'setter' => 'SETTER',
             'wounds' => 'WOUNDS',
         ];
         $groups = [];

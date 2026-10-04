@@ -113,6 +113,18 @@ $state->battle['strike']['result'] = ['attack' => 'strong', 'defend' => '', 'win
 $state->battle['strike']['final'] = ['attack' => 'strong', 'defend' => '', 'winner' => 'attack'];
 $state->battle['strike']['instant_summary'] = [
     [
+        'label' => 'Магический трюк',
+        'instant_name' => 'Магический трюк',
+        'card_ukid' => 'ost',
+        'card_id' => 4,
+        'player' => GameState::PLAYER_HOST,
+        'phase' => 'redirect',
+        'effect_type' => 'redirect_strike',
+        'applied' => true,
+        'reason' => '',
+        'result' => ['before_target_id' => 2, 'after_target_id' => 2],
+    ],
+    [
         'label' => 'Черная метка',
         'instant_name' => 'Черная метка',
         'card_ukid' => 'instant_card',
@@ -137,6 +149,18 @@ $state->battle['strike']['instant_summary'] = [
         'result' => ['side' => 'attack', 'before' => 'weak', 'after' => 'strong'],
     ],
     [
+        'label' => 'Ослабление',
+        'instant_name' => 'Ослабление',
+        'card_ukid' => 'ost',
+        'card_id' => 4,
+        'player' => GameState::PLAYER_HOST,
+        'phase' => 'value',
+        'effect_type' => 'strike_level',
+        'applied' => true,
+        'reason' => '',
+        'result' => ['side' => 'attack', 'before' => 'strong', 'after' => 'medium'],
+    ],
+    [
         'label' => 'Отвлекающая вспышка',
         'instant_name' => 'Отвлекающая вспышка',
         'card_ukid' => 'ost',
@@ -147,6 +171,18 @@ $state->battle['strike']['instant_summary'] = [
         'applied' => false,
         'reason' => 'цель удара изменилась',
         'result' => ['before_cap' => null, 'after_cap' => null, 'cap' => 1],
+    ],
+    [
+        'label' => 'Перераспределение ран',
+        'instant_name' => 'Перераспределение ран',
+        'card_ukid' => 'ost',
+        'card_id' => 4,
+        'player' => GameState::PLAYER_HOST,
+        'phase' => 'wounds',
+        'effect_type' => 'redistribute_wounds',
+        'applied' => true,
+        'reason' => '',
+        'result' => ['transferred' => 1],
     ],
 ];
 $state->battle['strike']['combat_damage_summary'] = [
@@ -162,7 +198,15 @@ $state->battle['strike']['combat_damage_summary'] = [
 
 $html = $screen->prepare($state, GameState::PLAYER_PLAYER, 'player', null, $cardsInfo)['data']['info_panel_html'];
 ciuAssert(str_contains($html, 'Разрешение инстантов по фазам'), 'Result screen should show phased instant summary.');
-ciuAssert(str_contains($html, 'DICE') && str_contains($html, 'STRENGTH') && str_contains($html, 'DAMAGE_CAP'), 'Result screen should group instant summary by phase.');
+ciuAssert(
+    str_contains($html, 'REDIRECT')
+    && str_contains($html, 'DICE')
+    && str_contains($html, 'POWER')
+    && str_contains($html, 'VALUE')
+    && str_contains($html, 'SETTER')
+    && str_contains($html, 'WOUNDS'),
+    'Result screen should group instant summary by canonical phase.'
+);
 ciuAssert(str_contains($html, 'Черная метка: кубик 1 -&gt; +2 урона'), 'Result screen should show dice damage effect result.');
 ciuAssert(str_contains($html, 'Отвлекающая вспышка: без эффекта'), 'Result screen should show no-op instants.');
 ciuAssert(str_contains($html, 'Итого по цели: <b>5</b> урона'), 'Result screen should show final target damage including instant damage.');
