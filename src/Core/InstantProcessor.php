@@ -299,6 +299,7 @@ final class InstantProcessor
                 'label'     => $label,
                 'phase'     => $phase,
                 'sequence'  => $sequence,
+                'strike_target_id' => (int) ($strike['defender_id'] ?: ($strike['target_id'] ?? 0)),
             ];
         if ($choice !== null) {
             $item['choice'] = $choice;
@@ -603,6 +604,10 @@ final class InstantProcessor
         $target = $this->state->getCard((int) ($item['target_id'] ?? 0));
         $effect = (array) ($item['effect'] ?? []);
         $type = (string) ($effect['type'] ?? '');
+        $effectTarget = $target;
+        if ($type === 'damage_cap' && (int) ($item['strike_target_id'] ?? 0) > 0) {
+            $effectTarget = $this->state->getCard((int) $item['strike_target_id']);
+        }
 
         if (!$source) {
             return ['source' => null, 'applied' => false, 'reason' => 'источник не найден'];
@@ -647,7 +652,7 @@ final class InstantProcessor
             $source,
             (string) $item['player'],
             $item['choice'] ?? null,
-            $target
+            $effectTarget
         );
 
         return ['source' => $source, 'applied' => $reason === null, 'reason' => $reason ?? ''];
@@ -804,20 +809,7 @@ final class InstantProcessor
         $currentTarget = $this->state->getCard((int) ($strike['target_id'] ?? 0));
         if (!$currentTarget) return [];
 
-        $ids = [];
-        foreach ($this->state->cards as $c) {
-            if ($c->owner !== $playerKey) continue;
-            if ($c->instanceId === $currentTarget->instanceId) continue;
-            if ($c->zone !== CardInstance::ZONE_FIELD || $currentTarget->zone !== CardInstance::ZONE_FIELD) continue;
-            if ($c->dying || $c->hp <= 0) continue;
-
-            $dr = abs($c->row - $currentTarget->row);
-            $dc = abs($c->col - $currentTarget->col);
-            if ($dr <= 1 && $dc <= 1 && ($dr + $dc) > 0) {
-                $ids[] = $c->instanceId;
-            }
-        }
-        return $ids;
+        return ZoneManager::adjacentFieldAllyIds($this->state, $currentTarget, $playerKey);
     }
 
     private function resumeAfterWindow(): void

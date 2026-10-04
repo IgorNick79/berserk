@@ -10,6 +10,7 @@ use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
 use Berserk\Core\CardInstance;
+use Berserk\Core\ZoneManager;
 use Berserk\View\Ui\PanelSpec;
 
 final class CombatPickChoice implements ChoiceHandlerInterface
@@ -50,16 +51,7 @@ final class CombatPickChoice implements ChoiceHandlerInterface
             $strike = $state->battle['strike'] ?? null;
             $currentTarget = $strike ? $state->getCard((int) ($strike['target_id'] ?? 0)) : null;
             if ($currentTarget) {
-                foreach ($state->cards as $candidate) {
-                    if ($candidate->owner !== $playerKey) continue;
-                    if ($candidate->instanceId === $currentTarget->instanceId) continue;
-                    if ($candidate->zone !== CardInstance::ZONE_FIELD || $currentTarget->zone !== CardInstance::ZONE_FIELD) continue;
-                    $dr = abs($candidate->row - $currentTarget->row);
-                    $dc = abs($candidate->col - $currentTarget->col);
-                    if ($dr <= 1 && $dc <= 1 && ($dr + $dc) > 0) {
-                        $adjacentIds[] = $candidate->instanceId;
-                    }
-                }
+                $adjacentIds = ZoneManager::adjacentFieldAllyIds($state, $currentTarget, $playerKey);
             }
         }
 

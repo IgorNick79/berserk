@@ -177,10 +177,10 @@ final class Engine
                 $currentTarget = $state->getCard((int) ($strike['target_id'] ?? 0));
                 if (!$currentTarget) return 'исходная цель не найдена';
                 if ($currentTarget->zone !== CardInstance::ZONE_FIELD) return 'исходная цель не на поле';
+                if ($currentTarget->owner !== $ownerKey) return 'исходная цель не союзная';
+                if ($target->owner !== $currentTarget->owner) return 'цель из другого отряда';
 
-                $dr = abs($target->row - $currentTarget->row);
-                $dc = abs($target->col - $currentTarget->col);
-                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
+                if (!ZoneManager::areAdjacentFieldCards($currentTarget, $target)) {
                     return 'цель не рядом';
                 }
 
@@ -244,6 +244,13 @@ final class Engine
                 return 'неверный mode';
 
             case 'damage_cap':
+                if ($target !== null) {
+                    $currentTargetId = (int) ($strike['defender_id'] ?: ($strike['target_id'] ?? 0));
+                    if ($currentTargetId !== $target->instanceId) {
+                        return 'цель удара изменилась';
+                    }
+                }
+
                 $cap = (int) ($effect['value'] ?? 0);
                 $strike['damage_cap'] = $cap;
 

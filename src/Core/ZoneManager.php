@@ -268,6 +268,37 @@ final class ZoneManager
         return null;
     }
 
+    public static function areAdjacentFieldCards(CardInstance $a, CardInstance $b): bool
+    {
+        if ($a->zone !== CardInstance::ZONE_FIELD || $b->zone !== CardInstance::ZONE_FIELD) {
+            return false;
+        }
+        if ($a->row === null || $a->col === null || $b->row === null || $b->col === null) {
+            return false;
+        }
+
+        $dr = abs($a->row - $b->row);
+        $dc = abs($a->col - $b->col);
+        return $dr <= 1 && $dc <= 1 && ($dr + $dc) > 0;
+    }
+
+    /**
+     * @return int[]
+     */
+    public static function adjacentFieldAllyIds(GameState $state, CardInstance $origin, string $owner): array
+    {
+        $ids = [];
+        foreach ($state->cards as $card) {
+            if ($card->owner !== $owner) continue;
+            if ($card->instanceId === $origin->instanceId) continue;
+            if ($card->dying || $card->hp <= 0) continue;
+            if (!self::areAdjacentFieldCards($origin, $card)) continue;
+
+            $ids[] = $card->instanceId;
+        }
+        return $ids;
+    }
+
     public function countInZone(string $owner, string $zone): int
     {
         $n = 0;
