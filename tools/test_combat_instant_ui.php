@@ -199,13 +199,13 @@ $state->battle['strike']['combat_damage_summary'] = [
 $html = $screen->prepare($state, GameState::PLAYER_PLAYER, 'player', null, $cardsInfo)['data']['info_panel_html'];
 ciuAssert(str_contains($html, 'Разрешение инстантов по фазам'), 'Result screen should show phased instant summary.');
 ciuAssert(
-    str_contains($html, 'REDIRECT')
-    && str_contains($html, 'DICE')
-    && str_contains($html, 'POWER')
-    && str_contains($html, 'VALUE')
-    && str_contains($html, 'SETTER')
-    && str_contains($html, 'WOUNDS'),
-    'Result screen should group instant summary by canonical phase.'
+    str_contains($html, 'ПЕРЕНАПРАВЛЕНИЕ')
+    && str_contains($html, 'КУБИК')
+    && str_contains($html, 'СИЛА УДАРА')
+    && str_contains($html, 'ИЗМЕНЕНИЕ УДАРА')
+    && str_contains($html, 'ФИНАЛЬНЫЙ ЭФФЕКТ')
+    && str_contains($html, 'РАНЫ'),
+    'Result screen should group instant summary by localized canonical phase.'
 );
 ciuAssert(str_contains($html, 'Черная метка: кубик 1 -&gt; +2 урона'), 'Result screen should show dice damage effect result.');
 ciuAssert(str_contains($html, 'Отвлекающая вспышка: без эффекта'), 'Result screen should show no-op instants.');

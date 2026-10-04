@@ -1532,12 +1532,12 @@ final class InfoPanel
         }
 
         $phaseLabels = [
-            'redirect' => 'REDIRECT',
-            'dice' => 'DICE',
-            'power' => 'POWER',
-            'value' => 'VALUE',
-            'setter' => 'SETTER',
-            'wounds' => 'WOUNDS',
+            'redirect' => 'ПЕРЕНАПРАВЛЕНИЕ',
+            'dice' => 'КУБИК',
+            'power' => 'СИЛА УДАРА',
+            'value' => 'ИЗМЕНЕНИЕ УДАРА',
+            'setter' => 'ФИНАЛЬНЫЙ ЭФФЕКТ',
+            'wounds' => 'РАНЫ',
         ];
         $groups = [];
         foreach ((array) $strike['instant_summary'] as $summary) {

@@ -727,10 +727,6 @@ final class StrikeResolver
             'attacker_extra_this_strike' => max(0, $attackerDamageThisStrike - $answerDamage),
         ];
         $this->state->battle['strike']['damage_applied'] = true;
-
-        if (!empty($this->state->battle['strike']['pending_wounds_resolution'])) {
-            (new InstantProcessor($this->state, $this->engine))->resumeCombatWounds();
-        }
     }
 
     private function applyStrongStrikeFollowUpEffects(
@@ -864,71 +860,85 @@ final class StrikeResolver
         $this->state->battle['strike']['confirmed'] = $confirmed;
 
         if (count($confirmed) >= 2) {
-            $strike = $this->state->battle['strike'];
-
-            // Auto — только если ещё не сработал
-            if (empty($strike['auto_effects'])) {
-                $attacker = $this->state->getCard($strike['attacker_id']);
-                if ($attacker && $this->engine->openAutoChoice($this->state, $attacker)) {
-                    $this->state->bumpVersion();
-                    return Result::ok(['auto_pending']);
-                }
-            }
-
-            if (!empty($strike['strike_hit']) && empty($strike['ally_modifier_result'])) {
-                if ($this->openGrantAllyModifier()) {
-                    $this->state->bumpVersion();
-                    return Result::ok(['ally_modifier_pending']);
-                }
-            }
-
-            // Close or damage — только если ещё не сработал
-            if (!empty($strike['strike_hit']) && empty($strike['close_or_damage_result'])) {
-                if ($this->openCloseOrDamageChoice()) {
-                    $this->state->bumpVersion();
-                    return Result::ok(['close_or_damage_pending']);
-                }
-            }
-
-            // Push — только если ещё не сработал
-            if (!empty($strike['strike_hit']) && empty($strike['push_result'])) {
-                if ($this->openPushChoice()) {
-                    $this->state->bumpVersion();
-                    return Result::ok(['push_pending']);
-                }
-            }
-
-            // Окно aftermath-инстантов (окно 3)
-            $attacker = $this->state->getCard($strike['attacker_id']);
-            $attackerKey = $attacker ? $attacker->owner : null;
-
-            $phase = $strike['instant_phase'] ?? null;
-            $alreadyAfter = ($phase === 'after');
-
-            if (!$alreadyAfter && $attackerKey) {
-                $ip = new InstantProcessor($this->state, $this->engine);
-                $ip->openWindow('after', $attackerKey);
-
-                if (($this->state->battle['strike']['state'] ?? '') === 'waiting_instant') {
-                    $this->state->battle['strike']['confirmed'] = [];
-                    $this->state->bumpVersion();
-                    return Result::ok(['instant_after_opened']);
-                }
-            }
-
-            // Закрываем сражение перед возможным обязательным добиванием после удара.
-            $this->state->battle['strike'] = null;
-            $this->engine->finalizeDying($this->state);
-
-            if ($this->openAfterStrikeExecute($strike)) {
+            if (!empty($this->state->battle['strike']['pending_wounds_resolution'])) {
+                $this->state->battle['strike']['wounds_after_result_ack'] = true;
+                (new InstantProcessor($this->state, $this->engine))->resumeCombatWounds();
                 $this->state->bumpVersion();
-                return Result::ok(['after_strike_execute']);
+                return Result::ok(['wounds_resolution_resumed']);
             }
 
+            $continuation = $this->continueAfterStrikeResultAck($this->state->battle['strike']);
+            if ($continuation instanceof Result) {
+                return $continuation;
+            }
         }
 
         $this->state->bumpVersion();
         return Result::ok(['strike_confirmed']);
+    }
+
+    public function continueAfterStrikeResultAck(array $strike): ?Result
+    {
+        // Auto — только если ещё не сработал
+        if (empty($strike['auto_effects'])) {
+            $attacker = $this->state->getCard($strike['attacker_id']);
+            if ($attacker && $this->engine->openAutoChoice($this->state, $attacker)) {
+                $this->state->bumpVersion();
+                return Result::ok(['auto_pending']);
+            }
+        }
+
+        if (!empty($strike['strike_hit']) && empty($strike['ally_modifier_result'])) {
+            if ($this->openGrantAllyModifier()) {
+                $this->state->bumpVersion();
+                return Result::ok(['ally_modifier_pending']);
+            }
+        }
+
+        // Close or damage — только если ещё не сработал
+        if (!empty($strike['strike_hit']) && empty($strike['close_or_damage_result'])) {
+            if ($this->openCloseOrDamageChoice()) {
+                $this->state->bumpVersion();
+                return Result::ok(['close_or_damage_pending']);
+            }
+        }
+
+        // Push — только если ещё не сработал
+        if (!empty($strike['strike_hit']) && empty($strike['push_result'])) {
+            if ($this->openPushChoice()) {
+                $this->state->bumpVersion();
+                return Result::ok(['push_pending']);
+            }
+        }
+
+        // Окно aftermath-инстантов (окно 3)
+        $attacker = $this->state->getCard($strike['attacker_id']);
+        $attackerKey = $attacker ? $attacker->owner : null;
+
+        $phase = $strike['instant_phase'] ?? null;
+        $alreadyAfter = ($phase === 'after');
+
+        if (!$alreadyAfter && $attackerKey) {
+            $ip = new InstantProcessor($this->state, $this->engine);
+            $ip->openWindow('after', $attackerKey);
+
+            if (($this->state->battle['strike']['state'] ?? '') === 'waiting_instant') {
+                $this->state->battle['strike']['confirmed'] = [];
+                $this->state->bumpVersion();
+                return Result::ok(['instant_after_opened']);
+            }
+        }
+
+        // Закрываем сражение перед возможным обязательным добиванием после удара.
+        $this->state->battle['strike'] = null;
+        $this->engine->finalizeDying($this->state);
+
+        if ($this->openAfterStrikeExecute($strike)) {
+            $this->state->bumpVersion();
+            return Result::ok(['after_strike_execute']);
+        }
+
+        return null;
     }
 
     public function chooseAfterStrikeExecute(string $playerKey, Command $cmd): Result

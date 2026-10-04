@@ -759,15 +759,23 @@ final class InstantProcessor
         }
 
         if ($mode === 'wounds') {
+            $afterResultAck = !empty($strike['wounds_after_result_ack']);
+            $strikeForContinuation = $strike;
             unset(
                 $strike['instant_priority'],
                 $strike['instant_passed'],
                 $strike['instant_stack'],
                 $strike['instant_next_sequence'],
                 $strike['instant_resolution'],
-                $strike['pending_wounds_resolution']
+                $strike['pending_wounds_resolution'],
+                $strike['wounds_after_result_ack']
             );
             unset($strike['instant_phase']);
+            if ($afterResultAck) {
+                (new StrikeResolver($this->state, $this->engine))
+                    ->continueAfterStrikeResultAck($strikeForContinuation);
+                return;
+            }
             if (($strike['state'] ?? '') !== 'waiting_auto_target') {
                 $strike['state'] = 'results';
             }

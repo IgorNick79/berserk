@@ -11,6 +11,7 @@ use Berserk\Core\Command;
 use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\InstantProcessor;
+use Berserk\Core\StrikeResolver;
 use Berserk\Core\WoundTransferProcessor;
 
 Autoloader::register();
@@ -110,6 +111,19 @@ function cipCatcherItem(CardInstance $catcher, int $sequence): array
         'player' => GameState::PLAYER_PLAYER,
         'label' => 'Удача',
         'phase' => 'dice',
+        'sequence' => $sequence,
+    ];
+}
+
+function cipHermitItem(CardInstance $hermit, int $sequence, string $label = 'Перераспределение ран'): array
+{
+    return [
+        'card_id' => $hermit->instanceId,
+        'effect' => ['type' => 'redistribute_wounds'],
+        'target_id' => $hermit->instanceId,
+        'player' => $hermit->owner,
+        'label' => $label,
+        'phase' => 'wounds',
         'sequence' => $sequence,
     ];
 }
@@ -470,5 +484,62 @@ cipAssert($hermit->closed, 'Hermit source should close after transfer.');
 cipAssert(count($state->battle['strike']['instant_summary'] ?? []) === 1, 'Hermit item should be removed exactly once.');
 cipAssert(($state->battle['strike']['instant_summary'][0]['result']['transferred'] ?? null) === 1, 'Hermit summary should report transferred wounds.');
 cipAssert(empty($state->battle['strike']['instant_resolution'] ?? []), 'Hermit transfer should finish wounds resolution.');
+
+// Lifecycle: interactive wounds are suspended until both players acknowledge the combat result.
+$attacker = cipCard(['instanceId' => 1, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3]);
+$target = cipCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4, 'hp' => 5, 'hpMax' => 5]);
+$recipient = cipCard(['instanceId' => 15, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 4]);
+$hermit = cipCard(['instanceId' => 14, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 5]);
+$state = cipState($attacker, $target, $recipient, $hermit);
+$state->battle['strike']['instant_stack'] = [cipHermitItem($hermit, 0)];
+(new InstantProcessor($state, new Engine()))->resolveStack();
+cipAssert(($state->battle['strike']['state'] ?? '') === 'results', 'Combat result should be visible before Hermit opens.');
+cipAssert(empty($state->battle['pending_wound_transfer']), 'Hermit pending must not open before result acknowledgment.');
+cipAssert(!empty($state->battle['strike']['pending_wounds_resolution']), 'Wounds continuation should be stored until result acknowledgment.');
+cipAssert(($target->flags['damage_taken_this_strike'] ?? 0) === 1, 'Strike damage should be applied once before Hermit.');
+$confirm = (new StrikeResolver($state, new Engine()))->confirmStrike(GameState::PLAYER_HOST, new Command('confirm_strike'));
+cipAssert($confirm->success, $confirm->error ?? 'Host result confirmation should succeed.');
+cipAssert(empty($state->battle['pending_wound_transfer']), 'One confirmation should not open Hermit yet.');
+$confirm = (new StrikeResolver($state, new Engine()))->confirmStrike(GameState::PLAYER_PLAYER, new Command('confirm_strike'));
+cipAssert($confirm->success, $confirm->error ?? 'Second result confirmation should resume wounds.');
+cipAssert(!empty($state->battle['pending_wound_transfer']), 'Hermit pending should open after both confirmations.');
+cipAssert(($target->flags['damage_taken_this_strike'] ?? 0) === 1, 'Result acknowledgment must not re-apply strike damage.');
+$repeat = (new StrikeResolver($state, new Engine()))->confirmStrike(GameState::PLAYER_PLAYER, new Command('confirm_strike'));
+cipAssert(!$repeat->success, 'Repeated result confirmation must not restart wounds.');
+
+// Multiple interactive wounds entries: phase-local LIFO continues without another result acknowledgment.
+$attacker = cipCard(['instanceId' => 1, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3]);
+$target = cipCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4, 'hp' => 4, 'hpMax' => 5]);
+$recipientA = cipCard(['instanceId' => 21, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 4]);
+$recipientB = cipCard(['instanceId' => 22, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 3]);
+$hermitA = cipCard(['instanceId' => 23, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 5]);
+$hermitB = cipCard(['instanceId' => 24, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 5]);
+$state = cipState($attacker, $target, $recipientA, $recipientB, $hermitA, $hermitB);
+$state->battle['strike']['instant_stack'] = [
+    cipHermitItem($hermitA, 0, 'Hermit A'),
+    cipHermitItem($hermitB, 1, 'Hermit B'),
+];
+(new InstantProcessor($state, new Engine()))->resolveStack();
+(new StrikeResolver($state, new Engine()))->confirmStrike(GameState::PLAYER_HOST, new Command('confirm_strike'));
+(new StrikeResolver($state, new Engine()))->confirmStrike(GameState::PLAYER_PLAYER, new Command('confirm_strike'));
+cipAssert(($state->battle['pending_wound_transfer']['source_id'] ?? null) === $hermitB->instanceId, 'Latest wounds sequence should resolve first.');
+(new WoundTransferProcessor($state, new Engine()))->chooseSource(
+    GameState::PLAYER_PLAYER,
+    new Command('wt_source', ['donor_id' => $target->instanceId])
+);
+(new WoundTransferProcessor($state, new Engine()))->chooseAmount(
+    GameState::PLAYER_PLAYER,
+    new Command('wt_amount', ['amount' => 1])
+);
+(new WoundTransferProcessor($state, new Engine()))->chooseTarget(
+    GameState::PLAYER_PLAYER,
+    new Command('wt_target', ['target_id' => $recipientA->instanceId])
+);
+(new WoundTransferProcessor($state, new Engine()))->chooseTargetAmount(
+    GameState::PLAYER_PLAYER,
+    new Command('wt_target_amount', ['amount' => 1])
+);
+cipAssert(($state->battle['pending_wound_transfer']['source_id'] ?? null) === $hermitA->instanceId, 'Next wounds entry should open without another result confirmation.');
+cipAssert(count($state->battle['strike']['instant_summary'] ?? []) === 1, 'First wounds entry should be summarized once before the second resolves.');
 
 echo "Combat instant phase tests passed.\n";
