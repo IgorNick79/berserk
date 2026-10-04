@@ -712,6 +712,11 @@ final class StrikeResolver
 
 
         $this->engine->flushDeadeatQueue($this->state);
+        $this->state->battle['strike']['damage_applied'] = true;
+
+        if (!empty($this->state->battle['strike']['pending_wounds_resolution'])) {
+            (new InstantProcessor($this->state, $this->engine))->resumeCombatWounds();
+        }
     }
 
     private function applyStrongStrikeFollowUpEffects(

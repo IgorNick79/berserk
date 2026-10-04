@@ -7,7 +7,7 @@ namespace Berserk\Core;
 
 /**
  * Общий процессор перераспределения ран.
- * Используется: Отшельница (aftermath-инстант), Волхв (main phase action).
+ * Используется: Отшельница (combat wounds-инстант), Волхв (main phase action).
  *
  * Шаги: source → amount → (target ⇄ target_amount)* → finish
  */
@@ -269,7 +269,7 @@ final class WoundTransferProcessor
             $this->engine->applyDamage($this->state, $target, (int) $t['amount'], 'wound_transfer', $source);
         }
 
-        // Закрываем источник только для after-инстанта (для main_phase уже закрыт в start)
+        // Закрываем источник только для отложенных flow (для main_phase уже закрыт в start)
         $onFinish = $pw['options']['on_finish'] ?? 'main_phase';
         if ($source && in_array($onFinish, ['strike_after', 'combat', 'main_phase'], true)) {
             $source->closed = true;
@@ -281,7 +281,13 @@ final class WoundTransferProcessor
         $this->engine->checkGameOver($this->state);
         $this->engine->refreshArmor($this->state);
 
-        // Возврат в окно aftermath — сброс «пас» обоих
+        if ($onFinish === 'combat_resolution') {
+            (new InstantProcessor($this->state, $this->engine))->completePausedCombatItem(true);
+            $this->state->bumpVersion();
+            return Result::ok(['wt_done']);
+        }
+
+        // Возврат в старое окно after/combat — сброс «пас» обоих
         $strike = $this->state->battle['strike'] ?? null;
         if ($strike && in_array($strike['instant_phase'] ?? '', ['after', 'combat'], true)) {
             $this->state->battle['strike']['instant_passed'] = [];

@@ -182,15 +182,17 @@ declare
  └─ resolve():
       бросок кубиков + ova/ovz → attack_dice, defend_dice, mod
       strikeTable() → result {attack, defend, winner}
-      ├─ ОКНО 2 (combat) — combat-инстанты (Ост, Глорм, Баньши, Ловец, Мэри)
+      ├─ ОКНО 2 (combat) — заказ combat-инстантов (Ост, Глорм, Баньши, Ловец, Мэри, Бешеный маг, Отшельница)
+      │    resolution по фазам: redirect → dice → power → value → setter
       ↓
       waiting_choice (если оба уровня непустые) → chooseStrikeMode
       ↓
       apply() → урон, ответки, on_death, deadeat, close карт
+      │    затем wounds-фаза combat-инстантов
       ↓
       results
       ↓
-      confirm_strike (оба) → ОКНО 3 (after) — turn-инстанты + aftermath
+      confirm_strike (оба) → ОКНО 3 (after) — turn-инстанты
                             ↓
                             закрытие strike
 Окна инстантов (InstantProcessor)
@@ -198,11 +200,11 @@ declare
 
 turn — общие (лечение, закрытие, баффы)
 
-combat — только на удар (Ост, Глорм, Баньши, Ловец, Мэри, будущий Бешеный маг)
+combat — только на удар, с обязательным phase (Ост, Глорм, Баньши, Ловец, Мэри, Бешеный маг, Отшельница)
 
-turn + aftermath: true — только окно 3 (Отшельница)
+turn + aftermath: true — legacy-признак turn-инстантов после удара; Отшельница больше его не использует.
 
-Стек (LIFO): общий для обоих игроков. Разрешение снизу вверх. Каждый эффект может сломать следующий (тогда следующий не срабатывает, карта не закрывается).
+Заказ сохраняет общий порядок для обоих игроков. Combat-resolution идет по фазам, LIFO действует только внутри одной фазы.
 
 Приоритеты: активный → пассивный → ... пока оба не пасанут.
 

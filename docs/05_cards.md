@@ -353,10 +353,10 @@ ActionResolver::handle()
   "key": "flash",
   "name": "Отвлекающая вспышка",
   "trigger": "combat",
+  "phase": "setter",
   "target": "enemy" | "ally" | "self",
   "coins": 1,
   "uses_per_turn": 1,
-  "aftermath": true,
   "effect": {
     "type": "damage_cap",
     "value": 1,
@@ -367,9 +367,15 @@ ActionResolver::handle()
 
 ### 4.1. trigger
 
-- `combat` — окно боя (до броска)
+- `combat` — окно боя; для него нужен `phase`
 - `turn` — обычное окно инстантов
-- `aftermath: true` — только в окне `after`, после удара (Отшельница)
+- `aftermath: true` — legacy-признак для turn-инстантов в окне `after`; Отшельница больше его не использует
+
+Combat-фазы исполняются в порядке:
+
+`redirect` → `dice` → `power` → `value` → `setter` → `wounds`.
+
+Внутри одной фазы действует LIFO по порядку заказа.
 
 ### 4.2. effect.type
 

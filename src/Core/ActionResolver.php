@@ -2965,40 +2965,8 @@ final class ActionResolver
 
     public function chooseDiceChoice(string $playerKey, Command $cmd): Result
     {
-        $dc = $this->state->battle['pending_dice_choice'] ?? null;
-        if (!$dc) return Result::error('Нет ожидающего выбора');
-        if ($dc['owner'] !== $playerKey) return Result::error('Не ваш выбор');
-
         $choice = (string) $cmd->get('choice', '');
-        $valid  = ['plus:own', 'minus:own', 'plus:enemy', 'minus:enemy', 'reroll:any'];
-        if (!in_array($choice, $valid, true)) {
-            return Result::error('Неверный выбор');
-        }
-
-        $card = $this->state->getCard($dc['card_id']);
-        if (!$card) return Result::error('Карта не найдена');
-        if ($card->closed) return Result::error('Карта закрыта');
-        if (!empty($card->flags['in_stack'])) {
-            return Result::error('Карта уже в стеке');
-        }
-
-        $card->flags['in_stack'] = true;
-
-        $this->state->battle['strike']['instant_stack'][] = [
-            'card_id'   => $card->instanceId,
-            'effect'    => ['type' => 'dice_choice'],
-            'target_id' => $card->instanceId,
-            'player'    => $playerKey,
-            'label'     => $dc['label'],
-            'choice'    => $choice,
-        ];
-
-        $this->state->battle['strike']['instant_passed'] = [];
-
-        unset($this->state->battle['pending_dice_choice']);
-
-        $this->state->bumpVersion();
-        return Result::ok(['dice_choice_stacked']);
+        return (new InstantProcessor($this->state, $this->engine))->applyDiceChoice($playerKey, $choice);
     }
 
     private function resolveGiveCoin(

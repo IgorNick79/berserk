@@ -160,12 +160,55 @@ final class Engine
         array $effect,
         ?CardInstance $source,
         string $ownerKey,
-        ?string $choice = null
+        ?string $choice = null,
+        ?CardInstance $target = null
     ): ?string {
         $type = $effect['type'] ?? '';
         $strike = &$state->battle['strike'];
 
         switch ($type) {
+
+            case 'redirect_strike':
+                if (!$target) return 'цель не найдена';
+                if ($target->owner !== $ownerKey) return 'цель не союзная';
+                if ($target->zone !== CardInstance::ZONE_FIELD) return 'цель не на поле';
+                if ($target->dying || $target->hp <= 0) return 'цель недоступна';
+
+                $currentTarget = $state->getCard((int) ($strike['target_id'] ?? 0));
+                if (!$currentTarget) return 'исходная цель не найдена';
+                if ($currentTarget->zone !== CardInstance::ZONE_FIELD) return 'исходная цель не на поле';
+
+                $dr = abs($target->row - $currentTarget->row);
+                $dc = abs($target->col - $currentTarget->col);
+                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
+                    return 'цель не рядом';
+                }
+
+                $strike['target_id'] = $target->instanceId;
+                $strike['defender_id'] = null;
+                $strike['defenders'] = [];
+                $strike['redirect_used'] = true;
+
+                $attacker = $state->getCard((int) ($strike['attacker_id'] ?? 0));
+                if ($attacker) {
+                    $noDefendDice = $target->closed
+                        || CardStats::hasUnanswer($state, $attacker, $target);
+                    if ($noDefendDice) {
+                        $strike['defend_dice'] = 0;
+                    }
+                    $strike['attack_mod'] = CardStats::getOva($state, $attacker, $target)
+                        - CardStats::getClumsyPenalty($attacker);
+                    $strike['defend_mod'] = $target->closed
+                        ? 0
+                        : (CardStats::getOvz($state, $target)
+                            - CardStats::getClumsyPenalty($target));
+                    $strike['attack_clumsy'] = CardStats::getClumsyPenalty($attacker);
+                    $strike['defend_clumsy'] = $target->closed
+                        ? 0
+                        : CardStats::getClumsyPenalty($target);
+                    (new StrikeResolver($state, $this))->recalcTable();
+                }
+                return null;
 
             case 'strike_level':
                 $mode  = $effect['mode'] ?? 'set';

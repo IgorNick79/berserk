@@ -45,6 +45,23 @@ final class CombatPickChoice implements ChoiceHandlerInterface
         }
 
         $condition = $pc['effect']['condition'] ?? null;
+        $adjacentIds = [];
+        if (($pc['target'] ?? '') === 'adjacent_ally') {
+            $strike = $state->battle['strike'] ?? null;
+            $currentTarget = $strike ? $state->getCard((int) ($strike['target_id'] ?? 0)) : null;
+            if ($currentTarget) {
+                foreach ($state->cards as $candidate) {
+                    if ($candidate->owner !== $playerKey) continue;
+                    if ($candidate->instanceId === $currentTarget->instanceId) continue;
+                    if ($candidate->zone !== CardInstance::ZONE_FIELD || $currentTarget->zone !== CardInstance::ZONE_FIELD) continue;
+                    $dr = abs($candidate->row - $currentTarget->row);
+                    $dc = abs($candidate->col - $currentTarget->col);
+                    if ($dr <= 1 && $dc <= 1 && ($dr + $dc) > 0) {
+                        $adjacentIds[] = $candidate->instanceId;
+                    }
+                }
+            }
+        }
 
         $buttons = [];
         foreach ($state->cards as $c) {
@@ -54,6 +71,7 @@ final class CombatPickChoice implements ChoiceHandlerInterface
 
             if (($pc['target'] ?? 'enemy') === 'enemy' && $c->owner === $playerKey) continue;
             if (($pc['target'] ?? 'enemy') === 'ally'  && $c->owner !== $playerKey) continue;
+            if (($pc['target'] ?? '') === 'adjacent_ally' && !in_array($c->instanceId, $adjacentIds, true)) continue;
             if ($condition === 'target_not_moved' && !empty($c->flags['moved_this_turn'])) continue;
 
             $name = $cardsInfo[$c->ukid]['name'] ?? '?';

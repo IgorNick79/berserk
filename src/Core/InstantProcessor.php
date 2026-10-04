@@ -7,6 +7,15 @@ namespace Berserk\Core;
 
 final class InstantProcessor
 {
+    public const COMBAT_PHASE_ORDER = [
+        'redirect',
+        'dice',
+        'power',
+        'value',
+        'setter',
+        'wounds',
+    ];
+
     public function __construct(
         private GameState $state,
         private Engine $engine,
@@ -65,6 +74,14 @@ final class InstantProcessor
                 }
 
                 if ($type === 'turn' && $phase === 'before' && !empty($inst['aftermath'])) continue;
+                if ($type === 'combat' && !in_array($this->instantCombatPhase($inst), self::COMBAT_PHASE_ORDER, true)) {
+                    continue;
+                }
+                if ($type === 'combat'
+                    && ($inst['target'] ?? 'self') === 'adjacent_ally'
+                    && empty($this->findAdjacentAllyTargets($ownerKey))) {
+                    continue;
+                }
 
                 // Активный игрок в бою не играет turn-инстанты (кроме aftermath).
                 if ($type === 'turn'
@@ -174,6 +191,7 @@ final class InstantProcessor
         $this->state->battle['strike']['instant_passed']   = $passed;
         $this->state->battle['strike']['instant_played']   = [];
         $this->state->battle['strike']['instant_stack']    = [];
+        unset($this->state->battle['strike']['instant_resolution']);
     }
 
     public function playCombat(string $playerKey, int $cardId, string $key): Result
@@ -208,45 +226,42 @@ final class InstantProcessor
 
         $target = $inst['target'] ?? 'self';
         $effect = $inst['effect'] ?? [];
-
-        // Отшельница — не в стек, а сразу pending
-        if (($effect['type'] ?? '') === 'redistribute_wounds') {
-            return (new WoundTransferProcessor($this->state, $this->engine))
-                ->start($playerKey, $card, [
-                    'kind'          => 'hermit',
-                    'donor_filter'  => 'damaged_this_strike',
-                    'target_filter' => 'own',
-                    'max_transfer'  => 0,
-                    'coins_cost'    => 0,
-                    'on_finish'     => 'strike_after',
-                ]);
-        }
-
-        // dice_choice — открываем подменю
-        if (($effect['type'] ?? '') === 'dice_choice') {
-            $this->state->battle['pending_dice_choice'] = [
-                'owner'   => $playerKey,
-                'card_id' => $card->instanceId,
-                'phase'   => $phase,
-                'label'   => $inst['name'] ?? 'Ловец',
-            ];
-            $this->state->bumpVersion();
-            return Result::ok(['dice_choice_opened']);
+        $combatPhase = $this->instantCombatPhase($inst);
+        if ($wantedType === 'combat' && !in_array($combatPhase, self::COMBAT_PHASE_ORDER, true)) {
+            return Result::error('Не задана фаза combat-инстанта');
         }
 
         // Self — сразу в стек
         if ($target === 'self') {
             $card->flags['in_stack'] = true;
-            $this->state->battle['strike']['instant_stack'][] = [
-                'card_id'   => $card->instanceId,
-                'effect'    => $effect,
-                'target_id' => $card->instanceId,
-                'player'    => $playerKey,
-                'label'     => $inst['name'] ?? 'Инстант',
-            ];
+            $this->state->battle['strike']['instant_stack'][] = $this->buildStackItem(
+                $card,
+                $effect,
+                $card->instanceId,
+                $playerKey,
+                $inst['name'] ?? 'Инстант',
+                $combatPhase
+            );
             $this->state->battle['strike']['instant_passed'] = [];
             $this->state->bumpVersion();
             return Result::ok(['instant_stacked']);
+        }
+
+        if ($target === 'adjacent_ally') {
+            if (empty($this->findAdjacentAllyTargets($playerKey))) {
+                return Result::error('Нет соседней союзной цели');
+            }
+            $this->state->battle['pending_combat_pick'] = [
+                'owner'    => $playerKey,
+                'card_id'  => $card->instanceId,
+                'target'   => $target,
+                'effect'   => $effect,
+                'phase'    => $combatPhase,
+                'label'    => $inst['name'] ?? 'Инстант',
+            ];
+
+            $this->state->bumpVersion();
+            return Result::ok(['combat_pick_opened']);
         }
 
         // Нужен выбор цели
@@ -255,11 +270,40 @@ final class InstantProcessor
             'card_id'  => $card->instanceId,
             'target'   => $target,
             'effect'   => $effect,
+            'phase'    => $combatPhase,
             'label'    => $inst['name'] ?? 'Инстант',
         ];
 
         $this->state->bumpVersion();
         return Result::ok(['combat_pick_opened']);
+    }
+
+    private function buildStackItem(
+        CardInstance $card,
+        array $effect,
+        int $targetId,
+        string $playerKey,
+        string $label,
+        string $phase,
+        ?string $choice = null
+    ): array {
+        $strike = $this->state->battle['strike'] ?? [];
+        $sequence = (int) ($strike['instant_next_sequence'] ?? 0);
+        $this->state->battle['strike']['instant_next_sequence'] = $sequence + 1;
+
+        $item = [
+                'card_id'   => $card->instanceId,
+                'effect'    => $effect,
+                'target_id' => $targetId,
+                'player'    => $playerKey,
+                'label'     => $label,
+                'phase'     => $phase,
+                'sequence'  => $sequence,
+            ];
+        if ($choice !== null) {
+            $item['choice'] = $choice;
+        }
+        return $item;
     }
 
     public function chooseTarget(string $playerKey, Command $cmd): Result
@@ -277,6 +321,10 @@ final class InstantProcessor
         if ($pc['target'] === 'ally' && $target->owner !== $playerKey) {
             return Result::error('Только на союзника');
         }
+        if ($pc['target'] === 'adjacent_ally'
+            && !in_array($target->instanceId, $this->findAdjacentAllyTargets($playerKey), true)) {
+            return Result::error('Только соседнее союзное существо цели удара');
+        }
         if ($target->zone !== CardInstance::ZONE_FIELD
             && $target->zone !== CardInstance::ZONE_FLYING) {
             return Result::error('Цель не на поле');
@@ -292,13 +340,14 @@ final class InstantProcessor
 
         $source->flags['in_stack'] = true;
 
-        $this->state->battle['strike']['instant_stack'][] = [
-            'card_id'   => $source->instanceId,
-            'effect'    => $pc['effect'],
-            'target_id' => $target->instanceId,
-            'player'    => $playerKey,
-            'label'     => $pc['label'],
-        ];
+        $this->state->battle['strike']['instant_stack'][] = $this->buildStackItem(
+            $source,
+            (array) $pc['effect'],
+            $target->instanceId,
+            $playerKey,
+            $pc['label'],
+            (string) ($pc['phase'] ?? $this->phaseForEffect((array) $pc['effect']))
+        );
 
         $this->state->battle['strike']['instant_passed'] = [];
 
@@ -344,11 +393,16 @@ final class InstantProcessor
     public function resolveStack(): void
     {
         $strike = &$this->state->battle['strike'];
-        $stack = $strike['instant_stack'] ?? [];
-        $stack = array_reverse($stack);
-
         $phase = $strike['instant_phase'] ?? 'before';
         $summary = [];
+
+        if ($phase === 'combat') {
+            $this->resolveCombatPhases();
+            return;
+        }
+
+        $stack = $strike['instant_stack'] ?? [];
+        $stack = array_reverse($stack);
 
         foreach ($stack as $item) {
             $source = $this->state->getCard($item['card_id']);
@@ -374,27 +428,15 @@ final class InstantProcessor
                     'reason'    => 'нет эффекта',
                 ];
             } else {
-                if ($phase === 'combat') {
-                    $reason = $this->engine->applyCombatEffect(
-                        $this->state,
-                        $effect,
-                        $source,
-                        $item['player'],
-                        $item['choice'] ?? null
-                    );
-                    $applied = ($reason === null);
-                    $reasonText = $reason ?? '';
-                } else {
-                    $this->engine->applyInstantEffect(
-                        $this->state,
-                        $effect,
-                        $source,
-                        $target,
-                        $item['player']
-                    );
-                    $applied = true;
-                    $reasonText = '';
-                }
+                $this->engine->applyInstantEffect(
+                    $this->state,
+                    $effect,
+                    $source,
+                    $target,
+                    $item['player']
+                );
+                $applied = true;
+                $reasonText = '';
 
                 $summary[] = [
                     'label'     => $label,
@@ -465,6 +507,317 @@ final class InstantProcessor
         }
 
         $this->resumeAfterWindow();
+    }
+
+    public function resumeCombatResolution(): void
+    {
+        $strike = $this->state->battle['strike'] ?? null;
+        if (!$strike || ($strike['instant_phase'] ?? null) !== 'combat') return;
+
+        $this->resolveCombatPhases();
+    }
+
+    public function resumeCombatWounds(): void
+    {
+        $strike = $this->state->battle['strike'] ?? null;
+        if (!$strike || empty($strike['pending_wounds_resolution'])) return;
+
+        unset($this->state->battle['strike']['pending_wounds_resolution']);
+        $this->resolveCombatPhases(true);
+    }
+
+    public function hasPendingCombatWounds(): bool
+    {
+        $strike = $this->state->battle['strike'] ?? null;
+        if (!$strike || empty($strike['instant_stack'])) return false;
+
+        foreach ($strike['instant_stack'] as $item) {
+            if (($item['phase'] ?? '') === 'wounds') return true;
+        }
+        return false;
+    }
+
+    private function resolveCombatPhases(bool $woundsOnly = false): void
+    {
+        $strike = &$this->state->battle['strike'];
+
+        if (empty($strike['instant_resolution'])) {
+            $this->startCombatResolution($woundsOnly);
+        }
+
+        while (!empty($strike['instant_resolution']['queue'])) {
+            $item = $strike['instant_resolution']['queue'][0];
+            $phase = (string) ($item['phase'] ?? '');
+
+            if ($phase === 'wounds' && !$woundsOnly && empty($strike['damage_applied'])) {
+                $strike['pending_wounds_resolution'] = true;
+                $this->finishCombatResolution(false);
+                return;
+            }
+
+            $result = $this->resolveCombatItem($item);
+            if ($result === 'paused') {
+                return;
+            }
+
+            array_shift($this->state->battle['strike']['instant_resolution']['queue']);
+            if ($result['source']) {
+                $result['source']->closed = true;
+                unset($result['source']->flags['in_stack']);
+            }
+            $this->appendInstantSummary($item, $result['applied'], $result['reason'], $result['source']);
+            $strike = &$this->state->battle['strike'];
+        }
+
+        $this->finishCombatResolution(true);
+    }
+
+    private function startCombatResolution(bool $woundsOnly): void
+    {
+        $stack = $this->state->battle['strike']['instant_stack'] ?? [];
+        $queue = [];
+
+        foreach (self::COMBAT_PHASE_ORDER as $phase) {
+            if ($woundsOnly && $phase !== 'wounds') continue;
+            if (!$woundsOnly && $phase === 'wounds') continue;
+
+            $items = array_values(array_filter(
+                $stack,
+                fn(array $item): bool => ($item['phase'] ?? $this->phaseForEffect((array) ($item['effect'] ?? []))) === $phase
+            ));
+            usort($items, fn(array $a, array $b): int => ((int) ($b['sequence'] ?? 0)) <=> ((int) ($a['sequence'] ?? 0)));
+            foreach ($items as $item) {
+                $queue[] = $item;
+            }
+        }
+
+        $this->state->battle['strike']['instant_resolution'] = [
+            'mode' => $woundsOnly ? 'wounds' : 'combat',
+            'queue' => $queue,
+        ];
+    }
+
+    private function resolveCombatItem(array $item): array|string
+    {
+        $source = $this->state->getCard((int) ($item['card_id'] ?? 0));
+        $target = $this->state->getCard((int) ($item['target_id'] ?? 0));
+        $effect = (array) ($item['effect'] ?? []);
+        $type = (string) ($effect['type'] ?? '');
+
+        if (!$source) {
+            return ['source' => null, 'applied' => false, 'reason' => 'источник не найден'];
+        }
+        if (empty($effect)) {
+            return ['source' => $source, 'applied' => false, 'reason' => 'нет эффекта'];
+        }
+
+        if ($type === 'dice_choice' && !isset($item['choice'])) {
+            $this->state->battle['pending_dice_choice'] = [
+                'owner'   => $item['player'],
+                'card_id' => $source->instanceId,
+                'label'   => $item['label'] ?? 'Ловец',
+                'resume'  => 'combat_resolution',
+            ];
+            return 'paused';
+        }
+
+        if ($type === 'redistribute_wounds') {
+            $result = (new WoundTransferProcessor($this->state, $this->engine))
+                ->start((string) $item['player'], $source, [
+                    'kind'          => 'hermit',
+                    'donor_filter'  => 'damaged_this_strike',
+                    'target_filter' => 'own',
+                    'max_transfer'  => 0,
+                    'coins_cost'    => 0,
+                    'on_finish'     => 'combat_resolution',
+                ]);
+            if ($result->success) {
+                return 'paused';
+            }
+            return ['source' => $source, 'applied' => false, 'reason' => $result->error ?? 'нет подходящих ран'];
+        }
+
+        if ($type === 'redirect_strike' && !$target) {
+            return ['source' => $source, 'applied' => false, 'reason' => 'цель не найдена'];
+        }
+
+        $reason = $this->engine->applyCombatEffect(
+            $this->state,
+            $effect,
+            $source,
+            (string) $item['player'],
+            $item['choice'] ?? null,
+            $target
+        );
+
+        return ['source' => $source, 'applied' => $reason === null, 'reason' => $reason ?? ''];
+    }
+
+    public function applyDiceChoice(string $playerKey, string $choice): Result
+    {
+        $dc = $this->state->battle['pending_dice_choice'] ?? null;
+        if (!$dc) return Result::error('Нет ожидающего выбора');
+        if ($dc['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+
+        $valid  = ['plus:own', 'minus:own', 'plus:enemy', 'minus:enemy', 'reroll:any'];
+        if (!in_array($choice, $valid, true)) {
+            return Result::error('Неверный выбор');
+        }
+
+        $strike = $this->state->battle['strike'] ?? null;
+        $queue = $strike['instant_resolution']['queue'] ?? [];
+        if (empty($queue)) return Result::error('Очередь инстантов пуста');
+
+        $item = $queue[0];
+        $source = $this->state->getCard((int) ($item['card_id'] ?? 0));
+        if (!$source) return Result::error('Карта не найдена');
+
+        $reason = $this->engine->applyCombatEffect(
+            $this->state,
+            ['type' => 'dice_choice'],
+            $source,
+            $playerKey,
+            $choice
+        );
+        if ($reason !== null) {
+            return Result::error($reason);
+        }
+
+        unset($this->state->battle['pending_dice_choice']);
+        array_shift($this->state->battle['strike']['instant_resolution']['queue']);
+        $source->closed = true;
+        unset($source->flags['in_stack']);
+        $item['choice'] = $choice;
+        $this->appendInstantSummary($item, true, '', $source);
+        $this->resumeCombatResolution();
+        $this->state->bumpVersion();
+        return Result::ok(['dice_choice_resolved']);
+    }
+
+    public function completePausedCombatItem(bool $applied, string $reason = ''): void
+    {
+        $queue = $this->state->battle['strike']['instant_resolution']['queue'] ?? [];
+        if (empty($queue)) return;
+
+        $item = $queue[0];
+        $source = $this->state->getCard((int) ($item['card_id'] ?? 0));
+        array_shift($this->state->battle['strike']['instant_resolution']['queue']);
+        if ($source) {
+            $source->closed = true;
+            unset($source->flags['in_stack']);
+        }
+        $this->appendInstantSummary($item, $applied, $reason, $source);
+        $this->resumeCombatResolution();
+    }
+
+    private function finishCombatResolution(bool $done): void
+    {
+        $strike = &$this->state->battle['strike'];
+        $mode = (string) ($strike['instant_resolution']['mode'] ?? 'combat');
+        if (!$done) {
+            unset($strike['instant_resolution']);
+            return;
+        }
+
+        if ($mode === 'wounds') {
+            unset(
+                $strike['instant_priority'],
+                $strike['instant_passed'],
+                $strike['instant_stack'],
+                $strike['instant_next_sequence'],
+                $strike['instant_resolution'],
+                $strike['pending_wounds_resolution']
+            );
+            unset($strike['instant_phase']);
+            if (($strike['state'] ?? '') !== 'waiting_auto_target') {
+                $strike['state'] = 'results';
+            }
+            return;
+        }
+
+        $hasWounds = $this->hasPendingCombatWounds();
+
+        unset(
+            $strike['instant_priority'],
+            $strike['instant_passed'],
+            $strike['instant_resolution']
+        );
+
+        if ($hasWounds) {
+            $strike['pending_wounds_resolution'] = true;
+        } else {
+            unset($strike['instant_stack'], $strike['instant_next_sequence']);
+            unset($strike['instant_phase']);
+        }
+
+        (new StrikeResolver($this->state, $this->engine))->recalcTable();
+        $table = $strike['result'] ?? null;
+
+        if ($table && $table['attack'] !== '' && $table['defend'] !== '') {
+            $strike['state'] = 'waiting_choice';
+            $strike['choice_winner'] = $table['winner'];
+            return;
+        }
+
+        (new StrikeResolver($this->state, $this->engine))
+            ->apply($table ?? ['attack' => '', 'defend' => '', 'winner' => ''], false);
+
+        if (($strike['state'] ?? '') !== 'waiting_auto_target') {
+            $strike['state'] = 'results';
+        }
+    }
+
+    private function appendInstantSummary(array $item, bool $applied, string $reason, ?CardInstance $source): void
+    {
+        $this->state->battle['strike']['instant_summary'][] = [
+            'label'     => $item['label'] ?? 'Инстант',
+            'card_ukid' => $source ? $source->ukid : '',
+            'player'    => $item['player'] ?? null,
+            'phase'     => $item['phase'] ?? null,
+            'applied'   => $applied,
+            'reason'    => $reason,
+        ];
+    }
+
+    private function instantCombatPhase(array $inst): string
+    {
+        return (string) ($inst['phase'] ?? $this->phaseForEffect((array) ($inst['effect'] ?? [])));
+    }
+
+    private function phaseForEffect(array $effect): string
+    {
+        return match ((string) ($effect['type'] ?? '')) {
+            'redirect_strike' => 'redirect',
+            'dice_choice', 'damage_on_dice' => 'dice',
+            'strike_level' => (($effect['mode'] ?? '') === 'reduce_one') ? 'value' : 'power',
+            'damage_cap' => 'setter',
+            'redistribute_wounds' => 'wounds',
+            default => '',
+        };
+    }
+
+    private function findAdjacentAllyTargets(string $playerKey): array
+    {
+        $strike = $this->state->battle['strike'] ?? null;
+        if (!$strike) return [];
+
+        $currentTarget = $this->state->getCard((int) ($strike['target_id'] ?? 0));
+        if (!$currentTarget) return [];
+
+        $ids = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->owner !== $playerKey) continue;
+            if ($c->instanceId === $currentTarget->instanceId) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD || $currentTarget->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $dr = abs($c->row - $currentTarget->row);
+            $dc = abs($c->col - $currentTarget->col);
+            if ($dr <= 1 && $dc <= 1 && ($dr + $dc) > 0) {
+                $ids[] = $c->instanceId;
+            }
+        }
+        return $ids;
     }
 
     private function resumeAfterWindow(): void
