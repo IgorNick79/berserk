@@ -254,6 +254,35 @@ $state = cipState($attacker, $target, $mage, $farAlly);
 $instants = (new InstantProcessor($state, new Engine()))->getInstants(GameState::PLAYER_PLAYER, 'combat', 'combat');
 cipAssert(empty($instants), 'Mage redirect should not be available without adjacent ally target.');
 
+// Attacker-side Mage must not be available against an opponent strike target, even with an attacker-owned adjacent card.
+$hostMage = cipCard([
+    'instanceId' => 17,
+    'owner' => GameState::PLAYER_HOST,
+    'row' => 5,
+    'col' => 4,
+    'prop' => ['instants' => [[
+        'key' => 'magic_trick',
+        'name' => 'Магический трюк',
+        'effect' => ['type' => 'redirect_strike'],
+        'target' => 'adjacent_ally',
+        'trigger' => 'combat',
+        'phase' => 'redirect',
+    ]]],
+]);
+$hostAdjacent = cipCard(['instanceId' => 18, 'owner' => GameState::PLAYER_HOST, 'row' => 4, 'col' => 4]);
+$state = cipState($attacker, $target, $hostMage, $hostAdjacent);
+$state->battle['strike']['instant_priority'] = GameState::PLAYER_HOST;
+$instants = (new InstantProcessor($state, new Engine()))->getInstants(GameState::PLAYER_HOST, 'combat', 'combat');
+cipAssert(empty($instants), 'Attacker-side Mage must not be available when origin strike target belongs to opponent.');
+$result = (new InstantProcessor($state, new Engine()))->playCombat(
+    GameState::PLAYER_HOST,
+    $hostMage->instanceId,
+    'magic_trick'
+);
+cipAssert(!$result->success, 'Direct playCombat should reject illegal attacker-side Mage redirect.');
+cipAssert(empty($state->battle['pending_combat_pick']), 'Illegal direct Mage play must not open pending target pick.');
+cipAssert(empty($state->battle['strike']['instant_stack']), 'Illegal direct Mage play must not mutate instant stack.');
+
 // Invalid redirect: attacker cannot redirect opponent target to attacker-owned card.
 $ownCard = cipCard(['instanceId' => 11, 'owner' => GameState::PLAYER_HOST, 'row' => 4, 'col' => 4]);
 $state = cipState($attacker, $target, $ownCard);

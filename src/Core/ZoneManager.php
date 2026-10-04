@@ -287,6 +287,10 @@ final class ZoneManager
      */
     public static function adjacentFieldAllyIds(GameState $state, CardInstance $origin, string $owner): array
     {
+        if ($origin->owner !== $owner) {
+            return [];
+        }
+
         $ids = [];
         foreach ($state->cards as $card) {
             if ($card->owner !== $owner) continue;
