@@ -712,6 +712,20 @@ final class StrikeResolver
 
 
         $this->engine->flushDeadeatQueue($this->state);
+        $primaryDamage = (int) ($this->state->battle['strike']['damage_total'] ?? 0);
+        $answerDamage = (int) ($this->state->battle['strike']['defend_damage_total'] ?? 0);
+        $targetDamageThisStrike = (int) ($defendCard->flags['damage_taken_this_strike'] ?? 0);
+        $attackerDamageThisStrike = (int) ($attacker->flags['damage_taken_this_strike'] ?? 0);
+        $this->state->battle['strike']['combat_damage_summary'] = [
+            'target_id' => $defendCard->instanceId,
+            'attacker_id' => $attacker->instanceId,
+            'primary_damage' => $primaryDamage,
+            'target_total_this_strike' => $targetDamageThisStrike,
+            'target_extra_this_strike' => max(0, $targetDamageThisStrike - $primaryDamage),
+            'answer_damage' => $answerDamage,
+            'attacker_total_this_strike' => $attackerDamageThisStrike,
+            'attacker_extra_this_strike' => max(0, $attackerDamageThisStrike - $answerDamage),
+        ];
         $this->state->battle['strike']['damage_applied'] = true;
 
         if (!empty($this->state->battle['strike']['pending_wounds_resolution'])) {

@@ -240,7 +240,9 @@ final class InstantProcessor
                 $card->instanceId,
                 $playerKey,
                 $inst['name'] ?? 'Инстант',
-                $combatPhase
+                $combatPhase,
+                null,
+                (string) ($inst['key'] ?? '')
             );
             $this->state->battle['strike']['instant_passed'] = [];
             $this->state->bumpVersion();
@@ -257,6 +259,7 @@ final class InstantProcessor
                 'target'   => $target,
                 'effect'   => $effect,
                 'phase'    => $combatPhase,
+                'instant_key' => (string) ($inst['key'] ?? ''),
                 'label'    => $inst['name'] ?? 'Инстант',
             ];
 
@@ -271,6 +274,7 @@ final class InstantProcessor
             'target'   => $target,
             'effect'   => $effect,
             'phase'    => $combatPhase,
+            'instant_key' => (string) ($inst['key'] ?? ''),
             'label'    => $inst['name'] ?? 'Инстант',
         ];
 
@@ -285,7 +289,8 @@ final class InstantProcessor
         string $playerKey,
         string $label,
         string $phase,
-        ?string $choice = null
+        ?string $choice = null,
+        string $instantKey = ''
     ): array {
         $strike = $this->state->battle['strike'] ?? [];
         $sequence = (int) ($strike['instant_next_sequence'] ?? 0);
@@ -300,6 +305,7 @@ final class InstantProcessor
                 'phase'     => $phase,
                 'sequence'  => $sequence,
                 'strike_target_id' => (int) ($strike['defender_id'] ?: ($strike['target_id'] ?? 0)),
+                'instant_key' => $instantKey,
             ];
         if ($choice !== null) {
             $item['choice'] = $choice;
@@ -347,7 +353,9 @@ final class InstantProcessor
             $target->instanceId,
             $playerKey,
             $pc['label'],
-            (string) ($pc['phase'] ?? $this->phaseForEffect((array) $pc['effect']))
+            (string) ($pc['phase'] ?? $this->phaseForEffect((array) $pc['effect'])),
+            null,
+            (string) ($pc['instant_key'] ?? '')
         );
 
         $this->state->battle['strike']['instant_passed'] = [];
@@ -566,7 +574,13 @@ final class InstantProcessor
                 $result['source']->closed = true;
                 unset($result['source']->flags['in_stack']);
             }
-            $this->appendInstantSummary($item, $result['applied'], $result['reason'], $result['source']);
+            $this->appendInstantSummary(
+                $item,
+                $result['applied'],
+                $result['reason'],
+                $result['source'],
+                (array) ($result['result'] ?? [])
+            );
             $strike = &$this->state->battle['strike'];
         }
 
@@ -610,10 +624,10 @@ final class InstantProcessor
         }
 
         if (!$source) {
-            return ['source' => null, 'applied' => false, 'reason' => 'источник не найден'];
+            return ['source' => null, 'applied' => false, 'reason' => 'источник не найден', 'result' => []];
         }
         if (empty($effect)) {
-            return ['source' => $source, 'applied' => false, 'reason' => 'нет эффекта'];
+            return ['source' => $source, 'applied' => false, 'reason' => 'нет эффекта', 'result' => []];
         }
 
         if ($type === 'dice_choice' && !isset($item['choice'])) {
@@ -639,13 +653,19 @@ final class InstantProcessor
             if ($result->success) {
                 return 'paused';
             }
-            return ['source' => $source, 'applied' => false, 'reason' => $result->error ?? 'нет подходящих ран'];
+            return [
+                'source' => $source,
+                'applied' => false,
+                'reason' => $result->error ?? 'нет подходящих ран',
+                'result' => ['transferred' => 0],
+            ];
         }
 
         if ($type === 'redirect_strike' && !$target) {
-            return ['source' => $source, 'applied' => false, 'reason' => 'цель не найдена'];
+            return ['source' => $source, 'applied' => false, 'reason' => 'цель не найдена', 'result' => []];
         }
 
+        $before = $this->captureCombatSnapshot();
         $reason = $this->engine->applyCombatEffect(
             $this->state,
             $effect,
@@ -654,8 +674,14 @@ final class InstantProcessor
             $item['choice'] ?? null,
             $effectTarget
         );
+        $after = $this->captureCombatSnapshot();
 
-        return ['source' => $source, 'applied' => $reason === null, 'reason' => $reason ?? ''];
+        return [
+            'source' => $source,
+            'applied' => $reason === null,
+            'reason' => $reason ?? '',
+            'result' => $this->buildCombatEffectResult($effect, $before, $after, (string) $item['player']),
+        ];
     }
 
     public function applyDiceChoice(string $playerKey, string $choice): Result
@@ -677,6 +703,7 @@ final class InstantProcessor
         $source = $this->state->getCard((int) ($item['card_id'] ?? 0));
         if (!$source) return Result::error('Карта не найдена');
 
+        $before = $this->captureCombatSnapshot();
         $reason = $this->engine->applyCombatEffect(
             $this->state,
             ['type' => 'dice_choice'],
@@ -693,13 +720,20 @@ final class InstantProcessor
         $source->closed = true;
         unset($source->flags['in_stack']);
         $item['choice'] = $choice;
-        $this->appendInstantSummary($item, true, '', $source);
+        $after = $this->captureCombatSnapshot();
+        $this->appendInstantSummary(
+            $item,
+            true,
+            '',
+            $source,
+            $this->buildCombatEffectResult(['type' => 'dice_choice'], $before, $after, $playerKey, $choice)
+        );
         $this->resumeCombatResolution();
         $this->state->bumpVersion();
         return Result::ok(['dice_choice_resolved']);
     }
 
-    public function completePausedCombatItem(bool $applied, string $reason = ''): void
+    public function completePausedCombatItem(bool $applied, string $reason = '', array $effectResult = []): void
     {
         $queue = $this->state->battle['strike']['instant_resolution']['queue'] ?? [];
         if (empty($queue)) return;
@@ -711,7 +745,7 @@ final class InstantProcessor
             $source->closed = true;
             unset($source->flags['in_stack']);
         }
-        $this->appendInstantSummary($item, $applied, $reason, $source);
+        $this->appendInstantSummary($item, $applied, $reason, $source, $effectResult);
         $this->resumeCombatResolution();
     }
 
@@ -772,16 +806,118 @@ final class InstantProcessor
         }
     }
 
-    private function appendInstantSummary(array $item, bool $applied, string $reason, ?CardInstance $source): void
+    private function appendInstantSummary(
+        array $item,
+        bool $applied,
+        string $reason,
+        ?CardInstance $source,
+        array $effectResult = []
+    ): void
     {
         $this->state->battle['strike']['instant_summary'][] = [
             'label'     => $item['label'] ?? 'Инстант',
             'card_ukid' => $source ? $source->ukid : '',
+            'card_id'   => $source ? $source->instanceId : (int) ($item['card_id'] ?? 0),
             'player'    => $item['player'] ?? null,
             'phase'     => $item['phase'] ?? null,
+            'sequence'  => (int) ($item['sequence'] ?? 0),
+            'instant_key' => (string) ($item['instant_key'] ?? ''),
+            'instant_name' => (string) ($item['label'] ?? 'Инстант'),
+            'effect_type' => (string) (($item['effect']['type'] ?? '') ?: ''),
             'applied'   => $applied,
             'reason'    => $reason,
+            'result'    => $effectResult,
         ];
+    }
+
+    private function captureCombatSnapshot(): array
+    {
+        $strike = $this->state->battle['strike'] ?? [];
+        $cards = [];
+        foreach ($this->state->cards as $card) {
+            $cards[$card->instanceId] = [
+                'hp' => $card->hp,
+                'damage_taken_this_strike' => (int) ($card->flags['damage_taken_this_strike'] ?? 0),
+                'damage_taken_this_turn' => (int) ($card->flags['damage_taken_this_turn'] ?? 0),
+            ];
+        }
+
+        return [
+            'attack_dice' => (int) ($strike['attack_dice'] ?? 0),
+            'defend_dice' => (int) ($strike['defend_dice'] ?? 0),
+            'target_id' => (int) ($strike['target_id'] ?? 0),
+            'defender_id' => (int) ($strike['defender_id'] ?? 0),
+            'damage_cap' => $strike['damage_cap'] ?? null,
+            'result' => (array) ($strike['result'] ?? []),
+            'cards' => $cards,
+        ];
+    }
+
+    private function buildCombatEffectResult(
+        array $effect,
+        array $before,
+        array $after,
+        string $ownerKey,
+        ?string $choice = null
+    ): array {
+        $type = (string) ($effect['type'] ?? '');
+
+        if ($type === 'strike_level') {
+            $attacker = $this->state->getCard((int) (($this->state->battle['strike']['attacker_id'] ?? 0)));
+            $side = ($attacker && $attacker->owner === $ownerKey) ? 'attack' : 'defend';
+            return [
+                'side' => $side,
+                'before' => (string) ($before['result'][$side] ?? ''),
+                'after' => (string) ($after['result'][$side] ?? ''),
+            ];
+        }
+
+        if ($type === 'damage_on_dice') {
+            $damaged = [];
+            $total = 0;
+            foreach ($after['cards'] as $cardId => $cardAfter) {
+                $beforeDamage = (int) ($before['cards'][$cardId]['damage_taken_this_strike'] ?? 0);
+                $delta = (int) $cardAfter['damage_taken_this_strike'] - $beforeDamage;
+                if ($delta <= 0) continue;
+                $damaged[] = ['card_id' => (int) $cardId, 'damage' => $delta];
+                $total += $delta;
+            }
+            return [
+                'dice_value' => (int) ($effect['value'] ?? 0),
+                'damage_delta' => $total,
+                'damaged' => $damaged,
+            ];
+        }
+
+        if ($type === 'dice_choice') {
+            $parts = $choice !== null ? explode(':', $choice) : [];
+            $op = $parts[0] ?? '';
+            return [
+                'choice' => $choice,
+                'operation' => $op,
+                'attack_before' => (int) $before['attack_dice'],
+                'attack_after' => (int) $after['attack_dice'],
+                'defend_before' => (int) $before['defend_dice'],
+                'defend_after' => (int) $after['defend_dice'],
+            ];
+        }
+
+        if ($type === 'redirect_strike') {
+            return [
+                'before_target_id' => (int) $before['target_id'],
+                'after_target_id' => (int) $after['target_id'],
+            ];
+        }
+
+        if ($type === 'damage_cap') {
+            return [
+                'before_cap' => $before['damage_cap'],
+                'after_cap' => $after['damage_cap'],
+                'cap' => (int) ($effect['value'] ?? 0),
+            ];
+        }
+
+        return [];
     }
 
     private function instantCombatPhase(array $inst): string

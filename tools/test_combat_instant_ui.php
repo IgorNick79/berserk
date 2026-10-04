@@ -104,4 +104,67 @@ ciuAssert(str_contains($html, 'cmd=combat_instant_play'), 'Instant owner should 
 ciuAssert(str_contains($html, 'cmd=combat_instant_pass'), 'Instant owner should see pass/close command.');
 ciuAssert(!str_contains($html, 'Ожидание — оппонент решает'), 'Instant owner should not see an intermediate waiting step.');
 
+$state->addCard(ciuCard(['instanceId' => 4, 'ukid' => 'ost', 'owner' => GameState::PLAYER_HOST, 'row' => 2, 'col' => 3]));
+$cardsInfo['ost'] = ['name' => 'Ост'];
+$state->battle['strike']['state'] = 'results';
+$state->battle['strike']['attack_dice'] = 2;
+$state->battle['strike']['defend_dice'] = 1;
+$state->battle['strike']['result'] = ['attack' => 'strong', 'defend' => '', 'winner' => 'attack'];
+$state->battle['strike']['final'] = ['attack' => 'strong', 'defend' => '', 'winner' => 'attack'];
+$state->battle['strike']['instant_summary'] = [
+    [
+        'label' => 'Черная метка',
+        'instant_name' => 'Черная метка',
+        'card_ukid' => 'instant_card',
+        'card_id' => 3,
+        'player' => GameState::PLAYER_PLAYER,
+        'phase' => 'dice',
+        'effect_type' => 'damage_on_dice',
+        'applied' => true,
+        'reason' => '',
+        'result' => ['dice_value' => 1, 'damage_delta' => 2, 'damaged' => [['card_id' => 2, 'damage' => 2]]],
+    ],
+    [
+        'label' => 'Дар силы',
+        'instant_name' => 'Дар силы',
+        'card_ukid' => 'ost',
+        'card_id' => 4,
+        'player' => GameState::PLAYER_HOST,
+        'phase' => 'power',
+        'effect_type' => 'strike_level',
+        'applied' => true,
+        'reason' => '',
+        'result' => ['side' => 'attack', 'before' => 'weak', 'after' => 'strong'],
+    ],
+    [
+        'label' => 'Отвлекающая вспышка',
+        'instant_name' => 'Отвлекающая вспышка',
+        'card_ukid' => 'ost',
+        'card_id' => 4,
+        'player' => GameState::PLAYER_HOST,
+        'phase' => 'setter',
+        'effect_type' => 'damage_cap',
+        'applied' => false,
+        'reason' => 'цель удара изменилась',
+        'result' => ['before_cap' => null, 'after_cap' => null, 'cap' => 1],
+    ],
+];
+$state->battle['strike']['combat_damage_summary'] = [
+    'target_id' => 2,
+    'attacker_id' => 1,
+    'primary_damage' => 3,
+    'target_total_this_strike' => 5,
+    'target_extra_this_strike' => 2,
+    'answer_damage' => 0,
+    'attacker_total_this_strike' => 0,
+    'attacker_extra_this_strike' => 0,
+];
+
+$html = $screen->prepare($state, GameState::PLAYER_PLAYER, 'player', null, $cardsInfo)['data']['info_panel_html'];
+ciuAssert(str_contains($html, 'Разрешение инстантов по фазам'), 'Result screen should show phased instant summary.');
+ciuAssert(str_contains($html, 'DICE') && str_contains($html, 'STRENGTH') && str_contains($html, 'DAMAGE_CAP'), 'Result screen should group instant summary by phase.');
+ciuAssert(str_contains($html, 'Черная метка: кубик 1 -&gt; +2 урона'), 'Result screen should show dice damage effect result.');
+ciuAssert(str_contains($html, 'Отвлекающая вспышка: без эффекта'), 'Result screen should show no-op instants.');
+ciuAssert(str_contains($html, 'Итого по цели: <b>5</b> урона'), 'Result screen should show final target damage including instant damage.');
+
 echo "Combat instant UI tests passed.\n";

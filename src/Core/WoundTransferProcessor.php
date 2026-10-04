@@ -282,7 +282,10 @@ final class WoundTransferProcessor
         $this->engine->refreshArmor($this->state);
 
         if ($onFinish === 'combat_resolution') {
-            (new InstantProcessor($this->state, $this->engine))->completePausedCombatItem(true);
+            (new InstantProcessor($this->state, $this->engine))->completePausedCombatItem(true, '', [
+                'transferred' => $transferred,
+                'transfers' => (array) ($pw['transfers'] ?? []),
+            ]);
             $this->state->bumpVersion();
             return Result::ok(['wt_done']);
         }

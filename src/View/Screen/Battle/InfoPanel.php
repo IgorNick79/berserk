@@ -584,40 +584,7 @@ final class InfoPanel
 
             $contentHtml = $damageInfo . $confirmHtml;
         } elseif ($strike['state'] === 'results') {
-            // Сводка инстантов (если были)
-            $summaryHtml = '';
-            if (!empty($strike['instant_summary'])) {
-                // instant_summary уже в LIFO порядке (сверху — разрешается первым)
-
-                $summaryHtml = '<div class="instant-summary">'
-                    . '<div class="instant-summary__title">Стек (LIFO — сверху разрешается первым):</div>'
-                    . '<ol class="instant-summary__list">';
-
-                foreach ($strike['instant_summary'] as $s) {
-                    $cardName = !empty($s['card_ukid'])
-                        ? ($cardsInfo[$s['card_ukid']]['name'] ?? $s['card_ukid'])
-                        : '?';
-
-                    $isMine   = (($s['player'] ?? null) === $playerKey);
-                    $whoLabel = $isMine ? 'Ты' : 'Оппонент';
-                    $whoClass = $isMine ? 'instant-summary__who--mine' : 'instant-summary__who--opp';
-
-                    $mark = $s['applied'] ? '✓' : '✗';
-                    $cls  = $s['applied'] ? '' : ' instant-summary__item--skip';
-                    $reason = !$s['applied'] && !empty($s['reason'])
-                        ? ' (' . htmlspecialchars($s['reason'], ENT_QUOTES) . ')'
-                        : '';
-
-                    $summaryHtml .= '<li class="instant-summary__item' . $cls . '">'
-                        . '<span class="instant-summary__who ' . $whoClass . '">' . $whoLabel . '</span> '
-                        . '<b>' . htmlspecialchars($cardName, ENT_QUOTES) . '</b> — '
-                        . htmlspecialchars($s['label'], ENT_QUOTES)
-                        . ' ' . $mark . $reason
-                        . '</li>';
-                }
-
-                $summaryHtml .= '</ol></div>';
-            }
+            $summaryHtml = $this->renderInstantResolutionSummary($strike);
             $ad = $strike['attack_dice'];
             $dd = $strike['defend_dice'] ?? 0;
             $am = $strike['attack_mod'] ?? 0;
@@ -943,21 +910,38 @@ final class InfoPanel
                     $resultText .= ' <span class="wait">(удары уменьшены)</span>';
                 }
 
-                $dmgTarget = (int) ($strike['damage_total'] ?? 0);
-                $dmgBack   = (int) ($strike['defend_damage_total'] ?? 0);
+                $damageSummary = (array) ($strike['combat_damage_summary'] ?? []);
+                $primaryDamage = (int) ($damageSummary['primary_damage'] ?? ($strike['damage_total'] ?? 0));
+                $targetTotal = (int) ($damageSummary['target_total_this_strike'] ?? $primaryDamage);
+                $targetExtra = (int) ($damageSummary['target_extra_this_strike'] ?? max(0, $targetTotal - $primaryDamage));
+                $answerDamage = (int) ($damageSummary['answer_damage'] ?? ($strike['defend_damage_total'] ?? 0));
+                $attackerTotal = (int) ($damageSummary['attacker_total_this_strike'] ?? $answerDamage);
+                $attackerExtra = (int) ($damageSummary['attacker_extra_this_strike'] ?? max(0, $attackerTotal - $answerDamage));
 
                 if (!empty($strike['blocked_by_weak'])) {
                     $resultText .= '<br><span class="wait">Удар заблокирован (защита от слабых атак)</span>';
                 } elseif (!empty($strike['defense_applied'])) {
                     $resultText .= '<br><span class="wait">Защита сработала (0 урона)</span>';
-                } elseif ($dmgTarget > 0) {
-                    $resultText .= '<br>По цели: <b>' . $dmgTarget . '</b> урона';
+                } elseif ($targetTotal > 0) {
+                    if ($targetExtra > 0) {
+                        $resultText .= '<br>Основной урон по цели: <b>' . $primaryDamage . '</b>';
+                        $resultText .= '<br>Доп. урон по цели: <b>+' . $targetExtra . '</b>';
+                        $resultText .= '<br>Итого по цели: <b>' . $targetTotal . '</b> урона';
+                    } else {
+                        $resultText .= '<br>По цели: <b>' . $targetTotal . '</b> урона';
+                    }
                 }
 
                 if (!empty($strike['defend_blocked_by_weak'])) {
                     $resultText .= '<br><span class="wait">Ответка заблокирована (защита от слабых атак)</span>';
-                } elseif ($dmgBack > 0) {
-                    $resultText .= '<br>По атакующему (ответка): <b>' . $dmgBack . '</b> урона';
+                } elseif ($attackerTotal > 0) {
+                    if ($attackerExtra > 0) {
+                        $resultText .= '<br>Ответка по атакующему: <b>' . $answerDamage . '</b>';
+                        $resultText .= '<br>Доп. урон по атакующему: <b>+' . $attackerExtra . '</b>';
+                        $resultText .= '<br>Итого по атакующему: <b>' . $attackerTotal . '</b> урона';
+                    } else {
+                        $resultText .= '<br>По атакующему (ответка): <b>' . $attackerTotal . '</b> урона';
+                    }
                 }
             }
 
@@ -1539,6 +1523,148 @@ final class InfoPanel
             . '<a class="button" href="' . $baseUrl . '&cmd=start_ack">Продолжить</a>'
             . '</div>'
             . '</div>';
+    }
+
+    private function renderInstantResolutionSummary(array $strike): string
+    {
+        if (empty($strike['instant_summary'])) {
+            return '';
+        }
+
+        $phaseLabels = [
+            'redirect' => 'REDIRECT',
+            'dice' => 'DICE',
+            'power' => 'STRENGTH',
+            'value' => 'DIRECT_DAMAGE',
+            'setter' => 'DAMAGE_CAP',
+            'wounds' => 'WOUNDS',
+        ];
+        $groups = [];
+        foreach ((array) $strike['instant_summary'] as $summary) {
+            $phase = (string) ($summary['phase'] ?? 'other');
+            $groups[$phase][] = (array) $summary;
+        }
+
+        $html = '<div class="instant-summary">'
+            . '<div class="instant-summary__title">Разрешение инстантов по фазам:</div>';
+
+        foreach ($phaseLabels as $phase => $label) {
+            if (empty($groups[$phase])) continue;
+            $html .= '<div class="instant-summary__phase">'
+                . '<div class="instant-summary__phase-title">' . htmlspecialchars($label, ENT_QUOTES) . '</div>'
+                . '<ol class="instant-summary__list">';
+            foreach ($groups[$phase] as $summary) {
+                $html .= $this->renderInstantSummaryItem($summary);
+            }
+            $html .= '</ol></div>';
+            unset($groups[$phase]);
+        }
+
+        foreach ($groups as $phase => $items) {
+            $html .= '<div class="instant-summary__phase">'
+                . '<div class="instant-summary__phase-title">' . htmlspecialchars(strtoupper($phase), ENT_QUOTES) . '</div>'
+                . '<ol class="instant-summary__list">';
+            foreach ($items as $summary) {
+                $html .= $this->renderInstantSummaryItem($summary);
+            }
+            $html .= '</ol></div>';
+        }
+
+        return $html . '</div>';
+    }
+
+    private function renderInstantSummaryItem(array $summary): string
+    {
+        $cardName = $this->instantCardName($summary);
+        $isMine = (($summary['player'] ?? null) === $this->playerKey);
+        $whoLabel = $isMine ? 'Ты' : 'Оппонент';
+        $whoClass = $isMine ? 'instant-summary__who--mine' : 'instant-summary__who--opp';
+        $cls = !empty($summary['applied']) ? '' : ' instant-summary__item--skip';
+
+        return '<li class="instant-summary__item' . $cls . '">'
+            . '<span class="instant-summary__who ' . $whoClass . '">' . $whoLabel . '</span> '
+            . '<b>' . htmlspecialchars($cardName, ENT_QUOTES) . '</b> — '
+            . htmlspecialchars($this->instantResultText($summary), ENT_QUOTES)
+            . '</li>';
+    }
+
+    private function instantResultText(array $summary): string
+    {
+        $name = (string) (($summary['instant_name'] ?? '') ?: ($summary['label'] ?? 'Инстант'));
+        if (empty($summary['applied'])) {
+            $reason = (string) ($summary['reason'] ?? '');
+            return $name . ': без эффекта' . ($reason !== '' ? ' — ' . $reason : '');
+        }
+
+        $result = (array) ($summary['result'] ?? []);
+        $type = (string) ($summary['effect_type'] ?? '');
+
+        if ($type === 'damage_on_dice') {
+            $dice = (int) ($result['dice_value'] ?? 0);
+            $damage = (int) ($result['damage_delta'] ?? 0);
+            return $name . ': кубик ' . $dice . ' -> +' . $damage . ' урона';
+        }
+
+        if ($type === 'strike_level') {
+            $before = (string) ($result['before'] ?? '');
+            $after = (string) ($result['after'] ?? '');
+            $beforeText = $before !== '' ? BattleHelper::strikeName($before) : '?';
+            $afterText = $after !== '' ? BattleHelper::strikeName($after) : '?';
+            return $name . ': сила удара ' . $beforeText . ' -> ' . $afterText;
+        }
+
+        if ($type === 'dice_choice') {
+            $attackBefore = (int) ($result['attack_before'] ?? 0);
+            $attackAfter = (int) ($result['attack_after'] ?? 0);
+            $defendBefore = (int) ($result['defend_before'] ?? 0);
+            $defendAfter = (int) ($result['defend_after'] ?? 0);
+            $parts = [];
+            if ($attackBefore !== $attackAfter) {
+                $parts[] = 'атакующий ' . $attackBefore . ' -> ' . $attackAfter;
+            }
+            if ($defendBefore !== $defendAfter) {
+                $parts[] = 'защитник ' . $defendBefore . ' -> ' . $defendAfter;
+            }
+            if (empty($parts)) {
+                $parts[] = 'кубики без изменения';
+            }
+            return $name . ': ' . implode(', ', $parts);
+        }
+
+        if ($type === 'redirect_strike') {
+            $before = $this->cardNameById((int) ($result['before_target_id'] ?? 0));
+            $after = $this->cardNameById((int) ($result['after_target_id'] ?? 0));
+            return $name . ': цель ' . $before . ' -> ' . $after;
+        }
+
+        if ($type === 'damage_cap') {
+            $cap = (int) ($result['after_cap'] ?? ($result['cap'] ?? 0));
+            return $name . ': лимит урона -> ' . $cap;
+        }
+
+        if ($type === 'redistribute_wounds') {
+            $transferred = (int) ($result['transferred'] ?? 0);
+            return $name . ': перенесено ран ' . $transferred;
+        }
+
+        return $name . ': применен';
+    }
+
+    private function instantCardName(array $summary): string
+    {
+        $ukid = (string) ($summary['card_ukid'] ?? '');
+        if ($ukid !== '') {
+            return $this->cardsInfo[$ukid]['name'] ?? $ukid;
+        }
+        return $this->cardNameById((int) ($summary['card_id'] ?? 0));
+    }
+
+    private function cardNameById(int $cardId): string
+    {
+        if ($cardId <= 0) return '?';
+        $card = $this->state->getCard($cardId);
+        if (!$card) return '?';
+        return $this->cardsInfo[$card->ukid]['name'] ?? $card->ukid;
     }
 
     private function renderStartOrder(string $side): string

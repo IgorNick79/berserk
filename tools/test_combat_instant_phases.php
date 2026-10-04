@@ -142,7 +142,45 @@ $state->battle['strike']['instant_stack'] = [
 $summary = $state->battle['strike']['instant_summary'] ?? [];
 cipAssert(($summary[0]['phase'] ?? null) === 'dice', 'Dice phase should resolve before power despite global LIFO.');
 cipAssert(($summary[1]['phase'] ?? null) === 'power', 'Power phase should resolve after dice.');
+cipAssert(($summary[0]['effect_type'] ?? '') === 'damage_on_dice', 'Dice summary should expose effect type.');
+cipAssert(($summary[0]['result']['damage_delta'] ?? null) === 0, 'Mary no-op damage summary should report zero delta.');
+cipAssert(($summary[1]['result']['before'] ?? '') === 'weak', 'Power summary should expose previous strike level.');
+cipAssert(($summary[1]['result']['after'] ?? '') === 'strong', 'Power summary should expose new strike level.');
 cipAssert(($state->battle['strike']['result']['attack'] ?? null) === 'strong', 'Power instant should still apply.');
+
+// Mary + Ost manual regression: dice damage is visible as extra target damage after the strike resolves.
+[$state, $attacker, $target, $mary, $catcher] = cipBaseState();
+$mary->owner = GameState::PLAYER_HOST;
+$ost = cipCard(['instanceId' => 5, 'owner' => GameState::PLAYER_HOST, 'row' => 2, 'col' => 3]);
+$state->addCard($ost);
+$state->battle['strike']['defend_dice'] = 1;
+$state->battle['strike']['instant_stack'] = [
+    [
+        'card_id' => $mary->instanceId,
+        'effect' => ['type' => 'damage_on_dice', 'value' => 1, 'damage' => 2],
+        'target_id' => $mary->instanceId,
+        'player' => GameState::PLAYER_HOST,
+        'label' => 'Черная метка',
+        'phase' => 'dice',
+        'sequence' => 0,
+    ],
+    [
+        'card_id' => $ost->instanceId,
+        'effect' => ['type' => 'strike_level', 'mode' => 'set', 'value' => 'strong'],
+        'target_id' => $ost->instanceId,
+        'player' => GameState::PLAYER_HOST,
+        'label' => 'Дар силы',
+        'phase' => 'power',
+        'sequence' => 1,
+    ],
+];
+(new InstantProcessor($state, new Engine()))->resolveStack();
+$summary = $state->battle['strike']['instant_summary'] ?? [];
+cipAssert(($summary[0]['result']['damage_delta'] ?? null) === 2, 'Mary should report +2 dice damage.');
+cipAssert(($summary[1]['result']['after'] ?? '') === 'strong', 'Ost should report strong strike.');
+cipAssert(($state->battle['strike']['combat_damage_summary']['primary_damage'] ?? null) === 3, 'Ost strong strike should be primary 3 damage.');
+cipAssert(($state->battle['strike']['combat_damage_summary']['target_extra_this_strike'] ?? null) === 2, 'Mary damage should be displayed as extra target damage.');
+cipAssert(($state->battle['strike']['combat_damage_summary']['target_total_this_strike'] ?? null) === 5, 'Final target total should include Mary and Ost damage.');
 
 // Same-phase LIFO: later sequence in the same phase resolves first.
 [$state, $attacker, $target, $mary, $catcher] = cipBaseState();
@@ -237,6 +275,8 @@ $state->battle['strike']['instant_stack'] = [[
 (new InstantProcessor($state, new Engine()))->resolveStack();
 cipAssert((int) $state->battle['strike']['target_id'] === $ally->instanceId, 'Valid redirect should update strike target.');
 cipAssert(($state->battle['strike']['instant_summary'][0]['applied'] ?? false) === true, 'Valid redirect should apply.');
+cipAssert(($state->battle['strike']['instant_summary'][0]['result']['before_target_id'] ?? null) === $target->instanceId, 'Redirect summary should report old target.');
+cipAssert(($state->battle['strike']['instant_summary'][0]['result']['after_target_id'] ?? null) === $ally->instanceId, 'Redirect summary should report new target.');
 
 // No adjacent target: Mage should not be listed as playable.
 $mage->closed = false;
@@ -341,6 +381,7 @@ $state->battle['strike']['instant_stack'] = [
 $summary = $state->battle['strike']['instant_summary'] ?? [];
 cipAssert(($summary[1]['label'] ?? '') === 'Отвлекающая вспышка', 'Glorm should still reach setter after redirect.');
 cipAssert(($summary[1]['applied'] ?? true) === false, 'Glorm should no-op when ordered target is no longer strike target.');
+cipAssert(($summary[1]['reason'] ?? '') !== '', 'Glorm no-op should keep a visible reason.');
 cipAssert((int) $state->battle['strike']['target_id'] === $ally->instanceId, 'Glorm no-op must not pick a new target.');
 
 // Hermit without wounds resolves without effect and closes the source.
@@ -427,6 +468,7 @@ cipAssert($result->success, $result->error ?? 'Hermit transfer should finish.');
 cipAssert(empty($state->battle['pending_wound_transfer']), 'Hermit transfer pending should close.');
 cipAssert($hermit->closed, 'Hermit source should close after transfer.');
 cipAssert(count($state->battle['strike']['instant_summary'] ?? []) === 1, 'Hermit item should be removed exactly once.');
+cipAssert(($state->battle['strike']['instant_summary'][0]['result']['transferred'] ?? null) === 1, 'Hermit summary should report transferred wounds.');
 cipAssert(empty($state->battle['strike']['instant_resolution'] ?? []), 'Hermit transfer should finish wounds resolution.');
 
 echo "Combat instant phase tests passed.\n";
