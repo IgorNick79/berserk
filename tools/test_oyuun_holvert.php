@@ -159,6 +159,14 @@ function ohApply(GameState $state, string $playerKey, Command $cmd): \Berserk\Co
     return (new Engine())->apply($state, $playerKey, $cmd);
 }
 
+function ohResolveTurnStack(GameState $state, string $firstPass = GameState::PLAYER_PLAYER, string $secondPass = GameState::PLAYER_HOST): void
+{
+    $result = ohApply($state, $firstPass, new Command('pass_turn_instant'));
+    ohAssert($result->success, $result->error ?? 'First turn instant pass should succeed.');
+    $result = ohApply($state, $secondPass, new Command('pass_turn_instant'));
+    ohAssert($result->success, $result->error ?? 'Second turn instant pass should resolve.');
+}
+
 function ohStrikeApply(GameState $state, int $attackerId, int $targetId, string $attack, string $defend = ''): void
 {
     $state->battle['strike'] = [
@@ -234,19 +242,19 @@ ohAssert(empty($state->battle['pending_instant_pick']), 'Oyuun cancel should cle
 ohAssert(!$state->getCard(31)->closed, 'Oyuun cancel should not close Oyuun.');
 ohAssert(empty($state->getCard(31)->flags['instant_uses_this_turn']['battle_frenzy']), 'Oyuun cancel should not spend uses_per_turn.');
 ohAssert($state->getCard(2)->closed && $state->getCard(2)->hp === 3, 'Oyuun cancel should not open or wound target.');
-$result = ohApply($state, GameState::PLAYER_HOST, new Command('open_turn_instants'));
-ohAssert($result->success, $result->error ?? 'Oyuun instant window should reopen after cancel.');
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 31, 'instant_key' => 'battle_frenzy']));
 ohAssert($result->success, $result->error ?? 'Oyuun should be playable again after cancel.');
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 2]));
-ohAssert($result->success, $result->error ?? 'Oyuun battle frenzy should resolve.');
-ohAssert($state->getCard(31)->closed, 'Oyuun should close as instant cost.');
+ohAssert($result->success, $result->error ?? 'Oyuun battle frenzy should be stacked.');
+ohAssert(!$state->getCard(31)->closed, 'Oyuun should not close before stack resolution.');
+ohAssert($state->getCard(2)->closed && $state->getCard(2)->hp === 3, 'Oyuun target should not change before stack resolution.');
+ohResolveTurnStack($state);
+ohAssert($state->getCard(31)->closed, 'Oyuun should close during stack resolution.');
 ohAssert(!$state->getCard(2)->closed, 'Oyuun target should open.');
 ohAssert($state->getCard(2)->hp === 2, 'Oyuun target should take 1 wound.');
 ohAssert((int) ($state->getCard(2)->flags['attacks_used_this_turn'] ?? -1) === 0, 'Oyuun open should reset target usage.');
 $html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render($state, GameState::PLAYER_HOST, 'host', ohCardsInfo(), '/battle?game=315&first=');
-ohAssert(substr_count($html, 'открыта и получает 1 рану') === 1, 'Oyuun wound message should appear once after one use.');
-unset($state->battle['pending_turn_instants']);
+ohAssert(count($state->battle['instant_result']['summary'] ?? []) === 1, 'Oyuun stack summary should contain one resolved entry after one use.');
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('strike', ['card_id' => 2, 'target_id' => 5]));
 ohAssert($result->success, $result->error ?? 'Oyuun-opened target should be able to attack without restrictions.');
 ohAssert(empty($state->battle['instant_result']), 'Oyuun instant result should be cleared by the next independent command.');
@@ -258,7 +266,8 @@ ohAssert($result->success, $result->error ?? 'Oyuun should be able to open turn 
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 32, 'instant_key' => 'battle_frenzy']));
 ohAssert($result->success, $result->error ?? 'Second Oyuun should target first Oyuun.');
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 31]));
-ohAssert($result->success, $result->error ?? 'Second Oyuun should open first Oyuun.');
+ohAssert($result->success, $result->error ?? 'Second Oyuun should stack target first Oyuun.');
+ohResolveTurnStack($state);
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('open_turn_instants'));
 ohAssert($result->success, $result->error ?? 'First Oyuun should still have second use available.');
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 31, 'instant_key' => 'battle_frenzy']));
@@ -281,10 +290,11 @@ $state = ohState(
 ohApply($state, GameState::PLAYER_HOST, new Command('open_turn_instants'));
 ohApply($state, GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 31, 'instant_key' => 'battle_frenzy']));
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 2]));
-ohAssert($result->success, $result->error ?? 'Lethal Oyuun frenzy should resolve.');
+ohAssert($result->success, $result->error ?? 'Lethal Oyuun frenzy should stack.');
+ohResolveTurnStack($state);
 ohAssert($state->getCard(2)->zone === CardInstance::ZONE_GRAVEYARD, 'Lethal Oyuun wound should send target to graveyard.');
 $html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render($state, GameState::PLAYER_HOST, 'host', ohCardsInfo(), '/battle?game=315&first=');
-ohAssert(substr_count($html, 'получает 1 рану и погибает') === 1, 'Lethal Oyuun wound message should appear once.');
+ohAssert(count($state->battle['instant_result']['summary'] ?? []) === 1, 'Lethal Oyuun stack summary should contain one resolved entry.');
 
 $state = ohState(holvert(), ohEnemy(5));
 ohStrikeApply($state, 15, 5, 'strong');
@@ -384,10 +394,11 @@ $result = ohApply($state, GameState::PLAYER_PLAYER, new Command('cancel_pending'
 ohAssert($result->success, $result->error ?? 'Passive start-phase instant target picker should be cancellable.');
 ohAssert(empty($state->battle['pending_instant_pick']), 'Passive cancel should clear instant picker.');
 ohAssert(!$state->getCard(31)->closed && $state->getCard(2)->closed && $state->getCard(2)->hp === 3, 'Passive cancel should not pay costs or apply effect.');
-$result = ohApply($state, GameState::PLAYER_PLAYER, new Command('turn_sub', ['sub_id' => 'instant_31_battle_frenzy']));
+$result = ohApply($state, GameState::PLAYER_PLAYER, new Command('play_turn_instant', ['card_id' => 31, 'instant_key' => 'battle_frenzy']));
 ohAssert($result->success, $result->error ?? 'Passive player should be able to redeclare after cancel.');
 $result = ohApply($state, GameState::PLAYER_PLAYER, new Command('choose_instant_pick', ['target_id' => 2]));
-ohAssert($result->success, $result->error ?? 'Passive start-phase instant should resolve.');
+ohAssert($result->success, $result->error ?? 'Passive start-phase instant should stack.');
+ohResolveTurnStack($state, GameState::PLAYER_HOST, GameState::PLAYER_PLAYER);
 ohAssert($state->getCard(31)->closed && !$state->getCard(2)->closed && $state->getCard(2)->hp === 2, 'Passive start-phase instant should close source, open target, and wound it.');
 
 $state = ohState(
@@ -399,7 +410,8 @@ ohAssert(($state->battle['turn_phase']['sub']['parent_type'] ?? null) === 'insta
 $result = ohApply($state, GameState::PLAYER_PLAYER, new Command('turn_sub', ['sub_id' => 'instant_31_battle_frenzy']));
 ohAssert($result->success, $result->error ?? 'Passive player should be able to declare end-phase instant.');
 $result = ohApply($state, GameState::PLAYER_PLAYER, new Command('choose_instant_pick', ['target_id' => 2]));
-ohAssert($result->success, $result->error ?? 'Passive end-phase instant should resolve.');
+ohAssert($result->success, $result->error ?? 'Passive end-phase instant should stack.');
+ohResolveTurnStack($state, GameState::PLAYER_HOST, GameState::PLAYER_PLAYER);
 ohAssert(!$state->getCard(2)->closed, 'Passive end-phase instant should open target.');
 ohAssert($state->getCard(2)->hp === 2, 'Passive end-phase instant should wound target.');
 ohAssert(empty($state->battle['turn_phase']), 'Passive end-phase instant should let the end phase complete without a hanging pending.');

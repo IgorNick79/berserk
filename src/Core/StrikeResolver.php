@@ -911,7 +911,7 @@ final class StrikeResolver
             }
         }
 
-        // Окно aftermath-инстантов (окно 3)
+        // Окно turn-инстантов после удара (окно 3)
         $attacker = $this->state->getCard($strike['attacker_id']);
         $attackerKey = $attacker ? $attacker->owner : null;
 

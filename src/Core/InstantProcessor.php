@@ -73,7 +73,6 @@ final class InstantProcessor
                     if ($used >= $limit) continue;
                 }
 
-                if ($type === 'turn' && $phase === 'before' && !empty($inst['aftermath'])) continue;
                 if ($type === 'combat' && !in_array($this->instantCombatPhase($inst), self::COMBAT_PHASE_ORDER, true)) {
                     continue;
                 }
@@ -83,12 +82,11 @@ final class InstantProcessor
                     continue;
                 }
 
-                // Активный игрок в бою не играет turn-инстанты (кроме aftermath).
+                // Активный игрок в бою не играет turn-инстанты в before/after окне.
                 if ($type === 'turn'
                     && $activeKey !== null
                     && $activeKey === $ownerKey
-                    && in_array($phase, ['before', 'after'], true)
-                    && empty($inst['aftermath'])) {
+                    && in_array($phase, ['before', 'after'], true)) {
                     continue;
                 }
 
@@ -163,7 +161,14 @@ final class InstantProcessor
         $attackerKey = $attacker->owner;
         $oppKey      = $this->state->getOpponentKey($attackerKey);
 
-        $type = ($phase === 'combat') ? 'combat' : 'turn';
+        if ($phase !== 'combat') {
+            $this->openTurnStackWindow($priorityKey, [
+                'type' => $phase === 'after' ? 'strike_after' : 'strike_before',
+            ], $phase);
+            return;
+        }
+
+        $type = 'combat';
         $attackerHas = !empty($this->getInstants($attackerKey, $phase, $type));
         $oppHas      = !empty($this->getInstants($oppKey, $phase, $type));
 
@@ -219,7 +224,6 @@ final class InstantProcessor
         $inst = null;
         foreach ($card->prop['instants'] ?? [] as $i) {
             if (($i['trigger'] ?? '') !== $wantedType) continue;
-            if ($phase === 'before' && !empty($i['aftermath'])) continue;
             if (($i['key'] ?? '') === $key) { $inst = $i; break; }
         }
         if (!$inst) return Result::error('Инстант не найден');
@@ -975,6 +979,40 @@ final class InstantProcessor
     //  TURN-ПОТОК (инстанты в main phase / фазе хода)
     // ═══════════════════════════════════════════════════════
 
+    public function openTurnStackWindow(string $priorityKey, array $continuation, string $phase = 'turn'): bool
+    {
+        $ownerHas = !empty($this->getInstants($priorityKey, $phase, 'turn'));
+        $oppKey = $this->state->getOpponentKey($priorityKey);
+        $oppHas = !empty($this->getInstants($oppKey, $phase, 'turn'));
+        if (!$ownerHas && !$oppHas) {
+            return false;
+        }
+
+        $passed = [];
+        $priority = $priorityKey;
+        if (!$ownerHas) {
+            $passed[] = $priorityKey;
+            $priority = $oppKey;
+        }
+        if (!$oppHas) {
+            $passed[] = $oppKey;
+            $priority = $priorityKey;
+        }
+
+        $this->state->battle['turn_instant_stack'] = [
+            'state' => 'ordering',
+            'phase' => $phase,
+            'priority' => $priority,
+            'passed' => $passed,
+            'stack' => [],
+            'next_sequence' => 0,
+            'continuation' => $continuation,
+            'summary' => [],
+        ];
+
+        return true;
+    }
+
     public function openTurnInstants(string $playerKey, Command $cmd): Result
     {
         if ($this->state->status !== 'battle') {
@@ -987,30 +1025,10 @@ final class InstantProcessor
             return Result::error('Идёт сражение');
         }
 
-        $instants = $this->getInstants($playerKey, 'before');
-
-        if (empty($instants)) {
+        if (empty($this->getInstants($playerKey, 'turn', 'turn'))) {
             return Result::error('Нет доступных инстантов');
         }
-
-        $list = [];
-        foreach ($instants as $i) {
-            $list[] = [
-                'card_id' => $i['card_id'],
-                'ukid'    => $i['ukid'],
-                'key'     => $i['payload']['key'] ?? '',
-                'label'   => $i['label'],
-                'target'  => $i['payload']['target'] ?? 'self',
-                'effect'  => $i['payload']['effect'] ?? [],
-                'cost'    => $i['cost'],
-                'uses_per_turn' => (int) ($i['payload']['uses_per_turn'] ?? 1),
-            ];
-        }
-
-        $this->state->battle['pending_turn_instants'] = [
-            'owner' => $playerKey,
-            'list'  => $list,
-        ];
+        $this->openTurnStackWindow($playerKey, ['type' => 'manual'], 'turn');
 
         $this->state->bumpVersion();
         return Result::ok(['turn_instants_opened']);
@@ -1018,88 +1036,70 @@ final class InstantProcessor
 
     public function playTurnInstant(string $playerKey, Command $cmd): Result
     {
-        $ti = $this->state->battle['pending_turn_instants'] ?? null;
-        if (!$ti) return Result::error('Нет окна инстантов');
-        if ($ti['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+        $stackState = $this->state->battle['turn_instant_stack'] ?? null;
+        if (!$stackState || ($stackState['state'] ?? '') !== 'ordering') {
+            return Result::error('Нет окна инстантов');
+        }
+        if (($stackState['priority'] ?? null) !== $playerKey) {
+            return Result::error('Не ваш приоритет');
+        }
 
         $cardId = (int) $cmd->get('card_id', 0);
         $key    = (string) $cmd->get('instant_key', '');
 
-        $found = null;
-        foreach ($ti['list'] as $item) {
-            if ((int) $item['card_id'] === $cardId && (string) $item['key'] === $key) {
-                $found = $item;
-                break;
-            }
-        }
-        if (!$found) {
-            return Result::error('Инстант не найден: card_id=' . $cardId . ', key=' . $key);
-        }
-
-        $card = $this->state->getCard($cardId);
-        if (!$card || $card->owner !== $playerKey) {
-            return Result::error('Карта не ваша');
-        }
-        if ($card->closed) return Result::error('Карта закрыта');
-        $limit = (int) ($found['uses_per_turn'] ?? 1);
-        $useKey = (string) ($found['key'] ?? '');
-        if ($limit > 0 && (int) ($card->flags['instant_uses_this_turn'][$useKey] ?? 0) >= $limit) {
-            return Result::error('Уже использовано в этот ход');
-        }
+        $found = $this->findAvailableTurnInstant($playerKey, $cardId, $key, (string) ($stackState['phase'] ?? 'turn'));
+        if (!$found) return Result::error('Инстант не найден: card_id=' . $cardId . ', key=' . $key);
 
         $target = $found['target'] ?? 'self';
-        $cost   = (int) ($found['cost'] ?? 0);
 
         if ($target === 'self') {
-            if ($cost > 0 && $card->coins < $cost) {
-                return Result::error('Не хватает монет');
-            }
-            if ($cost > 0) {
-                $card->coins -= $cost;
-                $this->engine->syncCoinBonus($card);
-            }
-            $card->closed = true;
-            $this->engine->applyInstantEffect($this->state, $found['effect'], $card, $card, $playerKey);
-            $this->engine->finalizeDying($this->state);
-            $this->markInstantUsed($card, $useKey);
-
-            $this->removeTurnInstant($cardId, $key);
-
+            $result = $this->pushTurnInstantEntry($playerKey, $found, $cardId);
+            if (!$result->success) return $result;
             $this->state->bumpVersion();
-            return Result::ok(['turn_instant_played']);
+            return Result::ok(['turn_instant_stacked']);
         }
 
-        // Нужен выбор цели
         $this->state->battle['pending_instant_pick'] = [
             'owner'    => $playerKey,
             'card_id'  => $cardId,
             'target'   => $target,
             'effect'   => $found['effect'],
             'label'    => $found['label'],
-            'source'   => 'turn_instants',
+            'source'   => 'turn_stack',
             'list_key' => $key,
-            'cost'     => $cost,
+            'cost'     => (int) ($found['cost'] ?? 0),
+            'payload'  => $found,
         ];
 
         $this->state->bumpVersion();
         return Result::ok(['instant_pick_opened']);
     }
 
-    public function removeTurnInstant(int $cardId, string $key): void
+    public function passTurnInstant(string $playerKey): Result
     {
-        if (empty($this->state->battle['pending_turn_instants'])) return;
-
-        $list = [];
-        foreach ($this->state->battle['pending_turn_instants']['list'] as $item) {
-            if ($item['card_id'] === $cardId && $item['key'] === $key) continue;
-            $list[] = $item;
+        $stack = $this->state->battle['turn_instant_stack'] ?? null;
+        if (!$stack || ($stack['state'] ?? '') !== 'ordering') {
+            return Result::error('Нет окна инстантов');
+        }
+        if (($stack['priority'] ?? null) !== $playerKey) {
+            return Result::error('Не ваш приоритет');
         }
 
-        if (empty($list)) {
-            unset($this->state->battle['pending_turn_instants']);
-        } else {
-            $this->state->battle['pending_turn_instants']['list'] = $list;
+        $passed = (array) ($stack['passed'] ?? []);
+        if (!in_array($playerKey, $passed, true)) {
+            $passed[] = $playerKey;
         }
+        $this->state->battle['turn_instant_stack']['passed'] = $passed;
+
+        if (count($passed) >= 2) {
+            $this->resolveTurnStack();
+            $this->state->bumpVersion();
+            return Result::ok(['turn_instant_stack_resolved']);
+        }
+
+        $this->state->battle['turn_instant_stack']['priority'] = $this->state->getOpponentKey($playerKey);
+        $this->state->bumpVersion();
+        return Result::ok(['turn_instant_priority_passed']);
     }
 
     public function chooseTurnTarget(string $playerKey, Command $cmd): Result
@@ -1126,65 +1126,216 @@ final class InstantProcessor
             return Result::error('Цель должна быть закрыта');
         }
 
-        $source = $this->state->getCard($pi['card_id']);
-        if ($source) {
-            $key = (string) ($pi['list_key'] ?? '');
-            $limit = 1;
-            foreach ($source->prop['instants'] ?? [] as $inst) {
-                if (($inst['key'] ?? '') === $key) {
-                    $limit = (int) ($inst['uses_per_turn'] ?? 1);
-                    break;
-                }
-            }
-            if ($limit > 0 && (int) ($source->flags['instant_uses_this_turn'][$key] ?? 0) >= $limit) {
-                return Result::error('Уже использовано в этот ход');
-            }
-            $cost = (int) ($pi['cost'] ?? 0);
-            if ($cost > 0 && $source->coins < $cost) {
-                return Result::error('Не хватает монет');
-            }
-            if ($cost > 0) {
-                $source->coins -= $cost;
-                $this->engine->syncCoinBonus($source);
-            }
-            $source->closed = true;
-            $this->markInstantUsed($source, $key);
+        $payload = (array) ($pi['payload'] ?? []);
+        if (empty($payload)) {
+            $payload = [
+                'card_id' => (int) $pi['card_id'],
+                'key' => (string) ($pi['list_key'] ?? ''),
+                'label' => (string) ($pi['label'] ?? 'Инстант'),
+                'target' => (string) ($pi['target'] ?? 'self'),
+                'effect' => (array) ($pi['effect'] ?? []),
+                'cost' => (int) ($pi['cost'] ?? 0),
+            ];
         }
 
-        $this->engine->applyInstantEffect($this->state, $pi['effect'], $source, $target, $playerKey);
-        $this->engine->finalizeDying($this->state);
+        $result = $this->pushTurnInstantEntry($playerKey, $payload, (int) $pi['card_id'], $target->instanceId);
+        if (!$result->success) return $result;
         unset($this->state->battle['pending_instant_pick']);
 
-        $src     = $pi['source'] ?? 'phase';
-        $listKey = $pi['list_key'] ?? null;
+        $this->state->bumpVersion();
+        return Result::ok(['turn_instant_stacked']);
+    }
 
-        if ($src === 'turn_instants') {
-            unset($this->state->battle['pending_turn_instants']);
-        } else {
-            // Убираем подзадачу из turn_phase
-            if (!empty($this->state->battle['turn_phase']['sub']['pending_id'])) {
-                $pid = $this->state->battle['turn_phase']['sub']['pending_id'];
-                unset($this->state->battle['turn_phase']['sub']['pending_id']);
+    private function findAvailableTurnInstant(string $playerKey, int $cardId, string $key, string $phase): ?array
+    {
+        foreach ($this->getInstants($playerKey, $phase, 'turn') as $inst) {
+            $payload = (array) ($inst['payload'] ?? []);
+            if ((int) $inst['card_id'] !== $cardId) continue;
+            if ((string) ($payload['key'] ?? '') !== $key) continue;
+            return [
+                'card_id' => $inst['card_id'],
+                'ukid' => $inst['ukid'],
+                'key' => $key,
+                'label' => $inst['label'],
+                'target' => $payload['target'] ?? 'self',
+                'effect' => (array) ($payload['effect'] ?? []),
+                'cost' => (int) ($payload['coins'] ?? 0),
+                'uses_per_turn' => (int) ($payload['uses_per_turn'] ?? 1),
+            ];
+        }
+        return null;
+    }
 
-                $sub = &$this->state->battle['turn_phase']['sub'];
-                foreach ($sub['remaining'] as $i => $s) {
-                    if (($s['id'] ?? '') === $pid) {
-                        array_splice($sub['remaining'], $i, 1);
-                        break;
-                    }
-                }
-                if (empty($sub['remaining'])) {
-                    unset($this->state->battle['turn_phase']['sub']);
-                }
+    public function declareTurnInstantFromTask(string $playerKey, array $subTask): Result
+    {
+        $payload = (array) ($subTask['payload'] ?? []);
+        $cardId = (int) ($subTask['card_id'] ?? 0);
+        $key = (string) ($payload['key'] ?? '');
+
+        if (empty($this->state->battle['turn_instant_stack'])) {
+            $this->openTurnStackWindow($playerKey, ['type' => 'turn_phase'], 'turn');
+        }
+
+        $found = $this->findAvailableTurnInstant($playerKey, $cardId, $key, 'turn');
+        if (!$found) return Result::error('Инстант недоступен');
+
+        if (($found['target'] ?? 'self') === 'self') {
+            return $this->pushTurnInstantEntry($playerKey, $found, $cardId);
+        }
+
+        $this->state->battle['pending_instant_pick'] = [
+            'owner'    => $playerKey,
+            'card_id'  => $cardId,
+            'target'   => $found['target'],
+            'effect'   => $found['effect'],
+            'label'    => $found['label'],
+            'source'   => 'turn_stack',
+            'list_key' => $key,
+            'cost'     => (int) ($found['cost'] ?? 0),
+            'payload'  => $found,
+        ];
+        return Result::ok(['instant_pick_opened']);
+    }
+
+    private function pushTurnInstantEntry(string $playerKey, array $inst, int $cardId, ?int $targetId = null): Result
+    {
+        $stack = $this->state->battle['turn_instant_stack'] ?? null;
+        if (!$stack || ($stack['state'] ?? '') !== 'ordering') {
+            return Result::error('Нет окна инстантов');
+        }
+        if (($stack['priority'] ?? null) !== $playerKey) {
+            return Result::error('Не ваш приоритет');
+        }
+
+        $card = $this->state->getCard($cardId);
+        if (!$card || $card->owner !== $playerKey) return Result::error('Карта не ваша');
+        if ($card->closed) return Result::error('Карта закрыта');
+        if (!empty($card->flags['in_stack'])) return Result::error('Карта уже в стеке');
+
+        $key = (string) ($inst['key'] ?? '');
+        $limit = (int) ($inst['uses_per_turn'] ?? 1);
+        if ($limit > 0 && (int) ($card->flags['instant_uses_this_turn'][$key] ?? 0) >= $limit) {
+            return Result::error('Уже использовано в этот ход');
+        }
+
+        $cost = (int) ($inst['cost'] ?? 0);
+        if ($cost > 0 && $card->coins < $cost) return Result::error('Не хватает монет');
+        if ($cost > 0) {
+            $card->coins -= $cost;
+            $this->engine->syncCoinBonus($card);
+        }
+
+        $targetId = $targetId ?? $card->instanceId;
+        $sequence = (int) ($this->state->battle['turn_instant_stack']['next_sequence'] ?? 0);
+        $this->state->battle['turn_instant_stack']['next_sequence'] = $sequence + 1;
+        $this->state->battle['turn_instant_stack']['stack'][] = [
+            'card_id' => $card->instanceId,
+            'player' => $playerKey,
+            'instant_key' => $key,
+            'label' => (string) ($inst['label'] ?? 'Инстант'),
+            'effect' => (array) ($inst['effect'] ?? []),
+            'target_id' => $targetId,
+            'sequence' => $sequence,
+            'cost' => $cost,
+        ];
+
+        $card->flags['in_stack'] = true;
+        $this->markInstantUsed($card, $key);
+        $this->state->battle['turn_instant_stack']['passed'] = [];
+        $this->state->battle['turn_instant_stack']['priority'] = $this->state->getOpponentKey($playerKey);
+
+        return Result::ok(['turn_instant_stacked']);
+    }
+
+    private function resolveTurnStack(): void
+    {
+        $stackState = &$this->state->battle['turn_instant_stack'];
+        $stackState['state'] = 'resolving';
+        $summary = [];
+        $items = array_reverse((array) ($stackState['stack'] ?? []));
+
+        foreach ($items as $item) {
+            $source = $this->state->getCard((int) ($item['card_id'] ?? 0));
+            $target = $this->state->getCard((int) ($item['target_id'] ?? 0));
+            $label = (string) ($item['label'] ?? 'Инстант');
+            $applied = false;
+            $reason = '';
+
+            if (!$source) {
+                $reason = 'источник не найден';
+            } elseif (!$target || $target->dying || $target->hp <= 0) {
+                $reason = 'цель не найдена';
+            } elseif (empty($item['effect'])) {
+                $reason = 'нет эффекта';
+            } else {
+                $this->engine->applyInstantEffect(
+                    $this->state,
+                    (array) $item['effect'],
+                    $source,
+                    $target,
+                    (string) $item['player']
+                );
+                $applied = true;
+                $source->closed = true;
             }
 
+            if ($source) {
+                unset($source->flags['in_stack']);
+            }
+            $summary[] = [
+                'label' => $label,
+                'card_ukid' => $source ? $source->ukid : '',
+                'player' => $item['player'] ?? null,
+                'applied' => $applied,
+                'reason' => $reason,
+                'sequence' => (int) ($item['sequence'] ?? 0),
+            ];
+        }
+
+        $this->engine->finalizeDying($this->state);
+        $continuation = (array) ($stackState['continuation'] ?? ['type' => 'manual']);
+        $this->state->battle['instant_result'] = ['summary' => $summary];
+        unset($this->state->battle['turn_instant_stack']);
+        $this->continueAfterTurnStack($continuation);
+    }
+
+    private function continueAfterTurnStack(array $continuation): void
+    {
+        $type = (string) ($continuation['type'] ?? 'manual');
+        if ($type === 'turn_phase') {
+            $this->completeTurnPhaseInstantSubtask();
             if (!empty($this->state->battle['turn_phase'])) {
                 (new TurnPhaseProcessor($this->state, $this->engine))->resume();
             }
+            return;
         }
+        if ($type === 'strike_before') {
+            $this->resumeAfterWindow();
+            return;
+        }
+        if ($type === 'strike_after') {
+            $this->state->battle['strike'] = null;
+            $this->engine->finalizeDying($this->state);
+            return;
+        }
+    }
 
-        $this->state->bumpVersion();
-        return Result::ok(['instant_applied']);
+    private function completeTurnPhaseInstantSubtask(): void
+    {
+        if (empty($this->state->battle['turn_phase']['sub']['pending_id'])) return;
+        $pid = $this->state->battle['turn_phase']['sub']['pending_id'];
+        unset($this->state->battle['turn_phase']['sub']['pending_id']);
+
+        $sub = &$this->state->battle['turn_phase']['sub'];
+        foreach ($sub['remaining'] as $i => $s) {
+            if (($s['id'] ?? '') === $pid) {
+                array_splice($sub['remaining'], $i, 1);
+                break;
+            }
+        }
+        if (empty($sub['remaining'])) {
+            unset($this->state->battle['turn_phase']['sub']);
+        }
     }
 
     private function markInstantUsed(CardInstance $card, string $key): void

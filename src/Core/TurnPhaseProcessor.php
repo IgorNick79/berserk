@@ -157,7 +157,9 @@ final class TurnPhaseProcessor
         $hasPending = false;
         if ($parentType === 'prophecy' && !empty($this->state->battle['pending_prophecy']))       $hasPending = true;
         if ($parentType === 'valhalla' && !empty($this->state->battle['pending_valhalla_pick']))  $hasPending = true;
-        if ($parentType === 'instants' && !empty($this->state->battle['pending_instant_pick']))   $hasPending = true;
+        if ($parentType === 'instants'
+            && (!empty($this->state->battle['pending_instant_pick'])
+                || !empty($this->state->battle['turn_instant_stack']))) $hasPending = true;
 
         if ($hasPending) {
             $this->state->battle['turn_phase']['sub']['pending_id'] = $subId;
@@ -462,7 +464,6 @@ final class TurnPhaseProcessor
         $instants = [];
         foreach ((new InstantProcessor($this->state, $this->engine))->getInstants($ownerKey, 'before', 'turn') as $inst) {
             $payload = $inst['payload'] ?? [];
-            if (!empty($payload['aftermath'])) continue;
 
             $instants[] = [
                 'id'      => 'instant_' . $inst['card_id'] . '_' . ($payload['key'] ?? ''),
@@ -583,41 +584,8 @@ final class TurnPhaseProcessor
 
             $ownerKey = $card->owner;   // ← владелец карты, не активный хода
 
-            $inst   = $subTask['payload'] ?? [];
-            $key    = (string) ($inst['key'] ?? '');
-            $target = $inst['target'] ?? 'self';
-            if (!$this->instantStillAvailable($ownerKey, $card->instanceId, $key)) return;
-
-            if ($target === 'self') {
-                $cost = (int) ($inst['coins'] ?? 0);
-                if ($cost > 0) {
-                    if ($card->coins < $cost) return;
-                    $card->coins -= $cost;
-                    $this->engine->syncCoinBonus($card);
-                }
-                $card->closed = true;
-                $this->engine->applyInstantEffect($this->state, $inst['effect'] ?? [], $card, $card, $ownerKey);
-                $this->engine->finalizeDying($this->state);
-                $this->markInstantUsed($card, $key);
-                return;
-            }
-
-            $cost = (int) ($inst['coins'] ?? 0);
-            if ($cost > 0 && $card->coins < $cost) {
-                // пропускаем, недостаточно монет
-                return;
-            }
-
-            $this->state->battle['pending_instant_pick'] = [
-                'owner'   => $ownerKey,
-                'card_id' => $card->instanceId,
-                'target'  => $target,
-                'effect'  => $inst['effect'] ?? [],
-                'label'   => $subTask['label'] ?? 'Инстант',
-                'cost'    => $cost,
-                'source'   => 'phase',
-                'list_key' => $key,
-            ];
+            (new InstantProcessor($this->state, $this->engine))
+                ->declareTurnInstantFromTask($ownerKey, $subTask);
         }
     }
 

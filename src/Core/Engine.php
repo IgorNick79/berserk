@@ -118,6 +118,7 @@ final class Engine
             'choose_combat_pick'      => $action->chooseCombatPick($playerKey, $cmd),
             'open_turn_instants'      => $action->openTurnInstants($playerKey, $cmd),
             'play_turn_instant'       => $action->playTurnInstant($playerKey, $cmd),
+            'pass_turn_instant'       => (new InstantProcessor($state, $this))->passTurnInstant($playerKey),
             'choose_close_or_damage'  => $strike->chooseCloseOrDamage($playerKey, $cmd),
             'choose_ally_modifier'    => $strike->chooseAllyModifier($playerKey, $cmd),
             'choose_row'                => $action->chooseRow($playerKey, $cmd),

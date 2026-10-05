@@ -1702,7 +1702,6 @@ final class ActionResolver
             ['pending_cell_marker_pick',        'owner'],
             ['pending_dice_choice',             'owner'],
             ['pending_combat_pick',             'owner'],
-            ['pending_turn_instants',           'owner'],
             ['pending_forced_directional_move', 'owner'],
             ['pending_row_pick',                'owner'],
             ['pending_gate_pick',               'owner'],
@@ -2886,9 +2885,9 @@ final class ActionResolver
         return (new InstantProcessor($this->state, $this->engine))->playTurnInstant($playerKey, $cmd);
     }
 
-    public function removeTurnInstant(int $cardId, string $key): void
+    public function passTurnInstant(string $playerKey): Result
     {
-        (new InstantProcessor($this->state, $this->engine))->removeTurnInstant($cardId, $key);
+        return (new InstantProcessor($this->state, $this->engine))->passTurnInstant($playerKey);
     }
 
     private function resolveDissonance(
