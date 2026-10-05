@@ -262,6 +262,7 @@ final class BattleHelper
                 || !empty($action['self'])
                 || ($type ?? '') === 'become_fly'
                 || ($type ?? '') === 'place_cell_marker'
+                || ($type ?? '') === 'mark_opponent_row'
                 || ($type ?? '') === 'jump') {
                 return $result; // цели не подсвечиваются
             }

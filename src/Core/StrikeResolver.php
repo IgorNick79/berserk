@@ -564,6 +564,12 @@ final class StrikeResolver
                 $val = min($val, (int) $strike['damage_cap']);
             }
 
+            $attackReduction = $this->engine->reduceAttackValueByCellMarkers($this->state, $attacker, $val);
+            $val = (int) $attackReduction['value'];
+            foreach ($attackReduction['events'] as $event) {
+                $this->state->battle['strike']['attack_value_reduction'][] = $event;
+            }
+
             $hitWasBlocked = false;
 
             // Защита цели

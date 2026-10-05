@@ -576,6 +576,7 @@ final class BattleScreen
                 'dive' => 'Пикирование',
                 'bomb_shot' => 'Бомба',
                 'row_spell' => 'Цветущие руны',
+                'mark_opponent_row' => 'Заклинание ряда',
             ];
 
             foreach ($c->prop['actions'] ?? [] as $a) {
@@ -667,6 +668,7 @@ final class BattleScreen
                     || ($a['type'] ?? '') === 'wound_transfer'
                     || ($a['type'] ?? '') === 'become_fly'
                     || ($a['type'] ?? '') === 'row_spell'
+                    || ($a['type'] ?? '') === 'mark_opponent_row'
                     || ($a['type'] ?? '') === 'destroy_self_and_target'
                     || !empty($a['max_targets']);
 

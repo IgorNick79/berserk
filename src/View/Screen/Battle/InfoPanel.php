@@ -968,6 +968,17 @@ final class InfoPanel
             if (!empty($strike['damage_reduction'])) {
                 $reductionHtml .= '<p class="wait">Урон снижен на ' . $strike['damage_reduction'] . '</p>';
             }
+            if (!empty($strike['attack_value_reduction'])) {
+                foreach ((array) $strike['attack_value_reduction'] as $event) {
+                    $label = htmlspecialchars((string) ($event['label'] ?? 'Способность'), ENT_QUOTES);
+                    $from = (int) ($event['from'] ?? 0);
+                    $to = (int) ($event['to'] ?? 0);
+                    if ($from > $to) {
+                        $reductionHtml .= '<p class="wait">' . $label
+                            . ': атака снижена с ' . $from . ' до ' . $to . '</p>';
+                    }
+                }
+            }
 
 
             $answerHtml = '';

@@ -47,6 +47,7 @@ final class ChoiceRegistry
                 new ForcedDirectionalMoveChoice(),
                 new ForcedStrikeChoice(),
                 new RowPickChoice(),
+                new OpponentRowMarkerChoice(),
                 new RowSpellPickChoice(),
                 new GatePickChoice(),
                 new GreedTeleportChoice(),

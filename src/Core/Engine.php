@@ -122,6 +122,7 @@ final class Engine
             'choose_close_or_damage'  => $strike->chooseCloseOrDamage($playerKey, $cmd),
             'choose_ally_modifier'    => $strike->chooseAllyModifier($playerKey, $cmd),
             'choose_row'                => $action->chooseRow($playerKey, $cmd),
+            'choose_opponent_row_marker'=> $action->chooseOpponentRowMarker($playerKey, $cmd),
             'choose_row_spell_targets'  => $action->chooseRowSpellTargets($playerKey, $cmd),
             'choose_gate'             => $action->chooseGate($playerKey, $cmd),
             'choose_greed_teleport'   => $action->chooseGreedTeleport($playerKey, $cmd),
@@ -416,6 +417,55 @@ final class Engine
         ?CardInstance $attacker = null
     ): void {
         $this->damageResolver($state)->applyDamage($target, $val, $actionType, $attacker);
+    }
+
+    public function reduceAttackValueByCellMarkers(GameState $state, CardInstance $attacker, int $value): array
+    {
+        if ($value <= 0) {
+            return ['value' => $value, 'events' => []];
+        }
+        if ($attacker->zone !== CardInstance::ZONE_FIELD || $attacker->row === null || $attacker->col === null) {
+            return ['value' => $value, 'events' => []];
+        }
+
+        $cellKey = $attacker->row . '_' . $attacker->col;
+        $current = $value;
+        $events = [];
+
+        foreach (ZoneManager::markersAt($state, $cellKey) as $marker) {
+            if (($marker['type'] ?? '') !== 'reduce_attack') continue;
+            if (!$this->attackReductionMarkerApplies($marker, $attacker)) continue;
+
+            $targetValue = max(0, (int) ($marker['value'] ?? $current));
+            if ($current <= $targetValue) continue;
+
+            $from = $current;
+            $current = $targetValue;
+            $events[] = [
+                'label' => (string) ($marker['label'] ?? 'Способность'),
+                'from'  => $from,
+                'to'    => $current,
+            ];
+        }
+
+        return ['value' => $current, 'events' => $events];
+    }
+
+    private function attackReductionMarkerApplies(array $marker, CardInstance $attacker): bool
+    {
+        $filter = (array) ($marker['filter'] ?? []);
+        $owner = (string) ($marker['owner'] ?? $marker['source'] ?? '');
+
+        if (array_key_exists('enemy', $filter)) {
+            $isEnemy = $owner !== '' && $attacker->owner !== $owner;
+            if ($isEnemy !== (bool) $filter['enemy']) return false;
+        }
+
+        if (array_key_exists('elite', $filter)) {
+            if ($attacker->elite !== (bool) $filter['elite']) return false;
+        }
+
+        return true;
     }
 
     public function forceDeath(

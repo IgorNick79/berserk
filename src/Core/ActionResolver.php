@@ -101,6 +101,10 @@ final class ActionResolver
             return $this->startRowSpell($attacker, $action, $cardId, $playerKey);
         }
 
+        if ($type === 'mark_opponent_row') {
+            return $this->startOpponentRowMarker($attacker, $action, $cardId, $playerKey, $actionKey);
+        }
+
         if ($type === 'destroy_self_and_target') {
             return $this->startDestroySelfAndTarget($attacker, $action, $cardId, $playerKey);
         }
@@ -431,6 +435,13 @@ final class ActionResolver
         $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, 'uchr');
         $val -= $reduction;
         if ($val < 0) $val = 0;
+
+        $attackReduction = $this->engine->reduceAttackValueByCellMarkers($this->state, $attacker, $val);
+        $val = (int) $attackReduction['value'];
+        foreach ($attackReduction['events'] as $event) {
+            $this->state->battle['strike']['attack_value_reduction'][] = $event;
+        }
+
         $successfulHit = $val > 0;
         $defended = CardStats::hasDefense($this->state, $target, 'uchr', $attacker);
         if ($defended) {
@@ -1164,6 +1175,12 @@ final class ActionResolver
         $val -= $reduction;
         if ($val < 0) $val = 0;
 
+        $attackReduction = $this->engine->reduceAttackValueByCellMarkers($this->state, $attacker, $val);
+        $val = (int) $attackReduction['value'];
+        foreach ($attackReduction['events'] as $event) {
+            $this->state->battle['strike']['attack_value_reduction'][] = $event;
+        }
+
         // Мира: закрыть цель, если она уже получала раны от 2+ других выстрелов/метаний
         $closeAfter = false;
         if (!empty($action['close_on_ranged_hits'])) {
@@ -1736,6 +1753,7 @@ final class ActionResolver
             ['pending_combat_pick',             'owner'],
             ['pending_forced_directional_move', 'owner'],
             ['pending_row_pick',                'owner'],
+            ['pending_opponent_row_marker',     'owner'],
             ['pending_gate_pick',               'owner'],
             ['pending_destroy_self_and_target',  'owner'],
         ];
@@ -3176,6 +3194,115 @@ final class ActionResolver
         return Result::ok(['row_pick_started']);
     }
 
+    private function startOpponentRowMarker(
+        CardInstance $attacker, array $action,
+        int $cardId, string $playerKey, string $actionKey
+    ): Result {
+        if ($attacker->closed) {
+            return Result::error('Карта закрыта');
+        }
+
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0 && $attacker->coins < $cost) {
+            return Result::error('Не хватает монет');
+        }
+
+        $rows = $this->availableOpponentMarkerRows($attacker, $action, $actionKey);
+        if (empty($rows)) {
+            return Result::error('Все ряды уже выбраны');
+        }
+
+        $this->state->battle['pending_opponent_row_marker'] = [
+            'owner'      => $playerKey,
+            'card_id'    => $cardId,
+            'action_key' => $actionKey,
+            'action'     => $action,
+            'rows'       => $rows,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['opponent_row_marker_started']);
+    }
+
+    public function chooseOpponentRowMarker(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_opponent_row_marker'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $logicalRow = (int) $cmd->get('row', 0);
+        $rows = array_map('intval', (array) ($pending['rows'] ?? []));
+        if (!in_array($logicalRow, $rows, true)) {
+            return Result::error('Неверный ряд');
+        }
+
+        $card = $this->state->getCard((int) ($pending['card_id'] ?? 0));
+        if (!$card || $card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_FIELD || $card->closed) {
+            unset($this->state->battle['pending_opponent_row_marker']);
+            return Result::error('Карта недоступна');
+        }
+
+        $action = (array) ($pending['action'] ?? []);
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0) {
+            if ($card->coins < $cost) return Result::error('Не хватает монет');
+            $card->coins -= $cost;
+            $this->engine->syncCoinBonus($card);
+        }
+
+        $actionKey = (string) ($pending['action_key'] ?? ($action['key'] ?? $action['type'] ?? 'mark_opponent_row'));
+        $physicalRow = $this->opponentPhysicalRow($playerKey, $logicalRow);
+        $markerConfig = (array) ($action['marker'] ?? []);
+        $label = (string) ($action['name'] ?? $markerConfig['label'] ?? 'Способность');
+
+        for ($col = 1; $col <= 5; $col++) {
+            ZoneManager::addMarker($this->state, "{$physicalRow}_{$col}", [
+                'type'       => (string) ($markerConfig['type'] ?? 'reduce_attack'),
+                'source'     => $playerKey,
+                'owner'      => $playerKey,
+                'source_id'  => $card->instanceId,
+                'source_ukid'=> $card->ukid,
+                'action_key' => $actionKey,
+                'label'      => $label,
+                'value'      => (int) ($markerConfig['value'] ?? 1),
+                'filter'     => (array) ($markerConfig['filter'] ?? ['enemy' => true, 'elite' => false]),
+                'timing'     => (string) ($markerConfig['timing'] ?? 'end_of_opponent_turn'),
+                'expire'     => (int) ($markerConfig['expire'] ?? 1),
+                'row'        => $physicalRow,
+                'logical_row'=> $logicalRow,
+            ]);
+        }
+
+        $card->flags['opponent_row_markers_used'][$actionKey][$logicalRow] = true;
+        $card->closed = true;
+
+        unset($this->state->battle['pending_opponent_row_marker']);
+
+        $this->state->bumpVersion();
+        return Result::ok(["opponent_row_marker:{$logicalRow}->{$physicalRow}"]);
+    }
+
+    /** @return int[] */
+    private function availableOpponentMarkerRows(CardInstance $card, array $action, string $actionKey): array
+    {
+        $rowCount = max(1, (int) ($action['row_count'] ?? 3));
+        $used = (array) ($card->flags['opponent_row_markers_used'][$actionKey] ?? []);
+        $rows = [];
+        for ($row = 1; $row <= $rowCount; $row++) {
+            if (!empty($used[$row])) continue;
+            $rows[] = $row;
+        }
+        return $rows;
+    }
+
+    private function opponentPhysicalRow(string $playerKey, int $logicalRow): int
+    {
+        return $playerKey === GameState::PLAYER_HOST
+            ? 3 + $logicalRow
+            : 4 - $logicalRow;
+    }
+
     private function startDive(
         CardInstance $attacker, array $action,
         int $cardId, int $targetId, string $playerKey
@@ -3278,6 +3405,8 @@ final class ActionResolver
 
         $value      = (int) ($action['value'] ?? 1);
         $bombDamage = (int) ($action['bomb_damage'] ?? 2);
+        $attackReduction = $this->engine->reduceAttackValueByCellMarkers($this->state, $attacker, $value);
+        $value = (int) $attackReduction['value'];
 
         $hpBefore = $target->hp;
         $this->engine->applyDamage($this->state, $target, $value, 'shot', $attacker);
@@ -3309,6 +3438,9 @@ final class ActionResolver
             ],
             'confirmed'   => [],
         ];
+        foreach ($attackReduction['events'] as $event) {
+            $this->state->battle['strike']['attack_value_reduction'][] = $event;
+        }
 
         $attacker->closed = true;
         $this->state->bumpVersion();
