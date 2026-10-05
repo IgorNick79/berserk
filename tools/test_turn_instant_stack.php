@@ -126,6 +126,7 @@ $html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render($state
 ], '/battle?game=9301');
 tisAssert(str_contains($html, 'Разрешение инстантов'), 'InfoPanel should render turn instant result title.');
 tisAssert(strpos($html, 'B-card') < strpos($html, 'C-card') && strpos($html, 'C-card') < strpos($html, 'A-card'), 'Result UI should preserve LIFO resolution order.');
+tisAssert(str_contains($html, 'instant-stack__who') && str_contains($html, 'Итог разрешения'), 'Result UI should use final instant stack presentation.');
 tisAssert(str_contains($html, 'cmd=turn_instant_result_ok'), 'Result UI should render OK command.');
 tisAckTurnResult($state);
 tisAssert(empty($state->battle['turn_instant_result']), 'Result OK should clear turn instant result.');

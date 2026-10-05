@@ -33,7 +33,7 @@ final class TurnInstantResultChoice implements ChoiceHandlerInterface
 
         return new PanelSpec(
             title: 'Разрешение инстантов',
-            text: [$this->renderSummary($state, (array) ($result['summary'] ?? []), $cardsInfo)],
+            text: [$this->renderSummary($state, (array) ($result['summary'] ?? []), $cardsInfo, $playerKey)],
             buttons: [[
                 'label' => 'OK',
                 'url' => $baseUrl . '&cmd=turn_instant_result_ok',
@@ -41,10 +41,13 @@ final class TurnInstantResultChoice implements ChoiceHandlerInterface
         );
     }
 
-    private function renderSummary(GameState $state, array $summary, array $cardsInfo): string
+    private function renderSummary(GameState $state, array $summary, array $cardsInfo, string $playerKey): string
     {
-        $html = '<ol class="instant-resolution-list">';
-        foreach ($summary as $item) {
+        $html = '<div class="instant-stack">'
+            . '<div class="instant-stack__title">Итог разрешения (сверху вниз):</div>'
+            . '<ul class="instant-stack__list">';
+
+        foreach ($summary as $i => $item) {
             $source = $state->getCard((int) ($item['card_id'] ?? 0));
             $sourceName = $source ? ($cardsInfo[$source->ukid]['name'] ?? $source->ukid) : '?';
             $label = (string) ($item['label'] ?? 'Инстант');
@@ -57,22 +60,30 @@ final class TurnInstantResultChoice implements ChoiceHandlerInterface
                 $targetName = $cardsInfo[$target->ukid]['name'] ?? $target->ukid;
             }
 
-            $line = htmlspecialchars($sourceName . ' — ' . $label, ENT_QUOTES);
+            $isTop = ($i === 0) ? ' instant-stack__item--top' : '';
+            $whoLabel = (($item['player'] ?? '') === $playerKey) ? 'Ты' : 'Оппонент';
+            $line = '<span class="instant-stack__who">' . htmlspecialchars($whoLabel, ENT_QUOTES) . '</span> '
+                . '<b>' . htmlspecialchars($sourceName, ENT_QUOTES) . '</b> — '
+                . htmlspecialchars($label, ENT_QUOTES);
             if ($targetName !== '') {
-                $line .= ': ' . htmlspecialchars($targetName, ENT_QUOTES);
+                $line .= ' <span class="instant-stack__target">→ '
+                    . htmlspecialchars($targetName, ENT_QUOTES)
+                    . '</span>';
             }
-            $line .= $applied
-                ? ' — применено'
-                : ' — без эффекта' . ($reason !== '' ? ': ' . htmlspecialchars($reason, ENT_QUOTES) : '');
+            $line .= ' <span class="muted">'
+                . ($applied
+                    ? 'применено'
+                    : 'без эффекта' . ($reason !== '' ? ': ' . htmlspecialchars($reason, ENT_QUOTES) : ''))
+                . '</span>';
 
             $details = $this->formatResultDetails((array) ($item['result'] ?? []));
             if ($details !== '') {
                 $line .= ' <span class="muted">' . htmlspecialchars($details, ENT_QUOTES) . '</span>';
             }
 
-            $html .= '<li>' . $line . '</li>';
+            $html .= '<li class="instant-stack__item' . $isTop . '">' . $line . '</li>';
         }
-        $html .= '</ol>';
+        $html .= '</ul></div>';
 
         return $html;
     }
