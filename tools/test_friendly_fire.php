@@ -148,7 +148,7 @@ friendlyAssert(!$farResult->success, 'Out-of-range friendly strike should be rej
 
 $actionProp = [
     'actions' => [
-        ['key' => 'shot', 'type' => 'shot', 'name' => 'Выстрел', 'value' => 1, 'range' => 6],
+        ['key' => 'shot', 'type' => 'shot', 'name' => 'Выстрел', 'value' => 1, 'range' => 6, 'near_shot' => true],
     ],
 ];
 $actionState = friendlyState($actionProp);
@@ -169,5 +169,68 @@ $actionResult = (new Engine())->apply($actionState, GameState::PLAYER_HOST, new 
 friendlyAssert($actionResult->success, $actionResult->error ?? 'Friendly ranged action should be accepted.');
 friendlyAssert(($actionState->battle['strike']['defend_dice'] ?? null) === 0, 'Friendly ranged action should remain one-die only.');
 friendlyAssert(($actionState->getCard(4)?->hp ?? 0) === 2, 'Friendly ranged action should apply damage to the selected ally.');
+
+$shortRangeProp = [
+    'actions' => [
+        ['key' => 'shot', 'type' => 'shot', 'name' => 'Короткий выстрел', 'value' => 1, 'range' => 2],
+    ],
+];
+$forgedRangeState = friendlyState($shortRangeProp);
+$forgedRangeTargets = BattleHelper::getAttackTargets(
+    $forgedRangeState,
+    $forgedRangeState->getCard(1),
+    'action:shot',
+    GameState::PLAYER_HOST,
+    true
+);
+friendlyAssert(!isset($forgedRangeTargets[4]), 'Out-of-range friendly action target should be absent from authoritative targets.');
+
+$forgedRangeResult = (new Engine())->apply($forgedRangeState, GameState::PLAYER_HOST, new Command('action', [
+    'card_id' => 1,
+    'action_key' => 'shot',
+    'target_id' => 4,
+]));
+friendlyAssert(!$forgedRangeResult->success, 'Forged direct action against out-of-range ally should be rejected.');
+friendlyAssert(($forgedRangeState->getCard(4)?->hp ?? 0) === 3, 'Rejected forged action should not damage ally.');
+friendlyAssert(empty($forgedRangeState->battle['strike']), 'Rejected forged action should not create strike state.');
+
+$interceptState = friendlyState($actionProp);
+$interceptState->addCard(friendlyCard(5, 'interceptor', GameState::PLAYER_PLAYER, 5, 5, [
+    'ranged_intercept' => true,
+]));
+$interceptTargets = BattleHelper::getAttackTargets(
+    $interceptState,
+    $interceptState->getCard(1),
+    'action:shot',
+    GameState::PLAYER_HOST,
+    true
+);
+friendlyAssert(isset($interceptTargets[5]), 'Ranged interceptor should become the authoritative target.');
+friendlyAssert(!isset($interceptTargets[4]), 'Friendly target excluded by interceptor rules should not be authoritative.');
+
+$interceptResult = (new Engine())->apply($interceptState, GameState::PLAYER_HOST, new Command('action', [
+    'card_id' => 1,
+    'action_key' => 'shot',
+    'target_id' => 4,
+]));
+friendlyAssert(!$interceptResult->success, 'Forged direct action should not bypass ranged interceptor targeting.');
+friendlyAssert(($interceptState->getCard(4)?->hp ?? 0) === 3, 'Rejected interceptor bypass should not damage ally.');
+
+$selfTargetState = friendlyState($actionProp);
+$selfTargetResult = (new Engine())->apply($selfTargetState, GameState::PLAYER_HOST, new Command('action', [
+    'card_id' => 1,
+    'action_key' => 'shot',
+    'target_id' => 1,
+]));
+friendlyAssert(!$selfTargetResult->success, 'Attacker should not be able to friendly-fire itself.');
+
+$enemyActionState = friendlyState($actionProp);
+$enemyActionResult = (new Engine())->apply($enemyActionState, GameState::PLAYER_HOST, new Command('action', [
+    'card_id' => 1,
+    'action_key' => 'shot',
+    'target_id' => 2,
+]));
+friendlyAssert($enemyActionResult->success, $enemyActionResult->error ?? 'Enemy ranged action should keep existing behavior.');
+friendlyAssert(($enemyActionState->getCard(2)?->hp ?? 0) === 2, 'Enemy ranged action should still damage enemy target.');
 
 echo "Friendly fire tests passed.\n";

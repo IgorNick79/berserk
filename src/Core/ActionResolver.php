@@ -202,6 +202,19 @@ final class ActionResolver
             return Result::error('Цель не на поле');
         }
 
+        if ($target->owner === $playerKey && $target->instanceId !== $attacker->instanceId) {
+            $allowedFriendlyTargets = BattleHelper::getAttackTargets(
+                $this->state,
+                $attacker,
+                'action:' . $actionKey,
+                $playerKey,
+                true
+            );
+            if (!isset($allowedFriendlyTargets[$target->instanceId])) {
+                return Result::error('Нельзя атаковать эту свою карту');
+            }
+        }
+
         // Раскрытие атакованной цели
         $isAttack = in_array($type, ['shot', 'throw', 'discharge', 'magic', 'cast', 'tap'], true)
             && $target->owner !== $playerKey;
