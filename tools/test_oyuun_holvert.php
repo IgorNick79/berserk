@@ -163,8 +163,17 @@ function ohResolveTurnStack(GameState $state, string $firstPass = GameState::PLA
 {
     $result = ohApply($state, $firstPass, new Command('pass_turn_instant'));
     ohAssert($result->success, $result->error ?? 'First turn instant pass should succeed.');
-    $result = ohApply($state, $secondPass, new Command('pass_turn_instant'));
-    ohAssert($result->success, $result->error ?? 'Second turn instant pass should resolve.');
+    if (!empty($state->battle['turn_instant_stack'])) {
+        $result = ohApply($state, $secondPass, new Command('pass_turn_instant'));
+        ohAssert($result->success, $result->error ?? 'Second turn instant pass should resolve.');
+    }
+    ohAssert(!empty($state->battle['turn_instant_result']), 'Resolved turn instant stack should show result before continuation.');
+}
+
+function ohAckTurnInstantResult(GameState $state): void
+{
+    $result = ohApply($state, GameState::PLAYER_HOST, new Command('turn_instant_result_ok'));
+    ohAssert($result->success, $result->error ?? 'Turn instant result OK should succeed.');
 }
 
 function ohStrikeApply(GameState $state, int $attackerId, int $targetId, string $attack, string $defend = ''): void
@@ -255,6 +264,7 @@ ohAssert($state->getCard(2)->hp === 2, 'Oyuun target should take 1 wound.');
 ohAssert((int) ($state->getCard(2)->flags['attacks_used_this_turn'] ?? -1) === 0, 'Oyuun open should reset target usage.');
 $html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render($state, GameState::PLAYER_HOST, 'host', ohCardsInfo(), '/battle?game=315&first=');
 ohAssert(count($state->battle['instant_result']['summary'] ?? []) === 1, 'Oyuun stack summary should contain one resolved entry after one use.');
+ohAckTurnInstantResult($state);
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('strike', ['card_id' => 2, 'target_id' => 5]));
 ohAssert($result->success, $result->error ?? 'Oyuun-opened target should be able to attack without restrictions.');
 ohAssert(empty($state->battle['instant_result']), 'Oyuun instant result should be cleared by the next independent command.');
@@ -268,6 +278,7 @@ ohAssert($result->success, $result->error ?? 'Second Oyuun should target first O
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 31]));
 ohAssert($result->success, $result->error ?? 'Second Oyuun should stack target first Oyuun.');
 ohResolveTurnStack($state);
+ohAckTurnInstantResult($state);
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('open_turn_instants'));
 ohAssert($result->success, $result->error ?? 'First Oyuun should still have second use available.');
 $result = ohApply($state, GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 31, 'instant_key' => 'battle_frenzy']));
@@ -295,6 +306,7 @@ ohResolveTurnStack($state);
 ohAssert($state->getCard(2)->zone === CardInstance::ZONE_GRAVEYARD, 'Lethal Oyuun wound should send target to graveyard.');
 $html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render($state, GameState::PLAYER_HOST, 'host', ohCardsInfo(), '/battle?game=315&first=');
 ohAssert(count($state->battle['instant_result']['summary'] ?? []) === 1, 'Lethal Oyuun stack summary should contain one resolved entry.');
+ohAckTurnInstantResult($state);
 
 $state = ohState(holvert(), ohEnemy(5));
 ohStrikeApply($state, 15, 5, 'strong');
@@ -400,6 +412,9 @@ $result = ohApply($state, GameState::PLAYER_PLAYER, new Command('choose_instant_
 ohAssert($result->success, $result->error ?? 'Passive start-phase instant should stack.');
 ohResolveTurnStack($state, GameState::PLAYER_HOST, GameState::PLAYER_PLAYER);
 ohAssert($state->getCard(31)->closed && !$state->getCard(2)->closed && $state->getCard(2)->hp === 2, 'Passive start-phase instant should close source, open target, and wound it.');
+ohAssert(!empty($state->battle['turn_phase']['sub']['pending_id']), 'Start-phase instant subtask should stay suspended until result OK.');
+ohAckTurnInstantResult($state);
+ohAssert(empty($state->battle['turn_phase']['sub']['pending_id']), 'Start-phase instant subtask should complete after result OK.');
 
 $state = ohState(
     oyuun(['owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 2]),
@@ -414,6 +429,8 @@ ohAssert($result->success, $result->error ?? 'Passive end-phase instant should s
 ohResolveTurnStack($state, GameState::PLAYER_HOST, GameState::PLAYER_PLAYER);
 ohAssert(!$state->getCard(2)->closed, 'Passive end-phase instant should open target.');
 ohAssert($state->getCard(2)->hp === 2, 'Passive end-phase instant should wound target.');
+ohAssert(!empty($state->battle['turn_phase']), 'Passive end-phase should remain suspended before result OK.');
+ohAckTurnInstantResult($state);
 ohAssert(empty($state->battle['turn_phase']), 'Passive end-phase instant should let the end phase complete without a hanging pending.');
 
 echo "Oyuun and Holvert regression tests passed.\n";

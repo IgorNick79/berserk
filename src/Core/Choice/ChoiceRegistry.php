@@ -53,6 +53,7 @@ final class ChoiceRegistry
                 new DestroySelfAndTargetChoice(),
                 // ─── Фаза хода ───────────────────────────────────────
                 new TurnAckChoice(),
+                new TurnInstantResultChoice(),
                 new TurnInstantStackChoice(),
                 new TurnSubChoice(),
                 new TurnPhaseChoice(),

@@ -49,7 +49,8 @@ final class InstantProcessor
             if ($card->owner !== $ownerKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || $card->closed) continue;
+            if ($card->dying) continue;
+            if ($type !== 'turn' && $card->closed) continue;
             if (!empty($card->flags['in_stack'])) continue;
             if (empty($card->prop['instants'])) continue;
 
@@ -109,22 +110,6 @@ final class InstantProcessor
                             break;
                         }
                         if (!$hasAny) continue;
-                    }
-
-                    // Специфично для heal_turn_wounds (Хронос)
-                    if (($inst['effect']['type'] ?? '') === 'heal_turn_wounds') {
-                        $hasWounded = false;
-                        foreach ($this->state->cards as $c) {
-                            if ($c->owner !== $ownerKey) continue;
-                            if ($c->zone !== CardInstance::ZONE_FIELD
-                                && $c->zone !== CardInstance::ZONE_FLYING) continue;
-                            if ($c->dying || $c->hp <= 0) continue;
-                            if ((int) ($c->flags['damage_taken_this_turn'] ?? 0) > 0) {
-                                $hasWounded = true;
-                                break;
-                            }
-                        }
-                        if (!$hasWounded) continue;
                     }
 
                     // Стоимость инстанта (coins)
@@ -1098,6 +1083,7 @@ final class InstantProcessor
         }
 
         $this->state->battle['turn_instant_stack']['priority'] = $this->state->getOpponentKey($playerKey);
+        $this->autoPassTurnPriorityIfNoOptions();
         $this->state->bumpVersion();
         return Result::ok(['turn_instant_priority_passed']);
     }
@@ -1212,7 +1198,6 @@ final class InstantProcessor
 
         $card = $this->state->getCard($cardId);
         if (!$card || $card->owner !== $playerKey) return Result::error('Карта не ваша');
-        if ($card->closed) return Result::error('Карта закрыта');
         if (!empty($card->flags['in_stack'])) return Result::error('Карта уже в стеке');
 
         $key = (string) ($inst['key'] ?? '');
@@ -1256,6 +1241,8 @@ final class InstantProcessor
         $stackState['state'] = 'resolving';
         $summary = [];
         $items = array_reverse((array) ($stackState['stack'] ?? []));
+        $continuation = (array) ($stackState['continuation'] ?? ['type' => 'manual']);
+        $phase = (string) ($stackState['phase'] ?? 'turn');
 
         foreach ($items as $item) {
             $source = $this->state->getCard((int) ($item['card_id'] ?? 0));
@@ -1263,6 +1250,8 @@ final class InstantProcessor
             $label = (string) ($item['label'] ?? 'Инстант');
             $applied = false;
             $reason = '';
+            $before = $target ? $this->captureTurnTargetSnapshot($target) : null;
+            $effectResult = [];
 
             if (!$source) {
                 $reason = 'источник не найден';
@@ -1278,7 +1267,12 @@ final class InstantProcessor
                     $target,
                     (string) $item['player']
                 );
-                $applied = true;
+                $after = $this->captureTurnTargetSnapshot($target);
+                $effectResult = $this->buildTurnEffectResult((array) $item['effect'], $before, $after, $target);
+                $applied = $this->turnEffectChanged($before, $after);
+                if (!$applied) {
+                    $reason = 'эффект ничего не изменил';
+                }
             }
 
             if ($source) {
@@ -1292,14 +1286,41 @@ final class InstantProcessor
                 'applied' => $applied,
                 'reason' => $reason,
                 'sequence' => (int) ($item['sequence'] ?? 0),
+                'card_id' => $source ? $source->instanceId : (int) ($item['card_id'] ?? 0),
+                'target_id' => $target ? $target->instanceId : (int) ($item['target_id'] ?? 0),
+                'effect_type' => (string) (($item['effect']['type'] ?? '') ?: ''),
+                'result' => $effectResult,
             ];
         }
 
         $this->engine->finalizeDying($this->state);
-        $continuation = (array) ($stackState['continuation'] ?? ['type' => 'manual']);
-        $this->state->battle['instant_result'] = ['summary' => $summary];
         unset($this->state->battle['turn_instant_stack']);
+        if (empty($items)) {
+            $this->continueAfterTurnStack($continuation);
+            return;
+        }
+
+        $this->state->battle['turn_instant_result'] = [
+            'summary' => $summary,
+            'continuation' => $continuation,
+            'phase' => $phase,
+        ];
+        $this->state->battle['instant_result'] = ['summary' => $summary];
+    }
+
+    public function ackTurnInstantResult(string $playerKey): Result
+    {
+        $pending = $this->state->battle['turn_instant_result'] ?? null;
+        if (!$pending) {
+            return Result::error('Нет результата инстантов');
+        }
+
+        $continuation = (array) ($pending['continuation'] ?? ['type' => 'manual']);
+        unset($this->state->battle['turn_instant_result']);
+        unset($this->state->battle['instant_result']);
         $this->continueAfterTurnStack($continuation);
+        $this->state->bumpVersion();
+        return Result::ok(['turn_instant_result_ack']);
     }
 
     private function continueAfterTurnStack(array $continuation): void
@@ -1321,6 +1342,78 @@ final class InstantProcessor
             $this->engine->finalizeDying($this->state);
             return;
         }
+    }
+
+    private function autoPassTurnPriorityIfNoOptions(): void
+    {
+        while (true) {
+            $stack = $this->state->battle['turn_instant_stack'] ?? null;
+            if (!$stack || ($stack['state'] ?? '') !== 'ordering') return;
+
+            $priority = (string) ($stack['priority'] ?? '');
+            if ($priority === '') return;
+
+            $phase = (string) ($stack['phase'] ?? 'turn');
+            if (!empty($this->getInstants($priority, $phase, 'turn'))) {
+                return;
+            }
+
+            $passed = (array) ($stack['passed'] ?? []);
+            if (!in_array($priority, $passed, true)) {
+                $passed[] = $priority;
+            }
+            $this->state->battle['turn_instant_stack']['passed'] = $passed;
+
+            if (count($passed) >= 2) {
+                $this->resolveTurnStack();
+                return;
+            }
+
+            $this->state->battle['turn_instant_stack']['priority'] = $this->state->getOpponentKey($priority);
+        }
+    }
+
+    private function captureTurnTargetSnapshot(CardInstance $target): array
+    {
+        return [
+            'hp' => $target->hp,
+            'hp_max' => $target->hpMax,
+            'closed' => $target->closed,
+            'dying' => $target->dying,
+            'zone' => $target->zone,
+            'damage_taken_this_turn' => (int) ($target->flags['damage_taken_this_turn'] ?? 0),
+            'markers' => $target->markers,
+        ];
+    }
+
+    private function turnEffectChanged(?array $before, array $after): bool
+    {
+        if ($before === null) return false;
+        return $before !== $after;
+    }
+
+    private function buildTurnEffectResult(array $effect, ?array $before, array $after, CardInstance $target): array
+    {
+        if ($before === null) return [];
+
+        $result = [
+            'target_id' => $target->instanceId,
+            'hp_before' => (int) $before['hp'],
+            'hp_after' => (int) $after['hp'],
+            'closed_before' => (bool) $before['closed'],
+            'closed_after' => (bool) $after['closed'],
+        ];
+
+        $type = (string) ($effect['type'] ?? '');
+        if ($type === 'heal_turn_wounds') {
+            $result['turn_wounds_before'] = (int) $before['damage_taken_this_turn'];
+        }
+        if ($type === 'marker') {
+            $result['markers_before'] = $before['markers'];
+            $result['markers_after'] = $after['markers'];
+        }
+
+        return $result;
     }
 
     private function completeTurnPhaseInstantSubtask(): void
