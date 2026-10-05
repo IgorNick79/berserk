@@ -273,10 +273,16 @@ final class InfoPanel
                 foreach ($strike['redirect_candidates'] ?? [] as $tid) {
                     $tc = $state->getCard($tid);
                     if (!$tc) continue;
-                    $ti = $cardsInfo[$tc->ukid] ?? null;
-                    $tn = $ti ? htmlspecialchars($ti['name'], ENT_QUOTES) : '?';
+                    $ti = $cardsInfo[$tc->ukid] ?? [];
                     $url = "{$baseUrl}&cmd=choose_redirect&target_id={$tid}";
-                    $buttons .= '<a class="button" href="' . $url . '">' . $tn . '</a> ';
+                    $buttons .= CardButton::battle(
+                        $this->tpl,
+                        $tc,
+                        $ti,
+                        $url,
+                        $playerKey,
+                        ['class' => 'redirect-target']
+                    );
                 }
                 $skipUrl = "{$baseUrl}&cmd=choose_redirect&target_id=0";
                 $buttons .= '<a class="button skip" href="' . $skipUrl . '">Не перенаправлять (' . $origName . ')</a>';
