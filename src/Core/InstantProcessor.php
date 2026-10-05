@@ -1122,6 +1122,9 @@ final class InstantProcessor
             return Result::error('Цель не на поле');
         }
         $condition = $pi['effect']['condition'] ?? null;
+        if ($condition === 'target_not_moved' && !empty($target->flags['moved_this_turn'])) {
+            return Result::error('Цель уже двигалась в этот ход');
+        }
         if ($condition === 'target_closed' && !$target->closed) {
             return Result::error('Цель должна быть закрыта');
         }
@@ -1276,10 +1279,10 @@ final class InstantProcessor
                     (string) $item['player']
                 );
                 $applied = true;
-                $source->closed = true;
             }
 
             if ($source) {
+                $source->closed = true;
                 unset($source->flags['in_stack']);
             }
             $summary[] = [

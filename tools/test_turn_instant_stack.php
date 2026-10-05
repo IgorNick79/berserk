@@ -159,6 +159,75 @@ $ip->passTurnInstant(GameState::PLAYER_PLAYER);
 $ip->passTurnInstant(GameState::PLAYER_HOST);
 tisAssert($target->hp === 3, 'Targeted instant should apply during LIFO resolution.');
 
+// No-op still consumes the declared instant: source closes and in_stack is cleared.
+$source = tisCard([
+    'instanceId' => 12,
+    'owner' => GameState::PLAYER_HOST,
+    'coins' => 1,
+    'prop' => ['instants' => [[
+        'key' => 'paid_zap',
+        'name' => 'Paid Zap',
+        'trigger' => 'turn',
+        'target' => 'enemy',
+        'coins' => 1,
+        'effect' => ['type' => 'damage', 'value' => 2],
+    ]]],
+]);
+$target = tisCard(['instanceId' => 13, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4]);
+$state = tisState($source, $target);
+$ip = new InstantProcessor($state, new Engine());
+$ip->openTurnStackWindow(GameState::PLAYER_HOST, ['type' => 'manual'], 'turn');
+tisAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 12, 'instant_key' => 'paid_zap']))->success, 'Paid targeted instant should open picker.');
+tisAssert($ip->chooseTurnTarget(GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 13]))->success, 'Paid targeted instant should stack.');
+tisAssert($source->coins === 0, 'Cost should be reserved at declaration.');
+tisAssert(!empty($source->flags['in_stack']), 'Source should be marked in_stack after declaration.');
+$target->dying = true;
+$target->hp = 0;
+$ip->passTurnInstant(GameState::PLAYER_PLAYER);
+$ip->passTurnInstant(GameState::PLAYER_HOST);
+$summary = $state->battle['instant_result']['summary'] ?? [];
+tisAssert(($summary[0]['applied'] ?? true) === false, 'Invalid target should resolve as no-op.');
+tisAssert(($summary[0]['reason'] ?? '') !== '', 'No-op should keep a reason.');
+tisAssert($source->closed, 'No-op resolved instant should still close source.');
+tisAssert(empty($source->flags['in_stack']), 'No-op resolved instant should clear in_stack.');
+tisAssert($source->coins === 0, 'No-op should not refund reserved cost.');
+tisAssert((int) ($source->flags['instant_uses_this_turn']['paid_zap'] ?? 0) === 1, 'No-op should not roll back uses_per_turn.');
+
+// target_not_moved is enforced server-side at target selection.
+$source = tisCard([
+    'instanceId' => 14,
+    'owner' => GameState::PLAYER_HOST,
+    'coins' => 1,
+    'prop' => ['instants' => [[
+        'key' => 'root_check',
+        'name' => 'Root Check',
+        'trigger' => 'turn',
+        'target' => 'ally',
+        'coins' => 1,
+        'effect' => ['type' => 'marker', 'condition' => 'target_not_moved', 'marker' => ['rooted' => true]],
+    ]]],
+]);
+$legal = tisCard(['instanceId' => 15, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 4]);
+$moved = tisCard([
+    'instanceId' => 16,
+    'owner' => GameState::PLAYER_HOST,
+    'row' => 3,
+    'col' => 5,
+    'flags' => ['moved_this_turn' => true],
+]);
+$state = tisState($source, $legal, $moved);
+$ip = new InstantProcessor($state, new Engine());
+$ip->openTurnStackWindow(GameState::PLAYER_HOST, ['type' => 'manual'], 'turn');
+tisAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 14, 'instant_key' => 'root_check']))->success, 'target_not_moved instant should open picker.');
+$invalid = $ip->chooseTurnTarget(GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 16]));
+tisAssert(!$invalid->success, 'Moved target must be rejected server-side.');
+tisAssert(count($state->battle['turn_instant_stack']['stack'] ?? []) === 0, 'Rejected moved target must not create a stack entry.');
+tisAssert($source->coins === 1, 'Rejected moved target must not spend cost.');
+tisAssert(empty($source->flags['instant_uses_this_turn']['root_check']), 'Rejected moved target must not spend use.');
+tisAssert(empty($source->flags['in_stack']), 'Rejected moved target must not mark source in_stack.');
+tisAssert($ip->chooseTurnTarget(GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 15]))->success, 'Legal unmoved target should remain selectable.');
+tisAssert(count($state->battle['turn_instant_stack']['stack'] ?? []) === 1, 'Legal target should add one stack entry.');
+
 // Lord of the Dead style start-phase interrupt: ordinary key "bone", no special handler.
 $lord = tisCard([
     'instanceId' => 20,
