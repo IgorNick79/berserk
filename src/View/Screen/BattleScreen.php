@@ -391,6 +391,22 @@ final class BattleScreen
         return Badge::forCard($card, $state);
     }
 
+    private function friendlyAttackConfirmAttribute(CardInstance $card, array $cardInfo): string
+    {
+        $name = (string) ($cardInfo['name'] ?? $card->ukid);
+        $message = 'Атаковать свою карту «' . $name . '»?';
+        $json = json_encode(
+            $message,
+            JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP
+        );
+
+        if (!is_string($json)) {
+            return '';
+        }
+
+        return ' onclick="return confirm(' . htmlspecialchars($json, ENT_QUOTES) . ')"';
+    }
+
     /**
      * @return array<int,string>
      */

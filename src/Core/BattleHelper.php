@@ -509,4 +509,11 @@ final class BattleHelper
 
         return $result;
     }
+
+    public static function isFriendlyFireTarget(CardInstance $attacker, CardInstance $target, string $mode): bool
+    {
+        return $target->owner === $attacker->owner
+            && $target->instanceId !== $attacker->instanceId
+            && CardStats::canFriendlyFireMode($attacker, $mode);
+    }
 }

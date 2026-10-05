@@ -299,6 +299,11 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
     border: 2px solid #c33;
     box-shadow: 0 0 6px rgba(200,50,50,0.6);
 }
+.field-cell.friendly-attack-target .battle-card,
+.fly-slot.friendly-attack-target .battle-card {
+    border: 2px solid #d9a21b;
+    box-shadow: 0 0 8px rgba(217,162,27,0.75);
+}
 
 .choice-form { margin: 15px 0; }
 .choice-item { display: block; padding: 10px; margin: 5px 0; background: #fff; border-radius: 6px; cursor: pointer; }
