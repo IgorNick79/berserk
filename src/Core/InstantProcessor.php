@@ -1230,7 +1230,6 @@ final class InstantProcessor
         $card->flags['in_stack'] = true;
         $this->markInstantUsed($card, $key);
         $this->state->battle['turn_instant_stack']['passed'] = [];
-        $this->state->battle['turn_instant_stack']['priority'] = $this->state->getOpponentKey($playerKey);
 
         return Result::ok(['turn_instant_stacked']);
     }

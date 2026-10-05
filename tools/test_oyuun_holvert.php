@@ -159,7 +159,7 @@ function ohApply(GameState $state, string $playerKey, Command $cmd): \Berserk\Co
     return (new Engine())->apply($state, $playerKey, $cmd);
 }
 
-function ohResolveTurnStack(GameState $state, string $firstPass = GameState::PLAYER_PLAYER, string $secondPass = GameState::PLAYER_HOST): void
+function ohResolveTurnStack(GameState $state, string $firstPass = GameState::PLAYER_HOST, string $secondPass = GameState::PLAYER_PLAYER): void
 {
     $result = ohApply($state, $firstPass, new Command('pass_turn_instant'));
     ohAssert($result->success, $result->error ?? 'First turn instant pass should succeed.');
@@ -410,7 +410,7 @@ $result = ohApply($state, GameState::PLAYER_PLAYER, new Command('play_turn_insta
 ohAssert($result->success, $result->error ?? 'Passive player should be able to redeclare after cancel.');
 $result = ohApply($state, GameState::PLAYER_PLAYER, new Command('choose_instant_pick', ['target_id' => 2]));
 ohAssert($result->success, $result->error ?? 'Passive start-phase instant should stack.');
-ohResolveTurnStack($state, GameState::PLAYER_HOST, GameState::PLAYER_PLAYER);
+ohResolveTurnStack($state, GameState::PLAYER_PLAYER, GameState::PLAYER_HOST);
 ohAssert($state->getCard(31)->closed && !$state->getCard(2)->closed && $state->getCard(2)->hp === 2, 'Passive start-phase instant should close source, open target, and wound it.');
 ohAssert(!empty($state->battle['turn_phase']['sub']['pending_id']), 'Start-phase instant subtask should stay suspended until result OK.');
 ohAckTurnInstantResult($state);
@@ -426,7 +426,7 @@ $result = ohApply($state, GameState::PLAYER_PLAYER, new Command('turn_sub', ['su
 ohAssert($result->success, $result->error ?? 'Passive player should be able to declare end-phase instant.');
 $result = ohApply($state, GameState::PLAYER_PLAYER, new Command('choose_instant_pick', ['target_id' => 2]));
 ohAssert($result->success, $result->error ?? 'Passive end-phase instant should stack.');
-ohResolveTurnStack($state, GameState::PLAYER_HOST, GameState::PLAYER_PLAYER);
+ohResolveTurnStack($state, GameState::PLAYER_PLAYER, GameState::PLAYER_HOST);
 ohAssert(!$state->getCard(2)->closed, 'Passive end-phase instant should open target.');
 ohAssert($state->getCard(2)->hp === 2, 'Passive end-phase instant should wound target.');
 ohAssert(!empty($state->battle['turn_phase']), 'Passive end-phase should remain suspended before result OK.');

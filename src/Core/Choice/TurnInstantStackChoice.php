@@ -43,9 +43,12 @@ final class TurnInstantStackChoice implements ChoiceHandlerInterface
         foreach ((array) ($stack['stack'] ?? []) as $entry) {
             $card = $state->getCard((int) ($entry['card_id'] ?? 0));
             $name = $card ? ($cardsInfo[$card->ukid]['name'] ?? $card->ukid) : '?';
+            $target = $state->getCard((int) ($entry['target_id'] ?? 0));
+            $targetName = $target ? ($cardsInfo[$target->ukid]['name'] ?? $target->ukid) : '';
             $items[] = [
                 'label' => $name . ' — ' . (string) ($entry['label'] ?? 'Инстант'),
-                'hint' => 'В стеке',
+                'player' => (string) ($entry['player'] ?? ''),
+                'target' => $targetName,
             ];
         }
 
@@ -76,7 +79,7 @@ final class TurnInstantStackChoice implements ChoiceHandlerInterface
         return new PanelSpec(
             title: 'Стек инстантов хода',
             cards: $cards,
-            text: $this->renderStackItems($items),
+            text: $this->renderStackItems($items, $playerKey),
             buttons: [[
                 'label' => 'Пас',
                 'url' => $baseUrl . '&cmd=pass_turn_instant',
@@ -85,21 +88,29 @@ final class TurnInstantStackChoice implements ChoiceHandlerInterface
         );
     }
 
-    private function renderStackItems(array $items): array
+    private function renderStackItems(array $items, string $playerKey): array
     {
         if (empty($items)) return [];
 
-        $html = '<ul class="instant-stack-items">';
-        foreach ($items as $item) {
+        $items = array_reverse($items);
+        $html = '<div class="instant-stack">'
+            . '<div class="instant-stack__title">Стек (сверху разрешается первым):</div>'
+            . '<ul class="instant-stack__list">';
+
+        foreach ($items as $i => $item) {
+            $isTop = ($i === 0) ? ' instant-stack__item--top' : '';
+            $whoLabel = (($item['player'] ?? '') === $playerKey) ? 'Ты' : 'Оппонент';
             $label = htmlspecialchars((string) ($item['label'] ?? ''), ENT_QUOTES);
-            $hint = htmlspecialchars((string) ($item['hint'] ?? ''), ENT_QUOTES);
-            $html .= '<li>' . $label;
-            if ($hint !== '') {
-                $html .= ' <span class="muted">' . $hint . '</span>';
+            $target = htmlspecialchars((string) ($item['target'] ?? ''), ENT_QUOTES);
+            $html .= '<li class="instant-stack__item' . $isTop . '">'
+                . '<span class="instant-stack__who">' . htmlspecialchars($whoLabel, ENT_QUOTES) . '</span> '
+                . $label;
+            if ($target !== '') {
+                $html .= ' <span class="instant-stack__target">→ ' . $target . '</span>';
             }
             $html .= '</li>';
         }
-        $html .= '</ul>';
+        $html .= '</ul></div>';
 
         return [$html];
     }

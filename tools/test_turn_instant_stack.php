@@ -81,7 +81,7 @@ function tisAckTurnResult(GameState $state): void
     tisAssert($result->success, $result->error ?? 'Turn instant result OK should succeed.');
 }
 
-// Basic A -> B -> C ordering resolves full global LIFO C -> B -> A.
+// Same player can declare multiple turn instants before passing; opponent can answer with multiple too.
 $a = tisCard([
     'instanceId' => 1,
     'owner' => GameState::PLAYER_HOST,
@@ -104,13 +104,18 @@ $ip = new InstantProcessor($state, new Engine());
 tisAssert($ip->openTurnStackWindow(GameState::PLAYER_HOST, ['type' => 'manual'], 'turn'), 'Manual turn stack should open.');
 tisAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 1, 'instant_key' => 'a']))->success, 'A declaration should succeed.');
 tisAssert($a->hp === 5, 'A effect must not apply at declaration.');
-tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_PLAYER, 'Priority should pass to opponent after A.');
+tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_HOST, 'Declaration should retain priority for A owner.');
+tisAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 3, 'instant_key' => 'c']))->success, 'C declaration by same player should succeed without pass.');
+tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_HOST, 'Declaration should retain priority for C owner.');
+tisAssert(array_column($state->battle['turn_instant_stack']['stack'] ?? [], 'label') === ['A', 'C'], 'Same-player declarations should keep declaration order.');
+tisAssert($ip->passTurnInstant(GameState::PLAYER_HOST)->success, 'Host pass should transfer priority.');
+tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_PLAYER, 'Pass should transfer priority to opponent with legal instants.');
 tisAssert($ip->playTurnInstant(GameState::PLAYER_PLAYER, new Command('play_turn_instant', ['card_id' => 2, 'instant_key' => 'b']))->success, 'B declaration should succeed.');
-tisAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 3, 'instant_key' => 'c']))->success, 'C declaration should succeed.');
+tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_PLAYER, 'Opponent declaration should retain opponent priority.');
 tisAssert(count($state->battle['turn_instant_stack']['stack'] ?? []) === 3, 'Three turn instants should be ordered before resolution.');
-tisAssert($ip->passTurnInstant(GameState::PLAYER_PLAYER)->success, 'First pass should succeed.');
+tisAssert($ip->passTurnInstant(GameState::PLAYER_PLAYER)->success, 'Opponent pass should auto-resolve when Host has no legal instants.');
 $summary = $state->battle['instant_result']['summary'] ?? [];
-tisAssert(array_column($summary, 'label') === ['C', 'B', 'A'], 'Turn stack should resolve full LIFO.');
+tisAssert(array_column($summary, 'label') === ['B', 'C', 'A'], 'Turn stack should resolve full LIFO.');
 tisAssert(empty($state->battle['turn_instant_stack']), 'Turn stack should close after resolution.');
 tisAssert(!empty($state->battle['turn_instant_result']), 'Resolved non-empty turn stack should wait for result OK.');
 tisAssert($a->hp === 4 && $b->hp === 4 && $c->hp === 4, 'Effects should apply during resolution.');
@@ -120,31 +125,42 @@ $html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render($state
     'card_3' => ['name' => 'C-card'],
 ], '/battle?game=9301');
 tisAssert(str_contains($html, 'Разрешение инстантов'), 'InfoPanel should render turn instant result title.');
-tisAssert(strpos($html, 'C-card') < strpos($html, 'B-card') && strpos($html, 'B-card') < strpos($html, 'A-card'), 'Result UI should preserve LIFO resolution order.');
+tisAssert(strpos($html, 'B-card') < strpos($html, 'C-card') && strpos($html, 'C-card') < strpos($html, 'A-card'), 'Result UI should preserve LIFO resolution order.');
 tisAssert(str_contains($html, 'cmd=turn_instant_result_ok'), 'Result UI should render OK command.');
 tisAckTurnResult($state);
 tisAssert(empty($state->battle['turn_instant_result']), 'Result OK should clear turn instant result.');
 
-// Pass reset: pass -> opponent instant resets pass-state.
+// New declaration after a pass resets the pass-chain when the other player can still respond.
 $a = tisCard([
-    'instanceId' => 1,
+    'instanceId' => 101,
     'owner' => GameState::PLAYER_HOST,
     'prop' => ['instants' => [tisInstant('a', 'A', ['type' => 'damage', 'value' => 1])]],
 ]);
-$c = tisCard([
-    'instanceId' => 3,
+$d = tisCard([
+    'instanceId' => 102,
     'owner' => GameState::PLAYER_HOST,
     'col' => 4,
-    'prop' => ['instants' => [tisInstant('c', 'C', ['type' => 'damage', 'value' => 1])]],
+    'prop' => ['instants' => [tisInstant('d', 'D', ['type' => 'damage', 'value' => 1])]],
 ]);
-$state = tisState($a, $c);
+$b = tisCard([
+    'instanceId' => 103,
+    'owner' => GameState::PLAYER_PLAYER,
+    'row' => 4,
+    'prop' => ['instants' => [tisInstant('b', 'B', ['type' => 'damage', 'value' => 1])]],
+]);
+$state = tisState($a, $d, $b);
 $ip = new InstantProcessor($state, new Engine());
 $ip->openTurnStackWindow(GameState::PLAYER_HOST, ['type' => 'manual'], 'turn');
-$ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 1, 'instant_key' => 'a']));
-$ip->passTurnInstant(GameState::PLAYER_PLAYER);
-tisAssert(($state->battle['turn_instant_stack']['passed'] ?? []) === [GameState::PLAYER_PLAYER], 'First pass should be stored.');
-$ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 3, 'instant_key' => 'c']));
-tisAssert(($state->battle['turn_instant_stack']['passed'] ?? []) === [], 'New instant should reset pass-state.');
+tisAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 101, 'instant_key' => 'a']))->success, 'Host A should stack.');
+tisAssert($ip->passTurnInstant(GameState::PLAYER_HOST)->success, 'Host pass should transfer priority before Player response.');
+tisAssert($ip->playTurnInstant(GameState::PLAYER_PLAYER, new Command('play_turn_instant', ['card_id' => 103, 'instant_key' => 'b']))->success, 'Player B response should stack.');
+tisAssert(($state->battle['turn_instant_stack']['passed'] ?? []) === [], 'Player declaration should reset pass-chain.');
+tisAssert($ip->passTurnInstant(GameState::PLAYER_PLAYER)->success, 'Player pass after declaration should not resolve while Host has D.');
+tisAssert(!empty($state->battle['turn_instant_stack']), 'Stack should remain open after only one new consecutive pass.');
+tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_HOST, 'Priority should return to Host after Player pass.');
+tisAssert($ip->passTurnInstant(GameState::PLAYER_HOST)->success, 'Host second consecutive pass should resolve.');
+tisAssert(array_column($state->battle['instant_result']['summary'] ?? [], 'label') === ['B', 'A'], 'Reset pass-chain scenario should resolve B then A.');
+tisAckTurnResult($state);
 
 // InfoPanel renders the turn instant stack choice through TurnInstantStackChoice::spec().
 $stacked = tisCard([
@@ -187,9 +203,11 @@ tisAssert(str_contains($html, 'task-card--instant'), 'InfoPanel should render av
 tisAssert(str_contains($html, 'cmd=play_turn_instant'), 'InfoPanel should render play command for available turn instants.');
 tisAssert(str_contains($html, 'cmd=pass_turn_instant'), 'InfoPanel should render turn instant pass command.');
 tisAssert((new InstantProcessor($state, new Engine()))->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 31, 'instant_key' => 'spark']))->success, 'UI-listed instant should be playable.');
+$html = $panel->render($state, GameState::PLAYER_HOST, 'host', $cardsInfo, '/battle?game=9301');
+tisAssert(str_contains($html, 'instant-stack__who') && str_contains($html, 'Оппонент') && str_contains($html, 'Ты'), 'Turn stack UI should distinguish owner and opponent entries.');
 $html = $panel->render($state, GameState::PLAYER_PLAYER, 'player', $cardsInfo, '/battle?game=9301');
-tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_PLAYER, 'Priority should move to the second player after ordering an instant.');
-tisAssert(str_contains($html, 'cmd=pass_turn_instant'), 'InfoPanel should render priority UI for the second player.');
+tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_HOST, 'Priority should stay with declarer after ordering an instant.');
+tisAssert(str_contains($html, 'Ожидание выбора оппонента'), 'Opponent should see waiting UI while Host keeps priority.');
 
 // uses_per_turn is reserved at declaration, so unresolved entries cannot bypass the limit.
 $limited = tisCard([
@@ -205,6 +223,32 @@ $state->battle['turn_instant_stack']['priority'] = GameState::PLAYER_HOST;
 $again = $ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 5, 'instant_key' => 'once']));
 tisAssert(!$again->success, 'Second unresolved declaration should not bypass uses_per_turn.');
 
+// Oyuun-style multiple declarations keep priority but still obey uses_per_turn.
+$oyuun = tisCard([
+    'instanceId' => 6,
+    'ukid' => 'oyuun_limit',
+    'owner' => GameState::PLAYER_HOST,
+    'prop' => ['instants' => [[
+        'key' => 'battle_frenzy',
+        'name' => 'Боевое исступление',
+        'trigger' => 'turn',
+        'target' => 'ally',
+        'uses_per_turn' => 2,
+        'effect' => ['type' => 'open', 'condition' => 'target_closed', 'damage' => 1],
+    ]]],
+]);
+$allyA = tisCard(['instanceId' => 7, 'owner' => GameState::PLAYER_HOST, 'col' => 4, 'closed' => true]);
+$allyB = tisCard(['instanceId' => 8, 'owner' => GameState::PLAYER_HOST, 'col' => 5, 'closed' => true]);
+$state = tisState($oyuun, $allyA, $allyB);
+$ip = new InstantProcessor($state, new Engine());
+$ip->openTurnStackWindow(GameState::PLAYER_HOST, ['type' => 'manual'], 'turn');
+tisAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 6, 'instant_key' => 'battle_frenzy']))->success, 'Oyuun first declaration should open picker.');
+tisAssert($ip->chooseTurnTarget(GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 7]))->success, 'Oyuun first target should stack.');
+tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_HOST, 'Oyuun should retain priority after first target.');
+$second = $ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 6, 'instant_key' => 'battle_frenzy']));
+tisAssert(!$second->success, 'Same Oyuun cannot be declared again while already in stack.');
+tisAssert((int) ($oyuun->flags['instant_uses_this_turn']['battle_frenzy'] ?? 0) === 1, 'Rejected stacked Oyuun should not spend another use.');
+
 // Targeted declaration stores target and waits for LIFO resolution.
 $source = tisCard([
     'instanceId' => 10,
@@ -219,7 +263,7 @@ tisAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_in
 tisAssert($target->hp === 5, 'Targeted instant must not apply before target selection.');
 tisAssert($ip->chooseTurnTarget(GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 11]))->success, 'Target selection should add stack entry.');
 tisAssert($target->hp === 5, 'Targeted instant must not apply at target selection.');
-$ip->passTurnInstant(GameState::PLAYER_PLAYER);
+$ip->passTurnInstant(GameState::PLAYER_HOST);
 tisAssert($target->hp === 3, 'Targeted instant should apply during LIFO resolution.');
 tisAssert(!empty($state->battle['turn_instant_result']), 'Targeted stack should show result before OK.');
 tisAckTurnResult($state);
@@ -248,7 +292,7 @@ tisAssert($source->coins === 0, 'Cost should be reserved at declaration.');
 tisAssert(!empty($source->flags['in_stack']), 'Source should be marked in_stack after declaration.');
 $target->dying = true;
 $target->hp = 0;
-$ip->passTurnInstant(GameState::PLAYER_PLAYER);
+$ip->passTurnInstant(GameState::PLAYER_HOST);
 $summary = $state->battle['instant_result']['summary'] ?? [];
 tisAssert(($summary[0]['applied'] ?? true) === false, 'Invalid target should resolve as no-op.');
 tisAssert(($summary[0]['reason'] ?? '') !== '', 'No-op should keep a reason.');
@@ -289,11 +333,11 @@ tisAssert(in_array('time_return', array_map(fn($i) => (string) (($i['payload']['
 $ip->openTurnStackWindow(GameState::PLAYER_HOST, ['type' => 'manual'], 'turn');
 tisAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 40, 'instant_key' => 'time_return']))->success, 'Chronos declaration should open target picker.');
 tisAssert($ip->chooseTurnTarget(GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 42]))->success, 'Chronos should stack even before the target has turn wounds.');
-tisAssert($ip->passTurnInstant(GameState::PLAYER_PLAYER)->success, 'Opponent pass should return priority to Host with Oyuun available.');
+tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_HOST, 'Chronos declaration should keep Host priority.');
 tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_HOST, 'Chronos should prevent premature auto-resolution while Host still has Oyuun.');
 tisAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 41, 'instant_key' => 'battle_frenzy']))->success, 'Oyuun declaration should open target picker above Chronos.');
 tisAssert($ip->chooseTurnTarget(GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 42]))->success, 'Oyuun should stack above Chronos.');
-tisAssert($ip->passTurnInstant(GameState::PLAYER_PLAYER)->success, 'Opponent pass should auto-finish when no declarations remain.');
+tisAssert($ip->passTurnInstant(GameState::PLAYER_HOST)->success, 'Host pass should auto-finish when opponent has no declarations.');
 $summary = $state->battle['instant_result']['summary'] ?? [];
 tisAssert(array_column($summary, 'label') === ['Боевое исступление', 'Возврат во времени'], 'Chronos combo should resolve in LIFO order.');
 tisAssert($ally->hp === 5, 'Chronos should heal the turn wound created by Oyuun above it.');
@@ -382,7 +426,7 @@ tisAssert($victim->hp === 5, 'Bone must not apply before stack pass resolution.'
 tisAssert(!empty($state->battle['turn_phase']['sub']['pending_id']), 'TurnPhaseProcessor should preserve selected instant subtask while stack is open.');
 $ip = new InstantProcessor($state, new Engine());
 $ip->chooseTurnTarget(GameState::PLAYER_PLAYER, new Command('choose_instant_pick', ['target_id' => 21]));
-$ip->passTurnInstant(GameState::PLAYER_HOST);
+$ip->passTurnInstant(GameState::PLAYER_PLAYER);
 tisAssert($victim->hp === 4, 'Bone should resolve through the common turn stack.');
 tisAssert(!empty($state->battle['turn_instant_result']), 'Turn phase instant should wait on result before continuation.');
 tisAssert(!empty($state->battle['turn_phase']['sub']['pending_id']), 'TurnPhaseProcessor should stay suspended until result OK.');
@@ -438,7 +482,7 @@ $state->battle['strike'] = [
 $ip = new InstantProcessor($state, new Engine());
 $ip->openTurnStackWindow(GameState::PLAYER_HOST, ['type' => 'strike_before'], 'before');
 tisAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 70, 'instant_key' => 'pulse']))->success, 'strike_before instant should stack.');
-tisAssert($ip->passTurnInstant(GameState::PLAYER_PLAYER)->success, 'strike_before pass should resolve with implicit second pass.');
+tisAssert($ip->passTurnInstant(GameState::PLAYER_HOST)->success, 'strike_before pass should resolve with implicit second pass.');
 tisAssert(($state->battle['strike']['state'] ?? '') === 'paused_before', 'strike_before continuation must not run before result OK.');
 tisAckTurnResult($state);
 tisAssert(($state->battle['strike']['state'] ?? '') === 'waiting_redirect', 'strike_before continuation should run after result OK.');
@@ -454,7 +498,7 @@ $state->battle['strike'] = ['state' => 'results'];
 $ip = new InstantProcessor($state, new Engine());
 $ip->openTurnStackWindow(GameState::PLAYER_HOST, ['type' => 'strike_after'], 'after');
 tisAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 80, 'instant_key' => 'after']))->success, 'strike_after instant should stack.');
-tisAssert($ip->passTurnInstant(GameState::PLAYER_PLAYER)->success, 'strike_after pass should resolve with implicit second pass.');
+tisAssert($ip->passTurnInstant(GameState::PLAYER_HOST)->success, 'strike_after pass should resolve with implicit second pass.');
 tisAssert(!empty($state->battle['strike']), 'strike_after continuation must not clear strike before result OK.');
 tisAckTurnResult($state);
 tisAssert(empty($state->battle['strike']), 'strike_after continuation should clear strike after result OK.');
