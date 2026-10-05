@@ -320,10 +320,21 @@ final class ActionResolver
             return Result::error('Цель не на поле');
         }
         if ($target->owner === $playerKey) {
-            return Result::error('Нельзя атаковать своих');
+            $allowedFriendlyTargets = BattleHelper::getAttackTargets(
+                $this->state,
+                $attacker,
+                'uchr',
+                $playerKey,
+                true
+            );
+            if (!isset($allowedFriendlyTargets[$target->instanceId])) {
+                return Result::error('Нельзя атаковать эту свою карту');
+            }
         }
 
-        $this->engine->revealCard($this->state, $target);
+        if ($target->owner !== $playerKey) {
+            $this->engine->revealCard($this->state, $target);
+        }
 
         $uchrAction = null;
         foreach ($attacker->prop['actions'] ?? [] as $a) {
@@ -483,6 +494,10 @@ final class ActionResolver
         string $type,
         string $playerKey
     ): ?Result {
+        $isFriendlyFire = $target->owner === $playerKey
+            && $target->instanceId !== $attacker->instanceId
+            && CardStats::canFriendlyFireAction($action);
+
         if ($type === 'tap') {
             if (!empty($action['self']) && $target->instanceId !== $attacker->instanceId) {
                 return Result::error('Только на себя');
@@ -490,7 +505,7 @@ final class ActionResolver
             if (!empty($action['own']) && $target->owner !== $playerKey) {
                 return Result::error('Только на своих');
             }
-            if (empty($action['own']) && empty($action['self']) && $target->owner === $playerKey) {
+            if (empty($action['own']) && empty($action['self']) && $target->owner === $playerKey && !$isFriendlyFire) {
                 return Result::error('Нельзя бить своих');
             }
             if (!empty($action['near'])) {
@@ -566,6 +581,10 @@ final class ActionResolver
                 }
             }
         } elseif ($type === 'magic') {
+            if ($target->owner === $playerKey && !$isFriendlyFire) {
+                return Result::error('Нельзя бить своих');
+            }
+
             // Ближний удар (как strike), либо в пределах range если указан
             $drow = abs($target->row - $attacker->row);
             $dcol = abs($target->col - $attacker->col);
@@ -623,7 +642,7 @@ final class ActionResolver
             }
 
             // shot / throw / discharge / cast
-            if ($target->owner === $playerKey) {
+            if ($target->owner === $playerKey && !$isFriendlyFire) {
                 return Result::error('Нельзя бить своих');
             }
 

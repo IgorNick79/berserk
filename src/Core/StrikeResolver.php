@@ -181,8 +181,18 @@ final class StrikeResolver
                 && $target->zone !== CardInstance::ZONE_FLYING)) {
             return Result::error('Цель не на поле');
         }
-        if ($target->owner === $playerKey) {
-            return Result::error('Нельзя атаковать своих');
+        $friendlyFire = $target->owner === $playerKey;
+        if ($friendlyFire) {
+            $allowedFriendlyTargets = BattleHelper::getAttackTargets(
+                $this->state,
+                $attacker,
+                'strike',
+                $playerKey,
+                true
+            );
+            if (!isset($allowedFriendlyTargets[$target->instanceId])) {
+                return Result::error('Нельзя атаковать эту свою карту');
+            }
         }
 
         $this->engine->revealCard($this->state, $target);
@@ -253,7 +263,7 @@ final class StrikeResolver
             }
         }
 
-        $isDirect = CardStats::isDirectStrike($this->state, $attacker, $target);
+        $isDirect = $friendlyFire || CardStats::isDirectStrike($this->state, $attacker, $target);
 
         $oppKey = $this->state->getOpponentKey($playerKey);
         $defenders = $isDirect
@@ -264,7 +274,7 @@ final class StrikeResolver
         $redirectConfig = $attacker->prop['strike']['redirect'] ?? null;
         $redirectCandidates = [];
 
-        if ($redirectConfig) {
+        if ($redirectConfig && !$friendlyFire) {
             foreach ($this->state->cards as $c) {
                 if ($c->owner !== $oppKey) continue;
                 if ($c->zone !== CardInstance::ZONE_FIELD) continue;
@@ -300,6 +310,7 @@ final class StrikeResolver
             'confirmed'   => [],
             'defenders'   => $defenders,
             'redirect_candidates' => $redirectCandidates,
+            'friendly_fire' => $friendlyFire,
         ];
 
         // Окно инстантов до броска — openWindow сам проверит, есть ли у кого
@@ -441,27 +452,28 @@ final class StrikeResolver
 
         $attackDice = Dice::roll();
 
-        $noDefendDice = $defendCard->closed 
+        $noDefendDice = !empty($strike['friendly_fire'])
+            || $defendCard->closed
             || CardStats::hasUnanswer($this->state, $attacker, $defendCard);
         $defendDice = $noDefendDice ? 0 : Dice::roll();
 
         $attackMod = CardStats::getOva($this->state, $attacker, $defendCard) 
              -   CardStats::getClumsyPenalty($attacker);
 
-        $defendMod = $defendCard->closed 
+        $defendMod = $noDefendDice
             ? 0 
             : (CardStats::getOvz($this->state, $defendCard) 
                 - CardStats::getClumsyPenalty($defendCard));
 
         $attackValue = $attackDice + $attackMod;
-        $defendValue = $defendCard->closed ? 0 : ($defendDice + $defendMod);
+        $defendValue = $noDefendDice ? 0 : ($defendDice + $defendMod);
 
         $strike['attack_dice'] = $attackDice;
         $strike['defend_dice'] = $defendDice;
         $strike['attack_mod'] = $attackMod;
         $strike['defend_mod'] = $defendMod;
         $strike['attack_clumsy'] = CardStats::getClumsyPenalty($attacker);
-        $strike['defend_clumsy'] = $defendCard->closed 
+        $strike['defend_clumsy'] = $noDefendDice
             ? 0 
             : CardStats::getClumsyPenalty($defendCard);
 

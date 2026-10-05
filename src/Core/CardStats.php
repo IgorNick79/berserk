@@ -625,6 +625,39 @@ final class CardStats
         return in_array($type, ['strike', 'uchr', 'shot', 'throw', 'discharge', 'magic', 'cast', 'tap', 'impact', 'execute', 'dissonance', 'sand_claws', 'bomb_shot'], true);
     }
 
+    public static function canFriendlyFireMode(CardInstance $card, string $mode): bool
+    {
+        if ($mode === 'strike' || $mode === 'uchr') {
+            return true;
+        }
+
+        if (!str_starts_with($mode, 'action:')) {
+            return false;
+        }
+
+        $actionKey = substr($mode, 7);
+        foreach ($card->prop['actions'] ?? [] as $action) {
+            $key = $action['key'] ?? $action['type'] ?? '';
+            if ($key === $actionKey) {
+                return self::canFriendlyFireAction($action);
+            }
+        }
+
+        return false;
+    }
+
+    public static function canFriendlyFireAction(array $action): bool
+    {
+        if (!empty($action['self'])
+            || !empty($action['own'])
+            || ($action['target'] ?? '') === 'ally_other'
+            || !empty($action['grant_modifier'])) {
+            return false;
+        }
+
+        return in_array((string) ($action['type'] ?? ''), ['shot', 'throw', 'discharge', 'magic', 'cast', 'tap'], true);
+    }
+
     private static function hasLineDeep(array $arr): bool
     {
         foreach ($arr as $key => $val) {

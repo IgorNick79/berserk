@@ -68,6 +68,7 @@ final class BattleScreen
         }
 
         // Режим и цели
+        $explicitAttackMode = isset($_GET['mode']) && (string) $_GET['mode'] !== '';
         $mode = (string) ($_GET['mode'] ?? 'strike');
         if ($mode === '') $mode = 'strike';
 
@@ -75,7 +76,7 @@ final class BattleScreen
         if ($selectedCardId > 0 && $isActive && !$strike) {
             $c = $state->getCard($selectedCardId);
             if ($c && $c->owner === $playerKey) {
-                $attackTargets = BattleHelper::getAttackTargets($state, $c, $mode, $playerKey);
+                $attackTargets = BattleHelper::getAttackTargets($state, $c, $mode, $playerKey, $explicitAttackMode);
             }
         }
 
@@ -99,11 +100,13 @@ final class BattleScreen
         $fieldHtml      = $this->buildField(
             $state, $playerKey, $rowOrder, $colOrder, $fieldMap,
             $cardsInfo, $selectedCardId, $mode, $baseUrl,
-            $moveCells, $jumpCells, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets, $pendingAutoTargets
+            $moveCells, $jumpCells, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets, $pendingAutoTargets,
+            $explicitAttackMode
         );
         $flyZonesHtml   = $this->buildFlyZones(
             $state, $playerKey, $oppKey, $flyMap, $cardsInfo,
-            $selectedCardId, $mode, $baseUrl, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets, $pendingAutoTargets
+            $selectedCardId, $mode, $baseUrl, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets, $pendingAutoTargets,
+            $explicitAttackMode
         );
         $pilesHtml = $this->buildPiles($state, $playerKey, $oppKey, $baseUrl);
         $panelHtml      = $this->buildPanel(
@@ -154,7 +157,8 @@ final class BattleScreen
         array $attackTargets,
         array $pendingDefenderTargets,
         array $pendingRedirectTargets,
-        array $pendingAutoTargets
+        array $pendingAutoTargets,
+        bool $explicitAttackMode
     ): string {
         $html = '';
         foreach ($rowOrder as $r) {
@@ -220,8 +224,13 @@ final class BattleScreen
                         } else {
                             $atkUrl = "{$baseUrl}&cmd={$mode}&card_id={$selectedCardId}&target_id={$card->instanceId}&sel={$selectedCardId}&mode={$mode}";
                         }
-                        $cellClass  .= ' attack-target';
-                        $cellContent = '<a class="card-link" href="' . $atkUrl . '">' . $cardBody . '</a>';
+                        $isFriendlyAttack = $card->owner === $playerKey
+                            && $explicitAttackMode
+                            && ($selected = $state->getCard($selectedCardId))
+                            && BattleHelper::isFriendlyFireTarget($selected, $card, $mode);
+                        $cellClass  .= $isFriendlyAttack ? ' attack-target friendly-attack-target' : ' attack-target';
+                        $confirmAttr = $isFriendlyAttack ? $this->friendlyAttackConfirmAttribute($card, $info ?? []) : '';
+                        $cellContent = '<a class="card-link" href="' . $atkUrl . '"' . $confirmAttr . '>' . $cardBody . '</a>';
                     } elseif ($card->owner === $playerKey || $card->revealed) {
                         $selUrl      = "{$baseUrl}&sel={$card->instanceId}";
                         $cellContent = '<a class="card-link" href="' . $selUrl . '">' . $cardBody . '</a>';
@@ -265,7 +274,8 @@ final class BattleScreen
         array $attackTargets,
         array $pendingDefenderTargets,
         array $pendingRedirectTargets,
-        array $pendingAutoTargets
+        array $pendingAutoTargets,
+        bool $explicitAttackMode
     ): string {
         $html = '';
         foreach (['opp', 'own'] as $who) {
@@ -319,8 +329,13 @@ final class BattleScreen
                     } else {
                         $atkUrl = "{$baseUrl}&cmd={$mode}&card_id={$selectedCardId}&target_id={$card->instanceId}&sel={$selectedCardId}&mode={$mode}";
                     }
-                    $cellClass  .= ' attack-target';
-                    $cellContent = '<a class="card-link" href="' . $atkUrl . '">' . $cardBody . '</a>';
+                    $isFriendlyAttack = $card->owner === $playerKey
+                        && $explicitAttackMode
+                        && ($selected = $state->getCard($selectedCardId))
+                        && BattleHelper::isFriendlyFireTarget($selected, $card, $mode);
+                    $cellClass  .= $isFriendlyAttack ? ' attack-target friendly-attack-target' : ' attack-target';
+                    $confirmAttr = $isFriendlyAttack ? $this->friendlyAttackConfirmAttribute($card, $info ?? []) : '';
+                    $cellContent = '<a class="card-link" href="' . $atkUrl . '"' . $confirmAttr . '>' . $cardBody . '</a>';
                 } else {
                     $selUrl      = "{$baseUrl}&sel={$card->instanceId}";
                     $cellContent = '<a class="card-link" href="' . $selUrl . '">' . $cardBody . '</a>';

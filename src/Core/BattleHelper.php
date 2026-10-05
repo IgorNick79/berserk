@@ -171,6 +171,7 @@ final class BattleHelper
         CardInstance $card,
         string $mode,
         string $playerKey,
+        bool $allowFriendlyFire = false,
     ): array {
         if ($card->closed) {
             return [];
@@ -195,6 +196,7 @@ final class BattleHelper
         }
         
         $result = [];
+        $allowFriendlyFire = $allowFriendlyFire && CardStats::canFriendlyFireMode($card, $mode);
 
         if (str_starts_with($mode, 'action:')) {
             $actionKey = substr($mode, 7);
@@ -209,6 +211,7 @@ final class BattleHelper
             if (!$action) return [];
 
             $type = $action['type'] ?? '';
+            $allowFriendlyAction = $allowFriendlyFire && CardStats::canFriendlyFireAction($action);
             if (CardStats::hasCannotAttack($card) && CardStats::isOffensiveAction($type)) {
                 return [];
             }
@@ -271,7 +274,10 @@ final class BattleHelper
                 if ($type === 'tap') {
                     if (!empty($action['self']) && $target->instanceId !== $card->instanceId) continue;
                     if (!empty($action['own']) && $target->owner !== $playerKey) continue;
-                    if (empty($action['own']) && empty($action['self']) && $target->owner === $playerKey) continue;
+                    if (empty($action['own'])
+                        && empty($action['self'])
+                        && $target->owner === $playerKey
+                        && !$allowFriendlyAction) continue;
                     if (!empty($action['near'])) {
                         $dr = abs($target->row - $card->row);
                         $dc = abs($target->col - $card->col);
@@ -295,7 +301,7 @@ final class BattleHelper
                         !empty($action['near'])
                     )) continue;
                 } elseif ($type === 'magic') {
-                    if ($target->owner === $playerKey) continue;
+                    if ($target->owner === $playerKey && !$allowFriendlyAction) continue;
 
                     $dr = abs($target->row - $card->row);
                     $dc = abs($target->col - $card->col);
@@ -385,7 +391,7 @@ final class BattleHelper
                     if (!$hasFree) continue;
                 } else {
                     // shot / throw / discharge / cast
-                    if ($target->owner === $playerKey) continue;
+                    if ($target->owner === $playerKey && !$allowFriendlyAction) continue;
 
                     $targetIsFlying = ($target->zone === CardInstance::ZONE_FLYING);
                     $attackerIsFlying = ($card->zone === CardInstance::ZONE_FLYING);
@@ -434,7 +440,8 @@ final class BattleHelper
                 if ($alreadyHitId > 0 && $target->instanceId === $alreadyHitId) continue;
                 if ($target->zone !== CardInstance::ZONE_FIELD
                     && $target->zone !== CardInstance::ZONE_FLYING) continue;
-                if ($target->owner === $playerKey) continue;
+                if ($target->instanceId === $card->instanceId) continue;
+                if ($target->owner === $playerKey && !$allowFriendlyFire) continue;
 
                 $targetIsFlying = ($target->zone === CardInstance::ZONE_FLYING);
 
@@ -476,7 +483,8 @@ final class BattleHelper
             foreach ($state->cards as $target) {
                 if ($target->zone !== CardInstance::ZONE_FIELD
                     && $target->zone !== CardInstance::ZONE_FLYING) continue;
-                if ($target->owner === $playerKey) continue;
+                if ($target->instanceId === $card->instanceId) continue;
+                if ($target->owner === $playerKey && !$allowFriendlyFire) continue;
 
                 $dr = abs($target->row - $card->row);
                 $dc = abs($target->col - $card->col);
