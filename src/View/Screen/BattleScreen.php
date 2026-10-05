@@ -81,6 +81,7 @@ final class BattleScreen
 
         $pendingDefenderTargets = $this->pendingDefenderTargets($state, $playerKey, $baseUrl);
         $pendingRedirectTargets = $this->pendingRedirectTargets($state, $playerKey, $baseUrl);
+        $pendingAutoTargets = $this->pendingAutoTargets($state, $playerKey, $baseUrl);
 
         // Порядок осей
         $rowOrder = $isHost ? [6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6];
@@ -98,11 +99,11 @@ final class BattleScreen
         $fieldHtml      = $this->buildField(
             $state, $playerKey, $rowOrder, $colOrder, $fieldMap,
             $cardsInfo, $selectedCardId, $mode, $baseUrl,
-            $moveCells, $jumpCells, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets
+            $moveCells, $jumpCells, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets, $pendingAutoTargets
         );
         $flyZonesHtml   = $this->buildFlyZones(
             $state, $playerKey, $oppKey, $flyMap, $cardsInfo,
-            $selectedCardId, $mode, $baseUrl, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets
+            $selectedCardId, $mode, $baseUrl, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets, $pendingAutoTargets
         );
         $pilesHtml = $this->buildPiles($state, $playerKey, $oppKey, $baseUrl);
         $panelHtml      = $this->buildPanel(
@@ -152,7 +153,8 @@ final class BattleScreen
         array $jumpCells,
         array $attackTargets,
         array $pendingDefenderTargets,
-        array $pendingRedirectTargets
+        array $pendingRedirectTargets,
+        array $pendingAutoTargets
     ): string {
         $html = '';
         foreach ($rowOrder as $r) {
@@ -208,6 +210,9 @@ final class BattleScreen
                     } elseif (isset($pendingRedirectTargets[$card->instanceId])) {
                         $cellClass  .= ' attack-target pending-redirect-target';
                         $cellContent = '<a class="card-link" href="' . $pendingRedirectTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                    } elseif (isset($pendingAutoTargets[$card->instanceId])) {
+                        $cellClass  .= ' attack-target pending-auto-target';
+                        $cellContent = '<a class="card-link" href="' . $pendingAutoTargets[$card->instanceId] . '">' . $cardBody . '</a>';
                     } elseif (isset($attackTargets[$card->instanceId]) && $selectedCardId > 0 && $card->instanceId !== $selectedCardId) {
                         if (str_starts_with($mode, 'action:')) {
                             $actionKey = substr($mode, 7);
@@ -259,7 +264,8 @@ final class BattleScreen
         string $baseUrl,
         array $attackTargets,
         array $pendingDefenderTargets,
-        array $pendingRedirectTargets
+        array $pendingRedirectTargets,
+        array $pendingAutoTargets
     ): string {
         $html = '';
         foreach (['opp', 'own'] as $who) {
@@ -303,6 +309,9 @@ final class BattleScreen
                 } elseif (isset($pendingRedirectTargets[$card->instanceId])) {
                     $cellClass  .= ' attack-target pending-redirect-target';
                     $cellContent = '<a class="card-link" href="' . $pendingRedirectTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                } elseif (isset($pendingAutoTargets[$card->instanceId])) {
+                    $cellClass  .= ' attack-target pending-auto-target';
+                    $cellContent = '<a class="card-link" href="' . $pendingAutoTargets[$card->instanceId] . '">' . $cardBody . '</a>';
                 } elseif (isset($attackTargets[$card->instanceId]) && $selectedCardId > 0 && $card->instanceId !== $selectedCardId) {
                     if (str_starts_with($mode, 'action:')) {
                         $actionKey = substr($mode, 7);
@@ -421,6 +430,37 @@ final class BattleScreen
             $targetId = (int) $targetId;
             if ($state->getCard($targetId)) {
                 $targets[$targetId] = $baseUrl . '&cmd=choose_redirect&target_id=' . $targetId;
+            }
+        }
+
+        return $targets;
+    }
+
+    /**
+     * @return array<int,string>
+     */
+    private function pendingAutoTargets(GameState $state, string $playerKey, string $baseUrl): array
+    {
+        $strike = $state->battle['strike'] ?? null;
+        if (!is_array($strike) || ($strike['state'] ?? null) !== 'waiting_auto_target') {
+            return [];
+        }
+
+        $pending = $strike['pending_auto'] ?? null;
+        if (!is_array($pending)) {
+            return [];
+        }
+
+        $source = $state->getCard((int) ($pending['source_id'] ?? 0));
+        if (!$source || $source->owner !== $playerKey) {
+            return [];
+        }
+
+        $targets = [];
+        foreach ($pending['candidates'] ?? [] as $targetId) {
+            $targetId = (int) $targetId;
+            if ($state->getCard($targetId)) {
+                $targets[$targetId] = $baseUrl . '&cmd=choose_auto_target&target_id=' . $targetId;
             }
         }
 

@@ -552,10 +552,16 @@ final class InfoPanel
                 foreach ($pa['candidates'] as $tid) {
                     $tc = $state->getCard($tid);
                     if (!$tc) continue;
-                    $ti = $cardsInfo[$tc->ukid] ?? null;
-                    $tn2 = $ti ? htmlspecialchars($ti['name'], ENT_QUOTES) : '?';
+                    $ti = $cardsInfo[$tc->ukid] ?? [];
                     $url = "{$baseUrl}&cmd=choose_auto_target&target_id={$tid}";
-                    $buttons .= '<a class="button" href="' . $url . '">' . $tn2 . '</a> ';
+                    $buttons .= CardButton::battle(
+                        $this->tpl,
+                        $tc,
+                        $ti,
+                        $url,
+                        $playerKey,
+                        ['class' => 'auto-target']
+                    );
                 }
                 $skipUrl = "{$baseUrl}&cmd=choose_auto_target&target_id=0";
                 $buttons .= '<a class="button skip" href="' . $skipUrl . '">Пропустить</a>';
