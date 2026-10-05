@@ -12,6 +12,8 @@ use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\InstantProcessor;
 use Berserk\Core\TurnPhaseProcessor;
+use Berserk\View\Screen\Battle\InfoPanel;
+use Berserk\View\Template;
 
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
@@ -126,6 +128,51 @@ $ip->passTurnInstant(GameState::PLAYER_PLAYER);
 tisAssert(($state->battle['turn_instant_stack']['passed'] ?? []) === [GameState::PLAYER_PLAYER], 'First pass should be stored.');
 $ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 3, 'instant_key' => 'c']));
 tisAssert(($state->battle['turn_instant_stack']['passed'] ?? []) === [], 'New instant should reset pass-state.');
+
+// InfoPanel renders the turn instant stack choice through TurnInstantStackChoice::spec().
+$stacked = tisCard([
+    'instanceId' => 30,
+    'ukid' => 'stacked',
+    'owner' => GameState::PLAYER_PLAYER,
+    'row' => 4,
+    'flags' => ['in_stack' => true],
+    'prop' => ['instants' => [tisInstant('stacked', 'Stacked', ['type' => 'damage', 'value' => 1])]],
+]);
+$available = tisCard([
+    'instanceId' => 31,
+    'ukid' => 'available',
+    'owner' => GameState::PLAYER_HOST,
+    'prop' => ['instants' => [tisInstant('spark', 'Spark', ['type' => 'damage', 'value' => 1])]],
+]);
+$state = tisState($stacked, $available);
+$state->battle['turn_instant_stack'] = [
+    'state' => 'ordering',
+    'priority' => GameState::PLAYER_HOST,
+    'phase' => 'turn',
+    'stack' => [[
+        'card_id' => 30,
+        'player' => GameState::PLAYER_PLAYER,
+        'label' => 'Stacked',
+        'effect' => ['type' => 'damage', 'value' => 1],
+    ]],
+    'passed' => [],
+    'context' => ['type' => 'manual'],
+];
+$cardsInfo = [
+    'stacked' => ['name' => 'Stacked Mage'],
+    'available' => ['name' => 'Available Mage'],
+];
+$panel = new InfoPanel(new Template(__DIR__ . '/../templates/'));
+$html = $panel->render($state, GameState::PLAYER_HOST, 'host', $cardsInfo, '/battle?game=9301');
+tisAssert(str_contains($html, 'Стек инстантов хода'), 'InfoPanel should render turn instant stack title.');
+tisAssert(str_contains($html, 'Stacked Mage'), 'InfoPanel should render existing turn instant stack entries.');
+tisAssert(str_contains($html, 'task-card--instant'), 'InfoPanel should render available turn instant cards.');
+tisAssert(str_contains($html, 'cmd=play_turn_instant'), 'InfoPanel should render play command for available turn instants.');
+tisAssert(str_contains($html, 'cmd=pass_turn_instant'), 'InfoPanel should render turn instant pass command.');
+tisAssert((new InstantProcessor($state, new Engine()))->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 31, 'instant_key' => 'spark']))->success, 'UI-listed instant should be playable.');
+$html = $panel->render($state, GameState::PLAYER_PLAYER, 'player', $cardsInfo, '/battle?game=9301');
+tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_PLAYER, 'Priority should move to the second player after ordering an instant.');
+tisAssert(str_contains($html, 'cmd=pass_turn_instant'), 'InfoPanel should render priority UI for the second player.');
 
 // uses_per_turn is reserved at declaration, so unresolved entries cannot bypass the limit.
 $limited = tisCard([

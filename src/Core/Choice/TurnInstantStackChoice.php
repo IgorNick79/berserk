@@ -52,7 +52,6 @@ final class TurnInstantStackChoice implements ChoiceHandlerInterface
         if ($priority !== $playerKey) {
             return new PanelSpec(
                 title: 'Стек инстантов хода',
-                items: $items,
                 isMine: false,
             );
         }
@@ -77,13 +76,32 @@ final class TurnInstantStackChoice implements ChoiceHandlerInterface
         return new PanelSpec(
             title: 'Стек инстантов хода',
             cards: $cards,
-            items: $items,
+            text: $this->renderStackItems($items),
             buttons: [[
                 'label' => 'Пас',
                 'url' => $baseUrl . '&cmd=pass_turn_instant',
                 'class' => 'skip',
             ]],
         );
+    }
+
+    private function renderStackItems(array $items): array
+    {
+        if (empty($items)) return [];
+
+        $html = '<ul class="instant-stack-items">';
+        foreach ($items as $item) {
+            $label = htmlspecialchars((string) ($item['label'] ?? ''), ENT_QUOTES);
+            $hint = htmlspecialchars((string) ($item['hint'] ?? ''), ENT_QUOTES);
+            $html .= '<li>' . $label;
+            if ($hint !== '') {
+                $html .= ' <span class="muted">' . $hint . '</span>';
+            }
+            $html .= '</li>';
+        }
+        $html .= '</ul>';
+
+        return [$html];
     }
 
     public function apply(GameState $state, Engine $engine, string $playerKey, Command $cmd): Result
