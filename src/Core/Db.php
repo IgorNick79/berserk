@@ -87,4 +87,9 @@ final class Db
     {
         return (int) $this->connection->insert_id;
     }
+
+    public function affectedRows(): int
+    {
+        return $this->connection->affected_rows;
+    }
 }

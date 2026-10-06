@@ -31,14 +31,6 @@ final class CellMarkerChoice implements ChoiceHandlerInterface
         string $role
     ): ?PanelSpec {
         $pm = $state->battle['pending_cell_marker_pick'] ?? null;
-
-         file_put_contents(
-            __DIR__ . '/../../../debug.log',
-            date('[Y-m-d H:i:s] ') . 'CellMarkerChoice::spec: pm=' . json_encode($pm) 
-                . ' player=' . $playerKey . "\n",
-            FILE_APPEND
-        );
-        
         if (!$pm) return null;
 
         $attCard = $state->getCard($pm['card_id']);

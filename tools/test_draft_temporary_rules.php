@@ -27,15 +27,60 @@ function stateWithDraft(array $hostPicked = [], array $playerPicked = [], string
     $state = new GameState(random_int(1000, 9999), 1, 2);
     $state->status = 'draft';
     $state->draft = [
-        'pool'   => ['a', 'b', 'c'],
+        'pool'   => array_merge(['a', 'b', 'c'], array_map(fn($i) => 'p' . $i, range(1, 60))),
         'grid'   => ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9'],
         'turn'   => $turn,
         'picked' => [
             GameState::PLAYER_HOST => $hostPicked,
             GameState::PLAYER_PLAYER => $playerPicked,
         ],
+        'history' => [],
+        'recycle' => [],
+        'grid_mode' => GameSettings::DRAFT_GRID_MODE_CONTINUOUS,
+        'consecutive_passes' => 0,
+        'round_first_player' => GameState::PLAYER_HOST,
+        'round_picks' => 0,
     ];
     return $state;
+}
+
+function minimumDraftState(
+    array $hostPicked,
+    array $playerPicked,
+    array $grid,
+    array $pool = [],
+    array $recycle = [],
+    string $turn = GameState::PLAYER_HOST,
+    string $gridMode = GameSettings::DRAFT_GRID_MODE_CONTINUOUS,
+): GameState {
+    $state = new GameState(random_int(1000, 9999), 1, 2);
+    $state->status = 'draft';
+    $state->settings = GameSettings::fromArray(['draft' => ['grid_mode' => $gridMode]]);
+    $state->draft = [
+        'pool' => $pool,
+        'grid' => array_pad(array_slice($grid, 0, 9), 9, null),
+        'turn' => $turn,
+        'picked' => [
+            GameState::PLAYER_HOST => $hostPicked,
+            GameState::PLAYER_PLAYER => $playerPicked,
+        ],
+        'history' => [],
+        'recycle' => $recycle,
+        'grid_mode' => $gridMode,
+        'consecutive_passes' => 0,
+        'round_first_player' => GameState::PLAYER_HOST,
+        'round_picks' => 0,
+    ];
+    return $state;
+}
+
+function draftCardCount(GameState $state): int
+{
+    return count($state->draft['pool'] ?? [])
+        + count(array_filter($state->draft['grid'] ?? [], fn($ukid) => $ukid !== null))
+        + count($state->draft['recycle'] ?? [])
+        + count($state->draft['picked'][GameState::PLAYER_HOST] ?? [])
+        + count($state->draft['picked'][GameState::PLAYER_PLAYER] ?? []);
 }
 
 function processorWithoutDb(GameState $state): DraftProcessor
@@ -50,23 +95,36 @@ function processorWithoutDb(GameState $state): DraftProcessor
     return $processor;
 }
 
-// Repeated pass is always allowed on the active player's turn.
+// Continuous pass chain replaces a mutually rejected grid.
 $state = stateWithDraft();
 $processor = processorWithoutDb($state);
+$initialCount = draftCardCount($state);
+$initialGrid = $state->draft['grid'];
 
 $result = $processor->pass(GameState::PLAYER_HOST);
 assertTrue($result->success, 'Host pass should succeed');
 assertTrue($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Host pass should switch turn to player');
-assertTrue(!array_key_exists('pass_blocked', $state->draft), 'Draft runtime state should not include pass_blocked');
-assertTrue(!array_key_exists('passed', $state->draft), 'Draft runtime state should not include passed');
+assertTrue($state->draft['consecutive_passes'] === 1, 'First pass should increment consecutive pass counter');
+assertTrue($state->draft['grid'] === $initialGrid, 'First pass should keep current grid');
 
 $result = $processor->pass(GameState::PLAYER_PLAYER);
 assertTrue($result->success, 'Player pass should succeed after host pass');
 assertTrue($state->draft['turn'] === GameState::PLAYER_HOST, 'Player pass should switch turn to host');
+assertTrue($state->draft['consecutive_passes'] === 0, 'Second pass should reset consecutive pass counter');
+assertTrue($state->draft['grid'] !== $initialGrid, 'Second consecutive pass should replace the whole grid');
+assertTrue(count($state->draft['recycle']) === 9, 'Second pass should recycle rejected grid cards');
+assertTrue(draftCardCount($state) === $initialCount, 'Second pass should conserve draft card count');
 
+$state = stateWithDraft();
+$processor = processorWithoutDb($state);
 $result = $processor->pass(GameState::PLAYER_HOST);
-assertTrue($result->success, 'Host should be able to pass again after consecutive passes');
-assertTrue($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Repeated pass should keep alternating turns');
+assertTrue($result->success, 'Host pass should succeed before a pick');
+$result = $processor->pickRow(GameState::PLAYER_PLAYER, 1);
+assertTrue($result->success, 'Pick after pass should succeed');
+assertTrue($state->draft['consecutive_passes'] === 0, 'Pick should reset pass chain');
+$result = $processor->pass(GameState::PLAYER_HOST);
+assertTrue($result->success, 'Pass should be available after pick reset');
+assertTrue($state->draft['consecutive_passes'] === 1, 'Pass after pick starts a fresh pass chain');
 
 // DraftProcessor exposes the same row/column selections for auto-pick logic.
 $state = stateWithDraft();
@@ -78,6 +136,101 @@ assertTrue($result->success, 'Auto selection should be applied through draft pro
 assertTrue(count($state->draft['picked'][GameState::PLAYER_HOST]) === 3, 'Auto selection should pick three cards');
 assertTrue($state->draft['grid'][0] === 'a', 'Auto selection should refill first selected position from pool');
 assertTrue($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Auto selection should switch turn');
+
+// Recycle is used after the pool is exhausted.
+$state = minimumDraftState(
+    array_fill(0, 27, 'h'),
+    array_fill(0, 30, 'p'),
+    ['g1', 'g2', 'g3', null, null, null, null, null, null],
+    [],
+    ['r1', 'r2', 'r3'],
+);
+$processor = processorWithoutDb($state);
+$result = $processor->pickRow(GameState::PLAYER_HOST, 1);
+assertTrue($result->success, 'Pick should refill from recycle when pool is empty');
+assertTrue(count(array_filter($state->draft['grid'], fn($ukid) => $ukid !== null)) === 3, 'Recycle should refill emptied positions');
+assertTrue(draftCardCount($state) === 63, 'Recycle refill should conserve cards');
+
+// Discrete grid: first pick does not refill, second pick ends the round.
+$state = minimumDraftState(
+    array_fill(0, 25, 'h'),
+    array_fill(0, 25, 'p'),
+    ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9'],
+    array_map(fn($i) => 'p' . $i, range(1, 20)),
+    [],
+    GameState::PLAYER_HOST,
+    GameSettings::DRAFT_GRID_MODE_DISCRETE,
+);
+$processor = processorWithoutDb($state);
+$initialCount = draftCardCount($state);
+$result = $processor->pass(GameState::PLAYER_HOST);
+assertTrue(!$result->success, 'Pass should be server-side rejected in discrete draft');
+$result = $processor->pickRow(GameState::PLAYER_HOST, 1);
+assertTrue($result->success, 'Discrete first row pick should succeed');
+assertTrue($state->draft['picked'][GameState::PLAYER_HOST] === array_merge(array_fill(0, 25, 'h'), ['g1', 'g2', 'g3']), 'Discrete first pick should take three cards');
+assertTrue($state->draft['grid'][0] === null && $state->draft['grid'][1] === null && $state->draft['grid'][2] === null, 'Discrete first pick should not refill selected row');
+assertTrue($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Discrete first pick should pass turn to second player');
+$result = $processor->pickSelection(GameState::PLAYER_PLAYER, ['positions' => [0, 1, 2]], 'auto_picked');
+assertTrue(!$result->success, 'Discrete empty line should be rejected');
+$result = $processor->pickCol(GameState::PLAYER_PLAYER, 1);
+assertTrue($result->success, 'Discrete second player should be able to pick a partially empty column');
+assertTrue(array_slice($state->draft['picked'][GameState::PLAYER_PLAYER], -2) === ['g4', 'g7'], 'Discrete second pick should take only remaining cards in selected line');
+assertTrue($state->draft['round_first_player'] === GameState::PLAYER_PLAYER, 'Discrete round first player should alternate');
+assertTrue($state->draft['turn'] === GameState::PLAYER_PLAYER, 'New discrete round should start with the alternated first player');
+assertTrue(count(array_filter($state->draft['grid'], fn($ukid) => $ukid !== null)) === 9, 'Discrete second pick should deal a fresh grid');
+assertTrue(draftCardCount($state) === $initialCount, 'Discrete round reset should conserve draft card count');
+
+// minimum_pool_distribution_safety: do not allow 31-29 / 32-28 traps at 60 cards.
+$state = minimumDraftState(
+    array_fill(0, 28, 'h'),
+    array_fill(0, 29, 'p'),
+    ['g1', 'g2', 'g3', null, null, null, null, null, null],
+);
+$processor = processorWithoutDb($state);
+$result = $processor->pickRow(GameState::PLAYER_HOST, 1);
+assertTrue(!$result->success, 'minimum_pool_distribution_safety: 31-29 should be rejected');
+assertTrue(count($state->draft['picked'][GameState::PLAYER_HOST]) === 28, 'Rejected 31-29 attempt should not mutate host picks');
+assertTrue(max(array_map(fn($selection) => count($selection['cards']), $processor->validSelections())) === 1, 'minimum_pool_distribution_safety: auto should only receive safe 31-29 avoidance selections');
+
+$state = minimumDraftState(
+    array_fill(0, 29, 'h'),
+    array_fill(0, 28, 'p'),
+    ['g1', 'g2', 'g3', null, null, null, null, null, null],
+);
+$processor = processorWithoutDb($state);
+$result = $processor->pickRow(GameState::PLAYER_HOST, 1);
+assertTrue(!$result->success, 'minimum_pool_distribution_safety: 32-28 should be rejected');
+assertTrue(max(array_map(fn($selection) => count($selection['cards']), $processor->validSelections())) === 1, 'minimum_pool_distribution_safety: auto should only receive safe 32-28 avoidance selections');
+
+$state = minimumDraftState(
+    array_fill(0, 29, 'h'),
+    array_fill(0, 28, 'p'),
+    ['g1', 'g2', null, null, null, null, null, null, null],
+    ['p1'],
+);
+$processor = processorWithoutDb($state);
+$result = $processor->pickRow(GameState::PLAYER_HOST, 1);
+assertTrue(!$result->success, 'minimum_pool_distribution_safety: 31-28 with one remaining card should be rejected');
+
+$state = minimumDraftState(
+    array_fill(0, 27, 'h'),
+    array_fill(0, 30, 'p'),
+    ['g1', 'g2', 'g3', null, null, null, null, null, null],
+);
+$processor = processorWithoutDb($state);
+$valid = $processor->validSelections();
+assertTrue(in_array(['positions' => [0, 1, 2], 'cards' => ['g1', 'g2', 'g3']], $valid, true), 'minimum_pool_distribution_safety: valid 30-30 should be reachable');
+
+$state = minimumDraftState(
+    array_fill(0, 30, 'h'),
+    array_fill(0, 30, 'p'),
+    ['g1', 'g2', 'g3', null, null, null, null, null, null],
+    array_map(fn($i) => 'extra' . $i, range(1, 9)),
+);
+$processor = processorWithoutDb($state);
+$result = $processor->pickRow(GameState::PLAYER_HOST, 1);
+assertTrue($result->success, 'Pool above minimum should allow taking more than 30 cards');
+assertTrue(count($state->draft['picked'][GameState::PLAYER_HOST]) === 33, 'No hard cap at 30 should be applied');
 
 // Valid auto selections are restricted to current rows/columns.
 $state = stateWithDraft();

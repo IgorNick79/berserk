@@ -45,13 +45,29 @@ final class RandomDraftProcessor
         $autoPicker = $this->autoPicker();
         $this->state->status = 'draft';
         $picked = ['host' => [], 'player' => []];
+        $guard = 0;
         while ($this->state->draft !== null) {
+            if (++$guard > 1000) {
+                return Result::error('Недостаточно допустимых вариантов для автоматического драфта');
+            }
             $turn = (string) ($this->state->draft['turn'] ?? '');
             $selection = $autoPicker->pick(
                 $processor->validSelections(),
                 $this->state->draft['picked'][$turn] ?? []
             );
-            if ($selection === null) break;
+            if ($selection === null) {
+                if (($this->state->draft['grid_mode'] ?? $this->state->settings->draftGridMode()) !== GameSettings::DRAFT_GRID_MODE_DISCRETE) {
+                    $result = $processor->pass($turn);
+                    if (!$result->success) return $result;
+                    continue;
+                }
+                if (empty($processor->validSelections())) {
+                    $result = $processor->skipNoViableSelection($turn, 'auto_forced_skip');
+                    if (!$result->success) return $result;
+                    continue;
+                }
+                break;
+            }
 
             $result = $processor->pickSelection($turn, $selection, 'auto_picked');
             if (!$result->success) return $result;
@@ -79,6 +95,9 @@ final class RandomDraftProcessor
             if ($ukid !== null) $ukids[] = (string) $ukid;
         }
         foreach ($this->state->draft['pool'] ?? [] as $ukid) {
+            if ($ukid !== null) $ukids[] = (string) $ukid;
+        }
+        foreach ($this->state->draft['recycle'] ?? [] as $ukid) {
             if ($ukid !== null) $ukids[] = (string) $ukid;
         }
 

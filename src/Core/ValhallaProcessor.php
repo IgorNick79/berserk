@@ -26,12 +26,6 @@ final class ValhallaProcessor
 
     public function collectActive(string $ownerKey): array
     {
-        file_put_contents(
-            __DIR__ . '/../../debug.log',
-            date('[Y-m-d H:i:s] ') . "collectActive owner={$ownerKey}\n",
-            FILE_APPEND
-        );
-
         $result = [];
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $ownerKey) continue;

@@ -89,13 +89,6 @@ final class InfoPanel
         $cardsInfo = $this->cardsInfo;
         $baseUrl   = $this->baseUrl;
 
-        file_put_contents(
-            __DIR__ . '/../../../../debug.log',
-            date('[Y-m-d H:i:s] ') . 'InfoPanel: pending=' 
-                . (!empty($state->battle['pending_cell_marker_pick']) ? 'Y' : 'N')
-                . "\n",
-            FILE_APPEND
-        );
         // Реестр ChoiceHandler — новая ветка
         $handler = \Berserk\Core\Choice\ChoiceRegistry::current($state);
         if ($handler !== null) {
@@ -105,12 +98,23 @@ final class InfoPanel
             }
         }
 
+        $anyDeathMessageHtml = '';
+        if (!empty($state->battle['any_death_messages'])) {
+            $anyDeathMessageHtml = '<div class="card-choice">';
+            foreach ((array) $state->battle['any_death_messages'] as $message) {
+                $text = (string) ($message['message'] ?? '');
+                if ($text === '') continue;
+                $anyDeathMessageHtml .= '<p class="bonus">' . htmlspecialchars($text, ENT_QUOTES) . '</p>';
+            }
+            $anyDeathMessageHtml .= '</div>';
+        }
+
         if (!empty($state->battle['pending_prophecy'])) {
             return $this->renderProphecy();
         }
 
         if (!empty($state->battle['strike'])) {
-            return $this->renderStrike();
+            return $anyDeathMessageHtml . $this->renderStrike();
         }
 
         if (!empty($state->battle['pending_dive'])) {
@@ -150,7 +154,7 @@ final class InfoPanel
                 $instantBtn = '<span style="flex: 1"><a class="button instant" href="' . $baseUrl . '&cmd=open_turn_instants">Сыграть инстант</a></span>';
             }
 
-            return $instantResultHtml . '<div class="info-actions">'
+            return $anyDeathMessageHtml . $instantResultHtml . '<div class="info-actions">'
                 . '<a class="button wide" href="' . $baseUrl . '&cmd=end_turn">Завершить ход</a>'
                 . $instantBtn
                 . '<a class="button wide resign" href="' . $baseUrl . '&cmd=resign" '
@@ -158,7 +162,7 @@ final class InfoPanel
                 . '</div>';
         }
 
-        return $instantResultHtml;
+        return $anyDeathMessageHtml . $instantResultHtml;
 
     }
 

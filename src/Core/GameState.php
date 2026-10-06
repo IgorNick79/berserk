@@ -25,6 +25,8 @@ final class GameState
     public ?string $mode = null;
     public GameSettings $settings;
     public ?array $draft = null;
+    public ?string $persistenceJson = null;
+    public ?int $persistenceVersion = null;
     public ?string $firstPlayer = null;
     public int $nextInstanceId = 1;
 

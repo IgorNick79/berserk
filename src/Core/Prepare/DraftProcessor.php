@@ -59,6 +59,13 @@ final class DraftProcessor
             'grid'   => $grid,
             'turn'   => 'host',
             'picked' => ['host' => [], 'player' => []],
+            'history' => [],
+            'recycle' => [],
+            'grid_mode' => $settings->draftGridMode(),
+            'consecutive_passes' => 0,
+            'round_first_player' => 'host',
+            'round_picks' => 0,
+            'initial_count' => count($pool) + count(array_filter($grid, fn($ukid) => $ukid !== null)),
         ];
 
         return Result::ok([
@@ -114,7 +121,7 @@ final class DraftProcessor
         for ($row = 0; $row < 3; $row++) {
             $positions = [$row * 3, $row * 3 + 1, $row * 3 + 2];
             $cards = $this->cardsAt($grid, $positions);
-            if (!empty($cards)) {
+            if (!empty($cards) && $this->isViableSelection((string) ($draft['turn'] ?? ''), $cards, $positions)) {
                 $selections[] = ['positions' => $positions, 'cards' => $cards];
             }
         }
@@ -122,7 +129,7 @@ final class DraftProcessor
         for ($col = 0; $col < 3; $col++) {
             $positions = [$col, $col + 3, $col + 6];
             $cards = $this->cardsAt($grid, $positions);
-            if (!empty($cards)) {
+            if (!empty($cards) && $this->isViableSelection((string) ($draft['turn'] ?? ''), $cards, $positions)) {
                 $selections[] = ['positions' => $positions, 'cards' => $cards];
             }
         }
@@ -135,29 +142,51 @@ final class DraftProcessor
         $draft = $this->state->draft ?? null;
         if (!$draft) return Result::error('Драфт не активен');
         if ($draft['turn'] !== $playerKey) return Result::error('Не ваш ход');
+        $this->ensureDraftRuntime();
 
         $taken = [];
         foreach ($positions as $pos) {
-            if (($draft['grid'][$pos] ?? null) !== null) {
-                $taken[] = $draft['grid'][$pos];
+            if (($this->state->draft['grid'][$pos] ?? null) !== null) {
+                $taken[] = $this->state->draft['grid'][$pos];
             }
         }
         if (empty($taken)) return Result::error('Нечего брать');
+        if (!$this->isViableSelection($playerKey, $taken, $positions)) {
+            return Result::error('Выбор лишает соперника минимальной колоды');
+        }
 
         foreach ($taken as $ukid) {
             $this->state->draft['picked'][$playerKey][] = $ukid;
         }
+        $this->state->draft['history'] ??= [];
+        $this->state->draft['history'][] = [
+            'player' => $playerKey,
+            'cards' => array_values($taken),
+        ];
 
         foreach ($positions as $pos) {
             $this->state->draft['grid'][$pos] = null;
         }
 
-        foreach ($positions as $pos) {
-            if (empty($this->state->draft['pool'])) break;
-            $this->state->draft['grid'][$pos] = array_shift($this->state->draft['pool']);
-        }
+        $this->state->draft['consecutive_passes'] = 0;
 
-        $this->state->draft['turn']   = $this->opponent($playerKey);
+        if ($this->isDiscreteMode()) {
+            $this->state->draft['round_picks'] = (int) ($this->state->draft['round_picks'] ?? 0) + 1;
+            if ($this->state->draft['round_picks'] >= 2) {
+                $nextFirst = $this->opponent((string) ($this->state->draft['round_first_player'] ?? GameState::PLAYER_HOST));
+                $this->recycleGridRemainder();
+                $this->state->draft['grid'] = array_fill(0, 9, null);
+                $this->fillPositions(range(0, 8));
+                $this->state->draft['round_first_player'] = $nextFirst;
+                $this->state->draft['round_picks'] = 0;
+                $this->state->draft['turn'] = $nextFirst;
+            } else {
+                $this->state->draft['turn'] = $this->opponent($playerKey);
+            }
+        } else {
+            $this->fillPositions($positions);
+            $this->state->draft['turn'] = $this->opponent($playerKey);
+        }
 
         return $this->checkEnd($eventPrefix . ':' . count($taken));
     }
@@ -177,10 +206,54 @@ final class DraftProcessor
         $draft = $this->state->draft ?? null;
         if (!$draft) return Result::error('Драфт не активен');
         if ($draft['turn'] !== $playerKey) return Result::error('Не ваш ход');
+        $this->ensureDraftRuntime();
+        if ($this->isDiscreteMode()) {
+            return Result::error('Пас недоступен в дискретном драфте');
+        }
 
+        $this->state->draft['consecutive_passes'] = (int) ($this->state->draft['consecutive_passes'] ?? 0) + 1;
+        $event = 'passed';
+        if ($this->state->draft['consecutive_passes'] >= 2) {
+            $this->recycleGridRemainder();
+            $this->state->draft['grid'] = array_fill(0, 9, null);
+            $this->fillPositions(range(0, 8));
+            $this->state->draft['consecutive_passes'] = 0;
+            $event = 'draft_grid_replaced';
+        }
         $this->state->draft['turn'] = $this->opponent($playerKey);
 
-        return $this->checkEnd('passed');
+        return $this->checkEnd($event);
+    }
+
+    public function skipNoViableSelection(string $playerKey, string $event = 'draft_forced_skip'): Result
+    {
+        $draft = $this->state->draft ?? null;
+        if (!$draft) return Result::error('Драфт не активен');
+        if ($draft['turn'] !== $playerKey) return Result::error('Не ваш ход');
+        $this->ensureDraftRuntime();
+        if (!$this->isDiscreteMode()) {
+            return Result::error('Автопропуск доступен только в дискретном драфте');
+        }
+        if (!empty($this->validSelections())) {
+            return Result::error('Есть допустимые варианты драфта');
+        }
+
+        $this->state->draft['consecutive_passes'] = 0;
+        $this->state->draft['round_picks'] = (int) ($this->state->draft['round_picks'] ?? 0) + 1;
+
+        if ($this->state->draft['round_picks'] >= 2) {
+            $nextFirst = $this->opponent((string) ($this->state->draft['round_first_player'] ?? GameState::PLAYER_HOST));
+            $this->recycleGridRemainder();
+            $this->state->draft['grid'] = array_fill(0, 9, null);
+            $this->fillPositions(range(0, 8));
+            $this->state->draft['round_first_player'] = $nextFirst;
+            $this->state->draft['round_picks'] = 0;
+            $this->state->draft['turn'] = $nextFirst;
+        } else {
+            $this->state->draft['turn'] = $this->opponent($playerKey);
+        }
+
+        return $this->checkEnd($event);
     }
 
     public function finish(string $playerKey): Result
@@ -208,7 +281,7 @@ final class DraftProcessor
             if ($ukid !== null) { $allEmpty = false; break; }
         }
 
-        if ($allEmpty && empty($draft['pool'])) {
+        if ($allEmpty && empty($draft['pool']) && empty($draft['recycle'] ?? [])) {
             if (!$this->canFinish($draft)) {
                 return Result::error('Пул драфта исчерпан, но у игроков недостаточно карт');
             }
@@ -233,6 +306,91 @@ final class DraftProcessor
     {
         return count($draft['picked']['host'] ?? []) >= GameSettings::MIN_DECK_SIZE
             && count($draft['picked']['player'] ?? []) >= GameSettings::MIN_DECK_SIZE;
+    }
+
+    private function ensureDraftRuntime(): void
+    {
+        if ($this->state->draft === null) return;
+        $this->state->draft['recycle'] = array_values((array) ($this->state->draft['recycle'] ?? []));
+        $this->state->draft['history'] = is_array($this->state->draft['history'] ?? null)
+            ? $this->state->draft['history']
+            : [];
+        $this->state->draft['grid_mode'] = (string) ($this->state->draft['grid_mode'] ?? $this->state->settings->draftGridMode());
+        $this->state->draft['consecutive_passes'] = max(0, (int) ($this->state->draft['consecutive_passes'] ?? 0));
+        $this->state->draft['round_first_player'] = (string) ($this->state->draft['round_first_player'] ?? GameState::PLAYER_HOST);
+        $this->state->draft['round_picks'] = max(0, (int) ($this->state->draft['round_picks'] ?? 0));
+    }
+
+    private function isDiscreteMode(): bool
+    {
+        $this->ensureDraftRuntime();
+        return ($this->state->draft['grid_mode'] ?? GameSettings::DRAFT_GRID_MODE_CONTINUOUS)
+            === GameSettings::DRAFT_GRID_MODE_DISCRETE;
+    }
+
+    private function drawDraftCard(): ?string
+    {
+        if ($this->state->draft === null) return null;
+
+        if (empty($this->state->draft['pool']) && !empty($this->state->draft['recycle'])) {
+            $this->state->draft['pool'] = array_values($this->state->draft['recycle']);
+            shuffle($this->state->draft['pool']);
+            $this->state->draft['recycle'] = [];
+        }
+
+        if (empty($this->state->draft['pool'])) {
+            return null;
+        }
+
+        return (string) array_shift($this->state->draft['pool']);
+    }
+
+    private function fillPositions(array $positions): void
+    {
+        foreach ($positions as $pos) {
+            if (($this->state->draft['grid'][$pos] ?? null) !== null) continue;
+            $card = $this->drawDraftCard();
+            if ($card === null) break;
+            $this->state->draft['grid'][$pos] = $card;
+        }
+    }
+
+    private function recycleGridRemainder(): void
+    {
+        foreach ($this->state->draft['grid'] ?? [] as $pos => $ukid) {
+            if ($ukid === null) continue;
+            $this->state->draft['recycle'][] = (string) $ukid;
+            $this->state->draft['grid'][$pos] = null;
+        }
+    }
+
+    private function isViableSelection(string $playerKey, array $taken, array $positions): bool
+    {
+        if ($this->state->draft === null || $playerKey === '') return false;
+
+        $hostPicked = count($this->state->draft['picked'][GameState::PLAYER_HOST] ?? []);
+        $playerPicked = count($this->state->draft['picked'][GameState::PLAYER_PLAYER] ?? []);
+        if ($playerKey === GameState::PLAYER_HOST) {
+            $hostPicked += count($taken);
+        } else {
+            $playerPicked += count($taken);
+        }
+
+        $remainingGrid = 0;
+        $selected = array_flip($positions);
+        foreach (($this->state->draft['grid'] ?? []) as $pos => $ukid) {
+            if ($ukid !== null && !isset($selected[$pos])) {
+                $remainingGrid++;
+            }
+        }
+
+        $available = count($this->state->draft['pool'] ?? [])
+            + count($this->state->draft['recycle'] ?? [])
+            + $remainingGrid;
+        $hostNeed = max(0, GameSettings::MIN_DECK_SIZE - $hostPicked);
+        $playerNeed = max(0, GameSettings::MIN_DECK_SIZE - $playerPicked);
+
+        return $available >= ($hostNeed + $playerNeed);
     }
 
     private function finalize(string $event): Result

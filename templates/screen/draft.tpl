@@ -9,6 +9,7 @@
             <span>Пул: {{pool_left}}</span>
         </div>
     </div>
+    {{timer_html}}
 
     <div class="draft-main">
         <div class="draft-grid">
@@ -35,4 +36,6 @@
             {{actions_html}}
         </div>
     </div>
+    {{history_html}}
+    {{draft_script_html}}
 </div>
