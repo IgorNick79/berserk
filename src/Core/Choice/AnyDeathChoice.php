@@ -21,7 +21,7 @@ final class AnyDeathChoice implements ChoiceHandlerInterface
 
     public function commandTypes(): array
     {
-        return ['choose_any_death_target'];
+        return ['choose_any_death_target', 'cancel_pending'];
     }
 
     public function spec(
@@ -43,8 +43,32 @@ final class AnyDeathChoice implements ChoiceHandlerInterface
 
         if ($playerKey !== $chooserKey) {
             return new PanelSpec(
-                title: $srcName . ' — отравление',
+                title: ($item['type'] ?? 'poison_near') === 'optional_effect'
+                    ? (string) ($item['title'] ?? ($srcName . ': сработала способность'))
+                    : $srcName . ' — отравление',
                 isMine: false,
+            );
+        }
+
+        $roleParam = $role === 'host' ? 'first' : 'second';
+
+        if (($item['type'] ?? 'poison_near') === 'optional_effect') {
+            $acceptLabel = (string) ($item['accept_label'] ?? 'Применить');
+            $declineLabel = (string) ($item['decline_label'] ?? 'Закрыть');
+
+            return new PanelSpec(
+                title: (string) ($item['title'] ?? ($srcName . ': сработала способность')),
+                buttons: [
+                    [
+                        'label' => $acceptLabel,
+                        'url' => $baseUrl . '&cmd=choose_any_death_target&target_id=' . (int) ($item['source_id'] ?? 0),
+                    ],
+                    [
+                        'label' => $declineLabel,
+                        'url' => $baseUrl . '&cmd=choose_any_death_target&target_id=0',
+                        'class' => 'skip',
+                    ],
+                ],
             );
         }
 
@@ -67,8 +91,6 @@ final class AnyDeathChoice implements ChoiceHandlerInterface
             ];
             $first = false;
         }
-
-        $roleParam = $role === 'host' ? 'first' : 'second';
 
         return new PanelSpec(
             title: $srcName . ': ' . $diedName . ' погиб от яда. Отравить на ' . $item['poison_value'] . '?',

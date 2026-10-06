@@ -178,6 +178,7 @@ final class DamageResolver
         if ($this->shouldTriggerOnDeath($cause)) {
             $this->triggerOnDeath($target);
         }
+        $this->pruneAnyDeathQueue();
 
         if (empty($this->state->battle['strike'])) {
             (new ZoneManager($this->state))->toGraveyard($target);
@@ -537,6 +538,7 @@ final class DamageResolver
     public function triggerOnAnyDeath(CardInstance $died, string $cause = 'any'): void
     {
         $poisonValue = (int) ($died->markers['poison']['value'] ?? 0);
+        $deadWasFlying = CardStats::isFlyingCreature($died);
 
         foreach ($this->state->cards as $seeder) {
             if ($seeder->zone !== CardInstance::ZONE_FIELD
@@ -544,81 +546,104 @@ final class DamageResolver
             if ($seeder->dying) continue;
             if ($seeder->instanceId === $died->instanceId) continue;
 
-            $config = $seeder->prop['on_any_death'] ?? null;
-            if (!$config || !is_array($config)) continue;
+            foreach ($this->normalizeAnyDeathConfigs($seeder->prop['on_any_death'] ?? null) as $configIndex => $config) {
+                $sideFilter = $config['side'] ?? 'enemy';
+                if ($sideFilter === 'enemy' && $seeder->owner === $died->owner) continue;
+                if ($sideFilter === 'own' && $seeder->owner !== $died->owner) continue;
 
-            $sideFilter = $config['side'] ?? 'enemy';
-            if ($sideFilter === 'enemy' && $seeder->owner === $died->owner) continue;
+                $configCause = $config['cause'] ?? 'any';
+                if ($configCause === 'poison' && $cause !== 'poison') continue;
+                if ($configCause !== 'any' && $configCause !== 'poison' && $configCause !== $cause) continue;
 
-            $configCause = $config['cause'] ?? 'any';
-            if ($configCause === 'poison' && $cause !== 'poison') continue;
-            if ($configCause !== 'any' && $configCause !== 'poison' && $configCause !== $cause) continue;
+                $condition = (string) ($config['condition'] ?? '');
+                if ($condition === 'dead_creature_flying' && !$deadWasFlying) continue;
+                if ($condition !== '' && $condition !== 'dead_creature_flying') continue;
 
-            if (!empty($seeder->flags['any_death_used_this_turn'])
-                && !empty($config['once_per_turn'])) continue;
+                $usageKey = $this->anyDeathUsageKey($config, $configIndex);
+                if ($this->anyDeathUsedThisTurn($seeder, $usageKey)
+                    && !empty($config['once_per_turn'])) continue;
+                if (!empty($seeder->flags['any_death_used_once_per_battle'][$usageKey])
+                    && !empty($config['once_per_battle'])) continue;
 
-            $effect = $config['effect'] ?? null;
-            if ($effect === 'get_coin') {
-                $value = (int) ($config['value'] ?? 1);
+                $effect = $config['effect'] ?? null;
+                if ($effect === 'get_coin') {
+                    $value = (int) ($config['value'] ?? 1);
 
-                $filter = $config['filter'] ?? 'any';
-                if ($filter === 'not_flying' && $died->type === 'fly') continue;
+                    $filter = $config['filter'] ?? 'any';
+                    if ($filter === 'not_flying' && CardStats::isFlyingCreature($died)) continue;
 
-                $max = (int) ($seeder->prop['coins']['max_value'] ?? 0);
-                $before = $seeder->coins;
+                    $max = (int) ($seeder->prop['coins']['max_value'] ?? 0);
+                    $before = $seeder->coins;
 
-                $seeder->coins += $value;
-                if ($max > 0 && $seeder->coins > $max) $seeder->coins = $max;
+                    $seeder->coins += $value;
+                    if ($max > 0 && $seeder->coins > $max) $seeder->coins = $max;
 
-                if ($seeder->coins > $before) {
-                    $this->syncCoinBonusViaOwner($seeder);
+                    if ($seeder->coins > $before) {
+                        $this->syncCoinBonusViaOwner($seeder);
+                    }
+
+                    if (!empty($config['once_per_turn'])) {
+                        $this->markAnyDeathUsedThisTurn($seeder, $usageKey);
+                    }
+                    continue;
                 }
+
+                if (!empty($config['optional']) && $this->hasAnyDeathEffects($config)) {
+                    $this->enqueueAnyDeath([
+                        'type' => 'optional_effect',
+                        'source_id' => $seeder->instanceId,
+                        'died_id' => $died->instanceId,
+                        'died_ukid' => $died->ukid,
+                        'usage_key' => $usageKey,
+                        'once_per_battle' => !empty($config['once_per_battle']),
+                        'once_per_turn' => !empty($config['once_per_turn']),
+                        'title' => (string) ($config['title'] ?? 'Сработала способность'),
+                        'accept_label' => (string) ($config['accept_label'] ?? 'Применить'),
+                        'decline_label' => (string) ($config['decline_label'] ?? 'Закрыть'),
+                        'result_message' => (string) ($config['result_message'] ?? ''),
+                        'effects' => $this->normalizeAnyDeathEffects($config),
+                    ]);
+                    continue;
+                }
+
+                $candidates = [];
+                foreach ($this->state->cards as $t) {
+                    if ($t->zone !== CardInstance::ZONE_FIELD) continue;
+                    if ($t->instanceId === $died->instanceId) continue;
+                    if ($t->dying) continue;
+                    // if ($t->owner === $seeder->owner) continue;
+
+                    $dr = abs($t->row - $died->row);
+                    $dc = abs($t->col - $died->col);
+                    if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+                    $filter = $config['filter'] ?? 'any';
+                    if ($filter === 'not_flying' && CardStats::isFlyingCreature($t)) continue;
+
+                    $candidates[] = $t->instanceId;
+                }
+
+                if (empty($candidates)) continue;
+
+                $this->enqueueAnyDeath([
+                    'type' => 'poison_near',
+                    'source_id'    => $seeder->instanceId,
+                    'died_id'      => $died->instanceId,
+                    'died_ukid'    => $died->ukid,
+                    'candidates'   => $candidates,
+                    'poison_value' => $poisonValue,
+                ]);
 
                 if (!empty($config['once_per_turn'])) {
-                    $seeder->flags['any_death_used_this_turn'] = true;
+                    $this->markAnyDeathUsedThisTurn($seeder, $usageKey);
                 }
-                continue;
-            }
-
-            $candidates = [];
-            foreach ($this->state->cards as $t) {
-                if ($t->zone !== CardInstance::ZONE_FIELD) continue;
-                if ($t->instanceId === $died->instanceId) continue;
-                if ($t->dying) continue;
-                // if ($t->owner === $seeder->owner) continue;
-
-                $dr = abs($t->row - $died->row);
-                $dc = abs($t->col - $died->col);
-                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
-
-                $filter = $config['filter'] ?? 'any';
-                if ($filter === 'not_flying' && $t->type === 'fly') continue;
-
-                $candidates[] = $t->instanceId;
-            }
-
-            if (empty($candidates)) continue;
-
-            if (!isset($this->state->battle['pending_any_death'])) {
-                $this->state->battle['pending_any_death'] = [];
-            }
-
-            $this->state->battle['pending_any_death'][] = [
-                'source_id'    => $seeder->instanceId,
-                'died_id'      => $died->instanceId,
-                'died_ukid'    => $died->ukid,
-                'candidates'   => $candidates,
-                'poison_value' => $poisonValue,
-            ];
-
-            if (!empty($config['once_per_turn'])) {
-                $seeder->flags['any_death_used_this_turn'] = true;
             }
         }
     }
 
     public function chooseAnyDeathTarget(string $playerKey, Command $cmd): Result
     {
+        $this->pruneAnyDeathQueue();
         $queue = $this->state->battle['pending_any_death'] ?? [];
         if (empty($queue)) {
             return Result::error('Нет ожидающего выбора');
@@ -626,20 +651,36 @@ final class DamageResolver
 
         $item = $queue[0];
         $sourceCard = $this->state->getCard($item['source_id']);
-        if (!$sourceCard || $sourceCard->owner !== $playerKey) {
+        if (!$this->isLiveAnyDeathSource($sourceCard) || $sourceCard->owner !== $playerKey) {
             return Result::error('Не ваш выбор');
         }
 
         $targetId = (int) $cmd->get('target_id', 0);
 
         if ($targetId === 0) {
-            array_shift($this->state->battle['pending_any_death']);
-            if (empty($this->state->battle['pending_any_death'])
-                && !empty($this->state->battle['turn_phase'])) {
-                (new TurnPhaseProcessor($this->state, $this->engine))->resume();
-            }
+            $this->shiftAnyDeathQueue();
             $this->state->bumpVersion();
             return Result::ok(['any_death_skipped']);
+        }
+
+        if (($item['type'] ?? 'poison_near') === 'optional_effect') {
+            $this->applyOptionalAnyDeathEffects($sourceCard, $item);
+            if (!empty($item['once_per_turn'])) {
+                $this->markAnyDeathUsedThisTurn($sourceCard, (string) ($item['usage_key'] ?? 'optional_effect'));
+            }
+            if (!empty($item['once_per_battle'])) {
+                $sourceCard->flags['any_death_used_once_per_battle'][(string) ($item['usage_key'] ?? 'optional_effect')] = true;
+            }
+            $message = (string) ($item['result_message'] ?? '');
+            if ($message !== '') {
+                $this->state->battle['any_death_messages'][] = [
+                    'source_id' => $sourceCard->instanceId,
+                    'message' => $message,
+                ];
+            }
+            $this->shiftAnyDeathQueue();
+            $this->state->bumpVersion();
+            return Result::ok(['any_death_effect_applied']);
         }
 
         if (!in_array($targetId, $item['candidates'], true)) {
@@ -654,15 +695,146 @@ final class DamageResolver
         $poisonValue = (int) $item['poison_value'];
         $this->applyPoison($target, $poisonValue, $sourceCard->owner);
 
-        if (empty($this->state->battle['pending_any_death'])
-            && !empty($this->state->battle['turn_phase'])) {
-            (new TurnPhaseProcessor($this->state, $this->engine))->resume();
-        }
-        
-        array_shift($this->state->battle['pending_any_death']);
+        $this->shiftAnyDeathQueue();
 
         $this->state->bumpVersion();
         return Result::ok(["any_death_target:{$targetId}"]);
+    }
+
+    public function pruneAnyDeathQueue(): void
+    {
+        $queue = $this->state->battle['pending_any_death'] ?? [];
+        if (empty($queue)) return;
+
+        $kept = [];
+        foreach ($queue as $item) {
+            $source = $this->state->getCard((int) ($item['source_id'] ?? 0));
+            if (!$this->isLiveAnyDeathSource($source)) {
+                continue;
+            }
+            if (($item['type'] ?? 'poison_near') === 'optional_effect') {
+                $usageKey = (string) ($item['usage_key'] ?? 'optional_effect');
+                if (!empty($item['once_per_battle'])
+                    && !empty($source->flags['any_death_used_once_per_battle'][$usageKey])) {
+                    continue;
+                }
+            }
+            $kept[] = $item;
+        }
+
+        if (empty($kept)) {
+            unset($this->state->battle['pending_any_death']);
+            if (!empty($this->state->battle['turn_phase'])) {
+                (new TurnPhaseProcessor($this->state, new Engine()))->resume();
+            }
+            return;
+        }
+
+        $this->state->battle['pending_any_death'] = array_values($kept);
+    }
+
+    private function normalizeAnyDeathConfigs(mixed $config): array
+    {
+        if (!$config || !is_array($config)) {
+            return [];
+        }
+        return array_is_list($config) ? $config : [$config];
+    }
+
+    private function anyDeathUsageKey(array $config, int $index): string
+    {
+        $key = (string) ($config['key'] ?? '');
+        return $key !== '' ? $key : 'on_any_death_' . $index;
+    }
+
+    private function normalizeAnyDeathEffects(array $config): array
+    {
+        $effects = $config['effects'] ?? $config['effect'] ?? [];
+        if (is_string($effects)) {
+            return [['type' => $effects]];
+        }
+        if (is_array($effects) && !array_is_list($effects)) {
+            return [$effects];
+        }
+        return is_array($effects) ? $effects : [];
+    }
+
+    private function hasAnyDeathEffects(array $config): bool
+    {
+        return !empty($this->normalizeAnyDeathEffects($config));
+    }
+
+    private function anyDeathUsedThisTurn(CardInstance $card, string $usageKey): bool
+    {
+        $used = $card->flags['any_death_used_this_turn'] ?? null;
+        if (is_bool($used)) {
+            return $used;
+        }
+        return is_array($used) && !empty($used[$usageKey]);
+    }
+
+    private function markAnyDeathUsedThisTurn(CardInstance $card, string $usageKey): void
+    {
+        $used = $card->flags['any_death_used_this_turn'] ?? [];
+        if (!is_array($used)) {
+            $used = [];
+        }
+        $used[$usageKey] = true;
+        $card->flags['any_death_used_this_turn'] = $used;
+    }
+
+    private function enqueueAnyDeath(array $item): void
+    {
+        if (!isset($this->state->battle['pending_any_death'])) {
+            $this->state->battle['pending_any_death'] = [];
+        }
+        $this->state->battle['pending_any_death'][] = $item;
+    }
+
+    private function shiftAnyDeathQueue(): void
+    {
+        array_shift($this->state->battle['pending_any_death']);
+        $this->pruneAnyDeathQueue();
+        if (!isset($this->state->battle['pending_any_death'])) {
+            return;
+        }
+        if (empty($this->state->battle['pending_any_death'])
+            && !empty($this->state->battle['turn_phase'])) {
+            (new TurnPhaseProcessor($this->state, new Engine()))->resume();
+        }
+    }
+
+    private function isLiveAnyDeathSource(?CardInstance $source): bool
+    {
+        if (!$source) return false;
+        if ($source->dying || $source->hp <= 0) return false;
+        return $source->zone === CardInstance::ZONE_FIELD || $source->zone === CardInstance::ZONE_FLYING;
+    }
+
+    private function applyOptionalAnyDeathEffects(CardInstance $source, array $item): void
+    {
+        foreach ((array) ($item['effects'] ?? []) as $effect) {
+            if (!is_array($effect)) continue;
+            $type = (string) ($effect['type'] ?? '');
+            if ($type === 'gain_flight') {
+                $source->type = 'fly';
+                (new ZoneManager($this->state))->toFlying($source);
+                continue;
+            }
+            if ($type === 'grant_modifier') {
+                $stat = (string) ($effect['stat'] ?? '');
+                if ($stat === 'strike') {
+                    $stat = 'ability_strike';
+                }
+                if ($stat === '') continue;
+                $source->modifiers[] = [
+                    'stat' => $stat,
+                    'value' => (int) ($effect['value'] ?? 0),
+                    'expire' => (string) ($effect['expire'] ?? 'permanent'),
+                    'source' => 'on_any_death',
+                ];
+            }
+        }
     }
 
     private function applyPoison(CardInstance $target, int $value, string $sourceKey): void

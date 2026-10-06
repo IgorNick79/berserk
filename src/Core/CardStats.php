@@ -27,6 +27,11 @@ final class CardStats
         return in_array($type, ['strike', 'answer', 'tap', 'magic', 'execute'], true);
     }
 
+    public static function isFlyingCreature(CardInstance $card): bool
+    {
+        return $card->type === 'fly' || $card->zone === CardInstance::ZONE_FLYING;
+    }
+
     public static function getStat(CardInstance $card, string $stat): int
     {
         $value = 0;

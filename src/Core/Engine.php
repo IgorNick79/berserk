@@ -26,6 +26,7 @@ final class Engine
     private function doApply(GameState $state, string $playerKey, Command $cmd): Result
     {
         unset($state->battle['instant_result']);
+        unset($state->battle['any_death_messages']);
 
         // Реестр ChoiceHandler — новые команды
         $activeChoice = Choice\ChoiceRegistry::current($state);
