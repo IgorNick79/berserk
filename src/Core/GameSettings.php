@@ -21,6 +21,8 @@ final class GameSettings
     public const DRAFT_TYPE_GRID = 'grid';
     public const DRAFT_PICK_MODE_MANUAL = 'manual';
     public const DRAFT_PICK_MODE_RANDOM = 'random';
+    public const DRAFT_GRID_MODE_CONTINUOUS = 'continuous';
+    public const DRAFT_GRID_MODE_DISCRETE = 'discrete';
     public const DRAFT_AUTO_SIDE_BOTH = 'both';
     public const DRAFT_AUTO_SIDE_HOST = 'host';
     public const DRAFT_AUTO_SIDE_PLAYER = 'player';
@@ -44,6 +46,7 @@ final class GameSettings
         public array $draft = [
             'type'            => self::DRAFT_TYPE_GRID,
             'pick_mode'       => self::DRAFT_PICK_MODE_MANUAL,
+            'grid_mode'       => self::DRAFT_GRID_MODE_CONTINUOUS,
             'auto_side'       => self::DRAFT_AUTO_SIDE_BOTH,
             'grid_size'       => 3,
             'boosters'        => 5,
@@ -101,6 +104,15 @@ final class GameSettings
     public function draftPickMode(): string
     {
         return (string) ($this->draft['pick_mode'] ?? self::DRAFT_PICK_MODE_MANUAL);
+    }
+
+    public function draftGridMode(): string
+    {
+        $mode = (string) ($this->draft['grid_mode'] ?? self::DRAFT_GRID_MODE_CONTINUOUS);
+        return in_array($mode, [
+            self::DRAFT_GRID_MODE_CONTINUOUS,
+            self::DRAFT_GRID_MODE_DISCRETE,
+        ], true) ? $mode : self::DRAFT_GRID_MODE_CONTINUOUS;
     }
 
     public function draftAutoSide(): string

@@ -65,6 +65,7 @@ final class SettingsScreen
         $settings = $state->settings;
         $boosters = $settings->draftBoosters();
         $isRandom = $settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM;
+        $isDiscrete = $settings->draftGridMode() === GameSettings::DRAFT_GRID_MODE_DISCRETE;
         $autoSide = $settings->draftAutoSide();
         $timerMode = $settings->draftTimerMode();
         $timerTotal = $settings->draftTimerTotalSeconds();
@@ -101,6 +102,12 @@ final class SettingsScreen
             . '<span>Автоматический драфт</span>'
             . '<input type="checkbox" name="draft_pick_mode" value="' . GameSettings::DRAFT_PICK_MODE_RANDOM . '"'
                 . ($isRandom ? ' checked' : '') . '>'
+            . '</label>'
+            . '<input type="hidden" name="draft_grid_mode" value="' . GameSettings::DRAFT_GRID_MODE_CONTINUOUS . '">'
+            . '<label class="settings-field">'
+            . '<span>Дискретный драфт</span>'
+            . '<input type="checkbox" name="draft_grid_mode" value="' . GameSettings::DRAFT_GRID_MODE_DISCRETE . '"'
+                . ($isDiscrete ? ' checked' : '') . '>'
             . '</label>'
             . '<div class="settings-field">'
             . '<span>Таймер драфта</span>'

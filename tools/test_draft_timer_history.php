@@ -29,10 +29,16 @@ function dtState(string $turn = GameState::PLAYER_HOST): GameState
     $state = new GameState(random_int(1000, 9999), 1, 2);
     $state->status = 'draft';
     $state->draft = [
-        'pool' => ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'],
+        'pool' => array_merge(['p1', 'p2', 'p3', 'p4', 'p5', 'p6'], array_map(fn($i) => 'px' . $i, range(1, 60))),
         'grid' => ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9'],
         'turn' => $turn,
         'picked' => [GameState::PLAYER_HOST => [], GameState::PLAYER_PLAYER => []],
+        'history' => [],
+        'recycle' => [],
+        'grid_mode' => GameSettings::DRAFT_GRID_MODE_CONTINUOUS,
+        'consecutive_passes' => 0,
+        'round_first_player' => GameState::PLAYER_HOST,
+        'round_picks' => 0,
     ];
     return $state;
 }
@@ -60,6 +66,35 @@ function dtSettingsFromCommand(GameSettings $settings, Command $cmd): GameSettin
 function dtPrepareWithAutoPicker(GameState $state, object $autoPicker): PrepareProcessor
 {
     return new PrepareProcessor($state, null, $autoPicker);
+}
+
+function dtConstrainedTimeoutState(
+    array $hostPicked,
+    array $playerPicked,
+    array $grid,
+    string $turn = GameState::PLAYER_HOST,
+    string $gridMode = GameSettings::DRAFT_GRID_MODE_CONTINUOUS,
+): GameState {
+    $state = new GameState(random_int(1000, 9999), 1, 2);
+    $state->status = 'draft';
+    $state->settings = GameSettings::fromArray(['draft' => ['grid_mode' => $gridMode]]);
+    $state->draft = [
+        'pool' => [],
+        'grid' => array_pad(array_slice($grid, 0, 9), 9, null),
+        'turn' => $turn,
+        'picked' => [
+            GameState::PLAYER_HOST => $hostPicked,
+            GameState::PLAYER_PLAYER => $playerPicked,
+        ],
+        'history' => [],
+        'recycle' => [],
+        'grid_mode' => $gridMode,
+        'consecutive_passes' => 0,
+        'round_first_player' => GameState::PLAYER_HOST,
+        'round_picks' => 0,
+    ];
+    DraftTimer::initialize($state, $state->settings, 1000);
+    return $state;
 }
 
 $defaults = GameSettings::defaults();
@@ -101,10 +136,12 @@ dtAssert($settings->validateDraftTimer() === null, 'Unlimited timer mode should 
 dtAssert($settings->draftTimerTotalSeconds() === 0, 'Unlimited timer should disable total limit');
 
 $settings = dtSettingsFromCommand(GameSettings::defaults(), new Command('confirm_settings', [
+    'draft_grid_mode' => GameSettings::DRAFT_GRID_MODE_DISCRETE,
     'draft_timer_mode' => GameSettings::DRAFT_TIMER_CUSTOM,
     'draft_timer_total' => 5,
     'draft_timer_action' => 10,
 ]));
+dtAssert($settings->draftGridMode() === GameSettings::DRAFT_GRID_MODE_DISCRETE, 'Settings command should persist discrete grid mode');
 dtAssert($settings->draftTimerTotalSeconds() === 300, 'Settings command should convert custom total minutes to seconds');
 dtAssert($settings->draftTimerActionSeconds() === 10, 'Settings command should keep custom action seconds');
 
@@ -190,6 +227,114 @@ DraftTimer::initialize($state, GameSettings::defaults(), 1000);
 $state->draft['timer']['elapsed'][GameState::PLAYER_HOST] = 600;
 dtAssert(DraftTimer::deadlineAt($state) === 1000 + DraftTimer::TRANSPORT_GRACE_SECONDS, 'Total budget exhaustion should still use only transport grace');
 dtAssert(DraftTimer::isExpired($state, 1000 + DraftTimer::TRANSPORT_GRACE_SECONDS), 'Total budget exhaustion should auto-resolve after transport grace');
+
+$nullAutoPicker = new class {
+    public function pick(array $validSelections, array $currentUkids): ?array
+    {
+        return null;
+    }
+};
+
+$state = dtConstrainedTimeoutState(
+    array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'),
+    array_fill(0, GameSettings::MIN_DECK_SIZE - 1, 'p'),
+    ['g1'],
+);
+$processor = dtPrepareWithAutoPicker($state, $autoPicker);
+$result = $processor->resolveDraftTimeouts(1000 + GameSettings::DRAFT_TIMER_DEFAULT_ACTION_SECONDS + DraftTimer::TRANSPORT_GRACE_SECONDS);
+dtAssert($result->success, 'Timeout continuous with zero viable selections should resolve through pass');
+dtAssert($result->events === ['passed'], 'Timeout pass should use canonical pass event');
+dtAssert($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Timeout pass should switch turn');
+dtAssert($state->draft['consecutive_passes'] === 1, 'Timeout pass should increment consecutive pass counter');
+dtAssert($state->draft['picked'][GameState::PLAYER_HOST] === array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'), 'Timeout pass should not pick blocked cards');
+
+$state = dtConstrainedTimeoutState(
+    array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'),
+    array_fill(0, GameSettings::MIN_DECK_SIZE, 'p'),
+    ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9'],
+);
+$state->draft['pool'] = ['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9'];
+$processor = dtPrepareWithAutoPicker($state, $nullAutoPicker);
+$result = $processor->resolveDraftTimeouts(1000 + (GameSettings::DRAFT_TIMER_DEFAULT_ACTION_SECONDS * 2) + DraftTimer::TRANSPORT_GRACE_SECONDS);
+dtAssert($result->success, 'Two timeout passes should resolve successfully');
+dtAssert($result->events === ['passed', 'draft_grid_replaced'], 'Two timeout passes should replace rejected grid');
+dtAssert($state->draft['consecutive_passes'] === 0, 'Second timeout pass should reset pass counter');
+dtAssert($state->draft['grid'] === ['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9'], 'Second timeout pass should deal a fresh grid');
+dtAssert(count($state->draft['recycle']) === 9, 'Second timeout pass should recycle the old grid');
+
+$state = dtConstrainedTimeoutState(
+    array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'),
+    array_fill(0, GameSettings::MIN_DECK_SIZE - 3, 'p'),
+    ['g1', 'g2'],
+);
+$state->draft['pool'] = ['p_final'];
+$processor = dtPrepareWithAutoPicker($state, $autoPicker);
+$result = $processor->resolveDraftTimeouts(1000 + (GameSettings::DRAFT_TIMER_DEFAULT_ACTION_SECONDS * 2) + DraftTimer::TRANSPORT_GRACE_SECONDS);
+dtAssert($result->success, 'Timeout pass followed by viable timeout pick should resolve');
+dtAssert($result->events === ['passed', 'timeout_picked:2'], 'Timeout should pass first player then pick for second player');
+dtAssert(array_slice($state->draft['picked'][GameState::PLAYER_PLAYER], -2) === ['g1', 'g2'], 'Second player should receive the viable row cards');
+dtAssert($state->draft['consecutive_passes'] === 0, 'Viable timeout pick should reset pass counter');
+
+$state = dtConstrainedTimeoutState(
+    array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'),
+    array_fill(0, GameSettings::MIN_DECK_SIZE - 3, 'p'),
+    ['g1', 'g2', 'g3'],
+    GameState::PLAYER_HOST,
+    GameSettings::DRAFT_GRID_MODE_DISCRETE,
+);
+$processor = dtPrepareWithAutoPicker($state, $nullAutoPicker);
+$result = $processor->resolveDraftTimeouts(1000 + GameSettings::DRAFT_TIMER_DEFAULT_ACTION_SECONDS + DraftTimer::TRANSPORT_GRACE_SECONDS);
+dtAssert($result->success, 'Discrete zero viable timeout should forced-skip the phase');
+dtAssert($result->events === ['forced_skip'], 'Discrete forced skip should be recorded as general draft progression');
+dtAssert($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Discrete forced skip should give the phase to the opponent');
+dtAssert($state->draft['grid'] === array_pad(['g1', 'g2', 'g3'], 9, null), 'Discrete forced skip should preserve needed cards for opponent');
+
+$state = dtConstrainedTimeoutState(
+    array_fill(0, GameSettings::MIN_DECK_SIZE - 1, 'h'),
+    array_fill(0, GameSettings::MIN_DECK_SIZE, 'p'),
+    ['g1'],
+    GameState::PLAYER_PLAYER,
+    GameSettings::DRAFT_GRID_MODE_DISCRETE,
+);
+$state->draft['round_picks'] = 1;
+$processor = dtPrepareWithAutoPicker($state, $nullAutoPicker);
+$result = $processor->resolveDraftTimeouts(1000 + (GameSettings::DRAFT_TIMER_DEFAULT_ACTION_SECONDS * 2) + DraftTimer::TRANSPORT_GRACE_SECONDS);
+dtAssert($result->success, 'Discrete forced skip in second phase should resolve through redeal');
+dtAssert($result->events === ['forced_skip', 'forced_skip'], 'Second-phase forced skip can immediately skip the new first player when still blocked');
+dtAssert($state->draft['turn'] === GameState::PLAYER_HOST, 'Forced skip processing should stop once a player has a viable line');
+dtAssert($state->draft['grid'] === array_pad(['g1'], 9, null), 'Second discrete forced skip should redeal recyclable grid cards');
+dtAssert(count($state->draft['recycle']) === 0, 'Second discrete forced skip should consume recycled cards when pool is empty');
+dtAssert($state->draft['round_picks'] === 1, 'Processing should leave the viable player in the first phase of the new round');
+
+$state = dtConstrainedTimeoutState(
+    array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'),
+    array_fill(0, GameSettings::MIN_DECK_SIZE - 3, 'p'),
+    ['g1', 'g2', 'g3'],
+    GameState::PLAYER_HOST,
+    GameSettings::DRAFT_GRID_MODE_DISCRETE,
+);
+$state->settings = GameSettings::fromArray(['draft' => [
+    'grid_mode' => GameSettings::DRAFT_GRID_MODE_DISCRETE,
+    'timer_mode' => GameSettings::DRAFT_TIMER_UNLIMITED,
+]]);
+DraftTimer::ensureRuntime($state, 1000);
+$processor = dtPrepareWithAutoPicker($state, $nullAutoPicker);
+$result = $processor->resolveDraftTimeouts(1000);
+dtAssert($result->success, 'Manual discrete unlimited zero viable should forced-skip without timer expiration');
+dtAssert($result->events === ['forced_skip'], 'Unlimited forced skip should use the shared progression event');
+dtAssert($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Unlimited forced skip should advance to opponent');
+
+$state = dtConstrainedTimeoutState(
+    array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'),
+    array_fill(0, GameSettings::MIN_DECK_SIZE - 3, 'p'),
+    ['g1', 'g2', 'g3'],
+    GameState::PLAYER_HOST,
+    GameSettings::DRAFT_GRID_MODE_DISCRETE,
+);
+$processor = dtPrepareWithAutoPicker($state, $nullAutoPicker);
+$result = $processor->resolveDraftTimeouts(1005);
+dtAssert($result->success, 'Manual discrete timed zero viable should forced-skip before timer expiration');
+dtAssert($result->events === ['forced_skip'], 'Pre-timeout forced skip should not depend on timer expiration');
 
 $configPath = __DIR__ . '/../config/db.php';
 if (is_file($configPath)) {

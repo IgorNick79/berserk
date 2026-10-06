@@ -106,6 +106,7 @@ final class DraftScreen
         $actions = [];
         $hostPickedCount = count($draft['picked']['host'] ?? []);
         $playerPickedCount = count($draft['picked']['player'] ?? []);
+        $isDiscrete = ($draft['grid_mode'] ?? $state->settings->draftGridMode()) === GameSettings::DRAFT_GRID_MODE_DISCRETE;
 
         if ($isMyTurn) {
             for ($r = 1; $r <= 3; $r++) {
@@ -116,7 +117,9 @@ final class DraftScreen
                 $actions[] = ['label' => 'Колонка ' . $c, 'url' => $baseUrl . '&cmd=draft_col&col=' . $c];
             }
 
-            $actions[] = ['label' => 'Пас', 'url' => $baseUrl . '&cmd=draft_pass', 'class' => 'skip'];
+            if (!$isDiscrete) {
+                $actions[] = ['label' => 'Пас', 'url' => $baseUrl . '&cmd=draft_pass', 'class' => 'skip'];
+            }
 
             if ($hostPickedCount >= GameSettings::MIN_DECK_SIZE && $playerPickedCount >= GameSettings::MIN_DECK_SIZE) {
                 $actions[] = ['label' => 'Закончить драфт', 'url' => $baseUrl . '&cmd=finish_draft'];
