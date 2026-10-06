@@ -990,6 +990,44 @@ body { padding-bottom: 46vh; }
     margin: 16px 0;
 }
 
+.draft-timer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 8px 0 12px;
+    padding: 8px;
+    border: 1px solid #cfcfcf;
+    background: #f6f6f6;
+}
+.draft-timer--unlimited {
+    color: #555;
+}
+
+.draft-history {
+    margin-top: 12px;
+}
+.draft-history summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+.draft-history__event {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+}
+.draft-history__owner {
+    margin-bottom: 6px;
+    font-weight: 700;
+}
+.draft-history__cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.draft-history__card {
+    width: 120px;
+}
+
 .draft-preview-slot {
     width: 560px;
     flex: 0 0 560px;

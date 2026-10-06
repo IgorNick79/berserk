@@ -24,6 +24,17 @@ final class GameSettings
     public const DRAFT_AUTO_SIDE_BOTH = 'both';
     public const DRAFT_AUTO_SIDE_HOST = 'host';
     public const DRAFT_AUTO_SIDE_PLAYER = 'player';
+    public const DRAFT_TIMER_DEFAULT = 'default';
+    public const DRAFT_TIMER_CUSTOM = 'custom';
+    public const DRAFT_TIMER_UNLIMITED = 'unlimited';
+    public const DRAFT_TIMER_DEFAULT_TOTAL_SECONDS = 600;
+    public const DRAFT_TIMER_DEFAULT_ACTION_SECONDS = 30;
+    public const DRAFT_TIMER_CUSTOM_TOTAL_MIN_SECONDS = 300;
+    public const DRAFT_TIMER_CUSTOM_TOTAL_MAX_SECONDS = 1800;
+    public const DRAFT_TIMER_CUSTOM_TOTAL_STEP_SECONDS = 60;
+    public const DRAFT_TIMER_CUSTOM_ACTION_MIN_SECONDS = 10;
+    public const DRAFT_TIMER_CUSTOM_ACTION_MAX_SECONDS = 120;
+    public const DRAFT_TIMER_CUSTOM_ACTION_STEP_SECONDS = 5;
     public const BOOSTER_PROFILE_DEFAULT = 'default';
     public const MIN_DECK_SIZE = 30;
     public const MAX_DECK_SIZE = 50;
@@ -37,6 +48,9 @@ final class GameSettings
             'grid_size'       => 3,
             'boosters'        => 5,
             'booster_profile' => self::BOOSTER_PROFILE_DEFAULT,
+            'timer_mode'      => self::DRAFT_TIMER_DEFAULT,
+            'timer_total'     => self::DRAFT_TIMER_DEFAULT_TOTAL_SECONDS,
+            'timer_action'    => self::DRAFT_TIMER_DEFAULT_ACTION_SECONDS,
         ],
         public array $sealed = [
             'boosters'        => 4,
@@ -102,5 +116,65 @@ final class GameSettings
     public function draftBoosterProfile(): string
     {
         return (string) ($this->draft['booster_profile'] ?? self::BOOSTER_PROFILE_DEFAULT);
+    }
+
+    public function draftTimerMode(): string
+    {
+        $mode = (string) ($this->draft['timer_mode'] ?? self::DRAFT_TIMER_DEFAULT);
+        return in_array($mode, [
+            self::DRAFT_TIMER_DEFAULT,
+            self::DRAFT_TIMER_CUSTOM,
+            self::DRAFT_TIMER_UNLIMITED,
+        ], true) ? $mode : self::DRAFT_TIMER_DEFAULT;
+    }
+
+    public function draftTimerTotalSeconds(): int
+    {
+        return match ($this->draftTimerMode()) {
+            self::DRAFT_TIMER_CUSTOM => (int) ($this->draft['timer_total'] ?? self::DRAFT_TIMER_DEFAULT_TOTAL_SECONDS),
+            self::DRAFT_TIMER_UNLIMITED => 0,
+            default => self::DRAFT_TIMER_DEFAULT_TOTAL_SECONDS,
+        };
+    }
+
+    public function draftTimerActionSeconds(): int
+    {
+        return match ($this->draftTimerMode()) {
+            self::DRAFT_TIMER_CUSTOM => (int) ($this->draft['timer_action'] ?? self::DRAFT_TIMER_DEFAULT_ACTION_SECONDS),
+            self::DRAFT_TIMER_UNLIMITED => 0,
+            default => self::DRAFT_TIMER_DEFAULT_ACTION_SECONDS,
+        };
+    }
+
+    public function validateDraftTimer(): ?string
+    {
+        $mode = (string) ($this->draft['timer_mode'] ?? self::DRAFT_TIMER_DEFAULT);
+        if (!in_array($mode, [
+            self::DRAFT_TIMER_DEFAULT,
+            self::DRAFT_TIMER_CUSTOM,
+            self::DRAFT_TIMER_UNLIMITED,
+        ], true)) {
+            return 'Неверный режим таймера драфта';
+        }
+
+        if ($mode !== self::DRAFT_TIMER_CUSTOM) {
+            return null;
+        }
+
+        $total = (int) ($this->draft['timer_total'] ?? 0);
+        if ($total < self::DRAFT_TIMER_CUSTOM_TOTAL_MIN_SECONDS
+            || $total > self::DRAFT_TIMER_CUSTOM_TOTAL_MAX_SECONDS
+            || $total % self::DRAFT_TIMER_CUSTOM_TOTAL_STEP_SECONDS !== 0) {
+            return 'Неверное общее время драфта';
+        }
+
+        $action = (int) ($this->draft['timer_action'] ?? 0);
+        if ($action < self::DRAFT_TIMER_CUSTOM_ACTION_MIN_SECONDS
+            || $action > self::DRAFT_TIMER_CUSTOM_ACTION_MAX_SECONDS
+            || $action % self::DRAFT_TIMER_CUSTOM_ACTION_STEP_SECONDS !== 0) {
+            return 'Неверное время на действие драфта';
+        }
+
+        return null;
     }
 }

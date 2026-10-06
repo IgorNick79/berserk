@@ -19,6 +19,7 @@ final class PrepareProcessor
     public function __construct(
         private GameState $state,
         private ?Db $db = null,
+        private mixed $draftAutoPickerOverride = null,
     ) {}
 
     public function chooseMode(string $playerKey, Command $cmd): Result
@@ -62,6 +63,10 @@ final class PrepareProcessor
         }
 
         $this->state->settings = $this->settingsFromCommand($this->state->settings, $cmd);
+        $timerError = $this->state->settings->validateDraftTimer();
+        if ($timerError !== null) {
+            return Result::error($timerError);
+        }
 
         switch ($this->state->mode) {
             case GameSettings::MODE_SYSTEM:
@@ -100,6 +105,7 @@ final class PrepareProcessor
                         }
 
                         $this->state->status = 'draft';
+                        DraftTimer::initialize($this->state, $this->state->settings, time());
                         $this->state->bumpVersion();
                         return Result::ok(array_merge(['settings_confirmed:draft', 'stage_changed:draft'], $result->events));
 
@@ -111,7 +117,8 @@ final class PrepareProcessor
                             }
 
                             $this->state->status = 'draft';
-                            $autoResult = $this->runDraftAutoTurns();
+                            DraftTimer::initialize($this->state, $this->state->settings, time());
+                            $autoResult = $this->runDraftAutoTurns(time());
                             if (!$autoResult->success) {
                                 return $autoResult;
                             }
@@ -161,11 +168,27 @@ final class PrepareProcessor
 
     public function finishDraft(string $playerKey): Result
     {
+        if ($this->db === null && $this->draftAutoPickerOverride === null) {
+            return Result::error('Db недоступен для драфта');
+        }
+
+        $timeoutResult = $this->resolveDraftTimeouts();
+        if (!$timeoutResult->success) {
+            return $timeoutResult;
+        }
+        if (!empty(array_diff($timeoutResult->events, ['draft_runtime_initialized']))) {
+            return Result::ok(array_merge($timeoutResult->events, ['manual_draft_action_expired']));
+        }
+
         if ($this->db === null) {
             return Result::error('Db недоступен для драфта');
         }
 
-        return (new DraftProcessor($this->state, $this->db))->finish($playerKey);
+        $result = (new DraftProcessor($this->state, $this->db))->finish($playerKey);
+        if ($result->success) {
+            $this->state->bumpVersion();
+        }
+        return $result;
     }
 
     public function selectDeck(string $playerKey, Command $cmd): Result
@@ -1322,9 +1345,16 @@ final class PrepareProcessor
             'grid_size' => 'grid_size',
             'boosters' => 'boosters',
             'booster_profile' => 'booster_profile',
+            'timer_mode' => 'draft_timer_mode',
+            'timer_total' => 'draft_timer_total',
+            'timer_action' => 'draft_timer_action',
         ] as $settingKey => $payloadKey) {
             if ($cmd->get($payloadKey) !== null) {
-                $data['draft'][$settingKey] = $cmd->get($payloadKey);
+                $value = $cmd->get($payloadKey);
+                if ($settingKey === 'timer_total') {
+                    $value = (int) $value * 60;
+                }
+                $data['draft'][$settingKey] = $value;
             }
         }
 
@@ -1334,41 +1364,144 @@ final class PrepareProcessor
             }
         }
 
-        return GameSettings::fromArray($data);
+        $settings = GameSettings::fromArray($data);
+        return $settings;
     }
 
     private function draftManualCommand(string $playerKey, callable $apply): Result
     {
-        if ($this->db === null) {
+        if ($this->db === null && $this->draftAutoPickerOverride === null) {
             return Result::error('Db недоступен для драфта');
         }
+
+        $timeoutResult = $this->resolveDraftTimeouts();
+        if (!$timeoutResult->success) {
+            return $timeoutResult;
+        }
+        if (!empty(array_diff($timeoutResult->events, ['draft_runtime_initialized']))) {
+            return Result::ok(array_merge($timeoutResult->events, ['manual_draft_action_expired']));
+        }
+
         if ($this->isDraftAutoControlled($playerKey)) {
             return Result::error('Эта сторона выбирает автоматически');
         }
 
-        $processor = new DraftProcessor($this->state, $this->db);
+        $processor = $this->draftProcessor();
+        if (($this->state->draft['turn'] ?? null) === $playerKey) {
+            DraftTimer::settleAction($this->state, $playerKey, time());
+        }
         $result = $apply($processor);
         if (!$result->success) {
             return $result;
         }
 
-        $autoResult = $this->runDraftAutoTurns();
+        if ($this->state->status === 'draft' && $this->state->draft !== null) {
+            DraftTimer::startAction($this->state, time());
+        }
+
+        $autoResult = $this->runDraftAutoTurns(time());
         if (!$autoResult->success) {
             return $autoResult;
         }
 
-        $this->state->bumpVersion();
-        return Result::ok(array_merge($result->events, $autoResult->events));
+        $postTimeoutResult = $this->resolveDraftTimeouts(time());
+        if (!$postTimeoutResult->success) {
+            return $postTimeoutResult;
+        }
+
+        if (empty($postTimeoutResult->events)) {
+            $this->state->bumpVersion();
+        }
+        return Result::ok(array_merge($result->events, $autoResult->events, $postTimeoutResult->events));
     }
 
-    private function runDraftAutoTurns(): Result
+    public function resolveDraftTimeouts(?int $now = null): Result
     {
-        if ($this->db === null) {
+        if ($this->db === null && $this->draftAutoPickerOverride === null) {
+            return Result::error('Db недоступен для драфта');
+        }
+        if ($this->state->status !== 'draft' || $this->state->draft === null) {
+            return Result::ok([]);
+        }
+
+        $now ??= time();
+        $needsRuntimeSave = !isset($this->state->draft['history'])
+            || ($this->state->settings->draftTimerMode() !== GameSettings::DRAFT_TIMER_UNLIMITED
+                && !isset($this->state->draft['timer']));
+        DraftTimer::ensureRuntime($this->state, $now);
+        $events = [];
+        if ($needsRuntimeSave) {
+            $events[] = 'draft_runtime_initialized';
+        }
+
+        if (!DraftTimer::hasTimer($this->state)) {
+            if (!empty($events)) {
+                $this->state->bumpVersion();
+            }
+            return Result::ok($events);
+        }
+
+        if (!DraftTimer::isExpired($this->state, $now)) {
+            if (!empty($events)) {
+                $this->state->bumpVersion();
+            }
+            return Result::ok($events);
+        }
+
+        $processor = $this->draftProcessor();
+        $autoPicker = $this->draftAutoPicker();
+
+        while ($this->state->status === 'draft'
+            && $this->state->draft !== null
+            && DraftTimer::hasTimer($this->state)
+            && DraftTimer::isExpired($this->state, $now)) {
+
+            $turn = (string) ($this->state->draft['turn'] ?? '');
+            if ($turn === '') break;
+
+            $chargeAt = DraftTimer::chargeLimitAt($this->state) ?? $now;
+            DraftTimer::settleAction($this->state, $turn, $chargeAt);
+
+            $selection = $autoPicker->pick(
+                $processor->validSelections(),
+                $this->state->draft['picked'][$turn] ?? []
+            );
+            if ($selection === null) break;
+
+            $result = $processor->pickSelection($turn, $selection, 'timeout_picked');
+            if (!$result->success) {
+                return $result;
+            }
+            $events = array_merge($events, $result->events);
+
+            if ($this->state->status !== 'draft' || $this->state->draft === null) {
+                break;
+            }
+
+            DraftTimer::startAction($this->state, $chargeAt);
+            $autoResult = $this->runDraftAutoTurns($chargeAt);
+            if (!$autoResult->success) {
+                return $autoResult;
+            }
+            $events = array_merge($events, $autoResult->events);
+        }
+
+        if (!empty($events)) {
+            $this->state->bumpVersion();
+        }
+
+        return Result::ok($events);
+    }
+
+    private function runDraftAutoTurns(?int $now = null): Result
+    {
+        if ($this->db === null && $this->draftAutoPickerOverride === null) {
             return Result::error('Db недоступен для драфта');
         }
 
+        $now ??= time();
         $events = [];
-        $processor = new DraftProcessor($this->state, $this->db);
+        $processor = $this->draftProcessor();
         $autoPicker = $this->draftAutoPicker();
 
         while ($this->state->status === 'draft' && $this->state->draft !== null) {
@@ -1386,13 +1519,20 @@ final class PrepareProcessor
                 return $result;
             }
             $events = array_merge($events, $result->events);
+            if ($this->state->status === 'draft' && $this->state->draft !== null) {
+                DraftTimer::startAction($this->state, $now);
+            }
         }
 
         return Result::ok($events);
     }
 
-    private function draftAutoPicker(): DraftAutoPicker
+    private function draftAutoPicker(): mixed
     {
+        if ($this->draftAutoPickerOverride !== null) {
+            return $this->draftAutoPickerOverride;
+        }
+
         $ukids = [];
         if ($this->state->draft !== null) {
             foreach ($this->state->draft['grid'] ?? [] as $ukid) {
@@ -1416,6 +1556,20 @@ final class PrepareProcessor
             $cardsByUkid,
             $dataProvider->loadSynergyByPair($cardsByUkid),
         ));
+    }
+
+    private function draftProcessor(): DraftProcessor
+    {
+        if ($this->db !== null) {
+            return new DraftProcessor($this->state, $this->db);
+        }
+
+        $ref = new \ReflectionClass(DraftProcessor::class);
+        $processor = $ref->newInstanceWithoutConstructor();
+        $stateProp = $ref->getProperty('state');
+        $stateProp->setAccessible(true);
+        $stateProp->setValue($processor, $this->state);
+        return $processor;
     }
 
     private function isDraftAutoControlled(string $playerKey): bool

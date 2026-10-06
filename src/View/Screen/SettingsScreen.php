@@ -66,6 +66,15 @@ final class SettingsScreen
         $boosters = $settings->draftBoosters();
         $isRandom = $settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM;
         $autoSide = $settings->draftAutoSide();
+        $timerMode = $settings->draftTimerMode();
+        $timerTotal = $settings->draftTimerTotalSeconds();
+        if ($timerTotal <= 0) {
+            $timerTotal = GameSettings::DRAFT_TIMER_DEFAULT_TOTAL_SECONDS;
+        }
+        $timerAction = $settings->draftTimerActionSeconds();
+        if ($timerAction <= 0) {
+            $timerAction = GameSettings::DRAFT_TIMER_DEFAULT_ACTION_SECONDS;
+        }
 
         $contentHtml = '<div class="settings-list">'
             . '<div><b>Тип</b>: Grid</div>'
@@ -92,6 +101,37 @@ final class SettingsScreen
             . '<span>Автоматический драфт</span>'
             . '<input type="checkbox" name="draft_pick_mode" value="' . GameSettings::DRAFT_PICK_MODE_RANDOM . '"'
                 . ($isRandom ? ' checked' : '') . '>'
+            . '</label>'
+            . '<div class="settings-field">'
+            . '<span>Таймер драфта</span>'
+            . '<div class="choice-list">'
+            . Form::radio('draft_timer_mode', GameSettings::DRAFT_TIMER_DEFAULT, 'Таймер (по умолчанию)', [
+                'checked' => $timerMode === GameSettings::DRAFT_TIMER_DEFAULT,
+            ])
+            . Form::radio('draft_timer_mode', GameSettings::DRAFT_TIMER_CUSTOM, 'Таймер (настраиваемый)', [
+                'checked' => $timerMode === GameSettings::DRAFT_TIMER_CUSTOM,
+            ])
+            . Form::radio('draft_timer_mode', GameSettings::DRAFT_TIMER_UNLIMITED, 'Без ограничений', [
+                'checked' => $timerMode === GameSettings::DRAFT_TIMER_UNLIMITED,
+            ])
+            . '</div>'
+            . '</div>'
+            . '<label class="settings-field">'
+            . '<span>Общее время, минут <small>используется только в настраиваемом режиме</small></span>'
+            . '<b>' . htmlspecialchars((string) (int) ($timerTotal / 60), ENT_QUOTES) . '</b>'
+            . '<input type="range" name="draft_timer_total" min="'
+                . (int) (GameSettings::DRAFT_TIMER_CUSTOM_TOTAL_MIN_SECONDS / 60)
+                . '" max="' . (int) (GameSettings::DRAFT_TIMER_CUSTOM_TOTAL_MAX_SECONDS / 60)
+                . '" step="1" value="' . htmlspecialchars((string) (int) ($timerTotal / 60), ENT_QUOTES) . '">'
+            . '</label>'
+            . '<label class="settings-field">'
+            . '<span>Время на действие, секунд <small>используется только в настраиваемом режиме</small></span>'
+            . '<b>' . htmlspecialchars((string) $timerAction, ENT_QUOTES) . '</b>'
+            . '<input type="range" name="draft_timer_action" min="'
+                . GameSettings::DRAFT_TIMER_CUSTOM_ACTION_MIN_SECONDS
+                . '" max="' . GameSettings::DRAFT_TIMER_CUSTOM_ACTION_MAX_SECONDS
+                . '" step="' . GameSettings::DRAFT_TIMER_CUSTOM_ACTION_STEP_SECONDS
+                . '" value="' . htmlspecialchars((string) $timerAction, ENT_QUOTES) . '">'
             . '</label>'
             . '<div class="settings-field">'
             . '<span>Кто выбирает автоматически</span>'

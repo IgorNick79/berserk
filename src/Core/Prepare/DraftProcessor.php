@@ -59,6 +59,7 @@ final class DraftProcessor
             'grid'   => $grid,
             'turn'   => 'host',
             'picked' => ['host' => [], 'player' => []],
+            'history' => [],
         ];
 
         return Result::ok([
@@ -147,6 +148,11 @@ final class DraftProcessor
         foreach ($taken as $ukid) {
             $this->state->draft['picked'][$playerKey][] = $ukid;
         }
+        $this->state->draft['history'] ??= [];
+        $this->state->draft['history'][] = [
+            'player' => $playerKey,
+            'cards' => array_values($taken),
+        ];
 
         foreach ($positions as $pos) {
             $this->state->draft['grid'][$pos] = null;

@@ -14,6 +14,9 @@ use Berserk\Core\DeckView;
 use Berserk\Core\ResourceCalculator;
 use Berserk\Core\BattleHelper;
 use Berserk\Core\ZoneManager;
+use Berserk\Core\StaleStateException;
+use Berserk\Core\Prepare\DraftTimer;
+use Berserk\Core\Prepare\PrepareProcessor;
 
 use Berserk\View\Template;
 use Berserk\View\Screen\ModeScreen;
@@ -119,6 +122,34 @@ $oppKey    = $state->getOpponentKey($playerKey);
 $message = null;
 $commandType = $_GET['cmd'] ?? '';
 
+if ($commandType === 'draft_sync') {
+    $changed = false;
+    $events = [];
+    $result = (new PrepareProcessor($state, $db))->resolveDraftTimeouts();
+    if ($result->success && !empty($result->events)) {
+        $changed = true;
+        $events = $result->events;
+        try {
+            $repo->save($state);
+        } catch (StaleStateException) {
+            $state = $repo->findById($state->gameId) ?? $state;
+            $changed = true;
+            $events = ['stale_reloaded'];
+        }
+    }
+
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'ok' => $result->success,
+        'changed' => $changed,
+        'version' => $state->version,
+        'status' => $state->status,
+        'events' => $events,
+        'timer' => $state->draft !== null ? DraftTimer::snapshot($state, $playerKey, time()) : null,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 if ($commandType !== '') {
     $payload = $_GET;
 
@@ -184,7 +215,14 @@ if ($commandType !== '') {
     $result = $engine->apply($state, $playerKey, $cmd);
 
     if ($result->success) {
-        $repo->save($state);
+        try {
+            $repo->save($state);
+        } catch (StaleStateException) {
+            $_SESSION['flash_message'] = 'Ошибка: состояние партии уже изменилось, обновляю страницу';
+            $roleParam = ($role === 'host') ? 'first' : 'second';
+            header('Location: ?' . $roleParam . '&game=' . $state->gameId);
+            exit;
+        }
 
         // PRG: редирект без cmd, чтобы F5 не выполнил команду повторно
         $roleParam = ($role === 'host') ? 'first' : 'second';
@@ -213,6 +251,17 @@ if ($commandType !== '') {
     }
 
     $message = 'Ошибка: ' . $result->error;
+}
+
+if ($commandType === '' && $state->status === 'draft') {
+    $timeoutResult = (new PrepareProcessor($state, $db))->resolveDraftTimeouts();
+    if ($timeoutResult->success && !empty($timeoutResult->events)) {
+        try {
+            $repo->save($state);
+        } catch (StaleStateException) {
+            $state = $repo->findById($state->gameId) ?? $state;
+        }
+    }
 }
 
 // Читаем flash-сообщение

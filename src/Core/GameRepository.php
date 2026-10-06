@@ -23,7 +23,8 @@ final class GameRepository
             return null;
         }
 
-        $data = json_decode($row['json'], true);
+        $rawJson = (string) $row['json'];
+        $data = json_decode($rawJson, true);
         if (!is_array($data)) {
             $data = [];
         }
@@ -33,7 +34,9 @@ final class GameRepository
         $data['host_id']   ??= (int) $row['host_id'];
         $data['player_id'] ??= (int) $row['player_id'];
 
-        return GameState::fromArray($data);
+        $state = GameState::fromArray($data);
+        $state->persistenceJson = $rawJson;
+        return $state;
     }
 
     public function save(GameState $state): void
@@ -43,14 +46,28 @@ final class GameRepository
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
         );
 
-        $sql = sprintf(
-            "UPDATE games SET json = '%s', status = '%s' WHERE ind = %d",
-            $this->db->escape($json),
-            $this->db->escape($state->status),
-            $state->gameId
-        );
+        if ($state->persistenceJson !== null) {
+            $sql = sprintf(
+                "UPDATE games SET json = '%s', status = '%s' WHERE ind = %d AND json = '%s'",
+                $this->db->escape($json),
+                $this->db->escape($state->status),
+                $state->gameId,
+                $this->db->escape($state->persistenceJson)
+            );
+        } else {
+            $sql = sprintf(
+                "UPDATE games SET json = '%s', status = '%s' WHERE ind = %d",
+                $this->db->escape($json),
+                $this->db->escape($state->status),
+                $state->gameId
+            );
+        }
 
         $this->db->query($sql);
+        if ($state->persistenceJson !== null && $this->db->affectedRows() !== 1) {
+            throw new StaleStateException('Game state was changed by another request');
+        }
+        $state->persistenceJson = $json;
     }
 
     /**
@@ -69,6 +86,7 @@ final class GameRepository
         $gameId = $this->db->lastInsertId();
         $state = new GameState($gameId, $hostId, $playerId);
         $state->status = 'mode';
+        $state->persistenceJson = '{}';
 
         $this->save($state);
 
