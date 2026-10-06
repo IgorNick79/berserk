@@ -105,6 +105,17 @@ final class InfoPanel
             }
         }
 
+        if (!empty($state->battle['any_death_messages'])) {
+            $html = '<div class="card-choice">';
+            foreach ((array) $state->battle['any_death_messages'] as $message) {
+                $text = (string) ($message['message'] ?? '');
+                if ($text === '') continue;
+                $html .= '<p class="bonus">' . htmlspecialchars($text, ENT_QUOTES) . '</p>';
+            }
+            $html .= '</div>';
+            return $html;
+        }
+
         if (!empty($state->battle['pending_prophecy'])) {
             return $this->renderProphecy();
         }

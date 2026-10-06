@@ -1268,6 +1268,9 @@ final class ActionResolver
             $val += $rowsBonus;
         }
 
+        $targetModifierBonus = $this->targetModifierBonus($action, $target);
+        $val += $targetModifierBonus;
+
         if ($type === 'shot') {
             $shotBonus = CardStats::getShotBonus($attacker);
             $val += $shotBonus;
@@ -1316,6 +1319,9 @@ final class ActionResolver
         if ($rowsBonus > 0) {
             $this->state->battle['strike']['rows_bonus'] = $rowsBonus;
         }
+        if ($targetModifierBonus > 0) {
+            $this->state->battle['strike']['target_modifier_bonus'] = $targetModifierBonus;
+        }
         if ($flyingBonus > 0) $this->state->battle['strike']['flying_bonus'] = $flyingBonus;
 
         $this->engine->applyAnswer($this->state, $target, $attacker, $type);
@@ -1346,6 +1352,33 @@ final class ActionResolver
 
         $this->state->bumpVersion();
         return Result::ok(["action:{$playerKey}:{$type}:{$cardId}->{$targetId}:dmg={$val}"]);
+    }
+
+    private function targetModifierBonus(array $action, CardInstance $target): int
+    {
+        $mods = $action['target_modifier'] ?? null;
+        if ($mods === null) {
+            return 0;
+        }
+        if (is_array($mods) && !array_is_list($mods)) {
+            $mods = [$mods];
+        }
+        if (!is_array($mods)) {
+            return 0;
+        }
+
+        $bonus = 0;
+        foreach ($mods as $mod) {
+            if (!is_array($mod)) continue;
+            $condition = (string) ($mod['condition'] ?? '');
+            $ok = match ($condition) {
+                'target_flying', 'target_is_flying' => CardStats::isFlyingCreature($target),
+                default => $condition === '',
+            };
+            if (!$ok) continue;
+            $bonus += (int) ($mod['value'] ?? 0);
+        }
+        return $bonus;
     }
 
     private function consumeNextActionBonuses(CardInstance $card, string $actionType): void
