@@ -89,13 +89,6 @@ final class InfoPanel
         $cardsInfo = $this->cardsInfo;
         $baseUrl   = $this->baseUrl;
 
-        file_put_contents(
-            __DIR__ . '/../../../../debug.log',
-            date('[Y-m-d H:i:s] ') . 'InfoPanel: pending=' 
-                . (!empty($state->battle['pending_cell_marker_pick']) ? 'Y' : 'N')
-                . "\n",
-            FILE_APPEND
-        );
         // Реестр ChoiceHandler — новая ветка
         $handler = \Berserk\Core\Choice\ChoiceRegistry::current($state);
         if ($handler !== null) {
