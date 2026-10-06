@@ -312,7 +312,7 @@ final class TurnPhaseProcessor
             if ($card->owner !== $passiveKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || $card->closed) continue;
+            if ($card->dying || CardStats::isDisabled($card)) continue;
             if (empty($card->prop['opponent_turn_start'])) continue;
             $otsCards[] = $card;
         }
@@ -445,7 +445,7 @@ final class TurnPhaseProcessor
             if ($card->owner !== $activeKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || $card->closed) continue;
+            if ($card->dying || CardStats::isDisabled($card)) continue;
             if (empty($card->prop['turn_start'])) continue;
 
             $hasNonCoin = false;
@@ -663,7 +663,7 @@ final class TurnPhaseProcessor
             if ($card->owner !== $activeKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || $card->closed) continue;
+            if ($card->dying || CardStats::isDisabled($card)) continue;
             if (empty($card->prop['turn_start'])) continue;
 
             foreach ($card->prop['turn_start'] as $eff) {
@@ -975,7 +975,7 @@ final class TurnPhaseProcessor
             if ($card->owner !== $activeKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || $card->closed) continue;
+            if ($card->dying || CardStats::isDisabled($card)) continue;
             if (empty($card->prop['turn_start'])) continue;
 
             foreach ($card->prop['turn_start'] as $eff) {
@@ -1054,7 +1054,7 @@ final class TurnPhaseProcessor
             if ($card->owner !== $passiveKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || $card->closed) continue;
+            if ($card->dying || CardStats::isDisabled($card)) continue;
             if (empty($card->prop['opponent_turn_end'])) continue;
 
             $queue[] = [
@@ -1201,7 +1201,7 @@ final class TurnPhaseProcessor
             if ($card->owner !== $activeKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || $card->closed) continue;
+            if ($card->dying || CardStats::isDisabled($card)) continue;
             if (empty($card->prop['instants'])) continue;
 
             foreach ($card->prop['instants'] as $inst) {
@@ -1232,7 +1232,7 @@ final class TurnPhaseProcessor
             if ($card->owner !== $activeKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || $card->closed) continue;
+            if ($card->dying || CardStats::isDisabled($card)) continue;
             if (empty($card->prop['turn_end'])) continue;
 
             $queue[] = [

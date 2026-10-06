@@ -105,6 +105,10 @@ final class ActionResolver
             return $this->startOpponentRowMarker($attacker, $action, $cardId, $playerKey, $actionKey);
         }
 
+        if ($type === 'apply_delayed_marker') {
+            return $this->resolveApplyDelayedMarker($attacker, $action, $cardId, $targetId, $playerKey);
+        }
+
         if ($type === 'destroy_self_and_target') {
             return $this->startDestroySelfAndTarget($attacker, $action, $cardId, $playerKey);
         }
@@ -327,8 +331,9 @@ final class ActionResolver
         if (!$attacker || $attacker->owner !== $playerKey || $attacker->zone !== CardInstance::ZONE_FIELD) {
             return Result::error('Атакующий не на поле');
         }
-        if ($attacker->closed) {
-            return Result::error('Атакующий закрыт');
+        if (CardStats::isDisabled($attacker)) {
+            $reason = CardStats::disabledReason($attacker);
+            return Result::error($reason !== '' ? $reason : 'Атакующий не может действовать');
         }
         if (CardStats::hasCannotAttack($attacker)) {
             return Result::error('Карта не может атаковать до конца хода');
@@ -442,12 +447,15 @@ final class ActionResolver
             $this->state->battle['strike']['attack_value_reduction'][] = $event;
         }
 
-        $successfulHit = $val > 0;
         $defended = CardStats::hasDefense($this->state, $target, 'uchr', $attacker);
         if ($defended) {
             $val = 0;
             $this->state->battle['strike']['defended'] = true;
         }
+        if ($this->engine->tryBlockDamageAttackWithMarker($this->state, $target, 'uchr', $val)) {
+            $val = 0;
+        }
+        $successfulHit = $val > 0;
 
         $this->engine->applyDamage($this->state, $target, $val, 'uchr', $attacker);
         $this->state->battle['strike']['damage_reduction'] = $reduction;
@@ -494,8 +502,9 @@ final class ActionResolver
                 && $attacker->zone !== CardInstance::ZONE_FLYING)) {
             return Result::error('Карта не на поле');
         }
-        if ($attacker->closed) {
-            return Result::error('Карта закрыта');
+        if (CardStats::isDisabled($attacker)) {
+            $reason = CardStats::disabledReason($attacker);
+            return Result::error($reason !== '' ? $reason : 'Карта не может действовать');
         }
         return null;
     }
@@ -633,6 +642,31 @@ final class ActionResolver
                 return Result::error('Цель не на поле');
             }
             return null;
+        } elseif ($type === 'apply_delayed_marker') {
+            if (($action['target'] ?? '') === 'enemy_non_flying') {
+                if ($target->owner === $playerKey) {
+                    return Result::error('Только на врага');
+                }
+                if ($target->zone !== CardInstance::ZONE_FIELD) {
+                    return Result::error('Цель должна быть нелетающей');
+                }
+                if ($target->type === 'fly') {
+                    return Result::error('Цель должна быть нелетающей');
+                }
+            }
+
+            $range = CardStats::getEffectiveRange($this->state, $attacker, $action);
+            if ($range > 0) {
+                $dist = abs($target->row - $attacker->row) + abs($target->col - $attacker->col);
+                if ($dist === 0) {
+                    return Result::error('Неверная цель');
+                }
+                if ($dist > $range) {
+                    return Result::error('Превышена дальность');
+                }
+            }
+
+            return null;
         } elseif (!empty($action['grant_modifier'])) {
             if (!empty($action['self']) && $target->instanceId !== $attacker->instanceId) {
                 return Result::error('Только на себя');
@@ -751,6 +785,77 @@ final class ActionResolver
     }
 
     // ─── Особые пути ──────────────────────────────────────────
+
+    private function resolveApplyDelayedMarker(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        $target = $this->state->getCard($targetId);
+        if (!$target
+            || ($target->zone !== CardInstance::ZONE_FIELD
+                && $target->zone !== CardInstance::ZONE_FLYING)) {
+            return Result::error('Цель не на поле');
+        }
+
+        $err = $this->validateTarget($attacker, $target, $action, 'apply_delayed_marker', $playerKey);
+        if ($err) return $err;
+
+        $marker = (array) ($action['marker'] ?? []);
+        $markerType = (string) ($marker['type'] ?? '');
+        if ($markerType === '') {
+            return Result::error('Маркер не задан');
+        }
+
+        $scheduled = (array) ($this->state->battle['scheduled_card_markers'] ?? []);
+        $kept = [];
+        foreach ($scheduled as $entry) {
+            if ((int) ($entry['target_id'] ?? 0) === $target->instanceId
+                && (string) ($entry['marker']['type'] ?? '') === $markerType) {
+                continue;
+            }
+            $kept[] = $entry;
+        }
+
+        $kept[] = [
+            'source_owner' => $playerKey,
+            'source_id'    => $attacker->instanceId,
+            'source_ukid'  => $attacker->ukid,
+            'target_id'    => $target->instanceId,
+            'target_ukid'  => $target->ukid,
+            'activate'     => (string) ($marker['activate'] ?? 'end_of_current_turn'),
+            'marker'       => [
+                'type'   => $markerType,
+                'source' => $playerKey,
+                'timing' => (string) ($marker['timing'] ?? 'source_next_turn_start'),
+            ],
+        ];
+        $this->state->battle['scheduled_card_markers'] = array_values($kept);
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'apply_delayed_marker',
+            'action_name' => $action['name'] ?? 'Способность',
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'delayed_marker' => [
+                'type' => $markerType,
+                'target_id' => $targetId,
+                'activate' => 'end_of_current_turn',
+            ],
+            'confirmed'   => [],
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(["delayed_marker:{$markerType}:{$cardId}->{$targetId}"]);
+    }
 
     private function resolveBecomeFly(
         CardInstance $attacker, array $action,
@@ -1188,6 +1293,10 @@ final class ActionResolver
             if ($hitsBefore >= (int) $action['close_on_ranged_hits']) {
                 $closeAfter = true;
             }
+        }
+
+        if ($this->engine->tryBlockDamageAttackWithMarker($this->state, $target, $type, $val)) {
+            $val = 0;
         }
 
         $this->engine->applyDamage($this->state, $target, $val, $type, $attacker);
@@ -3407,6 +3516,10 @@ final class ActionResolver
         $bombDamage = (int) ($action['bomb_damage'] ?? 2);
         $attackReduction = $this->engine->reduceAttackValueByCellMarkers($this->state, $attacker, $value);
         $value = (int) $attackReduction['value'];
+        $webBlocked = $this->engine->tryBlockDamageAttackWithMarker($this->state, $target, 'shot', $value);
+        if ($webBlocked) {
+            $value = 0;
+        }
 
         $hpBefore = $target->hp;
         $this->engine->applyDamage($this->state, $target, $value, 'shot', $attacker);

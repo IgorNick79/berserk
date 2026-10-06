@@ -142,6 +142,8 @@ final class TurnProcessor
      */
     public function afterEndPhase(string $endingKey, string $nextActiveKey): void
     {
+        $this->activateScheduledCardMarkers($endingKey);
+
         // Истечение маркеров
         foreach ($this->state->cards as $card) {
             if ($card->zone !== CardInstance::ZONE_FIELD
@@ -264,6 +266,8 @@ final class TurnProcessor
     public function continueStartTurn(string $activeKey, bool $fromIncarnation = false): void
     {
         if (!$fromIncarnation) {
+            $this->removeSpiderWebsForSourceOwner($activeKey);
+
             foreach ($this->state->cards as $card) {
                 if ($card->owner !== $activeKey) continue;
                 if ($card->zone !== CardInstance::ZONE_FIELD
@@ -348,6 +352,58 @@ final class TurnProcessor
 
         // 4. Фаза начала хода (яд пассивного → регенерация активного и т.д.)
         (new TurnPhaseProcessor($this->state, $this->engine))->beginStartPhase($activeKey);
+    }
+
+    private function activateScheduledCardMarkers(string $endingKey): void
+    {
+        $scheduled = (array) ($this->state->battle['scheduled_card_markers'] ?? []);
+        if (empty($scheduled)) return;
+
+        $kept = [];
+        foreach ($scheduled as $entry) {
+            if (($entry['source_owner'] ?? null) !== $endingKey
+                || ($entry['activate'] ?? '') !== 'end_of_current_turn') {
+                $kept[] = $entry;
+                continue;
+            }
+
+            $target = $this->state->getCard((int) ($entry['target_id'] ?? 0));
+            if (!$target
+                || ($target->zone !== CardInstance::ZONE_FIELD
+                    && $target->zone !== CardInstance::ZONE_FLYING)
+                || $target->dying
+                || $target->hp <= 0) {
+                continue;
+            }
+
+            $marker = (array) ($entry['marker'] ?? []);
+            $type = (string) ($marker['type'] ?? '');
+            if ($type === '') continue;
+
+            $target->markers[$type] = [
+                'value' => 1,
+                'source' => (string) ($entry['source_owner'] ?? ''),
+                'source_id' => (int) ($entry['source_id'] ?? 0),
+                'timing' => (string) ($marker['timing'] ?? 'source_next_turn_start'),
+            ];
+        }
+
+        if (empty($kept)) {
+            unset($this->state->battle['scheduled_card_markers']);
+        } else {
+            $this->state->battle['scheduled_card_markers'] = array_values($kept);
+        }
+    }
+
+    private function removeSpiderWebsForSourceOwner(string $activeKey): void
+    {
+        foreach ($this->state->cards as $card) {
+            if (empty($card->markers['spider_web'])) continue;
+            $marker = (array) $card->markers['spider_web'];
+            if (($marker['timing'] ?? '') !== 'source_next_turn_start') continue;
+            if (($marker['source'] ?? null) !== $activeKey) continue;
+            unset($card->markers['spider_web']);
+        }
     }
 
     /**

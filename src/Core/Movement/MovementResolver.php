@@ -38,8 +38,9 @@ final class MovementResolver
         if (!$card || $card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_FIELD) {
             return Result::error('Карта не на поле');
         }
-        if ($card->closed) {
-            return Result::error('Закрытая карта не может двигаться');
+        if (CardStats::isDisabled($card)) {
+            $reason = CardStats::disabledReason($card);
+            return Result::error($reason !== '' ? $reason : 'Карта не может двигаться');
         }
 
         if (!$this->keepsForcedStrikeTarget($card, $row, $col)) {
@@ -115,8 +116,9 @@ final class MovementResolver
         if (!$card || $card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_FIELD) {
             return Result::error('Карта не на поле');
         }
-        if ($card->closed) {
-            return Result::error('Закрытая карта не может двигаться');
+        if (CardStats::isDisabled($card)) {
+            $reason = CardStats::disabledReason($card);
+            return Result::error($reason !== '' ? $reason : 'Карта не может двигаться');
         }
         if (!empty($card->flags['moved_this_turn'])) {
             return Result::error('Существо уже двигалось в этот ход');

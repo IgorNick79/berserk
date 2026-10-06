@@ -148,8 +148,9 @@ final class StrikeResolver
                 && $attacker->zone !== CardInstance::ZONE_FLYING)) {
             return Result::error('Атакующий не на поле');
         }
-        if ($attacker->closed) {
-            return Result::error('Атакующий закрыт');
+        if (CardStats::isDisabled($attacker)) {
+            $reason = CardStats::disabledReason($attacker);
+            return Result::error($reason !== '' ? $reason : 'Атакующий не может действовать');
         }
         if (CardStats::hasCannotAttack($attacker)) {
             return Result::error('Карта не может атаковать до конца хода');
@@ -582,6 +583,11 @@ final class StrikeResolver
                 $val = 0;
                 $hitWasBlocked = true;
                 $this->state->battle['strike']['blocked_by_weak'] = true;
+            }
+
+            if ($this->engine->tryBlockDamageAttackWithMarker($this->state, $defendCard, 'strike', $val)) {
+                $val = 0;
+                $hitWasBlocked = true;
             }
 
             $hpBeforeStrikeDamage = $defendCard->hp;

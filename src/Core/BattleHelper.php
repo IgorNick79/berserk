@@ -61,7 +61,7 @@ final class BattleHelper
      */
     public static function getMoveCells(GameState $state, CardInstance $card): array
     {
-        if ($card->closed || $card->move <= 0 || isset($card->markers['rooted'])) {
+        if (CardStats::isDisabled($card) || $card->move <= 0 || isset($card->markers['rooted'])) {
             return [];
         }
 
@@ -123,7 +123,7 @@ final class BattleHelper
 
     public static function getJumpCells(GameState $state, CardInstance $card): array
     {
-        if ($card->closed || !empty($card->flags['moved_this_turn']) || isset($card->markers['rooted'])) {
+        if (CardStats::isDisabled($card) || !empty($card->flags['moved_this_turn']) || isset($card->markers['rooted'])) {
             return [];
         }
 
@@ -173,7 +173,7 @@ final class BattleHelper
         string $playerKey,
         bool $allowFriendlyFire = false,
     ): array {
-        if ($card->closed) {
+        if (CardStats::isDisabled($card)) {
             return [];
         }
         if (!str_starts_with($mode, 'action:') && CardStats::hasCannotAttack($card)) {
@@ -212,6 +212,9 @@ final class BattleHelper
 
             $type = $action['type'] ?? '';
             $allowFriendlyAction = $allowFriendlyFire && CardStats::canFriendlyFireAction($action);
+            if (CardStats::isDisabled($card)) {
+                return [];
+            }
             if (CardStats::hasCannotAttack($card) && CardStats::isOffensiveAction($type)) {
                 return [];
             }
@@ -356,6 +359,17 @@ final class BattleHelper
                     if ($target->zone !== CardInstance::ZONE_FIELD
                         && $target->zone !== CardInstance::ZONE_FLYING) continue;
                     // любой — свой или чужой
+                } elseif ($type === 'apply_delayed_marker') {
+                    if (($action['target'] ?? '') === 'enemy_non_flying') {
+                        if ($target->owner === $playerKey) continue;
+                        if ($target->zone !== CardInstance::ZONE_FIELD) continue;
+                        if ($target->type === 'fly') continue;
+                    }
+                    $range = CardStats::getEffectiveRange($state, $card, $action);
+                    if ($range > 0) {
+                        $dist = abs($target->row - $card->row) + abs($target->col - $card->col);
+                        if ($dist === 0 || $dist > $range) continue;
+                    }
                 } elseif ($type === 'dissonance') {
                     if ($target->owner === $playerKey) continue;
                     if ($target->zone !== CardInstance::ZONE_FIELD) continue;

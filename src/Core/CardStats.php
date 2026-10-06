@@ -620,6 +620,20 @@ final class CardStats
         return false;
     }
 
+    public static function isDisabled(CardInstance $card): bool
+    {
+        return $card->closed || isset($card->markers['spider_web']);
+    }
+
+    public static function disabledReason(CardInstance $card): string
+    {
+        if ($card->closed) return 'Карта закрыта';
+        if (isset($card->markers['spider_web'])) {
+            return 'Карта находится в сети и не может действовать';
+        }
+        return '';
+    }
+
     public static function isOffensiveAction(string $type): bool
     {
         return in_array($type, ['strike', 'uchr', 'shot', 'throw', 'discharge', 'magic', 'cast', 'tap', 'impact', 'execute', 'dissonance', 'sand_claws', 'bomb_shot'], true);

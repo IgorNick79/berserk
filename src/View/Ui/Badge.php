@@ -22,6 +22,7 @@ final class Badge
         'fire'       => 'Огонь',
         'tremor'     => 'Дрожь',
         'rooted'     => 'Обездвижен',
+        'spider_web' => 'Сеть',
         'sand_claws' => 'Когти',
         'prey'       => 'Добыча',
     ];

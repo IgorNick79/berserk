@@ -811,6 +811,13 @@ final class InfoPanel
                 } else {
                     $resultText = $name;
                 }
+            } elseif ($kind === 'apply_delayed_marker') {
+                $name = $strike['action_name'] ?? 'Способность';
+                $target = $state->getCard((int) ($strike['target_id'] ?? 0));
+                $targetName = $target ? ($cardsInfo[$target->ukid]['name'] ?? '?') : '?';
+                $resultText = htmlspecialchars($name, ENT_QUOTES)
+                    . ': ' . htmlspecialchars($targetName, ENT_QUOTES)
+                    . ' получит сеть в конце хода';
             } elseif ($kind === 'steal') {
                 $name = $strike['action_name'] ?? 'Украсть оружие';
                 $st = $strike['steal'] ?? null;
@@ -978,6 +985,16 @@ final class InfoPanel
                             . ': атака снижена с ' . $from . ' до ' . $to . '</p>';
                     }
                 }
+            }
+
+            $spiderWebHtml = '';
+            if (!empty($strike['spider_web_block'])) {
+                $web = $strike['spider_web_block'];
+                $target = $state->getCard((int) ($web['target_id'] ?? 0));
+                $targetInfo = $target ? ($cardsInfo[$target->ukid] ?? null) : null;
+                $targetName = $targetInfo ? htmlspecialchars($targetInfo['name'], ENT_QUOTES) : '?';
+                $spiderWebHtml = '<p class="wait">Сеть блокирует атаку по '
+                    . $targetName . ' и исчезает</p>';
             }
 
 
@@ -1290,9 +1307,9 @@ final class InfoPanel
                 . $behindWeakStrikeHtml . $shotBonusHtml . $nextActionBonusHtml
                 . $nextStrikeBonusHtml . $rowsBonusHtml . $clumsyHtml
                 . $abilityBonusHtml . $coinBonusHtml . $reductionHtml
-                . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml;
+                . $spiderWebHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml;
 
-            $noDiceKinds = ['heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot'];
+            $noDiceKinds = ['heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot', 'apply_delayed_marker'];
             if (!in_array($kind, $noDiceKinds, true)) {
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
@@ -1322,6 +1339,7 @@ final class InfoPanel
         if ($kind === 'steal_coin') $headerText = 'Уловка';
         if ($kind === 'give_coin') $headerText = 'Передача монеты';
         if ($kind === 'become_fly') $headerText = 'Полёт';
+        if ($kind === 'apply_delayed_marker') $headerText = 'Воздействие';
         if ($kind === 'dive') $headerText = 'Пикирование';
         if ($kind === 'bomb_shot') $headerText = 'Бомба';
         if ($kind === 'row_spell') $headerText = 'Цветущие руны';

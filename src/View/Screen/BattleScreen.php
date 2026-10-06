@@ -527,6 +527,12 @@ final class BattleScreen
         // Кнопки режимов
         $modeButtons = '';
         if ($isActive && !$strike && $c->owner === $playerKey) {
+            if (CardStats::isDisabled($c)) {
+                $reason = CardStats::disabledReason($c);
+                $modeButtons .= '<span class="button small disabled">'
+                    . htmlspecialchars($reason !== '' ? $reason : 'Карта не может действовать', ENT_QUOTES)
+                    . '</span> ';
+            } else {
             $abil = BattleHelper::abilities($c);
 
             $attackLimit = (int) ($c->prop['attacks_per_turn'] ?? 1);
@@ -577,6 +583,7 @@ final class BattleScreen
                 'bomb_shot' => 'Бомба',
                 'row_spell' => 'Цветущие руны',
                 'mark_opponent_row' => 'Заклинание ряда',
+                'apply_delayed_marker' => 'Воздействие',
             ];
 
             foreach ($c->prop['actions'] ?? [] as $a) {
@@ -700,12 +707,15 @@ final class BattleScreen
                     $modeButtons .= '<span class="button small disabled">Монет максимум</span> ';
                 }
             }
+            }
         }
 
         // Статус-строка
         $statusHtml = '';
         if ($c->closed) {
             $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта закрыта']);
+        } elseif (isset($c->markers['spider_web'])) {
+            $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта находится в сети']);
         } elseif ($isActive && !$strike && $c->owner === $playerKey) {
             if (empty($attackTargets)) {
                 $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Нет целей']);

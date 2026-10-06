@@ -345,6 +345,7 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 .marker-fire   { background: #c33; }
 .marker-tremor { background: #666; }
 .marker-rooted { background: #666; }
+.marker-spider_web { background: #256b8f; color: #fff; }
 
 .battle-layout {
     display: flex;

@@ -468,6 +468,31 @@ final class Engine
         return true;
     }
 
+    public function tryBlockDamageAttackWithMarker(
+        GameState $state,
+        CardInstance $target,
+        string $actionType,
+        int $value
+    ): bool {
+        if ($value <= 0) return false;
+        if (!isset($target->markers['spider_web'])) return false;
+
+        $attackTypes = ['strike', 'uchr', 'shot', 'throw', 'discharge', 'magic', 'cast', 'tap'];
+        if (!in_array($actionType, $attackTypes, true)) return false;
+
+        $marker = (array) $target->markers['spider_web'];
+        unset($target->markers['spider_web']);
+
+        $state->battle['strike']['spider_web_block'] = [
+            'target_id' => $target->instanceId,
+            'target_ukid' => $target->ukid,
+            'type' => 'spider_web',
+            'source' => $marker['source'] ?? null,
+        ];
+
+        return true;
+    }
+
     public function forceDeath(
         GameState $state,
         CardInstance $target,
@@ -538,8 +563,9 @@ final class Engine
                 && $card->zone !== CardInstance::ZONE_FLYING)) {
             return Result::error('Карта не на поле');
         }
-        if ($card->closed) {
-            return Result::error('Карта закрыта');
+        if (CardStats::isDisabled($card)) {
+            $reason = CardStats::disabledReason($card);
+            return Result::error($reason !== '' ? $reason : 'Карта не может действовать');
         }
         if (empty($card->prop['save_coins'])) {
             return Result::error('Карта не умеет копить монеты');
