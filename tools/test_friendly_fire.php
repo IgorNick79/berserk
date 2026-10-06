@@ -11,6 +11,7 @@ use Berserk\Core\CardInstance;
 use Berserk\Core\Command;
 use Berserk\Core\Engine;
 use Berserk\Core\GameState;
+use Berserk\Core\InstantProcessor;
 use Berserk\View\Screen\BattleScreen;
 use Berserk\View\Template;
 
@@ -66,6 +67,39 @@ function friendlyState(array $attackerProp = []): GameState
     $state->addCard(friendlyCard(4, 'ally_far', GameState::PLAYER_HOST, 6, 5));
 
     return $state;
+}
+
+function friendlyCombatInstantProp(): array
+{
+    return [
+        'instants' => [[
+            'key' => 'guard_flash',
+            'name' => 'Сторожевой отблеск',
+            'trigger' => 'combat',
+            'target' => 'self',
+            'combat_phase' => 'value',
+            'effect' => ['type' => 'damage_cap', 'value' => 1],
+        ]],
+    ];
+}
+
+function friendlyPrepareStrike(GameState $state, bool $friendlyFire): void
+{
+    $state->battle['strike'] = [
+        'attacker_id' => 1,
+        'target_id' => $friendlyFire ? 3 : 2,
+        'defender_id' => null,
+        'state' => 'resolving',
+        'attack_dice' => 2,
+        'defend_dice' => $friendlyFire ? 0 : 1,
+        'attack_mod' => 0,
+        'defend_mod' => 0,
+        'result' => ['attack' => 'weak', 'defend' => '', 'winner' => 'attack'],
+        'confirmed' => [],
+        'defenders' => [],
+        'redirect_candidates' => [],
+        'friendly_fire' => $friendlyFire,
+    ];
 }
 
 function friendlyRender(GameState $state, array $query): array
@@ -232,5 +266,40 @@ $enemyActionResult = (new Engine())->apply($enemyActionState, GameState::PLAYER_
 ]));
 friendlyAssert($enemyActionResult->success, $enemyActionResult->error ?? 'Enemy ranged action should keep existing behavior.');
 friendlyAssert(($enemyActionState->getCard(2)?->hp ?? 0) === 2, 'Enemy ranged action should still damage enemy target.');
+
+$friendlyInstantState = friendlyState();
+$friendlyInstantState->getCard(4)->prop = friendlyCombatInstantProp();
+$friendlyInstantState->getCard(2)->prop = friendlyCombatInstantProp();
+friendlyPrepareStrike($friendlyInstantState, true);
+(new InstantProcessor($friendlyInstantState, new Engine()))->openWindow('combat', GameState::PLAYER_HOST);
+friendlyAssert(
+    ($friendlyInstantState->battle['strike']['state'] ?? '') === 'waiting_instant',
+    'Friendly strike should open a combat instant window when the attacker side has an instant.'
+);
+friendlyAssert(
+    ($friendlyInstantState->battle['strike']['instant_priority'] ?? null) === GameState::PLAYER_HOST,
+    'Friendly strike combat instant priority should stay on the attacker side.'
+);
+friendlyAssert(
+    ($friendlyInstantState->battle['strike']['instant_participants'] ?? []) === [GameState::PLAYER_HOST],
+    'Friendly strike combat instant window should include only the attacker side.'
+);
+$blockedOpponentPass = (new InstantProcessor($friendlyInstantState, new Engine()))->passCombat(GameState::PLAYER_PLAYER);
+friendlyAssert(!$blockedOpponentPass->success, 'Opponent should not be able to pass a friendly strike instant window.');
+$hostPass = (new InstantProcessor($friendlyInstantState, new Engine()))->passCombat(GameState::PLAYER_HOST);
+friendlyAssert($hostPass->success, $hostPass->error ?? 'Attacker side should be able to pass a one-sided instant window.');
+friendlyAssert(
+    ($friendlyInstantState->battle['strike']['state'] ?? '') !== 'waiting_instant',
+    'One-sided friendly strike instant window should resolve after the attacker side passes.'
+);
+
+$opponentOnlyInstantState = friendlyState();
+$opponentOnlyInstantState->getCard(2)->prop = friendlyCombatInstantProp();
+friendlyPrepareStrike($opponentOnlyInstantState, true);
+(new InstantProcessor($opponentOnlyInstantState, new Engine()))->openWindow('combat', GameState::PLAYER_HOST);
+friendlyAssert(
+    ($opponentOnlyInstantState->battle['strike']['state'] ?? '') !== 'waiting_instant',
+    'Friendly strike should not open a combat instant window for opponent-only instants.'
+);
 
 echo "Friendly fire tests passed.\n";

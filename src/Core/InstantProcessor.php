@@ -21,6 +21,94 @@ final class InstantProcessor
         private Engine $engine,
     ) {}
 
+    private function normalizeParticipants(array $players): array
+    {
+        $result = [];
+        foreach ($players as $player) {
+            $player = (string) $player;
+            if ($player === '' || in_array($player, $result, true)) {
+                continue;
+            }
+            $result[] = $player;
+        }
+        return $result;
+    }
+
+    private function instantParticipants(array $strike, string $attackerKey, ?array $allowedPlayers = null): array
+    {
+        if ($allowedPlayers !== null) {
+            return $this->normalizeParticipants($allowedPlayers);
+        }
+        if (!empty($strike['friendly_fire'])) {
+            return [$attackerKey];
+        }
+        return $this->normalizeParticipants([$attackerKey, $this->state->getOpponentKey($attackerKey)]);
+    }
+
+    private function combatParticipants(array $strike): array
+    {
+        if (!empty($strike['instant_participants']) && is_array($strike['instant_participants'])) {
+            return $this->normalizeParticipants($strike['instant_participants']);
+        }
+
+        $attacker = !empty($strike['attacker_id']) ? $this->state->getCard((int) $strike['attacker_id']) : null;
+        if (!$attacker) {
+            return [];
+        }
+        return $this->instantParticipants($strike, $attacker->owner);
+    }
+
+    private function turnParticipants(array $stack): array
+    {
+        if (!empty($stack['participants']) && is_array($stack['participants'])) {
+            return $this->normalizeParticipants($stack['participants']);
+        }
+
+        $priority = (string) ($stack['priority'] ?? '');
+        if ($priority === '') {
+            return [];
+        }
+        return $this->normalizeParticipants([$priority, $this->state->getOpponentKey($priority)]);
+    }
+
+    private function firstParticipantWithInstants(array $participants, array $hasByPlayer): ?string
+    {
+        foreach ($participants as $player) {
+            if (!empty($hasByPlayer[$player])) {
+                return $player;
+            }
+        }
+        return null;
+    }
+
+    private function allParticipantsPassed(array $participants, array $passed): bool
+    {
+        foreach ($participants as $player) {
+            if (!in_array($player, $passed, true)) {
+                return false;
+            }
+        }
+        return !empty($participants);
+    }
+
+    private function nextUnpassedParticipant(array $participants, string $current, array $passed): ?string
+    {
+        if (empty($participants)) {
+            return null;
+        }
+
+        $count = count($participants);
+        $index = array_search($current, $participants, true);
+        $start = $index === false ? 0 : ((int) $index + 1);
+        for ($step = 0; $step < $count; $step++) {
+            $candidate = $participants[($start + $step) % $count];
+            if (!in_array($candidate, $passed, true)) {
+                return $candidate;
+            }
+        }
+        return null;
+    }
+
     // ═══════════════════════════════════════════════════════
     //  ОБЩЕЕ: список доступных инстантов
     // ═══════════════════════════════════════════════════════
@@ -135,7 +223,7 @@ final class InstantProcessor
     //  COMBAT-ОКНО (стек инстантов в фазе боя)
     // ═══════════════════════════════════════════════════════
 
-    public function openWindow(string $phase, string $priorityKey): void
+    public function openWindow(string $phase, string $priorityKey, ?array $allowedPlayers = null): void
     {
         $strike = $this->state->battle['strike'] ?? null;
         if (!$strike) return;
@@ -144,41 +232,44 @@ final class InstantProcessor
         if (!$attacker) return;
 
         $attackerKey = $attacker->owner;
-        $oppKey      = $this->state->getOpponentKey($attackerKey);
+        $participants = $this->instantParticipants($strike, $attackerKey, $allowedPlayers);
 
         if ($phase !== 'combat') {
             $this->openTurnStackWindow($priorityKey, [
                 'type' => $phase === 'after' ? 'strike_after' : 'strike_before',
-            ], $phase);
+            ], $phase, $participants);
             return;
         }
 
         $type = 'combat';
-        $attackerHas = !empty($this->getInstants($attackerKey, $phase, $type));
-        $oppHas      = !empty($this->getInstants($oppKey, $phase, $type));
+        $hasByPlayer = [];
+        foreach ($participants as $player) {
+            $hasByPlayer[$player] = !empty($this->getInstants($player, $phase, $type));
+        }
 
-        // Ни у кого нет — окно не открываем
-        if (!$attackerHas && !$oppHas) {
+        if (!in_array(true, $hasByPlayer, true)) {
             return;
         }
 
         $passed = [];
-        if (!$attackerHas) {
-            $passed[] = $attackerKey;
-        }
-        if (!$oppHas) {
-            $passed[] = $oppKey;
+        foreach ($hasByPlayer as $player => $hasInstants) {
+            if (!$hasInstants) {
+                $passed[] = $player;
+            }
         }
 
-        // Если кто-то уже автоматически пропущен — приоритет у того, у кого есть
-        $priority = $priorityKey;
-        if (!$attackerHas) $priority = $oppKey;
-        elseif (!$oppHas)  $priority = $attackerKey;
+        $priority = in_array($priorityKey, $participants, true) && !empty($hasByPlayer[$priorityKey])
+            ? $priorityKey
+            : $this->firstParticipantWithInstants($participants, $hasByPlayer);
+        if ($priority === null) {
+            return;
+        }
 
         $this->state->battle['strike']['state']            = 'waiting_instant';
         $this->state->battle['strike']['instant_phase']    = $phase;
         $this->state->battle['strike']['instant_priority'] = $priority;
         $this->state->battle['strike']['instant_passed']   = $passed;
+        $this->state->battle['strike']['instant_participants'] = $participants;
         $this->state->battle['strike']['instant_played']   = [];
         $this->state->battle['strike']['instant_stack']    = [];
         unset($this->state->battle['strike']['instant_resolution']);
@@ -192,6 +283,10 @@ final class InstantProcessor
         }
         if (($strike['instant_priority'] ?? null) !== $playerKey) {
             return Result::error('Не ваш приоритет');
+        }
+        $participants = $this->combatParticipants($strike);
+        if (!in_array($playerKey, $participants, true)) {
+            return Result::error('Игрок не участвует в этом окне инстантов');
         }
 
         $phase = $strike['instant_phase'] ?? 'before';
@@ -364,6 +459,10 @@ final class InstantProcessor
         if (($strike['instant_priority'] ?? null) !== $playerKey) {
             return Result::error('Не ваш приоритет');
         }
+        $participants = $this->combatParticipants($strike);
+        if (!in_array($playerKey, $participants, true)) {
+            return Result::error('Игрок не участвует в этом окне инстантов');
+        }
 
         $passed = $strike['instant_passed'] ?? [];
         if (!in_array($playerKey, $passed, true)) {
@@ -371,16 +470,18 @@ final class InstantProcessor
         }
         $this->state->battle['strike']['instant_passed'] = $passed;
 
-        if (count($passed) >= 2) {
+        if ($this->allParticipantsPassed($participants, $passed)) {
             $this->resolveStack();
             $this->state->bumpVersion();
             return Result::ok(['instant_stack_resolved']);
         }
 
-        $attacker = $this->state->getCard($strike['attacker_id']);
-        $attackerKey = $attacker->owner;
-        $oppKey = $this->state->getOpponentKey($attackerKey);
-        $newPriority = $playerKey === $attackerKey ? $oppKey : $attackerKey;
+        $newPriority = $this->nextUnpassedParticipant($participants, $playerKey, $passed);
+        if ($newPriority === null) {
+            $this->resolveStack();
+            $this->state->bumpVersion();
+            return Result::ok(['instant_stack_resolved']);
+        }
 
         $this->state->battle['strike']['instant_priority'] = $newPriority;
 
@@ -964,29 +1065,38 @@ final class InstantProcessor
     //  TURN-ПОТОК (инстанты в main phase / фазе хода)
     // ═══════════════════════════════════════════════════════
 
-    public function openTurnStackWindow(string $priorityKey, array $continuation, string $phase = 'turn'): bool
+    public function openTurnStackWindow(string $priorityKey, array $continuation, string $phase = 'turn', ?array $allowedPlayers = null): bool
     {
-        $ownerHas = !empty($this->getInstants($priorityKey, $phase, 'turn'));
-        $oppKey = $this->state->getOpponentKey($priorityKey);
-        $oppHas = !empty($this->getInstants($oppKey, $phase, 'turn'));
-        if (!$ownerHas && !$oppHas) {
+        $participants = $this->normalizeParticipants($allowedPlayers ?? [
+            $priorityKey,
+            $this->state->getOpponentKey($priorityKey),
+        ]);
+        $hasByPlayer = [];
+        foreach ($participants as $player) {
+            $hasByPlayer[$player] = !empty($this->getInstants($player, $phase, 'turn'));
+        }
+        if (!in_array(true, $hasByPlayer, true)) {
             return false;
         }
 
         $passed = [];
-        $priority = $priorityKey;
-        if (!$ownerHas) {
-            $passed[] = $priorityKey;
-            $priority = $oppKey;
+        foreach ($hasByPlayer as $player => $hasInstants) {
+            if (!$hasInstants) {
+                $passed[] = $player;
+            }
         }
-        if (!$oppHas) {
-            $passed[] = $oppKey;
-            $priority = $priorityKey;
+
+        $priority = in_array($priorityKey, $participants, true) && !empty($hasByPlayer[$priorityKey])
+            ? $priorityKey
+            : $this->firstParticipantWithInstants($participants, $hasByPlayer);
+        if ($priority === null) {
+            return false;
         }
 
         $this->state->battle['turn_instant_stack'] = [
             'state' => 'ordering',
             'phase' => $phase,
+            'participants' => $participants,
             'priority' => $priority,
             'passed' => $passed,
             'stack' => [],
@@ -1027,6 +1137,10 @@ final class InstantProcessor
         }
         if (($stackState['priority'] ?? null) !== $playerKey) {
             return Result::error('Не ваш приоритет');
+        }
+        $participants = $this->turnParticipants($stackState);
+        if (!in_array($playerKey, $participants, true)) {
+            return Result::error('Игрок не участвует в этом окне инстантов');
         }
 
         $cardId = (int) $cmd->get('card_id', 0);
@@ -1069,6 +1183,10 @@ final class InstantProcessor
         if (($stack['priority'] ?? null) !== $playerKey) {
             return Result::error('Не ваш приоритет');
         }
+        $participants = $this->turnParticipants($stack);
+        if (!in_array($playerKey, $participants, true)) {
+            return Result::error('Игрок не участвует в этом окне инстантов');
+        }
 
         $passed = (array) ($stack['passed'] ?? []);
         if (!in_array($playerKey, $passed, true)) {
@@ -1076,13 +1194,19 @@ final class InstantProcessor
         }
         $this->state->battle['turn_instant_stack']['passed'] = $passed;
 
-        if (count($passed) >= 2) {
+        if ($this->allParticipantsPassed($participants, $passed)) {
             $this->resolveTurnStack();
             $this->state->bumpVersion();
             return Result::ok(['turn_instant_stack_resolved']);
         }
 
-        $this->state->battle['turn_instant_stack']['priority'] = $this->state->getOpponentKey($playerKey);
+        $newPriority = $this->nextUnpassedParticipant($participants, $playerKey, $passed);
+        if ($newPriority === null) {
+            $this->resolveTurnStack();
+            $this->state->bumpVersion();
+            return Result::ok(['turn_instant_stack_resolved']);
+        }
+        $this->state->battle['turn_instant_stack']['priority'] = $newPriority;
         $this->autoPassTurnPriorityIfNoOptions();
         $this->state->bumpVersion();
         return Result::ok(['turn_instant_priority_passed']);
@@ -1194,6 +1318,10 @@ final class InstantProcessor
         }
         if (($stack['priority'] ?? null) !== $playerKey) {
             return Result::error('Не ваш приоритет');
+        }
+        $participants = $this->turnParticipants($stack);
+        if (!in_array($playerKey, $participants, true)) {
+            return Result::error('Игрок не участвует в этом окне инстантов');
         }
 
         $card = $this->state->getCard($cardId);
@@ -1351,6 +1479,8 @@ final class InstantProcessor
 
             $priority = (string) ($stack['priority'] ?? '');
             if ($priority === '') return;
+            $participants = $this->turnParticipants($stack);
+            if (!in_array($priority, $participants, true)) return;
 
             $phase = (string) ($stack['phase'] ?? 'turn');
             if (!empty($this->getInstants($priority, $phase, 'turn'))) {
@@ -1363,12 +1493,17 @@ final class InstantProcessor
             }
             $this->state->battle['turn_instant_stack']['passed'] = $passed;
 
-            if (count($passed) >= 2) {
+            if ($this->allParticipantsPassed($participants, $passed)) {
                 $this->resolveTurnStack();
                 return;
             }
 
-            $this->state->battle['turn_instant_stack']['priority'] = $this->state->getOpponentKey($priority);
+            $newPriority = $this->nextUnpassedParticipant($participants, $priority, $passed);
+            if ($newPriority === null) {
+                $this->resolveTurnStack();
+                return;
+            }
+            $this->state->battle['turn_instant_stack']['priority'] = $newPriority;
         }
     }
 
