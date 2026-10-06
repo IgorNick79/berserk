@@ -724,6 +724,9 @@ final class DamageResolver
 
         if (empty($kept)) {
             unset($this->state->battle['pending_any_death']);
+            if (empty($this->state->battle['strike'])) {
+                (new Engine())->finalizeDying($this->state);
+            }
             if (!empty($this->state->battle['turn_phase'])) {
                 (new TurnPhaseProcessor($this->state, new Engine()))->resume();
             }

@@ -280,6 +280,34 @@ $state->addCard($flyer4);
 fwKill($state, $flyer4, $watch);
 fwAssert(fwPendingCount($state) === 0, 'After accept, later flyer death should not create pending for same Watch.');
 
+$messageState = fwState(fwWatch(), fwVictim(2, GameState::PLAYER_PLAYER, false));
+$messageState->battle['strike'] = [
+    'kind' => 'strike',
+    'attacker_id' => 1,
+    'target_id' => 2,
+    'defender_id' => null,
+    'state' => 'results',
+    'attack_dice' => 2,
+    'defend_dice' => 0,
+    'result' => ['attack' => 'weak', 'defend' => '', 'winner' => 'attack'],
+    'final' => ['attack' => 'weak', 'defend' => '', 'decreased' => false],
+    'damage' => 1,
+    'damage_total' => 1,
+    'confirmed' => [],
+];
+$messageState->battle['any_death_messages'][] = [
+    'source_id' => 1,
+    'message' => 'Дозор Форрендора получает полёт и +1 к удару до конца боя',
+];
+$html = (new InfoPanel(new Template(__DIR__ . '/../templates')))->render(
+    $messageState,
+    GameState::PLAYER_HOST,
+    'host',
+    fwCardsInfo(),
+    '?first&game=' . $messageState->gameId
+);
+fwAssert(str_contains($html, 'Дозор Форрендора получает полёт') && str_contains($html, 'cmd=confirm_strike'), 'Accept result message should not block strike confirmation.');
+
 // Two flyer deaths stay queued: decline first, accept second.
 $watch = fwWatch();
 $flyerA = fwVictim(2, GameState::PLAYER_PLAYER, true);

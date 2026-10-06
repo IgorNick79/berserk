@@ -98,15 +98,15 @@ final class InfoPanel
             }
         }
 
+        $anyDeathMessageHtml = '';
         if (!empty($state->battle['any_death_messages'])) {
-            $html = '<div class="card-choice">';
+            $anyDeathMessageHtml = '<div class="card-choice">';
             foreach ((array) $state->battle['any_death_messages'] as $message) {
                 $text = (string) ($message['message'] ?? '');
                 if ($text === '') continue;
-                $html .= '<p class="bonus">' . htmlspecialchars($text, ENT_QUOTES) . '</p>';
+                $anyDeathMessageHtml .= '<p class="bonus">' . htmlspecialchars($text, ENT_QUOTES) . '</p>';
             }
-            $html .= '</div>';
-            return $html;
+            $anyDeathMessageHtml .= '</div>';
         }
 
         if (!empty($state->battle['pending_prophecy'])) {
@@ -114,7 +114,7 @@ final class InfoPanel
         }
 
         if (!empty($state->battle['strike'])) {
-            return $this->renderStrike();
+            return $anyDeathMessageHtml . $this->renderStrike();
         }
 
         if (!empty($state->battle['pending_dive'])) {
@@ -154,7 +154,7 @@ final class InfoPanel
                 $instantBtn = '<span style="flex: 1"><a class="button instant" href="' . $baseUrl . '&cmd=open_turn_instants">Сыграть инстант</a></span>';
             }
 
-            return $instantResultHtml . '<div class="info-actions">'
+            return $anyDeathMessageHtml . $instantResultHtml . '<div class="info-actions">'
                 . '<a class="button wide" href="' . $baseUrl . '&cmd=end_turn">Завершить ход</a>'
                 . $instantBtn
                 . '<a class="button wide resign" href="' . $baseUrl . '&cmd=resign" '
@@ -162,7 +162,7 @@ final class InfoPanel
                 . '</div>';
         }
 
-        return $instantResultHtml;
+        return $anyDeathMessageHtml . $instantResultHtml;
 
     }
 
