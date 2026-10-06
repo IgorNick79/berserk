@@ -1111,11 +1111,7 @@ body { padding-bottom: 46vh; }
 }
 
 .cell-marker-reduce_attack {
-    width: 30px;
-    height: 30px;
     background: rgba(82, 169, 232, 0.82);
-    border: 1px solid rgba(255, 255, 255, 0.9);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 .cell-marker-reduce_attack::after {
     content: '❄';
@@ -1125,8 +1121,8 @@ body { padding-bottom: 46vh; }
     width: 100%;
     height: 100%;
     color: #fff;
-    font-size: 22px;
-    line-height: 1;
+    font-size: 20px;
+    line-height: .9;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
