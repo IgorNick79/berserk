@@ -1110,6 +1110,26 @@ body { padding-bottom: 46vh; }
     background-image: url("/assets/images/flower.png");
 }
 
+.cell-marker-reduce_attack {
+    width: 30px;
+    height: 30px;
+    background: rgba(82, 169, 232, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+.cell-marker-reduce_attack::after {
+    content: '❄';
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
 
 /* Костёр: пока юникод 🔥 через псевдоэлемент */
 .cell-marker-bonfire {
