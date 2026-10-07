@@ -116,7 +116,7 @@ final class ActionResolver
         if ($type === 'freeze_moves') {
             return $this->resolveFreezeMoves($attacker, $action, $cardId, $playerKey);
         }
-        
+
         if ($type === 'mark_opponent_row') {
             return $this->startOpponentRowMarker($attacker, $action, $cardId, $playerKey, $actionKey);
         }
