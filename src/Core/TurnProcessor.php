@@ -144,6 +144,12 @@ final class TurnProcessor
     {
         $this->activateScheduledCardMarkers($endingKey);
 
+        // Ледяной дождь Криоманта — действует ровно один ход противника.
+        $limit = $this->state->battle['moves_limit'] ?? null;
+        if ($limit && ($limit['owner'] ?? '') === $endingKey) {
+            unset($this->state->battle['moves_limit']);
+        }
+
         // Истечение маркеров
         foreach ($this->state->cards as $card) {
             if ($card->zone !== CardInstance::ZONE_FIELD

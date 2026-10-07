@@ -65,6 +65,10 @@ final class BattleHelper
             return [];
         }
 
+        if (self::movesLimitExhausted($state, $card)) {
+            return [];
+        }
+
         $occupied = [];
         foreach ($state->cards as $c) {
             if ($c->zone === CardInstance::ZONE_FIELD) {
@@ -124,6 +128,10 @@ final class BattleHelper
     public static function getJumpCells(GameState $state, CardInstance $card): array
     {
         if (CardStats::isDisabled($card) || !empty($card->flags['moved_this_turn']) || isset($card->markers['rooted'])) {
+            return [];
+        }
+
+        if (self::movesLimitExhausted($state, $card)) {
             return [];
         }
 
@@ -530,5 +538,17 @@ final class BattleHelper
         return $target->owner === $attacker->owner
             && $target->instanceId !== $attacker->instanceId
             && CardStats::canFriendlyFireMode($attacker, $mode);
+    }
+
+    private static function movesLimitExhausted(GameState $state, CardInstance $card): bool
+    {
+        $limit = $state->battle['moves_limit'] ?? null;
+        if (!$limit) return false;
+        if (($limit['owner'] ?? '') !== $card->owner) return false;
+
+        $moved = (array) ($limit['moved_ids'] ?? []);
+        if (in_array($card->instanceId, $moved, true)) return false;
+
+        return count($moved) >= (int) ($limit['limit'] ?? 0);
     }
 }

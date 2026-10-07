@@ -881,6 +881,16 @@ final class InfoPanel
                 } else {
                     $resultText = $name;
                 }
+            } elseif ($kind === 'freeze_moves') {
+                $f = $strike['freeze'] ?? null;
+                if ($f) {
+                    $ownerLabel = ($f['owner'] ?? '') === 'player' ? 'игрок' : 'хост';
+                    $resultText = 'Ледяной дождь: кубик ' . (int) $f['dice']
+                        . ' → ' . (int) $f['limit']
+                        . ' существ ' . $ownerLabel . ' смогут двигаться в свой следующий ход';
+                } else {
+                    $resultText = 'Ледяной дождь';
+                }
             } elseif ($kind === 'row_spell') {
                 $rs = $strike['row_spell'] ?? null;
                 $name = $strike['action_name'] ?? 'Цветущие руны';
@@ -1347,6 +1357,7 @@ final class InfoPanel
         if ($kind === 'dive') $headerText = 'Пикирование';
         if ($kind === 'bomb_shot') $headerText = 'Бомба';
         if ($kind === 'row_spell') $headerText = 'Цветущие руны';
+        if ($kind === 'freeze_moves') $headerText = 'Ледяной дождь';
 
         if (($strike['state'] ?? '') === 'waiting_instant') {
             $phase = $strike['instant_phase'] ?? 'before';

@@ -101,6 +101,10 @@ final class ActionResolver
             return $this->startRowSpell($attacker, $action, $cardId, $playerKey);
         }
 
+        if ($type === 'freeze_moves') {
+            return $this->resolveFreezeMoves($attacker, $action, $cardId, $playerKey);
+        }
+        
         if ($type === 'mark_opponent_row') {
             return $this->startOpponentRowMarker($attacker, $action, $cardId, $playerKey, $actionKey);
         }
@@ -3307,6 +3311,60 @@ final class ActionResolver
 
         $this->state->bumpVersion();
         return Result::ok(["steal_coin:{$playerKey}:{$cardId}->{$targetId}:{$stolen}"]);
+    }
+
+    private function resolveFreezeMoves(
+        CardInstance $attacker, array $action,
+        int $cardId, string $playerKey
+    ): Result {
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0 && $attacker->coins < $cost) {
+            return Result::error('Не хватает монет');
+        }
+
+        $dice  = Dice::roll();
+        $level = BattleHelper::diceToLevel($dice);
+        $limit = (int) ($action['strike'][$level] ?? 0);
+
+        if ($cost > 0) {
+            $attacker->coins -= $cost;
+            $this->engine->syncCoinBonus($attacker);
+        }
+
+        $oppKey = $this->state->getOpponentKey($playerKey);
+
+        // Перезапись (см. договорённость). Прошлый лимит снимается.
+        $this->state->battle['moves_limit'] = [
+            'owner'      => $oppKey,
+            'limit'      => $limit,
+            'moved_ids'  => [],
+            'source_id'  => $cardId,
+        ];
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'freeze_moves',
+            'action_name' => $action['name'] ?? 'Ледяной дождь',
+            'attacker_id' => $cardId,
+            'target_id'   => $cardId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => $dice,
+            'defend_dice' => 0,
+            'result'      => ['attack' => $level, 'defend' => '', 'winner' => 'attack'],
+            'final'       => ['attack' => $level, 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'freeze'      => [
+                'dice'  => $dice,
+                'level' => $level,
+                'limit' => $limit,
+                'owner' => $oppKey,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $attacker->closed = true;
+        $this->state->bumpVersion();
+        return Result::ok(["freeze_moves:{$playerKey}:{$limit}"]);
     }
 
     private function startRowSpell(
