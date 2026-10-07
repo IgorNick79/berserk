@@ -641,7 +641,7 @@ final class CardStats
 
     public static function isOffensiveAction(string $type): bool
     {
-        return in_array($type, ['strike', 'uchr', 'shot', 'throw', 'discharge', 'magic', 'cast', 'tap', 'impact', 'execute', 'dissonance', 'sand_claws', 'bomb_shot'], true);
+        return in_array($type, ['strike', 'uchr', 'shot', 'throw', 'discharge', 'magic', 'cast', 'tap', 'impact', 'execute', 'dissonance', 'sand_claws', 'bomb_shot', 'particle', 'life_gift'], true);
     }
 
     public static function canFriendlyFireMode(CardInstance $card, string $mode): bool

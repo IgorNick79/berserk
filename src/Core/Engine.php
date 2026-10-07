@@ -127,6 +127,8 @@ final class Engine
             'choose_row_spell_targets'  => $action->chooseRowSpellTargets($playerKey, $cmd),
             'choose_gate'             => $action->chooseGate($playerKey, $cmd),
             'choose_greed_teleport'   => $action->chooseGreedTeleport($playerKey, $cmd),
+            'choose_particle_pick'    => $action->chooseParticlePick($playerKey, $cmd),
+            'choose_life_gift'        => $action->chooseLifeGift($playerKey, $cmd),
             'reorder_start'           => (new ProphecyProcessor($state, $this))->startReorder($playerKey),
             'reorder_card_up'         => (new ProphecyProcessor($state, $this))->reorderCard(
                 $playerKey, (int) $cmd->get('card_id', 0), 'top'

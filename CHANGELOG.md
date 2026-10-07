@@ -33,3 +33,41 @@
 **Не сделано:** UI-бейдж на панели хода (пункт 4 — позже).
 
 **Откат:** `git revert <sha>` + откат SQL.
+
+## feat/card-s1_95-soulcatcher — 2026-XX-XX
+
+**Карта:** Ловец душ (s1_95, Эльф, цена 6).
+8 HP, move 1, удар 1-2-3.
+
+**Механика:**
+- `on_any_death` (любая смерть): +1 монета, cap 5.
+- `<tap>`: частица души — до 2 существ без ран, −1 каждому (impact).
+- `X<counter><tap>`: предсмертный дар — потратить X монет, ранить
+  врага на X (cast, защита zom) и излечить союзника на X.
+
+**Изменения:**
+- `ActionResolver::startParticlePick` / `chooseParticlePick` — новый тип
+  действия `particle`. Pending `pending_particle_pick` с фильтром
+  `hp == hpMax`, до 2 целей.
+- `ActionResolver::startLifeGift` / `chooseLifeGift` — новый тип `life_gift`.
+  Pending `pending_life_gift` с X (1..coins), списком врагов и союзников.
+  Урон — `cast` (проверка `hasDefense`), heal с капом.
+- `Choice/ParticlePickChoice` — checkbox + переключатель
+  «Мои существа / Существа противника».
+- `Choice/LifeGiftChoice` — MultiRadio (amount / enemy_id / ally_id).
+- `ChoiceRegistry` — регистрация.
+- `Engine::doApply` — команды `choose_particle_pick`, `choose_life_gift`.
+- `ActionResolver::cancelPending` — оба pending в `$simple`.
+- `CardStats::isOffensiveAction` — добавлены `particle`, `life_gift`.
+- `BattleHelper::getAttackTargets` — цели для этих действий не подсвечиваются.
+- `BattleScreen::buildPanel` — immediate actions и метки.
+- `InfoPanel` — отображение результатов + `$noDiceKinds` + `$headerText`.
+- SQL s1_95 — prop.
+
+**Как проверить:**
+Сценарий `debug/scenarious/card_s1_95_soulcatcher.json`.
+1. Частица души: 2 цели без ран, default враги, переключение на своих.
+2. Предсмертный дар: X монет, урон cast (защита zom), heal союзнику.
+3. `on_any_death`: +1 монета до cap 5.
+
+**Откат:** `git revert <sha>` + откат SQL.

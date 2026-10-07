@@ -881,6 +881,33 @@ final class InfoPanel
                 } else {
                     $resultText = $name;
                 }
+            } elseif ($kind === 'particle') {
+                $pt = $strike['particle'] ?? null;
+                if ($pt) {
+                    $parts = [];
+                    foreach ($pt['targets'] as $t) {
+                        $tc = $state->getCard((int) $t['target_id']);
+                        $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
+                        $parts[] = $tn . ' −' . $t['damage'];
+                    }
+                    $resultText = 'Частица души: ' . implode(', ', $parts);
+                } else {
+                    $resultText = 'Частица души';
+                }
+            } elseif ($kind === 'life_gift') {
+                $lg = $strike['life_gift'] ?? null;
+                if ($lg) {
+                    $e = $state->getCard((int) $lg['enemy_id']);
+                    $a = $state->getCard((int) $lg['ally_id']);
+                    $en = $e ? ($cardsInfo[$e->ukid]['name'] ?? '?') : '?';
+                    $an = $a ? ($cardsInfo[$a->ukid]['name'] ?? '?') : '?';
+                    $resultText = 'Предсмертный дар (X = ' . $lg['x'] . '): ' . $en
+                        . ' получает ' . $lg['damage'] . ($lg['defended'] ? ' (защита)' : '')
+                        . ', ' . $an . ' излечивается на ' . $lg['heal'];
+                } else {
+                    $resultText = 'Предсмертный дар';
+                }
+            }
             } elseif ($kind === 'freeze_moves') {
                 $f = $strike['freeze'] ?? null;
                 if ($f) {
@@ -1358,6 +1385,8 @@ final class InfoPanel
         if ($kind === 'bomb_shot') $headerText = 'Бомба';
         if ($kind === 'row_spell') $headerText = 'Цветущие руны';
         if ($kind === 'freeze_moves') $headerText = 'Ледяной дождь';
+        if ($kind === 'particle')  $headerText = 'Частица души';
+        if ($kind === 'life_gift') $headerText = 'Предсмертный дар';
 
         if (($strike['state'] ?? '') === 'waiting_instant') {
             $phase = $strike['instant_phase'] ?? 'before';

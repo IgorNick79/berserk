@@ -101,6 +101,14 @@ final class ActionResolver
             return $this->startRowSpell($attacker, $action, $cardId, $playerKey);
         }
 
+        if ($type === 'particle') {
+            return $this->startParticlePick($attacker, $action, $cardId, $playerKey);
+        }
+
+        if ($type === 'life_gift') {
+            return $this->startLifeGift($attacker, $action, $cardId, $playerKey);
+        }
+
         if ($type === 'freeze_moves') {
             return $this->resolveFreezeMoves($attacker, $action, $cardId, $playerKey);
         }
@@ -1902,6 +1910,8 @@ final class ActionResolver
             ['pending_opponent_row_marker',     'owner'],
             ['pending_gate_pick',               'owner'],
             ['pending_destroy_self_and_target',  'owner'],
+            ['pending_particle_pick',           'owner'],
+            ['pending_life_gift',               'owner'],
         ];
         foreach ($simple as [$key, $field]) {
             $p = $state->battle[$key] ?? null;
@@ -3568,6 +3578,234 @@ final class ActionResolver
 
         $this->state->bumpVersion();
         return Result::ok(['dive_started']);
+    }
+
+        private function startParticlePick(
+        CardInstance $attacker, array $action,
+        int $cardId, string $playerKey
+    ): Result {
+        if ($attacker->closed) {
+            return Result::error('Карта закрыта');
+        }
+
+        $candidates = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->instanceId === $attacker->instanceId) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            if ($c->hp < $c->hpMax) continue;   // только без ран
+            $candidates[] = $c->instanceId;
+        }
+
+        if (empty($candidates)) {
+            return Result::error('Нет существ без ран');
+        }
+
+        $this->state->battle['pending_particle_pick'] = [
+            'owner'       => $playerKey,
+            'card_id'     => $cardId,
+            'value'       => (int) ($action['value'] ?? 1),
+            'max_targets' => (int) ($action['max_targets'] ?? 2),
+            'candidates'  => $candidates,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['particle_started']);
+    }
+
+    public function chooseParticlePick(string $playerKey, Command $cmd): Result
+    {
+        $p = $this->state->battle['pending_particle_pick'] ?? null;
+        if (!$p || $p['owner'] !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $raw = $cmd->get('target_ids', []);
+        if (!is_array($raw)) $raw = [$raw];
+        $targetIds = array_values(array_unique(array_map('intval', $raw)));
+
+        if (empty($targetIds)) {
+            return Result::error('Выберите хотя бы одну цель');
+        }
+        if (count($targetIds) > (int) $p['max_targets']) {
+            return Result::error('Слишком много целей');
+        }
+        foreach ($targetIds as $tid) {
+            if (!in_array($tid, $p['candidates'], true)) {
+                return Result::error('Неверная цель');
+            }
+        }
+
+        $attacker = $this->state->getCard((int) $p['card_id']);
+        if (!$attacker) {
+            unset($this->state->battle['pending_particle_pick']);
+            return Result::error('Источник недоступен');
+        }
+
+        unset($this->state->battle['pending_particle_pick']);
+
+        $value = (int) $p['value'];
+        $applied = [];
+        foreach ($targetIds as $tid) {
+            $target = $this->state->getCard($tid);
+            if (!$target || $target->dying || $target->hp <= 0) continue;
+            $hpBefore = $target->hp;
+            $this->engine->applyDamage($this->state, $target, $value, 'impact', $attacker);
+            $applied[] = [
+                'target_id' => $tid,
+                'damage'    => max(0, $hpBefore - $target->hp),
+            ];
+        }
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'particle',
+            'action_name' => 'Частица души',
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => $targetIds[0] ?? 0,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'particle'    => ['targets' => $applied],
+            'confirmed'   => [],
+        ];
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(['particle_done']);
+    }
+
+    private function startLifeGift(
+        CardInstance $attacker, array $action,
+        int $cardId, string $playerKey
+    ): Result {
+        if ($attacker->closed) {
+            return Result::error('Карта закрыта');
+        }
+
+        $min = (int) ($action['min_x'] ?? 1);
+        if ($attacker->coins < $min) {
+            return Result::error('Не хватает монет');
+        }
+
+        $enemies = [];
+        $allies  = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            if ($c->owner === $playerKey) {
+                $allies[] = $c->instanceId;
+            } else {
+                $enemies[] = $c->instanceId;
+            }
+        }
+
+        if (empty($enemies)) {
+            return Result::error('Нет целей-врагов');
+        }
+        if (empty($allies)) {
+            return Result::error('Нет союзников');
+        }
+
+        $this->state->battle['pending_life_gift'] = [
+            'owner'     => $playerKey,
+            'card_id'   => $cardId,
+            'min_x'     => $min,
+            'max_x'     => $attacker->coins,
+            'enemies'   => $enemies,
+            'allies'    => $allies,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['life_gift_started']);
+    }
+
+    public function chooseLifeGift(string $playerKey, Command $cmd): Result
+    {
+        $p = $this->state->battle['pending_life_gift'] ?? null;
+        if (!$p || $p['owner'] !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $x = (int) $cmd->get('amount', 0);
+        $enemyId = (int) $cmd->get('enemy_id', 0);
+        $allyId  = (int) $cmd->get('ally_id', 0);
+
+        if ($x < (int) $p['min_x'] || $x > (int) $p['max_x']) {
+            return Result::error('Неверное количество монет');
+        }
+        if (!in_array($enemyId, $p['enemies'], true)) {
+            return Result::error('Неверная цель-враг');
+        }
+        if (!in_array($allyId, $p['allies'], true)) {
+            return Result::error('Неверная цель-союзник');
+        }
+
+        $attacker = $this->state->getCard((int) $p['card_id']);
+        if (!$attacker) {
+            unset($this->state->battle['pending_life_gift']);
+            return Result::error('Источник недоступен');
+        }
+
+        $enemy = $this->state->getCard($enemyId);
+        $ally  = $this->state->getCard($allyId);
+        if (!$enemy || !$ally) {
+            return Result::error('Цель не найдена');
+        }
+
+        unset($this->state->battle['pending_life_gift']);
+
+        $attacker->coins -= $x;
+        $this->engine->syncCoinBonus($attacker);
+        $attacker->closed = true;
+
+        // Урон врагу — cast (защита zom)
+        $defended = CardStats::hasDefense($this->state, $enemy, 'cast', $attacker);
+        $hpBefore = $enemy->hp;
+        if (!$defended) {
+            $this->engine->applyDamage($this->state, $enemy, $x, 'cast', $attacker);
+        }
+        $dealt = max(0, $hpBefore - $enemy->hp);
+
+        // Heal союзнику на X (с капом)
+        $allyHpBefore = $ally->hp;
+        $ally->hp = min($ally->hpMax, $ally->hp + $x);
+        $healed = $ally->hp - $allyHpBefore;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'life_gift',
+            'action_name' => 'Предсмертный дар',
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => $enemy->instanceId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => $dealt,
+            'life_gift'   => [
+                'x'         => $x,
+                'enemy_id'  => $enemy->instanceId,
+                'ally_id'   => $ally->instanceId,
+                'damage'    => $dealt,
+                'heal'      => $healed,
+                'defended'  => $defended,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->state->checkGameOver();
+        $this->state->bumpVersion();
+        return Result::ok(["life_gift:{$x}"]);
     }
 
     private function resolveBombShot(
