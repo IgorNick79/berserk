@@ -144,6 +144,12 @@ final class TurnProcessor
     {
         $this->activateScheduledCardMarkers($endingKey);
 
+        // Ледяной дождь Криоманта — действует ровно один ход противника.
+        $limit = $this->state->battle['moves_limit'] ?? null;
+        if ($limit && ($limit['owner'] ?? '') === $endingKey) {
+            unset($this->state->battle['moves_limit']);
+        }
+
         // Истечение маркеров
         foreach ($this->state->cards as $card) {
             if ($card->zone !== CardInstance::ZONE_FIELD
@@ -322,6 +328,7 @@ final class TurnProcessor
                     unset($card->flags['strike_chain_broken']);
                     unset($card->flags['teleport_adjacent_bonus_used']);
                     unset($card->flags['on_heal_open_used_this_turn']);
+                    unset($card->flags['nokami_used_this_turn']);
                 }
             }
 

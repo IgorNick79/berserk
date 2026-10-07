@@ -742,6 +742,16 @@ final class InfoPanel
                 } else {
                     $resultText = $name;
                 }
+            } elseif ($kind === 'poison_boost') {
+                $pb = $strike['poison_boost'] ?? null;
+                if ($pb) {
+                    $t = $state->getCard((int) $pb['target_id']);
+                    $tn = $t ? ($cardsInfo[$t->ukid]['name'] ?? '?') : '?';
+                    $resultText = 'Вскипающий яд: ' . htmlspecialchars($tn, ENT_QUOTES)
+                        . ' — отравление ' . $pb['from'] . ' → ' . $pb['to'];
+                } else {
+                    $resultText = 'Вскипающий яд';
+                }
             } elseif ($kind === 'damage_poisoned') {
                 $name = $strike['action_name'] ?? 'Власть Ундины';
                 $pd   = $strike['poisoned_damage'] ?? [];
@@ -880,6 +890,42 @@ final class InfoPanel
                         . $bomb['row'] . ';' . $bomb['col'] . ').';
                 } else {
                     $resultText = $name;
+                }
+            } elseif ($kind === 'particle') {
+                $pt = $strike['particle'] ?? null;
+                if ($pt) {
+                    $parts = [];
+                    foreach ($pt['targets'] as $t) {
+                        $tc = $state->getCard((int) $t['target_id']);
+                        $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
+                        $parts[] = $tn . ' −' . $t['damage'];
+                    }
+                    $resultText = 'Частица души: ' . implode(', ', $parts);
+                } else {
+                    $resultText = 'Частица души';
+                }
+            } elseif ($kind === 'life_gift') {
+                $lg = $strike['life_gift'] ?? null;
+                if ($lg) {
+                    $e = $state->getCard((int) $lg['enemy_id']);
+                    $a = $state->getCard((int) $lg['ally_id']);
+                    $en = $e ? ($cardsInfo[$e->ukid]['name'] ?? '?') : '?';
+                    $an = $a ? ($cardsInfo[$a->ukid]['name'] ?? '?') : '?';
+                    $resultText = 'Предсмертный дар (X = ' . $lg['x'] . '): ' . $en
+                        . ' получает ' . $lg['damage'] . ($lg['defended'] ? ' (защита)' : '')
+                        . ', ' . $an . ' излечивается на ' . $lg['heal'];
+                } else {
+                    $resultText = 'Предсмертный дар';
+                }
+            } elseif ($kind === 'freeze_moves') {
+                $f = $strike['freeze'] ?? null;
+                if ($f) {
+                    $ownerLabel = ($f['owner'] ?? '') === 'player' ? 'игрок' : 'хост';
+                    $resultText = 'Ледяной дождь: кубик ' . (int) $f['dice']
+                        . ' → ' . (int) $f['limit']
+                        . ' существ ' . $ownerLabel . ' смогут двигаться в свой следующий ход';
+                } else {
+                    $resultText = 'Ледяной дождь';
                 }
             } elseif ($kind === 'row_spell') {
                 $rs = $strike['row_spell'] ?? null;
@@ -1313,7 +1359,7 @@ final class InfoPanel
                 . $abilityBonusHtml . $coinBonusHtml . $reductionHtml
                 . $spiderWebHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml;
 
-            $noDiceKinds = ['heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot', 'apply_delayed_marker'];
+            $noDiceKinds = ['heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot', 'apply_delayed_marker', 'particle', 'life_gift', 'poison_boost'];
             if (!in_array($kind, $noDiceKinds, true)) {
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
@@ -1327,7 +1373,7 @@ final class InfoPanel
         }
 
         $headerText = 'Атака';
-        if ($kind === 'heal' || $kind === 'multi_heal')     $headerText = 'Излечение';
+        if ($kind === 'heal' || $kind === 'multi_heal') $headerText = 'Излечение';
         if ($kind === 'multi_discharge') $headerText = 'Разряд';
         if ($kind === 'modifier') $headerText = 'Способность';
         if ($kind === 'impact')   $headerText = 'Воздействие';
@@ -1347,6 +1393,10 @@ final class InfoPanel
         if ($kind === 'dive') $headerText = 'Пикирование';
         if ($kind === 'bomb_shot') $headerText = 'Бомба';
         if ($kind === 'row_spell') $headerText = 'Цветущие руны';
+        if ($kind === 'freeze_moves') $headerText = 'Ледяной дождь';
+        if ($kind === 'particle')  $headerText = 'Частица души';
+        if ($kind === 'life_gift') $headerText = 'Предсмертный дар';
+        if ($kind === 'poison_boost') $headerText = 'Вскипающий яд';
 
         if (($strike['state'] ?? '') === 'waiting_instant') {
             $phase = $strike['instant_phase'] ?? 'before';

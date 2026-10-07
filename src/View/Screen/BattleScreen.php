@@ -584,6 +584,9 @@ final class BattleScreen
                 'row_spell' => 'Цветущие руны',
                 'mark_opponent_row' => 'Заклинание ряда',
                 'apply_delayed_marker' => 'Воздействие',
+                'freeze_moves' => 'Ледяной дождь',
+                'particle'  => 'Частица души',
+                'life_gift' => 'Предсмертный дар',
             ];
 
             foreach ($c->prop['actions'] ?? [] as $a) {
@@ -677,6 +680,9 @@ final class BattleScreen
                     || ($a['type'] ?? '') === 'row_spell'
                     || ($a['type'] ?? '') === 'mark_opponent_row'
                     || ($a['type'] ?? '') === 'destroy_self_and_target'
+                    || ($a['type'] ?? '') === 'freeze_moves'
+                    || ($a['type'] ?? '') === 'particle'
+                    || ($a['type'] ?? '') === 'life_gift'
                     || !empty($a['max_targets']);
 
                 if ($immediate) {

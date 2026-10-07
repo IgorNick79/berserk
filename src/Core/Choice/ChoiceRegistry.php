@@ -52,6 +52,9 @@ final class ChoiceRegistry
                 new GatePickChoice(),
                 new GreedTeleportChoice(),
                 new DestroySelfAndTargetChoice(),
+                new ParticlePickChoice(),
+                new LifeGiftChoice(),
+                new NokamiWoundChoice(),
                 // ─── Фаза хода ───────────────────────────────────────
                 new TurnAckChoice(),
                 new TurnInstantResultChoice(),

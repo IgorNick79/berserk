@@ -77,6 +77,9 @@ final class ForcedMovementResolver
 
     public function move(CardInstance $card, int $deltaRow, int $deltaCol): Result
     {
+        if ($err = $this->checkMovesLimit($card)) {
+            return $err;
+        }
         if (!$this->canMove($card, $deltaRow, $deltaCol)) {
             return Result::error('Существо не может быть перемещено');
         }
@@ -91,6 +94,7 @@ final class ForcedMovementResolver
 
         $card->row = $destination['row'];
         $card->col = $destination['col'];
+        $this->markMovedUnderLimit($card);
 
         $context = new MovementContext(
             card: $card,
@@ -128,5 +132,32 @@ final class ForcedMovementResolver
 
         $source->modifiers[] = $applied;
         return true;
+    }
+
+    private function checkMovesLimit(CardInstance $card): ?Result
+    {
+        $limit = $this->state->battle['moves_limit'] ?? null;
+        if (!$limit) return null;
+        if (($limit['owner'] ?? '') !== $card->owner) return null;
+
+        $moved = (array) ($limit['moved_ids'] ?? []);
+        if (in_array($card->instanceId, $moved, true)) return null;
+
+        if (count($moved) >= (int) ($limit['limit'] ?? 0)) {
+            return Result::error('Ледяной дождь: превышен лимит движущихся существ');
+        }
+        return null;
+    }
+
+    private function markMovedUnderLimit(CardInstance $card): void
+    {
+        $limit = &$this->state->battle['moves_limit'];
+        if (!$limit) return;
+        if (($limit['owner'] ?? '') !== $card->owner) return;
+
+        $moved = &$limit['moved_ids'];
+        if (!is_array($moved)) $moved = [];
+        if (in_array($card->instanceId, $moved, true)) return;
+        $moved[] = $card->instanceId;
     }
 }

@@ -47,6 +47,10 @@ final class MovementResolver
             return Result::error('Нельзя уйти от обязательной цели');
         }
 
+        if ($err = $this->checkMovesLimit($card)) {
+            return $err;
+        }
+
         if (isset($card->markers['rooted'])) {
             return Result::error('Карта обездвижена');
         }
@@ -80,6 +84,7 @@ final class MovementResolver
         $card->col = $col;
         $card->move--;
         $card->flags['moved_this_turn'] = true;
+        $this->markMovedUnderLimit($card);
 
         if (!empty($card->prop['strike_consecutive'])
             && (int) ($card->flags['attacks_used_this_turn'] ?? 0) > 0) {
@@ -153,6 +158,10 @@ final class MovementResolver
             return Result::error('Нельзя уйти от обязательной цели');
         }
 
+        if ($err = $this->checkMovesLimit($card)) {
+            return $err;
+        }
+
         $oldRow = $card->row;
         $oldCol = $card->col;
 
@@ -160,6 +169,7 @@ final class MovementResolver
         $card->col = $col;
         $card->move = 0;
         $card->flags['moved_this_turn'] = true;
+        $this->markMovedUnderLimit($card);
 
         // Берсерк: движение после атаки ломает цепочку
         if (!empty($card->prop['strike_consecutive'])
@@ -247,5 +257,32 @@ final class MovementResolver
         $card->col = $oldCol;
 
         return $stillReachable !== null;
+    }
+
+    private function checkMovesLimit(CardInstance $card): ?Result
+    {
+        $limit = $this->state->battle['moves_limit'] ?? null;
+        if (!$limit) return null;
+        if (($limit['owner'] ?? '') !== $card->owner) return null;
+
+        $moved = (array) ($limit['moved_ids'] ?? []);
+        if (in_array($card->instanceId, $moved, true)) return null;
+
+        if (count($moved) >= (int) ($limit['limit'] ?? 0)) {
+            return Result::error('Ледяной дождь: превышен лимит движущихся существ');
+        }
+        return null;
+    }
+
+    private function markMovedUnderLimit(CardInstance $card): void
+    {
+        $limit = &$this->state->battle['moves_limit'];
+        if (!$limit) return;
+        if (($limit['owner'] ?? '') !== $card->owner) return;
+
+        $moved = &$limit['moved_ids'];
+        if (!is_array($moved)) $moved = [];
+        if (in_array($card->instanceId, $moved, true)) return;
+        $moved[] = $card->instanceId;
     }
 }
