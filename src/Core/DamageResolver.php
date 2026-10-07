@@ -910,22 +910,36 @@ final class DamageResolver
             $config = $nokami->prop['on_poison_damage'] ?? null;
             if (!is_array($config)) continue;
 
+            // Пробуем найти в существующей очереди запись этого Ноками
+            $existingIdx = null;
+            foreach ((array) ($this->state->battle['pending_nokami_wound'] ?? []) as $i => $item) {
+                if ((int) ($item['source_id'] ?? 0) === $nokami->instanceId) {
+                    $existingIdx = $i;
+                    break;
+                }
+            }
+
+            // Если очередь для этого Ноками уже создана — дополняем candidates
+            if ($existingIdx !== null) {
+                $existing = $this->state->battle['pending_nokami_wound'][$existingIdx];
+                $candidates = (array) $existing['candidates'];
+                $poisonedIds = (array) ($existing['poisoned_ids'] ?? []);
+                if (!in_array($poisoned->instanceId, $poisonedIds, true)) {
+                    $poisonedIds[] = $poisoned->instanceId;
+                }
+
+                $newCandidates = $this->collectNokamiCandidates($poisonedIds);
+                $merged = array_values(array_unique(array_merge($candidates, $newCandidates)));
+                $this->state->battle['pending_nokami_wound'][$existingIdx]['candidates'] = $merged;
+                $this->state->battle['pending_nokami_wound'][$existingIdx]['poisoned_ids'] = $poisonedIds;
+                continue;
+            }
+
+            // Срабатывание уже потрачено в этом ходу — новую запись не создаём
             if (!empty($nokami->flags['nokami_used_this_turn'])
                 && !empty($config['once_per_turn'])) continue;
 
-            $candidates = [];
-            foreach ($this->state->cards as $t) {
-                if ($t->instanceId === $poisoned->instanceId) continue;
-                if ($t->zone !== CardInstance::ZONE_FIELD) continue;
-                if ($t->dying || $t->hp <= 0) continue;
-
-                $dr = abs($t->row - $poisoned->row);
-                $dc = abs($t->col - $poisoned->col);
-                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
-
-                $candidates[] = $t->instanceId;
-            }
-
+            $candidates = $this->collectNokamiCandidates([$poisoned->instanceId]);
             if (empty($candidates)) continue;
 
             if (!isset($this->state->battle['pending_nokami_wound'])) {
@@ -936,11 +950,42 @@ final class DamageResolver
                 'owner'         => $nokami->owner,
                 'source_id'     => $nokami->instanceId,
                 'source_ukid'   => $nokami->ukid,
-                'poisoned_id'   => $poisoned->instanceId,
+                'poisoned_ids'  => [$poisoned->instanceId],
                 'poisoned_ukid' => $poisoned->ukid,
                 'candidates'    => $candidates,
                 'value'         => (int) ($config['value'] ?? 1),
             ];
+
+            // Помечаем сразу, чтобы второй тик яда не создал ещё одну запись
+            $nokami->flags['nokami_used_this_turn'] = true;
         }
+    }
+
+    /**
+     * Соседи всех указанных отравленных (8 клеток, живые, на поле).
+     * @param int[] $poisonedIds
+     * @return int[]
+     */
+    private function collectNokamiCandidates(array $poisonedIds): array
+    {
+        $result = [];
+        foreach ($poisonedIds as $pid) {
+            $poisoned = $this->state->getCard((int) $pid);
+            if (!$poisoned) continue;
+            if ($poisoned->zone !== CardInstance::ZONE_FIELD) continue;
+
+            foreach ($this->state->cards as $t) {
+                if ($t->instanceId === $poisoned->instanceId) continue;
+                if ($t->zone !== CardInstance::ZONE_FIELD) continue;
+                if ($t->dying || $t->hp <= 0) continue;
+
+                $dr = abs($t->row - $poisoned->row);
+                $dc = abs($t->col - $poisoned->col);
+                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+                $result[$t->instanceId] = true;
+            }
+        }
+        return array_keys($result);
     }
 }
