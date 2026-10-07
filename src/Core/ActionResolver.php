@@ -3803,7 +3803,7 @@ final class ActionResolver
         ];
 
         $this->engine->flushDeadeatQueue($this->state);
-        $this->state->checkGameOver();
+        $this->state->checkGameOver($this->state);
         $this->state->bumpVersion();
         return Result::ok(["life_gift:{$x}"]);
     }
