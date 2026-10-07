@@ -129,6 +129,7 @@ final class Engine
             'choose_greed_teleport'   => $action->chooseGreedTeleport($playerKey, $cmd),
             'choose_particle_pick'    => $action->chooseParticlePick($playerKey, $cmd),
             'choose_life_gift'        => $action->chooseLifeGift($playerKey, $cmd),
+            'choose_nokami_wound'     => $action->chooseNokamiWound($playerKey, $cmd),
             'reorder_start'           => (new ProphecyProcessor($state, $this))->startReorder($playerKey),
             'reorder_card_up'         => (new ProphecyProcessor($state, $this))->reorderCard(
                 $playerKey, (int) $cmd->get('card_id', 0), 'top'

@@ -71,3 +71,39 @@
 3. `on_any_death`: +1 монета до cap 5.
 
 **Откат:** `git revert <sha>` + откат SQL.
+
+## feat/card-s1_123-nokami — 2026-XX-XX
+
+**Карта:** Ноками (s1_123, Речная дева, цена 4).
+7 HP, move 1, удар 1-2-2.
+
+**Механика:**
+- Когда существо противника получает урон от яда — Ноками может ранить
+  существо рядом с ним на 1 (1 раз за ход).
+- `<tap>`: вскипающий яд — выбранное отравленное существо получает
+  +1 к отравлению (до cap 2).
+
+**Изменения:**
+- `ActionResolver::resolvePoisonBoost` — новый тип действия `poison_boost`.
+  Проверка cap, увеличение `poison.value`.
+- `ActionResolver::chooseNokamiWound` — обработка pending Ноками.
+  Отмена не помечает Ноками использованным.
+- `DamageResolver::triggerNokamiOnPoison` — вызывается при `actionType === 'poison'`
+  с реальным уроном. Собирает кандидатов (соседи отравленного, 8 клеток),
+  пишет `pending_nokami_wound`.
+- `Choice/NokamiWoundChoice` — окно выбора цели + Отмена.
+- `ChoiceRegistry`, `Engine::doApply` — регистрация и команда.
+- `ActionResolver::cancelPending` — `pending_nokami_wound`.
+- `TurnProcessor::continueStartTurn` — сброс флага `nokami_used_this_turn`.
+- `BattleHelper::getAttackTargets` — цели для `poison_boost`.
+- `InfoPanel` — отображение `poison_boost` + `$headerText` + `$noDiceKinds`.
+- SQL s1_123 — prop.
+
+**Как проверить:**
+Сценарий `debug/scenarious/card_s1_123_nokami.json`.
+1. Вскипающий яд: цель с poison 1 → poison 2. Повтор — ошибка.
+2. Тик яда → pending Ноками с 2 кандидатами + Отмена.
+3. Отмена — Ноками не потрачен, может сработать на следующем тике.
+4. Выбор — target получает 1 impact, Ноками помечен used.
+
+**Откат:** `git revert <sha>` + откат SQL.

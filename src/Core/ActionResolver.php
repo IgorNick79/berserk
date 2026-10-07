@@ -89,6 +89,10 @@ final class ActionResolver
             return $this->resolvePoisonTarget($attacker, $action, $cardId, $targetId, $playerKey);
         }
 
+        if ($type === 'poison_boost') {
+            return $this->resolvePoisonBoost($attacker, $action, $cardId, $targetId, $playerKey);
+        }
+
         if ($type === 'damage_poisoned') {
             return $this->resolveDamagePoisoned($attacker, $action, $cardId, $playerKey);
         }
@@ -652,6 +656,15 @@ final class ActionResolver
             if ($target->zone !== CardInstance::ZONE_FIELD
                 && $target->zone !== CardInstance::ZONE_FLYING) {
                 return Result::error('Цель не на поле');
+            }
+            return null;
+        } elseif ($type === 'poison_boost') {
+            if ($target->zone !== CardInstance::ZONE_FIELD
+                && $target->zone !== CardInstance::ZONE_FLYING) {
+                return Result::error('Цель не на поле');
+            }
+            if (empty($target->markers['poison'])) {
+                return Result::error('Цель должна быть отравлена');
             }
             return null;
         } elseif ($type === 'apply_delayed_marker') {
@@ -1912,6 +1925,7 @@ final class ActionResolver
             ['pending_destroy_self_and_target',  'owner'],
             ['pending_particle_pick',           'owner'],
             ['pending_life_gift',               'owner'],
+            ['pending_nokami_wound',            'owner'],
         ];
         foreach ($simple as [$key, $field]) {
             $p = $state->battle[$key] ?? null;
@@ -2857,6 +2871,55 @@ final class ActionResolver
 
         $this->state->bumpVersion();
         return Result::ok(["blood_tap:{$x}"]);
+    }
+
+    private function resolvePoisonBoost(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        $target = $this->state->getCard($targetId);
+        if (!$target) return Result::error('Цель не найдена');
+        if (empty($target->markers['poison'])) {
+            return Result::error('Цель должна быть отравлена');
+        }
+
+        $value = (int) ($action['value'] ?? 1);
+        $cap   = (int) ($action['cap'] ?? 2);
+        $current = (int) $target->markers['poison']['value'];
+
+        if ($current >= $cap) {
+            return Result::error('Отравление уже максимально (' . $cap . ')');
+        }
+
+        $new = min($cap, $current + $value);
+        $delta = $new - $current;
+        $target->markers['poison']['value'] = $new;
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'poison_boost',
+            'action_name' => $action['name'] ?? 'Вскипающий яд',
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'poison_boost' => [
+                'target_id' => $targetId,
+                'from'      => $current,
+                'to'        => $new,
+                'delta'     => $delta,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(["poison_boost:{$targetId}:{$current}->{$new}"]);
     }
 
     private function resolvePoisonTarget(
@@ -4168,5 +4231,64 @@ final class ActionResolver
         $this->engine->flushDeadeatQueue($this->state);
         $this->state->bumpVersion();
         return Result::ok(["greed_teleport:{$row}_{$col}"]);
+    }
+
+    public function chooseNokamiWound(string $playerKey, Command $cmd): Result
+    {
+        $queue = $this->state->battle['pending_nokami_wound'] ?? [];
+        if (empty($queue)) {
+            return Result::error('Нет ожидающего выбора');
+        }
+
+        $item = $queue[0];
+        $nokami = $this->state->getCard((int) $item['source_id']);
+        if (!$nokami || $nokami->owner !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $targetId = (int) $cmd->get('target_id', 0);
+
+        if ($targetId === 0) {
+            array_shift($this->state->battle['pending_nokami_wound']);
+            if (empty($this->state->battle['pending_nokami_wound'])
+                && !empty($this->state->battle['turn_phase'])) {
+                (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+            }
+            $this->state->bumpVersion();
+            return Result::ok(['nokami_skipped']);
+        }
+
+        if (!in_array($targetId, $item['candidates'], true)) {
+            return Result::error('Неверная цель');
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target || $target->dying || $target->hp <= 0) {
+            return Result::error('Цель недоступна');
+        }
+
+        $value = (int) ($item['value'] ?? 1);
+        $this->engine->applyDamage($this->state, $target, $value, 'impact', $nokami);
+
+        $nokami->flags['nokami_used_this_turn'] = true;
+
+        if (!empty($this->state->battle['strike'])) {
+            $this->state->battle['strike']['nokami_wound'][] = [
+                'source_id' => $nokami->instanceId,
+                'target_id' => $target->instanceId,
+                'value'     => $value,
+            ];
+        }
+
+        array_shift($this->state->battle['pending_nokami_wound']);
+
+        if (empty($this->state->battle['pending_nokami_wound'])
+            && !empty($this->state->battle['turn_phase'])) {
+            (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+        }
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(["nokami_wound:{$targetId}"]);
     }
 }

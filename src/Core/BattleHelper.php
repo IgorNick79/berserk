@@ -368,6 +368,12 @@ final class BattleHelper
                     if ($target->zone !== CardInstance::ZONE_FIELD
                         && $target->zone !== CardInstance::ZONE_FLYING) continue;
                     // любой — свой или чужой
+                } elseif ($type === 'poison_boost') {
+                    if ($target->zone !== CardInstance::ZONE_FIELD
+                        && $target->zone !== CardInstance::ZONE_FLYING) continue;
+                    if (empty($target->markers['poison'])) continue;
+                    if ((int) $target->markers['poison']['value'] >= (int) ($action['cap'] ?? 2)) continue;
+                    // любой — свой или чужой
                 } elseif ($type === 'apply_delayed_marker') {
                     if (($action['target'] ?? '') === 'enemy_non_flying') {
                         if ($target->owner === $playerKey) continue;

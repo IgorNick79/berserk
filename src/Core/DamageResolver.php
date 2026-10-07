@@ -130,6 +130,11 @@ final class DamageResolver
             $this->resolveDeath($target, $actionType, $attacker);
         }
 
+        if ($actionType === 'poison' && $realDamage > 0
+            && $target->hp > 0 && !$target->dying) {
+            $this->triggerNokamiOnPoison($target);
+        }
+
         $this->checkGameOver();
     }
 
@@ -891,5 +896,51 @@ final class DamageResolver
         }
 
         ($this->syncCoinBonus)($card);
+    }
+
+    private function triggerNokamiOnPoison(CardInstance $poisoned): void
+    {
+        if ($poisoned->zone !== CardInstance::ZONE_FIELD) return;
+
+        foreach ($this->state->cards as $nokami) {
+            if ($nokami->owner === $poisoned->owner) continue;
+            if ($nokami->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($nokami->dying || $nokami->hp <= 0) continue;
+
+            $config = $nokami->prop['on_poison_damage'] ?? null;
+            if (!is_array($config)) continue;
+
+            if (!empty($nokami->flags['nokami_used_this_turn'])
+                && !empty($config['once_per_turn'])) continue;
+
+            $candidates = [];
+            foreach ($this->state->cards as $t) {
+                if ($t->instanceId === $poisoned->instanceId) continue;
+                if ($t->zone !== CardInstance::ZONE_FIELD) continue;
+                if ($t->dying || $t->hp <= 0) continue;
+
+                $dr = abs($t->row - $poisoned->row);
+                $dc = abs($t->col - $poisoned->col);
+                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+                $candidates[] = $t->instanceId;
+            }
+
+            if (empty($candidates)) continue;
+
+            if (!isset($this->state->battle['pending_nokami_wound'])) {
+                $this->state->battle['pending_nokami_wound'] = [];
+            }
+
+            $this->state->battle['pending_nokami_wound'][] = [
+                'owner'         => $nokami->owner,
+                'source_id'     => $nokami->instanceId,
+                'source_ukid'   => $nokami->ukid,
+                'poisoned_id'   => $poisoned->instanceId,
+                'poisoned_ukid' => $poisoned->ukid,
+                'candidates'    => $candidates,
+                'value'         => (int) ($config['value'] ?? 1),
+            ];
+        }
     }
 }
