@@ -33,54 +33,25 @@ final class ParticlePickChoice implements ChoiceHandlerInterface
             return new PanelSpec(title: $srcName . ' — частица души', isMine: false);
         }
 
-        $side = (string) ($_GET['p_side'] ?? 'enemy'); // enemy | own
-
         $items = [];
         foreach ($p['candidates'] as $tid) {
             $tc = $state->getCard((int) $tid);
             if (!$tc) continue;
-            $isOwn = ($tc->owner === $playerKey);
-            if ($side === 'enemy' && $isOwn) continue;
-            if ($side === 'own'   && !$isOwn) continue;
 
             $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
             $label = $tn . ' (' . $tc->row . ';' . $tc->col . ') — ' . $tc->hp . '/' . $tc->hpMax;
-            if ($isOwn) $label .= ' — моё';
+            if ($tc->owner === $playerKey) {
+                $label .= ' — моё';
+            }
 
             $items[] = ['value' => (int) $tid, 'label' => $label];
         }
 
         $roleParam = $role === 'host' ? 'first' : 'second';
-
-        if (empty($items)) {
-            return new PanelSpec(
-                title: $srcName . ': нет целей без ран на этой стороне',
-                buttons: [
-                    [
-                        'label' => $side === 'enemy' ? 'Мои существа' : 'Существа противника',
-                        'url'   => $baseUrl . '&cmd=choose_particle_pick&p_side=' . ($side === 'enemy' ? 'own' : 'enemy'),
-                    ],
-                    [
-                        'label' => 'Отмена',
-                        'url'   => $baseUrl . '&cmd=cancel_pending',
-                        'class' => 'skip',
-                    ],
-                ],
-            );
-        }
-
         $max = (int) $p['max_targets'];
-
-        $buttons = [
-            [
-                'label' => $side === 'enemy' ? 'Мои существа' : 'Существа противника',
-                'url'   => $baseUrl . '&cmd=choose_particle_pick&p_side=' . ($side === 'enemy' ? 'own' : 'enemy'),
-            ],
-        ];
 
         return new PanelSpec(
             title: $srcName . ': выбери до ' . $max . ' существ без ран (по 1 урона)',
-            buttons: $buttons,
             form: [
                 'type'   => 'checkbox',
                 'name'   => 'target_ids[]',
