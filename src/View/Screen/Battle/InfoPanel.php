@@ -907,7 +907,6 @@ final class InfoPanel
                 } else {
                     $resultText = 'Предсмертный дар';
                 }
-            }
             } elseif ($kind === 'freeze_moves') {
                 $f = $strike['freeze'] ?? null;
                 if ($f) {
@@ -1364,7 +1363,7 @@ final class InfoPanel
         }
 
         $headerText = 'Атака';
-        if ($kind === 'heal' || $kind === 'multi_heal')     $headerText = 'Излечение';
+        if ($kind === 'heal' || $kind === 'multi_heal') $headerText = 'Излечение';
         if ($kind === 'multi_discharge') $headerText = 'Разряд';
         if ($kind === 'modifier') $headerText = 'Способность';
         if ($kind === 'impact')   $headerText = 'Воздействие';
