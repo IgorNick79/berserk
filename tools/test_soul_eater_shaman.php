@@ -93,6 +93,17 @@ function shState(CardInstance ...$cards): GameState
     return $state;
 }
 
+function shHasHypnosis(GameState $state, string $owner = GameState::PLAYER_HOST): bool
+{
+    $instants = (new InstantProcessor($state, new Engine()))->getInstants($owner, 'turn', 'turn');
+    foreach ($instants as $instant) {
+        if (($instant['payload']['key'] ?? '') === 'hypnosis') {
+            return true;
+        }
+    }
+    return false;
+}
+
 function shOpenHypnosis(GameState $state, string $owner = GameState::PLAYER_HOST): InstantProcessor
 {
     $ip = new InstantProcessor($state, new Engine());
@@ -183,6 +194,74 @@ $targeting = shState(
 );
 $instants = (new InstantProcessor($targeting, new Engine()))->getInstants(GameState::PLAYER_HOST, 'turn', 'turn');
 shAssert(count($instants) === 1 && ($instants[0]['payload']['key'] ?? '') === 'hypnosis', 'Hypnosis should be available with a coin and an open valid enemy.');
+shAssert(shHasHypnosis($targeting), 'Open Shaman with a coin should offer Hypnosis.');
+
+$closedAfterZoal = shState(
+    shCard(['instanceId' => 1, 'ukid' => 's1_118', 'prop' => shamanProp(), 'coins' => 1]),
+    shCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4]),
+    shCard(['instanceId' => 3, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 5])
+);
+$result = (new Engine())->apply($closedAfterZoal, GameState::PLAYER_HOST, new Command('action', [
+    'card_id' => 1,
+    'action_key' => 'gain_zoal',
+]));
+shAssert($result->success, $result->error ?? 'Gain ZOAL should resolve before availability check.');
+shAssert(!shHasHypnosis($closedAfterZoal), 'Closed Shaman after Gain ZOAL should not offer Hypnosis.');
+
+$closedOnOpponentTurn = shState(
+    shCard(['instanceId' => 1, 'ukid' => 's1_118', 'prop' => shamanProp(), 'coins' => 1, 'closed' => true]),
+    shCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4]),
+    shCard(['instanceId' => 3, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 5])
+);
+$closedOnOpponentTurn->battle['active'] = GameState::PLAYER_PLAYER;
+shAssert(!shHasHypnosis($closedOnOpponentTurn), 'Closed Shaman should not offer Hypnosis on opponent turn.');
+
+$closedManyCoins = shState(
+    shCard(['instanceId' => 1, 'ukid' => 's1_118', 'prop' => shamanProp(), 'coins' => 3, 'closed' => true]),
+    shCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4]),
+    shCard(['instanceId' => 3, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 5])
+);
+shAssert(!shHasHypnosis($closedManyCoins), 'Closed Shaman with multiple coins should still not offer Hypnosis.');
+(new Engine())->openCard($closedManyCoins->getCard(1));
+shAssert(shHasHypnosis($closedManyCoins), 'Reopened Shaman with enough coins should offer Hypnosis again.');
+
+$directClosedAttempt = shState(
+    shCard(['instanceId' => 1, 'ukid' => 's1_118', 'prop' => shamanProp(), 'coins' => 1, 'closed' => true]),
+    shCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4]),
+    shCard(['instanceId' => 3, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 5])
+);
+$directClosedAttempt->battle['turn_instant_stack'] = [
+    'state' => 'ordering',
+    'phase' => 'turn',
+    'participants' => [GameState::PLAYER_HOST],
+    'priority' => GameState::PLAYER_HOST,
+    'passed' => [],
+    'stack' => [],
+    'next_sequence' => 0,
+    'continuation' => ['type' => 'manual'],
+    'summary' => [],
+];
+$result = (new InstantProcessor($directClosedAttempt, new Engine()))->playTurnInstant(
+    GameState::PLAYER_HOST,
+    new Command('play_turn_instant', ['card_id' => 1, 'instant_key' => 'hypnosis'])
+);
+shAssert(!$result->success, 'Server should reject direct Hypnosis declaration by closed Shaman.');
+
+$noTapInstant = shState(shCard([
+    'instanceId' => 10,
+    'owner' => GameState::PLAYER_HOST,
+    'closed' => true,
+    'prop' => ['instants' => [[
+        'key' => 'no_tap',
+        'name' => 'Без закрытия',
+        'trigger' => 'turn',
+        'tap_source' => false,
+        'effect' => ['type' => 'damage', 'value' => 1],
+    ]]],
+]));
+$instants = (new InstantProcessor($noTapInstant, new Engine()))->getInstants(GameState::PLAYER_HOST, 'turn', 'turn');
+shAssert(count($instants) === 1 && ($instants[0]['payload']['key'] ?? '') === 'no_tap', 'Closed source should still offer turn instants that do not require tapping.');
+
 $ip = shOpenHypnosis($targeting);
 shAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 1, 'instant_key' => 'hypnosis']))->success, 'Hypnosis declaration should open first pick.');
 shAssert(!empty($targeting->battle['pending_instant_pick']), 'First target pending should be created.');

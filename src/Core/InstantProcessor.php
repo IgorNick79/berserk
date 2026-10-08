@@ -155,6 +155,7 @@ final class InstantProcessor
 
             foreach ($card->prop['instants'] as $inst) {
                 if (($inst['trigger'] ?? '') !== $type) continue;
+                if ($type === 'turn' && $this->instantRequiresTap($inst) && $card->closed) continue;
                 $key = (string) ($inst['key'] ?? ($inst['name'] ?? 'instant'));
                 $limit = (int) ($inst['uses_per_turn'] ?? 1);
                 if ($limit > 0) {
@@ -1407,6 +1408,7 @@ final class InstantProcessor
                 'effect' => (array) ($payload['effect'] ?? []),
                 'cost' => (int) ($payload['coins'] ?? 0),
                 'uses_per_turn' => (int) ($payload['uses_per_turn'] ?? 1),
+                'close_source' => $this->instantRequiresTap($payload),
             ];
         }
         return null;
@@ -1469,6 +1471,7 @@ final class InstantProcessor
 
         $cost = (int) ($inst['cost'] ?? 0);
         if ($cost > 0 && $card->coins < $cost) return Result::error('Не хватает монет');
+        if (!empty($inst['close_source']) && $card->closed) return Result::error('Карта закрыта');
         if ($cost > 0) {
             $card->coins -= $cost;
             $this->engine->syncCoinBonus($card);
@@ -1486,6 +1489,7 @@ final class InstantProcessor
             'target_id' => $targetId,
             'sequence' => $sequence,
             'cost' => $cost,
+            'close_source' => !empty($inst['close_source']),
         ];
 
         $card->flags['in_stack'] = true;
@@ -1538,8 +1542,10 @@ final class InstantProcessor
                 }
             }
 
-            if ($source) {
+            if ($source && !empty($item['close_source'])) {
                 $source->closed = true;
+            }
+            if ($source) {
                 unset($source->flags['in_stack']);
             }
             $summary[] = [
@@ -1716,6 +1722,20 @@ final class InstantProcessor
         }
         $card->flags['instant_uses_this_turn'][$key] =
             ((int) ($card->flags['instant_uses_this_turn'][$key] ?? 0)) + 1;
+    }
+
+    private function instantRequiresTap(array $instant): bool
+    {
+        if (array_key_exists('tap_source', $instant)) {
+            return (bool) $instant['tap_source'];
+        }
+        if (array_key_exists('close_source', $instant)) {
+            return (bool) $instant['close_source'];
+        }
+        if (!empty($instant['no_close'])) {
+            return false;
+        }
+        return true;
     }
 
     private function isCardInPending(CardInstance $card): bool
