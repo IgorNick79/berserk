@@ -401,6 +401,17 @@ final class Engine
             case 'marker':
                 $this->applyMarker($target, $effect['marker'] ?? [], $ownerKey);
                 break;
+            case 'forced_strike_adjacent':
+                $forcedTarget = $state->getCard((int) ($effect['forced_target_id'] ?? 0));
+                if (!$source || !$forcedTarget) {
+                    break;
+                }
+                (new StrikeResolver($state, $this))->declareForcedAdjacent(
+                    $target,
+                    $forcedTarget,
+                    !empty($effect['close_attacker_after'])
+                );
+                break;
         }
     }
 
@@ -833,6 +844,7 @@ final class Engine
         if ($targetId === 0) {
             unset($state->battle['strike']['pending_auto']);
 
+            $this->closeForcedStrikeAttackerAfter($state);
             $state->battle['strike'] = null;
             $this->finalizeDying($state);
 
@@ -867,11 +879,29 @@ final class Engine
         unset($state->battle['strike']['pending_auto']);
 
         // Закрываем сражение
+        $this->closeForcedStrikeAttackerAfter($state);
         $state->battle['strike'] = null;
         $this->finalizeDying($state);
 
         $state->bumpVersion();
         return Result::ok(["auto_target:{$targetId}"]);
+    }
+
+    private function closeForcedStrikeAttackerAfter(GameState $state): void
+    {
+        $strike = $state->battle['strike'] ?? null;
+        if (!$strike || empty($strike['forced_close_attacker_after'])) return;
+
+        $attacker = $state->getCard((int) ($strike['attacker_id'] ?? 0));
+        if (!$attacker
+            || $attacker->dying
+            || $attacker->hp <= 0
+            || ($attacker->zone !== CardInstance::ZONE_FIELD
+                && $attacker->zone !== CardInstance::ZONE_FLYING)) {
+            return;
+        }
+
+        $attacker->closed = true;
     }
 
     public function clearRootedBySource(GameState $state, int $sourceId): void

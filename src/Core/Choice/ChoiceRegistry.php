@@ -29,6 +29,7 @@ final class ChoiceRegistry
                 new CellMarkerChoice(),
                 new InstantPickChoice(),
                 new CombatPickChoice(),
+                new ForcedStrikeAdjacentChoice(),
                 new IncarnationChoice(),
                 new ValhallaPickChoice(),
                 new AnyDeathChoice(),

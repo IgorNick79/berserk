@@ -331,6 +331,91 @@ final class StrikeResolver
         return Result::ok(["strike_declared:{$playerKey}:{$cardId}->{$targetId}"]);
     }
 
+    public function declareForcedAdjacent(
+        CardInstance $attacker,
+        CardInstance $target,
+        bool $closeAttackerAfter = false
+    ): Result {
+        if ($this->state->status !== 'battle') {
+            return Result::error('Сейчас не бой');
+        }
+        if (!empty($this->state->battle['strike'])) {
+            return Result::error('Уже идёт сражение');
+        }
+        if ($attacker->zone !== CardInstance::ZONE_FIELD
+            || $target->zone !== CardInstance::ZONE_FIELD
+            || $attacker->dying
+            || $target->dying
+            || $attacker->hp <= 0
+            || $target->hp <= 0) {
+            return Result::error('Цель не на поле');
+        }
+        if ($attacker->closed) {
+            return Result::error('Атакующий закрыт');
+        }
+        if (!CardStats::hasAnyStrike($attacker)) {
+            return Result::error('Карта не может атаковать');
+        }
+
+        $dr = abs($target->row - $attacker->row);
+        $dc = abs($target->col - $attacker->col);
+        if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
+            return Result::error('Цель не соседняя');
+        }
+
+        $playerKey = $attacker->owner;
+        $friendlyFire = $target->owner === $playerKey;
+
+        if (CardStats::hasDefense($this->state, $target, 'strike', $attacker)) {
+            return Result::error('Цель защищена от этой атаки');
+        }
+
+        $this->engine->revealCard($this->state, $target);
+
+        if ($this->engine->tryProphecyBlock($this->state, $attacker, $target, 'strike')) {
+            $attacker->closed = true;
+            return Result::ok(["forced_strike_blocked:{$attacker->instanceId}->{$target->instanceId}"]);
+        }
+
+        foreach ($this->state->cards as $card) {
+            $card->flags['damage_taken_this_strike'] = 0;
+        }
+
+        $oppKey = $this->state->getOpponentKey($playerKey);
+        $defenders = $friendlyFire
+            ? []
+            : $this->findDefenders($attacker, $target, $oppKey);
+
+        $this->state->battle['strike'] = [
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => $target->instanceId,
+            'defender_id' => null,
+            'state'       => 'waiting_defender',
+            'attack_dice' => null,
+            'defend_dice' => null,
+            'result'      => null,
+            'confirmed'   => [],
+            'defenders'   => $defenders,
+            'redirect_candidates' => [],
+            'friendly_fire' => $friendlyFire,
+            'forced_strike_adjacent' => true,
+            'forced_close_attacker_after' => $closeAttackerAfter,
+        ];
+
+        $ip = new InstantProcessor($this->state, $this->engine);
+        $ip->openWindow('before', $playerKey);
+
+        if (($this->state->battle['strike']['state'] ?? '') === 'waiting_instant') {
+            return Result::ok(["forced_strike_declared:{$attacker->instanceId}->{$target->instanceId}", 'instant_window_opened']);
+        }
+
+        if (empty($defenders)) {
+            $this->resolve();
+        }
+
+        return Result::ok(["forced_strike_declared:{$attacker->instanceId}->{$target->instanceId}"]);
+    }
+
     public function chooseDefender(string $playerKey, Command $cmd): Result
     {
         if ($this->state->status !== 'battle') {
@@ -950,6 +1035,17 @@ final class StrikeResolver
                 $this->state->battle['strike']['confirmed'] = [];
                 $this->state->bumpVersion();
                 return Result::ok(['instant_after_opened']);
+            }
+        }
+
+        if (!empty($strike['forced_close_attacker_after'])) {
+            $forcedAttacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+            if ($forcedAttacker
+                && !$forcedAttacker->dying
+                && $forcedAttacker->hp > 0
+                && ($forcedAttacker->zone === CardInstance::ZONE_FIELD
+                    || $forcedAttacker->zone === CardInstance::ZONE_FLYING)) {
+                $forcedAttacker->closed = true;
             }
         }
 
