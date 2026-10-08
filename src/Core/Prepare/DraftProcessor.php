@@ -5,7 +5,6 @@ declare(strict_types=1);
 
 namespace Berserk\Core\Prepare;
 
-use Berserk\Core\BoosterGenerator;
 use Berserk\Core\CardInstance;
 use Berserk\Core\Db;
 use Berserk\Core\GameSettings;
@@ -14,10 +13,17 @@ use Berserk\Core\Result;
 
 final class DraftProcessor
 {
+    /** @var array<string,array<string,mixed>> */
+    private array $copyRuleCardsCache = [];
+
+    private ?Db $db = null;
+
     public function __construct(
         private GameState $state,
-        private Db $db,
-    ) {}
+        ?Db $db,
+    ) {
+        $this->db = $db;
+    }
 
     public function start(GameSettings $settings, bool $allowRandomPickMode = false): Result
     {
@@ -39,13 +45,14 @@ final class DraftProcessor
             return Result::error('Неподдерживаемый профиль бустера');
         }
 
-        $gen = new BoosterGenerator($this->db);
+        if ($this->db === null) {
+            return Result::error('Db недоступен для драфта');
+        }
 
-        $pool = [];
-        for ($i = 0; $i < $settings->draftBoosters(); $i++) {
-            foreach ($gen->generate() as $ukid) {
-                $pool[] = $ukid;
-            }
+        try {
+            $pool = (new BoosterGenerator($this->db))->generatePool($settings->draftBoosters());
+        } catch (\RuntimeException $e) {
+            return Result::error($e->getMessage());
         }
 
         shuffle($pool);
@@ -122,7 +129,7 @@ final class DraftProcessor
         for ($row = 0; $row < 3; $row++) {
             $positions = [$row * 3, $row * 3 + 1, $row * 3 + 2];
             $cards = $this->cardsAt($grid, $positions);
-            if (!empty($cards) && $this->isViableSelection((string) ($draft['turn'] ?? ''), $cards, $positions)) {
+            if (!empty($cards) && $this->isAllowedSelection((string) ($draft['turn'] ?? ''), $cards, $positions)) {
                 $selections[] = ['positions' => $positions, 'cards' => $cards];
             }
         }
@@ -130,7 +137,7 @@ final class DraftProcessor
         for ($col = 0; $col < 3; $col++) {
             $positions = [$col, $col + 3, $col + 6];
             $cards = $this->cardsAt($grid, $positions);
-            if (!empty($cards) && $this->isViableSelection((string) ($draft['turn'] ?? ''), $cards, $positions)) {
+            if (!empty($cards) && $this->isAllowedSelection((string) ($draft['turn'] ?? ''), $cards, $positions)) {
                 $selections[] = ['positions' => $positions, 'cards' => $cards];
             }
         }
@@ -152,6 +159,10 @@ final class DraftProcessor
             }
         }
         if (empty($taken)) return Result::error('Нечего брать');
+        $copyViolation = $this->copyLimitViolation($playerKey, $taken);
+        if ($copyViolation !== null) {
+            return Result::error(DraftCopyRules::violationMessage($copyViolation));
+        }
         if (!$this->isViableSelection($playerKey, $taken, $positions)) {
             return Result::error('Выбор лишает соперника минимальной колоды');
         }
@@ -307,6 +318,64 @@ final class DraftProcessor
     {
         return count($draft['picked']['host'] ?? []) >= GameSettings::MIN_DECK_SIZE
             && count($draft['picked']['player'] ?? []) >= GameSettings::MIN_DECK_SIZE;
+    }
+
+    private function isAllowedSelection(string $playerKey, array $taken, array $positions): bool
+    {
+        return $this->copyLimitViolation($playerKey, $taken) === null
+            && $this->isViableSelection($playerKey, $taken, $positions);
+    }
+
+    private function copyLimitViolation(string $playerKey, array $taken): ?array
+    {
+        if ($this->state->draft === null || $playerKey === '') return ['ukid' => '', 'count' => 0, 'limit' => 0];
+
+        $existing = $this->state->draft['picked'][$playerKey] ?? [];
+        $ukids = array_merge($existing, $taken);
+        $cardsByUkid = $this->loadCopyRuleCards($ukids);
+        foreach ($ukids as $ukid) {
+            $ukid = (string) $ukid;
+            if (($cardsByUkid[$ukid]['_missing_copy_data'] ?? false) === true) {
+                return ['error' => "Не найдены данные карты {$ukid} для проверки лимита копий"];
+            }
+        }
+
+        return DraftCopyRules::firstDeckLimitViolation($existing, $taken, $cardsByUkid);
+    }
+
+    /**
+     * @param string[] $ukids
+     * @return array<string,array<string,mixed>>
+     */
+    private function loadCopyRuleCards(array $ukids): array
+    {
+        $unique = array_values(array_unique(array_map('strval', $ukids)));
+        if (empty($unique)) return [];
+
+        if ($this->db === null) {
+            $cards = [];
+            foreach ($unique as $ukid) {
+                $this->copyRuleCardsCache[$ukid] ??= ['ukid' => $ukid, 'name' => $ukid, 'prop' => []];
+            }
+            return array_intersect_key($this->copyRuleCardsCache, array_flip($unique));
+        }
+
+        $missing = array_values(array_filter($unique, fn($ukid) => !isset($this->copyRuleCardsCache[$ukid])));
+        if (!empty($missing)) {
+            foreach ((new DraftSelectionDataProvider($this->db))->loadCardsByUkid($missing) as $ukid => $card) {
+                $this->copyRuleCardsCache[$ukid] = $card;
+            }
+            foreach ($missing as $ukid) {
+                $this->copyRuleCardsCache[$ukid] ??= [
+                    'ukid' => $ukid,
+                    'name' => $ukid,
+                    'prop' => [],
+                    '_missing_copy_data' => true,
+                ];
+            }
+        }
+
+        return array_intersect_key($this->copyRuleCardsCache, array_flip($unique));
     }
 
     private function ensureDraftRuntime(): void

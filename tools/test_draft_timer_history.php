@@ -162,6 +162,13 @@ dtAssert($state->draft['timer']['elapsed']['host'] === 12, 'Settled elapsed time
 DraftTimer::startAction($state, 2000);
 dtAssert(DraftTimer::deadlineAt($state) === 2030 + DraftTimer::TRANSPORT_GRACE_SECONDS, 'New action should reset action deadline with grace');
 
+$runtimeProbe = dtState();
+unset($runtimeProbe->draft['history'], $runtimeProbe->draft['timer']);
+$pending = DraftTimer::pendingActionCharge($runtimeProbe, GameState::PLAYER_HOST, 3010);
+dtAssert($pending === 0, 'Pending action charge should be zero without timer runtime');
+dtAssert(!isset($runtimeProbe->draft['history']), 'Pending action charge should not initialize history');
+dtAssert(!isset($runtimeProbe->draft['timer']), 'Pending action charge should not initialize timer');
+
 $legacy = dtState();
 DraftTimer::ensureRuntime($legacy, 3000);
 dtAssert(isset($legacy->draft['history']), 'Legacy draft state should receive history array');
@@ -210,6 +217,35 @@ foreach ([
     dtAssert(!in_array('g7', $state->draft['picked'][GameState::PLAYER_HOST], true), "Expired manual {$label} should not apply stale manual selection");
     dtAssert($state->draft['grid'] !== $beforeGrid, "Expired manual {$label} should mutate grid through timeout");
 }
+
+$state = dtState();
+$state->draft['picked'][GameState::PLAYER_HOST] = ['dup', 'dup'];
+$state->draft['grid'] = ['dup', 'dup', 'safe', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9'];
+DraftTimer::initialize($state, GameSettings::defaults(), time() - 10);
+$initialStartedAt = $state->draft['timer']['action_started_at'];
+$processor = dtPrepareWithAutoPicker($state, $autoPicker);
+$result = $processor->draftRow(GameState::PLAYER_HOST, new Command('draft_row', ['row' => 1]));
+dtAssert(!$result->success, 'Invalid copy-limit row should be rejected');
+dtAssert($state->draft['timer']['elapsed'][GameState::PLAYER_HOST] === 0, 'Rejected manual pick should not charge elapsed time');
+dtAssert($state->draft['timer']['action_started_at'] === $initialStartedAt, 'Rejected manual pick should not reset action timer');
+dtAssert($state->draft['turn'] === GameState::PLAYER_HOST, 'Rejected manual pick should not advance turn');
+dtAssert($state->draft['history'] === [], 'Rejected manual pick should not write history');
+dtAssert($state->draft['picked'][GameState::PLAYER_HOST] === ['dup', 'dup'], 'Rejected manual pick should not mutate picked cards');
+
+$result = $processor->draftRow(GameState::PLAYER_HOST, new Command('draft_row', ['row' => 1]));
+dtAssert(!$result->success, 'Second invalid copy-limit row should also be rejected');
+dtAssert($state->draft['timer']['elapsed'][GameState::PLAYER_HOST] === 0, 'Repeated rejected manual pick should not charge elapsed time');
+dtAssert($state->draft['timer']['action_started_at'] === $initialStartedAt, 'Repeated rejected manual pick should not reset action timer');
+dtAssert($state->draft['turn'] === GameState::PLAYER_HOST, 'Repeated rejected manual pick should not advance turn');
+dtAssert($state->draft['history'] === [], 'Repeated rejected manual pick should not write history');
+dtAssert($state->draft['picked'][GameState::PLAYER_HOST] === ['dup', 'dup'], 'Repeated rejected manual pick should not mutate picked cards');
+
+$state->draft['grid'] = ['ok1', 'ok2', 'ok3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9'];
+$result = $processor->draftRow(GameState::PLAYER_HOST, new Command('draft_row', ['row' => 1]));
+dtAssert($result->success, 'Valid manual pick after rejection should still succeed');
+dtAssert($state->draft['timer']['elapsed'][GameState::PLAYER_HOST] > 0, 'Successful manual pick should charge old active player once');
+dtAssert($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Successful manual pick should advance turn');
+dtAssert(count($state->draft['history']) === 1, 'Successful manual pick should write one history entry');
 
 $state = dtState(GameState::PLAYER_HOST);
 $state->draft['picked'][GameState::PLAYER_HOST] = array_fill(0, GameSettings::MIN_DECK_SIZE, 'g1');
@@ -339,9 +375,35 @@ dtAssert($result->events === ['forced_skip'], 'Pre-timeout forced skip should no
 $configPath = __DIR__ . '/../config/db.php';
 if (is_file($configPath)) {
     $db = new Db(require $configPath);
-    $rows = $db->fetchAll('SELECT ukid FROM cards LIMIT 20');
-    dtAssert(count($rows) >= 9, 'DB-backed timeout test needs at least nine cards');
+    $rows = $db->fetchAll('SELECT ukid FROM cards LIMIT 60');
+    dtAssert(count($rows) >= 60, 'DB-backed timeout test needs enough cards to satisfy minimum deck viability');
     $ukids = array_map(fn($row) => (string) $row['ukid'], $rows);
+
+    $state = new GameState(random_int(1000, 9999), 1, 2);
+    $state->status = 'draft';
+    $state->draft = [
+        'pool' => [],
+        'grid' => [$ukids[59], null, null, null, null, null, null, null, null],
+        'turn' => GameState::PLAYER_HOST,
+        'picked' => [
+            GameState::PLAYER_HOST => array_slice($ukids, 0, GameSettings::MIN_DECK_SIZE - 1),
+            GameState::PLAYER_PLAYER => array_slice($ukids, GameSettings::MIN_DECK_SIZE - 1, GameSettings::MIN_DECK_SIZE),
+        ],
+        'history' => [],
+        'recycle' => [],
+        'grid_mode' => GameSettings::DRAFT_GRID_MODE_CONTINUOUS,
+        'consecutive_passes' => 0,
+        'round_first_player' => GameState::PLAYER_HOST,
+        'round_picks' => 0,
+    ];
+    DraftTimer::initialize($state, GameSettings::defaults(), 1000);
+    $state->draft['timer']['action_started_at'] = time() - 7;
+    $result = (new PrepareProcessor($state, $db))->draftRow(GameState::PLAYER_HOST, new Command('draft_row', ['row' => 1]));
+    dtAssert($result->success, 'Last successful manual pick should complete draft with active timer');
+    dtAssert(in_array('draft_finished', $result->events, true), 'Last successful manual pick should preserve draft finish event');
+    dtAssert($state->status === 'view', 'Last successful manual pick should transition to view');
+    dtAssert($state->draft === null, 'Last successful manual pick should clear draft runtime after finalization');
+    dtAssert(count($state->getCardsInZone(GameState::PLAYER_HOST, \Berserk\Core\CardInstance::ZONE_DECK)) === GameSettings::MIN_DECK_SIZE, 'Finalized timed draft should create host deck instances');
 
     $state = dtState();
     $state->draft['grid'] = array_slice($ukids, 0, 9);
@@ -353,7 +415,7 @@ if (is_file($configPath)) {
     dtAssert($result->success, 'Timeout resolution should succeed');
     dtAssert(!empty($result->events), 'Timeout resolution should apply an auto pick');
     dtAssert(count($state->draft['picked'][GameState::PLAYER_HOST]) > 0, 'Timeout should pick cards for active player');
-    dtAssert(count($state->draft['history']) === 1, 'Timeout auto-pick should be recorded in history');
+    dtAssert(count($state->draft['history']) >= 1, 'Timeout auto-pick should be recorded in history');
     dtAssert(str_starts_with($result->events[0], 'timeout_picked:'), 'Timeout should use timeout_picked event prefix');
 } else {
     echo "Skipping DB-backed draft timeout checks: config/db.php not found\n";

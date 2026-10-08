@@ -11,6 +11,7 @@ use Berserk\Core\Db;
 use Berserk\Core\Engine;
 use Berserk\Core\GameSettings;
 use Berserk\Core\GameState;
+use Berserk\Core\Prepare\DraftCopyRules;
 
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
@@ -26,6 +27,15 @@ function apply(GameState $state, Engine $engine, string $player, string $type, a
 {
     $result = $engine->apply($state, $player, new Command($type, $payload));
     assertTrue($result->success, $result->error ?? ('Command failed: ' . $type));
+}
+
+function assertDraftDeckCopyLimits(array $deckCards, string $message): void
+{
+    foreach ($deckCards as $card) {
+        $count = (int) ($card['count'] ?? 0);
+        $limit = DraftCopyRules::deckLimit($card);
+        assertTrue($count <= $limit, $message . ': ' . (string) ($card['ukid'] ?? '?'));
+    }
 }
 
 // mode -> settings (system)
@@ -236,6 +246,23 @@ if (is_file($configPath)) {
     assertTrue($randomDraft->getPlayer(GameState::PLAYER_PLAYER)->deckId === 0, 'Random draft player deck id should be 0');
     assertTrue(count($randomDraft->getPlayer(GameState::PLAYER_HOST)->deckCards) > 0, 'Random draft should build host deck cards');
     assertTrue(count($randomDraft->getPlayer(GameState::PLAYER_PLAYER)->deckCards) > 0, 'Random draft should build player deck cards');
+    assertDraftDeckCopyLimits($randomDraft->getPlayer(GameState::PLAYER_HOST)->deckCards, 'Continuous random draft host deck should respect copy limits');
+    assertDraftDeckCopyLimits($randomDraft->getPlayer(GameState::PLAYER_PLAYER)->deckCards, 'Continuous random draft player deck should respect copy limits');
+
+    $discreteRandomDraft = new GameState(22, 1, 2);
+    apply($discreteRandomDraft, $draftEngine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+    apply($discreteRandomDraft, $draftEngine, GameState::PLAYER_HOST, 'confirm_settings', [
+        'boosters' => 5,
+        'draft_pick_mode' => GameSettings::DRAFT_PICK_MODE_RANDOM,
+        'draft_grid_mode' => GameSettings::DRAFT_GRID_MODE_DISCRETE,
+    ]);
+
+    assertTrue($discreteRandomDraft->status === 'view', 'Discrete random draft should transition directly to view');
+    assertTrue($discreteRandomDraft->draft === null, 'Discrete random draft should not leave runtime draft state');
+    assertTrue(count($discreteRandomDraft->getPlayer(GameState::PLAYER_HOST)->deckCards) > 0, 'Discrete random draft should build host deck cards');
+    assertTrue(count($discreteRandomDraft->getPlayer(GameState::PLAYER_PLAYER)->deckCards) > 0, 'Discrete random draft should build player deck cards');
+    assertDraftDeckCopyLimits($discreteRandomDraft->getPlayer(GameState::PLAYER_HOST)->deckCards, 'Discrete random draft host deck should respect copy limits');
+    assertDraftDeckCopyLimits($discreteRandomDraft->getPlayer(GameState::PLAYER_PLAYER)->deckCards, 'Discrete random draft player deck should respect copy limits');
 
     $smallRandomDraft = new GameState(21, 1, 2);
     apply($smallRandomDraft, $draftEngine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);

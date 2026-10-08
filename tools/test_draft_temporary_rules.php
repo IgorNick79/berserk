@@ -10,6 +10,7 @@ use Berserk\Core\CardInstance;
 use Berserk\Core\Db;
 use Berserk\Core\GameSettings;
 use Berserk\Core\GameState;
+use Berserk\Core\Prepare\DraftCopyRules;
 use Berserk\Core\Prepare\DraftProcessor;
 
 Autoloader::register();
@@ -82,6 +83,11 @@ function draftCardCount(GameState $state): int
         + count($state->draft['picked'][GameState::PLAYER_HOST] ?? [])
         + count($state->draft['picked'][GameState::PLAYER_PLAYER] ?? []);
 }
+
+assertTrue(DraftCopyRules::deckLimit(['prop' => []]) === DraftCopyRules::NORMAL_DECK_LIMIT, 'Missing horde prop should use normal deck limit');
+assertTrue(DraftCopyRules::deckLimit(['prop' => ['horde' => false]]) === DraftCopyRules::NORMAL_DECK_LIMIT, 'False horde prop should use normal deck limit');
+assertTrue(DraftCopyRules::deckLimit(['prop' => ['horde' => true]]) === DraftCopyRules::HORDE_DECK_LIMIT, 'True horde prop should use horde deck limit');
+assertTrue(DraftCopyRules::poolLimit(['prop' => ['horde' => true]]) === DraftCopyRules::HORDE_POOL_LIMIT, 'True horde prop should use horde pool limit');
 
 function processorWithoutDb(GameState $state): DraftProcessor
 {
@@ -261,6 +267,24 @@ $result = $processor->pickSelection(GameState::PLAYER_HOST, ['positions' => []],
 assertTrue(!$result->success, 'Empty auto selection should be rejected');
 assertTrue($state->draft === $before, 'Rejected empty selection should not mutate draft state');
 
+// Copy limits are checked atomically before mutating the draft state.
+$state = stateWithDraft(['dup', 'dup']);
+$state->draft['grid'] = ['dup', 'dup', 'safe', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9'];
+$processor = processorWithoutDb($state);
+$before = $state->draft;
+$result = $processor->pickRow(GameState::PLAYER_HOST, 1);
+assertTrue(!$result->success, 'Picking two extra normal copies over limit should be rejected');
+assertTrue(str_contains($result->error ?? '', 'Слишком много копий'), 'Copy limit rejection should explain the exceeded limit');
+assertTrue($state->draft === $before, 'Rejected copy-limit pick should be atomic');
+assertTrue(count(array_filter($processor->validSelections(), fn($selection) => $selection['positions'] === [0, 1, 2])) === 0, 'Auto selections should filter copy-limit violating rows');
+
+$state = stateWithDraft();
+$state->draft['grid'] = ['triple', 'triple', 'triple', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9'];
+$processor = processorWithoutDb($state);
+$result = $processor->pickRow(GameState::PLAYER_HOST, 1);
+assertTrue($result->success, 'Exactly three normal copies in one line should be allowed');
+assertTrue(count(array_filter($state->draft['picked'][GameState::PLAYER_HOST], fn($ukid) => $ukid === 'triple')) === 3, 'Allowed triple line should be picked');
+
 $deckLimit = GameSettings::MIN_DECK_SIZE;
 
 // Manual finish is rejected before both players have enough drafted cards.
@@ -295,6 +319,13 @@ if (is_file($configPath)) {
     $row = $db->fetchOne('SELECT ukid FROM cards LIMIT 1');
     assertTrue($row !== null && !empty($row['ukid']), 'DB-backed draft test needs at least one card');
     $ukid = (string) $row['ukid'];
+
+    $missingUkid = '__missing_copy_rule_card__';
+    $state = stateWithDraft();
+    $state->draft['grid'] = [$missingUkid, 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9'];
+    $result = (new DraftProcessor($state, $db))->pickRow(GameState::PLAYER_HOST, 1);
+    assertTrue(!$result->success, 'Production copy-limit check should reject missing card metadata');
+    assertTrue(str_contains($result->error ?? '', 'Не найдены данные карты'), 'Missing card metadata should produce an explicit error');
 
     $state = stateWithDraft(array_fill(0, $deckLimit, $ukid), array_fill(0, $deckLimit, $ukid));
     $result = (new DraftProcessor($state, $db))->finish(GameState::PLAYER_HOST);

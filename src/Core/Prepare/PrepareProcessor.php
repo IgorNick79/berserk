@@ -266,6 +266,10 @@ final class PrepareProcessor
             if ($deckCount > GameSettings::MAX_DECK_SIZE) {
                 return Result::error('Слишком много карт в колоде');
             }
+            $copyViolation = $this->draftDeckCopyLimitViolation($playerKey);
+            if ($copyViolation !== null) {
+                return Result::error(DraftCopyRules::violationMessage($copyViolation));
+            }
         }
 
         $player->confirm('view');
@@ -1392,25 +1396,33 @@ final class PrepareProcessor
             return Result::error('Эта сторона выбирает автоматически');
         }
 
+        $now = time();
+        $hadTimer = isset($this->state->draft['timer']);
+        $timerSnapshot = $hadTimer ? $this->state->draft['timer'] : null;
+        DraftTimer::settleAction($this->state, $playerKey, $now);
         $processor = $this->draftProcessor();
-        if (($this->state->draft['turn'] ?? null) === $playerKey) {
-            DraftTimer::settleAction($this->state, $playerKey, time());
-        }
         $result = $apply($processor);
         if (!$result->success) {
+            if ($this->state->draft !== null) {
+                if ($hadTimer) {
+                    $this->state->draft['timer'] = $timerSnapshot;
+                } else {
+                    unset($this->state->draft['timer']);
+                }
+            }
             return $result;
         }
 
         if ($this->state->status === 'draft' && $this->state->draft !== null) {
-            DraftTimer::startAction($this->state, time());
+            DraftTimer::startAction($this->state, $now);
         }
 
-        $progressResult = $this->runDraftAutomaticProgress(time());
+        $progressResult = $this->runDraftAutomaticProgress($now);
         if (!$progressResult->success) {
             return $progressResult;
         }
 
-        $postTimeoutResult = $this->resolveDraftTimeouts(time());
+        $postTimeoutResult = $this->resolveDraftTimeouts($now);
         if (!$postTimeoutResult->success) {
             return $postTimeoutResult;
         }
@@ -1863,6 +1875,19 @@ final class PrepareProcessor
     private function zoneCount(string $playerKey, string $zone): int
     {
         return count($this->state->getCardsInZone($playerKey, $zone));
+    }
+
+    private function draftDeckCopyLimitViolation(string $playerKey): ?array
+    {
+        $deckCards = $this->state->getCardsInZone($playerKey, CardInstance::ZONE_DECK);
+        $ukids = [];
+        $cardsByUkid = [];
+        foreach ($deckCards as $card) {
+            $ukids[] = $card->ukid;
+            $cardsByUkid[$card->ukid] ??= $card;
+        }
+
+        return DraftCopyRules::firstDeckCountViolation($ukids, $cardsByUkid);
     }
 
     private function resetDealState(CardInstance $card): void

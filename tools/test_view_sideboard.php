@@ -11,6 +11,7 @@ use Berserk\Core\Command;
 use Berserk\Core\DeckView;
 use Berserk\Core\GameSettings;
 use Berserk\Core\GameState;
+use Berserk\Core\Prepare\DraftCopyRules;
 use Berserk\Core\Prepare\DraftProcessor;
 use Berserk\Core\Prepare\PrepareProcessor;
 use Berserk\View\Screen\ViewScreen;
@@ -33,7 +34,8 @@ function addViewCard(
     string $ukid,
     string $element = 'neutral',
     array $flags = [],
-    array $modifiers = []
+    array $modifiers = [],
+    array $prop = []
 ): CardInstance {
     $card = new CardInstance(
         instanceId: $state->nextInstanceId(),
@@ -51,6 +53,7 @@ function addViewCard(
         element: $element,
         flags: $flags,
         modifiers: $modifiers,
+        prop: $prop,
     );
     $state->addCard($card);
     return $card;
@@ -154,6 +157,45 @@ $optionalState = draftViewState($minDeckSize + 5, 22);
 $processor = new PrepareProcessor($optionalState);
 $result = $processor->confirmView(GameState::PLAYER_HOST);
 assertTrue($result->success, $result->error ?? 'Deck above minimum should confirm View without mandatory sideboard');
+
+$copyLimitState = draftViewState($minDeckSize, 220);
+foreach ($copyLimitState->cards as $id => $card) {
+    unset($copyLimitState->cards[$id]);
+}
+for ($i = 0; $i < 4; $i++) {
+    addViewCard($copyLimitState, GameState::PLAYER_HOST, CardInstance::ZONE_DECK, 'copy_limit_normal');
+}
+for ($i = 4; $i < $minDeckSize + 1; $i++) {
+    addViewCard($copyLimitState, GameState::PLAYER_HOST, CardInstance::ZONE_DECK, 'normal_filler_' . $i);
+}
+$processor = new PrepareProcessor($copyLimitState);
+$result = $processor->confirmView(GameState::PLAYER_HOST);
+assertTrue(!$result->success, 'Draft deck with four normal copies should be rejected on View confirm');
+assertTrue(str_contains($result->error ?? '', 'Слишком много копий'), 'View confirm copy rejection should explain the exceeded limit');
+
+$copyLimitCards = $copyLimitState->getCardsInZone(GameState::PLAYER_HOST, CardInstance::ZONE_DECK);
+$processor->moveViewCardToSideboard(GameState::PLAYER_HOST, new Command('view_to_sideboard', ['card_id' => $copyLimitCards[0]->instanceId]));
+$result = $processor->confirmView(GameState::PLAYER_HOST);
+assertTrue($result->success, $result->error ?? 'Moving extra normal copy to sideboard should allow View confirm');
+
+$hordeState = draftViewState($minDeckSize, 221);
+foreach ($hordeState->cards as $id => $card) {
+    unset($hordeState->cards[$id]);
+}
+for ($i = 0; $i < DraftCopyRules::HORDE_DECK_LIMIT + 1; $i++) {
+    addViewCard($hordeState, GameState::PLAYER_HOST, CardInstance::ZONE_DECK, 'copy_limit_horde', 'neutral', [], [], ['horde' => true]);
+}
+for ($i = DraftCopyRules::HORDE_DECK_LIMIT + 1; $i < $minDeckSize + 1; $i++) {
+    addViewCard($hordeState, GameState::PLAYER_HOST, CardInstance::ZONE_DECK, 'horde_filler_' . $i);
+}
+$processor = new PrepareProcessor($hordeState);
+$result = $processor->confirmView(GameState::PLAYER_HOST);
+assertTrue(!$result->success, 'Draft deck with six horde copies should be rejected on View confirm');
+
+$hordeCards = $hordeState->getCardsInZone(GameState::PLAYER_HOST, CardInstance::ZONE_DECK);
+$processor->moveViewCardToSideboard(GameState::PLAYER_HOST, new Command('view_to_sideboard', ['card_id' => $hordeCards[0]->instanceId]));
+$result = $processor->confirmView(GameState::PLAYER_HOST);
+assertTrue($result->success, $result->error ?? 'Five horde copies should be allowed on View confirm');
 
 $maxState = draftViewState($maxDeckSize, 23);
 $processor = new PrepareProcessor($maxState);

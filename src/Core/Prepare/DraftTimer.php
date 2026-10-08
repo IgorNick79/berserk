@@ -78,16 +78,28 @@ final class DraftTimer
 
     public static function settleAction(GameState $state, string $playerKey, int $now): int
     {
-        self::ensureRuntime($state, $now);
-        if (!self::hasTimer($state)) return 0;
-
-        $timer = &$state->draft['timer'];
-        $elapsed = max(0, $now - (int) $timer['action_started_at']);
-        $before = self::remainingTotalBeforeActive($state, $playerKey);
-        $charge = min($elapsed, (int) $timer['action_limit'], $before);
-        $timer['elapsed'][$playerKey] = (int) ($timer['elapsed'][$playerKey] ?? 0) + $charge;
+        $charge = self::pendingActionCharge($state, $playerKey, $now);
+        self::applyActionCharge($state, $playerKey, $charge);
 
         return $charge;
+    }
+
+    public static function pendingActionCharge(GameState $state, string $playerKey, int $now): int
+    {
+        if (!self::hasTimer($state)) return 0;
+
+        $timer = $state->draft['timer'];
+        $elapsed = max(0, $now - (int) $timer['action_started_at']);
+        $before = self::remainingTotalBeforeActive($state, $playerKey);
+
+        return min($elapsed, (int) $timer['action_limit'], $before);
+    }
+
+    public static function applyActionCharge(GameState $state, string $playerKey, int $charge): void
+    {
+        if ($charge <= 0 || !self::hasTimer($state)) return;
+
+        $state->draft['timer']['elapsed'][$playerKey] = (int) ($state->draft['timer']['elapsed'][$playerKey] ?? 0) + $charge;
     }
 
     public static function isExpired(GameState $state, int $now): bool

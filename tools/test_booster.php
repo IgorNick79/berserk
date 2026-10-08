@@ -7,7 +7,8 @@ require_once __DIR__ . '/../src/Core/Autoloader.php';
 
 use Berserk\Core\Autoloader;
 use Berserk\Core\Db;
-use Berserk\Core\BoosterGenerator;
+use Berserk\Core\Prepare\BoosterGenerator;
+use Berserk\Core\Prepare\DraftCopyRules;
 
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
@@ -15,6 +16,27 @@ Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
 $config = require __DIR__ . '/../config/db.php';
 $db  = new Db($config);
 $gen = new BoosterGenerator($db);
+
+function boosterAssert(bool $condition, string $message): void
+{
+    if (!$condition) {
+        throw new RuntimeException($message);
+    }
+}
+
+$pool = $gen->generatePool(8);
+boosterAssert(count($pool) === 96, 'Eight draft boosters should produce 96 cards');
+$in = "'" . implode("','", array_map(fn($u) => $db->escape($u), array_values(array_unique($pool)))) . "'";
+$rows = $db->fetchAll("SELECT ukid, prop FROM cards WHERE ukid IN ($in)");
+$byUkid = [];
+foreach ($rows as $row) {
+    $byUkid[(string) $row['ukid']] = $row;
+}
+$poolCounts = array_count_values($pool);
+foreach ($poolCounts as $ukid => $count) {
+    $limit = DraftCopyRules::poolLimit($byUkid[$ukid] ?? ['ukid' => $ukid, 'prop' => []]);
+    boosterAssert($count <= $limit, "Draft pool copy limit exceeded for {$ukid}: {$count} > {$limit}");
+}
 
 $boosters = [];
 for ($i = 1; $i <= 5; $i++) {
