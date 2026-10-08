@@ -10,6 +10,7 @@ use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
 use Berserk\Core\CardInstance;
+use Berserk\Core\InstantProcessor;
 use Berserk\View\Ui\PanelSpec;
 
 final class InstantPickChoice implements ChoiceHandlerInterface
@@ -45,6 +46,7 @@ final class InstantPickChoice implements ChoiceHandlerInterface
         }
 
         $condition = $pi['effect']['condition'] ?? null;
+        $instantProcessor = new InstantProcessor($state, new Engine());
 
         $buttons = [];
         foreach ($state->cards as $c) {
@@ -54,6 +56,12 @@ final class InstantPickChoice implements ChoiceHandlerInterface
 
             if (($pi['target'] ?? 'enemy') === 'enemy' && $c->owner === $playerKey) continue;
             if (($pi['target'] ?? 'enemy') === 'ally'  && $c->owner !== $playerKey) continue;
+            if (($pi['target'] ?? 'enemy') === 'enemy_open_creature') {
+                if ($c->owner === $playerKey) continue;
+                if ($c->closed) continue;
+                if ($c->type !== 'creature' && $c->type !== 'fly') continue;
+                if (empty($instantProcessor->findForcedStrikeAdjacentTargets($c))) continue;
+            }
             if ($condition === 'target_not_moved' && !empty($c->flags['moved_this_turn'])) continue;
             if ($condition === 'target_closed' && !$c->closed) continue;
 

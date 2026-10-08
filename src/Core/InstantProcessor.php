@@ -184,20 +184,8 @@ final class InstantProcessor
                     $target    = $inst['target'] ?? 'self';
                     $condition = $inst['effect']['condition'] ?? null;
 
-                    if ($target !== 'self') {
-                        $hasAny = false;
-                        foreach ($this->state->cards as $c) {
-                            if ($c->zone !== CardInstance::ZONE_FIELD
-                                && $c->zone !== CardInstance::ZONE_FLYING) continue;
-                            if ($c->dying || $c->hp <= 0) continue;
-                            if ($target === 'enemy' && $c->owner === $card->owner) continue;
-                            if ($target === 'ally'  && $c->owner !== $card->owner) continue;
-                            if ($condition === 'target_not_moved' && !empty($c->flags['moved_this_turn'])) continue;
-                            if ($condition === 'target_closed' && !$c->closed) continue;
-                            $hasAny = true;
-                            break;
-                        }
-                        if (!$hasAny) continue;
+                    if ($target !== 'self' && !$this->hasAnyTurnTarget($card, (string) $target, $condition)) {
+                        continue;
                     }
 
                     // Стоимость инстанта (coins)
@@ -215,6 +203,76 @@ final class InstantProcessor
                     'cost'    => (int) ($inst['coins'] ?? 0),
                 ];
             }
+        }
+        return $result;
+    }
+
+    private function hasAnyTurnTarget(CardInstance $source, string $target, mixed $condition): bool
+    {
+        foreach ($this->state->cards as $candidate) {
+            if ($this->isLegalTurnTarget($source, $candidate, $target, $condition)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function isLegalTurnTarget(
+        CardInstance $source,
+        CardInstance $candidate,
+        string $target,
+        mixed $condition
+    ): bool {
+        if ($candidate->zone !== CardInstance::ZONE_FIELD
+            && $candidate->zone !== CardInstance::ZONE_FLYING) return false;
+        if ($candidate->dying || $candidate->hp <= 0) return false;
+
+        if ($target === 'enemy' && $candidate->owner === $source->owner) return false;
+        if ($target === 'ally' && $candidate->owner !== $source->owner) return false;
+        if ($target === 'enemy_open_creature') {
+            if ($candidate->owner === $source->owner) return false;
+            if ($candidate->closed) return false;
+            if (!$this->isCreature($candidate)) return false;
+            if (empty($this->findForcedStrikeAdjacentTargets($candidate))) return false;
+        }
+
+        if ($condition === 'target_not_moved' && !empty($candidate->flags['moved_this_turn'])) return false;
+        if ($condition === 'target_closed' && !$candidate->closed) return false;
+
+        return true;
+    }
+
+    private function isCreature(CardInstance $card): bool
+    {
+        return $card->type === 'creature' || $card->type === 'fly';
+    }
+
+    /** @return int[] */
+    public function findForcedStrikeAdjacentTargets(CardInstance $attacker): array
+    {
+        if ($attacker->zone !== CardInstance::ZONE_FIELD
+            || $attacker->row === null
+            || $attacker->col === null
+            || $attacker->closed
+            || $attacker->dying
+            || $attacker->hp <= 0
+            || !CardStats::hasAnyStrike($attacker)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($this->state->cards as $target) {
+            if ($target->instanceId === $attacker->instanceId) continue;
+            if ($target->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($target->dying || $target->hp <= 0) continue;
+
+            $dr = abs($target->row - $attacker->row);
+            $dc = abs($target->col - $attacker->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            if (CardStats::hasDefense($this->state, $target, 'strike', $attacker)) continue;
+
+            $result[] = $target->instanceId;
         }
         return $result;
     }
@@ -1239,6 +1297,36 @@ final class InstantProcessor
             return Result::error('Цель должна быть закрыта');
         }
 
+        $source = $this->state->getCard((int) $pi['card_id']);
+        if (!$source) return Result::error('Источник не найден');
+        if (!$this->isLegalTurnTarget($source, $target, (string) ($pi['target'] ?? 'self'), $condition)) {
+            return Result::error('Цель недоступна');
+        }
+
+        $effect = (array) ($pi['effect'] ?? []);
+        if (($effect['type'] ?? '') === 'forced_strike_adjacent') {
+            $candidates = $this->findForcedStrikeAdjacentTargets($target);
+            if (empty($candidates)) {
+                return Result::error('Нет соседней карты для удара');
+            }
+
+            $this->state->battle['pending_forced_strike_adjacent'] = [
+                'owner' => $playerKey,
+                'card_id' => (int) $pi['card_id'],
+                'attacker_id' => $target->instanceId,
+                'candidates' => $candidates,
+                'effect' => $effect,
+                'label' => (string) ($pi['label'] ?? 'Инстант'),
+                'source' => (string) ($pi['source'] ?? 'turn_stack'),
+                'list_key' => (string) ($pi['list_key'] ?? ''),
+                'cost' => (int) ($pi['cost'] ?? 0),
+                'payload' => (array) ($pi['payload'] ?? []),
+            ];
+            unset($this->state->battle['pending_instant_pick']);
+            $this->state->bumpVersion();
+            return Result::ok(['forced_strike_adjacent_pick_opened']);
+        }
+
         $payload = (array) ($pi['payload'] ?? []);
         if (empty($payload)) {
             $payload = [
@@ -1255,6 +1343,51 @@ final class InstantProcessor
         if (!$result->success) return $result;
         unset($this->state->battle['pending_instant_pick']);
 
+        $this->state->bumpVersion();
+        return Result::ok(['turn_instant_stacked']);
+    }
+
+    public function chooseForcedStrikeAdjacent(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_forced_strike_adjacent'] ?? null;
+        if (!$pending) return Result::error('Нет ожидающего выбора');
+        if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        if (!in_array($targetId, (array) ($pending['candidates'] ?? []), true)) {
+            return Result::error('Неверная цель');
+        }
+
+        $attacker = $this->state->getCard((int) ($pending['attacker_id'] ?? 0));
+        $target = $this->state->getCard($targetId);
+        if (!$attacker || !$target) return Result::error('Цель не найдена');
+        if (!in_array($targetId, $this->findForcedStrikeAdjacentTargets($attacker), true)) {
+            return Result::error('Цель больше недоступна');
+        }
+
+        $payload = (array) ($pending['payload'] ?? []);
+        if (empty($payload)) {
+            $payload = [
+                'card_id' => (int) ($pending['card_id'] ?? 0),
+                'key' => (string) ($pending['list_key'] ?? ''),
+                'label' => (string) ($pending['label'] ?? 'Инстант'),
+                'target' => 'enemy_open_creature',
+                'effect' => (array) ($pending['effect'] ?? []),
+                'cost' => (int) ($pending['cost'] ?? 0),
+            ];
+        }
+        $payload['effect'] = (array) ($payload['effect'] ?? []);
+        $payload['effect']['forced_target_id'] = $targetId;
+
+        $result = $this->pushTurnInstantEntry(
+            $playerKey,
+            $payload,
+            (int) ($pending['card_id'] ?? 0),
+            $attacker->instanceId
+        );
+        if (!$result->success) return $result;
+
+        unset($this->state->battle['pending_forced_strike_adjacent']);
         $this->state->bumpVersion();
         return Result::ok(['turn_instant_stacked']);
     }
@@ -1396,7 +1529,10 @@ final class InstantProcessor
                 );
                 $after = $this->captureTurnTargetSnapshot($target);
                 $effectResult = $this->buildTurnEffectResult((array) $item['effect'], $before, $after, $target);
-                $applied = $this->turnEffectChanged($before, $after);
+                $effectType = (string) (($item['effect']['type'] ?? '') ?: '');
+                $applied = $effectType === 'forced_strike_adjacent'
+                    ? !empty($this->state->battle['strike'])
+                    : $this->turnEffectChanged($before, $after);
                 if (!$applied) {
                     $reason = 'эффект ничего не изменил';
                 }
@@ -1545,6 +1681,10 @@ final class InstantProcessor
         if ($type === 'marker') {
             $result['markers_before'] = $before['markers'];
             $result['markers_after'] = $after['markers'];
+        }
+        if ($type === 'forced_strike_adjacent') {
+            $result['forced_attacker_id'] = $target->instanceId;
+            $result['forced_target_id'] = (int) ($effect['forced_target_id'] ?? 0);
         }
 
         return $result;

@@ -1890,6 +1890,7 @@ final class ActionResolver
             ['pending_kobold_heal',             'owner'],
             ['pending_valhalla_pick',           'owner'],
             ['pending_instant_pick',            'owner'],
+            ['pending_forced_strike_adjacent',  'owner'],
             ['pending_cell_marker_pick',        'owner'],
             ['pending_dice_choice',             'owner'],
             ['pending_combat_pick',             'owner'],
