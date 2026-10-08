@@ -77,6 +77,14 @@ $randomRestored = GameSettings::fromArray($randomSettings->toArray());
 assertTrue($randomRestored->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM, 'Round-trip lost random draft pick mode');
 assertTrue($randomRestored->draftAutoSide() === GameSettings::DRAFT_AUTO_SIDE_PLAYER, 'Round-trip lost random draft auto side');
 
+$discreteSettings = GameSettings::fromArray([
+    'draft' => [
+        'grid_mode' => GameSettings::DRAFT_GRID_MODE_DISCRETE,
+    ],
+]);
+assertTrue($discreteSettings->draftGridMode() === GameSettings::DRAFT_GRID_MODE_DISCRETE, 'Discrete grid mode was not stored');
+assertTrue($discreteSettings->validateDraftSettings() === null, 'Default draft settings should validate');
+
 // Unsupported draft grid size is rejected before DB access.
 $badGrid = new GameState(3, 1, 2);
 apply($badGrid, $engine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
@@ -115,16 +123,66 @@ $result = $engine->apply(
 assertTrue(!$result->success, 'Unknown draft auto side should be rejected');
 assertTrue($badAutoSide->status === 'settings', 'Rejected draft auto side should stay in settings');
 
-// Draft booster count payload is applied by confirm_settings before draft startup.
-$customBoosters = new GameState(7, 1, 2);
-apply($customBoosters, $engine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+// Draft booster count is server-side restricted to the canonical 5-8 range.
+foreach ([4, 9] as $badBoosters) {
+    $badBoostersState = new GameState(70 + $badBoosters, 1, 2);
+    apply($badBoostersState, $engine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+    $result = $engine->apply(
+        $badBoostersState,
+        GameState::PLAYER_HOST,
+        new Command('confirm_settings', ['boosters' => $badBoosters])
+    );
+    assertTrue(!$result->success, "Draft boosters={$badBoosters} should be rejected");
+    assertTrue($badBoostersState->status === 'settings', 'Rejected booster count should stay in settings');
+}
+
+foreach ([GameSettings::DRAFT_BOOSTERS_MIN, GameSettings::DRAFT_BOOSTERS_MAX] as $goodBoosters) {
+    $customBoosters = new GameState(80 + $goodBoosters, 1, 2);
+    apply($customBoosters, $engine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+    $result = $engine->apply(
+        $customBoosters,
+        GameState::PLAYER_HOST,
+        new Command('confirm_settings', ['boosters' => $goodBoosters])
+    );
+    assertTrue(!$result->success, 'Draft without Db should not start in this test section');
+    assertTrue($customBoosters->settings->draftBoosters() === $goodBoosters, 'Valid booster payload was not applied to settings');
+}
+
+$autoManualState = new GameState(90, 1, 2);
+apply($autoManualState, $engine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
 $result = $engine->apply(
-    $customBoosters,
+    $autoManualState,
     GameState::PLAYER_HOST,
-    new Command('confirm_settings', ['boosters' => 2])
+    new Command('confirm_settings', [
+        'boosters' => 5,
+        'draft_pick_mode' => GameSettings::DRAFT_PICK_MODE_MANUAL,
+        'draft_auto_side' => GameSettings::DRAFT_AUTO_SIDE_PLAYER,
+        'draft_grid_mode' => GameSettings::DRAFT_GRID_MODE_DISCRETE,
+    ])
 );
-assertTrue(!$result->success, 'Draft without Db should not start in this test section');
-assertTrue($customBoosters->settings->draftBoosters() === 2, 'Booster payload was not applied to settings');
+assertTrue(!$result->success, 'Draft without Db should not start while checking settings payload');
+assertTrue($autoManualState->settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_MANUAL, 'Manual mode should remain manual even with auto side payload');
+assertTrue($autoManualState->settings->draftAutoSide() === GameSettings::DRAFT_AUTO_SIDE_PLAYER, 'Auto side payload should persist without forcing random mode');
+assertTrue($autoManualState->settings->draftGridMode() === GameSettings::DRAFT_GRID_MODE_DISCRETE, 'Grid mode payload was not applied');
+
+$customTimer = GameSettings::fromArray(['draft' => [
+    'timer_mode' => GameSettings::DRAFT_TIMER_CUSTOM,
+    'timer_total' => GameSettings::DRAFT_TIMER_CUSTOM_TOTAL_MIN_SECONDS,
+    'timer_action' => GameSettings::DRAFT_TIMER_CUSTOM_ACTION_MIN_SECONDS,
+]]);
+assertTrue($customTimer->validateDraftSettings() === null, 'Custom timer lower bounds should validate');
+$badTimerStep = GameSettings::fromArray(['draft' => [
+    'timer_mode' => GameSettings::DRAFT_TIMER_CUSTOM,
+    'timer_total' => GameSettings::DRAFT_TIMER_CUSTOM_TOTAL_MIN_SECONDS + 1,
+    'timer_action' => GameSettings::DRAFT_TIMER_CUSTOM_ACTION_MIN_SECONDS,
+]]);
+assertTrue($badTimerStep->validateDraftSettings() !== null, 'Custom timer bad total step should be rejected');
+$unlimitedTimer = GameSettings::fromArray(['draft' => [
+    'timer_mode' => GameSettings::DRAFT_TIMER_UNLIMITED,
+    'timer_total' => 1,
+    'timer_action' => 1,
+]]);
+assertTrue($unlimitedTimer->validateDraftSettings() === null, 'Unlimited timer should not require custom values');
 
 // Settings command outside settings stage is invalid.
 $invalidStage = new GameState(4, 1, 2);
@@ -150,52 +208,48 @@ assertTrue($old->settings->draftBoosters() === 5, 'Old state did not get draft d
 // DB-backed default draft initialization, when local DB config is usable.
 $configPath = __DIR__ . '/../config/db.php';
 if (is_file($configPath)) {
-    try {
-        $db = new Db(require $configPath);
-        foreach ([2, 5] as $boosters) {
-            $draftState = new GameState(6 + $boosters, 1, 2);
-            $draftEngine = new Engine($db);
-
-            apply($draftState, $draftEngine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
-            apply($draftState, $draftEngine, GameState::PLAYER_HOST, 'confirm_settings', ['boosters' => $boosters]);
-
-            assertTrue($draftState->status === 'draft', 'Draft settings did not transition to draft');
-            assertTrue($draftState->settings->draftBoosters() === $boosters, 'Draft booster count was not stored');
-            assertTrue(is_array($draftState->draft), 'Draft runtime state was not initialized');
-            assertTrue(count($draftState->draft['grid'] ?? []) === 9, 'Default draft grid is not 3x3');
-        }
-
-        $randomDraft = new GameState(20, 1, 2);
+    $db = new Db(require $configPath);
+    foreach ([GameSettings::DRAFT_BOOSTERS_MIN, GameSettings::DRAFT_BOOSTERS_MAX] as $boosters) {
+        $draftState = new GameState(6 + $boosters, 1, 2);
         $draftEngine = new Engine($db);
-        apply($randomDraft, $draftEngine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
-        apply($randomDraft, $draftEngine, GameState::PLAYER_HOST, 'confirm_settings', [
-            'boosters' => 5,
-            'draft_pick_mode' => GameSettings::DRAFT_PICK_MODE_RANDOM,
-        ]);
 
-        assertTrue($randomDraft->status === 'view', 'Random draft should transition directly to view');
-        assertTrue($randomDraft->draft === null, 'Random draft should not leave runtime draft state');
-        assertTrue($randomDraft->getPlayer(GameState::PLAYER_HOST)->deckId === 0, 'Random draft host deck id should be 0');
-        assertTrue($randomDraft->getPlayer(GameState::PLAYER_PLAYER)->deckId === 0, 'Random draft player deck id should be 0');
-        assertTrue(count($randomDraft->getPlayer(GameState::PLAYER_HOST)->deckCards) > 0, 'Random draft should build host deck cards');
-        assertTrue(count($randomDraft->getPlayer(GameState::PLAYER_PLAYER)->deckCards) > 0, 'Random draft should build player deck cards');
+        apply($draftState, $draftEngine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+        apply($draftState, $draftEngine, GameState::PLAYER_HOST, 'confirm_settings', ['boosters' => $boosters]);
 
-        $smallRandomDraft = new GameState(21, 1, 2);
-        apply($smallRandomDraft, $draftEngine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
-        $result = $draftEngine->apply(
-            $smallRandomDraft,
-            GameState::PLAYER_HOST,
-            new Command('confirm_settings', [
-                'boosters' => 1,
-                'draft_pick_mode' => GameSettings::DRAFT_PICK_MODE_RANDOM,
-            ])
-        );
-        assertTrue(!$result->success, 'Random draft should reject insufficient generated card supply');
-        assertTrue($smallRandomDraft->status === 'settings', 'Rejected random draft should stay in settings');
-        assertTrue($smallRandomDraft->draft === null, 'Rejected random draft should not initialize draft runtime state');
-    } catch (Throwable $e) {
-        echo "Skipping DB-backed draft initialization check: {$e->getMessage()}\n";
+        assertTrue($draftState->status === 'draft', 'Draft settings did not transition to draft');
+        assertTrue($draftState->settings->draftBoosters() === $boosters, 'Draft booster count was not stored');
+        assertTrue(is_array($draftState->draft), 'Draft runtime state was not initialized');
+        assertTrue(count($draftState->draft['grid'] ?? []) === 9, 'Default draft grid is not 3x3');
     }
+
+    $randomDraft = new GameState(20, 1, 2);
+    $draftEngine = new Engine($db);
+    apply($randomDraft, $draftEngine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+    apply($randomDraft, $draftEngine, GameState::PLAYER_HOST, 'confirm_settings', [
+        'boosters' => 5,
+        'draft_pick_mode' => GameSettings::DRAFT_PICK_MODE_RANDOM,
+    ]);
+
+    assertTrue($randomDraft->status === 'view', 'Random draft should transition directly to view');
+    assertTrue($randomDraft->draft === null, 'Random draft should not leave runtime draft state');
+    assertTrue($randomDraft->getPlayer(GameState::PLAYER_HOST)->deckId === 0, 'Random draft host deck id should be 0');
+    assertTrue($randomDraft->getPlayer(GameState::PLAYER_PLAYER)->deckId === 0, 'Random draft player deck id should be 0');
+    assertTrue(count($randomDraft->getPlayer(GameState::PLAYER_HOST)->deckCards) > 0, 'Random draft should build host deck cards');
+    assertTrue(count($randomDraft->getPlayer(GameState::PLAYER_PLAYER)->deckCards) > 0, 'Random draft should build player deck cards');
+
+    $smallRandomDraft = new GameState(21, 1, 2);
+    apply($smallRandomDraft, $draftEngine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+    $result = $draftEngine->apply(
+        $smallRandomDraft,
+        GameState::PLAYER_HOST,
+        new Command('confirm_settings', [
+            'boosters' => 1,
+            'draft_pick_mode' => GameSettings::DRAFT_PICK_MODE_RANDOM,
+        ])
+    );
+    assertTrue(!$result->success, 'Random draft should reject invalid booster count before startup');
+    assertTrue($smallRandomDraft->status === 'settings', 'Rejected random draft should stay in settings');
+    assertTrue($smallRandomDraft->draft === null, 'Rejected random draft should not initialize draft runtime state');
 } else {
     echo "Skipping DB-backed draft initialization check: config/db.php not found\n";
 }

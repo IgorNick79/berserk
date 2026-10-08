@@ -37,6 +37,8 @@ final class GameSettings
     public const DRAFT_TIMER_CUSTOM_ACTION_MIN_SECONDS = 10;
     public const DRAFT_TIMER_CUSTOM_ACTION_MAX_SECONDS = 120;
     public const DRAFT_TIMER_CUSTOM_ACTION_STEP_SECONDS = 5;
+    public const DRAFT_BOOSTERS_MIN = 5;
+    public const DRAFT_BOOSTERS_MAX = 8;
     public const BOOSTER_PROFILE_DEFAULT = 'default';
     public const MIN_DECK_SIZE = 30;
     public const MAX_DECK_SIZE = 50;
@@ -122,7 +124,7 @@ final class GameSettings
 
     public function draftBoosters(): int
     {
-        return (int) ($this->draft['boosters'] ?? 5);
+        return (int) ($this->draft['boosters'] ?? self::DRAFT_BOOSTERS_MIN);
     }
 
     public function draftBoosterProfile(): string
@@ -188,5 +190,23 @@ final class GameSettings
         }
 
         return null;
+    }
+
+    public function validateDraftSettings(): ?string
+    {
+        $boosters = $this->draftBoosters();
+        if ($boosters < self::DRAFT_BOOSTERS_MIN || $boosters > self::DRAFT_BOOSTERS_MAX) {
+            return 'Неверное количество бустеров';
+        }
+
+        $gridMode = (string) ($this->draft['grid_mode'] ?? self::DRAFT_GRID_MODE_CONTINUOUS);
+        if (!in_array($gridMode, [
+            self::DRAFT_GRID_MODE_CONTINUOUS,
+            self::DRAFT_GRID_MODE_DISCRETE,
+        ], true)) {
+            return 'Неверный режим сетки драфта';
+        }
+
+        return $this->validateDraftTimer();
     }
 }

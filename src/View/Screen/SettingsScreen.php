@@ -7,7 +7,6 @@ namespace Berserk\View\Screen;
 
 use Berserk\Core\GameSettings;
 use Berserk\Core\GameState;
-use Berserk\View\Ui\Form;
 
 final class SettingsScreen
 {
@@ -63,9 +62,9 @@ final class SettingsScreen
     private function draft(GameState $state, string $roleParam, ?string $message): array
     {
         $settings = $state->settings;
-        $boosters = $settings->draftBoosters();
+        $boosters = max(GameSettings::DRAFT_BOOSTERS_MIN, min(GameSettings::DRAFT_BOOSTERS_MAX, $settings->draftBoosters()));
         $isRandom = $settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM;
-        $isDiscrete = $settings->draftGridMode() === GameSettings::DRAFT_GRID_MODE_DISCRETE;
+        $gridMode = $settings->draftGridMode();
         $autoSide = $settings->draftAutoSide();
         $timerMode = $settings->draftTimerMode();
         $timerTotal = $settings->draftTimerTotalSeconds();
@@ -77,85 +76,84 @@ final class SettingsScreen
             $timerAction = GameSettings::DRAFT_TIMER_DEFAULT_ACTION_SECONDS;
         }
 
-        $contentHtml = '<div class="settings-list">'
-            . '<div><b>Тип</b>: Grid</div>'
-            . '<div><b>Способ</b>: '
-                . ($isRandom ? 'Автоматический' : 'Ручной')
-                . '</div>'
-            . '<div><b>Сетка</b>: ' . htmlspecialchars((string) $settings->draftGridSize(), ENT_QUOTES) . '×'
-                . htmlspecialchars((string) $settings->draftGridSize(), ENT_QUOTES) . '</div>'
-            . '<div><b>Профиль бустера</b>: '
-                . htmlspecialchars($settings->draftBoosterProfile(), ENT_QUOTES) . '</div>'
-            . '</div>';
+        $boosterHtml = '';
+        for ($count = GameSettings::DRAFT_BOOSTERS_MIN; $count <= GameSettings::DRAFT_BOOSTERS_MAX; $count++) {
+            $boosterHtml .= $this->radioTile('boosters', (string) $count, (string) $count, $boosters === $count);
+        }
 
-        $actionsHtml = '<form method="get" class="settings-form">'
-            . '<input type="hidden" name="' . htmlspecialchars($roleParam, ENT_QUOTES) . '" value="1">'
+        $contentHtml = '<p class="settings-mode-title">Grid 3×3</p>';
+
+        $actionsHtml = '<form method="get" class="settings-form settings-draft-form" data-settings-form="draft">'
+            . '<input type="hidden" name="' . $this->esc($roleParam) . '" value="1">'
             . '<input type="hidden" name="game" value="' . (int) $state->gameId . '">'
             . '<input type="hidden" name="cmd" value="confirm_settings">'
             . '<input type="hidden" name="draft_pick_mode" value="' . GameSettings::DRAFT_PICK_MODE_MANUAL . '">'
-            . '<label class="settings-field">'
-            . '<span>Бустеров</span>'
-            . '<input type="number" name="boosters" min="1" max="10" step="1" value="'
-                . htmlspecialchars((string) $boosters, ENT_QUOTES) . '">'
-            . '</label>'
-            . '<label class="settings-field">'
-            . '<span>Автоматический драфт</span>'
-            . '<input type="checkbox" name="draft_pick_mode" value="' . GameSettings::DRAFT_PICK_MODE_RANDOM . '"'
+            . '<section class="settings-section">'
+            . '<h2>Основные настройки</h2>'
+            . '<fieldset class="settings-fieldset">'
+            . '<legend>Количество бустеров</legend>'
+            . '<div class="settings-option-grid settings-option-grid--compact">' . $boosterHtml . '</div>'
+            . '</fieldset>'
+            . '<fieldset class="settings-fieldset">'
+            . '<legend>Режим сетки</legend>'
+            . '<div class="settings-option-grid">'
+            . $this->radioTile('draft_grid_mode', GameSettings::DRAFT_GRID_MODE_CONTINUOUS, 'Обычный', $gridMode === GameSettings::DRAFT_GRID_MODE_CONTINUOUS, 'Пополнение после каждого выбора.')
+            . $this->radioTile('draft_grid_mode', GameSettings::DRAFT_GRID_MODE_DISCRETE, 'Дискретный', $gridMode === GameSettings::DRAFT_GRID_MODE_DISCRETE, 'Два выбора на раунд без пополнения между ними.')
+            . '</div>'
+            . '</fieldset>'
+            . '</section>'
+            . '<section class="settings-section">'
+            . '<h2>Таймер</h2>'
+            . '<fieldset class="settings-fieldset">'
+            . '<legend>Режим таймера</legend>'
+            . '<div class="settings-option-grid">'
+            . $this->radioTile('draft_timer_mode', GameSettings::DRAFT_TIMER_DEFAULT, 'По умолчанию', $timerMode === GameSettings::DRAFT_TIMER_DEFAULT, '10 мин / 30 сек')
+            . $this->radioTile('draft_timer_mode', GameSettings::DRAFT_TIMER_CUSTOM, 'Настраиваемый', $timerMode === GameSettings::DRAFT_TIMER_CUSTOM, 'Выберите общий лимит и время на действие.')
+            . $this->radioTile('draft_timer_mode', GameSettings::DRAFT_TIMER_UNLIMITED, 'Без ограничений', $timerMode === GameSettings::DRAFT_TIMER_UNLIMITED, 'Драфт без отсчёта времени.')
+            . '</div>'
+            . '</fieldset>'
+            . '<div class="settings-dependent' . ($timerMode === GameSettings::DRAFT_TIMER_CUSTOM ? '' : ' is-hidden') . '" data-settings-dependent="timer-custom">'
+            . $this->stepper(
+                'draft_timer_total',
+                'Общее время',
+                (int) ($timerTotal / 60),
+                (int) (GameSettings::DRAFT_TIMER_CUSTOM_TOTAL_MIN_SECONDS / 60),
+                (int) (GameSettings::DRAFT_TIMER_CUSTOM_TOTAL_MAX_SECONDS / 60),
+                1,
+                'мин'
+            )
+            . $this->stepper(
+                'draft_timer_action',
+                'Время на действие',
+                $timerAction,
+                GameSettings::DRAFT_TIMER_CUSTOM_ACTION_MIN_SECONDS,
+                GameSettings::DRAFT_TIMER_CUSTOM_ACTION_MAX_SECONDS,
+                GameSettings::DRAFT_TIMER_CUSTOM_ACTION_STEP_SECONDS,
+                'сек'
+            )
+            . '</div>'
+            . '</section>'
+            . '<section class="settings-section">'
+            . '<h2>Автоматический выбор</h2>'
+            . '<label class="settings-toggle">'
+            . '<input type="checkbox" name="draft_pick_mode" value="' . GameSettings::DRAFT_PICK_MODE_RANDOM . '" data-settings-toggle="auto-draft"'
                 . ($isRandom ? ' checked' : '') . '>'
+            . '<span><b>Автоматический драфт</b><small>Если включено, выбранная сторона будет драфтить автоматически.</small></span>'
             . '</label>'
-            . '<input type="hidden" name="draft_grid_mode" value="' . GameSettings::DRAFT_GRID_MODE_CONTINUOUS . '">'
-            . '<label class="settings-field">'
-            . '<span>Дискретный драфт</span>'
-            . '<input type="checkbox" name="draft_grid_mode" value="' . GameSettings::DRAFT_GRID_MODE_DISCRETE . '"'
-                . ($isDiscrete ? ' checked' : '') . '>'
-            . '</label>'
-            . '<div class="settings-field">'
-            . '<span>Таймер драфта</span>'
-            . '<div class="choice-list">'
-            . Form::radio('draft_timer_mode', GameSettings::DRAFT_TIMER_DEFAULT, 'Таймер (по умолчанию)', [
-                'checked' => $timerMode === GameSettings::DRAFT_TIMER_DEFAULT,
-            ])
-            . Form::radio('draft_timer_mode', GameSettings::DRAFT_TIMER_CUSTOM, 'Таймер (настраиваемый)', [
-                'checked' => $timerMode === GameSettings::DRAFT_TIMER_CUSTOM,
-            ])
-            . Form::radio('draft_timer_mode', GameSettings::DRAFT_TIMER_UNLIMITED, 'Без ограничений', [
-                'checked' => $timerMode === GameSettings::DRAFT_TIMER_UNLIMITED,
-            ])
+            . '<div class="settings-dependent' . ($isRandom ? '' : ' is-hidden') . '" data-settings-dependent="auto-draft">'
+            . '<fieldset class="settings-fieldset">'
+            . '<legend>Кто выбирает автоматически</legend>'
+            . '<div class="settings-option-grid">'
+            . $this->radioTile('draft_auto_side', GameSettings::DRAFT_AUTO_SIDE_BOTH, 'Оба', $autoSide === GameSettings::DRAFT_AUTO_SIDE_BOTH)
+            . $this->radioTile('draft_auto_side', GameSettings::DRAFT_AUTO_SIDE_HOST, 'Хост', $autoSide === GameSettings::DRAFT_AUTO_SIDE_HOST)
+            . $this->radioTile('draft_auto_side', GameSettings::DRAFT_AUTO_SIDE_PLAYER, 'Соперник', $autoSide === GameSettings::DRAFT_AUTO_SIDE_PLAYER)
             . '</div>'
+            . '</fieldset>'
             . '</div>'
-            . '<label class="settings-field">'
-            . '<span>Общее время, минут <small>используется только в настраиваемом режиме</small></span>'
-            . '<b>' . htmlspecialchars((string) (int) ($timerTotal / 60), ENT_QUOTES) . '</b>'
-            . '<input type="range" name="draft_timer_total" min="'
-                . (int) (GameSettings::DRAFT_TIMER_CUSTOM_TOTAL_MIN_SECONDS / 60)
-                . '" max="' . (int) (GameSettings::DRAFT_TIMER_CUSTOM_TOTAL_MAX_SECONDS / 60)
-                . '" step="1" value="' . htmlspecialchars((string) (int) ($timerTotal / 60), ENT_QUOTES) . '">'
-            . '</label>'
-            . '<label class="settings-field">'
-            . '<span>Время на действие, секунд <small>используется только в настраиваемом режиме</small></span>'
-            . '<b>' . htmlspecialchars((string) $timerAction, ENT_QUOTES) . '</b>'
-            . '<input type="range" name="draft_timer_action" min="'
-                . GameSettings::DRAFT_TIMER_CUSTOM_ACTION_MIN_SECONDS
-                . '" max="' . GameSettings::DRAFT_TIMER_CUSTOM_ACTION_MAX_SECONDS
-                . '" step="' . GameSettings::DRAFT_TIMER_CUSTOM_ACTION_STEP_SECONDS
-                . '" value="' . htmlspecialchars((string) $timerAction, ENT_QUOTES) . '">'
-            . '</label>'
-            . '<div class="settings-field">'
-            . '<span>Кто выбирает автоматически</span>'
-            . '<div class="choice-list">'
-            . Form::radio('draft_auto_side', GameSettings::DRAFT_AUTO_SIDE_BOTH, 'Оба', [
-                'checked' => $autoSide === GameSettings::DRAFT_AUTO_SIDE_BOTH,
-            ])
-            . Form::radio('draft_auto_side', GameSettings::DRAFT_AUTO_SIDE_HOST, 'Хост', [
-                'checked' => $autoSide === GameSettings::DRAFT_AUTO_SIDE_HOST,
-            ])
-            . Form::radio('draft_auto_side', GameSettings::DRAFT_AUTO_SIDE_PLAYER, 'Соперник', [
-                'checked' => $autoSide === GameSettings::DRAFT_AUTO_SIDE_PLAYER,
-            ])
-            . '</div>'
-            . '</div>'
-            . '<button class="button wide" type="submit">Начать драфт</button>'
-            . '</form>';
+            . '</section>'
+            . '<div class="settings-submit-row"><button class="button wide settings-submit" type="submit">Начать драфт</button></div>'
+            . '</form>'
+            . '<script src="/assets/js/settings.js?v=1" defer></script>';
 
         return [
             'screen' => 'settings',
@@ -166,6 +164,36 @@ final class SettingsScreen
                 'message'      => $message ?? '',
             ],
         ];
+    }
+
+    private function radioTile(string $name, string $value, string $label, bool $checked, string $hint = ''): string
+    {
+        return '<label class="settings-option">'
+            . '<input type="radio" name="' . $this->esc($name) . '" value="' . $this->esc($value) . '"'
+                . ($checked ? ' checked' : '') . '>'
+            . '<span><b>' . $this->esc($label) . '</b>'
+            . ($hint !== '' ? '<small>' . $this->esc($hint) . '</small>' : '')
+            . '</span>'
+            . '</label>';
+    }
+
+    private function stepper(string $name, string $label, int $value, int $min, int $max, int $step, string $unit): string
+    {
+        $value = max($min, min($max, $value));
+        return '<div class="settings-stepper" data-settings-stepper data-min="' . $min . '" data-max="' . $max . '" data-step="' . $step . '">'
+            . '<span class="settings-stepper__label">' . $this->esc($label) . '</span>'
+            . '<div class="settings-stepper__control">'
+            . '<button type="button" class="settings-stepper__button" data-stepper-action="down" aria-label="Уменьшить">−</button>'
+            . '<output class="settings-stepper__value" data-stepper-output>' . $this->esc((string) $value) . ' ' . $this->esc($unit) . '</output>'
+            . '<button type="button" class="settings-stepper__button" data-stepper-action="up" aria-label="Увеличить">+</button>'
+            . '<input type="hidden" name="' . $this->esc($name) . '" value="' . $value . '" data-stepper-input data-unit="' . $this->esc($unit) . '">'
+            . '</div>'
+            . '</div>';
+    }
+
+    private function esc(string $value): string
+    {
+        return htmlspecialchars($value, ENT_QUOTES);
     }
 
     private function unsupported(GameState $state, ?string $message): array

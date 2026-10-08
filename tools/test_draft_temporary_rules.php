@@ -291,32 +291,28 @@ assertTrue($state->draft !== null, 'Invalid exhausted draft should keep draft ru
 // DB-backed finalization checks, when local DB config is usable.
 $configPath = __DIR__ . '/../config/db.php';
 if (is_file($configPath)) {
-    try {
-        $db = new Db(require $configPath);
-        $row = $db->fetchOne('SELECT ukid FROM cards LIMIT 1');
-        assertTrue($row !== null && !empty($row['ukid']), 'DB-backed draft test needs at least one card');
-        $ukid = (string) $row['ukid'];
+    $db = new Db(require $configPath);
+    $row = $db->fetchOne('SELECT ukid FROM cards LIMIT 1');
+    assertTrue($row !== null && !empty($row['ukid']), 'DB-backed draft test needs at least one card');
+    $ukid = (string) $row['ukid'];
 
-        $state = stateWithDraft(array_fill(0, $deckLimit, $ukid), array_fill(0, $deckLimit, $ukid));
-        $result = (new DraftProcessor($state, $db))->finish(GameState::PLAYER_HOST);
-        assertTrue($result->success, 'finish_draft should succeed once both players have deck limit cards');
-        assertTrue($state->status === 'view', 'Valid finish_draft should transition to view');
-        assertTrue($state->draft === null, 'Valid finish_draft should clear draft runtime state');
-        assertTrue(count($state->getPlayer(GameState::PLAYER_HOST)->deckCards) > 0, 'Finalized draft should build host deck cards');
-        assertTrue(count($state->getPlayer(GameState::PLAYER_PLAYER)->deckCards) > 0, 'Finalized draft should build player deck cards');
-        assertTrue(count($state->getCardsInZone(GameState::PLAYER_HOST, CardInstance::ZONE_DECK)) === $deckLimit, 'Finalized draft should create host deck instances');
-        assertTrue(count($state->getCardsInZone(GameState::PLAYER_PLAYER, CardInstance::ZONE_DECK)) === $deckLimit, 'Finalized draft should create player deck instances');
+    $state = stateWithDraft(array_fill(0, $deckLimit, $ukid), array_fill(0, $deckLimit, $ukid));
+    $result = (new DraftProcessor($state, $db))->finish(GameState::PLAYER_HOST);
+    assertTrue($result->success, 'finish_draft should succeed once both players have deck limit cards');
+    assertTrue($state->status === 'view', 'Valid finish_draft should transition to view');
+    assertTrue($state->draft === null, 'Valid finish_draft should clear draft runtime state');
+    assertTrue(count($state->getPlayer(GameState::PLAYER_HOST)->deckCards) > 0, 'Finalized draft should build host deck cards');
+    assertTrue(count($state->getPlayer(GameState::PLAYER_PLAYER)->deckCards) > 0, 'Finalized draft should build player deck cards');
+    assertTrue(count($state->getCardsInZone(GameState::PLAYER_HOST, CardInstance::ZONE_DECK)) === $deckLimit, 'Finalized draft should create host deck instances');
+    assertTrue(count($state->getCardsInZone(GameState::PLAYER_PLAYER, CardInstance::ZONE_DECK)) === $deckLimit, 'Finalized draft should create player deck instances');
 
-        $state = stateWithDraft(array_fill(0, $deckLimit, $ukid), array_fill(0, $deckLimit, $ukid));
-        $state->draft['pool'] = [];
-        $state->draft['grid'] = array_fill(0, 9, null);
-        $result = (new DraftProcessor($state, $db))->pass(GameState::PLAYER_HOST);
-        assertTrue($result->success, 'Exhausted pool with enough cards should auto-finalize');
-        assertTrue($state->status === 'view', 'Valid exhausted draft should transition to view');
-        assertTrue($state->draft === null, 'Valid exhausted draft should clear draft runtime state');
-    } catch (Throwable $e) {
-        echo "Skipping DB-backed draft finalization checks: {$e->getMessage()}\n";
-    }
+    $state = stateWithDraft(array_fill(0, $deckLimit, $ukid), array_fill(0, $deckLimit, $ukid));
+    $state->draft['pool'] = [];
+    $state->draft['grid'] = array_fill(0, 9, null);
+    $result = (new DraftProcessor($state, $db))->pass(GameState::PLAYER_HOST);
+    assertTrue($result->success, 'Exhausted pool with enough cards should auto-finalize');
+    assertTrue($state->status === 'view', 'Valid exhausted draft should transition to view');
+    assertTrue($state->draft === null, 'Valid exhausted draft should clear draft runtime state');
 } else {
     echo "Skipping DB-backed draft finalization checks: config/db.php not found\n";
 }

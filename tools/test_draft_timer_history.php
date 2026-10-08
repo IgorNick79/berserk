@@ -338,27 +338,23 @@ dtAssert($result->events === ['forced_skip'], 'Pre-timeout forced skip should no
 
 $configPath = __DIR__ . '/../config/db.php';
 if (is_file($configPath)) {
-    try {
-        $db = new Db(require $configPath);
-        $rows = $db->fetchAll('SELECT ukid FROM cards LIMIT 20');
-        dtAssert(count($rows) >= 9, 'DB-backed timeout test needs at least nine cards');
-        $ukids = array_map(fn($row) => (string) $row['ukid'], $rows);
+    $db = new Db(require $configPath);
+    $rows = $db->fetchAll('SELECT ukid FROM cards LIMIT 20');
+    dtAssert(count($rows) >= 9, 'DB-backed timeout test needs at least nine cards');
+    $ukids = array_map(fn($row) => (string) $row['ukid'], $rows);
 
-        $state = dtState();
-        $state->draft['grid'] = array_slice($ukids, 0, 9);
-        $state->draft['pool'] = array_slice($ukids, 9);
-        DraftTimer::initialize($state, GameSettings::defaults(), 1000);
-        $state->draft['timer']['action_started_at'] = 900;
+    $state = dtState();
+    $state->draft['grid'] = array_slice($ukids, 0, 9);
+    $state->draft['pool'] = array_slice($ukids, 9);
+    DraftTimer::initialize($state, GameSettings::defaults(), 1000);
+    $state->draft['timer']['action_started_at'] = 900;
 
-        $result = (new PrepareProcessor($state, $db))->resolveDraftTimeouts(1000);
-        dtAssert($result->success, 'Timeout resolution should succeed');
-        dtAssert(!empty($result->events), 'Timeout resolution should apply an auto pick');
-        dtAssert(count($state->draft['picked'][GameState::PLAYER_HOST]) > 0, 'Timeout should pick cards for active player');
-        dtAssert(count($state->draft['history']) === 1, 'Timeout auto-pick should be recorded in history');
-        dtAssert(str_starts_with($result->events[0], 'timeout_picked:'), 'Timeout should use timeout_picked event prefix');
-    } catch (Throwable $e) {
-        echo "Skipping DB-backed draft timeout checks: {$e->getMessage()}\n";
-    }
+    $result = (new PrepareProcessor($state, $db))->resolveDraftTimeouts(1000);
+    dtAssert($result->success, 'Timeout resolution should succeed');
+    dtAssert(!empty($result->events), 'Timeout resolution should apply an auto pick');
+    dtAssert(count($state->draft['picked'][GameState::PLAYER_HOST]) > 0, 'Timeout should pick cards for active player');
+    dtAssert(count($state->draft['history']) === 1, 'Timeout auto-pick should be recorded in history');
+    dtAssert(str_starts_with($result->events[0], 'timeout_picked:'), 'Timeout should use timeout_picked event prefix');
 } else {
     echo "Skipping DB-backed draft timeout checks: config/db.php not found\n";
 }

@@ -31,7 +31,8 @@ final class DraftProcessor
         if ($settings->draftGridSize() !== 3) {
             return Result::error('Неподдерживаемый размер сетки драфта');
         }
-        if ($settings->draftBoosters() <= 0) {
+        if ($settings->draftBoosters() < GameSettings::DRAFT_BOOSTERS_MIN
+            || $settings->draftBoosters() > GameSettings::DRAFT_BOOSTERS_MAX) {
             return Result::error('Неверное количество бустеров');
         }
         if ($settings->draftBoosterProfile() !== GameSettings::BOOSTER_PROFILE_DEFAULT) {

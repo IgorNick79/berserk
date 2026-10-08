@@ -79,6 +79,11 @@ final class PrepareProcessor
                 return Result::ok(['settings_confirmed:system', 'stage_changed:deck']);
 
             case GameSettings::MODE_DRAFT:
+                $draftSettingsError = $this->state->settings->validateDraftSettings();
+                if ($draftSettingsError !== null) {
+                    return Result::error($draftSettingsError);
+                }
+
                 if (!in_array($this->state->settings->draftPickMode(), [
                     GameSettings::DRAFT_PICK_MODE_MANUAL,
                     GameSettings::DRAFT_PICK_MODE_RANDOM,
