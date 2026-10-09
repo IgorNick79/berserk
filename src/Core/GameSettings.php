@@ -39,6 +39,8 @@ final class GameSettings
     public const DRAFT_TIMER_CUSTOM_ACTION_STEP_SECONDS = 5;
     public const DRAFT_BOOSTERS_MIN = 5;
     public const DRAFT_BOOSTERS_MAX = 8;
+    public const SEALED_BOOSTERS_MIN = 3;
+    public const SEALED_BOOSTERS_MAX = 4;
     public const BOOSTER_PROFILE_DEFAULT = 'default';
     public const MIN_DECK_SIZE = 30;
     public const MAX_DECK_SIZE = 50;
@@ -138,6 +140,16 @@ final class GameSettings
     public function draftBoosterProfile(): string
     {
         return (string) ($this->draft['booster_profile'] ?? self::BOOSTER_PROFILE_DEFAULT);
+    }
+
+    public function sealedBoosters(): int
+    {
+        return (int) ($this->sealed['boosters'] ?? self::SEALED_BOOSTERS_MAX);
+    }
+
+    public function sealedBoosterProfile(): string
+    {
+        return (string) ($this->sealed['booster_profile'] ?? self::BOOSTER_PROFILE_DEFAULT);
     }
 
     /**
@@ -249,5 +261,24 @@ final class GameSettings
         }
 
         return $this->validateDraftTimer() ?? $this->validateBoosterSettings();
+    }
+
+    public function validateSealedSettings(): ?string
+    {
+        $rawBoosters = $this->sealed['boosters'] ?? self::SEALED_BOOSTERS_MAX;
+        if (!is_int($rawBoosters)
+            && (!is_string($rawBoosters) || preg_match('/^\d+$/', $rawBoosters) !== 1)) {
+            return 'Неверное количество бустеров Sealed';
+        }
+
+        $boosters = (int) $rawBoosters;
+        if (!in_array($boosters, [self::SEALED_BOOSTERS_MIN, self::SEALED_BOOSTERS_MAX], true)) {
+            return 'Неверное количество бустеров Sealed';
+        }
+        if ($this->sealedBoosterProfile() !== self::BOOSTER_PROFILE_DEFAULT) {
+            return 'Неподдерживаемый профиль бустера';
+        }
+
+        return $this->validateBoosterSettings();
     }
 }

@@ -35,13 +35,12 @@ final class ViewScreen
         $baseUrl   = "?{$linkParam}&game={$state->gameId}";
         $me = $state->getPlayer($playerKey);
         $ui = new PrepareUi($this->tpl);
-        $isDraftDeck = $me->deckId === 0;
         $deckInstances = $state->getCardsInZone($playerKey, CardInstance::ZONE_DECK);
         $sideboardInstances = $state->getCardsInZone($playerKey, CardInstance::ZONE_SIDEBOARD);
         $usesRuntimeDeck = !empty($deckInstances) || !empty($sideboardInstances);
 
         if ($usesRuntimeDeck) {
-            $deckInfo = $this->buildFromInstances($deckInstances, $cardsInfo, $this->deckTitle($me->deckId));
+            $deckInfo = $this->buildFromInstances($deckInstances, $cardsInfo, $this->deckTitle($me->deckId, $state->mode));
             $sideboardInfo = $this->buildFromInstances($sideboardInstances, $cardsInfo, 'Сайдборд') ?? [
                 'name' => 'Сайдборд',
                 'cards' => [],
@@ -264,9 +263,12 @@ final class ViewScreen
         ];
     }
 
-    private function deckTitle(?int $deckId): string
+    private function deckTitle(?int $deckId, ?string $mode): string
     {
         if ($deckId === 0) {
+            if ($mode === GameSettings::MODE_SEALED) {
+                return 'Sealed';
+            }
             return 'Драфт';
         }
         if ($deckId === null) {

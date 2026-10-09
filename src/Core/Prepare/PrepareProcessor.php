@@ -157,7 +157,29 @@ final class PrepareProcessor
                 }
 
             case GameSettings::MODE_SEALED:
-                return Result::error('Sealed пока не реализован');
+                $sealedSettingsError = $nextSettings->validateSealedSettings();
+                if ($sealedSettingsError !== null) {
+                    return Result::error($sealedSettingsError);
+                }
+                if ($this->db === null) {
+                    return Result::error('Db недоступен для Sealed');
+                }
+
+                $snapshot = $this->state->toArray();
+                $this->state->settings = $nextSettings;
+                try {
+                    $result = $this->startSealed($nextSettings);
+                } catch (\Throwable $e) {
+                    $this->restoreState($snapshot);
+                    return Result::error($e->getMessage());
+                }
+                if (!$result->success) {
+                    $this->restoreState($snapshot);
+                    return $result;
+                }
+
+                $this->state->bumpVersion();
+                return $result;
 
             default:
                 return Result::error('Неверный режим');
@@ -1432,6 +1454,114 @@ final class PrepareProcessor
         $this->state->battle = $restored->battle;
         $this->state->log = $restored->log;
         $this->state->winner = $restored->winner;
+    }
+
+    private function startSealed(GameSettings $settings): Result
+    {
+        $attempts = 20;
+        $builder = new DraftDeckBuilder($this->db);
+        $generator = new BoosterGenerator($this->db, $settings->boosterConfig());
+
+        try {
+            $hostDeckCards = $this->generateSealedDeckCards($generator, $builder, $settings->sealedBoosters(), $attempts);
+            $playerDeckCards = $this->generateSealedDeckCards($generator, $builder, $settings->sealedBoosters(), $attempts);
+        } catch (\RuntimeException $e) {
+            return Result::error($e->getMessage());
+        }
+
+        $host = $this->state->getPlayer(GameState::PLAYER_HOST);
+        $player = $this->state->getPlayer(GameState::PLAYER_PLAYER);
+        $host->deckCards = $hostDeckCards;
+        $player->deckCards = $playerDeckCards;
+        $host->deckId = 0;
+        $player->deckId = 0;
+        $host->clearConfirmations();
+        $player->clearConfirmations();
+        $this->createDeckInstances(GameState::PLAYER_HOST, $hostDeckCards);
+        $this->createDeckInstances(GameState::PLAYER_PLAYER, $playerDeckCards);
+        $this->state->draft = null;
+        $this->state->status = 'view';
+
+        return Result::ok([
+            'settings_confirmed:sealed',
+            'sealed_started',
+            'sealed_boosters:' . $settings->sealedBoosters(),
+            'sealed_cards:host=' . $this->deckCardTotal($hostDeckCards) . ',player=' . $this->deckCardTotal($playerDeckCards),
+            'stage_changed:view',
+        ]);
+    }
+
+    private function generateSealedDeckCards(
+        BoosterGenerator $generator,
+        DraftDeckBuilder $builder,
+        int $boosterCount,
+        int $attempts
+    ): array {
+        $lastError = null;
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            try {
+                $ukids = $generator->generatePool($boosterCount);
+                $deckCards = $builder->buildDeckCards($ukids);
+                $countError = $this->sealedDeckCountError($boosterCount, $ukids, $deckCards);
+                if ($countError !== null) {
+                    $lastError = $countError;
+                    continue;
+                }
+                if (!$this->isDeckBuildable($deckCards)) {
+                    $lastError = 'Набор Sealed не позволяет собрать колоду из 30 карт';
+                    continue;
+                }
+
+                return $deckCards;
+            } catch (\RuntimeException $e) {
+                $lastError = $e->getMessage();
+            }
+        }
+
+        throw new \RuntimeException($lastError ?? 'Не удалось сгенерировать Sealed');
+    }
+
+    private function sealedDeckCountError(int $boosterCount, array $ukids, array $deckCards): ?string
+    {
+        $expected = $boosterCount * BoosterSettings::BOOSTER_SIZE;
+        if (count($ukids) !== $expected) {
+            return 'Неверное количество карт в наборе Sealed';
+        }
+        if ($this->deckCardTotal($deckCards) !== $expected) {
+            return 'Не все карты Sealed найдены в справочнике';
+        }
+
+        return null;
+    }
+
+    private function isDeckBuildable(array $deckCards): bool
+    {
+        $playable = 0;
+        $byUkid = [];
+        foreach ($deckCards as $card) {
+            $ukid = (string) ($card['ukid'] ?? '');
+            if ($ukid === '') continue;
+            if (!isset($byUkid[$ukid])) {
+                $byUkid[$ukid] = $card;
+                $byUkid[$ukid]['count'] = 0;
+            }
+            $byUkid[$ukid]['count'] += max(0, (int) ($card['count'] ?? 0));
+        }
+
+        foreach ($byUkid as $card) {
+            $playable += min((int) ($card['count'] ?? 0), DraftCopyRules::deckLimit($card));
+        }
+
+        return $playable >= GameSettings::MIN_DECK_SIZE;
+    }
+
+    private function deckCardTotal(array $deckCards): int
+    {
+        $total = 0;
+        foreach ($deckCards as $card) {
+            $total += max(0, (int) ($card['count'] ?? 0));
+        }
+        return $total;
     }
 
     private function draftManualCommand(string $playerKey, callable $apply): Result

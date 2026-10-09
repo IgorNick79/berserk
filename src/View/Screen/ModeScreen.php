@@ -30,12 +30,14 @@ final class ModeScreen
         } else {
             $draftUrl  = "{$baseUrl}&cmd=choose_mode&mode=draft";
             $systemUrl = "{$baseUrl}&cmd=choose_mode&mode=system";
+            $sealedUrl = "{$baseUrl}&cmd=choose_mode&mode=sealed";
 
             $contentHtml =
                 '<h1>Режим игры</h1>'
                 . '<div class="mode-actions">'
                 . '<a class="button wide" href="' . $systemUrl . '">Системные колоды</a>'
                 . '<a class="button wide" href="' . $draftUrl . '">Драфт</a>'
+                . '<a class="button wide" href="' . $sealedUrl . '">Sealed</a>'
                 . '</div>';
         }
 

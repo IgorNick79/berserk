@@ -39,6 +39,7 @@ final class SettingsScreen
         return match ($state->mode) {
             GameSettings::MODE_SYSTEM => $this->system($state, $baseUrl, $message),
             GameSettings::MODE_DRAFT  => $this->draft($state, $roleParam, $message),
+            GameSettings::MODE_SEALED => $this->sealed($state, $roleParam, $message),
             default                   => $this->unsupported($state, $message),
         };
     }
@@ -76,15 +77,6 @@ final class SettingsScreen
         if ($timerAction <= 0) {
             $timerAction = GameSettings::DRAFT_TIMER_DEFAULT_ACTION_SECONDS;
         }
-        $booster = $settings->boosterConfig();
-        $rareChance = 100 - $booster['ultra_rare_chance'];
-        $boosterSize = BoosterSettings::BOOSTER_SIZE;
-
-        $boosterHtml = '';
-        for ($count = GameSettings::DRAFT_BOOSTERS_MIN; $count <= GameSettings::DRAFT_BOOSTERS_MAX; $count++) {
-            $boosterHtml .= $this->radioTile('boosters', (string) $count, (string) $count, $boosters === $count);
-        }
-
         $contentHtml = '<p class="settings-mode-title">Grid 3×3</p>';
 
         $actionsHtml = '<form method="get" class="settings-form settings-draft-form" data-settings-form="draft">'
@@ -96,33 +88,9 @@ final class SettingsScreen
             . '<h2>Основные настройки</h2>'
             . '<fieldset class="settings-fieldset">'
             . '<legend>Количество бустеров</legend>'
-            . '<div class="settings-option-grid settings-option-grid--compact">' . $boosterHtml . '</div>'
+            . '<div class="settings-option-grid settings-option-grid--compact">' . $this->boosterCountTiles('boosters', GameSettings::DRAFT_BOOSTERS_MIN, GameSettings::DRAFT_BOOSTERS_MAX, $boosters) . '</div>'
             . '</fieldset>'
-            . '<fieldset class="settings-fieldset">'
-            . '<legend>Состав бустера</legend>'
-            . '<div class="settings-booster" data-booster-config data-total="' . $boosterSize . '">'
-            . '<div class="settings-booster-bar" aria-hidden="true">'
-            . '<span class="settings-booster-bar__common" data-booster-bar="common" style="width:' . $this->percent($booster['common'], $boosterSize) . '%"></span>'
-            . '<span class="settings-booster-bar__uncommon" data-booster-bar="uncommon" style="width:' . $this->percent($booster['uncommon'], $boosterSize) . '%"></span>'
-            . '<span class="settings-booster-bar__rare" data-booster-bar="rare_slots" style="width:' . $this->percent($booster['rare_slots'], $boosterSize) . '%"></span>'
-            . '</div>'
-            . '<div class="settings-booster-total">Всего карт: <b data-booster-total>' . $boosterSize . '</b></div>'
-            . $this->rangeSlider('booster_common', 'Common', $booster['common'], 0, $boosterSize, 1, 'карт', 'common')
-            . $this->rangeSlider('booster_uncommon', 'Uncommon', $booster['uncommon'], 0, $boosterSize, 1, 'карт', 'uncommon')
-            . $this->rangeSlider('booster_rare_slots', 'Rare slots', $booster['rare_slots'], 0, $boosterSize, 1, 'карт', 'rare_slots')
-            . '</div>'
-            . '</fieldset>'
-            . '<fieldset class="settings-fieldset">'
-            . '<legend>Редкая / ультраредкая карта</legend>'
-            . '<div class="settings-range" data-rarity-chance>'
-            . '<div class="settings-range__head">'
-            . '<span class="settings-stepper__label">Шанс редкой</span>'
-            . '<output class="settings-stepper__value" data-rarity-output>' . $rareChance . '% / ' . $booster['ultra_rare_chance'] . '%</output>'
-            . '</div>'
-            . '<input type="range" name="booster_rare_chance" min="0" max="100" step="10" value="' . $rareChance . '" data-rarity-input>'
-            . '<small>Второе значение считается как шанс ультраредкой.</small>'
-            . '</div>'
-            . '</fieldset>'
+            . $this->boosterSettingsHtml($settings)
             . '<fieldset class="settings-fieldset">'
             . '<legend>Режим сетки</legend>'
             . '<div class="settings-option-grid">'
@@ -195,6 +163,38 @@ final class SettingsScreen
         ];
     }
 
+    private function sealed(GameState $state, string $roleParam, ?string $message): array
+    {
+        $settings = $state->settings;
+        $boosters = max(GameSettings::SEALED_BOOSTERS_MIN, min(GameSettings::SEALED_BOOSTERS_MAX, $settings->sealedBoosters()));
+
+        $actionsHtml = '<form method="get" class="settings-form settings-draft-form" data-settings-form="draft">'
+            . '<input type="hidden" name="' . $this->esc($roleParam) . '" value="1">'
+            . '<input type="hidden" name="game" value="' . (int) $state->gameId . '">'
+            . '<input type="hidden" name="cmd" value="confirm_settings">'
+            . '<section class="settings-section">'
+            . '<h2>Основные настройки</h2>'
+            . '<fieldset class="settings-fieldset">'
+            . '<legend>Количество бустеров</legend>'
+            . '<div class="settings-option-grid settings-option-grid--compact">' . $this->boosterCountTiles('sealed_boosters', GameSettings::SEALED_BOOSTERS_MIN, GameSettings::SEALED_BOOSTERS_MAX, $boosters) . '</div>'
+            . '</fieldset>'
+            . $this->boosterSettingsHtml($settings)
+            . '</section>'
+            . '<div class="settings-submit-row"><button class="button wide settings-submit" type="submit">Начать Sealed</button></div>'
+            . '</form>'
+            . '<script src="/assets/js/settings.js?v=1" defer></script>';
+
+        return [
+            'screen' => 'settings',
+            'data'   => [
+                'title'        => 'Sealed',
+                'content_html' => '<p class="settings-mode-title">Набор из бустеров</p>',
+                'actions_html' => $actionsHtml,
+                'message'      => $message ?? '',
+            ],
+        ];
+    }
+
     private function radioTile(string $name, string $value, string $label, bool $checked, string $hint = ''): string
     {
         return '<label class="settings-option">'
@@ -204,6 +204,48 @@ final class SettingsScreen
             . ($hint !== '' ? '<small>' . $this->esc($hint) . '</small>' : '')
             . '</span>'
             . '</label>';
+    }
+
+    private function boosterCountTiles(string $name, int $min, int $max, int $selected): string
+    {
+        $html = '';
+        for ($count = $min; $count <= $max; $count++) {
+            $html .= $this->radioTile($name, (string) $count, (string) $count, $selected === $count);
+        }
+        return $html;
+    }
+
+    private function boosterSettingsHtml(GameSettings $settings): string
+    {
+        $booster = $settings->boosterConfig();
+        $rareChance = 100 - $booster['ultra_rare_chance'];
+        $boosterSize = BoosterSettings::BOOSTER_SIZE;
+
+        return '<fieldset class="settings-fieldset">'
+            . '<legend>Состав бустера</legend>'
+            . '<div class="settings-booster" data-booster-config data-total="' . $boosterSize . '">'
+            . '<div class="settings-booster-bar" aria-hidden="true">'
+            . '<span class="settings-booster-bar__common" data-booster-bar="common" style="width:' . $this->percent($booster['common'], $boosterSize) . '%"></span>'
+            . '<span class="settings-booster-bar__uncommon" data-booster-bar="uncommon" style="width:' . $this->percent($booster['uncommon'], $boosterSize) . '%"></span>'
+            . '<span class="settings-booster-bar__rare" data-booster-bar="rare_slots" style="width:' . $this->percent($booster['rare_slots'], $boosterSize) . '%"></span>'
+            . '</div>'
+            . '<div class="settings-booster-total">Всего карт: <b data-booster-total>' . $boosterSize . '</b></div>'
+            . $this->rangeSlider('booster_common', 'Common', $booster['common'], 0, $boosterSize, 1, 'карт', 'common')
+            . $this->rangeSlider('booster_uncommon', 'Uncommon', $booster['uncommon'], 0, $boosterSize, 1, 'карт', 'uncommon')
+            . $this->rangeSlider('booster_rare_slots', 'Rare slots', $booster['rare_slots'], 0, $boosterSize, 1, 'карт', 'rare_slots')
+            . '</div>'
+            . '</fieldset>'
+            . '<fieldset class="settings-fieldset">'
+            . '<legend>Редкая / ультраредкая карта</legend>'
+            . '<div class="settings-range" data-rarity-chance>'
+            . '<div class="settings-range__head">'
+            . '<span class="settings-stepper__label">Шанс редкой</span>'
+            . '<output class="settings-stepper__value" data-rarity-output>' . $rareChance . '% / ' . $booster['ultra_rare_chance'] . '%</output>'
+            . '</div>'
+            . '<input type="range" name="booster_rare_chance" min="0" max="100" step="10" value="' . $rareChance . '" data-rarity-input>'
+            . '<small>Второе значение считается как шанс ультраредкой.</small>'
+            . '</div>'
+            . '</fieldset>';
     }
 
     private function stepper(string $name, string $label, int $value, int $min, int $max, int $step, string $unit): string
