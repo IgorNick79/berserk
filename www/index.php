@@ -153,26 +153,36 @@ if ($commandType === 'draft_sync') {
 if ($commandType !== '') {
     $payload = $_GET;
 
-    // Для select_deck — резолвим список дек и вторую деку
-    if ($commandType === 'select_deck') {
-        $starters = $deckView->listStarters();
-        $deckIds  = array_column($starters, 'ind');
+    // Для select_deck — резолвим список дек и составы выбранных колод
+    $canResolveDeckSelection = $commandType === 'select_deck'
+        && $playerKey === 'host'
+        && $state->status === 'deck'
+        && $state->getPlayer('host')->deckId === null;
 
+    if ($canResolveDeckSelection) {
+        $starters = $deckView->listStarters();
+        $deckIds  = array_map('intval', array_column($starters, 'ind'));
+
+        $deckMode = (string) ($_GET['deck_mode'] ?? 'manual');
+        $otherMode = (string) ($_GET['other_deck_mode'] ?? 'manual');
         $selected = (int) ($_GET['deck_id'] ?? 0);
-        $other    = null;
-        foreach ($deckIds as $id) {
-            if ((int) $id !== $selected) { $other = (int) $id; break; }
+        $other = (int) ($_GET['other_deck_id'] ?? 0);
+
+        if ($deckMode === 'random' && $deckIds !== []) {
+            $selected = $deckIds[random_int(0, count($deckIds) - 1)];
+        }
+        if ($otherMode === 'random' && $deckIds !== []) {
+            $other = $deckIds[random_int(0, count($deckIds) - 1)];
         }
 
-        $payload['valid_deck_ids'] = array_map('intval', $deckIds);
+        $payload['deck_mode'] = $deckMode;
+        $payload['other_deck_mode'] = $otherMode;
+        $payload['deck_id'] = $selected;
+        $payload['valid_deck_ids'] = $deckIds;
         $payload['other_deck_id']  = $other;
 
-        // Состав дек в формате [{ukid, count}]
-        $selectedDeck = $deckView->forDeck($selected);
-        $otherDeck    = $deckView->forDeck($other);
-
-       $payload['deck_cards'] = array_map(
-            fn ($c) => [
+        $mapDeckCards = static fn(array $deck): array => array_map(
+            static fn ($c) => [
                 'ukid'    => $c['ukid'],
                 'count'   => $c['count'],
                 'price'   => $c['price'],
@@ -188,27 +198,16 @@ if ($commandType !== '') {
                 'type'          => $c['type'],
                 'class'         => $c['class'],
             ],
-            $selectedDeck['cards']
+            $deck['cards'] ?? []
         );
-        $payload['other_cards'] = array_map(
-            fn ($c) => [
-                'ukid'          => $c['ukid'],
-                'count'         => $c['count'],
-                'price'         => $c['price'],
-                'elite'         => $c['elite'],
-                'single'        => $c['single'] ?? false,
-                'element'       => $c['element'],
-                'health'        => $c['health'],
-                'move'          => $c['move'],
-                'strike_weak'   => $c['strike']['weak'],
-                'strike_medium' => $c['strike']['medium'],
-                'strike_strong' => $c['strike']['strong'],
-                'prop'          => $c['prop'],
-                'type'          => $c['type'],
-                'class'         => $c['class'],
-            ],
-            $otherDeck['cards']
-        );
+
+        // Состав дек в формате [{ukid, count}]
+        $payload['deck_cards'] = in_array($selected, $deckIds, true)
+            ? $mapDeckCards($deckView->forDeck($selected))
+            : [];
+        $payload['other_cards'] = in_array($other, $deckIds, true)
+            ? $mapDeckCards($deckView->forDeck($other))
+            : [];
     }
 
     $cmd = new Command($commandType, $payload);

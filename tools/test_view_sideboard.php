@@ -168,6 +168,75 @@ function viewScreenData(GameState $state, array $cardsInfo, array $elementLabels
 $minDeckSize = GameSettings::MIN_DECK_SIZE;
 $maxDeckSize = GameSettings::MAX_DECK_SIZE;
 
+$sameDeckTemplate = [testDeckCard('same_system_deck_card', $minDeckSize)];
+$sameDeckState = new GameState(9, 10, 20);
+$sameDeckState->mode = GameSettings::MODE_SYSTEM;
+$sameDeckState->status = 'deck';
+$sameDeckResult = (new PrepareProcessor($sameDeckState))->selectDeck(GameState::PLAYER_HOST, new Command('select_deck', [
+    'deck_mode' => 'manual',
+    'other_deck_mode' => 'manual',
+    'deck_id' => 42,
+    'other_deck_id' => 42,
+    'valid_deck_ids' => [42],
+    'deck_cards' => $sameDeckTemplate,
+    'other_cards' => $sameDeckTemplate,
+]));
+assertTrue($sameDeckResult->success, $sameDeckResult->error ?? 'System deck selection should allow the same deck for both sides');
+assertTrue($sameDeckState->status === 'view', 'Same-deck system selection should advance to View');
+assertTrue($sameDeckState->getPlayer(GameState::PLAYER_HOST)->deckId === 42, 'Host same-deck selection should be fixed');
+assertTrue($sameDeckState->getPlayer(GameState::PLAYER_PLAYER)->deckId === 42, 'Opponent same-deck selection should be fixed');
+
+foreach ([
+    ['manual', 'random'],
+    ['random', 'manual'],
+    ['random', 'random'],
+] as $i => [$hostMode, $opponentMode]) {
+    $modeState = new GameState(20 + $i, 10, 20);
+    $modeState->mode = GameSettings::MODE_SYSTEM;
+    $modeState->status = 'deck';
+    $modeResult = (new PrepareProcessor($modeState))->selectDeck(GameState::PLAYER_HOST, new Command('select_deck', [
+        'deck_mode' => $hostMode,
+        'other_deck_mode' => $opponentMode,
+        'deck_id' => 42,
+        'other_deck_id' => 42,
+        'valid_deck_ids' => [42],
+        'deck_cards' => $sameDeckTemplate,
+        'other_cards' => $sameDeckTemplate,
+    ]));
+    assertTrue($modeResult->success, "System deck selection should accept {$hostMode}/{$opponentMode} after deck ids are resolved");
+    assertTrue($modeState->status === 'view', "System deck selection {$hostMode}/{$opponentMode} should advance to View");
+}
+
+$missingHostDeckState = new GameState(11, 10, 20);
+$missingHostDeckState->mode = GameSettings::MODE_SYSTEM;
+$missingHostDeckState->status = 'deck';
+$missingHostDeckResult = (new PrepareProcessor($missingHostDeckState))->selectDeck(GameState::PLAYER_HOST, new Command('select_deck', [
+    'deck_mode' => 'manual',
+    'other_deck_mode' => 'manual',
+    'deck_id' => 0,
+    'other_deck_id' => 42,
+    'valid_deck_ids' => [42],
+    'deck_cards' => [],
+    'other_cards' => $sameDeckTemplate,
+]));
+assertTrue(!$missingHostDeckResult->success, 'Manual system selection should reject missing host deck');
+assertTrue($missingHostDeckState->status === 'deck', 'Rejected missing host deck should not advance');
+
+$missingOpponentDeckState = new GameState(12, 10, 20);
+$missingOpponentDeckState->mode = GameSettings::MODE_SYSTEM;
+$missingOpponentDeckState->status = 'deck';
+$missingOpponentDeckResult = (new PrepareProcessor($missingOpponentDeckState))->selectDeck(GameState::PLAYER_HOST, new Command('select_deck', [
+    'deck_mode' => 'manual',
+    'other_deck_mode' => 'manual',
+    'deck_id' => 42,
+    'other_deck_id' => 0,
+    'valid_deck_ids' => [42],
+    'deck_cards' => $sameDeckTemplate,
+    'other_cards' => [],
+]));
+assertTrue(!$missingOpponentDeckResult->success, 'Manual system selection should reject missing opponent deck');
+assertTrue($missingOpponentDeckState->status === 'deck', 'Rejected missing opponent deck should not advance');
+
 $draftFinalized = new GameState(10, 10, 20);
 $draftFinalized->mode = GameSettings::MODE_DRAFT;
 $draftFinalized->status = 'view';

@@ -420,6 +420,59 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
     cursor: pointer;
 }
 
+.screen-deck-select {
+    max-width: 980px;
+}
+
+.deck-select-form {
+    display: grid;
+    gap: 14px;
+}
+
+.deck-select-grid {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.deck-select-tile {
+    align-items: stretch;
+}
+
+.settings-option .deck-select-tile__body {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    align-items: center;
+}
+
+.deck-select-tile__image {
+    width: 48px;
+    height: 48px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #f7f7f7, #e4e4e4);
+    box-sizing: border-box;
+}
+
+.settings-option .deck-select-tile__text {
+    min-width: 0;
+}
+
+.deck-select-tile__text b {
+    overflow-wrap: anywhere;
+}
+
+.deck-select-empty {
+    padding: 12px;
+    background: #fff7e8;
+    border: 1px solid #e2bd75;
+    border-radius: 8px;
+}
+
+.deck-select-form:has(input[name="deck_mode"][value="random"]:checked) .deck-select-section--host .deck-select-manual,
+.deck-select-form:has(input[name="other_deck_mode"][value="random"]:checked) .deck-select-section--player .deck-select-manual {
+    display: none;
+}
+
 @media (max-width: 560px) {
     .screen-settings {
         max-width: none;

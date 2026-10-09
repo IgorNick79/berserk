@@ -216,15 +216,22 @@ final class PrepareProcessor
         $deckCards   = (array) $cmd->get('deck_cards', []);
         $otherCards  = (array) $cmd->get('other_cards', []);
         $validIds    = (array) $cmd->get('valid_deck_ids', []);
+        $deckMode    = (string) $cmd->get('deck_mode', 'manual');
+        $otherMode   = (string) $cmd->get('other_deck_mode', 'manual');
 
+        if (!in_array($deckMode, ['manual', 'random'], true)
+            || !in_array($otherMode, ['manual', 'random'], true)
+        ) {
+            return Result::error('Неверный способ выбора деки');
+        }
         if ($deckId <= 0 || !in_array($deckId, $validIds, true)) {
-            return Result::error('Неверная дека');
+            return Result::error($deckMode === 'manual' ? 'Выберите свою деку' : 'Неверная дека');
         }
         if ($otherDeckId <= 0 || !in_array($otherDeckId, $validIds, true)) {
-            return Result::error('Нет второй деки для оппонента');
+            return Result::error($otherMode === 'manual' ? 'Выберите деку соперника' : 'Нет деки для оппонента');
         }
-        if ($deckId === $otherDeckId) {
-            return Result::error('Деки не могут совпадать');
+        if ($deckCards === [] || $otherCards === []) {
+            return Result::error('Состав деки недоступен');
         }
 
         $host->deckId = $deckId;
