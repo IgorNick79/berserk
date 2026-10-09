@@ -160,7 +160,7 @@ final class ValhallaProcessor
                 $candidates[] = $c->instanceId;
             } elseif ($needEnemy && $c->owner !== $ownerKey) {
                 $candidates[] = $c->instanceId;
-            } elseif ($needOwnYordling && $c->owner === $ownerKey && $c->class === 'Йордлинг') {
+            } elseif ($needOwnYordling && $c->owner === $ownerKey && CardStats::hasClass($c, 'Йордлинг')) {
                 if ($ownNeedsCoins && empty($c->prop['save_coins'])) continue;
                 $candidates[] = $c->instanceId;
             }

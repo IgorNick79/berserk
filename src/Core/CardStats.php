@@ -52,6 +52,11 @@ final class CardStats
         return $value;
     }
 
+    public static function hasClass(CardInstance $card, string $class): bool
+    {
+        return in_array($class, $card->classes, true);
+    }
+
     public static function canExecuteTarget(
         GameState $state,
         CardInstance $attacker,
