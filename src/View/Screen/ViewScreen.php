@@ -41,7 +41,7 @@ final class ViewScreen
         $usesRuntimeDeck = !empty($deckInstances) || !empty($sideboardInstances);
 
         if ($usesRuntimeDeck) {
-            $deckInfo = $this->buildFromInstances($deckInstances, $cardsInfo, $isDraftDeck ? 'Драфт' : 'Колода');
+            $deckInfo = $this->buildFromInstances($deckInstances, $cardsInfo, $this->deckTitle($me->deckId));
             $sideboardInfo = $this->buildFromInstances($sideboardInstances, $cardsInfo, 'Сайдборд') ?? [
                 'name' => 'Сайдборд',
                 'cards' => [],
@@ -262,6 +262,24 @@ final class ViewScreen
             'elite' => $elite,
             'ordinary' => $ordinary,
         ];
+    }
+
+    private function deckTitle(?int $deckId): string
+    {
+        if ($deckId === 0) {
+            return 'Драфт';
+        }
+        if ($deckId === null) {
+            return 'Колода';
+        }
+
+        try {
+            $deckInfo = $this->deckView->forDeck($deckId);
+            $name = (string) ($deckInfo['name'] ?? '');
+            return $name !== '' ? $name : 'Колода';
+        } catch (\Throwable) {
+            return 'Колода';
+        }
     }
 
     private function buildFromDeckCards(array $deckCards, array $cardsInfo): ?array

@@ -38,18 +38,14 @@ function assertDraftDeckCopyLimits(array $deckCards, string $message): void
     }
 }
 
-// mode -> settings (system)
+// mode -> deck (system has no extra settings step)
 $state = new GameState(1, 1, 2);
 $engine = new Engine();
 
 apply($state, $engine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_SYSTEM]);
 assertTrue($state->mode === GameSettings::MODE_SYSTEM, 'System mode was not stored');
-assertTrue($state->status === 'settings', 'System mode did not transition to settings');
+assertTrue($state->status === 'deck', 'System mode did not transition directly to deck');
 assertTrue($state->draft === null, 'System mode should not initialize draft');
-
-// settings(system) -> deck
-apply($state, $engine, GameState::PLAYER_HOST, 'confirm_settings');
-assertTrue($state->status === 'deck', 'System settings did not transition to deck');
 
 // mode -> settings (draft), without starting draft yet
 $state = new GameState(2, 1, 2);

@@ -41,7 +41,7 @@ final class PrepareProcessor
 
         $this->state->mode = $mode;
         $this->state->settings = GameSettings::defaults();
-        $this->state->status = 'settings';
+        $this->state->status = $mode === GameSettings::MODE_SYSTEM ? 'deck' : 'settings';
 
         $this->state->bumpVersion();
         return Result::ok([
