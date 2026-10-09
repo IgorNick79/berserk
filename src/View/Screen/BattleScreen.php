@@ -995,6 +995,10 @@ final class BattleScreen
             if (!$card->revealed)      $line .= " hidden";
             if ($card->dying)          $line .= " DYING";
 
+            if (!empty($card->prop)) {
+                $line .= ' | prop=' . json_encode($card->prop, JSON_UNESCAPED_UNICODE);
+            }
+            
             if (!empty($flags))        $line .= ' | ' . implode(' ', $flags);
             if (!empty($card->markers)) {
                 $mk = [];
