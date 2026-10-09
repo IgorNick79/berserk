@@ -138,3 +138,19 @@
 - Публичное API: `$card->class` больше не существует — при попытке чтения
   сработает ошибка на этапе выполнения (в PHP 8.2+ — deprecated dynamic property).
   Все места в кодовой базе переведены.
+
+## [Unreleased]
+
+### Добавлено
+- Карта **Эорвал** (`s1_197`): получает **+1 к strike**, **+1 к ova**
+  и **−1 от немагических атак** (strike, tap, uchr, shot, throw), пока
+  рядом с ним стоят союзники суммарно **4+ разных классов**.
+  Мультиклассовые карты (Бон и Берроу, Паладин Алламора) учитываются
+  как несколько классов.
+
+### Затронуто
+- `src/Core/CardStats.php`:
+  - новый метод `countAllyClassesNear()`;
+  - новое условие `ally_classes_near` в `checkCondition()`;
+  - `getDamageReduction()` теперь читает `condition` у `damage_reduction`.
+- `debug/scenarios/eorval.json` — сценарий проверки.
