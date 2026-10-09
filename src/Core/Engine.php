@@ -78,6 +78,7 @@ final class Engine
             'choose_defender'     => $strike->chooseDefender($playerKey, $cmd),
             'choose_redirect'       => $strike->chooseRedirect($playerKey, $cmd),
             'choose_mage_redirect'  => $strike->chooseMageRedirect($playerKey, $cmd),
+            'choose_defender_option' => $strike->chooseDefenderOption($playerKey, $cmd),
             'confirm_strike'      => $strike->confirmStrike($playerKey, $cmd),
             'choose_strike_mode'  => $strike->chooseStrikeMode($playerKey, $cmd),
             'choose_after_strike_execute' => $strike->chooseAfterStrikeExecute($playerKey, $cmd),

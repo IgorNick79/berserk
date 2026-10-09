@@ -374,11 +374,11 @@ cipAssert(count($options) === 1, 'Defender-side Mage should be offered as a defe
 cipAssert($options[0]['target_ids'] === [20], 'Mage option should target adjacent defender-owned ally.');
 $combatInstants = (new InstantProcessor($state, new Engine()))->getInstants(GameState::PLAYER_PLAYER, 'combat', 'combat');
 cipAssert(empty($combatInstants), 'Mage redirect must not be listed in combat instant stack availability.');
-$chosen = (new StrikeResolver($state, new Engine()))->chooseMageRedirect(
+$chosen = (new StrikeResolver($state, new Engine()))->chooseDefenderOption(
     GameState::PLAYER_PLAYER,
-    new Command('choose_mage_redirect', ['card_id' => 19, 'target_id' => 20])
+    new Command('choose_defender_option', ['choice' => 'mage:19:20'])
 );
-cipAssert($chosen->success, $chosen->error ?? 'Mage redirect should be chosen from defender window.');
+cipAssert($chosen->success, $chosen->error ?? 'Mage redirect should be chosen from defender radio option.');
 cipAssert((int) ($state->battle['strike']['target_id'] ?? 0) === 20, 'Mage redirect should set final target before dice.');
 cipAssert((int) ($state->battle['strike']['original_target_id'] ?? 0) === 2, 'Mage redirect should not overwrite original target.');
 cipAssert(!empty($state->battle['strike']['redirect_used']), 'Mage redirect should consume the single redirect slot.');

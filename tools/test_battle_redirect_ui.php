@@ -127,13 +127,23 @@ redirectUiAssert(
     'Battlefield redirect click should use choose_redirect command.'
 );
 redirectUiAssert(
-    substr_count($playerHtml['info_panel_html'], 'cmd=choose_redirect&amp;target_id=') === 3,
-    'Three redirect target buttons should be rendered through CardButton.'
+    substr_count($playerHtml['info_panel_html'], 'name="choice"') === 4,
+    'Three redirect radio options plus skip should be rendered in pending panel.'
 );
 redirectUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'cmd=choose_redirect&target_id=0')
+    str_contains($playerHtml['info_panel_html'], 'name="cmd" value="choose_defender_option"'),
+    'Redirect pending panel should submit through the radio option dispatcher.'
+);
+redirectUiAssert(
+    str_contains($playerHtml['info_panel_html'], 'value="redirect:3"')
+        && str_contains($playerHtml['info_panel_html'], 'value="redirect:4"')
+        && str_contains($playerHtml['info_panel_html'], 'value="redirect:5"'),
+    'Redirect radio options should encode redirect target ids.'
+);
+redirectUiAssert(
+    str_contains($playerHtml['info_panel_html'], 'value="redirect:0"')
         && str_contains($playerHtml['info_panel_html'], 'Не перенаправлять (Цель)'),
-    'Skip redirect button should remain available.'
+    'Skip redirect radio should remain available.'
 );
 
 $hostState = redirectUiState(GameState::PLAYER_PLAYER, [

@@ -661,6 +661,34 @@ final class StrikeResolver
         return Result::ok(['mage_redirect:' . $targetId]);
     }
 
+    public function chooseDefenderOption(string $playerKey, Command $cmd): Result
+    {
+        $choice = (string) $cmd->get('choice', '');
+        if ($choice === '') {
+            return Result::error('Выберите вариант');
+        }
+
+        $parts = explode(':', $choice);
+        return match ($parts[0] ?? '') {
+            'defender' => $this->chooseDefender(
+                $playerKey,
+                new Command('choose_defender', ['defender_id' => (int) ($parts[1] ?? 0)])
+            ),
+            'redirect' => $this->chooseRedirect(
+                $playerKey,
+                new Command('choose_redirect', ['target_id' => (int) ($parts[1] ?? 0)])
+            ),
+            'mage' => $this->chooseMageRedirect(
+                $playerKey,
+                new Command('choose_mage_redirect', [
+                    'card_id' => (int) ($parts[1] ?? 0),
+                    'target_id' => (int) ($parts[2] ?? 0),
+                ])
+            ),
+            default => Result::error('Неизвестный вариант'),
+        };
+    }
+
     public function resolve(): void
     {
         $strike = &$this->state->battle['strike'];

@@ -134,8 +134,17 @@ $twoDefenderState = defenderUiState(GameState::PLAYER_HOST, [
 $twoDefenderHtml = defenderUiRender($twoDefenderState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 
 defenderUiAssert(
-    substr_count($twoDefenderHtml['info_panel_html'], 'cmd=choose_defender&amp;defender_id=') === 2,
-    'Two defender buttons should be rendered in pending panel.'
+    substr_count($twoDefenderHtml['info_panel_html'], 'name="choice"') === 3,
+    'Two defender radio options plus skip should be rendered in pending panel.'
+);
+defenderUiAssert(
+    str_contains($twoDefenderHtml['info_panel_html'], 'name="cmd" value="choose_defender_option"'),
+    'Defender pending panel should submit through the radio option dispatcher.'
+);
+defenderUiAssert(
+    str_contains($twoDefenderHtml['info_panel_html'], 'value="defender:3"')
+        && str_contains($twoDefenderHtml['info_panel_html'], 'value="defender:4"'),
+    'Defender radio options should encode defender ids.'
 );
 defenderUiAssert(
     str_contains($twoDefenderHtml['info_panel_html'], 'Без защитника'),
@@ -162,8 +171,8 @@ defenderUiAssert(
     'Defender window should render Mage redirect as a defender-side action.'
 );
 defenderUiAssert(
-    str_contains($mageHtml['info_panel_html'], 'cmd=choose_mage_redirect&card_id=6&target_id=7'),
-    'Mage redirect button should use defender-stage command with source and target.'
+    str_contains($mageHtml['info_panel_html'], 'value="mage:6:7"'),
+    'Mage redirect radio should encode source and target.'
 );
 
 $zomMageState = defenderUiState(GameState::PLAYER_HOST, []);
@@ -176,7 +185,7 @@ $zomMageState->addCard($zomRedirectAlly);
 $zomMageHtml = defenderUiRender($zomMageState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 
 defenderUiAssert(
-    !str_contains($zomMageHtml['info_panel_html'], 'cmd=choose_mage_redirect'),
+    !str_contains($zomMageHtml['info_panel_html'], 'value="mage:'),
     'Defender window should hide Mage redirect when every redirect target has zom.'
 );
 

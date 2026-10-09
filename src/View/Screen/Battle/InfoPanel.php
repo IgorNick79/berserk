@@ -271,22 +271,18 @@ final class InfoPanel
             if ($playerKey === $chooserKey) {
                 $origTarget = $state->getCard($strike['target_id']);
                 $origInfo   = $origTarget ? ($cardsInfo[$origTarget->ukid] ?? null) : null;
-                $origName   = $origInfo ? htmlspecialchars($origInfo['name'], ENT_QUOTES) : '?';
+                $origName   = $origInfo ? (string) $origInfo['name'] : '?';
 
-                $buttons = '';
+                $options = [];
                 foreach ($strike['redirect_candidates'] ?? [] as $tid) {
                     $tc = $state->getCard($tid);
                     if (!$tc) continue;
                     $ti = $cardsInfo[$tc->ukid] ?? [];
-                    $url = "{$baseUrl}&cmd=choose_redirect&target_id={$tid}";
-                    $buttons .= CardButton::battle(
-                        $this->tpl,
-                        $tc,
-                        $ti,
-                        $url,
-                        $playerKey,
-                        ['class' => 'redirect-target']
-                    );
+                    $options[] = [
+                        'value' => 'redirect:' . (int) $tid,
+                        'label' => $this->battleCardLabel($tc, $ti, $playerKey),
+                        'class' => 'redirect-target',
+                    ];
                 }
                 $sr = new \Berserk\Core\StrikeResolver($state, new \Berserk\Core\Engine());
                 foreach ($sr->getMageRedirectOptions($playerKey) as $option) {
@@ -298,19 +294,21 @@ final class InfoPanel
                         if (!$targetCard) continue;
                         $targetInfo = $cardsInfo[$targetCard->ukid] ?? [];
                         $targetName = $targetInfo['name'] ?? $targetCard->ukid;
-                        $url = "{$baseUrl}&cmd=choose_mage_redirect&card_id={$option['card_id']}&target_id={$tid}";
-                        $buttons .= $this->tpl->parse('includes/battle/defender_button.tpl', [
-                            'name' => $sourceName . ': ' . ($option['label'] ?? 'Перенаправить') . ' → ' . $targetName,
-                            'link' => $url,
+                        $options[] = [
+                            'value' => 'mage:' . (int) $option['card_id'] . ':' . (int) $tid,
+                            'label' => $sourceName . ': ' . ($option['label'] ?? 'Перенаправить') . ' → ' . $targetName,
                             'class' => 'redirect-target',
-                        ]);
+                        ];
                     }
                 }
-                $skipUrl = "{$baseUrl}&cmd=choose_redirect&target_id=0";
-                $buttons .= '<a class="button skip" href="' . $skipUrl . '">Не перенаправлять (' . $origName . ')</a>';
+                $options[] = [
+                    'value' => 'redirect:0',
+                    'label' => 'Не перенаправлять (' . $origName . ')',
+                    'class' => 'skip',
+                ];
 
                 $contentHtml = '<p>' . $an . ' атакует. Перенаправить удар на другое существо рядом?</p>'
-                    . '<div class="death-choice-buttons">' . $buttons . '</div>';
+                    . $this->renderDefenderRadioForm($options);
             } else {
                 $contentHtml = '<p class="wait">Ожидание выбора перенаправления...</p>';
             }
@@ -381,7 +379,7 @@ final class InfoPanel
         } elseif ($strike['state'] === 'waiting_defender') {
             $chooserKey = $state->getOpponentKey($attackerCard->owner);
             if ($playerKey === $chooserKey) {
-                $defButtons = '';
+                $options = [];
                 $sr = new \Berserk\Core\StrikeResolver($state, new \Berserk\Core\Engine());
                 foreach ($sr->getMageRedirectOptions($playerKey) as $option) {
                     $source = $state->getCard((int) $option['card_id']);
@@ -392,32 +390,29 @@ final class InfoPanel
                         if (!$targetCard) continue;
                         $targetInfo = $cardsInfo[$targetCard->ukid] ?? [];
                         $targetName = $targetInfo['name'] ?? $targetCard->ukid;
-                        $defButtons .= $this->tpl->parse('includes/battle/defender_button.tpl', [
-                            'name' => $sourceName . ': ' . ($option['label'] ?? 'Перенаправить') . ' → ' . $targetName,
-                            'link' => "{$baseUrl}&cmd=choose_mage_redirect&card_id={$option['card_id']}&target_id={$targetId}",
+                        $options[] = [
+                            'value' => 'mage:' . (int) $option['card_id'] . ':' . (int) $targetId,
+                            'label' => $sourceName . ': ' . ($option['label'] ?? 'Перенаправить') . ' → ' . $targetName,
                             'class' => 'redirect-target',
-                        ]);
+                        ];
                     }
                 }
                 foreach ($strike['defenders'] ?? [] as $defId) {
                     $dc = $state->getCard($defId);
                     if (!$dc) continue;
                     $di = $cardsInfo[$dc->ukid] ?? [];
-                    $defButtons .= CardButton::battle(
-                        $this->tpl,
-                        $dc,
-                        $di,
-                        "{$baseUrl}&cmd=choose_defender&defender_id={$defId}",
-                        $playerKey
-                    );
+                    $options[] = [
+                        'value' => 'defender:' . (int) $defId,
+                        'label' => $this->battleCardLabel($dc, $di, $playerKey),
+                    ];
                 }
-                $defButtons .= $this->tpl->parse('includes/battle/defender_button.tpl', [
-                    'name'  => 'Без защитника',
-                    'link'  => "{$baseUrl}&cmd=choose_defender&defender_id=0",
+                $options[] = [
+                    'value' => 'defender:0',
+                    'label' => 'Без защитника',
                     'class' => 'skip',
-                ]);
+                ];
                 $contentHtml = $this->tpl->parse('includes/battle/strike_defender.tpl', [
-                    'buttons_html' => $defButtons,
+                    'buttons_html' => $this->renderDefenderRadioForm($options),
                 ]);
             } else {
                 $contentHtml = '<p class="wait">Ожидание выбора защитника...</p>';
@@ -1876,6 +1871,58 @@ final class InfoPanel
             . '<a class="button skip" href="' . $this->baseUrl . '&cmd=cancel_pending">Отмена</a>'
             . '</div>'
             . '</div>';
+    }
+
+    /**
+     * @param array<int, array{value:string,label:string,class?:string}> $options
+     */
+    private function renderDefenderRadioForm(array $options): string
+    {
+        if (empty($options)) {
+            return '';
+        }
+
+        $items = [];
+        foreach ($options as $index => $option) {
+            $items[] = [
+                'value' => $option['value'],
+                'label' => $option['label'],
+                'checked' => $index === 0,
+                'class' => $option['class'] ?? '',
+            ];
+        }
+
+        $body = '<div class="defender-radio-list">';
+        foreach ($items as $item) {
+            $body .= Form::radio('choice', $item['value'], $item['label'], [
+                'checked' => !empty($item['checked']),
+                'class' => (string) ($item['class'] ?? ''),
+            ]);
+        }
+        $body .= '</div>'
+            . '<div class="death-choice-buttons">'
+            . Form::submit('Выбрать')
+            . '</div>';
+
+        return Form::form(
+            Form::battleHidden($this->role, $this->state->gameId, 'choose_defender_option'),
+            $body
+        );
+    }
+
+    /**
+     * @param array{name?:string} $cardInfo
+     */
+    private function battleCardLabel(CardInstance $card, array $cardInfo, string $viewerKey): string
+    {
+        $label = (string) ($cardInfo['name'] ?? $card->ukid);
+        if ($card->zone === CardInstance::ZONE_FIELD || $card->zone === CardInstance::ZONE_FLYING) {
+            $positionLabel = \Berserk\View\Ui\BattlefieldPosition::label($card->row, $card->col, $viewerKey);
+            if ($positionLabel !== '') {
+                $label .= ' ' . $positionLabel;
+            }
+        }
+        return $label;
     }
 
 }
