@@ -137,24 +137,6 @@ final class InfoPanel
             $instantResultHtml .= '</div>';
         }
 
-        if (!empty($state->battle['pending_teleport_target'])) {
-            $pt = $state->battle['pending_teleport_target'];
-            $target = $state->getCard($pt['target_id']);
-            $tn = $target ? ($cardsInfo[$target->ukid]['name'] ?? '?') : '?';
-            $buttons = '';
-            foreach ($pt['cells'] as $c) {
-                $url = "{$baseUrl}&cmd=choose_teleport_cell&row={$c['row']}&col={$c['col']}";
-                $buttons .= '<a class="button" href="' . $url . '">('
-                    . $c['row'] . ',' . $c['col'] . ')</a> ';
-            }
-            return '<div class="card-choice">'
-                . '<h3>Дверь измерений: куда переместить ' . htmlspecialchars($tn, ENT_QUOTES) . '?</h3>'
-                . '<div class="death-choice-buttons">' . $buttons . '</div>'
-                . '<div class="death-choice-buttons" style="margin-top:10px">'
-                . '<a class="button skip" href="' . $baseUrl . '&cmd=cancel_pending">Отмена</a>'
-                . '</div></div>';
-        }
-
         // Ничего не показали — показываем кнопки хода
         if ($state->winner !== null) {
             return '';

@@ -85,7 +85,6 @@ final class BattleScreen
         $pendingAutoTargets = $this->pendingAutoTargets($state, $playerKey, $baseUrl);
         $pendingDeathTargets = $this->pendingDeathTargets($state, $playerKey, $baseUrl);
         $pendingAllyModifierTargets = $this->pendingAllyModifierTargets($state, $playerKey, $baseUrl);
-        $pendingTeleportCells = $this->pendingTeleportCells($state, $playerKey, $baseUrl);
 
         // Порядок осей
         $rowOrder = $isHost ? [6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6];
@@ -104,7 +103,7 @@ final class BattleScreen
             $state, $playerKey, $rowOrder, $colOrder, $fieldMap,
             $cardsInfo, $selectedCardId, $mode, $baseUrl,
             $moveCells, $jumpCells, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets, $pendingAutoTargets, $pendingDeathTargets, $pendingAllyModifierTargets,
-            $pendingTeleportCells, $explicitAttackMode
+            $explicitAttackMode
         );
         $flyZonesHtml   = $this->buildFlyZones(
             $state, $playerKey, $oppKey, $flyMap, $cardsInfo,
@@ -163,7 +162,6 @@ final class BattleScreen
         array $pendingAutoTargets,
         array $pendingDeathTargets,
         array $pendingAllyModifierTargets,
-        array $pendingTeleportCells,
         bool $explicitAttackMode
     ): string {
         $html = '';
@@ -249,9 +247,6 @@ final class BattleScreen
                     } else {
                         $cellContent = $cardBody;
                     }
-                } elseif (isset($pendingTeleportCells[$key])) {
-                    $cellClass   = 'move-target teleport-target';
-                    $cellContent = '<a class="cell-link" href="' . $pendingTeleportCells[$key] . '"></a>';
                 } elseif (isset($moveCells[$key])) {
                     $moveUrl     = "{$baseUrl}&cmd=move&card_id={$selectedCardId}&row={$r}&col={$c}&sel={$selectedCardId}";
                     $cellClass   = 'move-target';
@@ -1123,18 +1118,6 @@ final class BattleScreen
         $html .= '</div>';
 
         return $html;
-    }
-
-    private function pendingTeleportCells(GameState $state, string $playerKey, string $baseUrl): array
-    {
-        $pt = $state->battle['pending_teleport_target'] ?? null;
-        if (!is_array($pt) || $pt['owner'] !== $playerKey) return [];
-        $out = [];
-        foreach ($pt['cells'] as $c) {
-            $out["{$c['row']}_{$c['col']}"] = $baseUrl
-                . '&cmd=choose_teleport_cell&row=' . $c['row'] . '&col=' . $c['col'];
-        }
-        return $out;
     }
 
 }
