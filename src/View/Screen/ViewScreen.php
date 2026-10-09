@@ -36,11 +36,12 @@ final class ViewScreen
         $me = $state->getPlayer($playerKey);
         $ui = new PrepareUi($this->tpl);
         $isDraftDeck = $me->deckId === 0;
-        $deckInstances = $isDraftDeck ? $state->getCardsInZone($playerKey, CardInstance::ZONE_DECK) : [];
-        $sideboardInstances = $isDraftDeck ? $state->getCardsInZone($playerKey, CardInstance::ZONE_SIDEBOARD) : [];
+        $deckInstances = $state->getCardsInZone($playerKey, CardInstance::ZONE_DECK);
+        $sideboardInstances = $state->getCardsInZone($playerKey, CardInstance::ZONE_SIDEBOARD);
+        $usesRuntimeDeck = !empty($deckInstances) || !empty($sideboardInstances);
 
-        if ($isDraftDeck && (!empty($deckInstances) || !empty($sideboardInstances))) {
-            $deckInfo = $this->buildFromInstances($deckInstances, $cardsInfo, 'Драфт');
+        if ($usesRuntimeDeck) {
+            $deckInfo = $this->buildFromInstances($deckInstances, $cardsInfo, $isDraftDeck ? 'Драфт' : 'Колода');
             $sideboardInfo = $this->buildFromInstances($sideboardInstances, $cardsInfo, 'Сайдборд') ?? [
                 'name' => 'Сайдборд',
                 'cards' => [],
@@ -83,7 +84,7 @@ final class ViewScreen
         $cardsHtml = '';
         foreach ($deckInfo['cards'] as $c) {
             $ukid = (string) ($c['ukid'] ?? '');
-            $cardToken = $isDraftDeck ? 'deck:' . (int) ($c['instance_id'] ?? 0) : $ukid;
+            $cardToken = $usesRuntimeDeck ? 'deck:' . (int) ($c['instance_id'] ?? 0) : $ukid;
             if ($selectedToken === $cardToken) {
                 $selectedCard = ['ukid' => $ukid, 'info' => $c, 'instance_id' => (int) ($c['instance_id'] ?? 0)];
                 $selectedZone = CardInstance::ZONE_DECK;
@@ -134,9 +135,9 @@ final class ViewScreen
 
         $deckCount = (int) ($deckInfo['total'] ?? 0);
         $sideboardCount = (int) ($sideboardInfo['total'] ?? 0);
-        $isBelowMinimum = $isDraftDeck && $deckCount < GameSettings::MIN_DECK_SIZE;
-        $isAboveMaximum = $isDraftDeck && $deckCount > GameSettings::MAX_DECK_SIZE;
-        $canSideboard = $isDraftDeck && $deckCount > GameSettings::MIN_DECK_SIZE;
+        $isBelowMinimum = $usesRuntimeDeck && $deckCount < GameSettings::MIN_DECK_SIZE;
+        $isAboveMaximum = $usesRuntimeDeck && $deckCount > GameSettings::MAX_DECK_SIZE;
+        $canSideboard = $usesRuntimeDeck && $deckCount > GameSettings::MIN_DECK_SIZE;
 
         if (!$me->isConfirmed('view') && $isBelowMinimum) {
             $confirmHtml = '<span class="button disabled">Недостаточно карт</span>';
@@ -150,7 +151,7 @@ final class ViewScreen
         }
 
         $actions = [];
-        if ($selectedCard !== null && !$me->isConfirmed('view') && $isDraftDeck) {
+        if ($selectedCard !== null && !$me->isConfirmed('view') && $usesRuntimeDeck) {
             $selectedInstanceId = (int) ($selectedCard['instance_id'] ?? 0);
             if ($selectedZone === CardInstance::ZONE_DECK && $canSideboard) {
                 $actions[] = [
@@ -170,7 +171,7 @@ final class ViewScreen
             . '<div class="prepare-bottom-row">'
             . '<span>Колода: <b>' . $deckCount . '</b></span>'
             . '<span>Сайдборд: <b>' . $sideboardCount . '</b></span>'
-            . ($isDraftDeck ? '<span>Минимум: <b>' . GameSettings::MIN_DECK_SIZE . '</b></span>' : '')
+            . ($usesRuntimeDeck ? '<span>Минимум: <b>' . GameSettings::MIN_DECK_SIZE . '</b></span>' : '')
             . '</div>'
             . '<div class="prepare-elements">' . $this->elementBadgesHtml($deckInfo['elements'], $elementLabels) . '</div>'
             . '</div>'

@@ -229,10 +229,12 @@ final class PrepareProcessor
 
         $host->deckId = $deckId;
         $host->deckCards = $deckCards;
+        $this->createDeckInstances(GameState::PLAYER_HOST, $deckCards);
 
         $player = $this->state->getPlayer('player');
         $player->deckId = $otherDeckId;
         $player->deckCards = $otherCards;
+        $this->createDeckInstances(GameState::PLAYER_PLAYER, $otherCards);
 
         $this->state->getPlayer('player')->deckId = $otherDeckId;
 
@@ -258,7 +260,10 @@ final class PrepareProcessor
         if ($player->isConfirmed('view')) {
             return Result::error('Уже подтверждено');
         }
-        if ($this->isDraftDeck($playerKey)) {
+        if (!$this->ensureViewDeckMaterialized($playerKey)) {
+            return Result::error('Колода не материализована');
+        }
+        if ($this->isViewDeckMaterialized($playerKey)) {
             $deckCount = $this->zoneCount($playerKey, CardInstance::ZONE_DECK);
             if ($deckCount < GameSettings::MIN_DECK_SIZE) {
                 return Result::error('Недостаточно карт в колоде');
@@ -266,7 +271,7 @@ final class PrepareProcessor
             if ($deckCount > GameSettings::MAX_DECK_SIZE) {
                 return Result::error('Слишком много карт в колоде');
             }
-            $copyViolation = $this->draftDeckCopyLimitViolation($playerKey);
+            $copyViolation = $this->deckCopyLimitViolation($playerKey);
             if ($copyViolation !== null) {
                 return Result::error(DraftCopyRules::violationMessage($copyViolation));
             }
@@ -299,8 +304,8 @@ final class PrepareProcessor
         if ($this->state->status !== 'view') {
             return Result::error('Сейчас не стадия просмотра деки');
         }
-        if (!$this->isDraftDeck($playerKey)) {
-            return Result::error('Сайдборд доступен только для драфта');
+        if (!$this->ensureViewDeckMaterialized($playerKey)) {
+            return Result::error('Сайдборд недоступен для этой колоды');
         }
 
         $player = $this->state->getPlayer($playerKey);
@@ -327,8 +332,8 @@ final class PrepareProcessor
         if ($this->state->status !== 'view') {
             return Result::error('Сейчас не стадия просмотра деки');
         }
-        if (!$this->isDraftDeck($playerKey)) {
-            return Result::error('Сайдборд доступен только для драфта');
+        if (!$this->ensureViewDeckMaterialized($playerKey)) {
+            return Result::error('Сайдборд недоступен для этой колоды');
         }
 
         $player = $this->state->getPlayer($playerKey);
@@ -1792,7 +1797,8 @@ final class PrepareProcessor
     {
         $player = $this->state->getPlayer($playerKey);
 
-        if ($this->isDraftDeck($playerKey)) {
+        $this->ensureViewDeckMaterialized($playerKey);
+        if ($this->isViewDeckMaterialized($playerKey)) {
             $zone = new ZoneManager($this->state);
             foreach ($this->state->cards as $card) {
                 if ($card->owner === $playerKey
@@ -1872,12 +1878,72 @@ final class PrepareProcessor
         return $this->state->getPlayer($playerKey)->deckId === 0;
     }
 
+    private function isViewDeckMaterialized(string $playerKey): bool
+    {
+        return $this->zoneCount($playerKey, CardInstance::ZONE_DECK) > 0
+            || $this->zoneCount($playerKey, CardInstance::ZONE_SIDEBOARD) > 0;
+    }
+
+    private function ensureViewDeckMaterialized(string $playerKey): bool
+    {
+        if ($this->isViewDeckMaterialized($playerKey)) {
+            return true;
+        }
+
+        $deckCards = $this->state->getPlayer($playerKey)->deckCards;
+        if (empty($deckCards)) {
+            return false;
+        }
+
+        $this->createDeckInstances($playerKey, $deckCards);
+        return $this->isViewDeckMaterialized($playerKey);
+    }
+
     private function zoneCount(string $playerKey, string $zone): int
     {
         return count($this->state->getCardsInZone($playerKey, $zone));
     }
 
-    private function draftDeckCopyLimitViolation(string $playerKey): ?array
+    private function createDeckInstances(string $owner, array $deckCards): void
+    {
+        foreach ($this->state->cards as $id => $card) {
+            if ($card->owner === $owner
+                && in_array($card->zone, [CardInstance::ZONE_DECK, CardInstance::ZONE_SIDEBOARD], true)) {
+                unset($this->state->cards[$id]);
+            }
+        }
+
+        foreach ($deckCards as $item) {
+            $count = max(0, (int) ($item['count'] ?? 1));
+            for ($i = 0; $i < $count; $i++) {
+                $health = (int) ($item['health'] ?? 0);
+                $move = (int) ($item['move'] ?? 0);
+                $id = $this->state->nextInstanceId();
+                $this->state->addCard(new CardInstance(
+                    instanceId: $id,
+                    ukid: (string) ($item['ukid'] ?? ''),
+                    owner: $owner,
+                    zone: CardInstance::ZONE_DECK,
+                    hp: $health,
+                    hpMax: $health,
+                    price: (int) ($item['price'] ?? 0),
+                    elite: (bool) ($item['elite'] ?? false),
+                    single: (bool) ($item['single'] ?? false),
+                    type: (string) ($item['type'] ?? 'creature'),
+                    element: (string) ($item['element'] ?? 'neutral'),
+                    class: (string) ($item['class'] ?? ''),
+                    move: $move,
+                    moveMax: $move,
+                    strikeWeak: (int) ($item['strike_weak'] ?? 0),
+                    strikeMedium: (int) ($item['strike_medium'] ?? 0),
+                    strikeStrong: (int) ($item['strike_strong'] ?? 0),
+                    prop: (array) ($item['prop'] ?? []),
+                ));
+            }
+        }
+    }
+
+    private function deckCopyLimitViolation(string $playerKey): ?array
     {
         $deckCards = $this->state->getCardsInZone($playerKey, CardInstance::ZONE_DECK);
         $ukids = [];

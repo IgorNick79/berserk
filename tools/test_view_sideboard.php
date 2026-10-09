@@ -93,6 +93,60 @@ function createDraftInstancesForTest(GameState $state, string $owner, array $dec
     $method->invoke($processor, $owner, $deckCards);
 }
 
+function systemViewState(array $hostDeckCards, int $gameId = 300): GameState
+{
+    $state = new GameState($gameId, 10, 20);
+    $state->mode = GameSettings::MODE_SYSTEM;
+    $state->status = 'deck';
+
+    $otherDeckCards = [];
+    for ($i = 0; $i < GameSettings::MIN_DECK_SIZE; $i++) {
+        $otherDeckCards[] = testDeckCard('opponent_filler_' . $i, 1);
+    }
+
+    $result = (new PrepareProcessor($state))->selectDeck(GameState::PLAYER_HOST, new Command('select_deck', [
+        'deck_id' => 42,
+        'other_deck_id' => 43,
+        'valid_deck_ids' => [42, 43],
+        'deck_cards' => $hostDeckCards,
+        'other_cards' => $otherDeckCards,
+    ]));
+    assertTrue($result->success, $result->error ?? 'System test deck should be selected');
+
+    return $state;
+}
+
+function legacySystemViewState(array $hostDeckCards, int $gameId = 350): GameState
+{
+    $state = new GameState($gameId, 10, 20);
+    $state->mode = GameSettings::MODE_SYSTEM;
+    $state->status = 'view';
+    $state->getPlayer(GameState::PLAYER_HOST)->deckId = 42;
+    $state->getPlayer(GameState::PLAYER_HOST)->deckCards = $hostDeckCards;
+    $state->getPlayer(GameState::PLAYER_PLAYER)->deckId = 43;
+    $state->getPlayer(GameState::PLAYER_PLAYER)->deckCards = [];
+
+    return $state;
+}
+
+function testDeckCard(string $ukid, int $count, array $prop = []): array
+{
+    return [
+        'ukid' => $ukid,
+        'count' => $count,
+        'price' => 3,
+        'health' => 5,
+        'move' => 1,
+        'strike_weak' => 1,
+        'strike_medium' => 2,
+        'strike_strong' => 3,
+        'element' => 'neutral',
+        'prop' => $prop,
+        'type' => 'creature',
+        'class' => '',
+    ];
+}
+
 function dummyDeckView(): DeckView
 {
     return (new ReflectionClass(DeckView::class))->newInstanceWithoutConstructor();
@@ -196,6 +250,109 @@ $hordeCards = $hordeState->getCardsInZone(GameState::PLAYER_HOST, CardInstance::
 $processor->moveViewCardToSideboard(GameState::PLAYER_HOST, new Command('view_to_sideboard', ['card_id' => $hordeCards[0]->instanceId]));
 $result = $processor->confirmView(GameState::PLAYER_HOST);
 assertTrue($result->success, $result->error ?? 'Five horde copies should be allowed on View confirm');
+
+$systemTemplate = [testDeckCard('system_copy_normal', 4)];
+for ($i = 0; $i < $minDeckSize - 3; $i++) {
+    $systemTemplate[] = testDeckCard('system_filler_' . $i, 1);
+}
+$systemState = systemViewState($systemTemplate);
+$systemBeforeDeckCards = $systemState->getPlayer(GameState::PLAYER_HOST)->deckCards;
+$processor = new PrepareProcessor($systemState);
+$result = $processor->confirmView(GameState::PLAYER_HOST);
+assertTrue(!$result->success, 'System deck with four normal copies should be rejected on View confirm');
+assertTrue(str_contains($result->error ?? '', 'system_copy_normal'), 'System deck copy rejection should mention the card');
+assertTrue(str_contains($result->error ?? '', '4 из 3'), 'System deck copy rejection should include count and limit');
+assertTrue(!$systemState->getPlayer(GameState::PLAYER_HOST)->isConfirmed('view'), 'Rejected system View confirm should not set confirmation');
+assertTrue($systemState->status === 'view', 'Rejected system View confirm should not advance stage');
+assertTrue(countZone($systemState, GameState::PLAYER_HOST, CardInstance::ZONE_DECK) === $minDeckSize + 1, 'Rejected system View confirm should not mutate deck zone');
+assertTrue(countZone($systemState, GameState::PLAYER_HOST, CardInstance::ZONE_SIDEBOARD) === 0, 'Rejected system View confirm should not mutate sideboard zone');
+
+$systemCopies = array_values(array_filter(
+    $systemState->getCardsInZone(GameState::PLAYER_HOST, CardInstance::ZONE_DECK),
+    fn(CardInstance $card) => $card->ukid === 'system_copy_normal'
+));
+$result = $processor->moveViewCardToSideboard(GameState::PLAYER_HOST, new Command('view_to_sideboard', ['card_id' => $systemCopies[0]->instanceId]));
+assertTrue($result->success, $result->error ?? 'System deck should allow moving extra copies to sideboard');
+assertTrue(countZone($systemState, GameState::PLAYER_HOST, CardInstance::ZONE_DECK) === $minDeckSize, 'System sideboard move should leave deck at minimum');
+assertTrue(countZone($systemState, GameState::PLAYER_HOST, CardInstance::ZONE_SIDEBOARD) === 1, 'System sideboard move should create sideboard entry');
+$result = $processor->selectDeck(GameState::PLAYER_HOST, new Command('select_deck', [
+    'deck_id' => 44,
+    'other_deck_id' => 45,
+    'valid_deck_ids' => [44, 45],
+    'deck_cards' => [testDeckCard('replacement', $minDeckSize)],
+    'other_cards' => [testDeckCard('replacement_opp', $minDeckSize)],
+]));
+assertTrue(!$result->success, 'selectDeck cannot be called again after View starts');
+assertTrue(countZone($systemState, GameState::PLAYER_HOST, CardInstance::ZONE_DECK) === $minDeckSize, 'Rejected repeat selectDeck should not rematerialize deck');
+assertTrue(countZone($systemState, GameState::PLAYER_HOST, CardInstance::ZONE_SIDEBOARD) === 1, 'Rejected repeat selectDeck should not lose sideboard edits');
+
+$result = $processor->moveViewCardToDeck(GameState::PLAYER_HOST, new Command('view_to_deck', ['card_id' => $systemCopies[0]->instanceId]));
+assertTrue($result->success, $result->error ?? 'System sideboard return should be allowed before final validation');
+$result = $processor->confirmView(GameState::PLAYER_HOST);
+assertTrue(!$result->success, 'Returning extra system copy should make View confirm fail again');
+$processor->moveViewCardToSideboard(GameState::PLAYER_HOST, new Command('view_to_sideboard', ['card_id' => $systemCopies[0]->instanceId]));
+$systemState->getPlayer(GameState::PLAYER_PLAYER)->confirm('view');
+$result = $processor->confirmView(GameState::PLAYER_HOST);
+assertTrue($result->success, $result->error ?? 'Fixed system deck should confirm View');
+assertTrue($systemState->status === 'turn', 'Fixed system deck should advance after both View confirmations');
+assertTrue(countZone($systemState, GameState::PLAYER_HOST, CardInstance::ZONE_DECK) === $minDeckSize, 'Fixed system deck composition should survive View transition');
+assertTrue(countZone($systemState, GameState::PLAYER_HOST, CardInstance::ZONE_SIDEBOARD) === 1, 'System sideboard should survive View transition');
+assertTrue($systemState->getPlayer(GameState::PLAYER_HOST)->deckCards === $systemBeforeDeckCards, 'System deck template should not be mutated by View sideboarding');
+$result = $processor->confirmTurn(GameState::PLAYER_HOST);
+assertTrue($result->success, $result->error ?? 'Host should confirm turn after fixed system View');
+$result = $processor->confirmTurn(GameState::PLAYER_PLAYER);
+assertTrue($result->success, $result->error ?? 'Player should confirm turn after fixed system View');
+$firstPlayer = $systemState->firstPlayer ?? GameState::PLAYER_HOST;
+$result = $processor->chooseSide($firstPlayer, new Command('choose_side', ['side' => 1]));
+assertTrue($result->success, $result->error ?? 'Fixed system deck should proceed to Deal');
+$playableNormalCopies = 0;
+foreach ($systemState->cards as $card) {
+    if ($card->owner === GameState::PLAYER_HOST
+        && $card->ukid === 'system_copy_normal'
+        && in_array($card->zone, [CardInstance::ZONE_DECK, CardInstance::ZONE_HAND], true)) {
+        $playableNormalCopies++;
+    }
+}
+assertTrue($playableNormalCopies === DraftCopyRules::NORMAL_DECK_LIMIT, 'Deal should use fixed system deck zones instead of original template copies');
+assertTrue(count(array_filter(
+    $systemState->getCardsInZone(GameState::PLAYER_HOST, CardInstance::ZONE_SIDEBOARD),
+    fn(CardInstance $card) => $card->ukid === 'system_copy_normal'
+)) === 1, 'System sideboarded copy should stay outside Deal zones');
+
+$systemHordeTemplate = [testDeckCard('system_copy_horde', DraftCopyRules::HORDE_DECK_LIMIT + 1, ['horde' => true])];
+for ($i = 0; $i < $minDeckSize - DraftCopyRules::HORDE_DECK_LIMIT; $i++) {
+    $systemHordeTemplate[] = testDeckCard('system_horde_filler_' . $i, 1);
+}
+$systemHordeState = systemViewState($systemHordeTemplate, 301);
+$processor = new PrepareProcessor($systemHordeState);
+$result = $processor->confirmView(GameState::PLAYER_HOST);
+assertTrue(!$result->success, 'System deck with six horde copies should be rejected on View confirm');
+assertTrue(str_contains($result->error ?? '', '6 из 5'), 'System horde copy rejection should include count and limit');
+$systemHordeCopies = array_values(array_filter(
+    $systemHordeState->getCardsInZone(GameState::PLAYER_HOST, CardInstance::ZONE_DECK),
+    fn(CardInstance $card) => $card->ukid === 'system_copy_horde'
+));
+$processor->moveViewCardToSideboard(GameState::PLAYER_HOST, new Command('view_to_sideboard', ['card_id' => $systemHordeCopies[0]->instanceId]));
+$result = $processor->confirmView(GameState::PLAYER_HOST);
+assertTrue($result->success, $result->error ?? 'Five system horde copies should be allowed on View confirm');
+
+$legacyInvalid = legacySystemViewState($systemTemplate, 352);
+$processor = new PrepareProcessor($legacyInvalid);
+$result = $processor->confirmView(GameState::PLAYER_HOST);
+assertTrue(!$result->success, 'Legacy system View without runtime instances should not bypass copy limits');
+assertTrue(str_contains($result->error ?? '', '4 из 3'), 'Legacy missing-runtime rejection should use copy-limit error');
+assertTrue(countZone($legacyInvalid, GameState::PLAYER_HOST, CardInstance::ZONE_DECK) === $minDeckSize + 1, 'Legacy missing-runtime confirm should materialize deck before validation');
+assertTrue(!$legacyInvalid->getPlayer(GameState::PLAYER_HOST)->isConfirmed('view'), 'Legacy invalid system deck should remain unconfirmed');
+
+$legacyValidTemplate = [testDeckCard('legacy_copy_normal', DraftCopyRules::NORMAL_DECK_LIMIT)];
+for ($i = 0; $i < $minDeckSize - DraftCopyRules::NORMAL_DECK_LIMIT; $i++) {
+    $legacyValidTemplate[] = testDeckCard('legacy_filler_' . $i, 1);
+}
+$legacyValid = legacySystemViewState($legacyValidTemplate, 353);
+$processor = new PrepareProcessor($legacyValid);
+$result = $processor->confirmView(GameState::PLAYER_HOST);
+assertTrue($result->success, $result->error ?? 'Legacy valid system View should materialize and confirm');
+assertTrue(countZone($legacyValid, GameState::PLAYER_HOST, CardInstance::ZONE_DECK) === $minDeckSize, 'Legacy valid system View should keep materialized deck');
 
 $maxState = draftViewState($maxDeckSize, 23);
 $processor = new PrepareProcessor($maxState);
