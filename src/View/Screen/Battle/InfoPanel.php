@@ -1442,7 +1442,7 @@ final class InfoPanel
                 . $abilityBonusHtml . $coinBonusHtml . $reductionHtml
                 . $spiderWebHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml;
 
-            $noDiceKinds = ['heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot', 'apply_delayed_marker', 'particle', 'life_gift', 'poison_boost', 'damage_ranged', 'teleport_target']];
+            $noDiceKinds = ['heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot', 'apply_delayed_marker', 'particle', 'life_gift', 'poison_boost', 'damage_ranged', 'teleport_target'];
             if (!in_array($kind, $noDiceKinds, true)) {
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
