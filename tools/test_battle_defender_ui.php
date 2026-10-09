@@ -81,6 +81,8 @@ $cardsInfo = [
     'def_a' => ['name' => 'Защитник A'],
     'def_b' => ['name' => 'Защитник B'],
     'def_c' => ['name' => 'Защитник C'],
+    'mage' => ['name' => 'Бешеный маг'],
+    'redirect_ally' => ['name' => 'Новая цель'],
 ];
 
 $playerState = defenderUiState(GameState::PLAYER_HOST, [
@@ -138,6 +140,30 @@ defenderUiAssert(
 defenderUiAssert(
     str_contains($twoDefenderHtml['info_panel_html'], 'Без защитника'),
     'Skip defender button should remain available.'
+);
+
+$mageState = defenderUiState(GameState::PLAYER_HOST, []);
+$mage = defenderUiCard(6, 'mage', GameState::PLAYER_PLAYER, 6, 4);
+$mage->prop = ['instants' => [[
+    'key' => 'magic_trick',
+    'name' => 'Магический трюк',
+    'effect' => ['type' => 'redirect_strike'],
+    'target' => 'adjacent_ally',
+    'trigger' => 'combat',
+    'phase' => 'redirect',
+]]];
+$redirectAlly = defenderUiCard(7, 'redirect_ally', GameState::PLAYER_PLAYER, 4, 4);
+$mageState->addCard($mage);
+$mageState->addCard($redirectAlly);
+$mageHtml = defenderUiRender($mageState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
+
+defenderUiAssert(
+    str_contains($mageHtml['info_panel_html'], 'Бешеный маг: Магический трюк'),
+    'Defender window should render Mage redirect as a defender-side action.'
+);
+defenderUiAssert(
+    str_contains($mageHtml['info_panel_html'], 'cmd=choose_mage_redirect&card_id=6&target_id=7'),
+    'Mage redirect button should use defender-stage command with source and target.'
 );
 
 echo "Battle defender UI tests passed.\n";

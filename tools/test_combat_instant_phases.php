@@ -337,6 +337,102 @@ cipAssert(!$result->success, 'Direct playCombat should reject illegal attacker-s
 cipAssert(empty($state->battle['pending_combat_pick']), 'Illegal direct Mage play must not open pending target pick.');
 cipAssert(empty($state->battle['strike']['instant_stack']), 'Illegal direct Mage play must not mutate instant stack.');
 
+// Mage redirect is no longer a combat stack instant; it is offered in defender choice before dice.
+$defMage = cipCard([
+    'instanceId' => 19,
+    'owner' => GameState::PLAYER_PLAYER,
+    'row' => 6,
+    'col' => 4,
+    'prop' => ['instants' => [[
+        'key' => 'magic_trick',
+        'name' => 'Магический трюк',
+        'effect' => ['type' => 'redirect_strike'],
+        'target' => 'adjacent_ally',
+        'trigger' => 'combat',
+        'phase' => 'redirect',
+    ]]],
+]);
+$defAlly = cipCard(['instanceId' => 20, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 5]);
+$state = new GameState(9102, 101, 202);
+$state->status = 'battle';
+$state->battle = ['turn' => 1, 'active' => GameState::PLAYER_HOST];
+$attacker = cipCard(['instanceId' => 1, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3]);
+$target = cipCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4]);
+foreach ([$attacker, $target, $defMage, $defAlly] as $card) {
+    $state->addCard($card);
+}
+$declared = (new StrikeResolver($state, new Engine()))->declare(
+    GameState::PLAYER_HOST,
+    new Command('strike', ['card_id' => 1, 'target_id' => 2])
+);
+cipAssert($declared->success, $declared->error ?? 'Strike with Mage option should be declared.');
+cipAssert(($state->battle['strike']['state'] ?? '') === 'waiting_defender', 'Mage option should keep strike in defender window before dice.');
+cipAssert((int) ($state->battle['strike']['target_id'] ?? 0) === 2, 'Target should remain original before Mage choice.');
+cipAssert((int) ($state->battle['strike']['original_target_id'] ?? 0) === 2, 'Original strike target should be preserved.');
+$options = (new StrikeResolver($state, new Engine()))->getMageRedirectOptions(GameState::PLAYER_PLAYER);
+cipAssert(count($options) === 1, 'Defender-side Mage should be offered as a defender-stage redirect option.');
+cipAssert($options[0]['target_ids'] === [20], 'Mage option should target adjacent defender-owned ally.');
+$combatInstants = (new InstantProcessor($state, new Engine()))->getInstants(GameState::PLAYER_PLAYER, 'combat', 'combat');
+cipAssert(empty($combatInstants), 'Mage redirect must not be listed in combat instant stack availability.');
+$chosen = (new StrikeResolver($state, new Engine()))->chooseMageRedirect(
+    GameState::PLAYER_PLAYER,
+    new Command('choose_mage_redirect', ['card_id' => 19, 'target_id' => 20])
+);
+cipAssert($chosen->success, $chosen->error ?? 'Mage redirect should be chosen from defender window.');
+cipAssert((int) ($state->battle['strike']['target_id'] ?? 0) === 20, 'Mage redirect should set final target before dice.');
+cipAssert((int) ($state->battle['strike']['original_target_id'] ?? 0) === 2, 'Mage redirect should not overwrite original target.');
+cipAssert(!empty($state->battle['strike']['redirect_used']), 'Mage redirect should consume the single redirect slot.');
+cipAssert($defMage->closed, 'Mage source should close when defender-stage redirect is chosen.');
+cipAssert(empty($state->battle['strike']['instant_stack'] ?? []), 'Mage defender redirect should not use combat instant stack.');
+$repeat = (new StrikeResolver($state, new Engine()))->chooseMageRedirect(
+    GameState::PLAYER_PLAYER,
+    new Command('choose_mage_redirect', ['card_id' => 19, 'target_id' => 20])
+);
+cipAssert(!$repeat->success, 'Repeated Mage redirect command should be rejected.');
+cipAssert((int) ($state->battle['strike']['target_id'] ?? 0) === 20, 'Repeated redirect must not change target.');
+
+// If Mage target becomes invalid before confirmation, the command is rejected and dice do not open.
+$defMage = cipCard([
+    'instanceId' => 21,
+    'owner' => GameState::PLAYER_PLAYER,
+    'row' => 6,
+    'col' => 4,
+    'prop' => ['instants' => [[
+        'key' => 'magic_trick',
+        'name' => 'Магический трюк',
+        'effect' => ['type' => 'redirect_strike'],
+        'target' => 'adjacent_ally',
+        'trigger' => 'combat',
+        'phase' => 'redirect',
+    ]]],
+]);
+$defAlly = cipCard(['instanceId' => 22, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 5]);
+$state = new GameState(9103, 101, 202);
+$state->status = 'battle';
+$state->battle = ['turn' => 1, 'active' => GameState::PLAYER_HOST];
+foreach ([
+    cipCard(['instanceId' => 1, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3]),
+    cipCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4]),
+    $defMage,
+    $defAlly,
+] as $card) {
+    $state->addCard($card);
+}
+(new StrikeResolver($state, new Engine()))->declare(
+    GameState::PLAYER_HOST,
+    new Command('strike', ['card_id' => 1, 'target_id' => 2])
+);
+$defAlly->dying = true;
+$invalid = (new StrikeResolver($state, new Engine()))->chooseMageRedirect(
+    GameState::PLAYER_PLAYER,
+    new Command('choose_mage_redirect', ['card_id' => 21, 'target_id' => 22])
+);
+cipAssert(!$invalid->success, 'Mage redirect should reject a target that became invalid before confirmation.');
+cipAssert(($state->battle['strike']['state'] ?? '') === 'waiting_defender', 'Invalid Mage redirect should keep defender window open.');
+cipAssert((int) ($state->battle['strike']['target_id'] ?? 0) === 2, 'Invalid Mage redirect must not change strike target.');
+cipAssert(!$defMage->closed, 'Invalid Mage redirect must not close source.');
+cipAssert(empty($state->battle['strike']['instant_stack'] ?? []), 'Invalid Mage redirect must not mutate combat stack.');
+
 // Invalid redirect: attacker cannot redirect opponent target to attacker-owned card.
 $ownCard = cipCard(['instanceId' => 11, 'owner' => GameState::PLAYER_HOST, 'row' => 4, 'col' => 4]);
 $state = cipState($attacker, $target, $ownCard);

@@ -288,6 +288,24 @@ final class InfoPanel
                         ['class' => 'redirect-target']
                     );
                 }
+                $sr = new \Berserk\Core\StrikeResolver($state, new \Berserk\Core\Engine());
+                foreach ($sr->getMageRedirectOptions($playerKey) as $option) {
+                    $source = $state->getCard((int) $option['card_id']);
+                    $sourceInfo = $source ? ($cardsInfo[$source->ukid] ?? []) : [];
+                    $sourceName = $sourceInfo['name'] ?? ($source ? $source->ukid : '?');
+                    foreach ($option['target_ids'] as $tid) {
+                        $targetCard = $state->getCard((int) $tid);
+                        if (!$targetCard) continue;
+                        $targetInfo = $cardsInfo[$targetCard->ukid] ?? [];
+                        $targetName = $targetInfo['name'] ?? $targetCard->ukid;
+                        $url = "{$baseUrl}&cmd=choose_mage_redirect&card_id={$option['card_id']}&target_id={$tid}";
+                        $buttons .= $this->tpl->parse('includes/battle/defender_button.tpl', [
+                            'name' => $sourceName . ': ' . ($option['label'] ?? 'Перенаправить') . ' → ' . $targetName,
+                            'link' => $url,
+                            'class' => 'redirect-target',
+                        ]);
+                    }
+                }
                 $skipUrl = "{$baseUrl}&cmd=choose_redirect&target_id=0";
                 $buttons .= '<a class="button skip" href="' . $skipUrl . '">Не перенаправлять (' . $origName . ')</a>';
 
@@ -364,6 +382,23 @@ final class InfoPanel
             $chooserKey = $state->getOpponentKey($attackerCard->owner);
             if ($playerKey === $chooserKey) {
                 $defButtons = '';
+                $sr = new \Berserk\Core\StrikeResolver($state, new \Berserk\Core\Engine());
+                foreach ($sr->getMageRedirectOptions($playerKey) as $option) {
+                    $source = $state->getCard((int) $option['card_id']);
+                    $sourceInfo = $source ? ($cardsInfo[$source->ukid] ?? []) : [];
+                    $sourceName = $sourceInfo['name'] ?? ($source ? $source->ukid : '?');
+                    foreach ($option['target_ids'] as $targetId) {
+                        $targetCard = $state->getCard((int) $targetId);
+                        if (!$targetCard) continue;
+                        $targetInfo = $cardsInfo[$targetCard->ukid] ?? [];
+                        $targetName = $targetInfo['name'] ?? $targetCard->ukid;
+                        $defButtons .= $this->tpl->parse('includes/battle/defender_button.tpl', [
+                            'name' => $sourceName . ': ' . ($option['label'] ?? 'Перенаправить') . ' → ' . $targetName,
+                            'link' => "{$baseUrl}&cmd=choose_mage_redirect&card_id={$option['card_id']}&target_id={$targetId}",
+                            'class' => 'redirect-target',
+                        ]);
+                    }
+                }
                 foreach ($strike['defenders'] ?? [] as $defId) {
                     $dc = $state->getCard($defId);
                     if (!$dc) continue;

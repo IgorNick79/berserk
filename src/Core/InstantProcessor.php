@@ -168,6 +168,11 @@ final class InstantProcessor
                 }
                 if ($type === 'combat'
                     && ($inst['target'] ?? 'self') === 'adjacent_ally'
+                    && (($inst['effect']['type'] ?? '') === 'redirect_strike')) {
+                    continue;
+                }
+                if ($type === 'combat'
+                    && ($inst['target'] ?? 'self') === 'adjacent_ally'
                     && empty($this->findAdjacentAllyTargets($ownerKey))) {
                     continue;
                 }
@@ -372,6 +377,11 @@ final class InstantProcessor
         $combatPhase = $this->instantCombatPhase($inst);
         if ($wantedType === 'combat' && !in_array($combatPhase, self::COMBAT_PHASE_ORDER, true)) {
             return Result::error('Не задана фаза combat-инстанта');
+        }
+        if ($wantedType === 'combat'
+            && $target === 'adjacent_ally'
+            && (($effect['type'] ?? '') === 'redirect_strike')) {
+            return Result::error('Перенаправление выбирается в окне защитника');
         }
 
         // Self — сразу в стек
@@ -1113,7 +1123,13 @@ final class InstantProcessor
             $strike['state'] = 'waiting_redirect';
             return;
         }
-        if (!empty($strike['defenders'])) {
+        $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+        $defenderKey = $attacker ? $this->state->getOpponentKey($attacker->owner) : null;
+        $mageOptions = $defenderKey !== null
+            ? (new StrikeResolver($this->state, $this->engine))->getMageRedirectOptions($defenderKey)
+            : [];
+
+        if (!empty($strike['defenders']) || !empty($mageOptions)) {
             $strike['state'] = 'waiting_defender';
             return;
         }

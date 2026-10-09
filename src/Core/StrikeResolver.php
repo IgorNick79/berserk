@@ -303,6 +303,7 @@ final class StrikeResolver
         $this->state->battle['strike'] = [
             'attacker_id' => $cardId,
             'target_id'   => $targetId,
+            'original_target_id' => $targetId,
             'defender_id' => null,
             'state'       => !empty($redirectCandidates) ? 'waiting_redirect' : 'waiting_defender',
             'attack_dice' => null,
@@ -323,7 +324,7 @@ final class StrikeResolver
             return Result::ok(["strike_declared:{$playerKey}:{$cardId}->{$targetId}", 'instant_window_opened']);
         }
 
-        if (empty($redirectCandidates) && empty($defenders)) {
+        if (empty($redirectCandidates) && empty($defenders) && empty($this->getMageRedirectOptions($oppKey))) {
             $this->resolve();
         }
 
@@ -389,6 +390,7 @@ final class StrikeResolver
         $this->state->battle['strike'] = [
             'attacker_id' => $attacker->instanceId,
             'target_id'   => $target->instanceId,
+            'original_target_id' => $target->instanceId,
             'defender_id' => null,
             'state'       => 'waiting_defender',
             'attack_dice' => null,
@@ -409,7 +411,7 @@ final class StrikeResolver
             return Result::ok(["forced_strike_declared:{$attacker->instanceId}->{$target->instanceId}", 'instant_window_opened']);
         }
 
-        if (empty($defenders)) {
+        if (empty($defenders) && empty($this->getMageRedirectOptions($oppKey))) {
             $this->resolve();
         }
 
@@ -513,14 +515,135 @@ final class StrikeResolver
                 return Result::error('Нельзя перенаправить на эту карту');
             }
             $this->state->battle['strike']['target_id'] = $targetId;
+            $this->state->battle['strike']['redirect_used'] = true;
         }
 
         // Перенаправление заменяет выбор защитника — сразу к броску
         $this->state->battle['strike']['defenders'] = [];
+        $this->state->battle['strike']['redirect_candidates'] = [];
 
         $this->resolve();
         $this->state->bumpVersion();
         return Result::ok(['redirect:' . ($targetId ?: 'skip')]);
+    }
+
+    /**
+     * @return array<int, array{card_id:int,target_ids:int[],key:string,label:string,cost:int}>
+     */
+    public function getMageRedirectOptions(string $playerKey): array
+    {
+        $strike = $this->state->battle['strike'] ?? null;
+        if (!$strike || !empty($strike['redirect_used'])) {
+            return [];
+        }
+
+        $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+        if (!$attacker || $playerKey !== $this->state->getOpponentKey($attacker->owner)) {
+            return [];
+        }
+
+        $origin = $this->state->getCard((int) ($strike['target_id'] ?? 0));
+        if (!$origin || $origin->owner !== $playerKey || $origin->zone !== CardInstance::ZONE_FIELD) {
+            return [];
+        }
+
+        $targetIds = ZoneManager::adjacentFieldAllyIds($this->state, $origin, $playerKey);
+        if (empty($targetIds)) {
+            return [];
+        }
+
+        $options = [];
+        foreach ($this->state->cards as $card) {
+            if ($card->owner !== $playerKey) continue;
+            if ($card->zone !== CardInstance::ZONE_FIELD && $card->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($card->closed || $card->dying || $card->hp <= 0) continue;
+            if (!empty($card->flags['in_stack'])) continue;
+            if ((int) $card->instanceId === (int) $attacker->instanceId) continue;
+            if (empty($card->prop['instants'])) continue;
+
+            foreach ($card->prop['instants'] as $inst) {
+                $effect = (array) ($inst['effect'] ?? []);
+                if (($inst['trigger'] ?? '') !== 'combat') continue;
+                if (($inst['target'] ?? 'self') !== 'adjacent_ally') continue;
+                if (($effect['type'] ?? '') !== 'redirect_strike') continue;
+
+                $key = (string) ($inst['key'] ?? ($inst['name'] ?? 'instant'));
+                $limit = (int) ($inst['uses_per_turn'] ?? 1);
+                if ($limit > 0) {
+                    $used = (int) ($card->flags['instant_uses_this_turn'][$key] ?? 0);
+                    if ($used >= $limit) continue;
+                }
+                $cost = (int) ($inst['coins'] ?? 0);
+                if ($cost > 0 && $card->coins < $cost) continue;
+
+                $options[] = [
+                    'card_id' => (int) $card->instanceId,
+                    'target_ids' => $targetIds,
+                    'key' => $key,
+                    'label' => (string) ($inst['name'] ?? 'Инстант'),
+                    'cost' => $cost,
+                ];
+            }
+        }
+
+        return $options;
+    }
+
+    public function chooseMageRedirect(string $playerKey, Command $cmd): Result
+    {
+        if ($this->state->status !== 'battle') {
+            return Result::error('Сейчас не бой');
+        }
+        $strike = $this->state->battle['strike'] ?? null;
+        if (!$strike || !in_array($strike['state'] ?? '', ['waiting_defender', 'waiting_redirect'], true)) {
+            return Result::error('Сейчас не окно защитника');
+        }
+        if (!empty($strike['redirect_used'])) {
+            return Result::error('Удар уже перенаправлен');
+        }
+
+        $sourceId = (int) $cmd->get('card_id', 0);
+        $targetId = (int) $cmd->get('target_id', 0);
+
+        $selected = null;
+        foreach ($this->getMageRedirectOptions($playerKey) as $option) {
+            if ((int) $option['card_id'] !== $sourceId) continue;
+            if (!in_array($targetId, $option['target_ids'], true)) continue;
+            $selected = $option;
+            break;
+        }
+        if ($selected === null) {
+            return Result::error('Нельзя перенаправить на эту карту');
+        }
+
+        $source = $this->state->getCard($sourceId);
+        $target = $this->state->getCard($targetId);
+        if (!$source || !$target) {
+            return Result::error('Источник или цель не найдены');
+        }
+
+        $source->closed = true;
+        $cost = (int) ($selected['cost'] ?? 0);
+        if ($cost > 0) {
+            $source->coins -= $cost;
+        }
+        $source->flags['instant_uses_this_turn'][$selected['key']] =
+            (int) ($source->flags['instant_uses_this_turn'][$selected['key']] ?? 0) + 1;
+
+        $this->state->battle['strike']['target_id'] = $targetId;
+        $this->state->battle['strike']['defender_id'] = null;
+        $this->state->battle['strike']['defenders'] = [];
+        $this->state->battle['strike']['redirect_candidates'] = [];
+        $this->state->battle['strike']['redirect_used'] = true;
+        $this->state->battle['strike']['mage_redirect'] = [
+            'source_id' => $sourceId,
+            'target_id' => $targetId,
+            'label' => $selected['label'],
+        ];
+
+        $this->resolve();
+        $this->state->bumpVersion();
+        return Result::ok(['mage_redirect:' . $targetId]);
     }
 
     public function resolve(): void
