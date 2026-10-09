@@ -196,8 +196,8 @@ final class CardStats
             'throw'     => ['zot', 'zoda'],
             'shot'      => ['zov', 'zoda'],
             'discharge' => ['zoda', 'zoz', 'zom', 'zor'],
-            'magic'     => ['zoz', 'zom'],
-            'cast'      => ['zom'],
+            'magic'     => ['zom'],
+            'cast'      => ['zoz', 'zom'],
         ];
 
         $defs = array_merge($map[$actionType] ?? [], $universal);
@@ -1370,4 +1370,14 @@ final class CardStats
         }
         return false;
     }
+
+    public static function hasRangedAction(CardInstance $card): bool
+    {
+        foreach ($card->prop['actions'] ?? [] as $a) {
+            $t = (string) ($a['type'] ?? '');
+            if (in_array($t, ['shot', 'throw', 'discharge'], true)) return true;
+        }
+        return false;
+    }
+
 }

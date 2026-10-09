@@ -335,6 +335,10 @@ final class BattleHelper
                     if ($target->owner === $playerKey) continue;
                     if (!CardStats::isOpposite($card, $target)) continue;
                     if ($target->zone !== CardInstance::ZONE_FIELD) continue;
+                } elseif ($type === 'teleport_target') {
+                    if ($target->zone !== CardInstance::ZONE_FIELD) continue;
+                    if ($target->dying || $target->hp <= 0) continue;
+                    // любое существо — своё или чужое
                 } elseif ($type === 'steal_strike') {
                     if ($target->owner === $playerKey) continue;
                     if ($target->zone !== CardInstance::ZONE_FIELD) continue;
