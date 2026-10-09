@@ -110,6 +110,7 @@ function koboldApply(GameState $state, string $playerKey, Command $cmd): void
 function koboldStrike(GameState $state, int $cardId = 1, int $targetId = 3, string $playerKey = GameState::PLAYER_HOST): void
 {
     $_SESSION['debug_roll'] = '6,1';
+    unset($_SESSION['debug_roll_state']);
     Dice::init();
 
     $resolver = new StrikeResolver($state, new Engine());

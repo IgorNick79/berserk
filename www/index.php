@@ -50,6 +50,7 @@ if (isset($_GET['debug']) && $_GET['debug'] === '0') {
 // Debug roll: ?debug_roll=6,1,4 или ?debug_roll=6* или ?debug_roll=off
 if (isset($_GET['debug_roll'])) {
     $v = (string) $_GET['debug_roll'];
+    unset($_SESSION['debug_roll_state']);
     if ($v === '' || $v === 'off') {
         unset($_SESSION['debug_roll']);
     } else {

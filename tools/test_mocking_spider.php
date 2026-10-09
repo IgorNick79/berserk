@@ -165,6 +165,7 @@ function msActivateWeb(GameState $state, string $endingKey = GameState::PLAYER_H
 function msStrikeAndConfirm(GameState $state, string $playerKey, int $attackerId, int $targetId): array
 {
     $_SESSION['debug_roll'] = '6,1';
+    unset($_SESSION['debug_roll_state']);
     Dice::init();
     $resolver = new StrikeResolver($state, new Engine());
     $r = $resolver->declare($playerKey, new Command('strike', [

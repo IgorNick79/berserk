@@ -186,6 +186,7 @@ $state->battle['active'] = GameState::PLAYER_HOST;
 $state->getCard(16)->row = 4;
 $state->getCard(16)->col = 2;
 $_SESSION['debug_roll'] = '6,1';
+unset($_SESSION['debug_roll_state']);
 Dice::init();
 $result = (new StrikeResolver($state, new Engine()))->declare(GameState::PLAYER_HOST, new Command('strike', [
     'card_id' => 11,
@@ -277,6 +278,7 @@ $defender = thanEnemy(71, 4, 3);
 $state = thanState($striker, $defender);
 $resolver = new StrikeResolver($state, new Engine());
 $_SESSION['debug_roll'] = '6,1';
+unset($_SESSION['debug_roll_state']);
 Dice::init();
 $result = $resolver->declare(GameState::PLAYER_HOST, new Command('strike', [
     'card_id' => 70,
@@ -305,6 +307,7 @@ $attacker = thanEnemy(83, 3, 3, ['strikeWeak' => 1, 'strikeMedium' => 1, 'strike
 $state = thanState($tan, $lineVictim, $lineAlly, $attacker);
 $state->battle['active'] = GameState::PLAYER_PLAYER;
 $_SESSION['debug_roll'] = '6,1';
+unset($_SESSION['debug_roll_state']);
 Dice::init();
 $result = (new StrikeResolver($state, new Engine()))->declare(GameState::PLAYER_PLAYER, new Command('strike', [
     'card_id' => 83,

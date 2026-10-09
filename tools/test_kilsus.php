@@ -120,6 +120,7 @@ function moveKilsus(GameState $state, int $row, int $col): void
 function strikeAndConfirm(GameState $state, int $targetId): void
 {
     $_SESSION['debug_roll'] = '6,1';
+    unset($_SESSION['debug_roll_state']);
     Dice::init();
 
     $resolver = new StrikeResolver($state, new Engine());
@@ -254,6 +255,7 @@ assertTrue($kilsus->hp === 9, 'Answer strike damage should be blocked by block_s
 
 $state = kilsusState(kilsusCard(), enemyCard(2, 4, 3, 20, ['prop' => ['ovz' => ['value' => 2]]]));
 $_SESSION['debug_roll'] = '6,1';
+unset($_SESSION['debug_roll_state']);
 Dice::init();
 $result = (new StrikeResolver($state, new Engine()))->declare(GameState::PLAYER_HOST, new Command('strike', [
     'card_id' => 1,
