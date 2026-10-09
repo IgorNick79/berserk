@@ -181,6 +181,14 @@ final class Engine
                 if ($target->zone !== CardInstance::ZONE_FIELD) return 'цель не на поле';
                 if ($target->dying || $target->hp <= 0) return 'цель недоступна';
 
+                $attacker = $state->getCard((int) ($strike['attacker_id'] ?? 0));
+                if ($source && $attacker && CardStats::hasDefense($state, $attacker, 'magic', $source)) {
+                    return 'атакующий защищён от магии';
+                }
+                if ($source && CardStats::hasDefense($state, $target, 'magic', $source)) {
+                    return 'цель защищена от магии';
+                }
+
                 $currentTarget = $state->getCard((int) ($strike['target_id'] ?? 0));
                 if (!$currentTarget) return 'исходная цель не найдена';
                 if ($currentTarget->zone !== CardInstance::ZONE_FIELD) return 'исходная цель не на поле';
@@ -196,7 +204,6 @@ final class Engine
                 $strike['defenders'] = [];
                 $strike['redirect_used'] = true;
 
-                $attacker = $state->getCard((int) ($strike['attacker_id'] ?? 0));
                 if ($attacker) {
                     $noDefendDice = $target->closed
                         || CardStats::hasUnanswer($state, $attacker, $target);

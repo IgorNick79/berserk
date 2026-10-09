@@ -433,6 +433,91 @@ cipAssert((int) ($state->battle['strike']['target_id'] ?? 0) === 2, 'Invalid Mag
 cipAssert(!$defMage->closed, 'Invalid Mage redirect must not close source.');
 cipAssert(empty($state->battle['strike']['instant_stack'] ?? []), 'Invalid Mage redirect must not mutate combat stack.');
 
+// Mage redirect is magic: zom on the attacking card prevents the redirect option entirely.
+$zomAttacker = cipCard([
+    'instanceId' => 1,
+    'owner' => GameState::PLAYER_HOST,
+    'row' => 3,
+    'col' => 3,
+    'prop' => ['zom' => true],
+]);
+$target = cipCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4]);
+$defMage = cipCard([
+    'instanceId' => 23,
+    'owner' => GameState::PLAYER_PLAYER,
+    'row' => 6,
+    'col' => 4,
+    'prop' => ['instants' => [[
+        'key' => 'magic_trick',
+        'name' => 'Магический трюк',
+        'effect' => ['type' => 'redirect_strike'],
+        'target' => 'adjacent_ally',
+        'trigger' => 'combat',
+        'phase' => 'redirect',
+    ]]],
+]);
+$defAlly = cipCard(['instanceId' => 24, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 5]);
+$state = cipState($zomAttacker, $target, $defMage, $defAlly);
+$state->battle['strike']['state'] = 'waiting_defender';
+$options = (new StrikeResolver($state, new Engine()))->getMageRedirectOptions(GameState::PLAYER_PLAYER);
+cipAssert(empty($options), 'Mage redirect should be hidden when the attacking card has zom.');
+$reason = (new Engine())->applyCombatEffect(
+    $state,
+    ['type' => 'redirect_strike'],
+    $defMage,
+    GameState::PLAYER_PLAYER,
+    null,
+    $defAlly
+);
+cipAssert($reason !== null, 'Defensive combat effect validation should reject Mage redirect against zom attacker.');
+cipAssert((int) $state->battle['strike']['target_id'] === $target->instanceId, 'Rejected Mage redirect against zom attacker must not change target.');
+
+// Mage redirect is magic: zom redirect targets are filtered out, and no option is shown if none remain.
+$attacker = cipCard(['instanceId' => 1, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3]);
+$target = cipCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4]);
+$defMage = cipCard([
+    'instanceId' => 25,
+    'owner' => GameState::PLAYER_PLAYER,
+    'row' => 6,
+    'col' => 4,
+    'prop' => ['instants' => [[
+        'key' => 'magic_trick',
+        'name' => 'Магический трюк',
+        'effect' => ['type' => 'redirect_strike'],
+        'target' => 'adjacent_ally',
+        'trigger' => 'combat',
+        'phase' => 'redirect',
+    ]]],
+]);
+$zomAlly = cipCard([
+    'instanceId' => 26,
+    'owner' => GameState::PLAYER_PLAYER,
+    'row' => 4,
+    'col' => 5,
+    'prop' => ['zom' => true],
+]);
+$plainAlly = cipCard(['instanceId' => 27, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 4]);
+$state = cipState($attacker, $target, $defMage, $zomAlly, $plainAlly);
+$state->battle['strike']['state'] = 'waiting_defender';
+$options = (new StrikeResolver($state, new Engine()))->getMageRedirectOptions(GameState::PLAYER_PLAYER);
+cipAssert(count($options) === 1, 'Mage redirect should remain visible when at least one non-zom target remains.');
+cipAssert($options[0]['target_ids'] === [27], 'Mage redirect should filter out redirect targets with zom.');
+$reason = (new Engine())->applyCombatEffect(
+    $state,
+    ['type' => 'redirect_strike'],
+    $defMage,
+    GameState::PLAYER_PLAYER,
+    null,
+    $zomAlly
+);
+cipAssert($reason !== null, 'Defensive combat effect validation should reject Mage redirect to zom target.');
+cipAssert((int) $state->battle['strike']['target_id'] === $target->instanceId, 'Rejected Mage redirect to zom target must not change target.');
+
+$state = cipState($attacker, $target, $defMage, $zomAlly);
+$state->battle['strike']['state'] = 'waiting_defender';
+$options = (new StrikeResolver($state, new Engine()))->getMageRedirectOptions(GameState::PLAYER_PLAYER);
+cipAssert(empty($options), 'Mage redirect should be hidden when the only adjacent redirect target has zom.');
+
 // Invalid redirect: attacker cannot redirect opponent target to attacker-owned card.
 $ownCard = cipCard(['instanceId' => 11, 'owner' => GameState::PLAYER_HOST, 'row' => 4, 'col' => 4]);
 $state = cipState($attacker, $target, $ownCard);

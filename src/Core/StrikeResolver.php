@@ -547,8 +547,8 @@ final class StrikeResolver
             return [];
         }
 
-        $targetIds = ZoneManager::adjacentFieldAllyIds($this->state, $origin, $playerKey);
-        if (empty($targetIds)) {
+        $candidateTargetIds = ZoneManager::adjacentFieldAllyIds($this->state, $origin, $playerKey);
+        if (empty($candidateTargetIds)) {
             return [];
         }
 
@@ -560,6 +560,21 @@ final class StrikeResolver
             if (!empty($card->flags['in_stack'])) continue;
             if ((int) $card->instanceId === (int) $attacker->instanceId) continue;
             if (empty($card->prop['instants'])) continue;
+
+            if (CardStats::hasDefense($this->state, $attacker, 'magic', $card)) {
+                continue;
+            }
+
+            $targetIds = [];
+            foreach ($candidateTargetIds as $targetId) {
+                $candidate = $this->state->getCard((int) $targetId);
+                if (!$candidate) continue;
+                if (CardStats::hasDefense($this->state, $candidate, 'magic', $card)) continue;
+                $targetIds[] = (int) $targetId;
+            }
+            if (empty($targetIds)) {
+                continue;
+            }
 
             foreach ($card->prop['instants'] as $inst) {
                 $effect = (array) ($inst['effect'] ?? []);

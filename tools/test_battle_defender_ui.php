@@ -166,4 +166,18 @@ defenderUiAssert(
     'Mage redirect button should use defender-stage command with source and target.'
 );
 
+$zomMageState = defenderUiState(GameState::PLAYER_HOST, []);
+$zomMage = defenderUiCard(8, 'mage', GameState::PLAYER_PLAYER, 6, 4);
+$zomMage->prop = $mage->prop;
+$zomRedirectAlly = defenderUiCard(9, 'redirect_ally', GameState::PLAYER_PLAYER, 4, 4);
+$zomRedirectAlly->prop = ['zom' => true];
+$zomMageState->addCard($zomMage);
+$zomMageState->addCard($zomRedirectAlly);
+$zomMageHtml = defenderUiRender($zomMageState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
+
+defenderUiAssert(
+    !str_contains($zomMageHtml['info_panel_html'], 'cmd=choose_mage_redirect'),
+    'Defender window should hide Mage redirect when every redirect target has zom.'
+);
+
 echo "Battle defender UI tests passed.\n";
