@@ -83,6 +83,8 @@ final class BattleScreen
         $pendingDefenderTargets = $this->pendingDefenderTargets($state, $playerKey, $baseUrl);
         $pendingRedirectTargets = $this->pendingRedirectTargets($state, $playerKey, $baseUrl);
         $pendingAutoTargets = $this->pendingAutoTargets($state, $playerKey, $baseUrl);
+        $pendingDeathTargets = $this->pendingDeathTargets($state, $playerKey, $baseUrl);
+        $pendingAllyModifierTargets = $this->pendingAllyModifierTargets($state, $playerKey, $baseUrl);
 
         // Порядок осей
         $rowOrder = $isHost ? [6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6];
@@ -100,12 +102,12 @@ final class BattleScreen
         $fieldHtml      = $this->buildField(
             $state, $playerKey, $rowOrder, $colOrder, $fieldMap,
             $cardsInfo, $selectedCardId, $mode, $baseUrl,
-            $moveCells, $jumpCells, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets, $pendingAutoTargets,
+            $moveCells, $jumpCells, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets, $pendingAutoTargets, $pendingDeathTargets, $pendingAllyModifierTargets,
             $explicitAttackMode
         );
         $flyZonesHtml   = $this->buildFlyZones(
             $state, $playerKey, $oppKey, $flyMap, $cardsInfo,
-            $selectedCardId, $mode, $baseUrl, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets, $pendingAutoTargets,
+            $selectedCardId, $mode, $baseUrl, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets, $pendingAutoTargets, $pendingDeathTargets, $pendingAllyModifierTargets,
             $explicitAttackMode
         );
         $pilesHtml = $this->buildPiles($state, $playerKey, $oppKey, $baseUrl);
@@ -158,6 +160,8 @@ final class BattleScreen
         array $pendingDefenderTargets,
         array $pendingRedirectTargets,
         array $pendingAutoTargets,
+        array $pendingDeathTargets,
+        array $pendingAllyModifierTargets,
         bool $explicitAttackMode
     ): string {
         $html = '';
@@ -217,6 +221,12 @@ final class BattleScreen
                     } elseif (isset($pendingAutoTargets[$card->instanceId])) {
                         $cellClass  .= ' attack-target pending-auto-target';
                         $cellContent = '<a class="card-link" href="' . $pendingAutoTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                    } elseif (isset($pendingDeathTargets[$card->instanceId])) {
+                        $cellClass  .= ' attack-target pending-death-target';
+                        $cellContent = '<a class="card-link" href="' . $pendingDeathTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                    } elseif (isset($pendingAllyModifierTargets[$card->instanceId])) {
+                        $cellClass  .= ' attack-target pending-ally-modifier-target';
+                        $cellContent = '<a class="card-link" href="' . $pendingAllyModifierTargets[$card->instanceId] . '">' . $cardBody . '</a>';
                     } elseif (isset($attackTargets[$card->instanceId]) && $selectedCardId > 0 && $card->instanceId !== $selectedCardId) {
                         if (str_starts_with($mode, 'action:')) {
                             $actionKey = substr($mode, 7);
@@ -275,6 +285,8 @@ final class BattleScreen
         array $pendingDefenderTargets,
         array $pendingRedirectTargets,
         array $pendingAutoTargets,
+        array $pendingDeathTargets,
+        array $pendingAllyModifierTargets,
         bool $explicitAttackMode
     ): string {
         $html = '';
@@ -322,6 +334,12 @@ final class BattleScreen
                 } elseif (isset($pendingAutoTargets[$card->instanceId])) {
                     $cellClass  .= ' attack-target pending-auto-target';
                     $cellContent = '<a class="card-link" href="' . $pendingAutoTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                } elseif (isset($pendingDeathTargets[$card->instanceId])) {
+                    $cellClass  .= ' attack-target pending-death-target';
+                    $cellContent = '<a class="card-link" href="' . $pendingDeathTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                } elseif (isset($pendingAllyModifierTargets[$card->instanceId])) {
+                    $cellClass  .= ' attack-target pending-ally-modifier-target';
+                    $cellContent = '<a class="card-link" href="' . $pendingAllyModifierTargets[$card->instanceId] . '">' . $cardBody . '</a>';
                 } elseif (isset($attackTargets[$card->instanceId]) && $selectedCardId > 0 && $card->instanceId !== $selectedCardId) {
                     if (str_starts_with($mode, 'action:')) {
                         $actionKey = substr($mode, 7);
@@ -492,6 +510,68 @@ final class BattleScreen
             $targetId = (int) $targetId;
             if ($state->getCard($targetId)) {
                 $targets[$targetId] = $baseUrl . '&cmd=choose_auto_target&target_id=' . $targetId;
+            }
+        }
+
+        return $targets;
+    }
+
+    /**
+     * @return array<int,string>
+     */
+    private function pendingDeathTargets(GameState $state, string $playerKey, string $baseUrl): array
+    {
+        $strike = $state->battle['strike'] ?? null;
+        if (!is_array($strike) || ($strike['state'] ?? null) !== 'results') {
+            return [];
+        }
+
+        $pending = $strike['pending_choice'] ?? null;
+        if (!is_array($pending) || ($pending['source'] ?? null) !== 'on_death') {
+            return [];
+        }
+
+        $died = $state->getCard((int) ($pending['died_id'] ?? 0));
+        if (!$died || $died->owner !== $playerKey) {
+            return [];
+        }
+
+        $targets = [];
+        foreach ($pending['candidates'] ?? [] as $targetId) {
+            $targetId = (int) $targetId;
+            if ($state->getCard($targetId)) {
+                $targets[$targetId] = $baseUrl . '&cmd=choose_death_target&target_id=' . $targetId;
+            }
+        }
+
+        return $targets;
+    }
+
+    /**
+     * @return array<int,string>
+     */
+    private function pendingAllyModifierTargets(GameState $state, string $playerKey, string $baseUrl): array
+    {
+        $strike = $state->battle['strike'] ?? null;
+        if (!is_array($strike) || ($strike['state'] ?? null) !== 'waiting_ally_modifier') {
+            return [];
+        }
+
+        $pending = $strike['pending_ally_modifier'] ?? null;
+        if (!is_array($pending)) {
+            return [];
+        }
+
+        $source = $state->getCard((int) ($pending['source_id'] ?? 0));
+        if (!$source || $source->owner !== $playerKey) {
+            return [];
+        }
+
+        $targets = [];
+        foreach ($pending['candidates'] ?? [] as $targetId) {
+            $targetId = (int) $targetId;
+            if ($state->getCard($targetId)) {
+                $targets[$targetId] = $baseUrl . '&cmd=choose_ally_modifier&target_id=' . $targetId;
             }
         }
 

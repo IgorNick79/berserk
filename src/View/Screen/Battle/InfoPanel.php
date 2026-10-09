@@ -505,9 +505,16 @@ final class InfoPanel
                 foreach ($pam['candidates'] as $tid) {
                     $tc = $state->getCard($tid);
                     if (!$tc) continue;
-                    $tn2 = $cardsInfo[$tc->ukid]['name'] ?? '?';
+                    $ti = $cardsInfo[$tc->ukid] ?? [];
                     $url = "{$baseUrl}&cmd=choose_ally_modifier&target_id={$tid}";
-                    $buttons .= '<a class="button" href="' . $url . '">' . htmlspecialchars($tn2, ENT_QUOTES) . '</a> ';
+                    $buttons .= CardButton::battle(
+                        $this->tpl,
+                        $tc,
+                        $ti,
+                        $url,
+                        $playerKey,
+                        ['class' => 'ally-modifier-target']
+                    );
                 }
                 $contentHtml = '<p><b>' . $srcName . '</b> — выбери союзника для защиты:</p>'
                     . '<div class="death-choice-buttons">' . $buttons . '</div>';
@@ -1364,10 +1371,16 @@ final class InfoPanel
                     foreach ($pc['candidates'] as $tid) {
                         $tc = $state->getCard($tid);
                         if (!$tc) continue;
-                        $ti = $cardsInfo[$tc->ukid] ?? null;
-                        $tn2 = $ti ? htmlspecialchars($ti['name'], ENT_QUOTES) : '?';
+                        $ti = $cardsInfo[$tc->ukid] ?? [];
                         $url = "{$baseUrl}&cmd=choose_death_target&target_id={$tid}";
-                        $buttons .= '<a class="button" href="' . $url . '">' . $tn2 . '</a> ';
+                        $buttons .= CardButton::battle(
+                            $this->tpl,
+                            $tc,
+                            $ti,
+                            $url,
+                            $playerKey,
+                            ['class' => 'death-target']
+                        );
                     }
 
                     $confirmHtml = '<div class="death-choice">'
