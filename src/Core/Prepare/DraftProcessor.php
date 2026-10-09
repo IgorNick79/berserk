@@ -50,7 +50,7 @@ final class DraftProcessor
         }
 
         try {
-            $pool = (new BoosterGenerator($this->db))->generatePool($settings->draftBoosters());
+            $pool = (new BoosterGenerator($this->db, $settings->boosterConfig()))->generatePool($settings->draftBoosters());
         } catch (\RuntimeException $e) {
             return Result::error($e->getMessage());
         }

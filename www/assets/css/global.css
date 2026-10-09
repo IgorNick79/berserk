@@ -408,6 +408,68 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
     font-weight: 700;
 }
 
+.settings-booster {
+    display: grid;
+    gap: 10px;
+}
+
+.settings-booster-bar {
+    height: 18px;
+    display: flex;
+    overflow: hidden;
+    background: #eee;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+.settings-booster-bar span {
+    min-width: 0;
+    transition: width 120ms ease;
+}
+
+.settings-booster-bar__common {
+    background: #8fcf9b;
+}
+
+.settings-booster-bar__uncommon {
+    background: #79aee8;
+}
+
+.settings-booster-bar__rare {
+    background: #d7ad58;
+}
+
+.settings-booster-total {
+    color: #555;
+    font-size: 13px;
+}
+
+.settings-range {
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.settings-range__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.settings-range input[type="range"] {
+    width: 100%;
+    accent-color: #4a4;
+}
+
+.settings-range small {
+    color: #666;
+    font-size: 12px;
+}
+
 .settings-submit-row {
     margin-top: 2px;
 }
@@ -490,6 +552,12 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 
     .settings-stepper__control {
         justify-content: space-between;
+    }
+
+    .settings-range__head {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
     }
 }
 

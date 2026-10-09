@@ -6,6 +6,7 @@ declare(strict_types=1);
 namespace Berserk\Core\Prepare;
 
 use Berserk\Core\CardInstance;
+use Berserk\Core\BoosterSettings;
 use Berserk\Core\Command;
 use Berserk\Core\Db;
 use Berserk\Core\GameSettings;
@@ -62,35 +63,36 @@ final class PrepareProcessor
             return Result::error('Режим не выбран');
         }
 
-        $this->state->settings = $this->settingsFromCommand($this->state->settings, $cmd);
-        $timerError = $this->state->settings->validateDraftTimer();
+        $nextSettings = $this->settingsFromCommand($this->state->settings, $cmd);
+        $timerError = $nextSettings->validateDraftTimer();
         if ($timerError !== null) {
             return Result::error($timerError);
         }
 
         switch ($this->state->mode) {
             case GameSettings::MODE_SYSTEM:
-                if ($this->state->settings->systemDeckSelection() !== GameSettings::SYSTEM_DECK_SELECTION_MANUAL) {
+                if ($nextSettings->systemDeckSelection() !== GameSettings::SYSTEM_DECK_SELECTION_MANUAL) {
                     return Result::error('Неподдерживаемый способ выбора деки');
                 }
 
+                $this->state->settings = $nextSettings;
                 $this->state->status = 'deck';
                 $this->state->bumpVersion();
                 return Result::ok(['settings_confirmed:system', 'stage_changed:deck']);
 
             case GameSettings::MODE_DRAFT:
-                $draftSettingsError = $this->state->settings->validateDraftSettings();
+                $draftSettingsError = $nextSettings->validateDraftSettings();
                 if ($draftSettingsError !== null) {
                     return Result::error($draftSettingsError);
                 }
 
-                if (!in_array($this->state->settings->draftPickMode(), [
+                if (!in_array($nextSettings->draftPickMode(), [
                     GameSettings::DRAFT_PICK_MODE_MANUAL,
                     GameSettings::DRAFT_PICK_MODE_RANDOM,
                 ], true)) {
                     return Result::error('Неподдерживаемый способ драфта');
                 }
-                if (!in_array($this->state->settings->draftAutoSide(), [
+                if (!in_array($nextSettings->draftAutoSide(), [
                     GameSettings::DRAFT_AUTO_SIDE_BOTH,
                     GameSettings::DRAFT_AUTO_SIDE_HOST,
                     GameSettings::DRAFT_AUTO_SIDE_PLAYER,
@@ -102,29 +104,34 @@ final class PrepareProcessor
                     return Result::error('Db недоступен для драфта');
                 }
 
-                switch ($this->state->settings->draftPickMode()) {
+                $snapshot = $this->state->toArray();
+                $this->state->settings = $nextSettings;
+                switch ($nextSettings->draftPickMode()) {
                     case GameSettings::DRAFT_PICK_MODE_MANUAL:
-                        $result = (new DraftProcessor($this->state, $this->db))->start($this->state->settings);
+                        $result = (new DraftProcessor($this->state, $this->db))->start($nextSettings);
                         if (!$result->success) {
+                            $this->restoreState($snapshot);
                             return $result;
                         }
 
                         $this->state->status = 'draft';
-                        DraftTimer::initialize($this->state, $this->state->settings, time());
+                        DraftTimer::initialize($this->state, $nextSettings, time());
                         $this->state->bumpVersion();
                         return Result::ok(array_merge(['settings_confirmed:draft', 'stage_changed:draft'], $result->events));
 
                     case GameSettings::DRAFT_PICK_MODE_RANDOM:
-                        if ($this->state->settings->draftAutoSide() !== GameSettings::DRAFT_AUTO_SIDE_BOTH) {
-                            $result = (new DraftProcessor($this->state, $this->db))->start($this->state->settings, true);
+                        if ($nextSettings->draftAutoSide() !== GameSettings::DRAFT_AUTO_SIDE_BOTH) {
+                            $result = (new DraftProcessor($this->state, $this->db))->start($nextSettings, true);
                             if (!$result->success) {
+                                $this->restoreState($snapshot);
                                 return $result;
                             }
 
                             $this->state->status = 'draft';
-                            DraftTimer::initialize($this->state, $this->state->settings, time());
+                            DraftTimer::initialize($this->state, $nextSettings, time());
                             $autoResult = $this->runDraftAutomaticProgress(time());
                             if (!$autoResult->success) {
+                                $this->restoreState($snapshot);
                                 return $autoResult;
                             }
 
@@ -136,8 +143,9 @@ final class PrepareProcessor
                             ));
                         }
 
-                        $result = (new RandomDraftProcessor($this->state, $this->db))->start($this->state->settings);
+                        $result = (new RandomDraftProcessor($this->state, $this->db))->start($nextSettings);
                         if (!$result->success) {
+                            $this->restoreState($snapshot);
                             return $result;
                         }
 
@@ -1386,8 +1394,44 @@ final class PrepareProcessor
             }
         }
 
+        foreach ([
+            'common' => 'booster_common',
+            'uncommon' => 'booster_uncommon',
+            'rare_slots' => 'booster_rare_slots',
+            'ultra_rare_chance' => 'booster_ultra_rare_chance',
+        ] as $settingKey => $payloadKey) {
+            if ($cmd->get($payloadKey) !== null) {
+                $data['booster'][$settingKey] = $cmd->get($payloadKey);
+            }
+        }
+
+        if ($cmd->get('booster_rare_chance') !== null) {
+            $rareChance = $cmd->get('booster_rare_chance');
+            $data['booster']['ultra_rare_chance'] = BoosterSettings::rareChanceToUltraChance($rareChance) ?? $rareChance;
+        }
+
         $settings = GameSettings::fromArray($data);
         return $settings;
+    }
+
+    private function restoreState(array $snapshot): void
+    {
+        $restored = GameState::fromArray($snapshot);
+        $this->state->version = $restored->version;
+        $this->state->status = $restored->status;
+        $this->state->mode = $restored->mode;
+        $this->state->settings = $restored->settings;
+        $this->state->draft = $restored->draft;
+        $this->state->persistenceJson = $restored->persistenceJson;
+        $this->state->persistenceVersion = $restored->persistenceVersion;
+        $this->state->firstPlayer = $restored->firstPlayer;
+        $this->state->nextInstanceId = $restored->nextInstanceId;
+        $this->state->players = $restored->players;
+        $this->state->cards = $restored->cards;
+        $this->state->cell_markers = $restored->cell_markers;
+        $this->state->battle = $restored->battle;
+        $this->state->log = $restored->log;
+        $this->state->winner = $restored->winner;
     }
 
     private function draftManualCommand(string $playerKey, callable $apply): Result

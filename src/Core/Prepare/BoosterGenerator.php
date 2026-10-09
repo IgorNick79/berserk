@@ -5,11 +5,11 @@ declare(strict_types=1);
 
 namespace Berserk\Core\Prepare;
 
+use Berserk\Core\BoosterSettings;
 use Berserk\Core\Db;
 
 /**
- * Генератор бустера: 12 карт = 7 common + 4 uncommon + 1 rare/ultra.
- * Ultra — 10% (вместо rare).
+ * Генератор бустера: 12 карт с настраиваемым распределением редкостей.
  * Внутри бустера дублей нет.
  */
 final class BoosterGenerator
@@ -17,7 +17,17 @@ final class BoosterGenerator
     /** @var array<string,array<int,array<string,mixed>>> */
     private array $cardsByRarity = [];
 
-    public function __construct(private Db $db) {}
+    /** @var array{common:int, uncommon:int, rare_slots:int, ultra_rare_chance:int} */
+    private array $config;
+
+    public function __construct(private Db $db, array $config = [])
+    {
+        $error = BoosterSettings::validate($config);
+        if ($error !== null) {
+            throw new \InvalidArgumentException($error);
+        }
+        $this->config = BoosterSettings::normalize($config);
+    }
 
     /**
      * @return string[] массив ukid (12 штук)
@@ -58,11 +68,15 @@ final class BoosterGenerator
         $candidateCounts = $poolCounts;
         $picks = [];
 
-        $picks = array_merge($picks, $this->pick('common', 7, $picks, $candidateCounts));
-        $picks = array_merge($picks, $this->pick('uncommon', 4, $picks, $candidateCounts));
+        $picks = array_merge($picks, $this->pick('common', $this->config['common'], $picks, $candidateCounts));
+        $picks = array_merge($picks, $this->pick('uncommon', $this->config['uncommon'], $picks, $candidateCounts));
 
-        $rareRarity = (random_int(1, 10) === 1) ? 'ultrarare' : 'rare';
-        $picks = array_merge($picks, $this->pick($rareRarity, 1, $picks, $candidateCounts));
+        for ($i = 0; $i < $this->config['rare_slots']; $i++) {
+            $rareRarity = random_int(1, 100) <= $this->config['ultra_rare_chance']
+                ? 'ultrarare'
+                : 'rare';
+            $picks = array_merge($picks, $this->pick($rareRarity, 1, $picks, $candidateCounts));
+        }
         $poolCounts = $candidateCounts;
 
         return $picks;

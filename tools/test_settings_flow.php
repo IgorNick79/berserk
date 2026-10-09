@@ -7,6 +7,7 @@ require_once __DIR__ . '/../src/Core/Autoloader.php';
 
 use Berserk\Core\Autoloader;
 use Berserk\Core\Command;
+use Berserk\Core\BoosterSettings;
 use Berserk\Core\Db;
 use Berserk\Core\Engine;
 use Berserk\Core\GameSettings;
@@ -70,6 +71,32 @@ assertTrue($restored->settings->draftBoosters() === 5, 'Round-trip lost draft bo
 assertTrue($restored->settings->draftGridSize() === 3, 'Round-trip lost draft grid size');
 assertTrue($restored->settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_MANUAL, 'Default draft pick mode should be manual');
 assertTrue($restored->settings->draftAutoSide() === GameSettings::DRAFT_AUTO_SIDE_BOTH, 'Default draft auto side should be both');
+assertTrue($restored->settings->boosterConfig() === BoosterSettings::defaults(), 'Round-trip lost default booster settings');
+
+$customBoosterSettings = GameSettings::fromArray([
+    'booster' => [
+        'common' => 12,
+        'uncommon' => 0,
+        'rare_slots' => 0,
+        'ultra_rare_chance' => 100,
+    ],
+]);
+assertTrue($customBoosterSettings->validateDraftSettings() === null, 'Custom 12-0-0 booster settings should validate');
+assertTrue($customBoosterSettings->boosterConfig()['common'] === 12, 'Custom booster common count was not stored');
+assertTrue(GameSettings::fromArray($customBoosterSettings->toArray())->boosterConfig() === $customBoosterSettings->boosterConfig(), 'Round-trip lost custom booster settings');
+
+foreach ([
+    ['common' => 8, 'uncommon' => 4, 'rare_slots' => 1, 'ultra_rare_chance' => 10],
+    ['common' => -1, 'uncommon' => 12, 'rare_slots' => 1, 'ultra_rare_chance' => 10],
+    ['common' => 8, 'uncommon' => 3, 'rare_slots' => 1, 'ultra_rare_chance' => 15],
+    ['common' => 'bad', 'uncommon' => 3, 'rare_slots' => 1, 'ultra_rare_chance' => 10],
+    ['common' => 8, 'uncommon' => 3, 'rare_slots' => 1, 'ultra_rare_chance' => str_repeat('9', 100)],
+] as $badBoosterConfig) {
+    assertTrue(
+        GameSettings::fromArray(['booster' => $badBoosterConfig])->validateDraftSettings() !== null,
+        'Invalid booster settings should be rejected'
+    );
+}
 
 $randomSettings = GameSettings::fromArray([
     'draft' => [
@@ -113,7 +140,7 @@ $result = $engine->apply(
 );
 assertTrue(!$result->success, 'Unknown draft pick mode should be rejected');
 assertTrue($badPickMode->status === 'settings', 'Rejected draft pick mode should stay in settings');
-assertTrue($badPickMode->settings->draftPickMode() === 'bogus', 'Rejected draft pick mode should still be visible in attempted settings');
+assertTrue($badPickMode->settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_MANUAL, 'Rejected draft pick mode should not mutate settings');
 
 // Unknown draft auto side is rejected before DB access.
 $badAutoSide = new GameState(9, 1, 2);
@@ -128,6 +155,44 @@ $result = $engine->apply(
 );
 assertTrue(!$result->success, 'Unknown draft auto side should be rejected');
 assertTrue($badAutoSide->status === 'settings', 'Rejected draft auto side should stay in settings');
+assertTrue($badAutoSide->settings->draftAutoSide() === GameSettings::DRAFT_AUTO_SIDE_BOTH, 'Rejected draft auto side should not mutate settings');
+
+// Invalid booster settings are rejected before DB access and do not mutate saved settings.
+$badBoosterState = new GameState(91, 1, 2);
+apply($badBoosterState, $engine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+$beforeBoosterSettings = $badBoosterState->settings->toArray();
+$result = $engine->apply(
+    $badBoosterState,
+    GameState::PLAYER_HOST,
+    new Command('confirm_settings', [
+        'booster_common' => 8,
+        'booster_uncommon' => 4,
+        'booster_rare_slots' => 1,
+        'booster_rare_chance' => 90,
+    ])
+);
+assertTrue(!$result->success, 'Invalid booster slot sum should be rejected');
+assertTrue($badBoosterState->status === 'settings', 'Rejected booster settings should stay in settings');
+assertTrue($badBoosterState->settings->toArray() === $beforeBoosterSettings, 'Rejected booster settings should not mutate settings');
+
+foreach ([str_repeat('9', 100), -10, 110, 95] as $i => $badRareChance) {
+    $badChanceState = new GameState(190 + $i, 1, 2);
+    apply($badChanceState, $engine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+    $beforeChanceSettings = $badChanceState->settings->toArray();
+    $result = $engine->apply(
+        $badChanceState,
+        GameState::PLAYER_HOST,
+        new Command('confirm_settings', [
+            'booster_common' => 8,
+            'booster_uncommon' => 3,
+            'booster_rare_slots' => 1,
+            'booster_rare_chance' => $badRareChance,
+        ])
+    );
+    assertTrue(!$result->success, 'Invalid rare chance payload should be rejected');
+    assertTrue($badChanceState->status === 'settings', 'Rejected rare chance should stay in settings');
+    assertTrue($badChanceState->settings->toArray() === $beforeChanceSettings, 'Rejected rare chance should not mutate settings');
+}
 
 // Draft booster count is server-side restricted to the canonical 5-8 range.
 foreach ([4, 9] as $badBoosters) {
@@ -145,17 +210,19 @@ foreach ([4, 9] as $badBoosters) {
 foreach ([GameSettings::DRAFT_BOOSTERS_MIN, GameSettings::DRAFT_BOOSTERS_MAX] as $goodBoosters) {
     $customBoosters = new GameState(80 + $goodBoosters, 1, 2);
     apply($customBoosters, $engine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+    $beforeSettings = $customBoosters->settings->toArray();
     $result = $engine->apply(
         $customBoosters,
         GameState::PLAYER_HOST,
         new Command('confirm_settings', ['boosters' => $goodBoosters])
     );
     assertTrue(!$result->success, 'Draft without Db should not start in this test section');
-    assertTrue($customBoosters->settings->draftBoosters() === $goodBoosters, 'Valid booster payload was not applied to settings');
+    assertTrue($customBoosters->settings->toArray() === $beforeSettings, 'Draft startup failure should not mutate settings');
 }
 
 $autoManualState = new GameState(90, 1, 2);
 apply($autoManualState, $engine, GameState::PLAYER_HOST, 'choose_mode', ['mode' => GameSettings::MODE_DRAFT]);
+$beforeAutoManualSettings = $autoManualState->settings->toArray();
 $result = $engine->apply(
     $autoManualState,
     GameState::PLAYER_HOST,
@@ -167,9 +234,7 @@ $result = $engine->apply(
     ])
 );
 assertTrue(!$result->success, 'Draft without Db should not start while checking settings payload');
-assertTrue($autoManualState->settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_MANUAL, 'Manual mode should remain manual even with auto side payload');
-assertTrue($autoManualState->settings->draftAutoSide() === GameSettings::DRAFT_AUTO_SIDE_PLAYER, 'Auto side payload should persist without forcing random mode');
-assertTrue($autoManualState->settings->draftGridMode() === GameSettings::DRAFT_GRID_MODE_DISCRETE, 'Grid mode payload was not applied');
+assertTrue($autoManualState->settings->toArray() === $beforeAutoManualSettings, 'Draft startup failure should not persist attempted settings');
 
 $customTimer = GameSettings::fromArray(['draft' => [
     'timer_mode' => GameSettings::DRAFT_TIMER_CUSTOM,

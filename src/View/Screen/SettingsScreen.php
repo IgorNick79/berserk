@@ -7,6 +7,7 @@ namespace Berserk\View\Screen;
 
 use Berserk\Core\GameSettings;
 use Berserk\Core\GameState;
+use Berserk\Core\BoosterSettings;
 
 final class SettingsScreen
 {
@@ -75,6 +76,9 @@ final class SettingsScreen
         if ($timerAction <= 0) {
             $timerAction = GameSettings::DRAFT_TIMER_DEFAULT_ACTION_SECONDS;
         }
+        $booster = $settings->boosterConfig();
+        $rareChance = 100 - $booster['ultra_rare_chance'];
+        $boosterSize = BoosterSettings::BOOSTER_SIZE;
 
         $boosterHtml = '';
         for ($count = GameSettings::DRAFT_BOOSTERS_MIN; $count <= GameSettings::DRAFT_BOOSTERS_MAX; $count++) {
@@ -93,6 +97,31 @@ final class SettingsScreen
             . '<fieldset class="settings-fieldset">'
             . '<legend>Количество бустеров</legend>'
             . '<div class="settings-option-grid settings-option-grid--compact">' . $boosterHtml . '</div>'
+            . '</fieldset>'
+            . '<fieldset class="settings-fieldset">'
+            . '<legend>Состав бустера</legend>'
+            . '<div class="settings-booster" data-booster-config data-total="' . $boosterSize . '">'
+            . '<div class="settings-booster-bar" aria-hidden="true">'
+            . '<span class="settings-booster-bar__common" data-booster-bar="common" style="width:' . $this->percent($booster['common'], $boosterSize) . '%"></span>'
+            . '<span class="settings-booster-bar__uncommon" data-booster-bar="uncommon" style="width:' . $this->percent($booster['uncommon'], $boosterSize) . '%"></span>'
+            . '<span class="settings-booster-bar__rare" data-booster-bar="rare_slots" style="width:' . $this->percent($booster['rare_slots'], $boosterSize) . '%"></span>'
+            . '</div>'
+            . '<div class="settings-booster-total">Всего карт: <b data-booster-total>' . $boosterSize . '</b></div>'
+            . $this->rangeSlider('booster_common', 'Common', $booster['common'], 0, $boosterSize, 1, 'карт', 'common')
+            . $this->rangeSlider('booster_uncommon', 'Uncommon', $booster['uncommon'], 0, $boosterSize, 1, 'карт', 'uncommon')
+            . $this->rangeSlider('booster_rare_slots', 'Rare slots', $booster['rare_slots'], 0, $boosterSize, 1, 'карт', 'rare_slots')
+            . '</div>'
+            . '</fieldset>'
+            . '<fieldset class="settings-fieldset">'
+            . '<legend>Редкая / ультраредкая карта</legend>'
+            . '<div class="settings-range" data-rarity-chance>'
+            . '<div class="settings-range__head">'
+            . '<span class="settings-stepper__label">Шанс редкой</span>'
+            . '<output class="settings-stepper__value" data-rarity-output>' . $rareChance . '% / ' . $booster['ultra_rare_chance'] . '%</output>'
+            . '</div>'
+            . '<input type="range" name="booster_rare_chance" min="0" max="100" step="10" value="' . $rareChance . '" data-rarity-input>'
+            . '<small>Второе значение считается как шанс ультраредкой.</small>'
+            . '</div>'
             . '</fieldset>'
             . '<fieldset class="settings-fieldset">'
             . '<legend>Режим сетки</legend>'
@@ -189,6 +218,22 @@ final class SettingsScreen
             . '<input type="hidden" name="' . $this->esc($name) . '" value="' . $value . '" data-stepper-input data-unit="' . $this->esc($unit) . '">'
             . '</div>'
             . '</div>';
+    }
+
+    private function rangeSlider(string $name, string $label, int $value, int $min, int $max, int $step, string $unit, string $slot): string
+    {
+        return '<div class="settings-range" data-booster-row="' . $this->esc($slot) . '">'
+            . '<div class="settings-range__head">'
+            . '<span class="settings-stepper__label">' . $this->esc($label) . '</span>'
+            . '<output class="settings-stepper__value" data-booster-output="' . $this->esc($slot) . '">' . $value . ' ' . $this->esc($unit) . '</output>'
+            . '</div>'
+            . '<input type="range" name="' . $this->esc($name) . '" value="' . $value . '" min="' . $min . '" max="' . $max . '" step="' . $step . '" data-booster-slot="' . $this->esc($slot) . '" data-unit="' . $this->esc($unit) . '">'
+            . '</div>';
+    }
+
+    private function percent(int $value, int $total): int
+    {
+        return $total > 0 ? (int) round(($value / $total) * 100) : 0;
     }
 
     private function esc(string $value): string

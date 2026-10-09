@@ -61,6 +61,12 @@ final class GameSettings
             'boosters'        => 4,
             'booster_profile' => self::BOOSTER_PROFILE_DEFAULT,
         ],
+        public array $booster = [
+            'common' => BoosterSettings::DEFAULT_COMMON,
+            'uncommon' => BoosterSettings::DEFAULT_UNCOMMON,
+            'rare_slots' => BoosterSettings::DEFAULT_RARE_SLOTS,
+            'ultra_rare_chance' => BoosterSettings::DEFAULT_ULTRA_RARE_CHANCE,
+        ],
     ) {}
 
     public static function defaults(): self
@@ -76,6 +82,7 @@ final class GameSettings
             system: array_merge($defaults->system, (array) ($data['system'] ?? [])),
             draft: array_merge($defaults->draft, (array) ($data['draft'] ?? [])),
             sealed: array_merge($defaults->sealed, (array) ($data['sealed'] ?? [])),
+            booster: array_merge($defaults->booster, (array) ($data['booster'] ?? [])),
         );
     }
 
@@ -85,6 +92,7 @@ final class GameSettings
             'system' => $this->system,
             'draft'  => $this->draft,
             'sealed' => $this->sealed,
+            'booster' => $this->booster,
         ];
     }
 
@@ -130,6 +138,39 @@ final class GameSettings
     public function draftBoosterProfile(): string
     {
         return (string) ($this->draft['booster_profile'] ?? self::BOOSTER_PROFILE_DEFAULT);
+    }
+
+    /**
+     * @return array{common:int, uncommon:int, rare_slots:int, ultra_rare_chance:int}
+     */
+    public function boosterConfig(): array
+    {
+        return BoosterSettings::normalize($this->booster);
+    }
+
+    public function boosterCommon(): int
+    {
+        return $this->boosterConfig()['common'];
+    }
+
+    public function boosterUncommon(): int
+    {
+        return $this->boosterConfig()['uncommon'];
+    }
+
+    public function boosterRareSlots(): int
+    {
+        return $this->boosterConfig()['rare_slots'];
+    }
+
+    public function boosterUltraRareChance(): int
+    {
+        return $this->boosterConfig()['ultra_rare_chance'];
+    }
+
+    public function validateBoosterSettings(): ?string
+    {
+        return BoosterSettings::validate($this->booster);
     }
 
     public function draftTimerMode(): string
@@ -207,6 +248,6 @@ final class GameSettings
             return 'Неверный режим сетки драфта';
         }
 
-        return $this->validateDraftTimer();
+        return $this->validateDraftTimer() ?? $this->validateBoosterSettings();
     }
 }
