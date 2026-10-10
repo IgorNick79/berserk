@@ -893,6 +893,27 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 .marker-ova     { background: #b8a04a; color: #fff; }
 .marker-ovz     { background: #4a7ab8; color: #fff; }
 .marker-strike  { background: #a33; color: #fff; }
+.marker-conditional-strike {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #a33;
+    color: #fff;
+}
+.marker-conditional-strike__value,
+.marker-element-fallback {
+    white-space: nowrap;
+}
+.marker-element-fallback {
+    opacity: .88;
+    font-size: 10px;
+}
+.marker-element-icon {
+    width: 12px;
+    height: 12px;
+    object-fit: contain;
+    flex: 0 0 auto;
+}
 
 .grave-reveal {
     margin-top: 20px;

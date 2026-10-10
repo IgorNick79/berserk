@@ -15,6 +15,23 @@ use Berserk\Core\GameState;
  */
 final class Badge
 {
+    private const ELEMENT_LABELS = [
+        'plains'    => 'степным',
+        'mountains' => 'горным',
+        'forests'   => 'лесным',
+        'swamps'    => 'болотным',
+        'dark'      => 'темным',
+    ];
+
+    private const ELEMENT_ICONS = [
+        'plains'    => '/assets/images/element-plains.png',
+        'mountains' => '/assets/images/element-mountains.png',
+        'forests'   => '/assets/images/element-forests.png',
+        'swamps'    => '/assets/images/element-swamps.png',
+        'dark'      => '/assets/images/element-dark.png',
+        'neutral'   => '/assets/images/element-neutral.png',
+    ];
+
     private const MARKER_NAMES = [
         'hunt'       => 'Охота',
         'stun'       => 'Оглушение',
@@ -75,13 +92,60 @@ final class Badge
             }
         }
 
+        $conditionalStrikeBadges = self::conditionalStrikeBadges($card, $state);
+        foreach ($conditionalStrikeBadges as $badge) {
+            $sums['ability_strike'] = ($sums['ability_strike'] ?? 0) - $badge['value'];
+            if (($sums['ability_strike'] ?? 0) === 0) {
+                unset($sums['ability_strike']);
+            }
+        }
+
         foreach ($sums as $stat => $value) {
             if (!isset(self::MOD_MAP[$stat])) continue;
             $items[] = self::modifier($stat, (int) $value, $expires[$stat] ?? 0);
         }
 
+        foreach ($conditionalStrikeBadges as $badge) {
+            $items[] = self::conditionalStrike((int) $badge['value'], (string) $badge['element']);
+        }
+
         if (empty($items)) return '';
         return '<div class="bmarkers">' . implode('', $items) . '</div>';
+    }
+
+    /**
+     * @return array<int,array{element:string,value:int}>
+     */
+    private static function conditionalStrikeBadges(CardInstance $card, ?GameState $state): array
+    {
+        $abilities = $card->prop['ability'] ?? null;
+        if ($abilities === null) return [];
+        if (isset($abilities['value'])) $abilities = [$abilities];
+        if (!is_array($abilities)) return [];
+
+        $result = [];
+
+        foreach ($abilities as $ability) {
+            if (!is_array($ability)) continue;
+            if (empty($ability['element'])) continue;
+            if (!empty($ability['types'])) continue;
+            if (!empty($ability['only']) && !in_array('strike', $ability['only'], true)) continue;
+            if (!empty($ability['condition'])
+                && ($state === null || !CardStats::checkCondition($ability['condition'], $state, $card))) {
+                continue;
+            }
+
+            $value = (int) ($ability['value'] ?? 0);
+            if ($value === 0) continue;
+
+            $element = (string) $ability['element'];
+            $result[$element] = [
+                'element' => $element,
+                'value'   => ($result[$element]['value'] ?? 0) + $value,
+            ];
+        }
+
+        return array_values($result);
     }
 
     private static function marker(string $type, $m): string
@@ -123,6 +187,43 @@ final class Badge
         }
 
         return self::raw($cfg['class'], $text);
+    }
+
+    private static function conditionalStrike(int $value, string $element): string
+    {
+        $conditionHtml = self::elementConditionHtml($element);
+        $sign = $value > 0 ? '+' : '';
+
+        return '<span class="marker marker-conditional-strike">'
+            . '<span class="marker-conditional-strike__value">удар ' . htmlspecialchars($sign . (string) $value, ENT_QUOTES) . '</span>'
+            . $conditionHtml
+            . '</span>';
+    }
+
+    private static function elementConditionHtml(string $element): string
+    {
+        $icon = self::ELEMENT_ICONS[$element] ?? null;
+        $label = self::ELEMENT_LABELS[$element] ?? $element;
+
+        if (is_string($icon) && $icon !== '' && self::assetExists($icon)) {
+            return '<img class="marker-element-icon" src="'
+                . htmlspecialchars($icon, ENT_QUOTES)
+                . '" alt="по '
+                . htmlspecialchars($label, ENT_QUOTES)
+                . '">';
+        }
+
+        return '<span class="marker-element-fallback">по '
+            . htmlspecialchars($label, ENT_QUOTES)
+            . '</span>';
+    }
+
+    private static function assetExists(string $webPath): bool
+    {
+        if (!str_starts_with($webPath, '/assets/')) return false;
+
+        $fullPath = dirname(__DIR__, 3) . '/www' . $webPath;
+        return is_file($fullPath);
     }
 
     private static function raw(string $class, string $text): string
