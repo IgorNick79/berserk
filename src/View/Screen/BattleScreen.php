@@ -26,7 +26,8 @@ final class BattleScreen
         string $playerKey,
         string $role,
         ?string $message,
-        array $cardsInfo
+        array $cardsInfo,
+        ?array $uiState = null
     ): array {
         $oppKey    = $state->getOpponentKey($playerKey);
         $linkParam = $role === 'host' ? 'first' : 'second';
@@ -36,17 +37,10 @@ final class BattleScreen
         $strike    = $state->battle['strike'] ?? null;
 
         $pendingAnyDeath = $state->battle['pending_any_death'][0] ?? null;
+        $ui = $this->normalizeUiState($state, $playerKey, $uiState);
 
         // Выбранная карта
-        $selectedCardId = (int) ($_GET['sel'] ?? 0);
-        if ($selectedCardId > 0) {
-            $c = $state->getCard($selectedCardId);
-            if (!$c
-                || ($c->zone !== CardInstance::ZONE_FIELD
-                    && $c->zone !== CardInstance::ZONE_FLYING)) {
-                $selectedCardId = 0;
-            }
-        }
+        $selectedCardId = $ui['sel'];
 
         // Карты на поле
         $fieldMap = [];
@@ -68,9 +62,8 @@ final class BattleScreen
         }
 
         // Режим и цели
-        $explicitAttackMode = isset($_GET['mode']) && (string) $_GET['mode'] !== '';
-        $mode = (string) ($_GET['mode'] ?? 'strike');
-        if ($mode === '') $mode = 'strike';
+        $explicitAttackMode = $ui['mode_explicit'];
+        $mode = $ui['mode'];
 
         $attackTargets = [];
         if ($selectedCardId > 0 && $isActive && !$strike) {
@@ -124,13 +117,18 @@ final class BattleScreen
         }
 
         $pileRevealHtml = '';
-        if (isset($_GET['pile']) && $_GET['pile'] !== '') {
-            $pileRevealHtml = $this->buildPileReveal($state, $playerKey, $oppKey, $cardsInfo);
+        if ($ui['pile'] !== '') {
+            $pileRevealHtml = $this->buildPileReveal($state, $playerKey, $oppKey, $cardsInfo, $ui['pile']);
         }
 
         return [
             'screen' => 'battle',
             'data'   => [
+                'ui' => [
+                    'sel'  => $ui['sel'],
+                    'mode' => $ui['mode'],
+                    'pile' => $ui['pile'],
+                ],
                 'debug_html' => $debugHtml,
                 'field_html'       => $fieldHtml,
                 'panel_html'       => $panelHtml,
@@ -140,6 +138,118 @@ final class BattleScreen
                 'info_panel_html'  => $infoPanelHtml,
             ],
         ];
+    }
+
+    /**
+     * @return array{sel:int,mode:string,pile:string,mode_explicit:bool}
+     */
+    private function normalizeUiState(
+        GameState $state,
+        string $playerKey,
+        ?array $uiState
+    ): array {
+        $source = $uiState ?? $_GET;
+
+        $selectedCardId = (int) ($source['sel'] ?? 0);
+        if ($selectedCardId > 0) {
+            $card = $state->getCard($selectedCardId);
+            if (!$card || !$this->isSelectableBattleCard($card, $playerKey)) {
+                $selectedCardId = 0;
+            }
+        }
+
+        $rawMode = (string) ($source['mode'] ?? 'strike');
+        $modeExplicit = array_key_exists('mode', $source) && $rawMode !== '';
+        $mode = $rawMode === '' ? 'strike' : $rawMode;
+        if (!$this->isValidMode($state, $playerKey, $selectedCardId, $mode)) {
+            $mode = 'strike';
+            $modeExplicit = false;
+        }
+
+        $pile = $this->normalizePile((string) ($source['pile'] ?? ''));
+
+        return [
+            'sel' => $selectedCardId,
+            'mode' => $mode,
+            'pile' => $pile,
+            'mode_explicit' => $modeExplicit,
+        ];
+    }
+
+    private function isSelectableBattleCard(CardInstance $card, string $playerKey): bool
+    {
+        if ($card->zone !== CardInstance::ZONE_FIELD && $card->zone !== CardInstance::ZONE_FLYING) {
+            return false;
+        }
+
+        return $card->owner === $playerKey || $card->revealed;
+    }
+
+    private function isValidMode(
+        GameState $state,
+        string $playerKey,
+        int $selectedCardId,
+        string $mode
+    ): bool {
+        if ($mode === 'strike') {
+            return true;
+        }
+
+        if ($selectedCardId <= 0) {
+            return false;
+        }
+
+        $card = $state->getCard($selectedCardId);
+        if (!$card || $card->owner !== $playerKey) {
+            return false;
+        }
+
+        if ($mode === 'uchr') {
+            return BattleHelper::abilities($card)['has_uchr'];
+        }
+
+        if (!str_starts_with($mode, 'action:')) {
+            return false;
+        }
+
+        $actionKey = substr($mode, 7);
+        if ($actionKey === '') {
+            return false;
+        }
+
+        foreach ($card->prop['actions'] ?? [] as $action) {
+            if (($action['type'] ?? '') === 'uchr') {
+                continue;
+            }
+            $key = (string) ($action['key'] ?? ($action['type'] ?? ''));
+            if ($key === $actionKey) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function normalizePile(string $pile): string
+    {
+        if ($pile === '') {
+            return '';
+        }
+
+        $parts = explode('_', $pile, 2);
+        if (count($parts) !== 2) {
+            return '';
+        }
+
+        [$who, $source] = $parts;
+        if (!in_array($who, ['own', 'opp'], true)) {
+            return '';
+        }
+        if (!in_array($source, ['grave', 'exile'], true)) {
+            return '';
+        }
+
+        return $pile;
     }
 
     // ─── Поле ────────────────────────────────────────────────
@@ -900,9 +1010,9 @@ final class BattleScreen
         GameState $state,
         string $playerKey,
         string $oppKey,
-        array $cardsInfo
+        array $cardsInfo,
+        string $pile
     ): string {
-        $pile = (string) ($_GET['pile'] ?? '');
         if ($pile === '') return '';
 
         $parts = explode('_', $pile, 2);
