@@ -102,9 +102,33 @@ final class InfoPanel
         if (!empty($state->battle['any_death_messages'])) {
             $anyDeathMessageHtml = '<div class="card-choice">';
             foreach ((array) $state->battle['any_death_messages'] as $message) {
-                $text = (string) ($message['message'] ?? '');
+                $type = (string) ($message['type'] ?? '');
+
+                if ($type === 'incarnation_token_wound' && !empty($message['targets'])) {
+                    $sourceUkid = (string) ($message['source_ukid'] ?? '');
+                    $sourceName = $sourceUkid !== '' && isset($cardsInfo[$sourceUkid])
+                        ? $cardsInfo[$sourceUkid]['name']
+                        : '?';
+
+                    $parts = [];
+                    foreach ($message['targets'] as $t) {
+                        $tUkid = (string) ($t['target_ukid'] ?? '');
+                        $tName = $tUkid !== '' && isset($cardsInfo[$tUkid])
+                            ? $cardsInfo[$tUkid]['name']
+                            : '?';
+                        $dmg = (int) ($t['damage'] ?? 0);
+                        $parts[] = $tName . ' -' . $dmg . 'HP';
+                    }
+
+                    $text = $sourceName . ': ' . implode(', ', $parts);
+                } else {
+                    $text = (string) ($message['message'] ?? '');
+                }
+
                 if ($text === '') continue;
-                $anyDeathMessageHtml .= '<p class="bonus">' . htmlspecialchars($text, ENT_QUOTES) . '</p>';
+                $anyDeathMessageHtml .= '<p class="bonus">'
+                    . htmlspecialchars($text, ENT_QUOTES)
+                    . '</p>';
             }
             $anyDeathMessageHtml .= '</div>';
         }
