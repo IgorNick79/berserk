@@ -30,6 +30,7 @@ final class ChoiceRegistry
                 new InstantPickChoice(),
                 new CombatPickChoice(),
                 new ForcedStrikeAdjacentChoice(),
+                new RangedAttackRedirectChoice(),
                 new IncarnationChoice(),
                 new ValhallaPickChoice(),
                 new AnyDeathChoice(),

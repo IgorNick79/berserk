@@ -1173,8 +1173,14 @@ final class ActionResolver
     private function resolveDamage(
         CardInstance $attacker, CardInstance $target, array $action,
         string $type, int $cardId, int $targetId, string $playerKey,
-        ?int $forcedCoinSpend = null
+        ?int $forcedCoinSpend = null,
+        bool $skipRedirect = false
     ): Result {
+        if (!$skipRedirect && $this->maybeStartRangedAttackRedirect($attacker, $target, $action, $type, $cardId, $targetId, $playerKey, $forcedCoinSpend)) {
+            $this->state->bumpVersion();
+            return Result::ok(['ranged_attack_redirect_pending']);
+        }
+
         $dice   = Dice::roll();
         $level  = BattleHelper::diceToLevel($dice);
 
@@ -1386,6 +1392,182 @@ final class ActionResolver
 
         $this->state->bumpVersion();
         return Result::ok(["action:{$playerKey}:{$type}:{$cardId}->{$targetId}:dmg={$val}"]);
+    }
+
+    private function maybeStartRangedAttackRedirect(
+        CardInstance $attacker,
+        CardInstance $target,
+        array $action,
+        string $type,
+        int $cardId,
+        int $targetId,
+        string $playerKey,
+        ?int $forcedCoinSpend
+    ): bool {
+        if (!$this->isRedirectableRangedAttack($attacker, $target, $action, $type)) return false;
+        if ($target->owner === $playerKey) return false;
+        if ($target->zone !== CardInstance::ZONE_FIELD) return false;
+        if (!empty($target->flags['ranged_redirect_used_this_turn'])) return false;
+
+        $options = $this->buildRangedRedirectOptions($target, $type);
+        if (empty($options)) return false;
+
+        $this->state->battle['pending_ranged_attack_redirect'] = [
+            'owner' => $target->owner,
+            'attacker_id' => $cardId,
+            'original_target_id' => $targetId,
+            'action' => $action,
+            'action_type' => $type,
+            'player_key' => $playerKey,
+            'forced_coin_spend' => $forcedCoinSpend,
+            'options' => $options,
+        ];
+        return true;
+    }
+
+    private function isRedirectableRangedAttack(CardInstance $attacker, CardInstance $target, array $action, string $type): bool
+    {
+        if (in_array($type, ['shot', 'throw', 'discharge'], true)) return true;
+        if (!in_array($type, ['magic', 'cast'], true)) return false;
+
+        $range = CardStats::getEffectiveRange($this->state, $attacker, $action);
+        if ($range <= 0) return false;
+
+        if ($attacker->row === null || $attacker->col === null || $target->row === null || $target->col === null) {
+            return true;
+        }
+
+        $distance = abs((int) $attacker->row - (int) $target->row)
+            + abs((int) $attacker->col - (int) $target->col);
+        return $distance > 1;
+    }
+
+    /**
+     * @return array<int, array{option_id:string, source_id:int, target_id:int}>
+     */
+    private function buildRangedRedirectOptions(CardInstance $originalTarget, string $type): array
+    {
+        if (!$this->isProtectedBackRowTarget($originalTarget)) return [];
+
+        $seen = [];
+        $options = [];
+        foreach ($this->state->cards as $source) {
+            $config = $source->prop['attack_redirect'] ?? null;
+            if (!is_array($config)) continue;
+            if ($source->owner !== $originalTarget->owner) continue;
+            if ($source->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($source->dying || $source->hp <= 0) continue;
+            if (!CardStats::isInLine($this->state, $source)) continue;
+
+            $attackTypes = $config['attack_types'] ?? 'ranged';
+            if ($attackTypes !== 'ranged' && (!is_array($attackTypes) || !in_array($type, $attackTypes, true))) {
+                continue;
+            }
+
+            foreach (CardStats::getConnectedLineGroup($this->state, $source) as $candidate) {
+                if ($candidate->instanceId === $source->instanceId) continue;
+                if ($candidate->instanceId === $originalTarget->instanceId) continue;
+                if ($candidate->owner !== $source->owner) continue;
+                if ($candidate->zone !== CardInstance::ZONE_FIELD) continue;
+                if ($candidate->dying || $candidate->hp <= 0) continue;
+                if ($candidate->type !== 'creature' && $candidate->type !== 'fly') continue;
+
+                $key = (string) $candidate->instanceId;
+                if (isset($seen[$key])) continue;
+                $seen[$key] = true;
+
+                $options[] = [
+                    'option_id' => $source->instanceId . ':' . $candidate->instanceId,
+                    'source_id' => $source->instanceId,
+                    'target_id' => $candidate->instanceId,
+                ];
+            }
+        }
+        return $options;
+    }
+
+    private function isProtectedBackRowTarget(CardInstance $target): bool
+    {
+        if ($target->row === null) return false;
+        if ($target->owner === GameState::PLAYER_HOST) {
+            return in_array((int) $target->row, [1, 2], true);
+        }
+        return in_array((int) $target->row, [5, 6], true);
+    }
+
+    public function chooseRangedRedirect(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_ranged_attack_redirect'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
+            return Result::error('Нет выбора перенаправления');
+        }
+
+        $choice = (string) $cmd->get('redirect_option', $cmd->get('target_id', '0'));
+        $attacker = $this->state->getCard((int) ($pending['attacker_id'] ?? 0));
+        $original = $this->state->getCard((int) ($pending['original_target_id'] ?? 0));
+        if (!$attacker || !$original) {
+            unset($this->state->battle['pending_ranged_attack_redirect']);
+            return Result::error('Атака больше недоступна');
+        }
+
+        $target = $original;
+        $redirectInfo = null;
+        if ($choice !== '0') {
+            $selected = null;
+            foreach ((array) ($pending['options'] ?? []) as $option) {
+                if ((string) ($option['option_id'] ?? '') === $choice) {
+                    $selected = $option;
+                    break;
+                }
+            }
+            if ($selected === null) return Result::error('Неверный выбор');
+
+            $source = $this->state->getCard((int) ($selected['source_id'] ?? 0));
+            $candidate = $this->state->getCard((int) ($selected['target_id'] ?? 0));
+            if (!$source || !$candidate) return Result::error('Цель перенаправления недоступна');
+
+            $validOptions = $this->buildRangedRedirectOptions($original, (string) ($pending['action_type'] ?? ''));
+            $stillValid = false;
+            foreach ($validOptions as $option) {
+                if (($option['option_id'] ?? '') === ($selected['option_id'] ?? '')) {
+                    $stillValid = true;
+                    break;
+                }
+            }
+            if (!$stillValid) return Result::error('Цель перенаправления больше недоступна');
+            if (!empty($original->flags['ranged_redirect_used_this_turn'])) {
+                return Result::error('Это существо уже защищали перенаправлением в этот ход');
+            }
+
+            $target = $candidate;
+            $original->flags['ranged_redirect_used_this_turn'] = true;
+            $redirectInfo = [
+                'source_id' => $source->instanceId,
+                'original_target_id' => $original->instanceId,
+                'target_id' => $target->instanceId,
+            ];
+        }
+
+        unset($this->state->battle['pending_ranged_attack_redirect']);
+
+        $result = $this->resolveDamage(
+            $attacker,
+            $target,
+            (array) ($pending['action'] ?? []),
+            (string) ($pending['action_type'] ?? ''),
+            (int) ($pending['attacker_id'] ?? 0),
+            $target->instanceId,
+            (string) ($pending['player_key'] ?? $attacker->owner),
+            isset($pending['forced_coin_spend']) ? (int) $pending['forced_coin_spend'] : null,
+            true
+        );
+
+        if ($redirectInfo !== null && !empty($this->state->battle['strike'])) {
+            $this->state->battle['strike']['ranged_redirect'] = $redirectInfo;
+            $this->state->battle['strike']['target_id'] = $target->instanceId;
+        }
+
+        return $result;
     }
 
     private function targetModifierBonus(array $action, CardInstance $target): int

@@ -937,6 +937,21 @@ final class InfoPanel
                 } else {
                     $resultText .= ' (' . $damage . ' урона)';
                 }
+
+                if (!empty($strike['ranged_redirect']) && is_array($strike['ranged_redirect'])) {
+                    $redirect = $strike['ranged_redirect'];
+                    $source = $state->getCard((int) ($redirect['source_id'] ?? 0));
+                    $original = $state->getCard((int) ($redirect['original_target_id'] ?? 0));
+                    $redirectTarget = $state->getCard((int) ($redirect['target_id'] ?? 0));
+                    $sourceName = $source ? ($cardsInfo[$source->ukid]['name'] ?? $source->ukid) : '?';
+                    $originalName = $original ? ($cardsInfo[$original->ukid]['name'] ?? $original->ukid) : '?';
+                    $redirectName = $redirectTarget ? ($cardsInfo[$redirectTarget->ukid]['name'] ?? $redirectTarget->ukid) : '?';
+                    $resultText .= '<br>' . htmlspecialchars($sourceName, ENT_QUOTES)
+                        . ': атака перенаправлена с '
+                        . htmlspecialchars($originalName, ENT_QUOTES)
+                        . ' на '
+                        . htmlspecialchars($redirectName, ENT_QUOTES);
+                }
             } elseif ($kind === 'bomb_shot') {
                 $name = $strike['action_name'] ?? 'Бомба';
                 $bomb = $strike['bomb'] ?? null;

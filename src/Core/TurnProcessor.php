@@ -308,6 +308,7 @@ final class TurnProcessor
                         unset($card->flags[$flagKey]);
                     }
                 }
+                unset($card->flags['ranged_redirect_used_this_turn']);
 
                 if ($card->owner === $activeKey) {
                     if (!isset($card->markers['stun'])) {

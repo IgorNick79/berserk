@@ -109,6 +109,7 @@ final class Engine
             'choose_kobold_heal'      => $action->chooseKoboldHeal($playerKey, $cmd),
             'choose_talion_incarnation' => $action->chooseTalionIncarnation($playerKey, $cmd),
             'choose_holvert_open'     => $action->chooseHolvertOpen($playerKey, $cmd),
+            'choose_ranged_redirect'  => $action->chooseRangedRedirect($playerKey, $cmd),
             'choose_dive_cell'        => $action->chooseDiveCell($playerKey, $cmd),
             'turn_task'               => $turnPhase->runTask($playerKey, $cmd),
             'turn_sub'                => $turnPhase->runSub($playerKey, $cmd),

@@ -362,6 +362,10 @@ final class CardStats
             }
         }
 
+        if ($actionType === 'strike') {
+            $result += self::getLineStrikeAuraBonus($state, $attacker);
+        }
+
         // Собираем ability как массив
         $abilities = $attacker->prop['ability'] ?? null;
         if (!$abilities) return $result;
@@ -738,6 +742,79 @@ final class CardStats
         }
 
         return $result;
+    }
+
+    /**
+     * @return CardInstance[]
+     */
+    public static function getConnectedLineGroup(GameState $state, CardInstance $card): array
+    {
+        if ($card->zone !== CardInstance::ZONE_FIELD) return [];
+        if ($card->type === 'fly') return [];
+        if (!self::hasLine($card)) return [];
+
+        $byId = [];
+        foreach ($state->cards as $candidate) {
+            if ($candidate->owner !== $card->owner) continue;
+            if ($candidate->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($candidate->type === 'fly') continue;
+            if ($candidate->dying || $candidate->hp <= 0) continue;
+            if (!self::hasLine($candidate)) continue;
+            $byId[$candidate->instanceId] = $candidate;
+        }
+        if (!isset($byId[$card->instanceId])) return [];
+
+        $queue = [$card->instanceId];
+        $seen = [$card->instanceId => true];
+
+        while (!empty($queue)) {
+            $currentId = array_shift($queue);
+            $current = $byId[$currentId] ?? null;
+            if (!$current) continue;
+
+            foreach ($byId as $candidateId => $candidate) {
+                if (isset($seen[$candidateId])) continue;
+                $dr = abs($candidate->row - $current->row);
+                $dc = abs($candidate->col - $current->col);
+                if ($dr + $dc !== 1) continue;
+
+                $seen[$candidateId] = true;
+                $queue[] = $candidateId;
+            }
+        }
+
+        $result = [];
+        foreach (array_keys($seen) as $id) {
+            $result[] = $byId[$id];
+        }
+        return $result;
+    }
+
+    public static function areInSameConnectedLine(GameState $state, CardInstance $a, CardInstance $b): bool
+    {
+        if ($a->owner !== $b->owner) return false;
+        foreach (self::getConnectedLineGroup($state, $a) as $member) {
+            if ($member->instanceId === $b->instanceId) return true;
+        }
+        return false;
+    }
+
+    private static function getLineStrikeAuraBonus(GameState $state, CardInstance $attacker): int
+    {
+        $bonus = 0;
+        foreach ($state->cards as $source) {
+            $aura = $source->prop['line_strike_aura'] ?? null;
+            if (!is_array($aura)) continue;
+            if ($source->owner !== $attacker->owner) continue;
+            if ($source->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($source->dying || $source->hp <= 0) continue;
+            if (!self::hasLine($source)) continue;
+            if (!empty($aura['exclude_self']) && $source->instanceId === $attacker->instanceId) continue;
+            if (!self::areInSameConnectedLine($state, $source, $attacker)) continue;
+
+            $bonus += (int) ($aura['value'] ?? 1);
+        }
+        return $bonus;
     }
 
     private static function checkLineCondition(GameState $state, CardInstance $card, array $prop): bool
