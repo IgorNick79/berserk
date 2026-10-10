@@ -354,6 +354,10 @@ final class CardStats
         foreach ($attacker->modifiers as $m) {
             $stat = $m['stat'] ?? '';
             if ($stat === 'ability_strike') {
+                $lvl = $m['levels'] ?? null;
+                if (is_array($lvl) && ($level === null || !in_array($level, $lvl, true))) {
+                    continue;
+                }
                 $result += (int) ($m['value'] ?? 0);
             } elseif ($stat === 'ability_discharge' && $actionType === 'discharge') {
                 $result += (int) ($m['value'] ?? 0);

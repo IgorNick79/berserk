@@ -154,3 +154,15 @@
   - новое условие `ally_classes_near` в `checkCondition()`;
   - `getDamageReduction()` теперь читает `condition` у `damage_reduction`.
 - `debug/scenarios/eorval.json` — сценарий проверки.
+
+### Добавлено
+- Карта **Гермет** (`s1_196`): в начале боя получает бонусы в зависимости от
+  элементов в отряде — +1 move (степи), armor 1 (горы), regen 1 (болота),
+  +1 ova и +1 ovz (леса), +1 к среднему и сильному strike (тьма).
+
+### Изменено
+- `TurnProcessor::applyStartEffect` — поддержка `start.type = element_bundle`.
+- `TurnProcessor::applyStartEffects` — `refreshArmor` в конце, чтобы
+  armor-модификаторы от стартовых эффектов подхватились сразу.
+- `CardStats::getAbilityBonus` — модификатор `ability_strike` теперь
+  учитывает необязательный массив `levels`.
