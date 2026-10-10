@@ -1936,7 +1936,7 @@ final class ActionResolver
             ['pending_particle_pick',           'owner'],
             ['pending_life_gift',               'owner'],
             ['pending_nokami_wound',            'owner'],
-            ['pending_teleport_target',         'owner'], 
+            ['pending_teleport_target',         'owner'],
         ];
         foreach ($simple as [$key, $field]) {
             $p = $state->battle[$key] ?? null;
