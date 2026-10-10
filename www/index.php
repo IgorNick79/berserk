@@ -9,6 +9,7 @@ use Berserk\Core\GameRepository;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\CardInstance;
+use Berserk\Core\GameState;
 use Berserk\Core\View;
 use Berserk\Core\DeckView;
 use Berserk\Core\ResourceCalculator;
@@ -27,11 +28,117 @@ use Berserk\View\Screen\SideScreen;
 use Berserk\View\Screen\DealScreen;
 use Berserk\View\Screen\PlaceScreen;
 use Berserk\View\Screen\BattleScreen;
+use Berserk\View\Screen\BattleSnapshotRenderer;
 use Berserk\View\Screen\DraftScreen;
 use Berserk\View\Screen\SettingsScreen;
 
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
+
+function ajaxParamString(string $key, int $maxLength = 128): ?string
+{
+    if (!array_key_exists($key, $_GET) || is_array($_GET[$key])) {
+        return null;
+    }
+
+    $value = (string) $_GET[$key];
+    if (strlen($value) > $maxLength) {
+        return null;
+    }
+
+    return $value;
+}
+
+function ajaxParamInt(string $key): ?int
+{
+    $value = ajaxParamString($key, 32);
+    if ($value === null || !preg_match('/^-?\d+$/', $value)) {
+        return null;
+    }
+
+    return (int) $value;
+}
+
+function ajaxFlag(string $key): bool
+{
+    $value = ajaxParamString($key, 16);
+    if ($value === null) {
+        return false;
+    }
+
+    return in_array(strtolower($value), ['1', 'true', 'yes', 'on'], true);
+}
+
+function sendAjaxJson(array $payload, int $statusCode = 200): never
+{
+    http_response_code($statusCode);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+function buildRenderCardInfo(Db $db, GameState $state): array
+{
+    $cardsInfo = [];
+
+    $ukids = array_map(fn ($c) => $c->ukid, $state->cards);
+
+    if (!empty($state->draft)) {
+        foreach ($state->draft['grid'] ?? [] as $u) if ($u !== null) $ukids[] = $u;
+        foreach ($state->draft['pool'] ?? [] as $u) if ($u !== null) $ukids[] = $u;
+        foreach ($state->draft['picked']['host']   ?? [] as $u) $ukids[] = $u;
+        foreach ($state->draft['picked']['player'] ?? [] as $u) $ukids[] = $u;
+    }
+
+    foreach (['host', 'player'] as $key) {
+        $player = $state->getPlayer($key);
+        foreach ($player->deckCards ?? [] as $dc) {
+            if (!empty($dc['ukid'])) $ukids[] = $dc['ukid'];
+        }
+    }
+
+    $ukids = array_unique($ukids);
+
+    $elements = [];
+    $elementLabels = [];
+    foreach ($db->fetchAll("SELECT ind, code, name FROM elements") as $e) {
+        $elements[(int) $e['ind']] = (string) $e['name'];
+        $elementLabels[(string) $e['code']] = (string) $e['name'];
+    }
+
+    if (!empty($ukids)) {
+        $in = "'" . implode("','", array_map(fn ($u) => $db->escape($u), $ukids)) . "'";
+        $rows = $db->fetchAll(
+            "SELECT ukid, name, price, health, move, elite,
+                    strike_weak, strike_medium, strike_strong,
+                    element_id
+             FROM cards WHERE ukid IN ($in)"
+        );
+        foreach ($rows as $r) {
+            $cardsInfo[$r['ukid']] = [
+                'name'    => $r['name'],
+                'price'   => (int) $r['price'],
+                'health'  => (int) $r['health'],
+                'move'    => (int) $r['move'],
+                'elite'   => (bool) $r['elite'],
+                'element' => $elements[(int) $r['element_id']] ?? '—',
+                'strike'  => [
+                    'weak'   => (int) $r['strike_weak'],
+                    'medium' => (int) $r['strike_medium'],
+                    'strong' => (int) $r['strike_strong'],
+                ],
+            ];
+        }
+    }
+
+    return [$cardsInfo, $elementLabels];
+}
+
+$ajax = ajaxParamString('ajax', 32);
+$isBattleSync = $ajax === 'battle_sync';
 
 $config = require __DIR__ . '/../config/db.php';
 
@@ -59,7 +166,18 @@ if (isset($_GET['debug_roll'])) {
 }
 \Berserk\Core\Dice::init();
 
-$db      = new Db($config);
+try {
+    $db = new Db($config);
+} catch (Throwable $e) {
+    if ($isBattleSync) {
+        sendAjaxJson([
+            'ok' => false,
+            'error' => 'server_error',
+        ], 500);
+    }
+
+    throw $e;
+}
 $repo    = new GameRepository($db);
 $engine   = new Engine($db);
 $deckView = new DeckView($db);
@@ -81,6 +199,13 @@ if (isset($_GET['first'])) {
 }
 
 if ($role === null) {
+    if ($isBattleSync) {
+        sendAjaxJson([
+            'ok' => false,
+            'error' => 'missing_player_role',
+        ], 400);
+    }
+
     echo '<h1>Berserk</h1>';
     echo '<p><a href="?first">Создать партию (я первый)</a></p>';
     echo '<p><a href="?second">Присоединиться (я второй)</a></p>';
@@ -90,11 +215,27 @@ if ($role === null) {
 $userId = $role === 'host' ? 1 : 2;
 
 // ─── Находим или создаём партию ──────────────────────────────
-$gameId = isset($_GET['game']) ? (int) $_GET['game'] : 0;
+$gameId = $isBattleSync
+    ? (ajaxParamInt('game') ?? 0)
+    : (isset($_GET['game']) && !is_array($_GET['game']) ? (int) $_GET['game'] : 0);
+
+if ($isBattleSync && $gameId <= 0) {
+    sendAjaxJson([
+        'ok' => false,
+        'error' => 'invalid_game',
+    ], 400);
+}
 
 if ($gameId > 0) {
     $state = $repo->findById($gameId);
     if (!$state) {
+        if ($isBattleSync) {
+            sendAjaxJson([
+                'ok' => false,
+                'error' => 'game_not_found',
+            ], 404);
+        }
+
         http_response_code(404);
         echo "Партия #$gameId не найдена";
         exit;
@@ -107,6 +248,13 @@ if ($gameId > 0) {
 }
 
 if ($userId !== $state->hostId && $userId !== $state->playerId) {
+    if ($isBattleSync) {
+        sendAjaxJson([
+            'ok' => false,
+            'error' => 'forbidden',
+        ], 403);
+    }
+
     http_response_code(403);
     echo "Вы не участник партии #$gameId";
     exit;
@@ -118,6 +266,59 @@ $_SESSION['role']    = $role;
 
 $playerKey = $role === 'host' ? 'host' : 'player';
 $oppKey    = $state->getOpponentKey($playerKey);
+
+if ($isBattleSync) {
+    try {
+        $syncVersion = $state->persistenceVersion ?? 0;
+        $sinceVersion = ajaxParamInt('since_version');
+        $forceSnapshot = ajaxFlag('force_snapshot');
+
+        if ($state->status !== 'battle') {
+            sendAjaxJson([
+                'ok' => true,
+                'type' => 'status',
+                'sync_version' => $syncVersion,
+                'status' => $state->status,
+            ]);
+        }
+
+        if (!$forceSnapshot && $sinceVersion !== null && $sinceVersion === $syncVersion) {
+            sendAjaxJson([
+                'ok' => true,
+                'type' => 'no_change',
+                'sync_version' => $syncVersion,
+            ]);
+        }
+
+        [$cardsInfo] = buildRenderCardInfo($db, $state);
+        $snapshot = (new BattleSnapshotRenderer($tpl))->render(
+            $state,
+            $playerKey,
+            $role,
+            null,
+            $cardsInfo,
+            [
+                'sel' => ajaxParamInt('sel') ?? 0,
+                'mode' => ajaxParamString('mode', 64) ?? '',
+                'pile' => ajaxParamString('pile', 32) ?? '',
+            ]
+        );
+
+        sendAjaxJson([
+            'ok' => true,
+            'type' => 'snapshot',
+            'sync_version' => $syncVersion,
+            'status' => $state->status,
+            'ui' => $snapshot['ui'],
+            'fragments' => $snapshot['fragments'],
+        ]);
+    } catch (Throwable) {
+        sendAjaxJson([
+            'ok' => false,
+            'error' => 'server_error',
+        ], 500);
+    }
+}
 
 // ─── Обработка команды ────────────────────────────────────────
 $message = null;
@@ -279,59 +480,7 @@ $screenName = null;
 $screenData = [];
 
 // Загружаем все карты, которые есть в партии — для рендера
-$cardsInfo = [];
-
-$ukids = array_map(fn ($c) => $c->ukid, $state->cards);
-
-if (!empty($state->draft)) {
-    foreach ($state->draft['grid'] ?? [] as $u) if ($u !== null) $ukids[] = $u;
-    foreach ($state->draft['pool'] ?? [] as $u) if ($u !== null) $ukids[] = $u;
-    foreach ($state->draft['picked']['host']   ?? [] as $u) $ukids[] = $u;
-    foreach ($state->draft['picked']['player'] ?? [] as $u) $ukids[] = $u;
-}
-
-// DeckCards игроков (после драфта, для view/deal)
-foreach (['host', 'player'] as $key) {
-    $player = $state->getPlayer($key);
-    foreach ($player->deckCards ?? [] as $dc) {
-        if (!empty($dc['ukid'])) $ukids[] = $dc['ukid'];
-    }
-}
-
-$ukids = array_unique($ukids);
-
-// Стихии — один раз
-$elements = [];
-$elementLabels = [];
-foreach ($db->fetchAll("SELECT ind, code, name FROM elements") as $e) {
-    $elements[(int) $e['ind']] = (string) $e['name'];
-    $elementLabels[(string) $e['code']] = (string) $e['name'];
-}
-
-if (!empty($ukids)) {
-    $in = "'" . implode("','", array_map(fn ($u) => $db->escape($u), $ukids)) . "'";
-    $rows = $db->fetchAll(
-        "SELECT ukid, name, price, health, move, elite,
-                strike_weak, strike_medium, strike_strong,
-                element_id
-         FROM cards WHERE ukid IN ($in)"
-    );
-    foreach ($rows as $r) {
-        $cardsInfo[$r['ukid']] = [
-            'name'    => $r['name'],
-            'price'   => (int) $r['price'],
-            'health'  => (int) $r['health'],
-            'move'    => (int) $r['move'],
-            'elite'   => (bool) $r['elite'],
-            'element' => $elements[(int) $r['element_id']] ?? '—',
-            'strike'  => [
-                'weak'   => (int) $r['strike_weak'],
-                'medium' => (int) $r['strike_medium'],
-                'strong' => (int) $r['strike_strong'],
-            ],
-        ];
-    }
-}
+[$cardsInfo, $elementLabels] = buildRenderCardInfo($db, $state);
 
 switch ($state->status) {
     case 'mode':
