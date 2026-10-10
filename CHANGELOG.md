@@ -154,3 +154,22 @@
   - новое условие `ally_classes_near` в `checkCondition()`;
   - `getDamageReduction()` теперь читает `condition` у `damage_reduction`.
 - `debug/scenarios/eorval.json` — сценарий проверки.
+
+### Добавлено
+- Карта **Поганище** (`s1_164`): при получении жетона инкарнации —
+  ранить X любых существ на поле на 1, где X — новый номинал жетона.
+  Реализовано общим триггером `prop.on_incarnation_token`.
+- `IncarnationTokenProcessor` — единая точка для эффектов на получение
+  жетона инкарнации (пока поддержан `wound_any_creature`).
+- `IncarnationWoundChoice` — Choice-окно выбора N целей с toggle
+  «Все существа / Только чужие».
+
+### Изменено
+- `TurnProcessor::processIncarnation` и `ActionResolver::addIncarnationToken`
+  дёргают `IncarnationTokenProcessor::onTokenGranted` сразу после инкремента
+  значения, до сброса в 0 и до `incarnation_ready`.
+- `TurnPhaseProcessor::hasPendingFromTask` учитывает
+  `pending_incarnation_wound` наравне с `pending_incarnation` —
+  фаза встаёт на паузу до выбора цели.
+- `ChoiceRegistry::all()` — `IncarnationWoundChoice` зарегистрирован
+  перед `IncarnationChoice`, чтобы могильная хватка разрешалась первой.

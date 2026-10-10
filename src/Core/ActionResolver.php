@@ -2378,6 +2378,10 @@ final class ActionResolver
 
         $card->markers['incarnation']['value'] =
             (int) ($card->markers['incarnation']['value'] ?? 0) + 1;
+
+        $newValue = (int) $card->markers['incarnation']['value'];
+        (new IncarnationTokenProcessor($this->state, $this->engine))
+            ->onTokenGranted($card, $newValue);
     }
 
     private function recordTalionIncarnationToken(CardInstance $source, CardInstance $target): void
@@ -4424,6 +4428,83 @@ final class ActionResolver
         $this->engine->flushDeadeatQueue($this->state);
         $this->state->bumpVersion();
         return Result::ok(["greed_teleport:{$row}_{$col}"]);
+    }
+
+    public function chooseIncarnationWound(string $playerKey, Command $cmd): Result
+    {
+        $queue = $this->state->battle['pending_incarnation_wound'] ?? [];
+        if (empty($queue)) {
+            return Result::error('Нет ожидающего выбора');
+        }
+
+        $item = $queue[0];
+        if (($item['owner'] ?? null) !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $source = $this->state->getCard((int) $item['source_id']);
+        if (!$source) {
+            array_shift($this->state->battle['pending_incarnation_wound']);
+            if (empty($this->state->battle['pending_incarnation_wound'])) {
+                unset($this->state->battle['pending_incarnation_wound']);
+            }
+            return Result::error('Источник не найден');
+        }
+
+        $raw = $cmd->get('target_ids', []);
+        if (!is_array($raw)) $raw = [$raw];
+        $targetIds = array_values(array_unique(array_map('intval', $raw)));
+
+        $count = (int) $item['count'];
+        if (count($targetIds) !== $count) {
+            return Result::error('Нужно выбрать ровно ' . $count
+                . ' цел' . ($count === 1 ? 'ь' : 'и'));
+        }
+
+        foreach ($targetIds as $tid) {
+            if (!in_array($tid, $item['candidates'], true)) {
+                return Result::error('Неверная цель');
+            }
+        }
+
+        $value = (int) $item['value'];
+        $hits = [];
+
+        foreach ($targetIds as $tid) {
+            $target = $this->state->getCard($tid);
+            if (!$target) continue;
+            if ($target->dying || $target->hp <= 0) continue;
+
+            $hpBefore = $target->hp;
+            $this->engine->applyDamage($this->state, $target, $value, 'impact', $source);
+            $hits[] = [
+                'target_id'   => $target->instanceId,
+                'target_ukid' => $target->ukid,
+                'damage'      => max(0, $hpBefore - $target->hp),
+            ];
+        }
+
+        if (!empty($hits)) {
+            $this->state->battle['any_death_messages'][] = [
+                'source_id'   => $source->instanceId,
+                'source_ukid' => $source->ukid,
+                'type'        => 'incarnation_token_wound',
+                'targets'     => $hits,
+                'message'     => 'Могильная хватка: ранено ' . count($hits) . ' существ',
+            ];
+        }
+
+        array_shift($this->state->battle['pending_incarnation_wound']);
+        if (empty($this->state->battle['pending_incarnation_wound'])) {
+            unset($this->state->battle['pending_incarnation_wound']);
+        }
+
+        if (!empty($this->state->battle['turn_phase'])) {
+            (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+        }
+
+        $this->state->bumpVersion();
+        return Result::ok(['incarnation_wound:' . count($hits)]);
     }
 
     public function chooseNokamiWound(string $playerKey, Command $cmd): Result

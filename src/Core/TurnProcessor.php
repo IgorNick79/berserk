@@ -442,9 +442,14 @@ final class TurnProcessor
             if (empty($card->markers['incarnation'])) continue;
 
             $card->markers['incarnation']['value']++;
+            $newValue = (int) $card->markers['incarnation']['value'];
             $threshold = (int) ($card->markers['incarnation']['threshold'] ?? 0);
 
-            if ($threshold > 0 && $card->markers['incarnation']['value'] >= $threshold) {
+            // Триггер "получил жетон" — до сброса в 0 и до ready
+            (new IncarnationTokenProcessor($this->state, $this->engine))
+                ->onTokenGranted($card, $newValue);
+
+            if ($threshold > 0 && $newValue >= $threshold) {
                 $card->markers['incarnation']['value'] = 0;
                 $card->flags['incarnation_ready'] = true;
                 $events[$card->instanceId] = [

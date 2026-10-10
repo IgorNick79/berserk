@@ -949,7 +949,9 @@ final class TurnPhaseProcessor
         [$base] = explode(':', $type . ':') + [''];
 
         if ($base === 'poison' && !empty($battle['pending_any_death'])) return true;
-        if ($base === 'incarnation' && !empty($battle['pending_incarnation'])) return true;
+        if ($base === 'incarnation'
+            && (!empty($battle['pending_incarnation'])
+                || !empty($battle['pending_incarnation_wound']))) return true;
         if ($base === 'turn_start' || $base === 'opponent_turn_start') {
             if (!empty($battle['pending_whip'])) return true;
             if (!empty($battle['pending_gate_pick'])) return true;
