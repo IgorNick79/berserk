@@ -69,6 +69,7 @@ final class Badge
 
         $sums    = [];
         $expires = [];
+        $propAbilityStrike = 0;
 
         foreach ($card->modifiers as $m) {
             $stat = (string) ($m['stat'] ?? '');
@@ -87,14 +88,18 @@ final class Badge
                 if ($stat === 'direct') {
                     $sums['direct'] = 1;
                 } else {
+                    if ($stat === 'ability_strike') {
+                        $propAbilityStrike += (int) $val;
+                    }
                     $sums[$stat] = ($sums[$stat] ?? 0) + (int) $val;
                 }
             }
         }
 
+        $conditionalStrikeDeduction = self::conditionalStrikeDeduction($card, $state);
         $conditionalStrikeBadges = self::conditionalStrikeBadges($card, $state);
-        foreach ($conditionalStrikeBadges as $badge) {
-            $sums['ability_strike'] = ($sums['ability_strike'] ?? 0) - $badge['value'];
+        if ($propAbilityStrike !== 0 && $conditionalStrikeDeduction !== 0) {
+            $sums['ability_strike'] = ($sums['ability_strike'] ?? 0) - $conditionalStrikeDeduction;
             if (($sums['ability_strike'] ?? 0) === 0) {
                 unset($sums['ability_strike']);
             }
@@ -118,6 +123,27 @@ final class Badge
      */
     private static function conditionalStrikeBadges(CardInstance $card, ?GameState $state): array
     {
+        return self::conditionalStrikeAbilities($card, $state, false);
+    }
+
+    private static function conditionalStrikeDeduction(CardInstance $card, ?GameState $state): int
+    {
+        $sum = 0;
+        foreach (self::conditionalStrikeAbilities($card, $state, true) as $ability) {
+            $sum += (int) $ability['value'];
+        }
+        return $sum;
+    }
+
+    /**
+     * @return array<int,array{element:string,value:int}>
+     */
+    private static function conditionalStrikeAbilities(
+        CardInstance $card,
+        ?GameState $state,
+        bool $includeLevelRestricted
+    ): array
+    {
         $abilities = $card->prop['ability'] ?? null;
         if ($abilities === null) return [];
         if (isset($abilities['value'])) $abilities = [$abilities];
@@ -130,6 +156,7 @@ final class Badge
             if (empty($ability['element'])) continue;
             if (!empty($ability['types'])) continue;
             if (!empty($ability['only']) && !in_array('strike', $ability['only'], true)) continue;
+            if (!$includeLevelRestricted && !empty($ability['level'])) continue;
             if (!empty($ability['condition'])
                 && ($state === null || !CardStats::checkCondition($ability['condition'], $state, $card))) {
                 continue;

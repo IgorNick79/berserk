@@ -50,6 +50,14 @@ badgeAssert(str_contains($conditional, '/assets/images/element-mountains.png'), 
 badgeAssert(str_contains($conditional, 'alt="по горным"'), 'Conditional element ability should label the element icon');
 badgeAssert(!str_contains($conditional, 'marker-strike'), 'Conditional element ability should not also render as a permanent strike badge');
 
+$conditionalWithoutState = Badge::forCard(badgeCard([
+    'ability' => ['value' => 1, 'element' => 'mountains'],
+]), null);
+badgeAssert(str_contains($conditionalWithoutState, 'marker-conditional-strike'), 'Conditional element ability should render without GameState');
+badgeAssert(str_contains($conditionalWithoutState, 'удар +1'), 'Conditional element ability without GameState should keep its value');
+badgeAssert(!str_contains($conditionalWithoutState, 'marker-strike'), 'Conditional element ability without GameState should not create a permanent strike badge');
+badgeAssert(!str_contains($conditionalWithoutState, 'удар -1'), 'Conditional element ability without GameState should not create a false negative strike badge');
+
 $unconditional = Badge::forCard(badgeCard([
     'ability' => ['value' => 2],
 ]), $state);
@@ -67,6 +75,16 @@ badgeAssert(substr_count($mixed, 'marker marker-conditional-strike') === 1, 'Mix
 badgeAssert(str_contains($mixed, 'marker-strike'), 'Mixed abilities should keep the unconditional strike badge');
 badgeAssert(str_contains($mixed, 'удар +2'), 'Mixed abilities should not subtract the unconditional bonus');
 
+$mixedWithoutState = Badge::forCard(badgeCard([
+    'ability' => ['value' => 1, 'element' => 'mountains'],
+], [
+    ['stat' => 'ability_strike', 'value' => 3],
+]), null);
+badgeAssert(str_contains($mixedWithoutState, 'marker-conditional-strike'), 'Mixed no-state card should keep conditional badge');
+badgeAssert(str_contains($mixedWithoutState, 'marker-strike'), 'Mixed no-state card should keep applied strike modifier');
+badgeAssert(str_contains($mixedWithoutState, 'удар +3'), 'Mixed no-state card should not subtract conditional prop from applied modifier');
+badgeAssert(!str_contains($mixedWithoutState, 'удар +2'), 'Mixed no-state card should not turn +3 modifier into +2');
+
 $modifier = Badge::forCard(badgeCard([], [
     ['stat' => 'ability_strike', 'value' => 3],
 ]), $state);
@@ -78,5 +96,21 @@ $unknown = Badge::forCard(badgeCard([
 ]), $state);
 badgeAssert(str_contains($unknown, 'по unknown_element'), 'Unknown elements should fall back to visible text');
 badgeAssert(!str_contains($unknown, '<img'), 'Unknown elements should not render broken images');
+
+$levelRestricted = Badge::forCard(badgeCard([
+    'ability' => ['value' => 1, 'element' => 'mountains', 'level' => ['strong']],
+]), $state);
+badgeAssert(!str_contains($levelRestricted, 'marker-strike'), 'Level-restricted element ability should not render as permanent strike');
+badgeAssert(!str_contains($levelRestricted, 'marker-conditional-strike'), 'Level-restricted element ability needs level-specific UX before rendering as conditional badge');
+
+$mixedLevelRestricted = Badge::forCard(badgeCard([
+    'ability' => [
+        ['value' => 1, 'element' => 'mountains', 'level' => ['strong']],
+        ['value' => 2],
+    ],
+]), $state);
+badgeAssert(str_contains($mixedLevelRestricted, 'marker-strike'), 'Mixed level-restricted card should keep unconditional strike badge');
+badgeAssert(str_contains($mixedLevelRestricted, 'удар +2'), 'Mixed level-restricted card should not include level-restricted value in permanent badge');
+badgeAssert(!str_contains($mixedLevelRestricted, 'marker-conditional-strike'), 'Mixed level-restricted card should not render incomplete conditional badge');
 
 echo "Badge ability element tests passed\n";
