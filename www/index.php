@@ -703,6 +703,7 @@ $opp = $state->getPlayer($oppKey);
 // Определяем, что рендерить
 $screenName = null;
 $screenData = [];
+$scriptsHtml = '';
 
 // Загружаем все карты, которые есть в партии — для рендера
 [$cardsInfo, $elementLabels] = buildRenderCardInfo($db, $state);
@@ -776,6 +777,18 @@ switch ($state->status) {
             ->prepare($state, $playerKey, $role, $message, $cardsInfo);
         $screenName = $result['screen'];
         $screenData = $result['data'];
+        $roleParam = $role === 'host' ? 'first' : 'second';
+        $syncUrl = '?' . $roleParam . '&game=' . $state->gameId . '&ajax=battle_sync';
+        $ui = $screenData['ui'] ?? ['sel' => 0, 'mode' => 'strike', 'pile' => ''];
+        $scriptsHtml = '<script src="/assets/js/battle-sync.js?v={{rkey}}"'
+            . ' data-sync-url="' . htmlspecialchars($syncUrl, ENT_QUOTES) . '"'
+            . ' data-game-id="' . (int) $state->gameId . '"'
+            . ' data-role="' . htmlspecialchars($role, ENT_QUOTES) . '"'
+            . ' data-version="' . (int) ($state->persistenceVersion ?? 0) . '"'
+            . ' data-sel="' . (int) ($ui['sel'] ?? 0) . '"'
+            . ' data-mode="' . htmlspecialchars((string) ($ui['mode'] ?? 'strike'), ENT_QUOTES) . '"'
+            . ' data-pile="' . htmlspecialchars((string) ($ui['pile'] ?? ''), ENT_QUOTES) . '"'
+            . ' defer></script>';
         break;
 
     case 'game_over':
@@ -808,6 +821,7 @@ $page = $tpl->parse('page.tpl', [
     'game_id' => $state->gameId,
     'role'    => $role,
     'screen'  => $screenHtml,
+    'scripts' => $scriptsHtml,
 ]);
 
 echo $page;
