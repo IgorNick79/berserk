@@ -704,8 +704,11 @@ final class StrikeResolver
 
         $attackDice = Dice::roll();
 
+        $defendWhileClosed = !empty($defendCard->prop['defend_while_closed']);
+        $isClosed = $defendCard->closed && !$defendWhileClosed;
+
         $noDefendDice = !empty($strike['friendly_fire'])
-            || $defendCard->closed
+            || $isClosed
             || CardStats::hasUnanswer($this->state, $attacker, $defendCard);
         $defendDice = $noDefendDice ? 0 : Dice::roll();
 
@@ -1492,7 +1495,8 @@ final class StrikeResolver
             : $this->state->getCard($strike['target_id']);
 
         $attackValue = (int) ($strike['attack_dice'] ?? 0) + (int) ($strike['attack_mod'] ?? 0);
-        $defendValue = $defendCard->closed
+        $defendWhileClosed = !empty($defendCard->prop['defend_while_closed']);
+        $defendValue = ($defendCard->closed && !$defendWhileClosed)
             ? 0
             : (int) ($strike['defend_dice'] ?? 0) + (int) ($strike['defend_mod'] ?? 0);
 
