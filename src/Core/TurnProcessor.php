@@ -524,9 +524,7 @@ final class TurnProcessor
         if (!empty($this->state->battle['pending_incarnation'])) {
             foreach ($this->state->battle['any_death_messages'] ?? [] as $m) {
                 if (($m['type'] ?? '') === 'incarnation_token_wound') {
-                    $this->state->battle['pending_incarnation_ack'] = [
-                        'owner' => $activeKey,
-                    ];
+                    $this->state->battle['pending_incarnation_ack'] = true;
                     break;
                 }
             }

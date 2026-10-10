@@ -23,20 +23,30 @@ final class IncarnationAckChoice implements ChoiceHandlerInterface
         string $baseUrl,
         string $role
     ): ?PanelSpec {
-        $ack = $state->battle['pending_incarnation_ack'] ?? null;
-        if (!$ack) return null;
+        if (empty($state->battle['pending_incarnation_ack'])) return null;
 
-        if (($ack['owner'] ?? null) !== $playerKey) {
-            return new PanelSpec(
-                title: 'Могильная хватка',
-                isMine: false,
-            );
+        $parts = [];
+        foreach ($state->battle['any_death_messages'] ?? [] as $m) {
+            if (($m['type'] ?? '') !== 'incarnation_token_wound') continue;
+
+            $srcUkid = (string) ($m['source_ukid'] ?? '');
+            $srcName = $cardsInfo[$srcUkid]['name'] ?? $srcUkid;
+
+            $hits = [];
+            foreach ((array) ($m['targets'] ?? []) as $t) {
+                $tUkid = (string) ($t['target_ukid'] ?? '');
+                $tName = $cardsInfo[$tUkid]['name'] ?? $tUkid;
+                $dmg   = (int) ($t['damage'] ?? 0);
+                $hits[] = $tName . ' -' . $dmg . 'HP';
+            }
+
+            $parts[] = $srcName . ': ' . implode(', ', $hits);
         }
 
-        $text = $this->formatEntries($ack['entries'] ?? [], $cardsInfo);
+        $title = empty($parts) ? 'Могильная хватка' : implode('; ', $parts);
 
         return new PanelSpec(
-            title: $text . '. Готов к инкарнации.',
+            title: $title,
             isMine: true,
             buttons: [[
                 'label' => 'Продолжить',
@@ -45,47 +55,14 @@ final class IncarnationAckChoice implements ChoiceHandlerInterface
         );
     }
 
-    /**
-     * @param array<int, array{source_ukid:string,targets:array}> $entries
-     */
-    private function formatEntries(array $entries, array $cardsInfo): string
-    {
-        if (empty($entries)) {
-            return 'Могильная хватка сработала';
-        }
-
-        $parts = [];
-        foreach ($entries as $entry) {
-            $srcUkid = (string) ($entry['source_ukid'] ?? '');
-            $srcName = $srcUkid !== '' && isset($cardsInfo[$srcUkid])
-                ? $cardsInfo[$srcUkid]['name']
-                : $srcUkid;
-
-            $hits = [];
-            foreach ($entry['targets'] as $t) {
-                $tUkid = (string) ($t['target_ukid'] ?? '');
-                $tName = $tUkid !== '' && isset($cardsInfo[$tUkid])
-                    ? $cardsInfo[$tUkid]['name']
-                    : $tUkid;
-                $dmg = (int) ($t['damage'] ?? 0);
-                $hits[] = $tName . ' -' . $dmg . 'HP';
-            }
-
-            $parts[] = $srcName . ': ' . implode(', ', $hits);
-        }
-
-        return implode('; ', $parts);
-    }
-
     public function apply(
         GameState $state,
         Engine $engine,
         string $playerKey,
         Command $cmd
     ): Result {
-        $ack = $state->battle['pending_incarnation_ack'] ?? null;
-        if (!$ack || ($ack['owner'] ?? null) !== $playerKey) {
-            return Result::error('Не ваш выбор');
+        if (empty($state->battle['pending_incarnation_ack'])) {
+            return Result::error('Нечего подтверждать');
         }
 
         unset($state->battle['pending_incarnation_ack']);
