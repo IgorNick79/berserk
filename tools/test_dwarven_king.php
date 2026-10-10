@@ -138,6 +138,14 @@ function dkApply(GameState $state, string $playerKey, Command $cmd): \Berserk\Co
     return (new Engine())->apply($state, $playerKey, $cmd);
 }
 
+function dkRedirectOptions(GameState $state, CardInstance $originalTarget, string $type = 'shot'): array
+{
+    $resolver = new \Berserk\Core\ActionResolver($state, new Engine());
+    $method = new ReflectionMethod($resolver, 'buildRangedRedirectOptions');
+    $method->setAccessible(true);
+    return $method->invoke($resolver, $originalTarget, $type);
+}
+
 function dkCardsInfo(): array
 {
     return [
@@ -147,6 +155,7 @@ function dkCardsInfo(): array
         'card_4' => ['name' => 'Дальний союзник'],
         'card_5' => ['name' => 'Второй король'],
         'card_6' => ['name' => 'Королевская цель'],
+        'card_7' => ['name' => 'Арбалетчик'],
         'shooter_9' => ['name' => 'Стрелок'],
     ];
 }
@@ -171,12 +180,65 @@ $state = dkState(
 );
 dkAssert(CardStats::getStrikeValue($state, $state->getCard(2), $state->getCard(9), 'weak') === 3, 'Ally in King line should get +1 strike.');
 dkAssert(CardStats::getStrikeValue($state, $state->getCard(1), $state->getCard(9), 'weak') === 1, 'King should not buff himself.');
-$state->addCard(dkCard(['instanceId' => 5, 'ukid' => 'card_5', 'row' => 5, 'col' => 2]));
+$state->addCard(dkCard(['instanceId' => 5, 'ukid' => 'card_5', 'row' => 5, 'col' => 5]));
 dkAssert(CardStats::getStrikeValue($state, $state->getCard(2), $state->getCard(9), 'weak') === 4, 'Two Kings should stack their strike aura.');
-dkAssert(CardStats::getStrikeValue($state, $state->getCard(1), $state->getCard(9), 'weak') === 2, 'Kings should buff each other.');
+dkAssert(CardStats::getStrikeValue($state, $state->getCard(1), $state->getCard(9), 'weak') === 1, 'Non-adjacent Kings should not buff through another ally.');
 $state->getCard(2)->row = 4;
 $state->getCard(2)->col = 4;
 dkAssert(CardStats::getStrikeValue($state, $state->getCard(2), $state->getCard(9), 'weak') === 2, 'Ally outside connected line should not get King aura.');
+
+$state = dkState(
+    dkCard(['instanceId' => 1, 'row' => 5, 'col' => 3]),
+    dkCard(['instanceId' => 5, 'ukid' => 'card_5', 'row' => 5, 'col' => 2]),
+    dkCreature(9, GameState::PLAYER_HOST, 1, 3, ['prop' => []])
+);
+dkAssert(CardStats::getStrikeValue($state, $state->getCard(1), $state->getCard(9), 'weak') === 2, 'Adjacent Kings should buff each other.');
+
+$state = dkState(
+    dkShooter(9, GameState::PLAYER_HOST, 1, 3),
+    dkCard(['instanceId' => 4, 'row' => 3, 'col' => 3]),
+    dkCreature(1, GameState::PLAYER_PLAYER, 3, 4),
+    dkCreature(2, GameState::PLAYER_PLAYER, 3, 2),
+    dkCreature(3, GameState::PLAYER_PLAYER, 2, 4, ['ukid' => 'card_7']),
+    dkCreature(6, GameState::PLAYER_PLAYER, 5, 5)
+);
+$options = dkRedirectOptions($state, $state->getCard(6));
+$optionTargetIds = array_map(static fn(array $option): int => (int) $option['target_id'], $options);
+sort($optionTargetIds);
+dkAssert($optionTargetIds === [1, 2], 'Exact manual formation should include direct targets #1 and #2 but not diagonal chained #3.');
+dkAssert(CardStats::getStrikeValue($state, $state->getCard(3), $state->getCard(9), 'weak') === 2, 'Diagonal chained Arbalester should not receive King strike aura.');
+
+$state = dkState(
+    dkShooter(9, GameState::PLAYER_HOST, 1, 3),
+    dkCard(['instanceId' => 4, 'row' => 5, 'col' => 3]),
+    dkCreature(1, GameState::PLAYER_PLAYER, 5, 4),
+    dkCreature(2, GameState::PLAYER_PLAYER, 5, 2),
+    dkCreature(3, GameState::PLAYER_PLAYER, 4, 4, ['ukid' => 'card_7']),
+    dkCreature(6, GameState::PLAYER_PLAYER, 5, 5)
+);
+$result = dkApply($state, GameState::PLAYER_HOST, new Command('action', [
+    'card_id' => 9,
+    'target_id' => 6,
+    'action_key' => 'shot',
+]));
+dkAssert($result->success, $result->error ?? 'Manual formation setup should start redirect choice.');
+$optionTargetIds = array_map(static fn(array $option): int => (int) $option['target_id'], $state->battle['pending_ranged_attack_redirect']['options'] ?? []);
+sort($optionTargetIds);
+dkAssert($optionTargetIds === [1, 2], 'Only direct King line members should be redirect options on protected rows.');
+$state->battle['pending_ranged_attack_redirect']['options'][] = [
+    'option_id' => '4:3',
+    'source_id' => 4,
+    'target_id' => 3,
+];
+$result = dkApply($state, GameState::PLAYER_PLAYER, new Command('choose_ranged_redirect', [
+    'redirect_option' => '4:3',
+]));
+dkAssert(!$result->success, 'Server should reject stale manual redirect option outside King line.');
+dkAssert(!empty($state->battle['pending_ranged_attack_redirect']), 'Rejected stale redirect should leave pending intact.');
+$result = dkApply($state, GameState::PLAYER_PLAYER, new Command('choose_ranged_redirect', [
+    'redirect_option' => (string) $state->battle['pending_ranged_attack_redirect']['options'][0]['option_id'],
+]));
+dkAssert($result->success, $result->error ?? 'Valid direct-line redirect should still work after stale option rejection.');
 
 $state = dkState(
     dkShooter(9, GameState::PLAYER_HOST, 1, 3),
@@ -196,6 +258,17 @@ dkAssert(($pending['owner'] ?? null) === GameState::PLAYER_PLAYER, 'Redirect pen
 dkAssert(count($pending['options'] ?? []) === 1, 'Redirect should offer one eligible line target.');
 dkAssert(($pending['options'][0]['target_id'] ?? null) === 3, 'Redirect option should target another creature in King line.');
 dkAssert(($pending['options'][0]['source_id'] ?? null) === 1, 'Redirect option should preserve concrete King source.');
+$html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render(
+    $state,
+    GameState::PLAYER_PLAYER,
+    'host',
+    dkCardsInfo(),
+    '/battle?first&game=67'
+);
+dkAssert(str_contains($html, 'name="first"'), 'Redirect form should preserve first-side URL parameter.');
+dkAssert(str_contains($html, 'name="game" value="67"'), 'Redirect form should preserve game id.');
+dkAssert(str_contains($html, 'name="cmd" value="choose_ranged_redirect"'), 'Redirect form should submit the redirect command.');
+dkAssert(str_contains($html, 'value="0"'), 'Redirect decline option should be submitted through the same preserved-context form.');
 $beforeOriginalHp = $state->getCard(2)->hp;
 $beforeRedirectHp = $state->getCard(3)->hp;
 $result = dkApply($state, GameState::PLAYER_PLAYER, new Command('choose_ranged_redirect', [

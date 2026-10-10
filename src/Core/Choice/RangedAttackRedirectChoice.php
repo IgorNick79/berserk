@@ -10,6 +10,7 @@ use Berserk\Core\Command;
 use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\Result;
+use Berserk\View\Ui\Form;
 use Berserk\View\Ui\PanelSpec;
 
 final class RangedAttackRedirectChoice implements ChoiceHandlerInterface
@@ -64,7 +65,7 @@ final class RangedAttackRedirectChoice implements ChoiceHandlerInterface
                 'type' => 'radio',
                 'name' => 'redirect_option',
                 'items' => $items,
-                'hidden' => ['cmd' => 'choose_ranged_redirect'],
+                'hidden' => Form::battleHidden($role, $state->gameId, 'choose_ranged_redirect'),
                 'submit' => 'Подтвердить',
             ],
         );
