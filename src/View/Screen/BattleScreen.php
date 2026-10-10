@@ -183,7 +183,7 @@ final class BattleScreen
                         $hpText   = '?/?';
                     } else {
                         $nameHtml = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
-                        $hpText   = $card->hp . '/' . $card->hpMax;;
+                        $hpText   = $card->hp . '/' . $this->displayHpMax($card);
                     }
 
                     $ownerClass  = $card->owner === $playerKey ? 'own' : 'enemy';
@@ -301,7 +301,7 @@ final class BattleScreen
 
                 $info     = $cardsInfo[$card->ukid] ?? null;
                 $nameHtml = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
-                $hpText   = $card->hp . '/' . $card->hpMax;
+                $hpText   = $card->hp . '/' . $this->displayHpMax($card);
                 $ownerClass = $card->owner === $playerKey ? 'own' : 'enemy';
                 $cellClass .= ' ' . $ownerClass;
                 if ($card->closed) {
@@ -825,12 +825,25 @@ final class BattleScreen
             'name'         => htmlspecialchars($info['name'], ENT_QUOTES),
             'mode_buttons' => $modeButtons,
             'hp'           => $c->hp,
-            'hp_max'       => $info['health'],
+            'hp_max'       => $this->displayHpMax($c, $info),
             'move'         => $c->move,
             'move_max'     => $c->moveMax,
             'coins_line'   => $coinsLine,
             'status_html'  => $statusHtml,
         ]);
+    }
+
+    private function displayHpMax(CardInstance $card, ?array $info = null): string
+    {
+        if ($card->hpMax === 999 && (int) ($card->prop['hp_max_override'] ?? 0) === 999) {
+            return '∞';
+        }
+
+        if ($info !== null && isset($info['health'])) {
+            return (string) $info['health'];
+        }
+
+        return (string) $card->hpMax;
     }
 
     private function linkedRecruitBattleHint(GameState $state, CardInstance $card, array $cardsInfo): string
