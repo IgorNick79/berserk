@@ -470,6 +470,7 @@ final class BattleHelper
                 }
             }
 
+            $forced = CardStats::getForcedStrikeTarget($state, $card);
             foreach ($state->cards as $target) {
                 if ($alreadyHitId > 0 && $target->instanceId === $alreadyHitId) continue;
                 if ($target->zone !== CardInstance::ZONE_FIELD
@@ -478,6 +479,18 @@ final class BattleHelper
                 if ($target->owner === $playerKey && !$allowFriendlyFire) continue;
 
                 $targetIsFlying = ($target->zone === CardInstance::ZONE_FLYING);
+
+                if ($forced !== null) {
+                    $dr = abs($target->row - $card->row);
+                    $dc = abs($target->col - $card->col);
+                    if (!$target->closed
+                        || $target->owner === $playerKey
+                        || $dr > 1
+                        || $dc > 1
+                        || ($dr + $dc) === 0) {
+                        continue;
+                    }
+                }
 
                 if (CardStats::hasDefense($state, $target, 'strike', $card)) {
                     continue;
