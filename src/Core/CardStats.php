@@ -52,6 +52,11 @@ final class CardStats
         return $value;
     }
 
+    public static function hasClass(CardInstance $card, string $class): bool
+    {
+        return in_array($class, $card->classes, true);
+    }
+
     public static function canExecuteTarget(
         GameState $state,
         CardInstance $attacker,
@@ -196,8 +201,8 @@ final class CardStats
             'throw'     => ['zot', 'zoda'],
             'shot'      => ['zov', 'zoda'],
             'discharge' => ['zoda', 'zoz', 'zom', 'zor'],
-            'magic'     => ['zoz', 'zom'],
-            'cast'      => ['zom'],
+            'magic'     => ['zom'],
+            'cast'      => ['zoz', 'zom'],
         ];
 
         $defs = array_merge($map[$actionType] ?? [], $universal);
@@ -541,6 +546,7 @@ final class CardStats
                 if (isset($r['attacker_type']) && $attacker->type !== $r['attacker_type']) continue;
                 if (!empty($r['line']) && !self::isInLine($state, $target)) continue;
                 if (isset($r['attacker_move_min']) && (int) $attacker->moveMax < (int) $r['attacker_move_min']) continue;
+                if (!empty($r['condition']) && !self::checkCondition($r['condition'], $state, $target)) continue;
 
                 if (!empty($r['attacker_direct'])) {
                     if (!self::isDirectStrike($state, $attacker, $target)) continue;
@@ -782,6 +788,8 @@ final class CardStats
             return match ($type) {
                 'enemies_near' => self::countEnemiesNearMatching($state, $card, $condition)
                     >= (int) ($condition['count'] ?? 1),
+                'ally_classes_near' => self::countClassesNear($state, $card)
+                    >= (int) ($condition['count'] ?? 4),
                 default => true,
             };
         }
@@ -1198,6 +1206,28 @@ final class CardStats
         return $allies > $enemies;
     }
 
+    public static function countClassesNear(GameState $state, CardInstance $card): int
+    {
+        if ($card->zone !== CardInstance::ZONE_FIELD) return 0;
+        if ($card->row === null || $card->col === null) return 0;
+
+        $classes = [];
+        foreach ($state->cards as $c) {
+            if ($c->instanceId === $card->instanceId) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $dr = abs($c->row - $card->row);
+            $dc = abs($c->col - $card->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            foreach ($c->classes as $cls) {
+                $classes[$cls] = true;
+            }
+        }
+        return count($classes);
+    }
+
     /**
      * Собирает активные бейджи из prop (для отображения на карте).
      * @return array<string, mixed>  stat => value
@@ -1370,4 +1400,14 @@ final class CardStats
         }
         return false;
     }
+
+    public static function hasRangedAction(CardInstance $card): bool
+    {
+        foreach ($card->prop['actions'] ?? [] as $a) {
+            $t = (string) ($a['type'] ?? '');
+            if (in_array($t, ['shot', 'throw', 'discharge'], true)) return true;
+        }
+        return false;
+    }
+
 }

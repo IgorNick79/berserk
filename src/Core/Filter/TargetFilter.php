@@ -7,6 +7,7 @@ namespace Berserk\Core\Filter;
 
 use Berserk\Core\GameState;
 use Berserk\Core\CardInstance;
+use Berserk\Core\CardStats;
 
 /**
  * Фильтры кандидатов для choice-окон.
@@ -54,7 +55,7 @@ final class TargetFilter
         return function (CardInstance $c) use ($cond) {
             return match ($cond) {
                 'target_not_moved' => empty($c->flags['moved_this_turn']),
-                'own_yordling'     => $c->class === 'Йордлинг',
+                'own_yordling'     => CardStats::hasClass($c, 'Йордлинг'),
                 default            => true,
             };
         };
@@ -75,7 +76,7 @@ final class TargetFilter
     /** Класс */
     public static function class(string $class): \Closure
     {
-        return fn(CardInstance $c) => $c->class === $class;
+        return fn(CardInstance $c) => CardStats::hasClass($c, $class);
     }
 
     /**

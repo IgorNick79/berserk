@@ -107,3 +107,50 @@
 4. Выбор — target получает 1 impact, Ноками помечен used.
 
 **Откат:** `git revert <sha>` + откат SQL.
+
+## [Unreleased]
+
+### Изменено
+- `CardInstance`: поле `class` (строка) заменено на `classes` (`string[]`).
+  Парсинг строки из БД (`"Аккенинец, Тоа-Дан"`) выполняется один раз при гидратации
+  и корректно поддерживает мультиклассовые карты.
+- Все проверки по классу переведены на `CardStats::hasClass()` — единая точка
+  сравнения. Ранее три копии `matchFilter` сравнивали строку через `===`,
+  что молча давало неверный результат для мультиклассовых карт
+  (`Бон и Берроу`, `Паладин Алламора`, `Лилит и Эйдерик`).
+
+### Добавлено
+- `CardInstance::parseClasses(string): string[]` — нормализация строки классов.
+- `CardInstance::extractClasses(array): string[]` — чтение из старого/нового формата.
+- `CardStats::hasClass(CardInstance, string): bool`.
+
+### Затронуто
+- `src/Core/CardInstance.php`
+- `src/Core/CardStats.php`
+- `src/Core/DamageResolver.php` (`matchFilter`)
+- `src/Core/ValhallaProcessor.php` (`collectCandidates`)
+- `src/Core/Filter/TargetFilter.php` (`hasCondition`, `class`)
+
+### Совместимость
+- БД: `cards.class` остаётся строкой — схема не меняется.
+- Сохранения: `fromArray()` принимает как `class` (строка, старый формат),
+  так и `classes` (массив, новый). Новые сохранения пишутся только с `classes`.
+- Публичное API: `$card->class` больше не существует — при попытке чтения
+  сработает ошибка на этапе выполнения (в PHP 8.2+ — deprecated dynamic property).
+  Все места в кодовой базе переведены.
+
+## [Unreleased]
+
+### Добавлено
+- Карта **Эорвал** (`s1_197`): получает **+1 к strike**, **+1 к ova**
+  и **−1 от немагических атак** (strike, tap, uchr, shot, throw), пока
+  рядом с ним стоят союзники суммарно **4+ разных классов**.
+  Мультиклассовые карты (Бон и Берроу, Паладин Алламора) учитываются
+  как несколько классов.
+
+### Затронуто
+- `src/Core/CardStats.php`:
+  - новый метод `countAllyClassesNear()`;
+  - новое условие `ally_classes_near` в `checkCondition()`;
+  - `getDamageReduction()` теперь читает `condition` у `damage_reduction`.
+- `debug/scenarios/eorval.json` — сценарий проверки.

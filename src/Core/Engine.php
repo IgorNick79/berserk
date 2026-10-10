@@ -88,6 +88,7 @@ final class Engine
             'end_turn'            => $turn->endTurn($playerKey, $cmd),
             'resign'              => $this->resign($state, $playerKey, $cmd),
             'gain_coin'               => $this->gainCoin($state, $playerKey, $cmd),
+            'choose_teleport_cell'    => $action->chooseTeleportTargetCell($playerKey, $cmd),
             'choose_death_target'     => $this->damageResolver($state)->chooseDeathTarget($playerKey, $cmd),
             'choose_auto_target'      => $this->chooseAutoTarget($state, $playerKey, $cmd),
             'choose_card_option'      => $turn->chooseCardOption($playerKey, $cmd),

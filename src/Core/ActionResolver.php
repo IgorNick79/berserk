@@ -129,6 +129,15 @@ final class ActionResolver
             return $this->startDestroySelfAndTarget($attacker, $action, $cardId, $playerKey);
         }
 
+        if ($type === 'damage_ranged') {
+            return $this->resolveDamageRanged($attacker, $action, $cardId, $playerKey);
+        }
+
+        if ($type === 'teleport_target') {
+            return $this->startTeleportTarget($attacker, $action, $cardId, $targetId, $playerKey);
+        }
+
+
         // ── Перераспределение ран (Волхв) ──────────────────────
         if ($type === 'wound_transfer') {
             $proc = new WoundTransferProcessor($this->state, $this->engine);
@@ -1927,6 +1936,7 @@ final class ActionResolver
             ['pending_particle_pick',           'owner'],
             ['pending_life_gift',               'owner'],
             ['pending_nokami_wound',            'owner'],
+            ['pending_teleport_target',         'owner'],
         ];
         foreach ($simple as [$key, $field]) {
             $p = $state->battle[$key] ?? null;
@@ -4291,5 +4301,159 @@ final class ActionResolver
         $this->engine->flushDeadeatQueue($this->state);
         $this->state->bumpVersion();
         return Result::ok(["nokami_wound:{$targetId}"]);
+    }
+
+    private function resolveDamageRanged(
+        CardInstance $attacker, array $action,
+        int $cardId, string $playerKey
+    ): Result {
+        $value  = (int) ($action['value'] ?? 2);
+        $filter = (string) ($action['filter'] ?? 'enemy');
+
+        $affected = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            if ($c->instanceId === $attacker->instanceId) continue;
+
+            if ($filter === 'enemy' && $c->owner === $playerKey) continue;
+            if ($filter === 'own'   && $c->owner !== $playerKey) continue;
+
+            if (!CardStats::hasRangedAction($c)) continue;
+
+            $hpBefore = $c->hp;
+            $this->engine->applyDamage($this->state, $c, $value, 'cast', $attacker);
+            $affected[] = [
+                'target_id' => $c->instanceId,
+                'damage'    => max(0, $hpBefore - $c->hp),
+            ];
+        }
+
+        $attacker->closed = true;
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'damage_ranged',
+            'action_name' => $action['name'] ?? 'Пламя бездны',
+            'attacker_id' => $cardId,
+            'target_id'   => $affected[0]['target_id'] ?? 0,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'ranged_damage' => $affected,
+            'confirmed'   => [],
+        ];
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->engine->checkGameOver($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(['damage_ranged:' . count($affected)]);
+    }
+
+    private function startTeleportTarget(
+        CardInstance $attacker, array $action,
+        int $cardId, int $targetId, string $playerKey
+    ): Result {
+        $target = $this->state->getCard($targetId);
+        if (!$target) return Result::error('Цель не найдена');
+        if ($target->zone !== CardInstance::ZONE_FIELD) {
+            return Result::error('Только нелетающее существо на земле');
+        }
+        if ($target->dying || $target->hp <= 0) {
+            return Result::error('Цель мертва');
+        }
+
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0 && $attacker->coins < $cost) {
+            return Result::error('Не хватает монет');
+        }
+
+        $zone  = new ZoneManager($this->state);
+        $cells = [];
+        for ($r = 1; $r <= 6; $r++) {
+            for ($c = 1; $c <= 5; $c++) {
+                if ($r === $target->row && $c === $target->col) continue;
+                if ($zone->isFieldOccupied($r, $c)) continue;
+                if (ZoneManager::hasBlockingMarker($this->state, "{$r}_{$c}")) continue;
+                $cells[] = ['row' => $r, 'col' => $c];
+            }
+        }
+        if (empty($cells)) return Result::error('Нет свободных клеток');
+
+        if ($cost > 0) {
+            $attacker->coins -= $cost;
+            $this->engine->syncCoinBonus($attacker);
+        }
+
+        $this->state->battle['pending_teleport_target'] = [
+            'owner'       => $playerKey,
+            'attacker_id' => $cardId,
+            'target_id'   => $targetId,
+            'action'      => $action,
+            'cells'       => $cells,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['teleport_target_started']);
+    }
+
+    public function chooseTeleportTargetCell(string $playerKey, Command $cmd): Result
+    {
+        $pt = $this->state->battle['pending_teleport_target'] ?? null;
+        if (!$pt) return Result::error('Нет ожидающего выбора');
+        if ($pt['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+
+        $row = (int) $cmd->get('row', 0);
+        $col = (int) $cmd->get('col', 0);
+
+        $valid = false;
+        foreach ($pt['cells'] as $c) {
+            if ($c['row'] === $row && $c['col'] === $col) { $valid = true; break; }
+        }
+        if (!$valid) return Result::error('Неверная клетка');
+
+        $attacker = $this->state->getCard($pt['attacker_id']);
+        $target   = $this->state->getCard($pt['target_id']);
+        if (!$attacker || !$target) {
+            unset($this->state->battle['pending_teleport_target']);
+            return Result::error('Карта не найдена');
+        }
+
+        $action = $pt['action'];
+
+        $target->row = $row;
+        $target->col = $col;
+        $target->flags['moved_this_turn'] = true;
+
+        $attacker->closed = true;
+
+        unset($this->state->battle['pending_teleport_target']);
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'teleport_target',
+            'action_name' => $action['name'] ?? 'Дверь измерений',
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => $target->instanceId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'teleport'    => [
+                'target_id' => $target->instanceId,
+                'new_row'   => $row,
+                'new_col'   => $col,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['teleport_target_done']);
     }
 }

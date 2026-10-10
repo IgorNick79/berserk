@@ -667,6 +667,8 @@ final class BattleScreen
                 'freeze_moves' => 'Ледяной дождь',
                 'particle'  => 'Частица души',
                 'life_gift' => 'Предсмертный дар',
+                'damage_ranged'   => 'Пламя бездны',
+                'teleport_target' => 'Дверь измерений',
             ];
 
             foreach ($c->prop['actions'] ?? [] as $a) {
@@ -762,6 +764,7 @@ final class BattleScreen
                     || ($a['type'] ?? '') === 'destroy_self_and_target'
                     || ($a['type'] ?? '') === 'freeze_moves'
                     || ($a['type'] ?? '') === 'particle'
+                    || ($a['type'] ?? '') === 'damage_ranged'
                     || ($a['type'] ?? '') === 'life_gift'
                     || !empty($a['max_targets']);
 
@@ -992,6 +995,10 @@ final class BattleScreen
             if (!$card->revealed)      $line .= " hidden";
             if ($card->dying)          $line .= " DYING";
 
+            if (!empty($card->prop)) {
+                $line .= ' | prop=' . json_encode($card->prop, JSON_UNESCAPED_UNICODE);
+            }
+            
             if (!empty($flags))        $line .= ' | ' . implode(' ', $flags);
             if (!empty($card->markers)) {
                 $mk = [];

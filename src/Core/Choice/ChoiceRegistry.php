@@ -56,6 +56,7 @@ final class ChoiceRegistry
                 new ParticlePickChoice(),
                 new LifeGiftChoice(),
                 new NokamiWoundChoice(),
+                new TeleportTargetChoice(),
                 // ─── Фаза хода ───────────────────────────────────────
                 new TurnAckChoice(),
                 new TurnInstantResultChoice(),

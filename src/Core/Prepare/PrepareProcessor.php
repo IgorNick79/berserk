@@ -2022,6 +2022,7 @@ final class PrepareProcessor
                     'prop'    => (array) ($item['prop'] ?? []),
                     'type'    => (string) ($item['type'] ?? 'creature'),
                     'class'   => (string) ($item['class'] ?? ''),
+                    'classes' => CardInstance::parseClasses((string) ($item['class'] ?? '')),
                 ];
             }
         }
@@ -2049,7 +2050,7 @@ final class PrepareProcessor
                 strikeStrong: $item['ss'],
                 prop:         $item['prop'],
                 type:         $item['type'],
-                class:        $item['class'],
+                classes:      $item['classes'],
             ));
         }
     }
@@ -2112,7 +2113,7 @@ final class PrepareProcessor
                     single: (bool) ($item['single'] ?? false),
                     type: (string) ($item['type'] ?? 'creature'),
                     element: (string) ($item['element'] ?? 'neutral'),
-                    class: (string) ($item['class'] ?? ''),
+                    classes: CardInstance::parseClasses((string) ($item['class'] ?? '')),
                     move: $move,
                     moveMax: $move,
                     strikeWeak: (int) ($item['strike_weak'] ?? 0),

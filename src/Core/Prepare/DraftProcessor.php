@@ -517,7 +517,7 @@ final class DraftProcessor
                     single: (bool) ($item['single'] ?? false),
                     type: (string) ($item['type'] ?? 'creature'),
                     element: (string) ($item['element'] ?? 'neutral'),
-                    class: (string) ($item['class'] ?? ''),
+                    classes: CardInstance::parseClasses((string) ($item['class'] ?? '')),
                     move: $move,
                     moveMax: $move,
                     strikeWeak: (int) ($item['strike_weak'] ?? 0),

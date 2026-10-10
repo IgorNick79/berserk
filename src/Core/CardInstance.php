@@ -39,7 +39,7 @@ final class CardInstance
         public bool $revealed = true,
         public bool $dying = false,
         public string $element = 'neutral',
-        public string $class = '',
+        public array $classes = [],
         public int $move = 0,
         public int $moveMax = 0,
         public int $armor = 0,
@@ -75,7 +75,7 @@ final class CardInstance
             revealed:     (bool) ($data['revealed'] ?? true),
             dying:        (bool) ($data['dying'] ?? false),
             element:      (string) ($data['element'] ?? 'neutral'),
-            class:        (string) ($data['class'] ?? ''),
+            classes:      self::extractClasses($data),
             move:         (int) ($data['move'] ?? 0),
             moveMax:      (int) ($data['move_max'] ?? 0),
             armor:        (int) ($data['armor'] ?? 0),
@@ -112,7 +112,7 @@ final class CardInstance
             'dying'         => $this->dying,
             'closed'        => $this->closed,
             'element'       => $this->element,
-            'class'         => $this->class,
+            'classes'       => $this->classes,
             'move'          => $this->move,
             'move_max'      => $this->moveMax,
             'armor'         => $this->armor,
@@ -155,4 +155,26 @@ final class CardInstance
         return $this->type === 'fly';
     }
 
+    public static function parseClasses(string $raw): array
+    {
+        if ($raw === '') return [];
+
+        $parts = array_map('trim', explode(',', $raw));
+        $parts = array_filter($parts, fn(string $c) => $c !== '');
+
+        return array_values(array_unique($parts));
+    }
+
+    private static function extractClasses(array $data): array
+    {
+        // Новый формат — массив
+        if (isset($data['classes']) && is_array($data['classes'])) {
+            $list = array_map(fn($c) => (string) $c, $data['classes']);
+            $list = array_filter($list, fn(string $c) => $c !== '');
+            return array_values(array_unique($list));
+        }
+
+        // Старый формат — строка
+        return self::parseClasses((string) ($data['class'] ?? ''));
+    }
 }

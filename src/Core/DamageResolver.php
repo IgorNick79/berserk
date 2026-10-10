@@ -400,7 +400,7 @@ final class DamageResolver
         return match ($filter) {
             'enemy_creature_not_flying' => $card->type === 'creature',
             'own_creature'              => true,
-            'own_yordling'              => $card->class === 'Йордлинг',
+            'own_yordling'              => CardStats::hasClass($card, 'Йордлинг'),
             default                     => true,
         };
     }

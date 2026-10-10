@@ -93,7 +93,7 @@ foreach ($scenario['cards'] ?? [] as $c) {
         strikeStrong: $i['ss'],
         prop:         $i['prop'],
         type:         $i['type'],
-        class:        $i['class']
+        classes:        $i['classes']
     ));
 }
 
@@ -147,6 +147,7 @@ if ($stage === 'battle') {
                     'single'  => (bool) $r['single'],
                     'type'    => $r['type'] ?? 'creature',
                     'class'   => (string) ($r['class'] ?? ''),
+                    'classes' => CardInstance::parseClasses((string) ($r['class'] ?? '')),
                     'element' => $elements[(int) $r['element_id']] ?? 'neutral',
                     'sw'      => (int) $r['strike_weak'],
                     'sm'      => (int) $r['strike_medium'],
@@ -174,7 +175,7 @@ if ($stage === 'battle') {
                 strikeStrong: $i['ss'],
                 prop:         $i['prop'],
                 type:         $i['type'],
-                class:        $i['class'],
+                classes:        $i['classes'],
             ));
         }
 
@@ -184,7 +185,7 @@ if ($stage === 'battle') {
             $rows = $db->fetchAll(
                 "SELECT ukid, price, health, move, elite, single, type,
                         strike_weak, strike_medium, strike_strong,
-                        element_id, prop
+                        element_id, prop, class
                  FROM cards
                  WHERE type IN ('creature','fly')
                  ORDER BY RAND()
@@ -209,6 +210,7 @@ if ($stage === 'battle') {
                     strikeStrong: (int) $r['strike_strong'],
                     prop:         $r['prop'] ? json_decode($r['prop'], true) : [],
                     type:         $r['type'] ?? 'creature',
+                    classes:      CardInstance::parseClasses((string) ($r['class'] ?? '')),
                 ));
             }
         }
@@ -248,6 +250,8 @@ function seedLoadCardInfo(Db $db, array $ukids, array $elements): array
 
 function seedCardInfoFromRow(array $r, array $elements): array
 {
+    $classRaw = (string) ($r['class'] ?? '');
+
     return [
         'ukid'    => (string) $r['ukid'],
         'price'   => (int) $r['price'],
@@ -256,7 +260,8 @@ function seedCardInfoFromRow(array $r, array $elements): array
         'elite'   => (bool) $r['elite'],
         'single'  => (bool) ($r['single'] ?? false),
         'type'    => $r['type'] ?? 'creature',
-        'class'   => $r['class'] ?? '',
+        'class'   => $classRaw,
+        'classes' => CardInstance::parseClasses($classRaw),
         'element' => $elements[(int) $r['element_id']] ?? 'neutral',
         'sw'      => (int) $r['strike_weak'],
         'sm'      => (int) $r['strike_medium'],
@@ -349,6 +354,6 @@ function seedAddCardInstance(GameState $state, string $owner, string $zone, arra
         strikeStrong: $i['ss'],
         prop:         $i['prop'],
         type:         $i['type'],
-        class:        $i['class'],
+        classes:        $i['classes'],
     ));
 }
