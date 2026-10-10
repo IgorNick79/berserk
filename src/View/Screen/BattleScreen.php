@@ -998,7 +998,7 @@ final class BattleScreen
             if (!empty($card->prop)) {
                 $line .= ' | prop=' . json_encode($card->prop, JSON_UNESCAPED_UNICODE);
             }
-            
+
             if (!empty($flags))        $line .= ' | ' . implode(' ', $flags);
             if (!empty($card->markers)) {
                 $mk = [];
