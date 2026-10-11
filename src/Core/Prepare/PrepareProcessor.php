@@ -9,6 +9,7 @@ use Berserk\Core\CardInstance;
 use Berserk\Core\BoosterSettings;
 use Berserk\Core\Command;
 use Berserk\Core\Db;
+use Berserk\Core\Dice;
 use Berserk\Core\GameSettings;
 use Berserk\Core\GameState;
 use Berserk\Core\ResourceCalculator;
@@ -1946,8 +1947,8 @@ final class PrepareProcessor
         $player = $this->state->getPlayer('player');
 
         do {
-            $host->dice   = random_int(1, 6);
-            $player->dice = random_int(1, 6);
+            $host->dice   = Dice::roll();
+            $player->dice = Dice::roll();
         } while ($host->dice === $player->dice);
 
         $this->state->firstPlayer = $host->dice > $player->dice ? 'host' : 'player';
