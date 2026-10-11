@@ -442,9 +442,14 @@ final class TurnProcessor
             if (empty($card->markers['incarnation'])) continue;
 
             $card->markers['incarnation']['value']++;
+            $newValue = (int) $card->markers['incarnation']['value'];
             $threshold = (int) ($card->markers['incarnation']['threshold'] ?? 0);
 
-            if ($threshold > 0 && $card->markers['incarnation']['value'] >= $threshold) {
+            // Триггер "получил жетон" — до сброса в 0 и до ready
+            (new IncarnationTokenProcessor($this->state, $this->engine))
+                ->onTokenGranted($card, $newValue);
+
+            if ($threshold > 0 && $newValue >= $threshold) {
                 $card->markers['incarnation']['value'] = 0;
                 $card->flags['incarnation_ready'] = true;
                 $events[$card->instanceId] = [
@@ -514,6 +519,15 @@ final class TurnProcessor
         // Убираем из событий тех, кто попал в pending — их судьба решится в окне выбора
         foreach ($queue as $id) {
             unset($events[$id]);
+        }
+
+        if (!empty($this->state->battle['pending_incarnation'])) {
+            foreach ($this->state->battle['any_death_messages'] ?? [] as $m) {
+                if (($m['type'] ?? '') === 'incarnation_token_wound') {
+                    $this->state->battle['pending_incarnation_ack'] = true;
+                    break;
+                }
+            }
         }
 
         return array_values($events);
