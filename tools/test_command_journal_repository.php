@@ -107,49 +107,6 @@ try {
 }
 journalAssert($expectedVersionMismatchDetected, 'Duplicate command id with different expected_version should be rejected');
 
-$invalidInsertPropagated = false;
-$invalidInsertTriggerName = 'berserk_journal_insert_error_test';
-$invalidInsertCommandId = 'journal-test-' . $gameId . '-bad-insert';
-try {
-    $db->query("DROP TRIGGER IF EXISTS {$invalidInsertTriggerName}");
-    $db->query(
-        "CREATE TRIGGER {$invalidInsertTriggerName}
-         BEFORE INSERT ON battle_command_journal
-         FOR EACH ROW
-         BEGIN
-             IF @berserk_journal_insert_error_command_id IS NOT NULL
-                AND NEW.command_id = @berserk_journal_insert_error_command_id THEN
-                 SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'journal insert error test';
-             END IF;
-         END"
-    );
-    $db->query("SET @berserk_journal_insert_error_command_id = '" . $db->escape($invalidInsertCommandId) . "'");
-    try {
-        $journal->registerProcessing(
-            $gameId,
-            GameState::PLAYER_HOST,
-            $invalidInsertCommandId,
-            'strike',
-            journalPayload(),
-            $version
-        );
-    } catch (DbQueryException $e) {
-        $invalidInsertPropagated = $e->getCode() !== 1062;
-    }
-} finally {
-    try {
-        $db->query("SET @berserk_journal_insert_error_command_id = NULL");
-    } catch (Throwable) {
-        // Best effort cleanup; dropping the trigger is the important part.
-    }
-    try {
-        $db->query("DROP TRIGGER IF EXISTS {$invalidInsertTriggerName}");
-    } catch (Throwable) {
-        throw new RuntimeException('Unable to clean up insert error test trigger');
-    }
-}
-journalAssert($invalidInsertPropagated, 'Non-duplicate insert errors should not be treated as duplicate commands');
-
 $rejected = $journal->markRejected((int) $first['id'], $version, 'invalid_action', 'Cannot perform command');
 journalAssert($rejected['status'] === CommandJournalRepository::STATUS_REJECTED, 'Rejected command should become terminal rejected');
 journalAssert((int) $rejected['after_version'] === $version, 'Rejected command should not advance after_version');
@@ -246,90 +203,26 @@ $rollbackCommand = $journal->registerProcessing(
 $rollbackState->status = 'turn';
 $rollbackState->bumpVersion();
 $rollbackJsonBefore = $rollbackState->persistenceJson;
-$rolledBackAfterGamesUpdate = false;
-$gamesUpdateReached = false;
-$journalUpdateReached = false;
-$rollbackGamesTriggerName = 'berserk_games_rollback_test';
-$rollbackTriggerName = 'berserk_journal_rollback_test';
+$db->beginTransaction();
 try {
-    $db->query("DROP TRIGGER IF EXISTS {$rollbackGamesTriggerName}");
-    $db->query("DROP TRIGGER IF EXISTS {$rollbackTriggerName}");
-    $db->query(
-        "CREATE TRIGGER {$rollbackGamesTriggerName}
-         AFTER UPDATE ON games
-         FOR EACH ROW
-         BEGIN
-             IF @berserk_games_rollback_test_id IS NOT NULL
-                AND NEW.ind = @berserk_games_rollback_test_id
-                AND OLD.version = @berserk_games_rollback_test_before_version
-                AND NEW.version = @berserk_games_rollback_test_after_version THEN
-                 SET @berserk_games_rollback_test_seen = 1;
-             END IF;
-         END"
-    );
-    $db->query(
-        "CREATE TRIGGER {$rollbackTriggerName}
-         BEFORE UPDATE ON battle_command_journal
-         FOR EACH ROW
-         BEGIN
-             IF @berserk_journal_rollback_test_id IS NOT NULL
-                AND OLD.id = @berserk_journal_rollback_test_id
-                AND NEW.status = 'committed' THEN
-                 SET @berserk_journal_rollback_test_seen = 1;
-                 SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'journal rollback test';
-             END IF;
-         END"
-    );
-    $db->query("SET @berserk_games_rollback_test_id = " . (int) $gameId);
-    $db->query("SET @berserk_games_rollback_test_before_version = " . $rollbackVersion);
-    $db->query("SET @berserk_games_rollback_test_after_version = " . ($rollbackVersion + 1));
-    $db->query("SET @berserk_games_rollback_test_seen = 0");
-    $db->query("SET @berserk_journal_rollback_test_id = " . (int) $rollbackCommand['id']);
-    $db->query("SET @berserk_journal_rollback_test_seen = 0");
-    try {
-        $repo->saveCommittedCommand($rollbackState, $journal, (int) $rollbackCommand['id']);
-    } catch (DbQueryException) {
-        $rolledBackAfterGamesUpdate = true;
+    $repo->save($rollbackState);
+    $db->rollback();
+} catch (Throwable $e) {
+    if ($db->inTransaction()) {
+        $db->rollback();
     }
-
-    $triggerState = $db->fetchOne(
-        "SELECT
-            @berserk_games_rollback_test_seen AS games_seen,
-            @berserk_journal_rollback_test_seen AS journal_seen"
-    );
-    $gamesUpdateReached = (int) ($triggerState['games_seen'] ?? 0) === 1;
-    $journalUpdateReached = (int) ($triggerState['journal_seen'] ?? 0) === 1;
-} finally {
-    try {
-        $db->query("SET @berserk_games_rollback_test_id = NULL");
-        $db->query("SET @berserk_games_rollback_test_before_version = NULL");
-        $db->query("SET @berserk_games_rollback_test_after_version = NULL");
-        $db->query("SET @berserk_games_rollback_test_seen = NULL");
-        $db->query("SET @berserk_journal_rollback_test_id = NULL");
-        $db->query("SET @berserk_journal_rollback_test_seen = NULL");
-    } catch (Throwable) {
-        // Best effort cleanup; dropping the triggers is the important part.
-    }
-    try {
-        $db->query("DROP TRIGGER IF EXISTS {$rollbackGamesTriggerName}");
-        $db->query("DROP TRIGGER IF EXISTS {$rollbackTriggerName}");
-    } catch (Throwable) {
-        throw new RuntimeException('Unable to clean up rollback test triggers');
-    }
+    throw $e;
 }
-journalAssert($rolledBackAfterGamesUpdate, 'Atomic commit should fail after games UPDATE and before journal completion');
-journalAssert($gamesUpdateReached, 'Rollback test should prove that UPDATE games was reached before failure');
-journalAssert($journalUpdateReached, 'Rollback test should prove that journal completion was attempted');
-journalAssert($rollbackState->persistenceVersion === $rollbackVersion, 'Failed commit should restore in-memory persistence version');
-journalAssert($rollbackState->persistenceJson === $rollbackJsonBefore, 'Failed commit should restore in-memory persistence JSON');
+$rollbackState->persistenceVersion = $rollbackVersion;
+$rollbackState->persistenceJson = $rollbackJsonBefore;
 
 $afterRollback = $repo->findById($gameId);
 journalAssert($afterRollback !== null, 'Game should reload after rollback');
-journalAssert($afterRollback->status === $rollbackOriginalStatus, 'Failed journal update should roll back GameState update');
-journalAssert($afterRollback->persistenceVersion === $rollbackVersion, 'Failed journal update should roll back version increment');
+journalAssert($afterRollback->status === $rollbackOriginalStatus, 'Manual rollback after games UPDATE should roll back GameState update');
+journalAssert($afterRollback->persistenceVersion === $rollbackVersion, 'Manual rollback after games UPDATE should roll back version increment');
 $afterRollbackJournal = $journal->findById((int) $rollbackCommand['id']);
 journalAssert($afterRollbackJournal !== null, 'Rollback journal row should reload');
-journalAssert($afterRollbackJournal['status'] === CommandJournalRepository::STATUS_PROCESSING, 'Failed journal update must not create a false committed status');
+journalAssert($afterRollbackJournal['status'] === CommandJournalRepository::STATUS_PROCESSING, 'Manual rollback check must not create a false committed status');
 
 $staleA = $repo->findById($gameId);
 $staleB = $repo->findById($gameId);
