@@ -57,6 +57,7 @@ final class ChoiceRegistry
                 new GreedTeleportChoice(),
                 new DestroySelfAndTargetChoice(),
                 new ParticlePickChoice(),
+                new BloodStormChoice(),
                 new LifeGiftChoice(),
                 new NokamiWoundChoice(),
                 new TeleportTargetChoice(),

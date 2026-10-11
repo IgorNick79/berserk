@@ -105,6 +105,10 @@ final class ActionResolver
             return $this->startRowSpell($attacker, $action, $cardId, $playerKey);
         }
 
+        if ($type === 'blood_storm') {
+            return $this->startBloodStorm($attacker, $action, $cardId, $playerKey);
+        }
+
         if ($type === 'particle') {
             return $this->startParticlePick($attacker, $action, $cardId, $playerKey);
         }
@@ -2114,11 +2118,12 @@ final class ActionResolver
             ['pending_row_pick',                'owner'],
             ['pending_opponent_row_marker',     'owner'],
             ['pending_gate_pick',               'owner'],
-            ['pending_destroy_self_and_target',  'owner'],
+            ['pending_destroy_self_and_target', 'owner'],
             ['pending_particle_pick',           'owner'],
             ['pending_life_gift',               'owner'],
             ['pending_nokami_wound',            'owner'],
             ['pending_teleport_target',         'owner'],
+            ['pending_blood_storm',             'owner'],
         ];
         foreach ($simple as [$key, $field]) {
             $p = $state->battle[$key] ?? null;
@@ -3840,7 +3845,145 @@ final class ActionResolver
         return Result::ok(['dive_started']);
     }
 
-        private function startParticlePick(
+    private function startBloodStorm(
+        CardInstance $attacker, array $action,
+        int $cardId, string $playerKey
+    ): Result {
+        if ($attacker->closed) {
+            return Result::error('Карта закрыта');
+        }
+
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0 && $attacker->coins < $cost) {
+            return Result::error('Не хватает монет');
+        }
+
+        // 1. Получить допку (раны сохраняются)
+        $attacker->hpMax += 1;
+        $attacker->hp += 1;
+
+        if ($cost > 0) {
+            $attacker->coins -= $cost;
+            $this->engine->syncCoinBonus($attacker);
+        }
+
+        // 2. X = свои на поле с hp > hp_base (включая саму знать)
+        $x = 0;
+        foreach ($this->state->cards as $c) {
+            if ($c->owner !== $playerKey) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $base = (int) ($c->prop['hp_base'] ?? $c->hpMax);
+            if ($c->hp > $base) $x++;
+        }
+        $x = min($x, 3);
+
+        // 3. Кандидаты — любые существа на поле
+        $candidates = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            $candidates[] = $c->instanceId;
+        }
+
+        if (empty($candidates)) {
+            $attacker->closed = true;
+            $this->state->battle['strike'] = [
+                'kind'        => 'blood_storm',
+                'action_name' => $action['name'] ?? 'Буря крови',
+                'attacker_id' => $cardId,
+                'target_id'   => 0,
+                'defender_id' => null,
+                'state'       => 'results',
+                'attack_dice' => 0,
+                'defend_dice' => 0,
+                'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+                'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+                'damage'      => 0,
+                'blood_storm' => ['x' => $x, 'target_id' => 0, 'damage' => 0, 'defended' => false],
+                'confirmed'   => [],
+            ];
+            $this->state->bumpVersion();
+            return Result::ok(["blood_storm_no_target:{$x}"]);
+        }
+
+        $this->state->battle['pending_blood_storm'] = [
+            'owner'      => $playerKey,
+            'card_id'    => $cardId,
+            'x'          => $x,
+            'candidates' => $candidates,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['blood_storm_started']);
+    }
+
+    public function chooseBloodStormTarget(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_blood_storm'] ?? null;
+        if (!$pending) return Result::error('Нет ожидающего выбора');
+        if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+
+        $attacker = $this->state->getCard((int) $pending['card_id']);
+        if (!$attacker) {
+            unset($this->state->battle['pending_blood_storm']);
+            return Result::error('Источник не найден');
+        }
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        if (!in_array($targetId, $pending['candidates'], true)) {
+            return Result::error('Неверная цель');
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target || $target->dying || $target->hp <= 0) {
+            return Result::error('Цель недоступна');
+        }
+
+        $x = (int) $pending['x'];
+
+        $defended = CardStats::hasDefense($this->state, $target, 'cast', $attacker);
+
+        $hpBefore = $target->hp;
+        if (!$defended) {
+            $this->engine->applyDamage($this->state, $target, $x, 'cast', $attacker);
+        }
+        $dealt = max(0, $hpBefore - $target->hp);
+
+        $attacker->closed = true;
+        unset($this->state->battle['pending_blood_storm']);
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'blood_storm',
+            'action_name' => 'Буря крови',
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => $target->instanceId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => $dealt,
+            'blood_storm' => [
+                'x'         => $x,
+                'target_id' => $target->instanceId,
+                'damage'    => $dealt,
+                'defended'  => $defended,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->engine->checkGameOver($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(["blood_storm:{$x}->{$targetId}:dmg={$dealt}"]);
+    }
+
+    private function startParticlePick(
         CardInstance $attacker, array $action,
         int $cardId, string $playerKey
     ): Result {

@@ -767,6 +767,22 @@ final class InfoPanel
                 } else {
                     $resultText = $name;
                 }
+            } elseif ($kind === 'blood_storm') {
+                $name = $strike['action_name'] ?? 'Буря крови';
+                $bs = $strike['blood_storm'] ?? null;
+                if ($bs && !empty($bs['target_id'])) {
+                    $tCard = $state->getCard((int) $bs['target_id']);
+                    $tName = $tCard ? ($cardsInfo[$tCard->ukid]['name'] ?? '?') : '?';
+                    if (!empty($bs['defended'])) {
+                        $resultText = $name . ': ' . htmlspecialchars($tName, ENT_QUOTES)
+                            . ' — защита (0 урона)';
+                    } else {
+                        $resultText = $name . ': ' . htmlspecialchars($tName, ENT_QUOTES)
+                            . ' получает ' . (int) $bs['damage'] . ' урона (X = ' . (int) $bs['x'] . ')';
+                    }
+                } else {
+                    $resultText = $name;
+                }
             } elseif ($kind === 'shield_light') {
                 $name = $strike['action_name'] ?? 'Щит света';
                 $sh = $strike['shield_data'] ?? null;
@@ -1463,7 +1479,7 @@ final class InfoPanel
                 . $abilityBonusHtml . $coinBonusHtml . $reductionHtml
                 . $spiderWebHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml;
 
-            $noDiceKinds = ['heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot', 'apply_delayed_marker', 'particle', 'life_gift', 'poison_boost', 'damage_ranged', 'teleport_target'];
+            $noDiceKinds = ['heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'magic', 'become_fly', 'bomb_shot', 'apply_delayed_marker', 'particle', 'life_gift', 'poison_boost', 'damage_ranged', 'teleport_target', 'blood_storm'];
             if (!in_array($kind, $noDiceKinds, true)) {
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
@@ -1503,6 +1519,7 @@ final class InfoPanel
         if ($kind === 'poison_boost') $headerText = 'Вскипающий яд';
         if ($kind === 'damage_ranged')   $headerText = 'Пламя бездны';
         if ($kind === 'teleport_target') $headerText = 'Дверь измерений';
+        if ($kind === 'blood_storm') $headerText = 'Буря крови';
 
         if (($strike['state'] ?? '') === 'waiting_instant') {
             $phase = $strike['instant_phase'] ?? 'before';
