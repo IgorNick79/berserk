@@ -19,7 +19,7 @@ $config = require __DIR__ . '/../config/db.php';
 $count = (int) ($argv[1] ?? 0);
 if ($count < 1 || $count > 9) {
     echo "Usage: php tools/test_cards.php <count>\n";
-    echo "  count: 1-9 (сколько готовых карт выставить на поле host)\n";
+    echo "  count: 1-9 (сколько готовых карт на поле у каждого игрока)\n";
     echo "  5-6 — оптимально: две линии по колонкам 2-3-4\n";
     exit(1);
 }
@@ -38,74 +38,48 @@ foreach ($db->fetchAll("SELECT ind, code FROM elements") as $e) {
     $elements[(int) $e['ind']] = $e['code'];
 }
 
-// Случайные карты с непустым prop
+// 2*N случайных карт с prop
+$total = $count * 2;
 $rows = $db->fetchAll(
     "SELECT ukid, name, price, health, move, elite, single, type, class,
             strike_weak, strike_medium, strike_strong,
             element_id, prop
      FROM cards
      WHERE prop IS NOT NULL
+       AND prop <> ''
        AND type IN ('creature','fly')
      ORDER BY RAND()
-     LIMIT $count"
+     LIMIT $total"
 );
 
-if (count($rows) < $count) {
-    echo "В БД меньше $count карт с prop\n";
+if (count($rows) < $total) {
+    echo "В БД меньше $total карт с prop\n";
     exit(1);
 }
 
-// Колонки 2-3-4, ряды: сначала 3 (ближний), потом 2, потом 1
-$cells = [
+// Колонки 2-3-4. Ряды: host — 3, 2, 1 (от центра), player — 4, 5, 6
+$hostCells = [
     [3, 2], [3, 3], [3, 4],
     [2, 2], [2, 3], [2, 4],
     [1, 2], [1, 3], [1, 4],
 ];
+$playerCells = [
+    [4, 2], [4, 3], [4, 4],
+    [5, 2], [5, 3], [5, 4],
+    [6, 2], [6, 3], [6, 4],
+];
 
-// Фиктивная карта игроку — иначе checkGameOver сразу завершит игру
-$dummy = $db->fetchAll(
-    "SELECT ukid, name, price, health, move, elite, single, type, class,
-            strike_weak, strike_medium, strike_strong, element_id, prop
-     FROM cards
-     WHERE ukid = 's1_1' LIMIT 1"
-);
-if (!empty($dummy)) {
-    $d = $dummy[0];
-    $state->addCard(new CardInstance(
-        instanceId:   $state->nextInstanceId(),
-        ukid:         $d['ukid'],
-        owner:        'player',
-        zone:         CardInstance::ZONE_FIELD,
-        row:          6,
-        col:          3,
-        hp:           (int) $d['health'],
-        hpMax:        (int) $d['health'],
-        price:        (int) $d['price'],
-        elite:        (bool) $d['elite'],
-        single:       (bool) ($d['single'] ?? false),
-        element:      $elements[(int) $d['element_id']] ?? 'neutral',
-        move:         (int) $d['move'],
-        moveMax:      (int) $d['move'],
-        strikeWeak:   (int) $d['strike_weak'],
-        strikeMedium: (int) $d['strike_medium'],
-        strikeStrong: (int) $d['strike_strong'],
-        prop:         $d['prop'] ? json_decode($d['prop'], true) : [],
-        type:         $d['type'] ?? 'creature',
-        classes:      CardInstance::parseClasses((string) ($d['class'] ?? '')),
-    ));
-}
+$hostRows   = array_slice($rows, 0, $count);
+$playerRows = array_slice($rows, $count, $count);
 
-// Основные карты — host, полные HP
-foreach ($rows as $i => $r) {
-    [$row, $col] = $cells[$i];
-
+$addCard = function (array $r, string $owner, int $row, int $col) use ($state, $elements) {
     $prop  = $r['prop'] ? json_decode($r['prop'], true) : [];
     $hpMax = (int) ($prop['hp_max_override'] ?? $r['health']);
 
     $state->addCard(new CardInstance(
         instanceId:   $state->nextInstanceId(),
         ukid:         $r['ukid'],
-        owner:        'host',
+        owner:        $owner,
         zone:         CardInstance::ZONE_FIELD,
         row:          $row,
         col:          $col,
@@ -124,6 +98,16 @@ foreach ($rows as $i => $r) {
         type:         $r['type'] ?? 'creature',
         classes:      CardInstance::parseClasses((string) ($r['class'] ?? '')),
     ));
+};
+
+foreach ($hostRows as $i => $r) {
+    [$row, $col] = $hostCells[$i];
+    $addCard($r, 'host', $row, $col);
+}
+
+foreach ($playerRows as $i => $r) {
+    [$row, $col] = $playerCells[$i];
+    $addCard($r, 'player', $row, $col);
 }
 
 $engine = new Engine();
@@ -133,10 +117,15 @@ $turn->startBattle();
 $state->bumpVersion();
 $repo->save($state);
 
-echo "Created test game #{$state->gameId}\n";
+echo "Created test game #{$state->gameId}\n\n";
 echo "Host field:\n";
-foreach ($rows as $i => $r) {
-    [$row, $col] = $cells[$i];
+foreach ($hostRows as $i => $r) {
+    [$row, $col] = $hostCells[$i];
+    printf("  (%d,%d)  %-8s  %s\n", $row, $col, $r['ukid'], $r['name']);
+}
+echo "\nPlayer field:\n";
+foreach ($playerRows as $i => $r) {
+    [$row, $col] = $playerCells[$i];
     printf("  (%d,%d)  %-8s  %s\n", $row, $col, $r['ukid'], $r['name']);
 }
 echo "\n";
