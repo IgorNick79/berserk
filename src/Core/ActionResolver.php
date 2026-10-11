@@ -4946,6 +4946,62 @@ final class ActionResolver
         return $ids;
     }
 
+    public function chooseWildHealerHeal(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_wild_healer_move'] ?? null;
+        if (!$pending) return Result::error('Нет ожидающего выбора');
+        if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+
+        $healer = $this->state->getCard((int) $pending['card_id']);
+        if (!$healer) {
+            unset($this->state->battle['pending_wild_healer_move']);
+            return Result::error('Источник не найден');
+        }
+
+        // Отмена — просто закрываем pending
+        if ($cmd->type === 'cancel_pending' || (int) $cmd->get('target_id', 0) === 0) {
+            unset($this->state->battle['pending_wild_healer_move']);
+            $this->state->bumpVersion();
+            return Result::ok(['wild_healer_cancelled']);
+        }
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        if (!in_array($targetId, $pending['candidates'], true)) {
+            return Result::error('Неверная цель');
+        }
+
+        $victim = $this->state->getCard($targetId);
+        if (!$victim || $victim->dying || $victim->hp <= 0) {
+            return Result::error('Цель недоступна');
+        }
+
+        $value = (int) $pending['value'];
+        unset($this->state->battle['pending_wild_healer_move']);
+
+        // Цепочка: если цель — Вожак с полным HP и соседями — открываем его окно
+        if (CardStats::canHealInsteadWound($victim) && $this->findAdjacentCreatures($victim)) {
+            $this->state->battle['pending_heal_instead_wound'] = [
+                'owner'      => $playerKey,
+                'source_id'  => $healer->instanceId,
+                'target_id'  => $victim->instanceId,
+                'heal_value' => $value,
+                'candidates' => $this->findAdjacentCreatures($victim),
+            ];
+            $this->state->bumpVersion();
+            return Result::ok(['wild_healer_to_vozhak']);
+        }
+
+        // Обычное излечение
+        $hpBefore = $victim->hp;
+        $victim->hp += $value;
+        if ($victim->hp > $victim->hpMax) $victim->hp = $victim->hpMax;
+
+        $this->state->bumpVersion();
+        return Result::ok([
+            "wild_healer_heal:{$targetId}:" . ($victim->hp - $hpBefore),
+        ]);
+    }
+
     public function chooseHealInsteadWound(string $playerKey, Command $cmd): Result
     {
         $pending = $this->state->battle['pending_heal_instead_wound'] ?? null;

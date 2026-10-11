@@ -47,6 +47,7 @@ final class ChoiceRegistry
                 new CardChoice(),
                 new BloodTapChoice(),
                 new HealInsteadWoundChoice(),
+                new WildHealerMoveChoice(),
                 new ReviveChoice(),
                 new GrezyChoice(),
                 new ForcedDirectionalMoveChoice(),

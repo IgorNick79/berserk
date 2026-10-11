@@ -101,6 +101,7 @@ final class MovementResolver
             movementType: MovementContext::TYPE_MOVE,
         );
         $this->effects->apply($context);
+        $this->tryWildHealer($card, $playerKey);
 
         $this->state->bumpVersion();
 
@@ -187,6 +188,7 @@ final class MovementResolver
             movementType: MovementContext::TYPE_JUMP,
         );
         $this->effects->apply($context);
+        $this->tryWildHealer($card, $playerKey);
 
         $this->state->bumpVersion();
 
@@ -284,5 +286,33 @@ final class MovementResolver
         if (!is_array($moved)) $moved = [];
         if (in_array($card->instanceId, $moved, true)) return;
         $moved[] = $card->instanceId;
+    }
+
+    private function tryWildHealer(CardInstance $card, string $playerKey): void
+    {
+        if (empty($card->prop['on_move_heal_adjacent'])) return;
+        if ($card->zone !== CardInstance::ZONE_FIELD) return;
+
+        $candidates = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->instanceId === $card->instanceId) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $dr = abs($c->row - $card->row);
+            $dc = abs($c->col - $card->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            $candidates[] = $c->instanceId;
+        }
+
+        if (empty($candidates)) return;
+
+        $this->state->battle['pending_wild_healer_move'] = [
+            'owner'      => $playerKey,
+            'card_id'    => $card->instanceId,
+            'value'      => (int) ($card->prop['on_move_heal_adjacent']['value'] ?? 1),
+            'candidates' => $candidates,
+        ];
     }
 }

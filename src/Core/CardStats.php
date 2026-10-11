@@ -842,6 +842,8 @@ final class CardStats
                     >= (int) ($condition['count'] ?? 1),
                 'ally_classes_near' => self::countClassesNear($state, $card)
                     >= (int) ($condition['count'] ?? 4),
+                'ally_no_wounds_near' => self::countAlliesNoWoundsNear($state, $card) 
+                    >= (int) ($condition['count'] ?? 3),
                 default => true,
             };
         }
@@ -1256,6 +1258,28 @@ final class CardStats
         }
 
         return $allies > $enemies;
+    }
+
+    public static function countAlliesNoWoundsNear(GameState $state, CardInstance $card): int
+    {
+        if ($card->zone !== CardInstance::ZONE_FIELD) return 0;
+        if ($card->row === null || $card->col === null) return 0;
+
+        $count = 0;
+        foreach ($state->cards as $c) {
+            if ($c->instanceId === $card->instanceId) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->owner !== $card->owner) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            if ($c->hp !== $c->hpMax) continue;
+
+            $dr = abs($c->row - $card->row);
+            $dc = abs($c->col - $card->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            $count++;
+        }
+        return $count;
     }
 
     public static function countClassesNear(GameState $state, CardInstance $card): int
