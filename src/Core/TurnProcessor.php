@@ -599,6 +599,8 @@ final class TurnProcessor
 
             $this->applyStartEffect($card, $start);
         }
+
+        $this->engine->refreshArmor($this->state);
     }
 
     private function applyStartEffect(CardInstance $card, array $start): void
@@ -606,6 +608,36 @@ final class TurnProcessor
         $type = $start['type'] ?? '';
 
         switch ($type) {
+            case 'element_bundle':
+                $rules = $start['rules'] ?? [];
+                foreach ($rules as $rule) {
+                    $element = (string) ($rule['element'] ?? '');
+                    if ($element === '') continue;
+
+                    // Есть ли у владельца карта такого элемента на поле
+                    $has = false;
+                    foreach ($this->state->cards as $c) {
+                        if ($c->owner !== $card->owner) continue;
+                        if ($c->zone !== CardInstance::ZONE_FIELD
+                            && $c->zone !== CardInstance::ZONE_FLYING) continue;
+                        if ($c->dying || $c->hp <= 0) continue;
+                        if ($c->element === $element) { $has = true; break; }
+                    }
+                    if (!$has) continue;
+
+                    foreach ($rule['modifiers'] ?? [] as $m) {
+                        $mod = [
+                            'stat'   => (string) ($m['stat'] ?? ''),
+                            'value'  => (int) ($m['value'] ?? 0),
+                            'expire' => 'permanent',
+                            'source' => $card->owner,
+                        ];
+                        if (!empty($m['levels'])) $mod['levels'] = (array) $m['levels'];
+                        if ($mod['stat'] === '' || $mod['value'] === 0) continue;
+                        $card->modifiers[] = $mod;
+                    }
+                }
+                break;
             case 'get_coins':
                 $coins = (int) ($start['coins'] ?? 1);
                 $max = (int) ($card->prop['coins']['max_value'] ?? 0);
