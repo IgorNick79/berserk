@@ -131,13 +131,13 @@ $cardsInfo = [
 $html = vampireHpUiRender($state, $cardsInfo);
 $combined = $html['field_html'] . $html['fly_zones_html'] . $html['panel_html'];
 
-vampireHpUiAssert(str_contains($html['field_html'], '<div class="bhp">9/∞</div>'), 'Base Vampire HP should render as 9/infinity.');
-vampireHpUiAssert(str_contains($html['field_html'], '<div class="bhp">10/∞</div>'), 'Healed Vampire HP should render as 10/infinity.');
-vampireHpUiAssert(str_contains($html['field_html'], '<div class="bhp">7/∞</div>'), 'Wounded Vampire HP should render as 7/infinity.');
-vampireHpUiAssert(str_contains($html['field_html'], '<div class="bhp">7/12</div>'), 'Normal HP bonuses should still render real hpMax.');
-vampireHpUiAssert(substr_count($html['field_html'], '<div class="bhp">7/∞</div>') === 2, 'Any technical 999 HP override should render as infinity.');
-vampireHpUiAssert(str_contains($html['field_html'], '<div class="bhp">7/999</div>'), 'Plain 999 hpMax without the technical override prop should keep existing display rules.');
-vampireHpUiAssert(str_contains($html['fly_zones_html'], '<div class="bhp">11/∞</div>'), 'Flying Vampire HP should use the same infinity max.');
+vampireHpUiAssert(str_contains($html['field_html'], '<span>9/∞</span>'), 'Base Vampire HP should render as 9/infinity.');
+vampireHpUiAssert(str_contains($html['field_html'], '<span>10/∞</span>'), 'Healed Vampire HP should render as 10/infinity.');
+vampireHpUiAssert(str_contains($html['field_html'], '<span>7/∞</span>'), 'Wounded Vampire HP should render as 7/infinity.');
+vampireHpUiAssert(str_contains($html['field_html'], '<span>7/12</span>'), 'Normal HP bonuses should still render real hpMax.');
+vampireHpUiAssert(substr_count($html['field_html'], '<span>7/∞</span>') === 2, 'Any technical 999 HP override should render as infinity.');
+vampireHpUiAssert(str_contains($html['field_html'], '<span>7/999</span>'), 'Plain 999 hpMax without the technical override prop should keep existing display rules.');
+vampireHpUiAssert(str_contains($html['fly_zones_html'], '<span>11/∞</span>'), 'Flying Vampire HP should use the same infinity max.');
 vampireHpUiAssert(str_contains($html['panel_html'], 'HP 9/∞'), 'Selected Vampire panel should render infinity max.');
 
 echo "Battle vampire HP UI tests passed.\n";

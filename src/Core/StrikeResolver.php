@@ -458,6 +458,24 @@ final class StrikeResolver
                         $target = $this->state->getCard($targetId);
                         if ($target && !$target->dying && $target->hp > 0) {
                             $healValue = (int) ($m['value'] ?? 0);
+
+                            // Вожак и подобные: вместо излечения — рана
+                            $adjacent = $this->findAdjacentCreatures($target);
+                            if (CardStats::canHealInsteadWound($target) && $adjacent) {
+                                $this->state->battle['pending_heal_instead_wound'] = [
+                                    'owner'      => $target->owner,
+                                    'source_id'  => $defender->instanceId,
+                                    'target_id'  => $target->instanceId,
+                                    'heal_value' => $healValue,
+                                    'candidates' => $adjacent,
+                                ];
+                                $this->state->battle['strike']['waiting_resolve_after_heal'] = true;
+
+                                $this->state->bumpVersion();
+                                return Result::ok(['defender_chosen_waiting_wound']);
+                            }
+
+                            // Обычное излечение
                             $before = $target->hp;
                             $target->hp = min($target->hpMax, $target->hp + $healValue);
                             $healed = $target->hp - $before;
@@ -1033,6 +1051,23 @@ final class StrikeResolver
         }
     }
 
+    private function findAdjacentCreatures(CardInstance $card): array
+    {
+        $ids = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->instanceId === $card->instanceId) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $dr = abs($c->row - $card->row);
+            $dc = abs($c->col - $card->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            $ids[] = $c->instanceId;
+        }
+        return $ids;
+    }
+
     private function getBehindStrikeTargetCard(CardInstance $attacker, CardInstance $target): ?CardInstance
     {
         if ($attacker->row === null || $attacker->col === null
@@ -1417,6 +1452,8 @@ final class StrikeResolver
         }
 
         if ($choice === 'move') {
+            $oldRow = (int) $defendCard->row;
+            $oldCol = (int) $defendCard->col;
             $defendCard->row = $pp['new_row'];
             $defendCard->col = $pp['new_col'];
 
@@ -1424,7 +1461,17 @@ final class StrikeResolver
                 $defendCard->coins = 0;
                 $this->engine->syncCoinBonus($defendCard);
             }
-            
+            (new \Berserk\Core\Movement\MovementEffectResolver($this->state, $this->engine))
+                ->applyForcedPositionChange(new \Berserk\Core\Movement\MovementContext(
+                    card: $defendCard,
+                    playerKey: $defendCard->owner,
+                    fromRow: $oldRow,
+                    fromCol: $oldCol,
+                    toRow: (int) $pp['new_row'],
+                    toCol: (int) $pp['new_col'],
+                    movementType: \Berserk\Core\Movement\MovementContext::TYPE_FORCED_MOVE,
+                ));
+
             $this->state->battle['strike']['push_result'] = [
                 'type'    => 'moved',
                 'new_row' => $pp['new_row'],

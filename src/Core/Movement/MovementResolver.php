@@ -285,4 +285,5 @@ final class MovementResolver
         if (in_array($card->instanceId, $moved, true)) return;
         $moved[] = $card->instanceId;
     }
+
 }

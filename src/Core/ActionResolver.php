@@ -105,6 +105,10 @@ final class ActionResolver
             return $this->startRowSpell($attacker, $action, $cardId, $playerKey);
         }
 
+        if ($type === 'blood_storm') {
+            return $this->startBloodStorm($attacker, $action, $cardId, $playerKey);
+        }
+
         if ($type === 'particle') {
             return $this->startParticlePick($attacker, $action, $cardId, $playerKey);
         }
@@ -931,6 +935,41 @@ final class ActionResolver
         CardInstance $attacker, CardInstance $target, array $action,
         int $cardId, int $targetId, string $playerKey
     ): Result {
+        if (CardStats::canHealInsteadWound($target)) {
+            $healRaw = $action['value'] ?? 0;
+            $healValue = ($healRaw === 'full') ? 0 : (int) $healRaw;
+
+            if ($healValue > 0 && $this->findAdjacentCreatures($target)) {
+                $attacker->closed = true;
+
+                $this->state->battle['pending_heal_instead_wound'] = [
+                    'owner'      => $target->owner,
+                    'source_id'  => $attacker->instanceId,
+                    'target_id'  => $target->instanceId,
+                    'heal_value' => $healValue,
+                    'candidates' => $this->findAdjacentCreatures($target),
+                ];
+
+                $this->state->battle['strike'] = [
+                    'kind'        => 'multi_heal',
+                    'action_name' => $action['name'] ?? 'Излечение',
+                    'attacker_id' => $cardId,
+                    'target_id'   => $targetId,
+                    'defender_id' => null,
+                    'state'       => 'results',
+                    'attack_dice' => 0,
+                    'defend_dice' => 0,
+                    'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+                    'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+                    'damage'      => 0,
+                    'healed'      => [],
+                    'confirmed'   => [],
+                ];
+
+                $this->state->bumpVersion();
+                return Result::ok(['heal_instead_wound_started']);
+            }
+        }
         // Серк и подобные: при полном hp вместо излечения — открыться
         $insteadOpen  = $target->prop['on_heal_instead_open'] ?? null;
         $openedInstead = false;
@@ -1840,18 +1879,20 @@ final class ActionResolver
         $value  = (int) $pmh['value'];
         $healed = [];
 
+        $deferred = [];
         foreach ($targetIds as $tid) {
             $card = $this->state->getCard($tid);
             if (!$card) continue;
 
+            if (CardStats::canHealInsteadWound($card) && $this->findAdjacentCreatures($card)) {
+                $deferred[] = $card->instanceId;
+                continue;
+            }
+
             $hpBefore = $card->hp;
             $card->hp += $value;
             if ($card->hp > $card->hpMax) $card->hp = $card->hpMax;
-
-            $healed[] = [
-                'target_id' => $tid,
-                'heal'      => $card->hp - $hpBefore,
-            ];
+            $healed[] = ['target_id' => $tid, 'heal' => $card->hp - $hpBefore];
         }
 
         $attacker->closed = true;
@@ -1871,6 +1912,25 @@ final class ActionResolver
             'healed'      => $healed,
             'confirmed'   => [],
         ];
+
+        // после обычного heal — если есть отложенные, ставим первый pending
+        if (!empty($deferred)) {
+            $first = $deferred[0];
+            $card = $this->state->getCard($first);
+            if (!$card) {
+                $this->state->bumpVersion();
+                return Result::ok(['multi_heal_done']);
+            }
+            $this->state->battle['pending_heal_instead_wound'] = [
+                'owner'          => $card->owner,
+                'source_id'      => $attacker->instanceId,
+                'target_id'      => $first,
+                'heal_value'     => $value,
+                'candidates'     => $this->findAdjacentCreatures($card),
+                'remaining'      => array_slice($deferred, 1),
+                'healed_summary' => $healed,   // ← добавили
+            ];
+        }
 
         $this->state->bumpVersion();
         return Result::ok(['multi_heal_done']);
@@ -2114,11 +2174,13 @@ final class ActionResolver
             ['pending_row_pick',                'owner'],
             ['pending_opponent_row_marker',     'owner'],
             ['pending_gate_pick',               'owner'],
-            ['pending_destroy_self_and_target',  'owner'],
+            ['pending_destroy_self_and_target', 'owner'],
             ['pending_particle_pick',           'owner'],
             ['pending_life_gift',               'owner'],
             ['pending_nokami_wound',            'owner'],
             ['pending_teleport_target',         'owner'],
+            ['pending_blood_storm',             'owner'],
+            ['pending_heal_instead_wound',      'owner'],
         ];
         foreach ($simple as [$key, $field]) {
             $p = $state->battle[$key] ?? null;
@@ -3840,7 +3902,145 @@ final class ActionResolver
         return Result::ok(['dive_started']);
     }
 
-        private function startParticlePick(
+    private function startBloodStorm(
+        CardInstance $attacker, array $action,
+        int $cardId, string $playerKey
+    ): Result {
+        if ($attacker->closed) {
+            return Result::error('Карта закрыта');
+        }
+
+        $cost = (int) ($action['coins'] ?? 0);
+        if ($cost > 0 && $attacker->coins < $cost) {
+            return Result::error('Не хватает монет');
+        }
+
+        // 1. Получить допку (раны сохраняются)
+        $attacker->hpMax += 1;
+        $attacker->hp += 1;
+
+        if ($cost > 0) {
+            $attacker->coins -= $cost;
+            $this->engine->syncCoinBonus($attacker);
+        }
+
+        // 2. X = свои на поле с hp > hp_base (включая саму знать)
+        $x = 0;
+        foreach ($this->state->cards as $c) {
+            if ($c->owner !== $playerKey) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $base = (int) ($c->prop['hp_base'] ?? $c->hpMax);
+            if ($c->hp > $base) $x++;
+        }
+        $x = min($x, 3);
+
+        // 3. Кандидаты — любые существа на поле
+        $candidates = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            $candidates[] = $c->instanceId;
+        }
+
+        if (empty($candidates)) {
+            $attacker->closed = true;
+            $this->state->battle['strike'] = [
+                'kind'        => 'blood_storm',
+                'action_name' => $action['name'] ?? 'Буря крови',
+                'attacker_id' => $cardId,
+                'target_id'   => 0,
+                'defender_id' => null,
+                'state'       => 'results',
+                'attack_dice' => 0,
+                'defend_dice' => 0,
+                'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+                'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+                'damage'      => 0,
+                'blood_storm' => ['x' => $x, 'target_id' => 0, 'damage' => 0, 'defended' => false],
+                'confirmed'   => [],
+            ];
+            $this->state->bumpVersion();
+            return Result::ok(["blood_storm_no_target:{$x}"]);
+        }
+
+        $this->state->battle['pending_blood_storm'] = [
+            'owner'      => $playerKey,
+            'card_id'    => $cardId,
+            'x'          => $x,
+            'candidates' => $candidates,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['blood_storm_started']);
+    }
+
+    public function chooseBloodStormTarget(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_blood_storm'] ?? null;
+        if (!$pending) return Result::error('Нет ожидающего выбора');
+        if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+
+        $attacker = $this->state->getCard((int) $pending['card_id']);
+        if (!$attacker) {
+            unset($this->state->battle['pending_blood_storm']);
+            return Result::error('Источник не найден');
+        }
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        if (!in_array($targetId, $pending['candidates'], true)) {
+            return Result::error('Неверная цель');
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target || $target->dying || $target->hp <= 0) {
+            return Result::error('Цель недоступна');
+        }
+
+        $x = (int) $pending['x'];
+
+        $defended = CardStats::hasDefense($this->state, $target, 'cast', $attacker);
+
+        $hpBefore = $target->hp;
+        if (!$defended) {
+            $this->engine->applyDamage($this->state, $target, $x, 'cast', $attacker);
+        }
+        $dealt = max(0, $hpBefore - $target->hp);
+
+        $attacker->closed = true;
+        unset($this->state->battle['pending_blood_storm']);
+
+        $this->state->battle['strike'] = [
+            'kind'        => 'blood_storm',
+            'action_name' => 'Буря крови',
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => $target->instanceId,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => $dealt,
+            'blood_storm' => [
+                'x'         => $x,
+                'target_id' => $target->instanceId,
+                'damage'    => $dealt,
+                'defended'  => $defended,
+            ],
+            'confirmed'   => [],
+        ];
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->engine->checkGameOver($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(["blood_storm:{$x}->{$targetId}:dmg={$dealt}"]);
+    }
+
+    private function startParticlePick(
         CardInstance $attacker, array $action,
         int $cardId, string $playerKey
     ): Result {
@@ -4188,6 +4388,17 @@ final class ActionResolver
         $attacker->moveMax  = 1;
         $attacker->flags['dive_used'] = true;
 
+        (new \Berserk\Core\Movement\MovementEffectResolver($this->state, $this->engine))
+            ->applyForcedPositionChange(new \Berserk\Core\Movement\MovementContext(
+                card: $target,
+                playerKey: $target->owner,
+                fromRow: (int) $oldRow,
+                fromCol: (int) $oldCol,
+                toRow: $row,
+                toCol: $col,
+                movementType: \Berserk\Core\Movement\MovementContext::TYPE_FORCED_MOVE,
+            ));
+
         // 4. Кубик и урон
         $dice  = Dice::roll();
         $level = BattleHelper::diceToLevel($dice);
@@ -4384,8 +4595,20 @@ final class ActionResolver
         unset($this->state->battle['pending_greed_teleport']);
 
         // Телепорт
+        $oldRow = (int) $card->row;
+        $oldCol = (int) $card->col;
         $card->row = $row;
         $card->col = $col;
+        (new \Berserk\Core\Movement\MovementEffectResolver($this->state, $this->engine))
+            ->applyForcedPositionChange(new \Berserk\Core\Movement\MovementContext(
+                card: $card,
+                playerKey: $card->owner,
+                fromRow: $oldRow,
+                fromCol: $oldCol,
+                toRow: $row,
+                toCol: $col,
+                movementType: \Berserk\Core\Movement\MovementContext::TYPE_FORCED_MOVE,
+            ));
 
         // AoE 8 клеток
         $hits = [];
@@ -4697,9 +4920,21 @@ final class ActionResolver
 
         $action = $pt['action'];
 
+        $oldRow = (int) $target->row;
+        $oldCol = (int) $target->col;
         $target->row = $row;
         $target->col = $col;
         $target->flags['moved_this_turn'] = true;
+        (new \Berserk\Core\Movement\MovementEffectResolver($this->state, $this->engine))
+            ->applyForcedPositionChange(new \Berserk\Core\Movement\MovementContext(
+                card: $target,
+                playerKey: $target->owner,
+                fromRow: $oldRow,
+                fromCol: $oldCol,
+                toRow: $row,
+                toCol: $col,
+                movementType: \Berserk\Core\Movement\MovementContext::TYPE_FORCED_MOVE,
+            ));
 
         $attacker->closed = true;
 
@@ -4727,5 +4962,194 @@ final class ActionResolver
 
         $this->state->bumpVersion();
         return Result::ok(['teleport_target_done']);
+    }
+
+    private function findAdjacentCreatures(CardInstance $card): array
+    {
+        $ids = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->instanceId === $card->instanceId) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $dr = abs($c->row - $card->row);
+            $dc = abs($c->col - $card->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            $ids[] = $c->instanceId;
+        }
+        return $ids;
+    }
+
+    public function chooseWildHealerHeal(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_wild_healer_move'] ?? null;
+        if (!$pending) return Result::error('Нет ожидающего выбора');
+        if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+
+        $healer = $this->state->getCard((int) $pending['card_id']);
+        if (!$healer) {
+            unset($this->state->battle['pending_wild_healer_move']);
+            return Result::error('Источник не найден');
+        }
+
+        // Отмена — просто закрываем pending
+        if ($cmd->type === 'cancel_pending' || (int) $cmd->get('target_id', 0) === 0) {
+            unset($this->state->battle['pending_wild_healer_move']);
+            $this->state->bumpVersion();
+            return Result::ok(['wild_healer_cancelled']);
+        }
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        if (!in_array($targetId, $pending['candidates'], true)) {
+            return Result::error('Неверная цель');
+        }
+
+        $victim = $this->state->getCard($targetId);
+        if (!$victim || $victim->dying || $victim->hp <= 0) {
+            return Result::error('Цель недоступна');
+        }
+
+        $value = (int) $pending['value'];
+        unset($this->state->battle['pending_wild_healer_move']);
+
+        // Цепочка: если цель — Вожак с полным HP и соседями — открываем его окно
+        if (CardStats::canHealInsteadWound($victim) && $this->findAdjacentCreatures($victim)) {
+            $this->state->battle['pending_heal_instead_wound'] = [
+                'owner'      => $victim->owner,
+                'source_id'  => $healer->instanceId,
+                'target_id'  => $victim->instanceId,
+                'heal_value' => $value,
+                'candidates' => $this->findAdjacentCreatures($victim),
+            ];
+            $this->state->bumpVersion();
+            return Result::ok(['wild_healer_to_vozhak']);
+        }
+
+        // Обычное излечение
+        $hpBefore = $victim->hp;
+        $victim->hp += $value;
+        if ($victim->hp > $victim->hpMax) $victim->hp = $victim->hpMax;
+
+        $this->state->bumpVersion();
+        return Result::ok([
+            "wild_healer_heal:{$targetId}:" . ($victim->hp - $hpBefore),
+        ]);
+    }
+
+    public function chooseHealInsteadWound(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_heal_instead_wound'] ?? null;
+        if (!$pending) return Result::error('Нет ожидающего выбора');
+        if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+
+        $target = $this->state->getCard((int) $pending['target_id']);
+        if (!$target) {
+            unset($this->state->battle['pending_heal_instead_wound']);
+            return Result::error('Источник не найден');
+        }
+
+        // Отмена
+        if ($cmd->type === 'cancel_pending' || (int) $cmd->get('target_id', 0) === 0) {
+            unset($this->state->battle['pending_heal_instead_wound']);
+
+            // Переезжаем на следующего отложенного
+            if (!empty($pending['remaining'])) {
+                $nextId = array_shift($pending['remaining']);
+                $next = $this->state->getCard((int) $nextId);
+                if ($next && CardStats::canHealInsteadWound($next)) {
+                    $this->state->battle['pending_heal_instead_wound'] = [
+                        'owner'          => $next->owner,
+                        'source_id'      => $pending['source_id'],
+                        'target_id'      => $nextId,
+                        'heal_value'     => $pending['heal_value'],
+                        'candidates'     => $this->findAdjacentCreatures($next),
+                        'remaining'      => $pending['remaining'],
+                        'healed_summary' => $pending['healed_summary'] ?? [],
+                    ];
+                }
+            }
+
+            if (!empty($this->state->battle['strike']['waiting_resolve_after_heal'])) {
+                unset($this->state->battle['strike']['waiting_resolve_after_heal']);
+                (new \Berserk\Core\StrikeResolver($this->state, $this->engine))->resolve();
+                return Result::ok(['heal_instead_wound_cancelled']);
+            }
+
+            $this->state->bumpVersion();
+
+            return Result::ok(['heal_instead_wound_cancelled']);
+        }
+
+        $chosenId = (int) $cmd->get('target_id', 0);
+        if (!in_array($chosenId, $pending['candidates'], true)) {
+            return Result::error('Неверная цель');
+        }
+
+        $victim = $this->state->getCard($chosenId);
+        if (!$victim) return Result::error('Цель не найдена');
+
+        $value = (int) $pending['heal_value'];
+        $this->engine->applyDamage($this->state, $victim, $value, 'impact', $target);
+
+        $target->flags['on_heal_wound_used_this_turn'] =
+        (int) ($target->flags['on_heal_wound_used_this_turn'] ?? 0) + 1;
+
+        unset($this->state->battle['pending_heal_instead_wound']);
+
+        // Дополняем существующий strike, не перезаписываем
+        if (empty($this->state->battle['strike'])) {
+            $this->state->battle['strike'] = [
+                'kind'        => 'multi_heal',
+                'action_name' => 'Излечение',
+                'attacker_id' => (int) ($pending['source_id'] ?? 0),
+                'target_id'   => $target->instanceId,
+                'defender_id' => null,
+                'state'       => 'results',
+                'attack_dice' => 0,
+                'defend_dice' => 0,
+                'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+                'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+                'damage'      => 0,
+                'healed'      => [],
+                'confirmed'   => [],
+            ];
+        }
+
+        $this->state->battle['strike']['heal_instead_wound'][] = [
+            'source_id'  => (int) $pending['source_id'],
+            'target_id'  => $victim->instanceId,
+            'value'      => $value,
+        ];
+
+        // Если есть следующий Вожак — ставим следующий pending
+        if (!empty($pending['remaining'])) {
+            $nextId = array_shift($pending['remaining']);
+            $next = $this->state->getCard((int) $nextId);
+            if ($next && CardStats::canHealInsteadWound($next)) {
+                $this->state->battle['pending_heal_instead_wound'] = [
+                    'owner'          => $next->owner,
+                    'source_id'      => $pending['source_id'],
+                    'target_id'      => $nextId,
+                    'heal_value'     => $value,
+                    'candidates'     => $this->findAdjacentCreatures($next),
+                    'remaining'      => $pending['remaining'],
+                    'healed_summary' => [],
+                ];
+            }
+        }
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->engine->checkGameOver($this->state);
+        $this->state->bumpVersion();
+
+        // Если pending был запущен из chooseDefender — вернуть управление в сражение
+        if (!empty($this->state->battle['strike']['waiting_resolve_after_heal'])) {
+            unset($this->state->battle['strike']['waiting_resolve_after_heal']);
+            (new \Berserk\Core\StrikeResolver($this->state, $this->engine))->resolve();
+            return Result::ok(["heal_instead_wound:{$value}->{$chosenId}"]);
+        }
+
+        return Result::ok(["heal_instead_wound:{$value}->{$chosenId}"]);
     }
 }
