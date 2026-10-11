@@ -258,7 +258,6 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 
 .battle-card__main {
     display: flex;
-    align-items: center;
     gap: 4px;
     min-height: 38px;
 }
