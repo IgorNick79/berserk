@@ -108,17 +108,45 @@ try {
 journalAssert($expectedVersionMismatchDetected, 'Duplicate command id with different expected_version should be rejected');
 
 $invalidInsertPropagated = false;
+$invalidInsertTriggerName = 'berserk_journal_insert_error_test';
+$invalidInsertCommandId = 'journal-test-' . $gameId . '-bad-insert';
 try {
-    $journal->registerProcessing(
-        2147483648,
-        GameState::PLAYER_HOST,
-        'journal-test-' . $gameId . '-bad-insert',
-        'strike',
-        journalPayload(),
-        $version
+    $db->query("DROP TRIGGER IF EXISTS {$invalidInsertTriggerName}");
+    $db->query(
+        "CREATE TRIGGER {$invalidInsertTriggerName}
+         BEFORE INSERT ON battle_command_journal
+         FOR EACH ROW
+         BEGIN
+             IF @berserk_journal_insert_error_command_id IS NOT NULL
+                AND NEW.command_id = @berserk_journal_insert_error_command_id THEN
+                 SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'journal insert error test';
+             END IF;
+         END"
     );
-} catch (DbQueryException $e) {
-    $invalidInsertPropagated = $e->getCode() !== 1062;
+    $db->query("SET @berserk_journal_insert_error_command_id = '" . $db->escape($invalidInsertCommandId) . "'");
+    try {
+        $journal->registerProcessing(
+            $gameId,
+            GameState::PLAYER_HOST,
+            $invalidInsertCommandId,
+            'strike',
+            journalPayload(),
+            $version
+        );
+    } catch (DbQueryException $e) {
+        $invalidInsertPropagated = $e->getCode() !== 1062;
+    }
+} finally {
+    try {
+        $db->query("SET @berserk_journal_insert_error_command_id = NULL");
+    } catch (Throwable) {
+        // Best effort cleanup; dropping the trigger is the important part.
+    }
+    try {
+        $db->query("DROP TRIGGER IF EXISTS {$invalidInsertTriggerName}");
+    } catch (Throwable) {
+        throw new RuntimeException('Unable to clean up insert error test trigger');
+    }
 }
 journalAssert($invalidInsertPropagated, 'Non-duplicate insert errors should not be treated as duplicate commands');
 
