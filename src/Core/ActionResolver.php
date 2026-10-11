@@ -943,7 +943,7 @@ final class ActionResolver
                 $attacker->closed = true;
 
                 $this->state->battle['pending_heal_instead_wound'] = [
-                    'owner'      => $playerKey,
+                    'owner'      => $target->owner,
                     'source_id'  => $attacker->instanceId,
                     'target_id'  => $target->instanceId,
                     'heal_value' => $healValue,
@@ -1922,7 +1922,7 @@ final class ActionResolver
                 return Result::ok(['multi_heal_done']);
             }
             $this->state->battle['pending_heal_instead_wound'] = [
-                'owner'          => $playerKey,
+                'owner'          => $card->owner,
                 'source_id'      => $attacker->instanceId,
                 'target_id'      => $first,
                 'heal_value'     => $value,
@@ -4388,6 +4388,17 @@ final class ActionResolver
         $attacker->moveMax  = 1;
         $attacker->flags['dive_used'] = true;
 
+        (new \Berserk\Core\Movement\MovementEffectResolver($this->state, $this->engine))
+            ->applyForcedPositionChange(new \Berserk\Core\Movement\MovementContext(
+                card: $target,
+                playerKey: $target->owner,
+                fromRow: (int) $oldRow,
+                fromCol: (int) $oldCol,
+                toRow: $row,
+                toCol: $col,
+                movementType: \Berserk\Core\Movement\MovementContext::TYPE_FORCED_MOVE,
+            ));
+
         // 4. Кубик и урон
         $dice  = Dice::roll();
         $level = BattleHelper::diceToLevel($dice);
@@ -4584,8 +4595,20 @@ final class ActionResolver
         unset($this->state->battle['pending_greed_teleport']);
 
         // Телепорт
+        $oldRow = (int) $card->row;
+        $oldCol = (int) $card->col;
         $card->row = $row;
         $card->col = $col;
+        (new \Berserk\Core\Movement\MovementEffectResolver($this->state, $this->engine))
+            ->applyForcedPositionChange(new \Berserk\Core\Movement\MovementContext(
+                card: $card,
+                playerKey: $card->owner,
+                fromRow: $oldRow,
+                fromCol: $oldCol,
+                toRow: $row,
+                toCol: $col,
+                movementType: \Berserk\Core\Movement\MovementContext::TYPE_FORCED_MOVE,
+            ));
 
         // AoE 8 клеток
         $hits = [];
@@ -4897,9 +4920,21 @@ final class ActionResolver
 
         $action = $pt['action'];
 
+        $oldRow = (int) $target->row;
+        $oldCol = (int) $target->col;
         $target->row = $row;
         $target->col = $col;
         $target->flags['moved_this_turn'] = true;
+        (new \Berserk\Core\Movement\MovementEffectResolver($this->state, $this->engine))
+            ->applyForcedPositionChange(new \Berserk\Core\Movement\MovementContext(
+                card: $target,
+                playerKey: $target->owner,
+                fromRow: $oldRow,
+                fromCol: $oldCol,
+                toRow: $row,
+                toCol: $col,
+                movementType: \Berserk\Core\Movement\MovementContext::TYPE_FORCED_MOVE,
+            ));
 
         $attacker->closed = true;
 
@@ -4981,7 +5016,7 @@ final class ActionResolver
         // Цепочка: если цель — Вожак с полным HP и соседями — открываем его окно
         if (CardStats::canHealInsteadWound($victim) && $this->findAdjacentCreatures($victim)) {
             $this->state->battle['pending_heal_instead_wound'] = [
-                'owner'      => $playerKey,
+                'owner'      => $victim->owner,
                 'source_id'  => $healer->instanceId,
                 'target_id'  => $victim->instanceId,
                 'heal_value' => $value,
@@ -5016,9 +5051,6 @@ final class ActionResolver
 
         // Отмена
         if ($cmd->type === 'cancel_pending' || (int) $cmd->get('target_id', 0) === 0) {
-            $target->flags['on_heal_wound_used_this_turn'] =
-            (int) ($target->flags['on_heal_wound_used_this_turn'] ?? 0) + 1;
-
             unset($this->state->battle['pending_heal_instead_wound']);
 
             // Переезжаем на следующего отложенного
@@ -5027,7 +5059,7 @@ final class ActionResolver
                 $next = $this->state->getCard((int) $nextId);
                 if ($next && CardStats::canHealInsteadWound($next)) {
                     $this->state->battle['pending_heal_instead_wound'] = [
-                        'owner'          => $playerKey,
+                        'owner'          => $next->owner,
                         'source_id'      => $pending['source_id'],
                         'target_id'      => $nextId,
                         'heal_value'     => $pending['heal_value'],
@@ -5043,7 +5075,7 @@ final class ActionResolver
                 (new \Berserk\Core\StrikeResolver($this->state, $this->engine))->resolve();
                 return Result::ok(['heal_instead_wound_cancelled']);
             }
-            
+
             $this->state->bumpVersion();
 
             return Result::ok(['heal_instead_wound_cancelled']);
@@ -5096,7 +5128,7 @@ final class ActionResolver
             $next = $this->state->getCard((int) $nextId);
             if ($next && CardStats::canHealInsteadWound($next)) {
                 $this->state->battle['pending_heal_instead_wound'] = [
-                    'owner'          => $playerKey,
+                    'owner'          => $next->owner,
                     'source_id'      => $pending['source_id'],
                     'target_id'      => $nextId,
                     'heal_value'     => $value,

@@ -463,7 +463,7 @@ final class StrikeResolver
                             $adjacent = $this->findAdjacentCreatures($target);
                             if (CardStats::canHealInsteadWound($target) && $adjacent) {
                                 $this->state->battle['pending_heal_instead_wound'] = [
-                                    'owner'      => $defender->owner,
+                                    'owner'      => $target->owner,
                                     'source_id'  => $defender->instanceId,
                                     'target_id'  => $target->instanceId,
                                     'heal_value' => $healValue,
@@ -1452,6 +1452,8 @@ final class StrikeResolver
         }
 
         if ($choice === 'move') {
+            $oldRow = (int) $defendCard->row;
+            $oldCol = (int) $defendCard->col;
             $defendCard->row = $pp['new_row'];
             $defendCard->col = $pp['new_col'];
 
@@ -1459,7 +1461,17 @@ final class StrikeResolver
                 $defendCard->coins = 0;
                 $this->engine->syncCoinBonus($defendCard);
             }
-            
+            (new \Berserk\Core\Movement\MovementEffectResolver($this->state, $this->engine))
+                ->applyForcedPositionChange(new \Berserk\Core\Movement\MovementContext(
+                    card: $defendCard,
+                    playerKey: $defendCard->owner,
+                    fromRow: $oldRow,
+                    fromCol: $oldCol,
+                    toRow: (int) $pp['new_row'],
+                    toCol: (int) $pp['new_col'],
+                    movementType: \Berserk\Core\Movement\MovementContext::TYPE_FORCED_MOVE,
+                ));
+
             $this->state->battle['strike']['push_result'] = [
                 'type'    => 'moved',
                 'new_row' => $pp['new_row'],

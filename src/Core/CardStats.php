@@ -842,7 +842,7 @@ final class CardStats
                     >= (int) ($condition['count'] ?? 1),
                 'ally_classes_near' => self::countClassesNear($state, $card)
                     >= (int) ($condition['count'] ?? 4),
-                'ally_no_wounds_near' => self::countAlliesNoWoundsNear($state, $card) 
+                'ally_no_wounds_near' => self::countAlliesNoWoundsNear($state, $card)
                     >= (int) ($condition['count'] ?? 3),
                 default => true,
             };

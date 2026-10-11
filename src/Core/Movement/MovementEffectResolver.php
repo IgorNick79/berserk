@@ -26,6 +26,7 @@ final class MovementEffectResolver
         $this->applyMovementDirectionBonus($context);
         $this->applyAirinTriggers($context);
         $this->applyTeleportAdjacentBonus($context);
+        $this->maybeOpenWildHealer($context->card, $context->playerKey);
 
         $this->engine->clearRootedBySource($this->state, $card->instanceId);
         $this->engine->refreshArmor($this->state);
@@ -38,6 +39,7 @@ final class MovementEffectResolver
         $this->applyMovePenalty($context->card);
         $this->engine->syncCoinBonus($context->card);
         $this->applyAirinTriggers($context);
+        $this->maybeOpenWildHealer($context->card, $context->playerKey);
         $this->engine->refreshArmor($this->state);
     }
 
@@ -46,6 +48,35 @@ final class MovementEffectResolver
         if (!empty($card->prop['lose_coins_on_move']) && $card->coins > 0) {
             $card->coins = 0;
         }
+    }
+
+    private function maybeOpenWildHealer(CardInstance $card, string $playerKey): void
+    {
+        if (empty($card->prop['on_move_heal_adjacent'])) return;
+        if ($card->zone !== CardInstance::ZONE_FIELD) return;
+        if ($card->dying || $card->hp <= 0) return;
+
+        $candidates = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->instanceId === $card->instanceId) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $dr = abs($c->row - $card->row);
+            $dc = abs($c->col - $card->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            $candidates[] = $c->instanceId;
+        }
+
+        if (empty($candidates)) return;
+
+        $this->state->battle['pending_wild_healer_move'] = [
+            'owner'      => $playerKey,
+            'card_id'    => $card->instanceId,
+            'value'      => (int) ($card->prop['on_move_heal_adjacent']['value'] ?? 1),
+            'candidates' => $candidates,
+        ];
     }
 
     private function applyOnMoveEffects(MovementContext $context): void
