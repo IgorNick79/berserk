@@ -81,6 +81,55 @@ final class GameRepository
         $state->persistenceVersion = $newPersistenceVersion;
     }
 
+    public function saveCommittedCommand(
+        GameState $state,
+        CommandJournalRepository $journal,
+        int $journalId
+    ): void {
+        if (!$journal->usesDb($this->db)) {
+            throw new \RuntimeException('GameRepository and CommandJournalRepository must use the same DB connection');
+        }
+
+        if ($state->persistenceVersion === null) {
+            throw new \RuntimeException('Cannot commit command for a state without persistence version');
+        }
+
+        $beforeJson = $state->persistenceJson;
+        $beforeVersion = $state->persistenceVersion;
+
+        $this->db->beginTransaction();
+        try {
+            $journal->requireProcessingForCommit($journalId, $state->gameId, $beforeVersion);
+            $this->save($state);
+            $afterVersion = $state->persistenceVersion;
+            if ($afterVersion === null) {
+                throw new \RuntimeException('Committed state did not receive persistence version');
+            }
+
+            $journal->markCommitted($journalId, $beforeVersion, $afterVersion);
+            $this->db->commit();
+        } catch (TransactionCommitUnknownException $e) {
+            $state->persistenceJson = $beforeJson;
+            $state->persistenceVersion = $beforeVersion;
+            throw $e;
+        } catch (\Throwable $e) {
+            $rollbackError = null;
+            if ($this->db->inTransaction()) {
+                try {
+                    $this->db->rollback();
+                } catch (TransactionRollbackUnknownException $rollbackException) {
+                    $rollbackError = $rollbackException;
+                }
+            }
+            $state->persistenceJson = $beforeJson;
+            $state->persistenceVersion = $beforeVersion;
+            if ($rollbackError !== null) {
+                throw $rollbackError;
+            }
+            throw $e;
+        }
+    }
+
     /**
      * Создать новую партию. Возвращает GameState с присвоенным game_id.
      */

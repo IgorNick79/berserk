@@ -7,6 +7,7 @@ namespace Berserk\Core;
 
 use mysqli;
 use mysqli_result;
+use mysqli_sql_exception;
 
 /**
  * Тонкая обёртка над mysqli.
@@ -15,6 +16,7 @@ use mysqli_result;
 final class Db
 {
     private mysqli $connection;
+    private bool $transactionActive = false;
 
     public function __construct(array $config)
     {
@@ -36,9 +38,14 @@ final class Db
 
     public function query(string $sql): mysqli_result|bool
     {
-        $result = $this->connection->query($sql);
+        try {
+            $result = $this->connection->query($sql);
+        } catch (mysqli_sql_exception $e) {
+            throw new DbQueryException('Query failed', (int) $e->getCode(), $e);
+        }
+
         if ($result === false) {
-            throw new \RuntimeException('Query failed: ' . $this->connection->error . ' | SQL: ' . $sql);
+            throw new DbQueryException('Query failed', (int) $this->connection->errno);
         }
         return $result;
     }
@@ -91,5 +98,76 @@ final class Db
     public function affectedRows(): int
     {
         return $this->connection->affected_rows;
+    }
+
+    public function beginTransaction(): void
+    {
+        if ($this->transactionActive) {
+            throw new \RuntimeException('Nested transactions are not supported');
+        }
+
+        try {
+            $started = $this->connection->begin_transaction();
+        } catch (mysqli_sql_exception $e) {
+            throw new \RuntimeException('Begin transaction failed: ' . $e->getMessage(), (int) $e->getCode(), $e);
+        }
+
+        if (!$started) {
+            throw new \RuntimeException('Begin transaction failed: ' . $this->connection->error);
+        }
+
+        $this->transactionActive = true;
+    }
+
+    public function commit(): void
+    {
+        if (!$this->transactionActive) {
+            throw new \RuntimeException('No active transaction to commit');
+        }
+
+        try {
+            $committed = $this->connection->commit();
+        } catch (mysqli_sql_exception $e) {
+            $this->transactionActive = false;
+            throw new TransactionCommitUnknownException('Commit result is unknown: ' . $e->getMessage(), (int) $e->getCode(), $e);
+        }
+
+        if (!$committed) {
+            $this->transactionActive = false;
+            throw new TransactionCommitUnknownException('Commit result is unknown: ' . $this->connection->error);
+        }
+
+        $this->transactionActive = false;
+    }
+
+    public function rollback(): void
+    {
+        if (!$this->transactionActive) {
+            throw new \RuntimeException('No active transaction to roll back');
+        }
+
+        try {
+            $rolledBack = $this->connection->rollback();
+        } catch (mysqli_sql_exception $e) {
+            $this->transactionActive = false;
+            throw new TransactionRollbackUnknownException('Rollback result is unknown', (int) $e->getCode(), $e);
+        }
+
+        if (!$rolledBack) {
+            $this->transactionActive = false;
+            throw new TransactionRollbackUnknownException('Rollback result is unknown', (int) $this->connection->errno);
+        }
+
+        $this->transactionActive = false;
+    }
+
+    public function inTransaction(): bool
+    {
+        return $this->transactionActive;
+    }
+
+    public function isSameConnection(self $other): bool
+    {
+        return $this === $other;
     }
 }
