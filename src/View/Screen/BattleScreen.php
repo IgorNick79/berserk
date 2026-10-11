@@ -192,25 +192,7 @@ final class BattleScreen
                     if ($isHiddenForMe) $cellClass .= ' hidden';
                     if ($card->dying)   $cellClass .= ' dying';
 
-                    $coinsBadge = '';
-                    if ($card->coins > 0) {
-                        $coinsBadge = '<div class="bcoins">' . $card->coins . '</div>';
-                    }
-
-                    $armorBadge = '';
-                    if ($card->armor > 0) {
-                        $armorBadge = '<div class="barmor">' . $card->armor . '</div>';
-                    }
-
-                    $markersHtml = $this->buildCardBadges($card, $state);
-
-                    $cardBody = '<div class="battle-card">'
-                        . '<div class="bname">' . $nameHtml . '</div>'
-                        . '<div class="bhp">' . $hpText . '</div>'
-                        . $coinsBadge
-                        . $markersHtml
-                        . $armorBadge
-                        . '</div>';
+                    $cardBody = $this->buildBattleCard($card, $state, $info, $isHiddenForMe, $nameHtml, $hpText);
 
                     if (isset($pendingDefenderTargets[$card->instanceId])) {
                         $cellClass  .= ' attack-target pending-defender-target';
@@ -300,30 +282,25 @@ final class BattleScreen
                 $cellClass   = 'fly-slot';
 
                 $info     = $cardsInfo[$card->ukid] ?? null;
-                $nameHtml = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
-                $hpText   = $card->hp . '/' . $this->displayHpMax($card);
+                $isHiddenForMe = (!$card->revealed && $card->owner !== $playerKey);
+
+                if ($isHiddenForMe) {
+                    $nameHtml = '???';
+                    $hpText   = '?/?';
+                } else {
+                    $nameHtml = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
+                    $hpText   = $card->hp . '/' . $this->displayHpMax($card);
+                }
                 $ownerClass = $card->owner === $playerKey ? 'own' : 'enemy';
                 $cellClass .= ' ' . $ownerClass;
                 if ($card->closed) {
                     $cellClass .= ' closed';
                 }
-
-                $coinsBadge = $card->coins > 0 ? '<div class="bcoins">' . $card->coins . '</div>' : '';
-
-                $armorBadge = '';
-                if ($card->armor > 0) {
-                    $armorBadge = '<div class="barmor">' . $card->armor . '</div>';
+                if ($isHiddenForMe) {
+                    $cellClass .= ' hidden';
                 }
 
-                $markersHtml = $this->buildCardBadges($card, $state);
-
-                $cardBody = '<div class="battle-card">'
-                    . '<div class="bname">' . $nameHtml . '</div>'
-                    . '<div class="bhp">' . $hpText . '</div>'
-                    . $coinsBadge
-                    . $markersHtml
-                    . $armorBadge
-                    . '</div>';
+                $cardBody = $this->buildBattleCard($card, $state, $info, $isHiddenForMe, $nameHtml, $hpText);
 
                 if (isset($pendingDefenderTargets[$card->instanceId])) {
                     $cellClass  .= ' attack-target pending-defender-target';
@@ -354,9 +331,11 @@ final class BattleScreen
                     $cellClass  .= $isFriendlyAttack ? ' attack-target friendly-attack-target' : ' attack-target';
                     $confirmAttr = $isFriendlyAttack ? $this->friendlyAttackConfirmAttribute($card, $info ?? []) : '';
                     $cellContent = '<a class="card-link" href="' . $atkUrl . '"' . $confirmAttr . '>' . $cardBody . '</a>';
-                } else {
+                } elseif ($card->owner === $playerKey || $card->revealed) {
                     $selUrl      = "{$baseUrl}&sel={$card->instanceId}";
                     $cellContent = '<a class="card-link" href="' . $selUrl . '">' . $cardBody . '</a>';
+                } else {
+                    $cellContent = $cardBody;
                 }
 
                 $slotsHtml .= $this->tpl->parse('includes/battle_cell.tpl', [
@@ -844,6 +823,65 @@ final class BattleScreen
         }
 
         return (string) $card->hpMax;
+    }
+
+    private function buildBattleCard(
+        CardInstance $card,
+        GameState $state,
+        ?array $info,
+        bool $hidden,
+        string $nameHtml,
+        string $hpText
+    ): string {
+        $iconHtml = '';
+        if (!$hidden) {
+            $elementIcon = $this->elementIconPath($card);
+            $elementLabel = $card->element;
+            if ($elementIcon !== null) {
+                $iconHtml = '<img src="' . htmlspecialchars($elementIcon, ENT_QUOTES) . '"'
+                    . ' alt="' . htmlspecialchars($elementLabel, ENT_QUOTES) . '"'
+                    . ' class="battle-card__icon"'
+                    . '>';
+            }
+        }
+
+        $coinsBadge = '';
+        if (!$hidden && $card->coins > 0) {
+            $coinsBadge = '<div class="bcoins">' . $card->coins . '</div>';
+        }
+
+        $armorBadge = '';
+        if (!$hidden && $card->armor > 0) {
+            $armorBadge = '<div class="barmor">' . $card->armor . '</div>';
+        }
+
+        $markersHtml = $hidden ? '' : $this->buildCardBadges($card, $state);
+
+        return '<div class="battle-card">'
+            . '<div class="battle-card__main">'
+            . $iconHtml
+            . '<div class="battle-card__text">'
+            . '<div class="bname">' . $nameHtml . '</div>'
+            . '<div class="bhp">' . htmlspecialchars($hpText, ENT_QUOTES) . '</div>'
+            . '</div>'
+            . '</div>'
+            . '<div class="battle-card__bottom">' . $markersHtml . '</div>'
+            . $coinsBadge
+            . $armorBadge
+            . '</div>';
+    }
+
+    private function elementIconPath(CardInstance $card): ?string
+    {
+        return match ($card->element) {
+            'plains' => '/assets/images/element-plains.png',
+            'mountains' => '/assets/images/element-mountains.png',
+            'forests' => '/assets/images/element-forests.png',
+            'swamps' => '/assets/images/element-swamps.png',
+            'dark' => '/assets/images/element-dark.png',
+            'neutral' => '/assets/images/element-neutral.png',
+            default => null,
+        };
     }
 
     private function linkedRecruitBattleHint(GameState $state, CardInstance $card, array $cardsInfo): string
