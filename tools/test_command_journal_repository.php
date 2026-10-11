@@ -219,9 +219,26 @@ $rollbackState->status = 'turn';
 $rollbackState->bumpVersion();
 $rollbackJsonBefore = $rollbackState->persistenceJson;
 $rolledBackAfterGamesUpdate = false;
+$gamesUpdateReached = false;
+$journalUpdateReached = false;
+$rollbackGamesTriggerName = 'berserk_games_rollback_test';
 $rollbackTriggerName = 'berserk_journal_rollback_test';
 try {
+    $db->query("DROP TRIGGER IF EXISTS {$rollbackGamesTriggerName}");
     $db->query("DROP TRIGGER IF EXISTS {$rollbackTriggerName}");
+    $db->query(
+        "CREATE TRIGGER {$rollbackGamesTriggerName}
+         AFTER UPDATE ON games
+         FOR EACH ROW
+         BEGIN
+             IF @berserk_games_rollback_test_id IS NOT NULL
+                AND NEW.ind = @berserk_games_rollback_test_id
+                AND OLD.version = @berserk_games_rollback_test_before_version
+                AND NEW.version = @berserk_games_rollback_test_after_version THEN
+                 SET @berserk_games_rollback_test_seen = 1;
+             END IF;
+         END"
+    );
     $db->query(
         "CREATE TRIGGER {$rollbackTriggerName}
          BEFORE UPDATE ON battle_command_journal
@@ -230,29 +247,51 @@ try {
              IF @berserk_journal_rollback_test_id IS NOT NULL
                 AND OLD.id = @berserk_journal_rollback_test_id
                 AND NEW.status = 'committed' THEN
+                 SET @berserk_journal_rollback_test_seen = 1;
                  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'journal rollback test';
              END IF;
          END"
     );
+    $db->query("SET @berserk_games_rollback_test_id = " . (int) $gameId);
+    $db->query("SET @berserk_games_rollback_test_before_version = " . $rollbackVersion);
+    $db->query("SET @berserk_games_rollback_test_after_version = " . ($rollbackVersion + 1));
+    $db->query("SET @berserk_games_rollback_test_seen = 0");
     $db->query("SET @berserk_journal_rollback_test_id = " . (int) $rollbackCommand['id']);
+    $db->query("SET @berserk_journal_rollback_test_seen = 0");
     try {
         $repo->saveCommittedCommand($rollbackState, $journal, (int) $rollbackCommand['id']);
     } catch (DbQueryException) {
         $rolledBackAfterGamesUpdate = true;
     }
+
+    $triggerState = $db->fetchOne(
+        "SELECT
+            @berserk_games_rollback_test_seen AS games_seen,
+            @berserk_journal_rollback_test_seen AS journal_seen"
+    );
+    $gamesUpdateReached = (int) ($triggerState['games_seen'] ?? 0) === 1;
+    $journalUpdateReached = (int) ($triggerState['journal_seen'] ?? 0) === 1;
 } finally {
     try {
+        $db->query("SET @berserk_games_rollback_test_id = NULL");
+        $db->query("SET @berserk_games_rollback_test_before_version = NULL");
+        $db->query("SET @berserk_games_rollback_test_after_version = NULL");
+        $db->query("SET @berserk_games_rollback_test_seen = NULL");
         $db->query("SET @berserk_journal_rollback_test_id = NULL");
+        $db->query("SET @berserk_journal_rollback_test_seen = NULL");
     } catch (Throwable) {
-        // Best effort cleanup; dropping the trigger is the important part.
+        // Best effort cleanup; dropping the triggers is the important part.
     }
     try {
+        $db->query("DROP TRIGGER IF EXISTS {$rollbackGamesTriggerName}");
         $db->query("DROP TRIGGER IF EXISTS {$rollbackTriggerName}");
     } catch (Throwable) {
-        throw new RuntimeException('Unable to clean up rollback test trigger');
+        throw new RuntimeException('Unable to clean up rollback test triggers');
     }
 }
 journalAssert($rolledBackAfterGamesUpdate, 'Atomic commit should fail after games UPDATE and before journal completion');
+journalAssert($gamesUpdateReached, 'Rollback test should prove that UPDATE games was reached before failure');
+journalAssert($journalUpdateReached, 'Rollback test should prove that journal completion was attempted');
 journalAssert($rollbackState->persistenceVersion === $rollbackVersion, 'Failed commit should restore in-memory persistence version');
 journalAssert($rollbackState->persistenceJson === $rollbackJsonBefore, 'Failed commit should restore in-memory persistence JSON');
 
