@@ -20,7 +20,7 @@ final class BattleSnapshotRenderer
 
     /**
      * @return array{
-     *     ui: array{sel:int,mode:string,pile:string},
+     *     ui: array{sel:int,mode:string,pile:string,mode_explicit:bool},
      *     fragments: array{
      *         field_html:string,
      *         fly_zones_html:string,

@@ -790,6 +790,7 @@ switch ($state->status) {
             . ' data-version="' . (int) ($state->persistenceVersion ?? 0) . '"'
             . ' data-sel="' . (int) ($ui['sel'] ?? 0) . '"'
             . ' data-mode="' . htmlspecialchars((string) ($ui['mode'] ?? 'strike'), ENT_QUOTES) . '"'
+            . ' data-mode-explicit="' . (!empty($ui['mode_explicit']) ? '1' : '0') . '"'
             . ' data-pile="' . htmlspecialchars((string) ($ui['pile'] ?? ''), ENT_QUOTES) . '"'
             . ' defer></script>';
         break;

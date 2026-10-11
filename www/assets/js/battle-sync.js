@@ -33,6 +33,7 @@
     var uiState = {
         sel: parseInt(script.dataset.sel || "0", 10) || 0,
         mode: script.dataset.mode || "strike",
+        modeExplicit: script.dataset.modeExplicit === "1",
         pile: script.dataset.pile || ""
     };
 
@@ -77,7 +78,11 @@
         var url = new URL(syncUrl, window.location.href);
         url.searchParams.set("since_version", String(Math.max(0, syncVersion)));
         url.searchParams.set("sel", String(uiState.sel || 0));
-        url.searchParams.set("mode", uiState.mode || "strike");
+        if (uiState.modeExplicit) {
+            url.searchParams.set("mode", uiState.mode || "strike");
+        } else {
+            url.searchParams.delete("mode");
+        }
         url.searchParams.set("pile", uiState.pile || "");
         if (forceSnapshot) {
             url.searchParams.set("force_snapshot", "1");
@@ -101,7 +106,7 @@
     function addUiAndVersion(params) {
         params.set("expected_version", String(Math.max(0, syncVersion)));
         params.set("sel", String(uiState.sel || 0));
-        if (!params.has("mode")) {
+        if (!params.has("mode") && uiState.modeExplicit) {
             params.set("mode", uiState.mode || "strike");
         }
         params.set("pile", uiState.pile || "");
@@ -136,6 +141,7 @@
         return {
             sel: parseInt(ui.sel || "0", 10) || 0,
             mode: typeof ui.mode === "string" && ui.mode !== "" ? ui.mode : "strike",
+            modeExplicit: ui.mode_explicit === true || ui.mode_explicit === 1 || ui.mode_explicit === "1",
             pile: typeof ui.pile === "string" ? ui.pile : ""
         };
     }
@@ -391,6 +397,7 @@
             mode: url.searchParams.has("mode") && url.searchParams.get("mode") !== ""
                 ? url.searchParams.get("mode")
                 : "strike",
+            modeExplicit: url.searchParams.has("mode") && url.searchParams.get("mode") !== "",
             pile: url.searchParams.has("pile") ? (url.searchParams.get("pile") || "") : ""
         };
         uiRevision++;

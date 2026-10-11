@@ -93,6 +93,14 @@ function battleSnapshotState(): GameState
         1
     ));
     $state->addCard(battleSnapshotCard(
+        5,
+        'ally',
+        GameState::PLAYER_HOST,
+        CardInstance::ZONE_FIELD,
+        2,
+        1
+    ));
+    $state->addCard(battleSnapshotCard(
         4,
         'dead',
         GameState::PLAYER_HOST,
@@ -108,6 +116,7 @@ $cardsInfo = [
     'own' => ['name' => 'Свой'],
     'hidden_enemy' => ['name' => 'Скрытый враг'],
     'flying' => ['name' => 'Летун'],
+    'ally' => ['name' => 'Союзник'],
     'dead' => ['name' => 'Погибший'],
     'attacker' => ['name' => 'Атакующий'],
     'target' => ['name' => 'Цель'],
@@ -131,7 +140,7 @@ $snapshot = $renderer->render(
 );
 
 battleSnapshotAssert(
-    $snapshot['ui'] === ['sel' => 1, 'mode' => 'action:aimed_shot', 'pile' => 'own_grave'],
+    $snapshot['ui'] === ['sel' => 1, 'mode' => 'action:aimed_shot', 'pile' => 'own_grave', 'mode_explicit' => true],
     'Explicit UI state should override $_GET and be returned as normalized UI state.'
 );
 
@@ -165,6 +174,10 @@ battleSnapshotAssert(
     $inactiveSnapshot['ui']['mode'] === 'action:aimed_shot',
     'Action mode should remain a local UI hint during the opponent turn.'
 );
+battleSnapshotAssert(
+    $inactiveSnapshot['ui']['mode_explicit'] === true,
+    'Explicit action mode should remain explicit during the opponent turn.'
+);
 
 $strikeState = battleSnapshotState();
 $strikeState->battle['strike'] = [
@@ -196,8 +209,25 @@ $invalid = $renderer->render(
     ['sel' => 999, 'mode' => 'not_a_mode', 'pile' => 'broken']
 );
 battleSnapshotAssert(
-    $invalid['ui'] === ['sel' => 0, 'mode' => 'strike', 'pile' => ''],
+    $invalid['ui'] === ['sel' => 0, 'mode' => 'strike', 'pile' => '', 'mode_explicit' => false],
     'Invalid selection, mode and pile should normalize to safe defaults.'
+);
+
+$implicitStrike = $renderer->render(
+    $state,
+    GameState::PLAYER_HOST,
+    'host',
+    null,
+    $cardsInfo,
+    ['sel' => 1, 'pile' => '']
+);
+battleSnapshotAssert(
+    $implicitStrike['ui']['mode'] === 'strike' && $implicitStrike['ui']['mode_explicit'] === false,
+    'Selecting a card without an explicit mode should keep strike as an implicit default.'
+);
+battleSnapshotAssert(
+    !str_contains($implicitStrike['fragments']['field_html'], 'friendly-attack-target'),
+    'Implicit strike mode should not expose friendly-fire targets after simple AJAX selection.'
 );
 
 $hidden = $renderer->render(

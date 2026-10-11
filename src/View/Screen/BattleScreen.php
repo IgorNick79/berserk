@@ -128,6 +128,7 @@ final class BattleScreen
                     'sel'  => $ui['sel'],
                     'mode' => $ui['mode'],
                     'pile' => $ui['pile'],
+                    'mode_explicit' => $ui['mode_explicit'],
                 ],
                 'debug_html' => $debugHtml,
                 'field_html'       => $fieldHtml,
