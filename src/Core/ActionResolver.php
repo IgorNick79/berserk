@@ -5038,7 +5038,14 @@ final class ActionResolver
                 }
             }
 
+            if (!empty($this->state->battle['strike']['waiting_resolve_after_heal'])) {
+                unset($this->state->battle['strike']['waiting_resolve_after_heal']);
+                (new \Berserk\Core\StrikeResolver($this->state, $this->engine))->resolve();
+                return Result::ok(['heal_instead_wound_cancelled']);
+            }
+            
             $this->state->bumpVersion();
+
             return Result::ok(['heal_instead_wound_cancelled']);
         }
 
@@ -5103,6 +5110,14 @@ final class ActionResolver
         $this->engine->flushDeadeatQueue($this->state);
         $this->engine->checkGameOver($this->state);
         $this->state->bumpVersion();
+
+        // Если pending был запущен из chooseDefender — вернуть управление в сражение
+        if (!empty($this->state->battle['strike']['waiting_resolve_after_heal'])) {
+            unset($this->state->battle['strike']['waiting_resolve_after_heal']);
+            (new \Berserk\Core\StrikeResolver($this->state, $this->engine))->resolve();
+            return Result::ok(["heal_instead_wound:{$value}->{$chosenId}"]);
+        }
+
         return Result::ok(["heal_instead_wound:{$value}->{$chosenId}"]);
     }
 }
