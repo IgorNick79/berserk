@@ -1,4 +1,5 @@
 <div class="battle-sync-root" data-battle-sync-root>
+<div class="battle-ajax-message" data-battle-message hidden></div>
 <div class="battle-main">
     <div class="battle-left">
         <div class="battle-layout">

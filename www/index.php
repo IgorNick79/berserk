@@ -92,13 +92,16 @@ function ajaxFlag(string $key): bool
 function ajaxCommandPayload(): ?array
 {
     $payload = [];
+    $commandType = requestParamString($_POST, 'cmd', 64) ?? '';
     $excluded = [
         'cmd' => true,
         'expected_version' => true,
         'sel' => true,
-        'mode' => true,
         'pile' => true,
     ];
+    if ($commandType !== 'choose_strike_mode') {
+        $excluded['mode'] = true;
+    }
 
     foreach ($_POST as $key => $value) {
         if (!is_string($key) || strlen($key) > 64) {
