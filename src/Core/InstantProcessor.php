@@ -777,10 +777,7 @@ final class InstantProcessor
         $target = $this->state->getCard((int) ($item['target_id'] ?? 0));
         $effect = (array) ($item['effect'] ?? []);
         $type = (string) ($effect['type'] ?? '');
-        $effectTarget = $target;
-        if ($type === 'damage_cap' && (int) ($item['strike_target_id'] ?? 0) > 0) {
-            $effectTarget = $this->state->getCard((int) $item['strike_target_id']);
-        }
+        $effectTarget = $type === 'damage_cap' ? null : $target;
 
         if (!$source) {
             return ['source' => null, 'applied' => false, 'reason' => 'источник не найден', 'result' => []];

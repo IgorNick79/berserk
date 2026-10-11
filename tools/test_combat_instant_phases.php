@@ -115,6 +115,19 @@ function cipCatcherItem(CardInstance $catcher, int $sequence): array
     ];
 }
 
+function cipGlormItem(CardInstance $glorm, int $sequence = 0): array
+{
+    return [
+        'card_id' => $glorm->instanceId,
+        'effect' => ['type' => 'damage_cap', 'value' => 1, 'self_wound' => 1, 'except_element' => 'plains'],
+        'target_id' => $glorm->instanceId,
+        'player' => GameState::PLAYER_PLAYER,
+        'label' => 'Отвлекающая вспышка',
+        'phase' => 'setter',
+        'sequence' => $sequence,
+    ];
+}
+
 function cipHermitItem(CardInstance $hermit, int $sequence, string $label = 'Перераспределение ран'): array
 {
     return [
@@ -545,23 +558,48 @@ $reason = (new Engine())->applyCombatEffect(
 );
 cipAssert($reason !== null, 'Redirect to another owner should be rejected.');
 
-// Redirect + setter: Glorm ordered before redirect becomes no-op after redirect changes the target.
-$attacker = cipCard(['instanceId' => 1, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3]);
-$target = cipCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4]);
-$ally = cipCard(['instanceId' => 8, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 4]);
+// Glorm: plains target keeps the cap but prevents self-wound.
+$attacker = cipCard(['instanceId' => 1, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3, 'strikeWeak' => 3]);
+$target = cipCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4, 'hp' => 5, 'element' => 'plains']);
+$glorm = cipCard(['instanceId' => 13, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 5, 'hp' => 4]);
+$state = cipState($attacker, $target, $glorm);
+$state->battle['strike']['instant_stack'] = [cipGlormItem($glorm)];
+(new InstantProcessor($state, new Engine()))->resolveStack();
+cipAssert((int) ($state->battle['strike']['damage_cap'] ?? 0) === 1, 'Glorm should keep capping strike damage to 1 against plains target.');
+cipAssert($target->hp === 4, 'Plains target should take capped 1 damage.');
+cipAssert($glorm->hp === 4, 'Glorm should not wound himself when the final strike target is plains.');
+
+// Glorm: non-plains target keeps the cap and wounds Glorm by 1.
+$attacker = cipCard(['instanceId' => 1, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3, 'strikeWeak' => 3]);
+$target = cipCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4, 'hp' => 5, 'element' => 'forests']);
+$glorm = cipCard(['instanceId' => 13, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 5, 'hp' => 4]);
+$state = cipState($attacker, $target, $glorm);
+$state->battle['strike']['instant_stack'] = [cipGlormItem($glorm)];
+(new InstantProcessor($state, new Engine()))->resolveStack();
+cipAssert((int) ($state->battle['strike']['damage_cap'] ?? 0) === 1, 'Glorm should keep capping strike damage to 1 against non-plains target.');
+cipAssert($target->hp === 4, 'Non-plains target should take capped 1 damage.');
+cipAssert($glorm->hp === 3, 'Glorm should take 1 wound when the final strike target is not plains.');
+
+// Glorm with 1 HP still uses the standard self-wound/death path on non-plains target.
+$attacker = cipCard(['instanceId' => 1, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3, 'strikeWeak' => 3]);
+$target = cipCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4, 'hp' => 5, 'element' => 'dark']);
+$glorm = cipCard(['instanceId' => 13, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 5, 'hp' => 1]);
+$state = cipState($attacker, $target, $glorm);
+$state->battle['strike']['instant_stack'] = [cipGlormItem($glorm)];
+(new InstantProcessor($state, new Engine()))->resolveStack();
+cipAssert((int) ($state->battle['strike']['damage_cap'] ?? 0) === 1, 'Glorm at 1 HP should still apply the damage cap.');
+cipAssert($target->hp === 4, 'Target should still take capped 1 damage when Glorm dies from self-wound.');
+cipAssert($glorm->hp === 0 && $glorm->dying, 'Glorm should enter the standard dying state at 1 HP.');
+
+// Redirect + setter: Glorm uses the final strike target after a valid redirect.
+$attacker = cipCard(['instanceId' => 1, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3, 'strikeWeak' => 3]);
+$target = cipCard(['instanceId' => 2, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4, 'hp' => 5, 'element' => 'forests']);
+$ally = cipCard(['instanceId' => 8, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 4, 'hp' => 5, 'element' => 'plains']);
 $mage = cipCard(['instanceId' => 9, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 4]);
-$glorm = cipCard(['instanceId' => 13, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 5]);
+$glorm = cipCard(['instanceId' => 13, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 5, 'hp' => 4]);
 $state = cipState($attacker, $target, $ally, $mage, $glorm);
 $state->battle['strike']['instant_stack'] = [
-    [
-        'card_id' => $glorm->instanceId,
-        'effect' => ['type' => 'damage_cap', 'value' => 1, 'self_wound' => 1, 'except_element' => 'plains'],
-        'target_id' => $target->instanceId,
-        'player' => GameState::PLAYER_PLAYER,
-        'label' => 'Отвлекающая вспышка',
-        'phase' => 'setter',
-        'sequence' => 0,
-    ],
+    cipGlormItem($glorm, 0),
     [
         'card_id' => $mage->instanceId,
         'effect' => ['type' => 'redirect_strike'],
@@ -575,9 +613,12 @@ $state->battle['strike']['instant_stack'] = [
 (new InstantProcessor($state, new Engine()))->resolveStack();
 $summary = $state->battle['strike']['instant_summary'] ?? [];
 cipAssert(($summary[1]['label'] ?? '') === 'Отвлекающая вспышка', 'Glorm should still reach setter after redirect.');
-cipAssert(($summary[1]['applied'] ?? true) === false, 'Glorm should no-op when ordered target is no longer strike target.');
-cipAssert(($summary[1]['reason'] ?? '') !== '', 'Glorm no-op should keep a visible reason.');
-cipAssert((int) $state->battle['strike']['target_id'] === $ally->instanceId, 'Glorm no-op must not pick a new target.');
+cipAssert(($summary[1]['applied'] ?? false) === true, 'Glorm should apply to the final redirected strike target.');
+cipAssert((int) $state->battle['strike']['target_id'] === $ally->instanceId, 'Redirect should choose the final strike target before Glorm resolves.');
+cipAssert((int) ($state->battle['strike']['damage_cap'] ?? 0) === 1, 'Glorm should cap redirected strike damage to 1.');
+cipAssert($ally->hp === 4, 'Redirected plains target should take capped 1 damage.');
+cipAssert($target->hp === 5, 'Original target should not take redirected strike damage.');
+cipAssert($glorm->hp === 4, 'Glorm should not self-wound when redirect changes final target to plains.');
 
 // Hermit without wounds resolves without effect and closes the source.
 $attacker = cipCard(['instanceId' => 1, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3]);

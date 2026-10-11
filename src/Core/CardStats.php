@@ -66,6 +66,11 @@ final class CardStats
         return in_array($class, $card->classes, true);
     }
 
+    public static function hasElement(CardInstance $card, string $element): bool
+    {
+        return $element !== '' && $card->element === $element;
+    }
+
     public static function canExecuteTarget(
         GameState $state,
         CardInstance $attacker,

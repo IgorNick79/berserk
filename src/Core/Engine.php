@@ -278,7 +278,7 @@ final class Engine
 
                     $skipWound = false;
                     $except    = $effect['except_element'] ?? null;
-                    if ($except && $target && $target->element === $except) {
+                    if ($except && $target && CardStats::hasElement($target, (string) $except)) {
                         $skipWound = true;
                     }
 
