@@ -27,6 +27,15 @@ final class CardStats
         return in_array($type, ['strike', 'answer', 'tap', 'magic', 'execute'], true);
     }
 
+    public static function canHealInsteadWound(CardInstance $card): bool
+    {
+        if (empty($card->prop['on_heal_instead_wound'])) return false;
+        if ($card->hp < $card->hpMax) return false;   // нужен полный HP
+        $used = (int) ($card->flags['on_heal_wound_used_this_turn'] ?? 0);
+        $limit = (int) ($card->prop['on_heal_instead_wound']['uses_per_turn'] ?? 3);
+        return $limit <= 0 || $used < $limit;
+    }
+
     public static function isFlyingCreature(CardInstance $card): bool
     {
         return $card->type === 'fly' || $card->zone === CardInstance::ZONE_FLYING;

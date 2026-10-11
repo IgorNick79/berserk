@@ -820,6 +820,13 @@ final class InfoPanel
                     $tn = $ti ? htmlspecialchars($ti['name'], ENT_QUOTES) : '?';
                     $parts[] = $tn . ' +' . $h['heal'] . ' HP';
                 }
+                if (!empty($strike['heal_instead_wound'])) {
+                    foreach ($strike['heal_instead_wound'] as $hw) {
+                        $tc = $state->getCard((int) $hw['target_id']);
+                        $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
+                        $parts[] = $tn . ' −' . (int) $hw['value'] . ' HP (рана)';
+                    }
+                }
                 $resultText = $name . ': ' . implode(', ', $parts);
             } elseif ($kind === 'blood_tap') {
                 $name = $strike['action_name'] ?? 'Кровавый разряд';

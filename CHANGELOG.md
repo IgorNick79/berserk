@@ -211,3 +211,15 @@
 - `CardStats::hasDefense` — `cast` теперь защищён и `zoz`, не только `zom`.
 - `ActionResolver` — новый action-тип `blood_storm` + `chooseBloodStormTarget`.
 - `ChoiceRegistry` — `BloodStormChoice`.
+
+### Добавлено
+- Карта **Вожак сатиров** (`s1_81`): −1 от атак летающих. Пока полный HP,
+  при излечении на X может вместо этого ранить соседа на X (до 3 раз за ход).
+  Если соседей нет — абилка не срабатывает.
+- `CardStats::canHealInsteadWound()` — общий предикат для эффекта
+  «рана вместо излечения». Работает в `resolveHeal` и `chooseMultiHeal`.
+
+### Отложено
+- Точки heal через инстанты (`heal`, `heal_turn_wounds`), Бьерн,
+  Дикий целитель — подключатся к хелперу отдельной задачей,
+  когда будем их трогать.
