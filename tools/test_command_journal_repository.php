@@ -14,6 +14,7 @@ use Berserk\Core\GameRepository;
 use Berserk\Core\GameState;
 use Berserk\Core\StaleStateException;
 
+
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
 
