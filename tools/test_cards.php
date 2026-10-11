@@ -16,12 +16,13 @@ Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
 
 $config = require __DIR__ . '/../config/db.php';
 
+$hasCount = array_key_exists(1, $argv);
 $count = (int) ($argv[1] ?? 0);
-if ($count < 1 || $count > 9) {
+if (!$hasCount || $count < 1 || $count > 9) {
     echo "Usage: php tools/test_cards.php <count>\n";
     echo "  count: 1-9 (сколько готовых карт на поле у каждого игрока)\n";
     echo "  5-6 — оптимально: две линии по колонкам 2-3-4\n";
-    exit(1);
+    exit($hasCount ? 1 : 0);
 }
 
 $db   = new Db($config);
