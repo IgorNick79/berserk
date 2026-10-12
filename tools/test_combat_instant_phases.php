@@ -141,6 +141,42 @@ function cipHermitItem(CardInstance $hermit, int $sequence, string $label = 'П�
     ];
 }
 
+function cipMaryInstantProp(): array
+{
+    return ['instants' => [[
+        'key' => 'black_mark',
+        'name' => 'Черная метка',
+        'effect' => ['type' => 'damage_on_dice', 'value' => 1, 'damage' => 2],
+        'target' => 'self',
+        'trigger' => 'combat',
+        'phase' => 'dice',
+    ]]];
+}
+
+function cipCatcherInstantProp(): array
+{
+    return ['instants' => [[
+        'key' => 'luck',
+        'name' => 'Удача',
+        'effect' => ['type' => 'dice_choice'],
+        'target' => 'self',
+        'trigger' => 'combat',
+        'phase' => 'dice',
+    ]]];
+}
+
+function cipOstInstantProp(): array
+{
+    return ['instants' => [[
+        'key' => 'power_gift',
+        'name' => 'Дар силы',
+        'effect' => ['type' => 'strike_level', 'mode' => 'set', 'value' => 'strong'],
+        'target' => 'self',
+        'trigger' => 'combat',
+        'phase' => 'power',
+    ]]];
+}
+
 function cipResolveChoice(GameState $state, string $choice): void
 {
     $result = (new InstantProcessor($state, new Engine()))->applyDiceChoice(GameState::PLAYER_PLAYER, $choice);
@@ -283,6 +319,80 @@ foreach ([
     cipAssert($assertion($state), "{$choice}: dice result should be applied.");
     cipAssert(count($state->battle['strike']['instant_summary'] ?? []) === 1, "{$choice}: item should resolve once.");
 }
+
+// Two-window lifecycle: Dice Window lists only dice instants and rejects direct Main instant commands.
+$hostDice = cipCard(['instanceId' => 28, 'owner' => GameState::PLAYER_HOST, 'row' => 2, 'col' => 2, 'prop' => cipMaryInstantProp()]);
+$hostPower = cipCard(['instanceId' => 29, 'owner' => GameState::PLAYER_HOST, 'row' => 2, 'col' => 3, 'prop' => cipOstInstantProp()]);
+$state = cipState($attacker, $target, $hostDice, $hostPower);
+$ip = new InstantProcessor($state, new Engine());
+$opened = $ip->openWindow('combat', GameState::PLAYER_HOST, null, 'dice');
+cipAssert($opened, 'Dice Window should open when a dice instant is available.');
+cipAssert(($state->battle['strike']['combat_instant_window'] ?? '') === 'dice', 'Dice Window stage should be server-side state.');
+$diceInstants = $ip->getInstants(GameState::PLAYER_HOST, 'combat', 'combat');
+cipAssert(array_column($diceInstants, 'card_id') === [$hostDice->instanceId], 'Dice Window should expose only dice combat instants.');
+$rejected = $ip->playCombat(GameState::PLAYER_HOST, $hostPower->instanceId, 'power_gift');
+cipAssert(!$rejected->success, 'Direct command must reject a Main instant in Dice Window.');
+cipAssert(empty($state->battle['strike']['instant_stack']), 'Rejected Main instant must not enter the Dice Window stack.');
+
+// Empty Dice Window: both players pass with no declarations, so Main Window opens without an intermediate result.
+$state = cipState($attacker, $target, $hostDice, $hostPower);
+$ip = new InstantProcessor($state, new Engine());
+$ip->openWindow('combat', GameState::PLAYER_HOST, null, 'dice');
+$pass = $ip->passCombat(GameState::PLAYER_HOST);
+cipAssert($pass->success, $pass->error ?? 'Empty Dice pass should succeed.');
+cipAssert(($state->battle['strike']['state'] ?? '') === 'waiting_instant', 'Empty Dice Window should continue to Main Window.');
+cipAssert(($state->battle['strike']['combat_instant_window'] ?? '') === 'main', 'Main Window should open after an empty Dice Window.');
+cipAssert(empty($state->battle['strike']['instant_result_stage'] ?? null), 'Empty Dice Window should not show an intermediate result.');
+$mainInstants = $ip->getInstants(GameState::PLAYER_HOST, 'combat', 'combat');
+cipAssert(array_column($mainInstants, 'card_id') === [$hostPower->instanceId], 'Main Window should expose non-dice combat instants.');
+
+// Dice result acknowledgment opens Main Window with the already-updated dice state.
+$playerMary = cipCard(['instanceId' => 30, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 4, 'prop' => cipMaryInstantProp()]);
+$hostPower = cipCard(['instanceId' => 31, 'owner' => GameState::PLAYER_HOST, 'row' => 2, 'col' => 3, 'prop' => cipOstInstantProp()]);
+$state = cipState($attacker, $target, $playerMary, $hostPower);
+$ip = new InstantProcessor($state, new Engine());
+$ip->openWindow('combat', GameState::PLAYER_HOST, null, 'dice');
+$played = $ip->playCombat(GameState::PLAYER_PLAYER, $playerMary->instanceId, 'black_mark');
+cipAssert($played->success, $played->error ?? 'Mary dice instant should be playable in Dice Window.');
+$pass = $ip->passCombat(GameState::PLAYER_PLAYER);
+cipAssert($pass->success, $pass->error ?? 'Dice owner pass should succeed.');
+$pass = $ip->passCombat(GameState::PLAYER_HOST);
+cipAssert($pass->success, $pass->error ?? 'Opponent pass should resolve Dice Window.');
+cipAssert(($state->battle['strike']['state'] ?? '') === 'results', 'Resolved Dice Window should show an intermediate result.');
+cipAssert(($state->battle['strike']['instant_result_stage'] ?? '') === 'dice', 'Intermediate result should be marked as the Dice result.');
+cipAssert(count($state->battle['strike']['instant_summary'] ?? []) === 1, 'Dice result should summarize resolved dice instants.');
+$ack = (new StrikeResolver($state, new Engine()))->confirmStrike(GameState::PLAYER_HOST, new Command('confirm_strike'));
+cipAssert($ack->success, $ack->error ?? 'First Dice result ack should succeed.');
+cipAssert(($state->battle['strike']['state'] ?? '') === 'results', 'First Dice ack should wait for the other player.');
+$ack = (new StrikeResolver($state, new Engine()))->confirmStrike(GameState::PLAYER_PLAYER, new Command('confirm_strike'));
+cipAssert($ack->success, $ack->error ?? 'Second Dice result ack should open Main Window.');
+cipAssert(($state->battle['strike']['state'] ?? '') === 'waiting_instant', 'Main Window should open after Dice result acknowledgement.');
+cipAssert(($state->battle['strike']['combat_instant_window'] ?? '') === 'main', 'Server stage should be Main Window after Dice OK.');
+cipAssert(empty($state->battle['strike']['instant_summary'] ?? []), 'Acknowledged Dice summary should not be shown again in Main Window.');
+$mainInstants = (new InstantProcessor($state, new Engine()))->getInstants(GameState::PLAYER_HOST, 'combat', 'combat');
+cipAssert(array_column($mainInstants, 'card_id') === [$hostPower->instanceId], 'Main Window should use post-Dice state and exclude dice instants.');
+$maryMain = (new InstantProcessor($state, new Engine()))->getInstants(GameState::PLAYER_PLAYER, 'combat', 'combat');
+cipAssert(empty($maryMain), 'Dice instants should not be available again in Main Window.');
+
+// Catcher interactive choice stays inside Dice Window and only opens Main after the Dice result OK.
+$catcher = cipCard(['instanceId' => 32, 'owner' => GameState::PLAYER_PLAYER, 'row' => 5, 'col' => 4, 'prop' => cipCatcherInstantProp()]);
+$hostPower = cipCard(['instanceId' => 33, 'owner' => GameState::PLAYER_HOST, 'row' => 2, 'col' => 3, 'prop' => cipOstInstantProp()]);
+$state = cipState($attacker, $target, $catcher, $hostPower);
+$ip = new InstantProcessor($state, new Engine());
+$ip->openWindow('combat', GameState::PLAYER_HOST, null, 'dice');
+$played = $ip->playCombat(GameState::PLAYER_PLAYER, $catcher->instanceId, 'luck');
+cipAssert($played->success, $played->error ?? 'Catcher should be playable in Dice Window.');
+$ip->passCombat(GameState::PLAYER_PLAYER);
+$ip->passCombat(GameState::PLAYER_HOST);
+cipAssert(!empty($state->battle['pending_dice_choice']), 'Catcher should pause Dice Window resolution for an interactive choice.');
+$choice = (new InstantProcessor($state, new Engine()))->applyDiceChoice(GameState::PLAYER_PLAYER, 'plus:enemy');
+cipAssert($choice->success, $choice->error ?? 'Catcher choice should resolve.');
+cipAssert(($state->battle['strike']['attack_dice'] ?? null) === 3, 'Catcher choice should update the existing dice value.');
+cipAssert(($state->battle['strike']['state'] ?? '') === 'results', 'Catcher Dice result should be shown before Main Window.');
+(new StrikeResolver($state, new Engine()))->confirmStrike(GameState::PLAYER_HOST, new Command('confirm_strike'));
+(new StrikeResolver($state, new Engine()))->confirmStrike(GameState::PLAYER_PLAYER, new Command('confirm_strike'));
+cipAssert(($state->battle['strike']['combat_instant_window'] ?? '') === 'main', 'Main Window should open only after Catcher result acknowledgement.');
+cipAssert(($state->battle['strike']['attack_dice'] ?? null) === 3, 'Main Window should keep the rerolled/modified dice state.');
 
 // Valid redirect: defender-side Mage redirects from current defender card to adjacent ally.
 $attacker = cipCard(['instanceId' => 1, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3]);

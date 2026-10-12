@@ -348,6 +348,11 @@ final class InfoPanel
 
             $whoLabel = ($attackerKey === $priority) ? 'Атакующий' : 'Защитник';
             $stackHtml = $this->renderCombatInstantStack($strike, true);
+            $window = (string) ($strike['combat_instant_window'] ?? 'main');
+            $windowLabel = $window === 'dice'
+                ? 'Работа с кубиками'
+                : 'Боевые инстанты';
+            $windowHtml = '<p class="instant-window-label">' . htmlspecialchars($windowLabel, ENT_QUOTES) . '</p>';
 
             if ($isMine) {
                 $sr = new \Berserk\Core\StrikeResolver($state, new \Berserk\Core\Engine());
@@ -364,7 +369,7 @@ final class InfoPanel
                         . '</a> ';
                 }
 
-                $contentHtml = $diceHtml . $stackHtml . '<p>Твой ход: ' . $whoLabel . '. Сыграть инстант?</p>';
+                $contentHtml = $diceHtml . $windowHtml . $stackHtml . '<p>Твой ход: ' . $whoLabel . '. Сыграть инстант?</p>';
                 if (!empty($cards)) {
                     $contentHtml .= '<div class="task-list">' . $cards . '</div>';
                 }
@@ -372,7 +377,7 @@ final class InfoPanel
                     . '<a class="button skip" href="' . $baseUrl . '&cmd=combat_instant_pass">Продолжить</a>'
                     . '</div>';
             } else {
-                $contentHtml = $diceHtml . $stackHtml . '<p class="wait">Ожидание — оппонент решает, сыграть инстант...</p>';
+                $contentHtml = $diceHtml . $windowHtml . $stackHtml . '<p class="wait">Ожидание — оппонент решает, сыграть инстант...</p>';
             }
         } elseif ($strike['state'] === 'waiting_defender') {
             $chooserKey = $state->getOpponentKey($attackerCard->owner);

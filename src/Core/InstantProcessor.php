@@ -16,6 +16,9 @@ final class InstantProcessor
         'wounds',
     ];
 
+    private const COMBAT_WINDOW_DICE = 'dice';
+    private const COMBAT_WINDOW_MAIN = 'main';
+
     public function __construct(
         private GameState $state,
         private Engine $engine,
@@ -167,6 +170,11 @@ final class InstantProcessor
                     continue;
                 }
                 if ($type === 'combat'
+                    && $phase === 'combat'
+                    && !$this->combatInstantAllowedInCurrentWindow($inst)) {
+                    continue;
+                }
+                if ($type === 'combat'
                     && ($inst['target'] ?? 'self') === 'adjacent_ally'
                     && (($inst['effect']['type'] ?? '') === 'redirect_strike')) {
                     continue;
@@ -287,22 +295,37 @@ final class InstantProcessor
     //  COMBAT-ОКНО (стек инстантов в фазе боя)
     // ═══════════════════════════════════════════════════════
 
-    public function openWindow(string $phase, string $priorityKey, ?array $allowedPlayers = null): void
+    public function openWindow(
+        string $phase,
+        string $priorityKey,
+        ?array $allowedPlayers = null,
+        ?string $combatWindow = null
+    ): bool
     {
         $strike = $this->state->battle['strike'] ?? null;
-        if (!$strike) return;
+        if (!$strike) return false;
 
         $attacker = $this->state->getCard($strike['attacker_id']);
-        if (!$attacker) return;
+        if (!$attacker) return false;
 
         $attackerKey = $attacker->owner;
         $participants = $this->instantParticipants($strike, $attackerKey, $allowedPlayers);
 
         if ($phase !== 'combat') {
-            $this->openTurnStackWindow($priorityKey, [
+            return $this->openTurnStackWindow($priorityKey, [
                 'type' => $phase === 'after' ? 'strike_after' : 'strike_before',
             ], $phase, $participants);
-            return;
+        }
+
+        $combatWindow = in_array($combatWindow, [self::COMBAT_WINDOW_DICE, self::COMBAT_WINDOW_MAIN], true)
+            ? $combatWindow
+            : null;
+        $hadPreviousWindow = array_key_exists('combat_instant_window', $this->state->battle['strike']);
+        $previousWindow = $this->state->battle['strike']['combat_instant_window'] ?? null;
+        if ($combatWindow !== null) {
+            $this->state->battle['strike']['combat_instant_window'] = $combatWindow;
+        } else {
+            unset($this->state->battle['strike']['combat_instant_window']);
         }
 
         $type = 'combat';
@@ -312,7 +335,12 @@ final class InstantProcessor
         }
 
         if (!in_array(true, $hasByPlayer, true)) {
-            return;
+            if ($hadPreviousWindow) {
+                $this->state->battle['strike']['combat_instant_window'] = $previousWindow;
+            } else {
+                unset($this->state->battle['strike']['combat_instant_window']);
+            }
+            return false;
         }
 
         $passed = [];
@@ -326,7 +354,12 @@ final class InstantProcessor
             ? $priorityKey
             : $this->firstParticipantWithInstants($participants, $hasByPlayer);
         if ($priority === null) {
-            return;
+            if ($hadPreviousWindow) {
+                $this->state->battle['strike']['combat_instant_window'] = $previousWindow;
+            } else {
+                unset($this->state->battle['strike']['combat_instant_window']);
+            }
+            return false;
         }
 
         $this->state->battle['strike']['state']            = 'waiting_instant';
@@ -337,6 +370,7 @@ final class InstantProcessor
         $this->state->battle['strike']['instant_played']   = [];
         $this->state->battle['strike']['instant_stack']    = [];
         unset($this->state->battle['strike']['instant_resolution']);
+        return true;
     }
 
     public function playCombat(string $playerKey, int $cardId, string $key): Result
@@ -377,6 +411,9 @@ final class InstantProcessor
         $combatPhase = $this->instantCombatPhase($inst);
         if ($wantedType === 'combat' && !in_array($combatPhase, self::COMBAT_PHASE_ORDER, true)) {
             return Result::error('Не задана фаза combat-инстанта');
+        }
+        if ($wantedType === 'combat' && !$this->combatInstantAllowedInCurrentWindow($inst)) {
+            return Result::error('Инстант недоступен в текущем окне');
         }
         if ($wantedType === 'combat'
             && $target === 'adjacent_ally'
@@ -540,6 +577,10 @@ final class InstantProcessor
         $this->state->battle['strike']['instant_passed'] = $passed;
 
         if ($this->allParticipantsPassed($participants, $passed)) {
+            if ($this->completeEmptyCombatWindow()) {
+                $this->state->bumpVersion();
+                return Result::ok(['instant_window_closed']);
+            }
             $this->resolveStack();
             $this->state->bumpVersion();
             return Result::ok(['instant_stack_resolved']);
@@ -547,6 +588,10 @@ final class InstantProcessor
 
         $newPriority = $this->nextUnpassedParticipant($participants, $playerKey, $passed);
         if ($newPriority === null) {
+            if ($this->completeEmptyCombatWindow()) {
+                $this->state->bumpVersion();
+                return Result::ok(['instant_window_closed']);
+            }
             $this->resolveStack();
             $this->state->bumpVersion();
             return Result::ok(['instant_stack_resolved']);
@@ -750,10 +795,13 @@ final class InstantProcessor
     {
         $stack = $this->state->battle['strike']['instant_stack'] ?? [];
         $queue = [];
+        $window = (string) ($this->state->battle['strike']['combat_instant_window'] ?? '');
 
         foreach (self::COMBAT_PHASE_ORDER as $phase) {
             if ($woundsOnly && $phase !== 'wounds') continue;
             if (!$woundsOnly && $phase === 'wounds') continue;
+            if (!$woundsOnly && $window === self::COMBAT_WINDOW_DICE && $phase !== 'dice') continue;
+            if (!$woundsOnly && $window === self::COMBAT_WINDOW_MAIN && $phase === 'dice') continue;
 
             $items = array_values(array_filter(
                 $stack,
@@ -766,7 +814,7 @@ final class InstantProcessor
         }
 
         $this->state->battle['strike']['instant_resolution'] = [
-            'mode' => $woundsOnly ? 'wounds' : 'combat',
+            'mode' => $woundsOnly ? 'wounds' : ($window !== '' ? $window : 'combat'),
             'queue' => $queue,
         ];
     }
@@ -938,6 +986,23 @@ final class InstantProcessor
             return;
         }
 
+        if ($mode === self::COMBAT_WINDOW_DICE) {
+            unset(
+                $strike['instant_priority'],
+                $strike['instant_passed'],
+                $strike['instant_stack'],
+                $strike['instant_next_sequence'],
+                $strike['instant_resolution'],
+                $strike['instant_phase'],
+                $strike['combat_instant_window']
+            );
+            (new StrikeResolver($this->state, $this->engine))->recalcTable();
+            $strike['instant_result_stage'] = self::COMBAT_WINDOW_DICE;
+            $strike['state'] = 'results';
+            $strike['confirmed'] = [];
+            return;
+        }
+
         $hasWounds = $this->hasPendingCombatWounds();
 
         unset(
@@ -951,6 +1016,7 @@ final class InstantProcessor
         } else {
             unset($strike['instant_stack'], $strike['instant_next_sequence']);
             unset($strike['instant_phase']);
+            unset($strike['combat_instant_window']);
         }
 
         (new StrikeResolver($this->state, $this->engine))->recalcTable();
@@ -1099,6 +1165,107 @@ final class InstantProcessor
             'redistribute_wounds' => 'wounds',
             default => '',
         };
+    }
+
+    private function combatInstantAllowedInCurrentWindow(array $inst): bool
+    {
+        $strike = $this->state->battle['strike'] ?? null;
+        if (!$strike) {
+            return true;
+        }
+
+        $window = (string) ($strike['combat_instant_window'] ?? '');
+        if ($window === '') {
+            return true;
+        }
+
+        return $this->combatInstantAllowedInWindow($inst, $window);
+    }
+
+    private function combatInstantAllowedInWindow(array $inst, string $window): bool
+    {
+        $combatPhase = $this->instantCombatPhase($inst);
+        if ($window === self::COMBAT_WINDOW_DICE) {
+            return $combatPhase === 'dice';
+        }
+        if ($window === self::COMBAT_WINDOW_MAIN) {
+            return $combatPhase !== 'dice';
+        }
+        return true;
+    }
+
+    private function completeEmptyCombatWindow(): bool
+    {
+        $strike = $this->state->battle['strike'] ?? null;
+        if (!$strike || ($strike['instant_phase'] ?? null) !== 'combat') {
+            return false;
+        }
+        if (!empty($strike['instant_stack'])) {
+            return false;
+        }
+
+        $window = (string) ($strike['combat_instant_window'] ?? self::COMBAT_WINDOW_MAIN);
+        unset(
+            $this->state->battle['strike']['instant_priority'],
+            $this->state->battle['strike']['instant_passed'],
+            $this->state->battle['strike']['instant_participants'],
+            $this->state->battle['strike']['instant_played'],
+            $this->state->battle['strike']['instant_stack'],
+            $this->state->battle['strike']['instant_next_sequence'],
+            $this->state->battle['strike']['instant_phase'],
+            $this->state->battle['strike']['combat_instant_window']
+        );
+
+        if ($window === self::COMBAT_WINDOW_DICE) {
+            $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+            $attackerKey = $attacker ? $attacker->owner : '';
+            if ($attackerKey !== '' && $this->openWindow('combat', $attackerKey, null, self::COMBAT_WINDOW_MAIN)) {
+                return true;
+            }
+        }
+
+        $this->continueAfterCombatMainWindow();
+        return true;
+    }
+
+    public function continueAfterCombatDiceResult(): void
+    {
+        $strike = $this->state->battle['strike'] ?? null;
+        if (!$strike || ($strike['instant_result_stage'] ?? '') !== self::COMBAT_WINDOW_DICE) {
+            return;
+        }
+
+        unset($this->state->battle['strike']['instant_result_stage']);
+        unset($this->state->battle['strike']['instant_summary']);
+        $this->state->battle['strike']['confirmed'] = [];
+
+        $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+        $attackerKey = $attacker ? $attacker->owner : '';
+        if ($attackerKey !== '' && $this->openWindow('combat', $attackerKey, null, self::COMBAT_WINDOW_MAIN)) {
+            return;
+        }
+
+        $this->continueAfterCombatMainWindow();
+    }
+
+    private function continueAfterCombatMainWindow(): void
+    {
+        $strike = &$this->state->battle['strike'];
+        (new StrikeResolver($this->state, $this->engine))->recalcTable();
+        $table = $strike['result'] ?? null;
+
+        if ($table && $table['attack'] !== '' && $table['defend'] !== '') {
+            $strike['state'] = 'waiting_choice';
+            $strike['choice_winner'] = $table['winner'];
+            return;
+        }
+
+        (new StrikeResolver($this->state, $this->engine))
+            ->apply($table ?? ['attack' => '', 'defend' => '', 'winner' => ''], false);
+
+        if (($strike['state'] ?? '') !== 'waiting_auto_target') {
+            $strike['state'] = 'results';
+        }
     }
 
     private function findAdjacentAllyTargets(string $playerKey): array

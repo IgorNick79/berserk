@@ -753,11 +753,17 @@ final class StrikeResolver
         $table = $this->strikeTable($attackValue, $defendValue);
         $strike['result'] = $table;
 
-        // Окно 2 — combat-инстанты
+        // Окно 2 — сначала dice-инстанты, затем остальные combat-инстанты.
         $attackerKey = $attacker->owner;
 
         $ip = new InstantProcessor($this->state, $this->engine);
-        $ip->openWindow('combat', $attackerKey);
+        $ip->openWindow('combat', $attackerKey, null, 'dice');
+
+        if (($strike['state'] ?? '') === 'waiting_instant') {
+            return;
+        }
+
+        $ip->openWindow('combat', $attackerKey, null, 'main');
 
         if (($strike['state'] ?? '') === 'waiting_instant') {
             return;
@@ -1173,6 +1179,12 @@ final class StrikeResolver
         $this->state->battle['strike']['confirmed'] = $confirmed;
 
         if (count($confirmed) >= 2) {
+            if (($this->state->battle['strike']['instant_result_stage'] ?? '') === 'dice') {
+                (new InstantProcessor($this->state, $this->engine))->continueAfterCombatDiceResult();
+                $this->state->bumpVersion();
+                return Result::ok(['combat_dice_result_ack']);
+            }
+
             if (!empty($this->state->battle['strike']['pending_wounds_resolution'])) {
                 $this->state->battle['strike']['wounds_after_result_ack'] = true;
                 (new InstantProcessor($this->state, $this->engine))->resumeCombatWounds();
