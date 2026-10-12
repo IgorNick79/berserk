@@ -52,65 +52,69 @@ final class TurnInstantStackChoice implements ChoiceHandlerInterface
             ];
         }
 
-        if ($priority !== $playerKey) {
-            return new PanelSpec(
-                title: 'Стек инстантов хода',
-                isMine: false,
-            );
-        }
-
         $phase = (string) ($stack['phase'] ?? 'turn');
         $cards = [];
-        $instantProcessor = new InstantProcessor($state, new Engine());
-        foreach ($instantProcessor->getInstants($playerKey, $phase, 'turn') as $inst) {
-            $payload = (array) ($inst['payload'] ?? []);
-            $url = "{$baseUrl}&cmd=play_turn_instant&card_id={$inst['card_id']}"
-                . '&instant_key=' . urlencode((string) ($payload['key'] ?? ''));
-            $cards[] = TaskCard::render([
-                'label' => (string) ($inst['label'] ?? ''),
-                'card_ukid' => $inst['ukid'] ?? null,
-                'row' => $inst['row'] ?? null,
-                'col' => $inst['col'] ?? null,
-                'hint' => (string) ($inst['label'] ?? ''),
-                'is_instant' => true,
-            ], $url, $cardsInfo);
+        $buttons = [];
+        $text = $this->renderStackItems($items, $playerKey);
+
+        if ($priority !== $playerKey) {
+            $text[] = '<p class="wait">Ожидание выбора оппонента...</p>';
+        } else {
+            $instantProcessor = new InstantProcessor($state, new Engine());
+            foreach ($instantProcessor->getInstants($playerKey, $phase, 'turn') as $inst) {
+                $payload = (array) ($inst['payload'] ?? []);
+                $url = "{$baseUrl}&cmd=play_turn_instant&card_id={$inst['card_id']}"
+                    . '&instant_key=' . urlencode((string) ($payload['key'] ?? ''));
+                $cards[] = TaskCard::render([
+                    'label' => (string) ($inst['label'] ?? ''),
+                    'card_ukid' => $inst['ukid'] ?? null,
+                    'row' => $inst['row'] ?? null,
+                    'col' => $inst['col'] ?? null,
+                    'hint' => (string) ($inst['label'] ?? ''),
+                    'is_instant' => true,
+                ], $url, $cardsInfo);
+            }
+            $buttons[] = [
+                'label' => 'Пас',
+                'url' => $baseUrl . '&cmd=pass_turn_instant',
+                'class' => 'skip',
+            ];
         }
 
         return new PanelSpec(
             title: 'Стек инстантов хода',
             cards: $cards,
-            text: $this->renderStackItems($items, $playerKey),
-            buttons: [[
-                'label' => 'Пас',
-                'url' => $baseUrl . '&cmd=pass_turn_instant',
-                'class' => 'skip',
-            ]],
+            text: $text,
+            buttons: $buttons,
         );
     }
 
     private function renderStackItems(array $items, string $playerKey): array
     {
-        if (empty($items)) return [];
+        $html = '<div class="instant-summary">'
+            . '<div class="instant-summary__title">Объявленные инстанты хода:</div>';
 
-        $items = array_reverse($items);
-        $html = '<div class="instant-stack">'
-            . '<div class="instant-stack__title">Стек (сверху разрешается первым):</div>'
-            . '<ul class="instant-stack__list">';
+        if (empty($items)) {
+            return [$html . '<p class="instant-stack__empty">Пока нет объявленных инстантов.</p></div>'];
+        }
 
-        foreach ($items as $i => $item) {
-            $isTop = ($i === 0) ? ' instant-stack__item--top' : '';
-            $whoLabel = (($item['player'] ?? '') === $playerKey) ? 'Ты' : 'Оппонент';
+        $html .= '<ol class="instant-summary__list">';
+
+        foreach ($items as $item) {
+            $isMine = (($item['player'] ?? '') === $playerKey);
+            $whoLabel = $isMine ? 'Ты' : 'Соперник';
+            $whoClass = $isMine ? 'instant-summary__who--mine' : 'instant-summary__who--opp';
             $label = htmlspecialchars((string) ($item['label'] ?? ''), ENT_QUOTES);
             $target = htmlspecialchars((string) ($item['target'] ?? ''), ENT_QUOTES);
-            $html .= '<li class="instant-stack__item' . $isTop . '">'
-                . '<span class="instant-stack__who">' . htmlspecialchars($whoLabel, ENT_QUOTES) . '</span> '
+            $html .= '<li class="instant-summary__item">'
+                . '<span class="instant-summary__who ' . $whoClass . '">' . htmlspecialchars($whoLabel, ENT_QUOTES) . '</span> '
                 . $label;
             if ($target !== '') {
                 $html .= ' <span class="instant-stack__target">→ ' . $target . '</span>';
             }
             $html .= '</li>';
         }
-        $html .= '</ul></div>';
+        $html .= '</ol></div>';
 
         return [$html];
     }
