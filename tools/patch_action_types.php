@@ -44,7 +44,7 @@ foreach ($rows as $r) {
     foreach ($prop['actions'] as &$a) {
         $t = (string) ($a['type'] ?? '');
         if ($t === '' || !isset($map[$t])) continue;
-        if (!empty($a['action_type'])) continue;   // уже стоит
+        if (!empty($a['action_type'])) continue;
 
         $a['action_type'] = $map[$t];
         $changed = true;
@@ -54,10 +54,11 @@ foreach ($rows as $r) {
     if (!$changed) continue;
 
     $json = json_encode($prop, JSON_UNESCAPED_UNICODE);
-    $db->query(
-        "UPDATE cards SET prop = ? WHERE ukid = ?",
-        [$json, $r['ukid']]
-    );
+    $escapedJson = $db->escape($json);
+    $escapedUkid = $db->escape($r['ukid']);
+
+    $db->query("UPDATE cards SET prop = '{$escapedJson}' WHERE ukid = '{$escapedUkid}'");
+
     $patched++;
     echo "  patched {$r['ukid']} {$r['name']}\n";
 }
