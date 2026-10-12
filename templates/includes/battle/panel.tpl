@@ -4,7 +4,9 @@
 
 <h3>{{name}}</h3>
 
-{{mode_buttons}}
+<div class="battle-mode-buttons">
+    {{mode_buttons}}
+</div>
 
 <p>HP {{hp}}/{{hp_max}} | Move {{move}}/{{move_max}}{{coins_line}}</p>
 

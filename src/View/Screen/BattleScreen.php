@@ -10,6 +10,7 @@ use Berserk\Core\CardInstance;
 use Berserk\Core\ZoneManager;
 use Berserk\Core\BattleHelper;
 use Berserk\Core\CardStats;
+use Berserk\Core\Choice\ChoiceRegistry;
 use Berserk\View\Template;
 use Berserk\View\Screen\Battle\InfoPanel;
 use Berserk\View\Ui\Badge;
@@ -113,7 +114,7 @@ final class BattleScreen
         $pilesHtml = $this->buildPiles($state, $playerKey, $oppKey, $baseUrl);
         $panelHtml      = $this->buildPanel(
             $state, $playerKey, $selectedCardId, $cardsInfo,
-            $baseUrl, $mode, $isActive, $strike, $attackTargets
+            $baseUrl, $mode, $isActive, $strike, $attackTargets, $explicitAttackMode
         );
         
         $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl);
@@ -568,7 +569,8 @@ final class BattleScreen
         string $mode,
         bool $isActive,
         ?array $strike,
-        array $attackTargets
+        array $attackTargets,
+        bool $explicitAttackMode
     ): string {
         if ($selectedCardId <= 0) return '';
 
@@ -729,24 +731,7 @@ final class BattleScreen
                     }
                 }
 
-                $immediate = !empty($a['self']) 
-                    || !empty($a['self_destroy']) 
-                    || !empty($a['transfer_wounds'])
-                    || ($a['type'] ?? '') === 'prophecy'
-                    || ($a['type'] ?? '') === 'revive'
-                    || ($a['type'] ?? '') === 'grezy_prophecy'
-                    || ($a['type'] ?? '') === 'damage_poisoned'
-                    || ($a['type'] ?? '') === 'place_cell_marker'
-                    || ($a['type'] ?? '') === 'wound_transfer'
-                    || ($a['type'] ?? '') === 'become_fly'
-                    || ($a['type'] ?? '') === 'row_spell'
-                    || ($a['type'] ?? '') === 'mark_opponent_row'
-                    || ($a['type'] ?? '') === 'destroy_self_and_target'
-                    || ($a['type'] ?? '') === 'freeze_moves'
-                    || ($a['type'] ?? '') === 'particle'
-                    || ($a['type'] ?? '') === 'damage_ranged'
-                    || ($a['type'] ?? '') === 'life_gift'
-                    || !empty($a['max_targets']);
+                $immediate = $this->isImmediateBattleAction($a);
 
                 if ($immediate) {
                     $link = "{$baseUrl}&cmd=action&action_key={$key}&card_id={$c->instanceId}&target_id={$c->instanceId}&sel={$c->instanceId}&mode=action:{$key}";
@@ -777,6 +762,14 @@ final class BattleScreen
                 }
             }
             }
+        }
+
+        if ($this->canCancelTargetMode($state, $c, $playerKey, $mode, $isActive, $strike, $explicitAttackMode)) {
+            $modeButtons .= $this->tpl->parse('includes/battle/mode_button.tpl', [
+                'label'  => 'Отменить действие',
+                'link'   => $baseUrl,
+                'active' => ' cancel',
+            ]);
         }
 
         // Статус-строка
@@ -811,6 +804,70 @@ final class BattleScreen
             'coins_line'   => $coinsLine,
             'status_html'  => $statusHtml,
         ]);
+    }
+
+    private function canCancelTargetMode(
+        GameState $state,
+        CardInstance $card,
+        string $playerKey,
+        string $mode,
+        bool $isActive,
+        ?array $strike,
+        bool $explicitAttackMode
+    ): bool {
+        if (!$explicitAttackMode || !$isActive || $strike !== null) return false;
+        if ($card->owner !== $playerKey) return false;
+        if ($this->hasActiveServerPending($state)) return false;
+
+        $abil = BattleHelper::abilities($card);
+        if ($mode === 'strike') return (bool) ($abil['has_strike'] ?? false);
+        if ($mode === 'uchr') return (bool) ($abil['has_uchr'] ?? false);
+        if (!str_starts_with($mode, 'action:')) return false;
+
+        $key = substr($mode, 7);
+        foreach ($card->prop['actions'] ?? [] as $action) {
+            $type = $action['type'] ?? '';
+            $actionKey = $action['key'] ?? $type;
+            if ($actionKey === $key) {
+                return !$this->isImmediateBattleAction($action);
+            }
+        }
+
+        return false;
+    }
+
+    private function hasActiveServerPending(GameState $state): bool
+    {
+        if (ChoiceRegistry::current($state) !== null) return true;
+
+        return !empty($state->battle['pending_dive']);
+    }
+
+    private function isImmediateBattleAction(array $action): bool
+    {
+        $type = $action['type'] ?? '';
+
+        return !empty($action['self'])
+            || !empty($action['self_destroy'])
+            || !empty($action['transfer_wounds'])
+            || $type === 'blood_storm'
+            || $type === 'prophecy'
+            || $type === 'revive'
+            || $type === 'grezy_prophecy'
+            || $type === 'grant_prop'
+            || $type === 'damage_poisoned'
+            || $type === 'place_cell_marker'
+            || $type === 'wound_transfer'
+            || $type === 'become_fly'
+            || $type === 'row_spell'
+            || $type === 'mark_opponent_row'
+            || $type === 'destroy_self_and_target'
+            || $type === 'freeze_moves'
+            || $type === 'multi_discharge'
+            || $type === 'particle'
+            || $type === 'damage_ranged'
+            || $type === 'life_gift'
+            || !empty($action['max_targets']);
     }
 
     private function displayHpMax(CardInstance $card, ?array $info = null): string
