@@ -41,12 +41,30 @@
     var requestSequence = 0;
     var activeRequestSequence = 0;
     var inFlight = false;
-    var commandInFlight = false;
+    var commandState = "idle";
+    var pendingCommand = null;
+    var statusInFlight = false;
+    var statusTimer = 0;
+    var statusController = null;
+    var statusRequestGeneration = 0;
+    var forcedSyncTimer = 0;
+    var forcedSyncInFlight = false;
+    var forcedSyncGeneration = 0;
     var pendingForce = false;
     var pollTimer = 0;
     var stopped = false;
     var controller = null;
     var messageNode = root.querySelector("[data-battle-message]");
+    var terminalCommandStatuses = {
+        committed: true,
+        rejected: true,
+        conflict: true,
+        failed: true
+    };
+
+    function commandInFlight() {
+        return commandState !== "idle";
+    }
 
     function clearPollTimer() {
         if (pollTimer) {
@@ -55,9 +73,23 @@
         }
     }
 
+    function clearStatusTimer() {
+        if (statusTimer) {
+            window.clearTimeout(statusTimer);
+            statusTimer = 0;
+        }
+    }
+
+    function clearForcedSyncTimer() {
+        if (forcedSyncTimer) {
+            window.clearTimeout(forcedSyncTimer);
+            forcedSyncTimer = 0;
+        }
+    }
+
     function scheduleNext() {
         clearPollTimer();
-        if (stopped || document.hidden) return;
+        if (stopped || document.hidden || commandInFlight()) return;
         pollTimer = window.setTimeout(function () {
             requestSnapshot(false);
         }, 2000);
@@ -72,6 +104,16 @@
             controller.abort();
             controller = null;
         }
+    }
+
+    function cancelStatusRequest() {
+        clearStatusTimer();
+        statusRequestGeneration++;
+        if (statusController) {
+            statusController.abort();
+            statusController = null;
+        }
+        statusInFlight = false;
     }
 
     function buildUrl(forceSnapshot) {
@@ -103,6 +145,18 @@
         return url;
     }
 
+    function buildCommandStatusUrl(commandId) {
+        var url = new URL(syncUrl, window.location.href);
+        url.searchParams.set("ajax", "battle_command_status");
+        url.searchParams.set("command_id", commandId);
+        url.searchParams.delete("since_version");
+        url.searchParams.delete("force_snapshot");
+        url.searchParams.delete("sel");
+        url.searchParams.delete("mode");
+        url.searchParams.delete("pile");
+        return url;
+    }
+
     function addUiAndVersion(params) {
         params.set("expected_version", String(Math.max(0, syncVersion)));
         params.set("sel", String(uiState.sel || 0));
@@ -123,6 +177,45 @@
 
     function clearMessage() {
         showMessage("", "info");
+    }
+
+    function generateCommandId() {
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+            return window.crypto.randomUUID();
+        }
+
+        if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+            var bytes = new Uint8Array(16);
+            window.crypto.getRandomValues(bytes);
+            var hex = "";
+            for (var i = 0; i < bytes.length; i++) {
+                hex += bytes[i].toString(16).padStart(2, "0");
+            }
+            return "cmd-" + Date.now().toString(36) + "-" + hex;
+        }
+
+        return "";
+    }
+
+    function validCommandStatus(data, commandId) {
+        if (!data || typeof data !== "object") return false;
+        if (data.command_id !== commandId) return false;
+        if (typeof data.command_status !== "string") return false;
+        if (typeof data.terminal !== "boolean") return false;
+        return true;
+    }
+
+    function isTerminalCommandStatus(data) {
+        return data
+            && data.terminal === true
+            && !!terminalCommandStatuses[data.command_status];
+    }
+
+    function isNonTerminalCommandStatus(data) {
+        return data
+            && (data.terminal === false
+                || data.command_status === "processing"
+                || data.command_status === "unknown");
     }
 
     function validSnapshot(data) {
@@ -148,13 +241,13 @@
 
     function applySnapshot(data, requestUiRevision) {
         var incomingVersion = parseInt(data.sync_version, 10);
-        if (!Number.isFinite(incomingVersion)) return;
-        if (incomingVersion < syncVersion) return;
+        if (!Number.isFinite(incomingVersion)) return false;
+        if (incomingVersion < syncVersion) return false;
 
         if (requestUiRevision !== uiRevision) {
             syncVersion = Math.max(syncVersion, incomingVersion);
             pendingForce = true;
-            return;
+            return false;
         }
 
         for (var i = 0; i < fragmentKeys.length; i++) {
@@ -164,6 +257,7 @@
 
         syncVersion = incomingVersion;
         uiState = normalizeUi(data.ui);
+        return true;
     }
 
     function navigateToCurrentPage() {
@@ -178,16 +272,16 @@
     }
 
     function handleResponse(data, requestUiRevision) {
-        if (!data || data.ok !== true || typeof data.type !== "string") return;
+        if (!data || data.ok !== true || typeof data.type !== "string") return false;
 
         var incomingVersion = parseInt(data.sync_version, 10);
-        if (Number.isFinite(incomingVersion) && incomingVersion < syncVersion) return;
+        if (Number.isFinite(incomingVersion) && incomingVersion < syncVersion) return false;
 
         if (data.type === "no_change") {
             if (Number.isFinite(incomingVersion)) {
                 syncVersion = Math.max(syncVersion, incomingVersion);
             }
-            return;
+            return "unchanged";
         }
 
         if (data.type === "status") {
@@ -196,12 +290,13 @@
             }
             if (data.status === "game_over") {
                 navigateToCurrentPage();
+                return "game_over";
             }
-            return;
+            return "status";
         }
 
-        if (!validSnapshot(data)) return;
-        applySnapshot(data, requestUiRevision);
+        if (!validSnapshot(data)) return false;
+        return applySnapshot(data, requestUiRevision);
     }
 
     function handleCommandResponse(data, status, requestUiRevision) {
@@ -256,17 +351,190 @@
         showMessage(data.error || "Действие отклонено.", "error");
     }
 
-    function requestSnapshot(forceSnapshot) {
-        if (stopped || document.hidden || commandInFlight) return;
+    function completeCommand() {
+        var finalError = pendingCommand && pendingCommand.finalError;
+        commandState = "idle";
+        pendingCommand = null;
+        statusInFlight = false;
+        statusController = null;
+        forcedSyncInFlight = false;
+        forcedSyncGeneration++;
+        clearStatusTimer();
+        clearForcedSyncTimer();
+        if (finalError) {
+            showMessage(finalError, "error");
+        } else {
+            clearMessage();
+        }
+        scheduleNext();
+    }
+
+    function scheduleForcedSyncRetry() {
+        if (!pendingCommand || stopped || commandState !== "syncing") return;
+
+        clearForcedSyncTimer();
+        if (document.hidden) return;
+
+        forcedSyncTimer = window.setTimeout(function () {
+            forcedSyncTimer = 0;
+            startForcedCommandSync();
+        }, 2000);
+    }
+
+    function startForcedCommandSync() {
+        if (!pendingCommand || stopped) return;
+        if (forcedSyncInFlight) return;
+
+        commandState = "syncing";
+        clearStatusTimer();
+        clearForcedSyncTimer();
+        showMessage("Синхронизирую состояние партии.", "info");
+
+        if (document.hidden) {
+            return;
+        }
+
+        forcedSyncInFlight = true;
+        var syncGeneration = ++forcedSyncGeneration;
+        requestSnapshot(true, function (ok) {
+            if (syncGeneration !== forcedSyncGeneration) return;
+            forcedSyncInFlight = false;
+            if (!pendingCommand || commandState !== "syncing") return;
+
+            if (ok) {
+                completeCommand();
+                return;
+            }
+
+            showMessage("Не удалось синхронизировать состояние. Повторяю попытку.", "error");
+            scheduleForcedSyncRetry();
+        });
+    }
+
+    function scheduleCommandRecovery(delay) {
+        if (!pendingCommand || stopped || commandState !== "recovering") return;
+
+        clearStatusTimer();
+        if (document.hidden) return;
+
+        statusTimer = window.setTimeout(function () {
+            requestCommandStatus();
+        }, Math.max(0, delay));
+    }
+
+    function enterCommandRecovery(message) {
+        if (!pendingCommand || stopped) return;
+
+        commandState = "recovering";
+        pendingCommand.recoveryDelay = pendingCommand.recoveryDelay || 2000;
+        if (message) showMessage(message, "error");
+        scheduleCommandRecovery(0);
+    }
+
+    function continueCommandRecovery() {
+        if (!pendingCommand || stopped) return;
+
+        pendingCommand.recoveryDelay = Math.min((pendingCommand.recoveryDelay || 2000) * 1.5, 10000);
+        scheduleCommandRecovery(pendingCommand.recoveryDelay);
+    }
+
+    function requestCommandStatus() {
+        if (!pendingCommand || stopped || commandState !== "recovering") return;
+        if (statusInFlight || document.hidden) return;
+
+        statusInFlight = true;
+        var statusGeneration = ++statusRequestGeneration;
+        var requestController = new AbortController();
+        statusController = requestController;
+        var commandId = pendingCommand.id;
+
+        fetch(buildCommandStatusUrl(commandId), {
+            headers: {"Accept": "application/json"},
+            cache: "no-store",
+            signal: requestController.signal
+        })
+            .then(function (response) {
+                return response.json().catch(function () { return null; });
+            })
+            .then(function (data) {
+                if (statusGeneration !== statusRequestGeneration || !pendingCommand || commandState !== "recovering" || commandId !== pendingCommand.id) return;
+
+                if (!validCommandStatus(data, commandId)) {
+                    showMessage("Восстанавливаю результат действия.", "info");
+                    continueCommandRecovery();
+                    return;
+                }
+
+                if (isTerminalCommandStatus(data)) {
+                    if (pendingCommand && data.command_status !== "committed") {
+                        pendingCommand.finalError = data.error || "Действие не выполнено.";
+                    }
+                    showMessage("Результат действия подтверждён. Обновляю поле.", "info");
+                    startForcedCommandSync();
+                    return;
+                }
+
+                if (isNonTerminalCommandStatus(data)) {
+                    showMessage("Действие ещё обрабатывается. Жду подтверждения.", "info");
+                    continueCommandRecovery();
+                    return;
+                }
+
+                continueCommandRecovery();
+            })
+            .catch(function () {
+                if (statusGeneration !== statusRequestGeneration || !pendingCommand || commandState !== "recovering" || commandId !== pendingCommand.id) return;
+                showMessage("Связь нестабильна. Продолжаю проверять результат действия.", "error");
+                continueCommandRecovery();
+            })
+            .finally(function () {
+                if (statusGeneration !== statusRequestGeneration || !pendingCommand || commandId !== pendingCommand.id) return;
+                statusInFlight = false;
+                statusController = null;
+            });
+    }
+
+    function handleJournalCommandResponse(data, status, commandId, requestUiRevision) {
+        if (!validCommandStatus(data, commandId)) {
+            enterCommandRecovery("Не удалось подтвердить результат действия. Проверяю журнал команды.");
+            return;
+        }
+
+        if (isTerminalCommandStatus(data)) {
+            if (pendingCommand && data.command_status !== "committed") {
+                pendingCommand.finalError = data.error || "Действие не выполнено.";
+            }
+            if (data.type === "snapshot" || data.type === "conflict" || data.type === "status") {
+                handleCommandResponse(data, status, requestUiRevision);
+            }
+            startForcedCommandSync();
+            return;
+        }
+
+        if (isNonTerminalCommandStatus(data)) {
+            enterCommandRecovery("Действие отправлено. Жду подтверждения сервера.");
+            return;
+        }
+
+        enterCommandRecovery("Не удалось подтвердить результат действия. Проверяю журнал команды.");
+    }
+
+    function requestSnapshot(forceSnapshot, onComplete) {
+        if (stopped || document.hidden || (commandInFlight() && commandState !== "syncing")) {
+            if (typeof onComplete === "function") onComplete(false);
+            return;
+        }
 
         if (inFlight) {
             pendingForce = pendingForce || !!forceSnapshot;
+            if (typeof onComplete === "function") onComplete(false);
             return;
         }
 
         inFlight = true;
         var requestUiRevision = uiRevision;
         var sequence = ++requestSequence;
+        var completionResult = false;
         activeRequestSequence = sequence;
         controller = new AbortController();
 
@@ -280,15 +548,24 @@
                 return response.json().catch(function () { return null; });
             })
             .then(function (data) {
-                if (stopped || document.hidden || sequence !== activeRequestSequence) return;
-                handleResponse(data, requestUiRevision);
+                if (stopped || document.hidden || sequence !== activeRequestSequence) {
+                    completionResult = false;
+                    return;
+                }
+                var handled = handleResponse(data, requestUiRevision);
+                completionResult = handled === true || handled === "game_over";
             })
-            .catch(function () {})
+            .catch(function () {
+                completionResult = false;
+            })
             .finally(function () {
                 if (sequence !== activeRequestSequence) return;
                 inFlight = false;
                 controller = null;
                 activeRequestSequence = 0;
+                if (typeof onComplete === "function") {
+                    onComplete(completionResult);
+                }
                 if (stopped) return;
 
                 if (pendingForce && !document.hidden) {
@@ -349,13 +626,32 @@
     }
 
     function submitCommand(params) {
-        if (stopped || commandInFlight) return;
+        if (stopped || commandInFlight()) return;
 
-        commandInFlight = true;
+        var commandId = generateCommandId();
+        if (!commandId) {
+            showMessage("Браузер не может создать безопасный идентификатор команды.", "error");
+            return;
+        }
+
         var commandUiRevision = uiRevision;
+        commandState = "sending";
+        pendingCommand = {
+            id: commandId,
+            uiRevision: commandUiRevision,
+            recoveryDelay: 2000
+        };
         clearPollTimer();
         cancelActiveRequest();
+        cancelStatusRequest();
         addUiAndVersion(params);
+        params.set("command_id", commandId);
+        showMessage("Отправляю действие.", "info");
+
+        var commandController = new AbortController();
+        var commandTimeout = window.setTimeout(function () {
+            commandController.abort();
+        }, 20000);
 
         fetch(buildCommandUrl(), {
             method: "POST",
@@ -364,30 +660,23 @@
                 "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
             },
             cache: "no-store",
-            body: params.toString()
+            body: params.toString(),
+            signal: commandController.signal
         })
             .then(function (response) {
                 return response.json()
                     .catch(function () { return null; })
                     .then(function (data) {
-                        handleCommandResponse(data, response.status, commandUiRevision);
+                        if (!pendingCommand || pendingCommand.id !== commandId || commandState !== "sending") return;
+                        handleJournalCommandResponse(data, response.status, commandId, commandUiRevision);
                     });
             })
             .catch(function () {
-                showMessage("Связь прервалась. Обновляю состояние партии.", "error");
-                pendingForce = true;
+                if (!pendingCommand || pendingCommand.id !== commandId || commandState !== "sending") return;
+                enterCommandRecovery("Связь прервалась. Проверяю результат действия.");
             })
             .finally(function () {
-                commandInFlight = false;
-                if (stopped) return;
-
-                if (pendingForce && !document.hidden) {
-                    pendingForce = false;
-                    requestSnapshot(true);
-                    return;
-                }
-
-                scheduleNext();
+                window.clearTimeout(commandTimeout);
             });
     }
 
@@ -442,7 +731,7 @@
         }
 
         if (!isCommandUrl(url)) return;
-        if (commandInFlight) {
+        if (commandInFlight()) {
             event.preventDefault();
             return;
         }
@@ -473,7 +762,7 @@
         applyFormFieldsToUrl(url, form, event.submitter || null);
 
         if (!isCommandUrl(url)) return;
-        if (commandInFlight) {
+        if (commandInFlight()) {
             event.preventDefault();
             return;
         }
@@ -491,11 +780,24 @@
     document.addEventListener("visibilitychange", function () {
         if (document.hidden) {
             clearPollTimer();
+            clearForcedSyncTimer();
+            if (commandState === "syncing") {
+                forcedSyncGeneration++;
+                forcedSyncInFlight = false;
+            }
             cancelActiveRequest();
+            if (commandState === "recovering") {
+                cancelStatusRequest();
+            }
             return;
         }
 
-        if (commandInFlight) {
+        if (commandInFlight()) {
+            if (commandState === "recovering") {
+                scheduleCommandRecovery(0);
+            } else if (commandState === "syncing") {
+                startForcedCommandSync();
+            }
             return;
         }
 
@@ -507,7 +809,11 @@
     window.addEventListener("beforeunload", function () {
         stopped = true;
         clearPollTimer();
+        clearForcedSyncTimer();
+        forcedSyncGeneration++;
+        forcedSyncInFlight = false;
         cancelActiveRequest();
+        cancelStatusRequest();
     });
 
     requestSnapshot(false);
