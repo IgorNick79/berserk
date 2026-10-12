@@ -1037,10 +1037,14 @@ final class StrikeResolver
         string $attackStrike
     ): void {
         foreach ($attacker->prop['strike_effects'] ?? [] as $effect) {
-            if (empty($effect['wound_target_by_behind_weak_strike'])) continue;
-
             $levels = $effect['levels'] ?? ['strong'];
             if (!in_array($attackStrike, $levels, true)) continue;
+
+            if (!empty($effect['chain_damage']) && is_array($effect['chain_damage'])) {
+                $this->applyChainDamage($attacker, $target, $effect['chain_damage']);
+            }
+
+            if (empty($effect['wound_target_by_behind_weak_strike'])) continue;
 
             $behind = $this->getBehindStrikeTargetCard($attacker, $target);
             if ($behind === null) continue;
@@ -1053,6 +1057,46 @@ final class StrikeResolver
                 'source_id' => $behind->instanceId,
                 'target_id' => $target->instanceId,
                 'damage' => $damage,
+            ];
+        }
+    }
+
+    private function applyChainDamage(CardInstance $attacker, CardInstance $target, array $config): void
+    {
+        $damage = (int) ($config['value'] ?? 0);
+        if ($damage <= 0) return;
+
+        $maxTargets = (int) ($config['max_targets'] ?? 0);
+        if ($maxTargets <= 0) $maxTargets = 999;
+        $filter = (string) ($config['filter'] ?? 'enemy');
+
+        $applied = [];
+        foreach ($this->state->cards as $candidate) {
+            if ($candidate->instanceId === $target->instanceId) continue;
+            if ($candidate->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($candidate->dying || $candidate->hp <= 0) continue;
+            if ($candidate->type !== 'creature') continue;
+            if ($filter === 'enemy' && $candidate->owner === $attacker->owner) continue;
+            if ($filter === 'ally' && $candidate->owner !== $attacker->owner) continue;
+
+            $dr = abs((int) $candidate->row - (int) $target->row);
+            $dc = abs((int) $candidate->col - (int) $target->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            $this->engine->applyDamage($this->state, $candidate, $damage, 'impact', $attacker);
+            $applied[] = [
+                'source_id' => $attacker->instanceId,
+                'target_id' => $candidate->instanceId,
+                'damage' => $damage,
+            ];
+            if (count($applied) >= $maxTargets) break;
+        }
+
+        if (!empty($applied)) {
+            $this->state->battle['strike']['chain_damage'][] = [
+                'source_id' => $attacker->instanceId,
+                'attacked_id' => $target->instanceId,
+                'items' => $applied,
             ];
         }
     }

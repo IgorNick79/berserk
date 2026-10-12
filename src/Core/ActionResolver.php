@@ -2461,44 +2461,52 @@ final class ActionResolver
 
     public function triggerLineOpenOnStrike(CardInstance $source): bool
     {
-        $config = $source->prop['on_successful_strike'] ?? null;
-        if (!is_array($config) || ($config['type'] ?? '') !== 'open_line_ally_cannot_attack') {
-            return false;
-        }
-        if (!CardStats::isInLine($this->state, $source)) return false;
-
-        $key = (string) ($config['key'] ?? 'open_line_ally_cannot_attack');
-        $limit = (int) ($config['uses_per_turn'] ?? 1);
-        $flag = 'trigger_used_this_turn:' . $key;
-        if ($limit > 0 && (int) ($source->flags[$flag] ?? 0) >= $limit) {
-            return false;
+        $configs = [];
+        $ownConfig = $source->prop['on_successful_strike'] ?? null;
+        if (is_array($ownConfig)) $configs[] = $ownConfig;
+        foreach (CardStats::getInheritedLineBonusValues($this->state, $source, 'on_successful_strike') as $inheritedConfig) {
+            if (is_array($inheritedConfig)) $configs[] = $inheritedConfig;
         }
 
-        $candidateIds = [];
-        foreach (CardStats::getLineGroup($this->state, $source) as $card) {
-            if ($card->instanceId === $source->instanceId) continue;
-            if ($card->dying || $card->hp <= 0) continue;
-            if (!$card->closed) continue;
-            $candidateIds[] = $card->instanceId;
-        }
+        foreach ($configs as $config) {
+            if (($config['type'] ?? '') !== 'open_line_ally_cannot_attack') continue;
+            if (!CardStats::isInLine($this->state, $source)) continue;
 
-        if (empty($candidateIds)) return false;
+            $key = (string) ($config['key'] ?? 'open_line_ally_cannot_attack');
+            $limit = (int) ($config['uses_per_turn'] ?? 1);
+            $flag = 'trigger_used_this_turn:' . $key;
+            if ($limit > 0 && (int) ($source->flags[$flag] ?? 0) >= $limit) {
+                continue;
+            }
 
-        if (count($candidateIds) === 1) {
-            $target = $this->state->getCard($candidateIds[0]);
-            if (!$target) return false;
-            $this->resolveLineOpenOnStrike($source, $target, $flag);
+            $candidateIds = [];
+            foreach (CardStats::getLineGroup($this->state, $source) as $card) {
+                if ($card->instanceId === $source->instanceId) continue;
+                if ($card->dying || $card->hp <= 0) continue;
+                if (!$card->closed) continue;
+                $candidateIds[] = $card->instanceId;
+            }
+
+            if (empty($candidateIds)) continue;
+
+            if (count($candidateIds) === 1) {
+                $target = $this->state->getCard($candidateIds[0]);
+                if (!$target) return false;
+                $this->resolveLineOpenOnStrike($source, $target, $flag);
+                return true;
+            }
+
+            $this->state->battle['pending_holvert_open'] = [
+                'owner' => $source->owner,
+                'source_id' => $source->instanceId,
+                'candidate_ids' => $candidateIds,
+                'flag' => $flag,
+            ];
+
             return true;
         }
 
-        $this->state->battle['pending_holvert_open'] = [
-            'owner' => $source->owner,
-            'source_id' => $source->instanceId,
-            'candidate_ids' => $candidateIds,
-            'flag' => $flag,
-        ];
-
-        return true;
+        return false;
     }
 
     public function chooseHolvertOpen(string $playerKey, Command $cmd): Result

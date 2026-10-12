@@ -234,6 +234,10 @@ final class CardStats
                 return true;
             }
 
+            foreach (self::getInheritedLineBonusValues($state, $target, $def) as $d) {
+                if (!empty($d)) return true;
+            }
+
             foreach ($target->modifiers as $m) {
                 if (($m['stat'] ?? '') === $def && !empty($m['value'])) {
                     return true;
@@ -385,14 +389,13 @@ final class CardStats
         }
 
         // Собираем ability как массив
-        $abilities = $attacker->prop['ability'] ?? null;
-        if (!$abilities) return $result;
-
-        // Список или одиночный объект?
-        if (!array_is_list($abilities)) {
-            // Одиночный объект — оборачиваем
-            $abilities = [$abilities];
+        $abilities = self::normalizeAbilityList($attacker->prop['ability'] ?? null);
+        foreach (self::getInheritedLineBonusValues($state, $attacker, 'ability') as $inherited) {
+            foreach (self::normalizeAbilityList($inherited) as $ability) {
+                $abilities[] = $ability;
+            }
         }
+        if (!$abilities) return $result;
 
         foreach ($abilities as $ability) {
             if (!is_array($ability)) continue;
@@ -559,27 +562,15 @@ final class CardStats
         $reductions = $target->prop['damage_reduction'] ?? [];
         if (is_array($reductions)) {
             foreach ($reductions as $r) {
-                $types = $r['types'] ?? null;
-                if ($types !== null && !in_array($actionType, $types, true)) continue;
+                $total += self::damageReductionValue($state, $attacker, $target, $actionType, (array) $r);
+            }
+        }
 
-                if (!empty($r['require_no_wounds']) && $target->hp < $target->hpMax) continue;
-                if (isset($r['max_price']) && $attacker->price > (int) $r['max_price']) continue;
-                if (isset($r['element']) && $attacker->element !== $r['element']) continue;
-                if (isset($r['attacker_type']) && $attacker->type !== $r['attacker_type']) continue;
-                if (!empty($r['line']) && !self::isInLine($state, $target)) continue;
-                if (isset($r['attacker_move_min']) && (int) $attacker->moveMax < (int) $r['attacker_move_min']) continue;
-                if (!empty($r['condition']) && !self::checkCondition($r['condition'], $state, $target)) continue;
-
-                if (!empty($r['attacker_direct'])) {
-                    if (!self::isDirectStrike($state, $attacker, $target)) continue;
-                }
-                if (!empty($r['attacker_diagonal'])) {
-                    $dr = abs($attacker->row - $target->row);
-                    $dc = abs($attacker->col - $target->col);
-                    if ($dr !== 1 || $dc !== 1) continue;
-                }
-
-                $total += (int) ($r['value'] ?? 0);
+        foreach (self::getInheritedLineBonusValues($state, $target, 'damage_reduction') as $inherited) {
+            $list = (is_array($inherited) && array_is_list($inherited)) ? $inherited : [$inherited];
+            foreach ($list as $r) {
+                if (!is_array($r)) continue;
+                $total += self::damageReductionValue($state, $attacker, $target, $actionType, $r);
             }
         }
 
@@ -627,6 +618,11 @@ final class CardStats
             if (self::checkLineCondition($state, $card, $armor)) {
                 $val = (int) ($armor['value'] ?? 0);
             }
+        }
+
+        foreach (self::getInheritedLineBonusValues($state, $card, 'armor') as $inheritedArmor) {
+            if (!is_array($inheritedArmor)) continue;
+            $val = max($val, (int) ($inheritedArmor['value'] ?? 0));
         }
 
         // Модификаторы (инкарнация, способности)
@@ -760,6 +756,106 @@ final class CardStats
         }
 
         return $result;
+    }
+
+    /**
+     * @return CardInstance[]
+     */
+    public static function getInheritedLineBonusSources(GameState $state, CardInstance $card): array
+    {
+        $config = $card->prop['inherit_line_bonuses'] ?? null;
+        if (!is_array($config)) return [];
+        if ($card->zone !== CardInstance::ZONE_FIELD || $card->dying || $card->hp <= 0) return [];
+
+        $filter = $config['source_filter'] ?? [];
+        $element = (string) ($filter['element'] ?? 'plains');
+        $members = self::getLineGroup($state, $card);
+        $memberIds = [];
+        foreach ($members as $member) {
+            $memberIds[$member->instanceId] = true;
+        }
+
+        $sources = [];
+        foreach ($state->cards as $source) {
+            if ($source->instanceId === $card->instanceId) continue;
+            if (!isset($memberIds[$source->instanceId])) continue;
+            if ($source->owner !== $card->owner) continue;
+            if ($source->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($source->dying || $source->hp <= 0) continue;
+            if ($element !== '' && $source->element !== $element) continue;
+            if (!empty($source->prop['inherit_line_bonuses'])) continue;
+            $sources[] = $source;
+        }
+        return $sources;
+    }
+
+    /**
+     * @return array<int,mixed>
+     */
+    public static function getInheritedLineBonusValues(GameState $state, CardInstance $card, string $propKey): array
+    {
+        $values = [];
+        foreach (self::getInheritedLineBonusSources($state, $card) as $source) {
+            if (!array_key_exists($propKey, $source->prop)) continue;
+            $value = $source->prop[$propKey];
+            if ($propKey === 'ability') {
+                foreach (self::normalizeAbilityList($value) as $ability) {
+                    if (!empty($ability['line'])) $values[] = $ability;
+                }
+                continue;
+            }
+            if ($propKey === 'damage_reduction') {
+                $list = (is_array($value) && array_is_list($value)) ? $value : [$value];
+                foreach ($list as $item) {
+                    if (is_array($item) && !empty($item['line'])) $values[] = $item;
+                }
+                continue;
+            }
+            if (in_array($propKey, ['armor', 'zot', 'zoal', 'zov', 'zom', 'zoa', 'zoan', 'zoda', 'zoz', 'zor'], true)) {
+                if (is_array($value) && !empty($value['line'])) {
+                    $values[] = $value;
+                }
+                continue;
+            }
+            if ($propKey === 'on_successful_strike' && is_array($value)) {
+                $values[] = $value;
+            }
+        }
+        return $values;
+    }
+
+    private static function normalizeAbilityList(mixed $abilities): array
+    {
+        if (!$abilities || !is_array($abilities)) return [];
+        return array_is_list($abilities) ? $abilities : [$abilities];
+    }
+
+    private static function damageReductionValue(
+        GameState $state,
+        CardInstance $attacker,
+        CardInstance $target,
+        string $actionType,
+        array $r
+    ): int {
+        $types = $r['types'] ?? null;
+        if ($types !== null && !in_array($actionType, $types, true)) return 0;
+
+        if (!empty($r['require_no_wounds']) && $target->hp < $target->hpMax) return 0;
+        if (isset($r['max_price']) && $attacker->price > (int) $r['max_price']) return 0;
+        if (isset($r['element']) && $attacker->element !== $r['element']) return 0;
+        if (isset($r['attacker_type']) && $attacker->type !== $r['attacker_type']) return 0;
+        if (!empty($r['line']) && !self::isInLine($state, $target)) return 0;
+        if (isset($r['attacker_move_min']) && (int) $attacker->moveMax < (int) $r['attacker_move_min']) return 0;
+        if (!empty($r['condition']) && !self::checkCondition($r['condition'], $state, $target)) return 0;
+
+        if (!empty($r['attacker_direct']) && !self::isDirectStrike($state, $attacker, $target)) return 0;
+        if (!empty($r['attacker_diagonal'])) {
+            $dr = abs($attacker->row - $target->row);
+            $dc = abs($attacker->col - $target->col);
+            if ($dr !== 1 || $dc !== 1) return 0;
+        }
+
+        return (int) ($r['value'] ?? 0);
     }
 
     /**
