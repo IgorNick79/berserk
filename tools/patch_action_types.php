@@ -54,7 +54,7 @@ foreach ($rows as $r) {
     if (!$changed) continue;
 
     $json = json_encode($prop, JSON_UNESCAPED_UNICODE);
-    $db->execute(
+    $db->query(
         "UPDATE cards SET prop = ? WHERE ukid = ?",
         [$json, $r['ukid']]
     );
