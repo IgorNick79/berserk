@@ -16,6 +16,10 @@ use Berserk\Core\ResourceCalculator;
 use Berserk\Core\BattleHelper;
 use Berserk\Core\ZoneManager;
 use Berserk\Core\StaleStateException;
+use Berserk\Core\CommandJournalException;
+use Berserk\Core\CommandJournalRepository;
+use Berserk\Core\TransactionCommitUnknownException;
+use Berserk\Core\TransactionRollbackUnknownException;
 use Berserk\Core\Prepare\DraftTimer;
 use Berserk\Core\Prepare\PrepareProcessor;
 
@@ -96,6 +100,7 @@ function ajaxCommandPayload(): ?array
     $excluded = [
         'cmd' => true,
         'expected_version' => true,
+        'command_id' => true,
         'sel' => true,
         'pile' => true,
     ];
@@ -125,6 +130,30 @@ function ajaxCommandPayload(): ?array
     return $payload;
 }
 
+function ajaxCommandIdPresent(): bool
+{
+    return array_key_exists('command_id', $_POST);
+}
+
+function requestCommandId(array $source): array
+{
+    if (!array_key_exists('command_id', $source)) {
+        return ['present' => false, 'command_id' => null, 'error' => 'missing_command_id'];
+    }
+
+    $commandId = requestParamString($source, 'command_id', 64);
+    if ($commandId === null || $commandId === '' || !isValidAjaxCommandId($commandId)) {
+        return ['present' => true, 'command_id' => null, 'error' => 'invalid_command_id'];
+    }
+
+    return ['present' => true, 'command_id' => $commandId, 'error' => null];
+}
+
+function isValidAjaxCommandId(string $commandId): bool
+{
+    return preg_match('/^[A-Za-z0-9_.:-]+$/', $commandId) === 1;
+}
+
 function sendAjaxJson(array $payload, int $statusCode = 200): never
 {
     http_response_code($statusCode);
@@ -146,7 +175,8 @@ function sendBattleAjaxState(
     bool $ok = true,
     string $type = 'snapshot',
     ?string $error = null,
-    int $statusCode = 200
+    int $statusCode = 200,
+    array $extra = []
 ): never {
     $syncVersion = $state->persistenceVersion ?? 0;
 
@@ -160,6 +190,7 @@ function sendBattleAjaxState(
         if ($error !== null) {
             $payload['error'] = $error;
         }
+        $payload = array_merge($payload, $extra);
         sendAjaxJson($payload, $statusCode);
     }
 
@@ -184,8 +215,77 @@ function sendBattleAjaxState(
     if ($error !== null) {
         $payload['error'] = $error;
     }
+    $payload = array_merge($payload, $extra);
 
     sendAjaxJson($payload, $statusCode);
+}
+
+function commandJournalMeta(array $record): array
+{
+    return [
+        'command_id' => (string) $record['command_id'],
+        'command_status' => (string) $record['status'],
+        'terminal' => (string) $record['status'] !== CommandJournalRepository::STATUS_PROCESSING,
+        'before_version' => $record['before_version'] === null ? null : (int) $record['before_version'],
+        'after_version' => $record['after_version'] === null ? null : (int) $record['after_version'],
+    ];
+}
+
+function sendCommandStatus(
+    GameState $state,
+    string $commandId,
+    ?array $record,
+    bool $ok = true,
+    ?string $error = null,
+    int $statusCode = 200
+): never {
+    sendCommandStatusPayload($commandId, $record, $ok, $error, $statusCode, $state->persistenceVersion ?? 0);
+}
+
+function sendCommandStatusPayload(
+    string $commandId,
+    ?array $record,
+    bool $ok = true,
+    ?string $error = null,
+    int $statusCode = 200,
+    ?int $syncVersion = null
+): never {
+    $payload = [
+        'ok' => $ok,
+        'type' => 'command_status',
+        'command_id' => $commandId,
+        'command_status' => $record === null ? 'unknown' : (string) $record['status'],
+        'terminal' => $record !== null && (string) $record['status'] !== CommandJournalRepository::STATUS_PROCESSING,
+        'sync_version' => $syncVersion,
+    ];
+
+    if ($record !== null) {
+        $payload['before_version'] = $record['before_version'] === null ? null : (int) $record['before_version'];
+        $payload['after_version'] = $record['after_version'] === null ? null : (int) $record['after_version'];
+        if (!empty($record['error_code'])) {
+            $payload['error_code'] = (string) $record['error_code'];
+        }
+        if (!empty($record['error_message'])) {
+            $payload['error'] = (string) $record['error_message'];
+        }
+    }
+
+    if ($error !== null) {
+        $payload['error'] = $error;
+    }
+
+    sendAjaxJson($payload, $statusCode);
+}
+
+function sendUnknownCommandOutcome(string $commandId): never
+{
+    sendCommandStatusPayload(
+        $commandId,
+        null,
+        false,
+        'Command outcome is unknown',
+        500
+    );
 }
 
 function reloadPersistedBattleAjaxState(GameRepository $repo, int $gameId): GameState
@@ -261,6 +361,7 @@ function buildRenderCardInfo(Db $db, GameState $state): array
 $ajax = ajaxParamString('ajax', 32);
 $isBattleSync = $ajax === 'battle_sync';
 $isBattleCommand = $ajax === 'battle_command';
+$isBattleCommandStatus = $ajax === 'battle_command_status';
 
 $config = require __DIR__ . '/../config/db.php';
 
@@ -291,7 +392,7 @@ if (isset($_GET['debug_roll'])) {
 try {
     $db = new Db($config);
 } catch (Throwable $e) {
-    if ($isBattleSync || $isBattleCommand) {
+    if ($isBattleSync || $isBattleCommand || $isBattleCommandStatus) {
         sendAjaxJson([
             'ok' => false,
             'error' => 'server_error',
@@ -321,7 +422,7 @@ if (isset($_GET['first'])) {
 }
 
 if ($role === null) {
-    if ($isBattleSync || $isBattleCommand) {
+    if ($isBattleSync || $isBattleCommand || $isBattleCommandStatus) {
         sendAjaxJson([
             'ok' => false,
             'error' => 'missing_player_role',
@@ -337,7 +438,7 @@ if ($role === null) {
 $userId = $role === 'host' ? 1 : 2;
 
 // ─── Находим или создаём партию ──────────────────────────────
-$isBattleAjax = $isBattleSync || $isBattleCommand;
+$isBattleAjax = $isBattleSync || $isBattleCommand || $isBattleCommandStatus;
 $gameId = $isBattleAjax
     ? (ajaxParamInt('game') ?? 0)
     : (isset($_GET['game']) && !is_array($_GET['game']) ? (int) $_GET['game'] : 0);
@@ -433,6 +534,44 @@ if ($isBattleSync) {
     }
 }
 
+if ($isBattleCommandStatus) {
+    try {
+        $commandIdResult = requestCommandId($_GET);
+        if ($commandIdResult['error'] === 'missing_command_id') {
+            sendAjaxJson([
+                'ok' => false,
+                'type' => 'command_status',
+                'error' => 'missing_command_id',
+            ], 400);
+        }
+
+        if ($commandIdResult['error'] !== null) {
+            sendAjaxJson([
+                'ok' => false,
+                'type' => 'command_status',
+                'error' => $commandIdResult['error'],
+            ], 400);
+        }
+
+        $commandId = (string) $commandIdResult['command_id'];
+        $journal = new CommandJournalRepository($db);
+        $record = $journal->find($state->gameId, $playerKey, $commandId);
+        sendCommandStatus($state, $commandId, $record);
+    } catch (CommandJournalException) {
+        sendAjaxJson([
+            'ok' => false,
+            'type' => 'command_status',
+            'error' => 'server_error',
+        ], 500);
+    } catch (Throwable) {
+        sendAjaxJson([
+            'ok' => false,
+            'type' => 'command_status',
+            'error' => 'server_error',
+        ], 500);
+    }
+}
+
 if ($isBattleCommand) {
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
         sendAjaxJson([
@@ -455,6 +594,276 @@ if ($isBattleCommand) {
             'mode' => ajaxPostParamString('mode', 64) ?? '',
             'pile' => ajaxPostParamString('pile', 32) ?? '',
         ];
+
+        if (ajaxCommandIdPresent()) {
+            $commandIdResult = requestCommandId($_POST);
+            if ($commandIdResult['error'] !== null) {
+                sendAjaxJson([
+                    'ok' => false,
+                    'type' => 'command_status',
+                    'error' => $commandIdResult['error'],
+                ], 400);
+            }
+
+            $commandId = (string) $commandIdResult['command_id'];
+            $commandType = ajaxPostParamString('cmd', 64);
+            $payload = ajaxCommandPayload();
+            if ($commandType === null || $commandType === '' || $payload === null) {
+                sendAjaxJson([
+                    'ok' => false,
+                    'type' => 'command_status',
+                    'command_id' => $commandId,
+                    'error' => 'invalid_command_request',
+                ], 400);
+            }
+
+            $journal = new CommandJournalRepository($db);
+            try {
+                $journalRecord = $journal->registerProcessing(
+                    $state->gameId,
+                    $playerKey,
+                    $commandId,
+                    $commandType,
+                    $payload,
+                    $expectedVersion
+                );
+            } catch (CommandJournalException) {
+                sendAjaxJson([
+                    'ok' => false,
+                    'type' => 'command_status',
+                    'command_id' => $commandId,
+                    'error' => 'command_id_conflict',
+                ], 409);
+            }
+
+            $journalId = (int) $journalRecord['id'];
+            $journalMeta = commandJournalMeta($journalRecord);
+
+            if (($journalRecord['is_new'] ?? false) !== true) {
+                $status = (string) $journalRecord['status'];
+                $fresh = reloadPersistedBattleAjaxState($repo, $state->gameId);
+
+                if ($status === CommandJournalRepository::STATUS_PROCESSING) {
+                    sendCommandStatus($fresh, $commandId, $journalRecord);
+                }
+
+                if ($status === CommandJournalRepository::STATUS_COMMITTED) {
+                    sendBattleAjaxState($db, $tpl, $fresh, $playerKey, $role, $uiState, true, 'snapshot', null, 200, $journalMeta);
+                }
+
+                if ($status === CommandJournalRepository::STATUS_CONFLICT) {
+                    sendBattleAjaxState(
+                        $db,
+                        $tpl,
+                        $fresh,
+                        $playerKey,
+                        $role,
+                        $uiState,
+                        false,
+                        'conflict',
+                        $journalRecord['error_message'] !== null ? (string) $journalRecord['error_message'] : 'State changed, refresh required',
+                        409,
+                        $journalMeta
+                    );
+                }
+
+                if ($status === CommandJournalRepository::STATUS_REJECTED) {
+                    sendBattleAjaxState(
+                        $db,
+                        $tpl,
+                        $fresh,
+                        $playerKey,
+                        $role,
+                        $uiState,
+                        false,
+                        'snapshot',
+                        $journalRecord['error_message'] !== null ? (string) $journalRecord['error_message'] : 'Command cannot be performed',
+                        200,
+                        $journalMeta
+                    );
+                }
+
+                sendCommandStatus(
+                    $fresh,
+                    $commandId,
+                    $journalRecord,
+                    false,
+                    $journalRecord['error_message'] !== null ? (string) $journalRecord['error_message'] : 'Command failed'
+                );
+            }
+
+            $currentVersion = $state->persistenceVersion ?? 0;
+            if ($expectedVersion !== $currentVersion) {
+                $journalRecord = $journal->markConflict($journalId, $currentVersion, 'stale_version', 'State changed, refresh required');
+                $fresh = reloadPersistedBattleAjaxState($repo, $state->gameId);
+                sendBattleAjaxState(
+                    $db,
+                    $tpl,
+                    $fresh,
+                    $playerKey,
+                    $role,
+                    $uiState,
+                    false,
+                    'conflict',
+                    'State changed, refresh required',
+                    409,
+                    commandJournalMeta($journalRecord)
+                );
+            }
+
+            if ($state->status !== 'battle') {
+                $journalRecord = $journal->markRejected($journalId, $currentVersion, 'battle_not_active', 'Battle is not active');
+                sendBattleAjaxState(
+                    $db,
+                    $tpl,
+                    $state,
+                    $playerKey,
+                    $role,
+                    $uiState,
+                    false,
+                    'status',
+                    'Battle is not active',
+                    200,
+                    commandJournalMeta($journalRecord)
+                );
+            }
+
+            $result = $engine->apply($state, $playerKey, new Command($commandType, $payload));
+            if (!$result->success) {
+                $journalRecord = $journal->markRejected(
+                    $journalId,
+                    $currentVersion,
+                    'command_rejected',
+                    $result->error !== '' ? $result->error : 'Command cannot be performed'
+                );
+                $fresh = reloadPersistedBattleAjaxState($repo, $state->gameId);
+                sendBattleAjaxState(
+                    $db,
+                    $tpl,
+                    $fresh,
+                    $playerKey,
+                    $role,
+                    $uiState,
+                    false,
+                    'snapshot',
+                    $result->error !== '' ? $result->error : 'Command cannot be performed',
+                    200,
+                    commandJournalMeta($journalRecord)
+                );
+            }
+
+            try {
+                $repo->saveCommittedCommand($state, $journal, $journalId);
+            } catch (StaleStateException) {
+                $fresh = reloadPersistedBattleAjaxState($repo, $state->gameId);
+                $journalRecord = $journal->markConflict(
+                    $journalId,
+                    $fresh->persistenceVersion ?? $currentVersion,
+                    'stale_state',
+                    'State changed, refresh required'
+                );
+                sendBattleAjaxState(
+                    $db,
+                    $tpl,
+                    $fresh,
+                    $playerKey,
+                    $role,
+                    $uiState,
+                    false,
+                    'conflict',
+                    'State changed, refresh required',
+                    409,
+                    commandJournalMeta($journalRecord)
+                );
+            } catch (TransactionCommitUnknownException|TransactionRollbackUnknownException) {
+                try {
+                    $fresh = $repo->findById($state->gameId);
+                    $latestJournalRecord = $journal->findById($journalId);
+                } catch (Throwable) {
+                    sendUnknownCommandOutcome($commandId);
+                }
+
+                if (
+                    $fresh !== null
+                    && $latestJournalRecord !== null
+                    && (string) $latestJournalRecord['status'] === CommandJournalRepository::STATUS_COMMITTED
+                ) {
+                    sendBattleAjaxState($db, $tpl, $fresh, $playerKey, $role, $uiState, true, 'snapshot', null, 200, commandJournalMeta($latestJournalRecord));
+                }
+
+                if (
+                    $fresh !== null
+                    && $latestJournalRecord !== null
+                    && (string) $latestJournalRecord['status'] === CommandJournalRepository::STATUS_CONFLICT
+                ) {
+                    sendBattleAjaxState(
+                        $db,
+                        $tpl,
+                        $fresh,
+                        $playerKey,
+                        $role,
+                        $uiState,
+                        false,
+                        'conflict',
+                        $latestJournalRecord['error_message'] !== null ? (string) $latestJournalRecord['error_message'] : 'State changed, refresh required',
+                        409,
+                        commandJournalMeta($latestJournalRecord)
+                    );
+                }
+
+                if (
+                    $fresh !== null
+                    && $latestJournalRecord !== null
+                    && (string) $latestJournalRecord['status'] === CommandJournalRepository::STATUS_REJECTED
+                ) {
+                    sendBattleAjaxState(
+                        $db,
+                        $tpl,
+                        $fresh,
+                        $playerKey,
+                        $role,
+                        $uiState,
+                        false,
+                        'snapshot',
+                        $latestJournalRecord['error_message'] !== null ? (string) $latestJournalRecord['error_message'] : 'Command cannot be performed',
+                        200,
+                        commandJournalMeta($latestJournalRecord)
+                    );
+                }
+
+                if (
+                    $latestJournalRecord !== null
+                    && (string) $latestJournalRecord['status'] === CommandJournalRepository::STATUS_FAILED
+                ) {
+                    sendCommandStatusPayload(
+                        $commandId,
+                        $latestJournalRecord,
+                        false,
+                        $latestJournalRecord['error_message'] !== null ? (string) $latestJournalRecord['error_message'] : 'Command failed',
+                        500,
+                        $fresh?->persistenceVersion
+                    );
+                }
+
+                if (
+                    $fresh === null
+                    || $latestJournalRecord === null
+                    || (string) $latestJournalRecord['status'] === CommandJournalRepository::STATUS_PROCESSING
+                ) {
+                    sendUnknownCommandOutcome($commandId);
+                }
+
+                sendUnknownCommandOutcome($commandId);
+            }
+
+            try {
+                $committed = reloadPersistedBattleAjaxState($repo, $state->gameId);
+                $journalRecord = $journal->findById($journalId) ?? $journalRecord;
+                sendBattleAjaxState($db, $tpl, $committed, $playerKey, $role, $uiState, true, 'snapshot', null, 200, commandJournalMeta($journalRecord));
+            } catch (Throwable) {
+                sendUnknownCommandOutcome($commandId);
+            }
+        }
 
         $currentVersion = $state->persistenceVersion ?? 0;
         if ($expectedVersion !== $currentVersion) {

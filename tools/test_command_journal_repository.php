@@ -66,6 +66,7 @@ $first = $journal->registerProcessing(
     journalPayload(),
     $version
 );
+journalAssert(($first['is_new'] ?? null) === true, 'New command registration should return is_new=true');
 $duplicate = $journal->registerProcessing(
     $gameId,
     GameState::PLAYER_HOST,
@@ -75,6 +76,7 @@ $duplicate = $journal->registerProcessing(
     $version
 );
 journalAssert((int) $duplicate['id'] === (int) $first['id'], 'Duplicate command id should return the original journal row');
+journalAssert(($duplicate['is_new'] ?? null) === false, 'Duplicate command registration should return is_new=false');
 journalAssert($duplicate['status'] === CommandJournalRepository::STATUS_PROCESSING, 'Duplicate matching command should remain processing');
 
 $mismatchDetected = false;
@@ -110,6 +112,38 @@ journalAssert($expectedVersionMismatchDetected, 'Duplicate command id with diffe
 $rejected = $journal->markRejected((int) $first['id'], $version, 'invalid_action', 'Cannot perform command');
 journalAssert($rejected['status'] === CommandJournalRepository::STATUS_REJECTED, 'Rejected command should become terminal rejected');
 journalAssert((int) $rejected['after_version'] === $version, 'Rejected command should not advance after_version');
+$duplicateRejected = $journal->registerProcessing(
+    $gameId,
+    GameState::PLAYER_HOST,
+    $commandId,
+    'strike',
+    journalPayload(),
+    $version
+);
+journalAssert(($duplicateRejected['is_new'] ?? null) === false, 'Duplicate rejected command should return is_new=false');
+journalAssert($duplicateRejected['status'] === CommandJournalRepository::STATUS_REJECTED, 'Duplicate rejected command should keep rejected status');
+
+$failedCommandId = 'journal-test-' . $gameId . '-failed';
+$failedCommand = $journal->registerProcessing(
+    $gameId,
+    GameState::PLAYER_HOST,
+    $failedCommandId,
+    'strike',
+    journalPayload(3),
+    $version
+);
+$failed = $journal->markFailed((int) $failedCommand['id'], $version, 'unknown_outcome');
+journalAssert($failed['status'] === CommandJournalRepository::STATUS_FAILED, 'Failed command should become terminal failed');
+$duplicateFailed = $journal->registerProcessing(
+    $gameId,
+    GameState::PLAYER_HOST,
+    $failedCommandId,
+    'strike',
+    journalPayload(3),
+    $version
+);
+journalAssert(($duplicateFailed['is_new'] ?? null) === false, 'Duplicate failed command should return is_new=false');
+journalAssert($duplicateFailed['status'] === CommandJournalRepository::STATUS_FAILED, 'Duplicate failed command should keep failed status');
 
 $terminalProtected = false;
 try {
@@ -186,6 +220,16 @@ journalAssert((int) $committed['before_version'] === $commitVersion, 'Committed 
 journalAssert((int) $committed['after_version'] === $commitVersion + 1, 'Committed command should record after_version');
 journalAssert($afterCommit->status === 'battle', 'Atomic commit should persist GameState');
 journalAssert($afterCommit->persistenceVersion === $commitVersion + 1, 'Atomic commit should advance persistence version');
+$duplicateCommitted = $journal->registerProcessing(
+    $gameId,
+    GameState::PLAYER_HOST,
+    'journal-test-' . $gameId . '-commit',
+    'resign',
+    ['cmd' => 'resign'],
+    $commitVersion
+);
+journalAssert(($duplicateCommitted['is_new'] ?? null) === false, 'Duplicate committed command should return is_new=false');
+journalAssert($duplicateCommitted['status'] === CommandJournalRepository::STATUS_COMMITTED, 'Duplicate committed command should keep committed status');
 
 $rollbackState = $repo->findById($gameId);
 journalAssert($rollbackState !== null, 'Game should reload before rollback check');

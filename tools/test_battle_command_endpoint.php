@@ -7,6 +7,7 @@ require_once __DIR__ . '/../src/Core/Autoloader.php';
 
 use Berserk\Core\Autoloader;
 use Berserk\Core\CardInstance;
+use Berserk\Core\CommandJournalRepository;
 use Berserk\Core\Db;
 use Berserk\Core\GameRepository;
 
@@ -159,6 +160,7 @@ try {
     exit(0);
 }
 $repo = new GameRepository($db);
+$journal = new CommandJournalRepository($db);
 
 $cardRows = $db->fetchAll(
     "SELECT ukid, health, move, strike_weak, strike_medium, strike_strong, prop
@@ -224,6 +226,7 @@ battleCommandAssert($nonFinishing['type'] === 'snapshot', 'Successful non-finish
 battleCommandAssert($nonFinishing['status'] === 'battle', 'Successful non-finishing command should keep battle active');
 battleCommandAssert($nonFinishing['sync_version'] > $version, 'Successful non-finishing command should advance persistence version');
 battleCommandAssert($nonFinishing['__http_status'] === 200, 'Successful non-finishing command should use HTTP 200');
+battleCommandAssert(!array_key_exists('command_status', $nonFinishing), 'Legacy command without command_id should not include journal metadata');
 foreach (['field_html', 'fly_zones_html', 'panel_html', 'piles_html', 'pile_reveal_html', 'info_panel_html'] as $fragment) {
     battleCommandAssert(array_key_exists($fragment, $nonFinishing['fragments']), "Snapshot should contain {$fragment}");
 }
@@ -311,5 +314,195 @@ $arrayPayload = battleCommandRequest([
 ]);
 battleCommandAssert($arrayPayload['ok'] === false, 'Array command payload values should be rejected safely');
 battleCommandAssert($arrayPayload['error'] === 'Invalid command request', 'Array payload should use invalid request error');
+
+[$processingState, $processingVersion] = battleCommandCreateBattle($repo, $cardRows);
+$processingCommandId = 'journal-endpoint-' . $processingState->gameId . '-processing';
+$processingRecord = $journal->registerProcessing(
+    $processingState->gameId,
+    'host',
+    $processingCommandId,
+    'gain_coin',
+    ['card_id' => '1'],
+    $processingVersion
+);
+$processingDuplicate = battleCommandRequest([
+    'first' => '',
+    'game' => (string) $processingState->gameId,
+    'ajax' => 'battle_command',
+], [
+    'cmd' => 'gain_coin',
+    'expected_version' => (string) $processingVersion,
+    'command_id' => $processingCommandId,
+    'card_id' => '1',
+]);
+battleCommandAssert(($processingRecord['is_new'] ?? null) === true, 'Test setup should create a fresh processing journal row');
+battleCommandAssert($processingDuplicate['ok'] === true, 'Duplicate processing command should return ok=true status response');
+battleCommandAssert($processingDuplicate['type'] === 'command_status', 'Duplicate processing command should return command_status type');
+battleCommandAssert($processingDuplicate['command_status'] === CommandJournalRepository::STATUS_PROCESSING, 'Duplicate processing command should remain processing');
+battleCommandAssert($processingDuplicate['terminal'] === false, 'Processing command should not be terminal');
+$afterProcessingDuplicate = $repo->findById($processingState->gameId);
+battleCommandAssert($afterProcessingDuplicate !== null, 'Processing duplicate game should reload');
+battleCommandAssert($afterProcessingDuplicate->getCard(1)?->coins === 0, 'Duplicate processing command must not execute Engine');
+
+[$failedState, $failedVersion] = battleCommandCreateBattle($repo, $cardRows);
+$failedCommandId = 'journal-endpoint-' . $failedState->gameId . '-failed';
+$failedRecord = $journal->registerProcessing(
+    $failedState->gameId,
+    'host',
+    $failedCommandId,
+    'gain_coin',
+    ['card_id' => '1'],
+    $failedVersion
+);
+$journal->markFailed((int) $failedRecord['id'], $failedVersion, 'unknown_outcome');
+$failedDuplicate = battleCommandRequest([
+    'first' => '',
+    'game' => (string) $failedState->gameId,
+    'ajax' => 'battle_command',
+], [
+    'cmd' => 'gain_coin',
+    'expected_version' => (string) $failedVersion,
+    'command_id' => $failedCommandId,
+    'card_id' => '1',
+]);
+battleCommandAssert($failedDuplicate['ok'] === false, 'Duplicate failed command should return ok=false');
+battleCommandAssert($failedDuplicate['type'] === 'command_status', 'Duplicate failed command should return command_status type');
+battleCommandAssert($failedDuplicate['command_status'] === CommandJournalRepository::STATUS_FAILED, 'Duplicate failed command should preserve failed status');
+battleCommandAssert($failedDuplicate['terminal'] === true, 'Failed command should be terminal');
+battleCommandAssert(($failedDuplicate['error'] ?? '') !== 'Command outcome is unknown', 'Failed terminal command should not be reported as unknown');
+$afterFailedDuplicate = $repo->findById($failedState->gameId);
+battleCommandAssert($afterFailedDuplicate !== null, 'Failed duplicate game should reload');
+battleCommandAssert($afterFailedDuplicate->getCard(1)?->coins === 0, 'Duplicate failed command must not execute Engine');
+
+[$journalState, $journalVersion] = battleCommandCreateBattle($repo, $cardRows);
+$journalQuery = [
+    'first' => '',
+    'game' => (string) $journalState->gameId,
+    'ajax' => 'battle_command',
+];
+$journalCommandId = 'journal-endpoint-' . $journalState->gameId . '-gain';
+$journalSuccess = battleCommandRequest($journalQuery, [
+    'cmd' => 'gain_coin',
+    'expected_version' => (string) $journalVersion,
+    'command_id' => $journalCommandId,
+    'card_id' => '1',
+]);
+battleCommandAssert($journalSuccess['ok'] === true, 'Journal-aware successful command should return ok=true');
+battleCommandAssert($journalSuccess['command_id'] === $journalCommandId, 'Journal-aware response should echo command_id');
+battleCommandAssert($journalSuccess['command_status'] === CommandJournalRepository::STATUS_COMMITTED, 'Journal-aware successful command should be committed');
+battleCommandAssert($journalSuccess['terminal'] === true, 'Committed command should be terminal');
+battleCommandAssert($journalSuccess['before_version'] === $journalVersion, 'Committed command should record before_version');
+battleCommandAssert($journalSuccess['after_version'] === $journalSuccess['sync_version'], 'Committed after_version should match response version');
+
+$afterJournalSuccess = $repo->findById($journalState->gameId);
+battleCommandAssert($afterJournalSuccess !== null, 'Journal-aware game should reload after success');
+battleCommandAssert($afterJournalSuccess->getCard(1)?->coins === 1, 'Journal-aware success should persist exactly one coin');
+$committedVersion = (int) $afterJournalSuccess->persistenceVersion;
+
+$journalDuplicate = battleCommandRequest($journalQuery, [
+    'cmd' => 'gain_coin',
+    'expected_version' => (string) $journalVersion,
+    'command_id' => $journalCommandId,
+    'card_id' => '1',
+]);
+battleCommandAssert($journalDuplicate['ok'] === true, 'Duplicate committed command should return current state');
+battleCommandAssert($journalDuplicate['command_status'] === CommandJournalRepository::STATUS_COMMITTED, 'Duplicate committed command should remain committed');
+$afterJournalDuplicate = $repo->findById($journalState->gameId);
+battleCommandAssert($afterJournalDuplicate !== null, 'Journal-aware game should reload after duplicate');
+battleCommandAssert($afterJournalDuplicate->getCard(1)?->coins === 1, 'Duplicate command id must not execute Engine again');
+battleCommandAssert($afterJournalDuplicate->persistenceVersion === $committedVersion, 'Duplicate command id must not advance version again');
+
+$journalMismatch = battleCommandRequest($journalQuery, [
+    'cmd' => 'gain_coin',
+    'expected_version' => (string) $journalVersion,
+    'command_id' => $journalCommandId,
+    'card_id' => '2',
+]);
+battleCommandAssert($journalMismatch['ok'] === false, 'Duplicate command id with different payload should be rejected');
+battleCommandAssert($journalMismatch['error'] === 'command_id_conflict', 'Payload mismatch should use command_id_conflict');
+battleCommandAssert($journalMismatch['__http_status'] === 409, 'Payload mismatch should use HTTP 409');
+
+$journalRejectedId = 'journal-endpoint-' . $journalState->gameId . '-rejected';
+$journalRejected = battleCommandRequest([
+    'first' => '',
+    'game' => (string) $journalState->gameId,
+    'ajax' => 'battle_command',
+], [
+    'cmd' => 'unknown_ajax_test_command',
+    'expected_version' => (string) $committedVersion,
+    'command_id' => $journalRejectedId,
+    'sel' => '1',
+]);
+battleCommandAssert($journalRejected['ok'] === false, 'Rejected journal-aware command should return ok=false');
+battleCommandAssert($journalRejected['command_status'] === CommandJournalRepository::STATUS_REJECTED, 'Rejected command should be journaled as rejected');
+battleCommandAssert(($journalRejected['error'] ?? '') !== 'Command outcome is unknown', 'Rejected terminal command should not be reported as unknown');
+battleCommandAssert($journalRejected['sync_version'] === $committedVersion, 'Rejected journal-aware command should not advance version');
+
+$journalStatus = battleCommandRequest([
+    'first' => '',
+    'game' => (string) $journalState->gameId,
+    'ajax' => 'battle_command_status',
+    'command_id' => $journalCommandId,
+], [], 'GET');
+battleCommandAssert($journalStatus['ok'] === true, 'Command status endpoint should return ok=true for owner');
+battleCommandAssert($journalStatus['type'] === 'command_status', 'Command status endpoint should use command_status type');
+battleCommandAssert($journalStatus['command_status'] === CommandJournalRepository::STATUS_COMMITTED, 'Command status endpoint should report committed status');
+battleCommandAssert($journalStatus['terminal'] === true, 'Committed status endpoint response should be terminal');
+
+$opponentStatus = battleCommandRequest([
+    'second' => '',
+    'game' => (string) $journalState->gameId,
+    'ajax' => 'battle_command_status',
+    'command_id' => $journalCommandId,
+], [], 'GET');
+battleCommandAssert($opponentStatus['ok'] === true, 'Opponent command status lookup should not fail');
+battleCommandAssert($opponentStatus['command_id'] === $journalCommandId, 'Unknown command status should preserve command_id');
+battleCommandAssert($opponentStatus['command_status'] === 'unknown', 'Opponent must not see another player command status');
+battleCommandAssert($opponentStatus['terminal'] === false, 'Unknown opponent status must not be terminal');
+
+[$conflictState, $conflictVersion] = battleCommandCreateBattle($repo, $cardRows);
+$journalConflictId = 'journal-endpoint-' . $conflictState->gameId . '-conflict';
+$journalConflict = battleCommandRequest([
+    'first' => '',
+    'game' => (string) $conflictState->gameId,
+    'ajax' => 'battle_command',
+], [
+    'cmd' => 'resign',
+    'expected_version' => (string) ($conflictVersion - 1),
+    'command_id' => $journalConflictId,
+]);
+battleCommandAssert($journalConflict['ok'] === false, 'Journal-aware stale command should be rejected');
+battleCommandAssert($journalConflict['type'] === 'conflict', 'Journal-aware stale command should return conflict');
+battleCommandAssert($journalConflict['command_status'] === CommandJournalRepository::STATUS_CONFLICT, 'Journal-aware stale command should be journaled as conflict');
+battleCommandAssert(($journalConflict['error'] ?? '') !== 'Command outcome is unknown', 'Conflict terminal command should not be reported as unknown');
+battleCommandAssert($journalConflict['__http_status'] === 409, 'Journal-aware stale command should use HTTP 409');
+
+$missingStatusId = battleCommandRequest([
+    'first' => '',
+    'game' => (string) $journalState->gameId,
+    'ajax' => 'battle_command_status',
+], [], 'GET');
+battleCommandAssert($missingStatusId['ok'] === false, 'Missing status command_id should be rejected');
+battleCommandAssert($missingStatusId['error'] === 'missing_command_id', 'Missing status command_id should be explicit');
+
+$invalidStatusId = battleCommandRequest([
+    'first' => '',
+    'game' => (string) $journalState->gameId,
+    'ajax' => 'battle_command_status',
+    'command_id' => 'bad id',
+], [], 'GET');
+battleCommandAssert($invalidStatusId['ok'] === false, 'Invalid status command_id should be rejected');
+battleCommandAssert($invalidStatusId['error'] === 'invalid_command_id', 'Invalid status command_id should be explicit');
+battleCommandAssert($invalidStatusId['__http_status'] === 400, 'Invalid status command_id should use HTTP 400');
+
+$invalidCommandId = battleCommandRequest($journalQuery, [
+    'cmd' => 'gain_coin',
+    'expected_version' => (string) $committedVersion,
+    'command_id' => 'bad id',
+    'card_id' => '1',
+]);
+battleCommandAssert($invalidCommandId['ok'] === false, 'Invalid command_id should be rejected');
+battleCommandAssert($invalidCommandId['error'] === 'invalid_command_id', 'Invalid command_id should be explicit');
+battleCommandAssert($invalidCommandId['__http_status'] === 400, 'Invalid command_id should use HTTP 400');
 
 echo "Battle command endpoint tests passed.\n";

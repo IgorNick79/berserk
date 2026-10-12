@@ -79,6 +79,7 @@ final class CommandJournalRepository
             }
 
             $this->assertSameCommand($record, $commandType, $payloadHash, $expectedVersion);
+            $record['is_new'] = false;
             return $record;
         }
 
@@ -88,6 +89,7 @@ final class CommandJournalRepository
         }
 
         $this->assertSameCommand($record, $commandType, $payloadHash, $expectedVersion);
+        $record['is_new'] = true;
 
         return $record;
     }
