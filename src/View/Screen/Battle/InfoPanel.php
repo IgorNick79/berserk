@@ -261,34 +261,7 @@ final class InfoPanel
         }
 
         if ($strike['state'] === 'waiting_redirect') {
-            $stackHtml = '';
-            $stack = $strike['instant_stack'] ?? [];
-            if (!empty($stack)) {
-                $stack = array_reverse($stack);   // разрешение сверху вниз
-                $stackHtml = '<div class="instant-stack">'
-                    . '<div class="instant-stack__title">Стек (сверху разрешается первым):</div>'
-                    . '<ul class="instant-stack__list">';
-
-                foreach ($stack as $i => $item) {
-                    $srcCard = $state->getCard($item['card_id']);
-                    $srcName = $srcCard ? ($cardsInfo[$srcCard->ukid]['name'] ?? '?') : '?';
-                    $tgtCard = $state->getCard($item['target_id']);
-                    $tgtName = $tgtCard ? ($cardsInfo[$tgtCard->ukid]['name'] ?? '?') : '?';
-
-                    $isTop = ($i === 0) ? ' instant-stack__item--top' : '';
-                    $whoLabel = ($item['player'] ?? '') === $playerKey ? 'Ты' : 'Оппонент';
-
-                    $stackHtml .= '<li class="instant-stack__item' . $isTop . '">'
-                        . '<span class="instant-stack__who">' . htmlspecialchars($whoLabel, ENT_QUOTES) . '</span> '
-                        . '<b>' . htmlspecialchars($srcName, ENT_QUOTES) . '</b> — '
-                        . htmlspecialchars($item['label'], ENT_QUOTES)
-                        . ' <span class="instant-stack__target">→ '
-                        . htmlspecialchars($tgtName, ENT_QUOTES) . '</span>'
-                        . '</li>';
-                }
-
-                $stackHtml .= '</ul></div>';
-            }
+            $stackHtml = $this->renderCombatInstantStack($strike, false);
 
             $chooserKey = $state->getOpponentKey($attackerCard->owner);
 
@@ -374,6 +347,7 @@ final class InfoPanel
             $isMine = ($priority === $playerKey);
 
             $whoLabel = ($attackerKey === $priority) ? 'Атакующий' : 'Защитник';
+            $stackHtml = $this->renderCombatInstantStack($strike, true);
 
             if ($isMine) {
                 $sr = new \Berserk\Core\StrikeResolver($state, new \Berserk\Core\Engine());
@@ -390,7 +364,7 @@ final class InfoPanel
                         . '</a> ';
                 }
 
-                $contentHtml = $diceHtml . '<p>Твой ход: ' . $whoLabel . '. Сыграть инстант?</p>';
+                $contentHtml = $diceHtml . $stackHtml . '<p>Твой ход: ' . $whoLabel . '. Сыграть инстант?</p>';
                 if (!empty($cards)) {
                     $contentHtml .= '<div class="task-list">' . $cards . '</div>';
                 }
@@ -398,7 +372,7 @@ final class InfoPanel
                     . '<a class="button skip" href="' . $baseUrl . '&cmd=combat_instant_pass">Продолжить</a>'
                     . '</div>';
             } else {
-                $contentHtml = $diceHtml . '<p class="wait">Ожидание — оппонент решает, сыграть инстант...</p>';
+                $contentHtml = $diceHtml . $stackHtml . '<p class="wait">Ожидание — оппонент решает, сыграть инстант...</p>';
             }
         } elseif ($strike['state'] === 'waiting_defender') {
             $chooserKey = $state->getOpponentKey($attackerCard->owner);
@@ -1971,6 +1945,56 @@ final class InfoPanel
             . '<a class="button skip" href="' . $this->baseUrl . '&cmd=cancel_pending">Отмена</a>'
             . '</div>'
             . '</div>';
+    }
+
+    private function renderCombatInstantStack(array $strike, bool $showEmpty): string
+    {
+        $stack = array_values((array) ($strike['instant_stack'] ?? []));
+        if (empty($stack)) {
+            if (!$showEmpty) {
+                return '';
+            }
+            return '<div class="instant-stack instant-stack--empty">'
+                . '<div class="instant-stack__title">Объявленные боевые инстанты:</div>'
+                . '<p class="instant-stack__empty">Пока нет объявленных инстантов.</p>'
+                . '</div>';
+        }
+
+        foreach ($stack as $index => &$item) {
+            $item['_display_index'] = $index;
+        }
+        unset($item);
+
+        usort($stack, static function (array $a, array $b): int {
+            $aSeq = array_key_exists('sequence', $a) ? (int) $a['sequence'] : (int) $a['_display_index'];
+            $bSeq = array_key_exists('sequence', $b) ? (int) $b['sequence'] : (int) $b['_display_index'];
+            return [$aSeq, (int) $a['_display_index']] <=> [$bSeq, (int) $b['_display_index']];
+        });
+
+        $html = '<div class="instant-stack">'
+            . '<div class="instant-stack__title">Объявленные боевые инстанты:</div>'
+            . '<ul class="instant-stack__list">';
+
+        foreach ($stack as $item) {
+            $srcCard = $this->state->getCard((int) ($item['card_id'] ?? 0));
+            $srcName = $srcCard ? ($this->cardsInfo[$srcCard->ukid]['name'] ?? $srcCard->ukid) : '?';
+            $target = $this->state->getCard((int) ($item['target_id'] ?? 0));
+            $targetName = $target ? ($this->cardsInfo[$target->ukid]['name'] ?? $target->ukid) : '';
+            $whoLabel = (($item['player'] ?? '') === $this->playerKey) ? 'Ты' : 'Соперник';
+
+            $html .= '<li class="instant-stack__item">'
+                . '<span class="instant-stack__who">' . htmlspecialchars($whoLabel, ENT_QUOTES) . '</span> '
+                . '<b>' . htmlspecialchars((string) $srcName, ENT_QUOTES) . '</b> — '
+                . htmlspecialchars((string) ($item['label'] ?? 'Инстант'), ENT_QUOTES);
+            if ($targetName !== '') {
+                $html .= ' <span class="instant-stack__target">→ '
+                    . htmlspecialchars((string) $targetName, ENT_QUOTES)
+                    . '</span>';
+            }
+            $html .= '</li>';
+        }
+
+        return $html . '</ul></div>';
     }
 
     /**

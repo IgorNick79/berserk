@@ -103,9 +103,70 @@ ciuAssert(str_contains($html, 'task-card--instant'), 'Instant owner should immed
 ciuAssert(str_contains($html, 'cmd=combat_instant_play'), 'Instant owner should see play command.');
 ciuAssert(str_contains($html, 'cmd=combat_instant_pass'), 'Instant owner should see pass/close command.');
 ciuAssert(!str_contains($html, 'Ожидание — оппонент решает'), 'Instant owner should not see an intermediate waiting step.');
+ciuAssert(str_contains($html, 'Пока нет объявленных инстантов.'), 'Empty combat instant stack should be shown cleanly.');
 
 $state->addCard(ciuCard(['instanceId' => 4, 'ukid' => 'ost', 'owner' => GameState::PLAYER_HOST, 'row' => 2, 'col' => 3]));
+$state->addCard(ciuCard(['instanceId' => 5, 'ukid' => 'glorm', 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 5]));
 $cardsInfo['ost'] = ['name' => 'Ост'];
+$cardsInfo['glorm'] = ['name' => 'Глорм'];
+$state->battle['strike']['instant_stack'] = [
+    [
+        'card_id' => 4,
+        'effect' => ['type' => 'strike_level', 'mode' => 'increase_one'],
+        'target_id' => 1,
+        'player' => GameState::PLAYER_HOST,
+        'label' => 'Дар силы',
+        'phase' => 'power',
+        'sequence' => 0,
+    ],
+    [
+        'card_id' => 5,
+        'effect' => ['type' => 'damage_cap', 'value' => 1, 'internal_debug' => 'hidden-debug-value'],
+        'target_id' => 2,
+        'player' => GameState::PLAYER_PLAYER,
+        'label' => 'Отвлекающая вспышка',
+        'phase' => 'setter',
+        'sequence' => 1,
+    ],
+    [
+        'card_id' => 3,
+        'effect' => ['type' => 'damage_on_dice', 'value' => 1, 'damage' => 2],
+        'target_id' => 2,
+        'player' => GameState::PLAYER_PLAYER,
+        'label' => 'Черная метка',
+        'phase' => 'dice',
+        'sequence' => 2,
+    ],
+];
+$state->battle['strike']['instant_participants'] = [GameState::PLAYER_PLAYER, GameState::PLAYER_HOST];
+$state->battle['strike']['instant_priority'] = GameState::PLAYER_PLAYER;
+$state->battle['strike']['instant_passed'] = [];
+
+$htmlPlayer = $screen->prepare($state, GameState::PLAYER_PLAYER, 'player', null, $cardsInfo)['data']['info_panel_html'];
+$htmlHost = $screen->prepare($state, GameState::PLAYER_HOST, 'host', null, $cardsInfo)['data']['info_panel_html'];
+
+ciuAssert(str_contains($htmlPlayer, 'Объявленные боевые инстанты:'), 'Battle instant window should show declared stack title.');
+ciuAssert(str_contains($htmlPlayer, 'Ты') && str_contains($htmlPlayer, 'Соперник'), 'Player viewer should see self/opponent labels.');
+ciuAssert(str_contains($htmlHost, 'Ты') && str_contains($htmlHost, 'Соперник'), 'Host viewer should see self/opponent labels.');
+ciuAssert(
+    strpos($htmlPlayer, 'Ост') < strpos($htmlPlayer, 'Глорм')
+        && strpos($htmlPlayer, 'Глорм') < strpos($htmlPlayer, 'Взрывная Мэри'),
+    'Combat instant stack should be displayed in declaration order, not phase resolution order.'
+);
+ciuAssert(str_contains($htmlPlayer, 'Соперник</span> <b>Ост</b>'), 'Player viewer should mark Host instant as opponent.');
+ciuAssert(str_contains($htmlHost, 'Ты</span> <b>Ост</b>'), 'Host viewer should mark own instant as self.');
+ciuAssert(str_contains($htmlPlayer, '→ Цель'), 'Declared target should be shown when it is public stack information.');
+ciuAssert(!str_contains($htmlPlayer, 'hidden-debug-value'), 'Combat stack UI must not leak effect internals.');
+
+$pass = (new InstantProcessor($state, new Engine()))->passCombat(GameState::PLAYER_PLAYER);
+ciuAssert($pass->success, $pass->error ?? 'Combat pass should transfer priority.');
+ciuAssert(($state->battle['strike']['instant_priority'] ?? null) === GameState::PLAYER_HOST, 'Pass should transfer priority to Host.');
+$htmlAfterPass = $screen->prepare($state, GameState::PLAYER_HOST, 'host', null, $cardsInfo)['data']['info_panel_html'];
+ciuAssert(
+    str_contains($htmlAfterPass, 'Ост') && str_contains($htmlAfterPass, 'Глорм') && str_contains($htmlAfterPass, 'Взрывная Мэри'),
+    'Declared combat instant stack should remain visible after pass/priority transfer.'
+);
+
 $state->battle['strike']['state'] = 'results';
 $state->battle['strike']['attack_dice'] = 2;
 $state->battle['strike']['defend_dice'] = 1;
