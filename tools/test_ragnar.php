@@ -189,6 +189,8 @@ rgAssert($vp->beginExecute($deadShaman, GameState::PLAYER_HOST), 'Targeted first
 $result = $vp->chooseTarget(GameState::PLAYER_HOST, new Command('valhalla_pick', ['target_id' => 10]));
 rgAssert($result->success, $result->error ?? 'First Valhalla target choice should resolve.');
 rgAssert(!empty($state->battle['pending_valhalla_pick']), 'Doubled targeted Valhalla should request the second target.');
+rgAssert(($state->battle['pending_valhalla_pick']['repeat_source'] ?? null) === 'ragnar', 'Second doubled Valhalla pick should be marked as Ragnar repeat.');
+rgAssert((int) ($state->battle['pending_valhalla_pick']['repeat_index'] ?? 0) === 2, 'Second doubled Valhalla pick should expose repeat index.');
 $result = $vp->chooseTarget(GameState::PLAYER_HOST, new Command('valhalla_pick', ['target_id' => 110]));
 rgAssert($result->success, $result->error ?? 'Second Valhalla target choice should resolve.');
 rgAssert(empty($state->battle['pending_valhalla_pick']), 'Doubled targeted Valhalla should finish after the second target.');

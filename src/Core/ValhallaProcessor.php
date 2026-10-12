@@ -79,6 +79,9 @@ final class ValhallaProcessor
             'owner'     => $ownerKey,
             'card_id'   => $card->instanceId,
             'remaining' => $repeat,
+            'repeat_source' => $repeat > 1 ? 'ragnar' : null,
+            'repeat_index'  => 1,
+            'repeat_total'  => $repeat,
         ];
         return true;
     }
@@ -109,6 +112,9 @@ final class ValhallaProcessor
                 'owner'     => $playerKey,
                 'card_id'   => $card->instanceId,
                 'remaining' => $remaining,
+                'repeat_source' => $pv['repeat_source'] ?? null,
+                'repeat_index'  => ((int) ($pv['repeat_index'] ?? 1)) + 1,
+                'repeat_total'  => (int) ($pv['repeat_total'] ?? (($pv['repeat'] ?? 1))),
             ];
             $this->state->bumpVersion();
             return Result::ok(['valhalla_applied', 'valhalla_pick_pending']);

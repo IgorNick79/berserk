@@ -67,8 +67,13 @@ final class ValhallaPickChoice implements ChoiceHandlerInterface
             'class' => 'skip',
         ];
 
+        $title = $name . ' — выбери цель';
+        if (($pv['repeat_source'] ?? null) === 'ragnar' && (int) ($pv['repeat_index'] ?? 1) > 1) {
+            $title = $name . ' — Рагнар: второй выбор цели';
+        }
+
         return new PanelSpec(
-            title: $name . ' — выбери цель',
+            title: $title,
             buttons: $buttons,
         );
     }
