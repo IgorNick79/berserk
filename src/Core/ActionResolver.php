@@ -57,6 +57,12 @@ final class ActionResolver
         }
 
         $type = $action['type'] ?? '';
+        $actionType = (string) ($action['action_type'] ?? $type);
+
+        if ($err = $this->checkTargetDefense($actionType, $targetId, $attacker)) {
+            return $err;
+        }
+
         if (CardStats::hasCannotAttack($attacker) && CardStats::isOffensiveAction($type)) {
             return Result::error('Карта не может атаковать до конца хода');
         }
@@ -523,6 +529,24 @@ final class ActionResolver
 
     // ─── Проверки ─────────────────────────────────────────────
 
+    private function checkTargetDefense(
+        string $actionType,
+        int $targetId,
+        CardInstance $attacker
+    ): ?Result {
+        $attackTypes = ['strike','tap','uchr','shot','throw','discharge','magic','cast','impact'];
+        if (!in_array($actionType, $attackTypes, true)) return null;
+        if ($targetId <= 0) return null;
+
+        $target = $this->state->getCard($targetId);
+        if (!$target) return null;
+
+        if (CardStats::hasDefense($this->state, $target, $actionType, $attacker)) {
+            return Result::error('Цель защищена');
+        }
+        return null;
+    }
+
     private function validateAttacker(?CardInstance $attacker, string $playerKey): ?Result
     {
         if (!$attacker
@@ -756,7 +780,6 @@ final class ActionResolver
                     }
                 }
             }
-
 
             // Перехват (только shot / throw / disacharge)
             if (in_array($type, ['shot', 'throw', 'discharge'], true)) {

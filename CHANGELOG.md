@@ -262,3 +262,23 @@
 - `CardStats::getDamageReduction` — ранний выход, если у атакующего
   `ignore: ["damage_reduction"]` (паттерн Мантикоры).
 - `AttackSeriesContinueChoice` — UI выбора следующей цели.
+
+### Единая точка проверки защиты от действия
+
+**Проблема.** `hasDefense` вызывается точечно в ~11 методах `ActionResolver`.
+Методы без проверки: `resolveStealStrike`, `resolveSandClaws`, `resolvePoisonTarget`,
+`resolvePoisonBoost`, `resolveDamagePoisoned`, `resolveDissonance`, `resolveImpact`,
+`resolveApplyDelayedMarker`, `resolveFreezeMoves`, `resolveBombShot`, `chooseParticlePick`.
+Когда появятся карты 2-го сета со стойкостью `stamina` — защита не сработает.
+
+**Решение.**
+1. Приватный `ActionResolver::checkTargetDefense($actionType, $targetId, $attacker)`
+   с белым списком типов (`strike/tap/uchr/shot/throw/discharge/magic/cast/impact`).
+2. Вызов **один раз** в `handle()` после разбора `$action`, до роутинга по `$type`.
+   Покрывает все действия с `target_id` из `cmd=action`.
+3. Для методов с выбором цели внутри Choice (MultiDischarge, BloodStorm,
+   ParticlePick, LifeGift, HealInsteadWound, WildHealerHeal, AttackSeriesNext):
+   сохранить `action_type` в `pending_*` при старте, читать при `choose*`.
+
+**Оценка.** ~1 итерация. Основное — пройтись по 7 Choice-методам и не забыть
+прочитать `action_type` перед `hasDefense`.
