@@ -2185,7 +2185,7 @@ final class ActionResolver
             ['pending_teleport_target',         'owner'],
             ['pending_blood_storm',             'owner'],
             ['pending_heal_instead_wound',      'owner'],
-            ['pending_attack_series',           'owner'],
+            ['pending_attack_series_choice',    'owner'],
         ];
         foreach ($simple as [$key, $field]) {
             $p = $state->battle[$key] ?? null;
@@ -5132,6 +5132,66 @@ final class ActionResolver
 
         return (new \Berserk\Core\StrikeResolver($this->state, $this->engine))
             ->declare($playerKey, $strikeCmd);
+    }
+
+    public function chooseAttackSeriesNext(string $playerKey, Command $cmd): Result
+    {
+        $p = $this->state->battle['pending_attack_series_choice'] ?? null;
+        if (!$p) return Result::error('Нет ожидающего выбора');
+        if (($p['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+
+        $hydra = $this->state->getCard((int) $p['source_id']);
+        if (!$hydra) {
+            unset($this->state->battle['pending_attack_series_choice']);
+            return Result::error('Источник не найден');
+        }
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        if (!in_array($targetId, $p['candidates'], true)) {
+            return Result::error('Неверная цель');
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target || $target->dying || $target->hp <= 0) {
+            return Result::error('Цель недоступна');
+        }
+
+        // Проверка соседства (могло измениться из-за эффектов после первого сражения)
+        $dr = abs($target->row - $hydra->row);
+        $dc = abs($target->col - $hydra->col);
+        if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
+            return Result::error('Цель уже не сосед');
+        }
+
+        unset($this->state->battle['pending_attack_series_choice']);
+
+        $strikeCmd = new Command('strike', [
+            'card_id'   => $hydra->instanceId,
+            'target_id' => $targetId,
+        ]);
+
+        return (new \Berserk\Core\StrikeResolver($this->state, $this->engine))
+            ->declare($playerKey, $strikeCmd);
+    }
+
+    public function chooseAttackSeriesEnd(string $playerKey, Command $cmd): Result
+    {
+        $p = $this->state->battle['pending_attack_series_choice'] ?? null;
+        if (!$p) return Result::error('Нет ожидающего выбора');
+        if (($p['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+
+        $hydra = $this->state->getCard((int) $p['source_id']);
+        unset($this->state->battle['pending_attack_series_choice']);
+
+        if ($hydra) {
+            unset($hydra->flags['attack_series_active']);
+            $hydra->closed = true;
+            $hydra->flags['attacks_used_this_turn'] = 1;
+        }
+
+        $this->engine->finalizeDying($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(['attack_series_ended']);
     }
 
     public function chooseWildHealerHeal(string $playerKey, Command $cmd): Result

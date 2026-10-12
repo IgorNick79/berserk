@@ -155,7 +155,15 @@ final class StrikeResolver
         if (CardStats::hasCannotAttack($attacker)) {
             return Result::error('Карта не может атаковать до конца хода');
         }
-        if (empty($attacker->flags['attack_series_active'])) {
+        $isSeries = !empty($attacker->prop['attack_series']);
+        $seriesActive = !empty($attacker->flags['attack_series_active']);
+
+        if ($isSeries && !$seriesActive) {
+            $attacker->flags['attack_series_active'] = true;
+            $seriesActive = true;
+        }
+
+        if (!$seriesActive) {
             $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
 
             if (!empty($attacker->prop['strike_consecutive'])
@@ -1014,7 +1022,6 @@ final class StrikeResolver
             fn($m) => ($m['source'] ?? '') !== 'prophecy_charge'
         ));
 
-
         $this->engine->flushDeadeatQueue($this->state);
         $primaryDamage = (int) ($this->state->battle['strike']['damage_total'] ?? 0);
         $answerDamage = (int) ($this->state->battle['strike']['defend_damage_total'] ?? 0);
@@ -1276,12 +1283,67 @@ final class StrikeResolver
             return Result::ok(['after_strike_execute']);
         }
 
-        if (!empty($this->state->battle['pending_attack_series']['active'])) {
+        if ($this->openAttackSeriesChoice($strike)) {
             $this->state->bumpVersion();
-            return $this->continueAttackSeries();
+            return Result::ok(['attack_series_choice']);
         }
 
         return null;
+    }
+
+    private function openAttackSeriesChoice(array $strike): bool
+    {
+        $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+        if (!$attacker) return false;
+        if (empty($attacker->flags['attack_series_active'])) return false;
+
+        // Гидра погибла — завершаем серию
+        if ($attacker->dying
+            || $attacker->hp <= 0
+            || ($attacker->zone !== CardInstance::ZONE_FIELD
+                && $attacker->zone !== CardInstance::ZONE_FLYING)) {
+            $this->finishAttackSeries($attacker);
+            return false;
+        }
+
+        // Собираем валидных соседей-врагов
+        $candidates = [];
+        $prevTarget = (int) ($strike['target_id'] ?? 0);
+
+        foreach ($this->state->cards as $c) {
+            if ($c->owner === $attacker->owner) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            if ($c->instanceId === $prevTarget) continue;
+
+            $dr = abs($c->row - $attacker->row);
+            $dc = abs($c->col - $attacker->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            $candidates[] = $c->instanceId;
+        }
+
+        // Нет соседей — завершаем серию
+        if (empty($candidates)) {
+            $this->finishAttackSeries($attacker);
+            return false;
+        }
+
+        $this->state->battle['pending_attack_series_choice'] = [
+            'owner'      => $attacker->owner,
+            'source_id'  => $attacker->instanceId,
+            'candidates' => $candidates,
+        ];
+
+        return true;
+    }
+
+    private function finishAttackSeries(CardInstance $attacker): void
+    {
+        unset($attacker->flags['attack_series_active']);
+        $attacker->closed = true;
+        $attacker->flags['attacks_used_this_turn'] = 1;
+        unset($this->state->battle['pending_attack_series_choice']);
     }
 
     public function chooseAfterStrikeExecute(string $playerKey, Command $cmd): Result
@@ -1451,71 +1513,6 @@ final class StrikeResolver
         $this->state->battle['strike']['confirmed'] = [];
         return true;
     }
-
-    private function continueAttackSeries(): ?Result
-    {
-        $series = &$this->state->battle['pending_attack_series'];
-        $hydra = $this->state->getCard((int) ($series['source_id'] ?? 0));
-
-        // Отбитую цель убираем
-        if (!empty($series['chosen'])) array_shift($series['chosen']);
-
-        // Гидра жива?
-        if (!$hydra
-            || $hydra->dying
-            || $hydra->hp <= 0
-            || $hydra->zone !== CardInstance::ZONE_FIELD) {
-            if ($hydra) {
-                unset($hydra->flags['attack_series_active']);
-                $hydra->closed = true;
-                $hydra->flags['attacks_used_this_turn'] = 1;
-            }
-            unset($this->state->battle['pending_attack_series']);
-            return null;
-        }
-
-        // Ищем следующую валидную цель
-        $next = null;
-        while (!empty($series['chosen'])) {
-            $candidateId = (int) $series['chosen'][0];
-            $candidate = $this->state->getCard($candidateId);
-
-            $valid = $candidate
-                && !$candidate->dying
-                && $candidate->hp > 0
-                && $candidate->zone === CardInstance::ZONE_FIELD
-                && $candidate->owner !== $hydra->owner;
-
-            if ($valid) {
-                $dr = abs($candidate->row - $hydra->row);
-                $dc = abs($candidate->col - $hydra->col);
-                $valid = ($dr <= 1 && $dc <= 1 && ($dr + $dc) > 0);
-            }
-
-            if ($valid) {
-                $next = $candidate;
-                break;
-            }
-
-            array_shift($series['chosen']);
-        }
-
-        if ($next === null) {
-            // Серия закончена
-            unset($hydra->flags['attack_series_active']);
-            $hydra->closed = true;
-            $hydra->flags['attacks_used_this_turn'] = 1;
-            unset($this->state->battle['pending_attack_series']);
-            return null;
-        }
-
-        $cmd = new Command('strike', [
-            'card_id'   => $hydra->instanceId,
-            'target_id' => $next->instanceId,
-        ]);
-        return $this->declare($hydra->owner, $cmd);
-    }
-
 
     public function choosePushChoice(string $playerKey, Command $cmd): Result
     {
