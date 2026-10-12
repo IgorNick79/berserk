@@ -76,9 +76,9 @@ final class ValhallaProcessor
         }
 
         $this->state->battle['pending_valhalla_pick'] = [
-            'owner'   => $ownerKey,
-            'card_id' => $card->instanceId,
-            'repeat'  => $repeat,
+            'owner'     => $ownerKey,
+            'card_id'   => $card->instanceId,
+            'remaining' => $repeat,
         ];
         return true;
     }
@@ -101,7 +101,33 @@ final class ValhallaProcessor
 
         unset($this->state->battle['pending_valhalla_pick']);
 
-        // Убираем подзадачу
+        $this->applyAll($card, $playerKey, $target);
+
+        $remaining = max(1, (int) ($pv['remaining'] ?? $pv['repeat'] ?? 1)) - 1;
+        if ($remaining > 0 && !empty($this->collectCandidates($card, $playerKey))) {
+            $this->state->battle['pending_valhalla_pick'] = [
+                'owner'     => $playerKey,
+                'card_id'   => $card->instanceId,
+                'remaining' => $remaining,
+            ];
+            $this->state->bumpVersion();
+            return Result::ok(['valhalla_applied', 'valhalla_pick_pending']);
+        }
+
+        $this->finishPendingSubtask();
+
+        if (!empty($this->state->battle['turn_phase'])) {
+            if ($this->engine !== null) {
+                (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+            }
+        }
+
+        $this->state->bumpVersion();
+        return Result::ok(['valhalla_applied']);
+    }
+
+    private function finishPendingSubtask(): void
+    {
         if (!empty($this->state->battle['turn_phase']['sub']['pending_id'])) {
             $pid = $this->state->battle['turn_phase']['sub']['pending_id'];
             unset($this->state->battle['turn_phase']['sub']['pending_id']);
@@ -117,17 +143,6 @@ final class ValhallaProcessor
                 unset($this->state->battle['turn_phase']['sub']);
             }
         }
-        
-        $this->applyAll($card, $playerKey, $target, (int) ($pv['repeat'] ?? 1));
-
-        if (!empty($this->state->battle['turn_phase'])) {
-            if ($this->engine !== null) {
-                (new TurnPhaseProcessor($this->state, $this->engine))->resume();
-            }
-        }
-
-        $this->state->bumpVersion();
-        return Result::ok(['valhalla_applied']);
     }
 
     /**

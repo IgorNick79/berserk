@@ -140,15 +140,25 @@ function rgActiveValhalla(CardInstance $card): CardInstance
     return $card;
 }
 
-function rgResolveValhalla(GameState $state, int $cardId, int $targetId = 0): void
+function rgResolveValhalla(GameState $state, int $cardId, int ...$targetIds): void
 {
     $card = $state->getCard($cardId);
     rgAssert($card !== null, 'Valhalla card should exist.');
     $vp = new ValhallaProcessor($state, new Engine());
     $pending = $vp->beginExecute($card, $card->owner);
-    if ($pending) {
+    $lastTargetId = $targetIds[0] ?? 0;
+    $pickIndex = 0;
+    while ($pending || !empty($state->battle['pending_valhalla_pick'])) {
+        $targetId = $targetIds[$pickIndex] ?? $lastTargetId;
+        if (!isset($targetIds[$pickIndex]) && !in_array($targetId, $vp->collectCandidates($card, $card->owner), true)) {
+            $targetId = $vp->collectCandidates($card, $card->owner)[0] ?? 0;
+        }
+        $lastTargetId = $targetId;
         $result = $vp->chooseTarget($card->owner, new Command('valhalla_pick', ['target_id' => $targetId]));
         rgAssert($result->success, $result->error ?? 'Valhalla target choice should resolve.');
+        $pending = !empty($state->battle['pending_valhalla_pick']);
+        $pickIndex++;
+        rgAssert($pickIndex <= 3, 'Valhalla pick loop should finish.');
     }
 }
 
@@ -168,26 +178,34 @@ $state = rgState($fieldRagnar, $graveRagnar);
 rgResolveValhalla($state, 163);
 rgAssert(($graveRagnar->flags['ragnar_valhalla_resolved_this_turn'] ?? 0) === 2, 'First no-target Valhalla should resolve twice with field Ragnar.');
 
-// 2. Первая Вальхалла с целью: один выбор, два применения к той же цели.
+// 2. Первая Вальхалла с целью: два последовательных выбора могут попасть в разные цели.
 $fieldRagnar = rgRagnar(['instanceId' => 63, 'row' => 3, 'col' => 2]);
 $deadShaman = rgActiveValhalla(rgCard(['instanceId' => 42, 'zone' => CardInstance::ZONE_GRAVEYARD, 'prop' => rgDamageValhallaProp(1)]));
 $target = rgCard(['instanceId' => 10, 'row' => 3, 'col' => 3, 'hp' => 5, 'hpMax' => 5]);
-$state = rgState($fieldRagnar, $deadShaman, $target);
-rgResolveValhalla($state, 42, 10);
-rgAssert($target->hp === 3, 'Targeted first Valhalla should damage the same target twice.');
+$targetAlt = rgCard(['instanceId' => 110, 'row' => 3, 'col' => 4, 'hp' => 5, 'hpMax' => 5]);
+$state = rgState($fieldRagnar, $deadShaman, $target, $targetAlt);
+$vp = new ValhallaProcessor($state, new Engine());
+rgAssert($vp->beginExecute($deadShaman, GameState::PLAYER_HOST), 'Targeted first Valhalla should request the first target.');
+$result = $vp->chooseTarget(GameState::PLAYER_HOST, new Command('valhalla_pick', ['target_id' => 10]));
+rgAssert($result->success, $result->error ?? 'First Valhalla target choice should resolve.');
+rgAssert(!empty($state->battle['pending_valhalla_pick']), 'Doubled targeted Valhalla should request the second target.');
+$result = $vp->chooseTarget(GameState::PLAYER_HOST, new Command('valhalla_pick', ['target_id' => 110]));
+rgAssert($result->success, $result->error ?? 'Second Valhalla target choice should resolve.');
+rgAssert(empty($state->battle['pending_valhalla_pick']), 'Doubled targeted Valhalla should finish after the second target.');
+rgAssert($target->hp === 4 && $targetAlt->hp === 4, 'Targeted first Valhalla should allow different targets.');
 
 // 3. Вторая Вальхалла в том же ходу не удваивается.
 $deadSecond = rgActiveValhalla(rgCard(['instanceId' => 43, 'zone' => CardInstance::ZONE_GRAVEYARD, 'prop' => rgDamageValhallaProp(1)]));
 $state->addCard($deadSecond);
 rgResolveValhalla($state, 43, 10);
-rgAssert($target->hp === 2, 'Second Valhalla in the same turn should resolve once.');
+rgAssert($target->hp === 3 && $targetAlt->hp === 4, 'Second Valhalla in the same turn should resolve once.');
 
 // 4. На следующем ходе первая Вальхалла снова удваивается.
 (new TurnProcessor($state, new Engine()))->continueStartTurn(GameState::PLAYER_HOST);
 $deadThird = rgActiveValhalla(rgCard(['instanceId' => 44, 'zone' => CardInstance::ZONE_GRAVEYARD, 'prop' => rgDamageValhallaProp(1)]));
 $state->addCard($deadThird);
 rgResolveValhalla($state, 44, 10);
-rgAssert($target->hp === 0, 'Next turn first Valhalla should double again.');
+rgAssert($target->hp === 1, 'Next turn first Valhalla should double again.');
 
 // 5-7. No field Ragnar / graveyard Ragnar / two field Ragnars.
 $dead = rgActiveValhalla(rgCard(['instanceId' => 45, 'zone' => CardInstance::ZONE_GRAVEYARD, 'prop' => rgDamageValhallaProp(1)]));
@@ -216,13 +234,14 @@ $repeat = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('val
 rgAssert(!$repeat->success, 'Repeated Valhalla pick without pending should fail.');
 rgAssert($target->hp === 3, 'Repeated Valhalla command should not apply damage again.');
 
-// 9. Цель, погибшая от первого применения, не получает второе применение.
+// 9. Цель, погибшая от первого применения, не получает второе применение; второй выбор уходит в другую валидную цель.
 $fieldRagnar = rgRagnar(['instanceId' => 63, 'row' => 3, 'col' => 2]);
 $dead = rgActiveValhalla(rgCard(['instanceId' => 48, 'zone' => CardInstance::ZONE_GRAVEYARD, 'prop' => rgDamageValhallaProp(1)]));
 $target = rgCard(['instanceId' => 14, 'hp' => 1, 'hpMax' => 1]);
 $state = rgState($fieldRagnar, $dead, $target);
-rgResolveValhalla($state, 48, 14);
+rgResolveValhalla($state, 48, 14, 63);
 rgAssert($target->hp === 0 && $target->zone === CardInstance::ZONE_GRAVEYARD, 'Target killed by first Valhalla application should follow normal death lifecycle.');
+rgAssert($fieldRagnar->hp === 9, 'Second doubled Valhalla choice should apply to another valid target.');
 
 // 10. Вальхалла с модификатором применяет тот же выбранный target дважды.
 $fieldRagnar = rgRagnar(['instanceId' => 63, 'row' => 3, 'col' => 2]);
