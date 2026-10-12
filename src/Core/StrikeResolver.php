@@ -160,6 +160,7 @@ final class StrikeResolver
 
         if ($isSeries && !$seriesActive) {
             $attacker->flags['attack_series_active'] = true;
+            $attacker->flags['attack_series_hit_ids'] = [];
             $seriesActive = true;
         }
 
@@ -1009,6 +1010,15 @@ final class StrikeResolver
             }
         }
 
+        if (!empty($attacker->flags['attack_series_active'])) {
+            $hitIds = (array) ($attacker->flags['attack_series_hit_ids'] ?? []);
+            $thisTarget = (int) ($strike['target_id'] ?? 0);
+            if ($thisTarget > 0 && !in_array($thisTarget, $hitIds, true)) {
+                $hitIds[] = $thisTarget;
+            }
+            $attacker->flags['attack_series_hit_ids'] = $hitIds;
+        }
+
         $redirectUsed = !empty($strike['redirect_used']);
         $staysOpen    = !empty($defendCard->prop['defender']['all']);
 
@@ -1306,15 +1316,15 @@ final class StrikeResolver
             return false;
         }
 
-        // Собираем валидных соседей-врагов
+        // Собираем валидных соседей-врагов, которых ещё не били
         $candidates = [];
-        $prevTarget = (int) ($strike['target_id'] ?? 0);
+        $hitIds = (array) ($attacker->flags['attack_series_hit_ids'] ?? []);
 
         foreach ($this->state->cards as $c) {
             if ($c->owner === $attacker->owner) continue;
             if ($c->zone !== CardInstance::ZONE_FIELD) continue;
             if ($c->dying || $c->hp <= 0) continue;
-            if ($c->instanceId === $prevTarget) continue;
+            if (in_array($c->instanceId, $hitIds, true)) continue;
 
             $dr = abs($c->row - $attacker->row);
             $dc = abs($c->col - $attacker->col);
@@ -1341,6 +1351,7 @@ final class StrikeResolver
     private function finishAttackSeries(CardInstance $attacker): void
     {
         unset($attacker->flags['attack_series_active']);
+        unset($attacker->flags['attack_series_hit_ids']);
         $attacker->closed = true;
         $attacker->flags['attacks_used_this_turn'] = 1;
         unset($this->state->battle['pending_attack_series_choice']);

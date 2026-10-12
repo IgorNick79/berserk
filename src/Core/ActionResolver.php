@@ -5033,6 +5033,7 @@ final class ActionResolver
 
         if ($hydra) {
             unset($hydra->flags['attack_series_active']);
+            unset($hydra->flags['attack_series_hit_ids']);
             $hydra->closed = true;
             $hydra->flags['attacks_used_this_turn'] = 1;
         }
