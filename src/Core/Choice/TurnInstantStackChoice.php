@@ -98,7 +98,7 @@ final class TurnInstantStackChoice implements ChoiceHandlerInterface
             return [$html . '<p class="instant-stack__empty">Пока нет объявленных инстантов.</p></div>'];
         }
 
-        $html .= '<ol class="instant-summary__list">';
+        $html .= '<ul class="instant-summary__list instant-summary__list--plain">';
 
         foreach ($items as $item) {
             $isMine = (($item['player'] ?? '') === $playerKey);
@@ -114,7 +114,7 @@ final class TurnInstantStackChoice implements ChoiceHandlerInterface
             }
             $html .= '</li>';
         }
-        $html .= '</ol></div>';
+        $html .= '</ul></div>';
 
         return [$html];
     }

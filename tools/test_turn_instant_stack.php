@@ -127,6 +127,7 @@ $html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render($state
 tisAssert(str_contains($html, 'Разрешение инстантов'), 'InfoPanel should render turn instant result title.');
 tisAssert(strpos($html, 'B-card') < strpos($html, 'C-card') && strpos($html, 'C-card') < strpos($html, 'A-card'), 'Result UI should preserve LIFO resolution order.');
 tisAssert(str_contains($html, 'instant-summary__item') && str_contains($html, 'Итог разрешения'), 'Result UI should use battle-style instant summary presentation.');
+tisAssert(!str_contains($html, 'instant-summary__list--plain'), 'Result UI should keep numbered/applied summary styling.');
 tisAssert(str_contains($html, 'instant-summary__who--mine') && str_contains($html, 'instant-summary__who--opp'), 'Result UI should distinguish own and opponent entries with battle-style badges.');
 tisAssert(str_contains($html, 'cmd=turn_instant_result_ok'), 'Result UI should render OK command.');
 tisAckTurnResult($state);
@@ -207,6 +208,7 @@ tisAssert(str_contains($html, 'cmd=pass_turn_instant'), 'InfoPanel should render
 tisAssert((new InstantProcessor($state, new Engine()))->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 31, 'instant_key' => 'spark']))->success, 'UI-listed instant should be playable.');
 $html = $panel->render($state, GameState::PLAYER_HOST, 'host', $cardsInfo, '/battle?game=9301');
 tisAssert(str_contains($html, 'instant-summary__item') && str_contains($html, 'Соперник') && str_contains($html, 'Ты'), 'Turn stack UI should distinguish owner and opponent entries.');
+tisAssert(str_contains($html, 'instant-summary__list--plain'), 'Turn ordering UI should use plain pending list styling.');
 tisAssert(!str_contains($html, 'применено'), 'Turn ordering UI must not show result text before resolution.');
 $html = $panel->render($state, GameState::PLAYER_PLAYER, 'player', $cardsInfo, '/battle?game=9301');
 tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_HOST, 'Priority should stay with declarer after ordering an instant.');

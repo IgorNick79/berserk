@@ -1370,11 +1370,11 @@ body { padding-bottom: 46vh; }
     font-size: 13px;
 }
 .instant-summary ul {
-    margin: 4px 0 0 20px;
+    margin: 4px 0 0 0;
     padding: 0;
     list-style: none;
 }
-.instant-summary li { margin: 2px 0; color: #2a2; }
+.instant-summary li { margin: 2px 0; color: inherit; }
 .instant-summary li.skip { color: #999; }
 .prophecy-actions .button.prophecy-secondary {
     margin-left: 12px;
@@ -1473,6 +1473,9 @@ body { padding-bottom: 46vh; }
     padding: 4px 0 4px 24px;
     position: relative;
     border-bottom: 1px solid #eee;
+}
+.instant-summary__list:not(.instant-summary__list--plain) .instant-summary__item:not(.instant-summary__item--skip) {
+    color: #2a2;
 }
 .instant-summary__item:last-child { border-bottom: none; }
 .instant-summary__item::before {
