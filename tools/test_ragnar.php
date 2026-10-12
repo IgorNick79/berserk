@@ -239,26 +239,34 @@ $attackerA = rgCard(['instanceId' => 1, 'row' => 3, 'col' => 3, 'strikeWeak' => 
 $attackerB = rgCard(['instanceId' => 2, 'row' => 3, 'col' => 5, 'strikeWeak' => 1, 'strikeMedium' => 2, 'strikeStrong' => 3]);
 $targetA = rgCard(['instanceId' => 101, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 3, 'hp' => 20, 'hpMax' => 20]);
 $targetB = rgCard(['instanceId' => 102, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 5, 'hp' => 20, 'hpMax' => 20]);
-$state = rgState($graveRagnar, $attackerA, $attackerB, $targetA, $targetB);
+$defender = rgCard(['instanceId' => 103, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4, 'hp' => 20, 'hpMax' => 20]);
+$state = rgState($graveRagnar, $attackerA, $attackerB, $targetA, $targetB, $defender);
 rgRolls('4,1,6,1');
 $result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('strike', ['card_id' => 1, 'target_id' => 101]));
 rgAssert($result->success, $result->error ?? 'First strike should be accepted.');
+rgAssert(($state->battle['strike']['state'] ?? '') !== 'waiting_defender', 'Ragnar unanswered strike should skip defender choice.');
+rgAssert(empty($state->battle['strike']['defenders']), 'Ragnar unanswered strike should not offer defenders.');
 rgAssert(($state->battle['strike']['defend_dice'] ?? null) === 0, 'Ragnar Valhalla should use existing unanswered one-die strike.');
 rgAssert(!empty($state->battle['strike']['ragnar_unanswer']), 'Strike should record Ragnar unanswered source.');
 $state->battle['strike'] = null;
 $result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('strike', ['card_id' => 2, 'target_id' => 102]));
 rgAssert($result->success, $result->error ?? 'Second strike should be accepted.');
-rgAssert((int) ($state->battle['strike']['defend_dice'] ?? 0) > 0, 'Second ordinary strike in the same turn should defend normally.');
+rgAssert(empty($state->battle['strike']['ragnar_unanswer']), 'Second ordinary strike in the same turn should not record Ragnar unanswered source.');
+rgAssert(
+    ($state->battle['strike']['state'] ?? '') === 'waiting_defender'
+    || (int) ($state->battle['strike']['defend_dice'] ?? 0) > 0,
+    'Second ordinary strike in the same turn should defend normally.'
+);
 
 $state->battle['strike'] = null;
 (new TurnProcessor($state, new Engine()))->continueStartTurn(GameState::PLAYER_HOST);
 unset($state->battle['turn_phase']);
 $attackerC = rgCard(['instanceId' => 3, 'row' => 2, 'col' => 1, 'strikeWeak' => 1, 'strikeMedium' => 2, 'strikeStrong' => 3]);
-$targetC = rgCard(['instanceId' => 103, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 1, 'hp' => 20, 'hpMax' => 20]);
+$targetC = rgCard(['instanceId' => 104, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 1, 'hp' => 20, 'hpMax' => 20]);
 $state->addCard($attackerC);
 $state->addCard($targetC);
 rgRolls('5,1');
-$result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('strike', ['card_id' => 3, 'target_id' => 103]));
+$result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('strike', ['card_id' => 3, 'target_id' => 104]));
 rgAssert($result->success, $result->error ?? 'Next turn strike should be accepted.');
 rgAssert(($state->battle['strike']['defend_dice'] ?? null) === 0, 'Ragnar unanswered strike should reset next turn.');
 

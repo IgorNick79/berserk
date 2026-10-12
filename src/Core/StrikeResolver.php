@@ -265,9 +265,12 @@ final class StrikeResolver
         }
 
         $isDirect = $friendlyFire || CardStats::isDirectStrike($this->state, $attacker, $target);
+        $ragnarUnanswer = !$isDirect
+            ? $this->consumeRagnarUnanswerStrike($attacker, $target, $friendlyFire)
+            : null;
 
         $oppKey = $this->state->getOpponentKey($playerKey);
-        $defenders = $isDirect
+        $defenders = ($isDirect || $ragnarUnanswer !== null)
             ? []
             : $this->findDefenders($attacker, $target, $oppKey);
 
@@ -300,7 +303,7 @@ final class StrikeResolver
             $card->flags['damage_taken_this_strike'] = 0;
         }
 
-        $this->state->battle['strike'] = [
+        $strike = [
             'attacker_id' => $cardId,
             'target_id'   => $targetId,
             'original_target_id' => $targetId,
@@ -314,6 +317,10 @@ final class StrikeResolver
             'redirect_candidates' => $redirectCandidates,
             'friendly_fire' => $friendlyFire,
         ];
+        if ($ragnarUnanswer !== null) {
+            $strike['ragnar_unanswer'] = $ragnarUnanswer;
+        }
+        $this->state->battle['strike'] = $strike;
 
         // Окно инстантов до броска — openWindow сам проверит, есть ли у кого
         $ip = new InstantProcessor($this->state, $this->engine);
@@ -728,14 +735,8 @@ final class StrikeResolver
         $hasUnanswer = CardStats::hasUnanswer($this->state, $attacker, $defendCard);
         $noDefendDice = !empty($strike['friendly_fire'])
             || $isClosed
-            || $hasUnanswer;
-        if (!$noDefendDice && $this->consumeRagnarUnanswerStrike($attacker)) {
-            $noDefendDice = true;
-            $strike['ragnar_unanswer'] = [
-                'owner' => $attacker->owner,
-                'attacker_id' => $attacker->instanceId,
-            ];
-        }
+            || $hasUnanswer
+            || !empty($strike['ragnar_unanswer']);
         $defendDice = $noDefendDice ? 0 : Dice::roll();
 
         $attackMod = CardStats::getOva($this->state, $attacker, $defendCard) 
@@ -1673,11 +1674,13 @@ final class StrikeResolver
         $pp->commit($attacker->owner, $attacker, $peeked, 'strike', $title, $actions);
     }
 
-    private function consumeRagnarUnanswerStrike(CardInstance $attacker): bool
+    private function consumeRagnarUnanswerStrike(CardInstance $attacker, CardInstance $target, bool $friendlyFire): ?array
     {
-        $strike = $this->state->battle['strike'] ?? [];
-        if (!empty($strike['friendly_fire'])) return false;
-        if (!empty($strike['forced_strike_adjacent'])) return false;
+        if ($friendlyFire) return null;
+
+        $defendWhileClosed = !empty($target->prop['defend_while_closed']);
+        if ($target->closed && !$defendWhileClosed) return null;
+        if (CardStats::hasUnanswer($this->state, $attacker, $target)) return null;
 
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $attacker->owner) continue;
@@ -1687,10 +1690,14 @@ final class StrikeResolver
             if (!empty($card->flags['ragnar_unanswer_used_this_turn'])) continue;
 
             $card->flags['ragnar_unanswer_used_this_turn'] = true;
-            return true;
+            return [
+                'owner' => $attacker->owner,
+                'attacker_id' => $attacker->instanceId,
+                'source_id' => $card->instanceId,
+            ];
         }
 
-        return false;
+        return null;
     }
 
     public function recalcTable(): void
