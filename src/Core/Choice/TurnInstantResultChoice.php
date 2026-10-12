@@ -43,11 +43,11 @@ final class TurnInstantResultChoice implements ChoiceHandlerInterface
 
     private function renderSummary(GameState $state, array $summary, array $cardsInfo, string $playerKey): string
     {
-        $html = '<div class="instant-stack">'
-            . '<div class="instant-stack__title">Итог разрешения (сверху вниз):</div>'
-            . '<ul class="instant-stack__list">';
+        $html = '<div class="instant-summary">'
+            . '<div class="instant-summary__title">Итог разрешения инстантов:</div>'
+            . '<ol class="instant-summary__list">';
 
-        foreach ($summary as $i => $item) {
+        foreach ($summary as $item) {
             $source = $state->getCard((int) ($item['card_id'] ?? 0));
             $sourceName = $source ? ($cardsInfo[$source->ukid]['name'] ?? $source->ukid) : '?';
             $label = (string) ($item['label'] ?? 'Инстант');
@@ -60,9 +60,18 @@ final class TurnInstantResultChoice implements ChoiceHandlerInterface
                 $targetName = $cardsInfo[$target->ukid]['name'] ?? $target->ukid;
             }
 
-            $isTop = ($i === 0) ? ' instant-stack__item--top' : '';
-            $whoLabel = (($item['player'] ?? '') === $playerKey) ? 'Ты' : 'Оппонент';
-            $line = '<span class="instant-stack__who">' . htmlspecialchars($whoLabel, ENT_QUOTES) . '</span> '
+            $isMine = (($item['player'] ?? '') === $playerKey);
+            $whoLabel = $isMine ? 'Ты' : 'Соперник';
+            $whoClass = $isMine ? 'instant-summary__who--mine' : 'instant-summary__who--opp';
+            $itemClass = $applied ? '' : ' instant-summary__item--skip';
+
+            $resultText = $applied ? 'применено' : 'без эффекта' . ($reason !== '' ? ' — ' . $reason : '');
+            $details = $this->formatResultDetails((array) ($item['result'] ?? []));
+            if ($details !== '') {
+                $resultText .= ' — ' . $details;
+            }
+
+            $line = '<span class="instant-summary__who ' . $whoClass . '">' . htmlspecialchars($whoLabel, ENT_QUOTES) . '</span> '
                 . '<b>' . htmlspecialchars($sourceName, ENT_QUOTES) . '</b> — '
                 . htmlspecialchars($label, ENT_QUOTES);
             if ($targetName !== '') {
@@ -70,20 +79,11 @@ final class TurnInstantResultChoice implements ChoiceHandlerInterface
                     . htmlspecialchars($targetName, ENT_QUOTES)
                     . '</span>';
             }
-            $line .= ' <span class="muted">'
-                . ($applied
-                    ? 'применено'
-                    : 'без эффекта' . ($reason !== '' ? ': ' . htmlspecialchars($reason, ENT_QUOTES) : ''))
-                . '</span>';
+            $line .= ': ' . htmlspecialchars($resultText, ENT_QUOTES);
 
-            $details = $this->formatResultDetails((array) ($item['result'] ?? []));
-            if ($details !== '') {
-                $line .= ' <span class="muted">' . htmlspecialchars($details, ENT_QUOTES) . '</span>';
-            }
-
-            $html .= '<li class="instant-stack__item' . $isTop . '">' . $line . '</li>';
+            $html .= '<li class="instant-summary__item' . $itemClass . '">' . $line . '</li>';
         }
-        $html .= '</ul></div>';
+        $html .= '</ol></div>';
 
         return $html;
     }
