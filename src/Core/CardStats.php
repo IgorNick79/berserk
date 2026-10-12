@@ -217,6 +217,7 @@ final class CardStats
             'discharge' => ['zoda', 'zoz', 'zom', 'zor'],
             'magic'     => ['zom'],
             'cast'      => ['zoz', 'zom'],
+            'impact'    => ['stamina'],
         ];
 
         $defs = array_merge($map[$actionType] ?? [], $universal);
