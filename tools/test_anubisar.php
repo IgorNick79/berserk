@@ -13,6 +13,8 @@ use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\StrikeResolver;
 use Berserk\Core\Choice\AnubisarChainChoice;
+use Berserk\View\Template;
+use Berserk\View\Screen\Battle\InfoPanel;
 
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
@@ -228,6 +230,13 @@ anAssert($state->getCard(5)->hp === 5, 'Chain damage should not exceed max_targe
 anAssert($state->getCard(6)->hp === 10, 'Chain damage should not hit own creatures.');
 anAssert(!empty($state->battle['strike']['chain_damage']), 'Chain damage should be recorded on the strike result.');
 anAssert(empty($state->battle['pending_anubisar_chain']), 'Two chain targets should resolve without pending.');
+$html = (new InfoPanel(new Template(__DIR__ . '/../templates')))->render($state, GameState::PLAYER_HOST, 'host', [
+    's1_26' => ['name' => 'Анубисар'],
+    'card_3' => ['name' => 'Цель цепей A'],
+    'card_4' => ['name' => 'Цель цепей B'],
+], '?first&game=2601');
+anAssert(str_contains($html, 'Цепи Анубисара'), 'InfoPanel should mention Anubisar chains.');
+anAssert(str_contains($html, 'Цель цепей A') && str_contains($html, '-1 HP'), 'InfoPanel should list chain targets with -1 HP.');
 
 $state = anState(anAnubisar(), anEnemy(2, 4, 4), anEnemy(3, 4, 3));
 $state->battle['strike'] = ['attacker_id' => 26, 'target_id' => 2, 'defender_id' => null, 'state' => 'results', 'attack_dice' => 6, 'defend_dice' => 0, 'confirmed' => []];

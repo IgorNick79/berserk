@@ -1418,6 +1418,21 @@ final class InfoPanel
                         . '</div>';
                 }
             }
+            if (!empty($strike['chain_damage'])) {
+                foreach ((array) $strike['chain_damage'] as $chain) {
+                    foreach ((array) ($chain['items'] ?? []) as $item) {
+                        $target = $state->getCard((int) ($item['target_id'] ?? 0));
+                        $targetInfo = $target ? ($cardsInfo[$target->ukid] ?? null) : null;
+                        $targetName = $targetInfo ? htmlspecialchars($targetInfo['name'], ENT_QUOTES) : '?';
+                        $damage = (int) ($item['damage'] ?? 0);
+                        if ($damage <= 0) continue;
+
+                        $vampireHtml .= '<div class="vampire">'
+                            . 'Цепи Анубисара: <b>' . $targetName . '</b> -' . $damage . ' HP'
+                            . '</div>';
+                    }
+                }
+            }
 
             // Кнопка подтверждения / отложенный выбор
             $confirmed = $strike['confirmed'] ?? [];
