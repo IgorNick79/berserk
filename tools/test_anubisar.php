@@ -8,9 +8,11 @@ require_once __DIR__ . '/../src/Core/Autoloader.php';
 use Berserk\Core\Autoloader;
 use Berserk\Core\CardInstance;
 use Berserk\Core\CardStats;
+use Berserk\Core\Command;
 use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\StrikeResolver;
+use Berserk\Core\Choice\AnubisarChainChoice;
 
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
@@ -141,6 +143,11 @@ function anSteppeSource(string $ukid, int $id, int $row = 3, int $col = 4, array
     ], $extra));
 }
 
+function anResolveStrike(GameState $state, string $level): void
+{
+    (new StrikeResolver($state, new Engine()))->apply(['attack' => $level, 'defend' => '', 'winner' => $level === '' ? 'defend' : 'attack'], false);
+}
+
 $enemy = anEnemy(2, 3, 4);
 
 // Санкторум: only line weak +1 is inherited, weak-block is not.
@@ -210,20 +217,96 @@ $state = anState(
     anEnemy(2, 4, 4, ['hp' => 5]),
     anEnemy(3, 4, 3, ['hp' => 1]),
     anEnemy(4, 5, 4, ['hp' => 5]),
-    anEnemy(5, 5, 5, ['hp' => 5]),
+    anEnemy(5, 6, 6, ['hp' => 5]),
     anCard(['instanceId' => 6, 'owner' => GameState::PLAYER_HOST, 'row' => 4, 'col' => 5, 'prop' => []])
 );
 $state->battle['strike'] = ['attacker_id' => 26, 'target_id' => 2, 'defender_id' => null, 'state' => 'results', 'attack_dice' => 6, 'defend_dice' => 0, 'confirmed' => []];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+anResolveStrike($state, 'strong');
 anAssert($state->getCard(3)->hp === 0 && $state->getCard(3)->dying, 'Chain damage should use the normal damage/death path.');
 anAssert($state->getCard(4)->hp === 4, 'Chain damage should damage the second adjacent enemy.');
 anAssert($state->getCard(5)->hp === 5, 'Chain damage should not exceed max_targets 2.');
 anAssert($state->getCard(6)->hp === 10, 'Chain damage should not hit own creatures.');
 anAssert(!empty($state->battle['strike']['chain_damage']), 'Chain damage should be recorded on the strike result.');
+anAssert(empty($state->battle['pending_anubisar_chain']), 'Two chain targets should resolve without pending.');
+
+$state = anState(anAnubisar(), anEnemy(2, 4, 4), anEnemy(3, 4, 3));
+$state->battle['strike'] = ['attacker_id' => 26, 'target_id' => 2, 'defender_id' => null, 'state' => 'results', 'attack_dice' => 6, 'defend_dice' => 0, 'confirmed' => []];
+anResolveStrike($state, 'strong');
+anAssert($state->getCard(3)->hp === 4, 'One chain target should receive 1 damage.');
+anAssert(empty($state->battle['pending_anubisar_chain']), 'One chain target should not create pending.');
+
+$state = anState(anAnubisar(), anEnemy(2, 4, 4), anEnemy(3, 6, 6));
+$state->battle['strike'] = ['attacker_id' => 26, 'target_id' => 2, 'defender_id' => null, 'state' => 'results', 'attack_dice' => 6, 'defend_dice' => 0, 'confirmed' => []];
+anResolveStrike($state, 'strong');
+anAssert($state->getCard(3)->hp === 5, 'No adjacent enemies should mean no chain damage.');
+anAssert(empty($state->battle['strike']['chain_damage']), 'No adjacent enemies should not record chain damage.');
 
 $state = anState(anAnubisar(), anEnemy(2, 4, 4), anEnemy(3, 4, 3));
 $state->battle['strike'] = ['attacker_id' => 26, 'target_id' => 2, 'defender_id' => null, 'state' => 'results', 'attack_dice' => 4, 'defend_dice' => 0, 'confirmed' => []];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'medium', 'defend' => '', 'winner' => 'attack'], false);
+anResolveStrike($state, 'medium');
 anAssert(empty($state->battle['strike']['chain_damage']), 'Chain damage should not trigger on medium strike.');
+
+$state = anState(anAnubisar(), anEnemy(2, 4, 4), anEnemy(3, 4, 3));
+$state->battle['strike'] = ['attacker_id' => 26, 'target_id' => 2, 'defender_id' => null, 'state' => 'results', 'attack_dice' => 2, 'defend_dice' => 0, 'confirmed' => []];
+anResolveStrike($state, 'weak');
+anAssert(empty($state->battle['strike']['chain_damage']), 'Chain damage should not trigger on weak strike.');
+
+// Strong final level should matter even if the original dice was medium.
+$state = anState(anAnubisar(), anEnemy(2, 4, 4), anEnemy(3, 4, 3));
+$state->battle['strike'] = ['attacker_id' => 26, 'target_id' => 2, 'defender_id' => null, 'state' => 'results', 'attack_dice' => 4, 'defend_dice' => 0, 'confirmed' => []];
+anResolveStrike($state, 'strong');
+anAssert($state->getCard(3)->hp === 4, 'Chain damage should use final resolved strong level.');
+
+// Miss / empty final strike follows existing strike_effects semantics and does not trigger strong effects.
+$state = anState(anAnubisar(), anEnemy(2, 4, 4), anEnemy(3, 4, 3));
+$state->battle['strike'] = ['attacker_id' => 26, 'target_id' => 2, 'defender_id' => null, 'state' => 'results', 'attack_dice' => 1, 'defend_dice' => 6, 'confirmed' => []];
+anResolveStrike($state, '');
+anAssert(empty($state->battle['strike']['chain_damage']), 'Chain damage should not trigger when there is no final strike level.');
+
+// Three valid enemies create mandatory pending; the owner chooses exactly two.
+$state = anState(
+    anAnubisar(),
+    anEnemy(2, 4, 4, ['hp' => 20]),
+    anEnemy(3, 4, 3),
+    anEnemy(4, 5, 4),
+    anEnemy(5, 5, 5),
+    anCard(['instanceId' => 6, 'owner' => GameState::PLAYER_HOST, 'row' => 4, 'col' => 5, 'prop' => []])
+);
+$state->battle['strike'] = ['attacker_id' => 26, 'target_id' => 2, 'defender_id' => null, 'state' => 'results', 'attack_dice' => 6, 'defend_dice' => 0, 'confirmed' => []];
+anResolveStrike($state, 'strong');
+anAssert(!empty($state->battle['pending_anubisar_chain']), 'Three valid chain targets should create pending.');
+anAssert($state->getCard(2)->hp === 15, 'Main strike should resolve before chain pending.');
+anAssert($state->getCard(3)->hp === 5 && $state->getCard(4)->hp === 5 && $state->getCard(5)->hp === 5, 'Pending should not auto damage first targets.');
+$pendingIds = $state->battle['pending_anubisar_chain']['candidate_ids'] ?? [];
+sort($pendingIds);
+anAssert($pendingIds === [3, 4, 5], 'Pending should include only adjacent enemy creatures.');
+$spec = (new AnubisarChainChoice())->spec($state, GameState::PLAYER_HOST, [], '?first&game=2601', 'host');
+anAssert(($spec?->form['hidden']['game'] ?? null) === 2601, 'Anubisar chain form should preserve game id.');
+anAssert(array_key_exists('first', $spec?->form['hidden'] ?? []), 'Anubisar chain form should preserve side parameter.');
+
+$duplicate = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('choose_anubisar_chain', ['target_ids' => [3, 3]]));
+anAssert(!$duplicate->success, 'Chain pending should reject duplicate target selection.');
+anAssert(!empty($state->battle['pending_anubisar_chain']), 'Rejected chain selection should keep pending.');
+
+$invalid = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('choose_anubisar_chain', ['target_ids' => [2, 3]]));
+anAssert(!$invalid->success, 'Chain pending should reject the originally attacked target.');
+$invalid = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('choose_anubisar_chain', ['target_ids' => [3, 6]]));
+anAssert(!$invalid->success, 'Chain pending should reject Anubisar allies.');
+
+$result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('choose_anubisar_chain', ['target_ids' => [3, 5]]));
+anAssert($result->success, $result->error ?? 'Valid Anubisar chain choice should resolve.');
+anAssert(empty($state->battle['pending_anubisar_chain']), 'Chain pending should be cleared after choice.');
+anAssert($state->getCard(3)->hp === 4 && $state->getCard(5)->hp === 4, 'Chosen chain targets should receive damage.');
+anAssert($state->getCard(4)->hp === 5, 'Unchosen chain candidate should not receive damage.');
+anAssert($state->getCard(2)->hp === 15, 'Resolving chain pending should not repeat main strike.');
+$repeat = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('choose_anubisar_chain', ['target_ids' => [3, 5]]));
+anAssert(!$repeat->success, 'Repeated chain command should not resolve without pending.');
+anAssert($state->getCard(3)->hp === 4 && $state->getCard(5)->hp === 4, 'Repeated chain command should not apply damage twice.');
+
+// Chain damage does not depend on Anubisar being in a line.
+$state = anState(anAnubisar(['prop' => array_merge(anProp(), ['has_line' => false])]), anEnemy(2, 4, 4), anEnemy(3, 4, 3));
+$state->battle['strike'] = ['attacker_id' => 26, 'target_id' => 2, 'defender_id' => null, 'state' => 'results', 'attack_dice' => 6, 'defend_dice' => 0, 'confirmed' => []];
+anResolveStrike($state, 'strong');
+anAssert($state->getCard(3)->hp === 4, 'Chain damage should not depend on line state.');
 
 echo "Anubisar tests passed\n";

@@ -1070,7 +1070,31 @@ final class StrikeResolver
         if ($maxTargets <= 0) $maxTargets = 999;
         $filter = (string) ($config['filter'] ?? 'enemy');
 
-        $applied = [];
+        $candidateIds = $this->findChainDamageTargetIds($attacker, $target, $filter);
+        if (empty($candidateIds)) return;
+
+        if (count($candidateIds) > $maxTargets) {
+            $this->state->battle['pending_anubisar_chain'] = [
+                'owner' => $attacker->owner,
+                'source_id' => $attacker->instanceId,
+                'attacked_id' => $target->instanceId,
+                'candidate_ids' => $candidateIds,
+                'value' => $damage,
+                'max_targets' => $maxTargets,
+                'filter' => $filter,
+            ];
+            return;
+        }
+
+        $this->applyChainDamageToTargets($attacker, $target, array_slice($candidateIds, 0, $maxTargets), $damage);
+    }
+
+    /**
+     * @return int[]
+     */
+    private function findChainDamageTargetIds(CardInstance $attacker, CardInstance $target, string $filter): array
+    {
+        $ids = [];
         foreach ($this->state->cards as $candidate) {
             if ($candidate->instanceId === $target->instanceId) continue;
             if ($candidate->zone !== CardInstance::ZONE_FIELD) continue;
@@ -1078,27 +1102,84 @@ final class StrikeResolver
             if ($candidate->type !== 'creature') continue;
             if ($filter === 'enemy' && $candidate->owner === $attacker->owner) continue;
             if ($filter === 'ally' && $candidate->owner !== $attacker->owner) continue;
+            if (!ZoneManager::areAdjacentFieldCards($target, $candidate)) continue;
+            $ids[] = $candidate->instanceId;
+        }
+        return $ids;
+    }
 
-            $dr = abs((int) $candidate->row - (int) $target->row);
-            $dc = abs((int) $candidate->col - (int) $target->col);
-            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
-
+    /**
+     * @param int[] $targetIds
+     */
+    private function applyChainDamageToTargets(CardInstance $attacker, CardInstance $attacked, array $targetIds, int $damage): void
+    {
+        $applied = [];
+        foreach ($targetIds as $targetId) {
+            $candidate = $this->state->getCard((int) $targetId);
+            if (!$candidate) continue;
             $this->engine->applyDamage($this->state, $candidate, $damage, 'impact', $attacker);
             $applied[] = [
                 'source_id' => $attacker->instanceId,
                 'target_id' => $candidate->instanceId,
                 'damage' => $damage,
             ];
-            if (count($applied) >= $maxTargets) break;
         }
 
         if (!empty($applied)) {
             $this->state->battle['strike']['chain_damage'][] = [
                 'source_id' => $attacker->instanceId,
-                'attacked_id' => $target->instanceId,
+                'attacked_id' => $attacked->instanceId,
                 'items' => $applied,
             ];
         }
+    }
+
+    public function chooseAnubisarChain(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_anubisar_chain'] ?? null;
+        if (!$pending) {
+            return Result::error('Нет выбора целей');
+        }
+        if (($pending['owner'] ?? '') !== $playerKey) {
+            return Result::error('Сейчас не ваш выбор');
+        }
+
+        $attacker = $this->state->getCard((int) ($pending['source_id'] ?? 0));
+        $attacked = $this->state->getCard((int) ($pending['attacked_id'] ?? 0));
+        if (!$attacker || !$attacked) {
+            unset($this->state->battle['pending_anubisar_chain']);
+            return Result::error('Исходный удар недоступен');
+        }
+
+        $rawTargetIds = $cmd->get('target_ids', []);
+        if (!is_array($rawTargetIds)) {
+            $rawTargetIds = [$rawTargetIds];
+        }
+        $targetIds = array_map('intval', $rawTargetIds);
+        $targetIds = array_values(array_filter($targetIds, static fn(int $id): bool => $id > 0));
+
+        if (count($targetIds) !== count(array_unique($targetIds))) {
+            return Result::error('Нужно выбрать две разные цели');
+        }
+
+        $maxTargets = (int) ($pending['max_targets'] ?? 2);
+        if (count($targetIds) !== $maxTargets) {
+            return Result::error('Нужно выбрать ' . $maxTargets . ' цели');
+        }
+
+        $filter = (string) ($pending['filter'] ?? 'enemy');
+        $validIds = $this->findChainDamageTargetIds($attacker, $attacked, $filter);
+        foreach ($targetIds as $targetId) {
+            if (!in_array($targetId, $validIds, true)) {
+                return Result::error('Недопустимая цель');
+            }
+        }
+
+        unset($this->state->battle['pending_anubisar_chain']);
+        $this->applyChainDamageToTargets($attacker, $attacked, $targetIds, (int) ($pending['value'] ?? 1));
+        $this->state->bumpVersion();
+
+        return Result::ok(['anubisar_chain']);
     }
 
     private function findAdjacentCreatures(CardInstance $card): array
