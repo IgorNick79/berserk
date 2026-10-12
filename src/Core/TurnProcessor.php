@@ -309,6 +309,8 @@ final class TurnProcessor
                     }
                 }
                 unset($card->flags['ranged_redirect_used_this_turn']);
+                unset($card->flags['ragnar_valhalla_double_used_this_turn']);
+                unset($card->flags['ragnar_unanswer_used_this_turn']);
 
                 if ($card->owner === $activeKey) {
                     if (!isset($card->markers['stun'])) {
@@ -332,6 +334,13 @@ final class TurnProcessor
                     unset($card->flags['nokami_used_this_turn']);
                     unset($card->flags['on_heal_wound_used_this_turn']);
                 }
+            }
+
+            foreach ($this->state->cards as $card) {
+                if ($card->owner !== $activeKey) continue;
+                if ($card->zone !== CardInstance::ZONE_GRAVEYARD) continue;
+                unset($card->flags['ragnar_unanswer_used_this_turn']);
+                unset($card->flags['ragnar_valhalla_double_used_this_turn']);
             }
 
             // Airin — сброс счётчика в начале каждого хода (независимо от владельца)

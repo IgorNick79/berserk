@@ -58,6 +58,7 @@ final class ValhallaProcessor
     {
         $effects = $card->prop['valhalla'] ?? [];
         if (!is_array($effects) || empty($effects)) return false;
+        $repeat = $this->consumeRagnarValhallaRepeat($ownerKey);
 
         $needsChoice = false;
         foreach ($effects as $eff) {
@@ -70,13 +71,14 @@ final class ValhallaProcessor
         }
 
         if (!$needsChoice) {
-            $this->applyAll($card, $ownerKey, null);
+            $this->applyAll($card, $ownerKey, null, $repeat);
             return false;
         }
 
         $this->state->battle['pending_valhalla_pick'] = [
             'owner'   => $ownerKey,
             'card_id' => $card->instanceId,
+            'repeat'  => $repeat,
         ];
         return true;
     }
@@ -93,6 +95,9 @@ final class ValhallaProcessor
         $targetId = (int) $cmd->get('target_id', 0);
         $target   = $this->state->getCard($targetId);
         if (!$target) return Result::error('Цель не найдена');
+        if (!in_array($targetId, $this->collectCandidates($card, $playerKey), true)) {
+            return Result::error('Недопустимая цель');
+        }
 
         unset($this->state->battle['pending_valhalla_pick']);
 
@@ -113,7 +118,7 @@ final class ValhallaProcessor
             }
         }
         
-        $this->applyAll($card, $playerKey, $target);
+        $this->applyAll($card, $playerKey, $target, (int) ($pv['repeat'] ?? 1));
 
         if (!empty($this->state->battle['turn_phase'])) {
             if ($this->engine !== null) {
@@ -168,29 +173,45 @@ final class ValhallaProcessor
         return $candidates;
     }
 
-    private function applyAll(CardInstance $card, string $ownerKey, ?CardInstance $chosen): void
+    private function applyAll(CardInstance $card, string $ownerKey, ?CardInstance $chosen, int $repeat = 1): void
     {
         $effects = $card->prop['valhalla'] ?? [];
         if (!is_array($effects)) return;
 
-        foreach ($effects as $eff) {
-            $this->applyEffect($eff, $ownerKey, $chosen);
+        $repeat = max(1, min(2, $repeat));
+        for ($i = 0; $i < $repeat; $i++) {
+            foreach ($effects as $eff) {
+                $this->applyEffect($card, $eff, $ownerKey, $chosen);
+            }
         }
     }
 
-    private function applyEffect(array $eff, string $ownerKey, ?CardInstance $chosen): void
+    private function applyEffect(CardInstance $source, array $eff, string $ownerKey, ?CardInstance $chosen): void
     {
         $type       = $eff['type'] ?? '';
         $targetType = $eff['target'] ?? 'self';
         $value      = (int) ($eff['value'] ?? 0);
 
         $target = null;
+        if ($targetType === 'self') {
+            $target = $source;
+        }
         if (in_array($targetType, ['own_creature', 'enemy_creature', 'own_yordling'], true)) {
             $target = $chosen;
             if (!$target) return;
+            if (($target->zone !== CardInstance::ZONE_FIELD && $target->zone !== CardInstance::ZONE_FLYING)
+                || $target->dying
+                || $target->hp <= 0) {
+                return;
+            }
         }
 
         switch ($type) {
+            case 'ragnar_first_strike_unanswer':
+                $source->flags['ragnar_valhalla_resolved_this_turn'] =
+                    ((int) ($source->flags['ragnar_valhalla_resolved_this_turn'] ?? 0)) + 1;
+                break;
+
             case 'modifier':
                 if (!$target) return;
                 $target->modifiers[] = [
@@ -232,5 +253,21 @@ final class ValhallaProcessor
                 if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
                 break;
         }
+    }
+
+    private function consumeRagnarValhallaRepeat(string $ownerKey): int
+    {
+        foreach ($this->state->cards as $card) {
+            if ($card->owner !== $ownerKey) continue;
+            if ($card->zone !== CardInstance::ZONE_FIELD && $card->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($card->dying || $card->hp <= 0) continue;
+            if (empty($card->prop['ragnar_valhalla_double'])) continue;
+            if (!empty($card->flags['ragnar_valhalla_double_used_this_turn'])) continue;
+
+            $card->flags['ragnar_valhalla_double_used_this_turn'] = true;
+            return 2;
+        }
+
+        return 1;
     }
 }

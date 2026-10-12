@@ -725,9 +725,17 @@ final class StrikeResolver
         $defendWhileClosed = !empty($defendCard->prop['defend_while_closed']);
         $isClosed = $defendCard->closed && !$defendWhileClosed;
 
+        $hasUnanswer = CardStats::hasUnanswer($this->state, $attacker, $defendCard);
         $noDefendDice = !empty($strike['friendly_fire'])
             || $isClosed
-            || CardStats::hasUnanswer($this->state, $attacker, $defendCard);
+            || $hasUnanswer;
+        if (!$noDefendDice && $this->consumeRagnarUnanswerStrike($attacker)) {
+            $noDefendDice = true;
+            $strike['ragnar_unanswer'] = [
+                'owner' => $attacker->owner,
+                'attacker_id' => $attacker->instanceId,
+            ];
+        }
         $defendDice = $noDefendDice ? 0 : Dice::roll();
 
         $attackMod = CardStats::getOva($this->state, $attacker, $defendCard) 
@@ -1663,6 +1671,26 @@ final class StrikeResolver
         $actions = [['label' => 'Закрыть', 'cmd' => 'close_prophecy', 'class' => 'skip']];
 
         $pp->commit($attacker->owner, $attacker, $peeked, 'strike', $title, $actions);
+    }
+
+    private function consumeRagnarUnanswerStrike(CardInstance $attacker): bool
+    {
+        $strike = $this->state->battle['strike'] ?? [];
+        if (!empty($strike['friendly_fire'])) return false;
+        if (!empty($strike['forced_strike_adjacent'])) return false;
+
+        foreach ($this->state->cards as $card) {
+            if ($card->owner !== $attacker->owner) continue;
+            if ($card->zone !== CardInstance::ZONE_GRAVEYARD) continue;
+            if (empty($card->flags['valhalla_active'])) continue;
+            if (empty($card->prop['ragnar_first_strike_unanswer'])) continue;
+            if (!empty($card->flags['ragnar_unanswer_used_this_turn'])) continue;
+
+            $card->flags['ragnar_unanswer_used_this_turn'] = true;
+            return true;
+        }
+
+        return false;
     }
 
     public function recalcTable(): void
