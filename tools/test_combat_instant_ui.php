@@ -146,6 +146,8 @@ $htmlPlayer = $screen->prepare($state, GameState::PLAYER_PLAYER, 'player', null,
 $htmlHost = $screen->prepare($state, GameState::PLAYER_HOST, 'host', null, $cardsInfo)['data']['info_panel_html'];
 
 ciuAssert(str_contains($htmlPlayer, 'Объявленные боевые инстанты:'), 'Battle instant window should show declared stack title.');
+ciuAssert(str_contains($htmlPlayer, 'instant-summary__list--plain'), 'Declared battle instant stack should use plain battle-style list without numbering.');
+ciuAssert(!str_contains($htmlPlayer, '<ol class="instant-summary__list instant-summary__list--plain">'), 'Declared battle instant stack should not render as an ordered list.');
 ciuAssert(str_contains($htmlPlayer, 'Ты') && str_contains($htmlPlayer, 'Соперник'), 'Player viewer should see self/opponent labels.');
 ciuAssert(str_contains($htmlHost, 'Ты') && str_contains($htmlHost, 'Соперник'), 'Host viewer should see self/opponent labels.');
 ciuAssert(

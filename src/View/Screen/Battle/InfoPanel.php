@@ -1954,8 +1954,8 @@ final class InfoPanel
             if (!$showEmpty) {
                 return '';
             }
-            return '<div class="instant-stack instant-stack--empty">'
-                . '<div class="instant-stack__title">Объявленные боевые инстанты:</div>'
+            return '<div class="instant-summary instant-stack--empty">'
+                . '<div class="instant-summary__title">Объявленные боевые инстанты:</div>'
                 . '<p class="instant-stack__empty">Пока нет объявленных инстантов.</p>'
                 . '</div>';
         }
@@ -1971,19 +1971,21 @@ final class InfoPanel
             return [$aSeq, (int) $a['_display_index']] <=> [$bSeq, (int) $b['_display_index']];
         });
 
-        $html = '<div class="instant-stack">'
-            . '<div class="instant-stack__title">Объявленные боевые инстанты:</div>'
-            . '<ul class="instant-stack__list">';
+        $html = '<div class="instant-summary">'
+            . '<div class="instant-summary__title">Объявленные боевые инстанты:</div>'
+            . '<ul class="instant-summary__list instant-summary__list--plain">';
 
         foreach ($stack as $item) {
             $srcCard = $this->state->getCard((int) ($item['card_id'] ?? 0));
             $srcName = $srcCard ? ($this->cardsInfo[$srcCard->ukid]['name'] ?? $srcCard->ukid) : '?';
             $target = $this->state->getCard((int) ($item['target_id'] ?? 0));
             $targetName = $target ? ($this->cardsInfo[$target->ukid]['name'] ?? $target->ukid) : '';
-            $whoLabel = (($item['player'] ?? '') === $this->playerKey) ? 'Ты' : 'Соперник';
+            $isMine = (($item['player'] ?? '') === $this->playerKey);
+            $whoLabel = $isMine ? 'Ты' : 'Соперник';
+            $whoClass = $isMine ? 'instant-summary__who--mine' : 'instant-summary__who--opp';
 
-            $html .= '<li class="instant-stack__item">'
-                . '<span class="instant-stack__who">' . htmlspecialchars($whoLabel, ENT_QUOTES) . '</span> '
+            $html .= '<li class="instant-summary__item">'
+                . '<span class="instant-summary__who ' . $whoClass . '">' . htmlspecialchars($whoLabel, ENT_QUOTES) . '</span> '
                 . '<b>' . htmlspecialchars((string) $srcName, ENT_QUOTES) . '</b> — '
                 . htmlspecialchars((string) ($item['label'] ?? 'Инстант'), ENT_QUOTES);
             if ($targetName !== '') {

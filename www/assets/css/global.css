@@ -1491,6 +1491,13 @@ body { padding-bottom: 46vh; }
     text-align: center;
     font-weight: bold;
 }
+.instant-summary__list--plain .instant-summary__item {
+    padding-left: 0;
+}
+.instant-summary__list--plain .instant-summary__item::before {
+    content: none;
+    display: none;
+}
 .instant-summary__item--skip::before {
     background: #999;
 }
