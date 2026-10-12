@@ -20,21 +20,6 @@ final class DamageResolver
     ): void {
         if ($val <= 0) return;
 
-        // Единая проверка защиты — здесь и только здесь
-        $attackTypes = ['strike','tap','uchr','shot','throw','discharge','magic','cast','impact'];
-        if (in_array($actionType, $attackTypes, true)
-            && $attacker
-            && CardStats::hasDefense($state, $target, $actionType, $attacker)) {
-            // защита сработала — фиксируем для UI, урон не идёт
-            if (!empty($state->battle['strike'])) {
-                $state->battle['strike']['defended'][] = [
-                    'target_id' => $target->instanceId,
-                    'type'      => $actionType,
-                ];
-            }
-            return;
-        }
-        
         if ($actionType === 'answer' && !empty($target->prop['block_strike_answer'])) {
             if (!empty($this->state->battle['strike'])) {
                 $this->state->battle['strike']['answer_blocked'][] = [

@@ -1311,13 +1311,6 @@ final class ActionResolver
             }
         }
 
-        // Защита цели
-        $defended = false;
-        if (in_array($type, ['shot', 'throw', 'discharge', 'magic', 'cast'], true)) {
-            $defended = CardStats::hasDefense($this->state, $target, $type, $attacker);
-            if ($defended) $val = 0;
-        }
-
         // Аргвальд: получает монету при разряде по нему
         if ($type === 'discharge' && !empty($target->prop['on_discharge_self'])) {
             $bonus = (int) ($target->prop['on_discharge_self']['coins'] ?? 1);
@@ -1339,7 +1332,7 @@ final class ActionResolver
             'result'      => ['attack' => $level, 'defend' => '', 'winner' => 'attack'],
             'final'       => ['attack' => $level, 'defend' => '', 'decreased' => false],
             'damage'      => $val,
-            'defended'    => $defended,
+            'defended'    => false,
             'confirmed'   => [],
         ];
 
@@ -4026,13 +4019,10 @@ final class ActionResolver
 
         $x = (int) $pending['x'];
 
-        $defended = CardStats::hasDefense($this->state, $target, 'cast', $attacker);
-
         $hpBefore = $target->hp;
-        if (!$defended) {
-            $this->engine->applyDamage($this->state, $target, $x, 'cast', $attacker);
-        }
+        $this->engine->applyDamage($this->state, $target, $x, 'cast', $attacker);
         $dealt = max(0, $hpBefore - $target->hp);
+        $defended = false;
 
         $attacker->closed = true;
         unset($this->state->battle['pending_blood_storm']);
@@ -4251,7 +4241,6 @@ final class ActionResolver
         $attacker->closed = true;
 
         // Урон врагу — cast (защита zom)
-        $defended = CardStats::hasDefense($this->state, $enemy, 'cast', $attacker);
         $hpBefore = $enemy->hp;
         if (!$defended) {
             $this->engine->applyDamage($this->state, $enemy, $x, 'cast', $attacker);
@@ -4281,7 +4270,7 @@ final class ActionResolver
                 'ally_id'   => $ally->instanceId,
                 'damage'    => $dealt,
                 'heal'      => $healed,
-                'defended'  => $defended,
+                'defended'  => false,
             ],
             'confirmed'   => [],
         ];

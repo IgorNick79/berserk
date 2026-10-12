@@ -651,7 +651,6 @@ final class BattleScreen
                 'damage_ranged'   => 'Пламя бездны',
                 'teleport_target' => 'Дверь измерений',
                 'blood_storm' => 'Буря крови',
-                'attack_series' => 'Серия атак',
             ];
 
             foreach ($c->prop['actions'] ?? [] as $a) {
