@@ -553,6 +553,8 @@ final class CardStats
         CardInstance $target,
         string $actionType
     ): int {
+        if (self::isDefenseIgnored($attacker, 'damage_reduction')) return 0;
+
         $total = 0;
 
         // Из prop

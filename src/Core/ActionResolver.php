@@ -105,6 +105,10 @@ final class ActionResolver
             return $this->startRowSpell($attacker, $action, $cardId, $playerKey);
         }
 
+        if ($type === 'attack_series') {
+            return $this->startAttackSeries($playerKey, $cmd);
+        }
+
         if ($type === 'blood_storm') {
             return $this->startBloodStorm($attacker, $action, $cardId, $playerKey);
         }
@@ -2181,6 +2185,7 @@ final class ActionResolver
             ['pending_teleport_target',         'owner'],
             ['pending_blood_storm',             'owner'],
             ['pending_heal_instead_wound',      'owner'],
+            ['pending_attack_series',           'owner'],
         ];
         foreach ($simple as [$key, $field]) {
             $p = $state->battle[$key] ?? null;
@@ -4979,6 +4984,154 @@ final class ActionResolver
             $ids[] = $c->instanceId;
         }
         return $ids;
+    }
+
+    public function startAttackSeries(string $playerKey, Command $cmd): Result
+    {
+        if ($this->state->battle['active'] !== $playerKey) {
+            return Result::error('Сейчас не ваш ход');
+        }
+        if (!empty($this->state->battle['strike'])) {
+            return Result::error('Идёт сражение');
+        }
+
+        $cardId = (int) $cmd->get('card_id', 0);
+        $card = $this->state->getCard($cardId);
+        if (!$card
+            || $card->owner !== $playerKey
+            || $card->zone !== CardInstance::ZONE_FIELD) {
+            return Result::error('Карта не на поле');
+        }
+        if (CardStats::isDisabled($card)) {
+            $reason = CardStats::disabledReason($card);
+            return Result::error($reason !== '' ? $reason : 'Карта не может действовать');
+        }
+        if (empty($card->prop['attack_series'])) {
+            return Result::error('Карта не умеет серию атак');
+        }
+
+        $candidates = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->owner === $playerKey) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $dr = abs($c->row - $card->row);
+            $dc = abs($c->col - $card->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            $candidates[] = $c->instanceId;
+        }
+
+        if (empty($candidates)) {
+            return Result::error('Нет соседей-противников');
+        }
+
+        $this->state->battle['pending_attack_series'] = [
+            'owner'      => $playerKey,
+            'source_id'  => $cardId,
+            'candidates' => $candidates,
+            'chosen'     => [],
+            'active'     => false,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['attack_series_started']);
+    }
+
+    public function chooseAttackSeries(string $playerKey, Command $cmd): Result
+    {
+        $series = $this->state->battle['pending_attack_series'] ?? null;
+        if (!$series) return Result::error('Нет ожидающего выбора');
+        if (($series['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+        if (!empty($series['active'])) return Result::error('Серия уже началась');
+
+        $targetId = (int) $cmd->get('target_id', 0);
+
+        switch ($cmd->type) {
+            case 'attack_series_add':
+                if (!in_array($targetId, $series['candidates'], true)) {
+                    return Result::error('Неверная цель');
+                }
+                if (in_array($targetId, $series['chosen'], true)) {
+                    return Result::error('Уже в очереди');
+                }
+                $this->state->battle['pending_attack_series']['chosen'][] = $targetId;
+                break;
+
+            case 'attack_series_remove':
+                $this->state->battle['pending_attack_series']['chosen'] = array_values(
+                    array_filter($series['chosen'], fn($id) => $id !== $targetId)
+                );
+                break;
+
+            case 'attack_series_reset':
+                $this->state->battle['pending_attack_series']['chosen'] = [];
+                break;
+
+            case 'attack_series_start':
+                return $this->attackSeriesStart($playerKey);
+
+            default:
+                return Result::error('Неизвестная команда');
+        }
+
+        $this->state->bumpVersion();
+        return Result::ok(['attack_series_updated']);
+    }
+
+    private function attackSeriesStart(string $playerKey): Result
+    {
+        $series = &$this->state->battle['pending_attack_series'];
+        if (empty($series['chosen'])) {
+            return Result::error('Выберите хотя бы одну цель');
+        }
+
+        $hydra = $this->state->getCard((int) $series['source_id']);
+        if (!$hydra) {
+            unset($this->state->battle['pending_attack_series']);
+            return Result::error('Источник недоступен');
+        }
+
+        // Ищем первую валидную цель
+        $first = null;
+        while (!empty($series['chosen'])) {
+            $candidate = $this->state->getCard((int) $series['chosen'][0]);
+            $valid = $candidate
+                && !$candidate->dying
+                && $candidate->hp > 0
+                && $candidate->zone === CardInstance::ZONE_FIELD
+                && $candidate->owner !== $hydra->owner;
+
+            if ($valid) {
+                $dr = abs($candidate->row - $hydra->row);
+                $dc = abs($candidate->col - $hydra->col);
+                $valid = ($dr <= 1 && $dc <= 1 && ($dr + $dc) > 0);
+            }
+
+            if ($valid) {
+                $first = $candidate;
+                break;
+            }
+
+            array_shift($series['chosen']);
+        }
+
+        if ($first === null) {
+            unset($this->state->battle['pending_attack_series']);
+            return Result::error('Ни одна цель не является соседом');
+        }
+
+        $series['active'] = true;
+        $hydra->flags['attack_series_active'] = true;
+
+        $strikeCmd = new Command('strike', [
+            'card_id'   => $hydra->instanceId,
+            'target_id' => $first->instanceId,
+        ]);
+
+        return (new \Berserk\Core\StrikeResolver($this->state, $this->engine))
+            ->declare($playerKey, $strikeCmd);
     }
 
     public function chooseWildHealerHeal(string $playerKey, Command $cmd): Result
