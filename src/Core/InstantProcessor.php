@@ -1586,6 +1586,7 @@ final class InstantProcessor
                 'label' => $inst['label'],
                 'target' => $payload['target'] ?? 'self',
                 'effect' => (array) ($payload['effect'] ?? []),
+                'action_type' => (string) ($payload['action_type'] ?? ''),
                 'cost' => (int) ($payload['coins'] ?? 0),
                 'uses_per_turn' => (int) ($payload['uses_per_turn'] ?? 1),
                 'close_source' => $this->instantRequiresTap($payload),
@@ -1670,6 +1671,7 @@ final class InstantProcessor
             'sequence' => $sequence,
             'cost' => $cost,
             'close_source' => !empty($inst['close_source']),
+            'action_type' => (string) ($inst['action_type'] ?? ''),
         ];
 
         $card->flags['in_stack'] = true;
@@ -1703,6 +1705,8 @@ final class InstantProcessor
                 $reason = 'цель не найдена';
             } elseif (empty($item['effect'])) {
                 $reason = 'нет эффекта';
+            } elseif ($this->isTurnInstantDefended($item, $source, $target)) {
+                $reason = 'цель защищена';
             } else {
                 $this->engine->applyInstantEffect(
                     $this->state,
@@ -1738,6 +1742,7 @@ final class InstantProcessor
                 'card_id' => $source ? $source->instanceId : (int) ($item['card_id'] ?? 0),
                 'target_id' => $target ? $target->instanceId : (int) ($item['target_id'] ?? 0),
                 'effect_type' => (string) (($item['effect']['type'] ?? '') ?: ''),
+                'action_type' => (string) ($item['action_type'] ?? ''),
                 'result' => $effectResult,
             ];
         }
@@ -1755,6 +1760,16 @@ final class InstantProcessor
             'phase' => $phase,
         ];
         $this->state->battle['instant_result'] = ['summary' => $summary];
+    }
+
+    private function isTurnInstantDefended(array $item, CardInstance $source, CardInstance $target): bool
+    {
+        $actionType = (string) ($item['action_type'] ?? '');
+        if ($actionType === '') return false;
+        if (!in_array($actionType, ['strike', 'uchr', 'shot', 'throw', 'discharge', 'magic', 'cast', 'tap'], true)) return false;
+        if ($target->owner === $source->owner) return false;
+
+        return CardStats::hasDefense($this->state, $target, $actionType, $source);
     }
 
     public function ackTurnInstantResult(string $playerKey): Result
