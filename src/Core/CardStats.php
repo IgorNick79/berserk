@@ -214,7 +214,7 @@ final class CardStats
         $map = [
             'throw'     => ['zot', 'zoda'],
             'shot'      => ['zov', 'zoda'],
-            'discharge' => ['zoda', 'zoz', 'zom', 'zor'],
+            'discharge' => ['zoda', 'zom', 'zor'],
             'magic'     => ['zom'],
             'cast'      => ['zoz', 'zom'],
             'impact'    => ['stamina'],
