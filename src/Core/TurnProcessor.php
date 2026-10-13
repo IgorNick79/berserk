@@ -72,7 +72,7 @@ final class TurnProcessor
         if ($this->collectPreBattleIntrigue($activeKey)) {
             return;
         }
-        
+
         // Проверка выбора в начале первого хода
         $needsChoice = $this->checkCardChoice($activeKey);
 
@@ -573,7 +573,7 @@ final class TurnProcessor
                 if ($count <= 0) continue;
 
                 $candidates = $this->intrigueCandidates($card, (string) ($effect['type'] ?? ''));
-                if (empty($candidates)) continue;
+                if (count($candidates) < $count) continue;
 
                 $queue[] = [
                     'owner'      => $card->owner,
