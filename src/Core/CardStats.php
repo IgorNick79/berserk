@@ -217,6 +217,7 @@ final class CardStats
             'discharge' => ['zoda', 'zoz', 'zom', 'zor'],
             'magic'     => ['zom'],
             'cast'      => ['zoz', 'zom'],
+            'impact'    => ['stamina'],
         ];
 
         $defs = array_merge($map[$actionType] ?? [], $universal);
@@ -556,6 +557,8 @@ final class CardStats
         CardInstance $target,
         string $actionType
     ): int {
+        if (self::isDefenseIgnored($attacker, 'damage_reduction')) return 0;
+
         $total = 0;
 
         // Из prop

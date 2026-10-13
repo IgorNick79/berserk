@@ -155,18 +155,27 @@ final class StrikeResolver
         if (CardStats::hasCannotAttack($attacker)) {
             return Result::error('Карта не может атаковать до конца хода');
         }
+        $isSeries = !empty($attacker->prop['attack_series']);
+        $seriesActive = !empty($attacker->flags['attack_series_active']);
 
-        $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
-
-        // Берсерк: движение после атаки снимает вторую атаку
-        if (!empty($attacker->prop['strike_consecutive'])
-            && !empty($attacker->flags['strike_chain_broken'])) {
-            $attackLimit = 1;
+        if ($isSeries && !$seriesActive) {
+            $attacker->flags['attack_series_active'] = true;
+            $attacker->flags['attack_series_hit_ids'] = [];
+            $seriesActive = true;
         }
 
-        $attacksUsed = (int) ($attacker->flags['attacks_used_this_turn'] ?? 0);
-        if ($attacksUsed >= $attackLimit) {
-            return Result::error('Уже атаковал в этот ход');
+        if (!$seriesActive) {
+            $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
+
+            if (!empty($attacker->prop['strike_consecutive'])
+                && !empty($attacker->flags['strike_chain_broken'])) {
+                $attackLimit = 1;
+            }
+
+            $attacksUsed = (int) ($attacker->flags['attacks_used_this_turn'] ?? 0);
+            if ($attacksUsed >= $attackLimit) {
+                return Result::error('Уже атаковал в этот ход');
+            }
         }
 
         // Берсерк: второй удар только по другой цели
@@ -992,20 +1001,31 @@ final class StrikeResolver
             $this->engine->moveToFlyingZone($this->state, $defendCard);
         }
 
-        $attacker->flags['attacks_used_this_turn'] = 
-            ((int) ($attacker->flags['attacks_used_this_turn'] ?? 0)) + 1;
+        if (empty($attacker->flags['attack_series_active'])) {
+            $attacker->flags['attacks_used_this_turn'] = 
+                ((int) ($attacker->flags['attacks_used_this_turn'] ?? 0)) + 1;
 
-        if (!empty($attacker->prop['strike_targets_unique']) 
-            && empty($attacker->flags['first_attack_target_id'])) {
-            $attacker->flags['first_attack_target_id'] = (int) ($strike['target_id'] ?? 0);
+            if (!empty($attacker->prop['strike_targets_unique']) 
+                && empty($attacker->flags['first_attack_target_id'])) {
+                $attacker->flags['first_attack_target_id'] = (int) ($strike['target_id'] ?? 0);
+            }
+            
+            $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
+            $noClose     = !empty($attacker->prop['no_close_after_attack'])
+                || !empty($attacker->flags['no_close_this_turn']);
+
+            if ($attacker->flags['attacks_used_this_turn'] >= $attackLimit && !$noClose) {
+                $attacker->closed = true;
+            }
         }
-        
-        $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
-        $noClose     = !empty($attacker->prop['no_close_after_attack'])
-            || !empty($attacker->flags['no_close_this_turn']);
 
-        if ($attacker->flags['attacks_used_this_turn'] >= $attackLimit && !$noClose) {
-            $attacker->closed = true;
+        if (!empty($attacker->flags['attack_series_active'])) {
+            $hitIds = (array) ($attacker->flags['attack_series_hit_ids'] ?? []);
+            $thisTarget = (int) ($strike['target_id'] ?? 0);
+            if ($thisTarget > 0 && !in_array($thisTarget, $hitIds, true)) {
+                $hitIds[] = $thisTarget;
+            }
+            $attacker->flags['attack_series_hit_ids'] = $hitIds;
         }
 
         $redirectUsed = !empty($strike['redirect_used']);
@@ -1020,7 +1040,6 @@ final class StrikeResolver
             $attacker->modifiers,
             fn($m) => ($m['source'] ?? '') !== 'prophecy_charge'
         ));
-
 
         $this->engine->flushDeadeatQueue($this->state);
         $primaryDamage = (int) ($this->state->battle['strike']['damage_total'] ?? 0);
@@ -1408,7 +1427,68 @@ final class StrikeResolver
             return Result::ok(['after_strike_execute']);
         }
 
+        if ($this->openAttackSeriesChoice($strike)) {
+            $this->state->bumpVersion();
+            return Result::ok(['attack_series_choice']);
+        }
+
         return null;
+    }
+
+    private function openAttackSeriesChoice(array $strike): bool
+    {
+        $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+        if (!$attacker) return false;
+        if (empty($attacker->flags['attack_series_active'])) return false;
+
+        // Гидра погибла — завершаем серию
+        if ($attacker->dying
+            || $attacker->hp <= 0
+            || ($attacker->zone !== CardInstance::ZONE_FIELD
+                && $attacker->zone !== CardInstance::ZONE_FLYING)) {
+            $this->finishAttackSeries($attacker);
+            return false;
+        }
+
+        // Собираем валидных соседей-врагов, которых ещё не били
+        $candidates = [];
+        $hitIds = (array) ($attacker->flags['attack_series_hit_ids'] ?? []);
+
+        foreach ($this->state->cards as $c) {
+            if ($c->owner === $attacker->owner) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            if (in_array($c->instanceId, $hitIds, true)) continue;
+
+            $dr = abs($c->row - $attacker->row);
+            $dc = abs($c->col - $attacker->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            $candidates[] = $c->instanceId;
+        }
+
+        // Нет соседей — завершаем серию
+        if (empty($candidates)) {
+            $this->finishAttackSeries($attacker);
+            return false;
+        }
+
+        $this->state->battle['pending_attack_series_choice'] = [
+            'owner'      => $attacker->owner,
+            'source_id'  => $attacker->instanceId,
+            'candidates' => $candidates,
+        ];
+
+        return true;
+    }
+
+    private function finishAttackSeries(CardInstance $attacker): void
+    {
+        unset($attacker->flags['attack_series_active']);
+        unset($attacker->flags['attack_series_hit_ids']);
+        $attacker->closed = true;
+        $attacker->flags['attacks_used_this_turn'] = 1;
+        unset($this->state->battle['pending_attack_series_choice']);
     }
 
     public function chooseAfterStrikeExecute(string $playerKey, Command $cmd): Result
