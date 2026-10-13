@@ -4071,6 +4071,55 @@ final class ActionResolver
         $turn->continueStartTurn($activeKey);
     }
 
+    public function chooseSeggerShield(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_segger_shield'] ?? null;
+        if (!$pending) return Result::error('Нет ожидающего выбора');
+        if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+
+        $value = (int) $cmd->get('value', 0);
+        if ($value < 1 || $value > (int) $pending['max_value']) {
+            return Result::error('Неверное число');
+        }
+
+        $source = $this->state->getCard((int) $pending['source_id']);
+        if (!$source) {
+            unset($this->state->battle['pending_segger_shield']);
+            return Result::error('Источник не найден');
+        }
+
+        $types = (array) ($pending['types'] ?? []);
+
+        foreach ($pending['candidates'] as $tid) {
+            $target = $this->state->getCard((int) $tid);
+            if (!$target) continue;
+            if ($target->dying || $target->hp <= 0) continue;
+
+            $target->modifiers[] = [
+                'stat'   => 'damage_reduction',
+                'value'  => $value,
+                'types'  => $types,
+                'expire' => 1,
+                'timing' => 'not_source_turn',
+                'source' => $playerKey,
+            ];
+        }
+
+        unset($this->state->battle['pending_segger_shield']);
+
+        if (!empty($this->state->battle['strike'])) {
+            $this->state->battle['strike']['segger_shield_result'] = [
+                'value'   => $value,
+                'targets' => $pending['candidates'],
+            ];
+            $this->state->battle['strike']['state']     = 'results';
+            $this->state->battle['strike']['confirmed'] = [];
+        }
+
+        $this->state->bumpVersion();
+        return Result::ok(['segger_shield:' . $value]);
+    }
+
     public function chooseBloodStormTarget(string $playerKey, Command $cmd): Result
     {
         $pending = $this->state->battle['pending_blood_storm'] ?? null;

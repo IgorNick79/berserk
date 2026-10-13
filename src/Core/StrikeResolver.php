@@ -1372,6 +1372,13 @@ final class StrikeResolver
             }
         }
 
+        if (!empty($strike['strike_hit']) && empty($strike['segger_shield_result'])) {
+            if ($this->openSeggerShieldChoice($strike)) {
+                $this->state->bumpVersion();
+                return Result::ok(['segger_shield_pending']);
+            }
+        }
+
         // Close or damage — только если ещё не сработал
         if (!empty($strike['strike_hit']) && empty($strike['close_or_damage_result'])) {
             if ($this->openCloseOrDamageChoice()) {
@@ -2000,5 +2007,51 @@ final class StrikeResolver
 
         $this->state->bumpVersion();
         return Result::ok(['ally_modifier:' . $targetId]);
+    }
+
+    private function openSeggerShieldChoice(array $strike): bool
+    {
+        $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+        if (!$attacker) return false;
+        if (empty($attacker->prop['on_strike_ally_shield'])) return false;
+
+        $level = (string) ($strike['final']['attack'] ?? '');
+        $x = match ($level) {
+            'weak'   => (int) $attacker->strikeWeak,
+            'medium' => (int) $attacker->strikeMedium,
+            'strong' => (int) $attacker->strikeStrong,
+            default  => 0,
+        };
+        if ($x <= 0) return false;
+
+        if ($attacker->zone !== CardInstance::ZONE_FIELD
+            || $attacker->row === null
+            || $attacker->col === null) {
+            return false;
+        }
+
+        $candidates = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->owner !== $attacker->owner) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            if ($c->row !== $attacker->row) continue;
+            if (abs($c->col - $attacker->col) !== 1) continue;
+            $candidates[] = $c->instanceId;
+        }
+        if (empty($candidates)) return false;
+
+        $this->state->battle['pending_segger_shield'] = [
+            'owner'      => $attacker->owner,
+            'source_id'  => $attacker->instanceId,
+            'max_value'  => $x,
+            'candidates' => $candidates,
+            'types'      => (array) ($attacker->prop['on_strike_ally_shield']['types'] ?? []),
+        ];
+
+        $this->state->battle['strike']['state'] = 'waiting_segger_shield';
+        $this->state->battle['strike']['confirmed'] = [];
+
+        return true;
     }
 }
