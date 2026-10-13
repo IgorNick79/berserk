@@ -39,11 +39,11 @@ final class IntrigueStartChoice implements ChoiceHandlerInterface
             );
         }
 
-        // Toggle только для poison
-        $side = 'all';
+        /// Toggle только для poison. Дефолт — чужие, кнопка переключает на «Все».
+        $side = 'enemy';
         if ($effectType === 'poison') {
-            $side = (string) ($_GET['in_side'] ?? 'all');
-            if (!in_array($side, ['all', 'enemy'], true)) $side = 'all';
+            $side = (string) ($_GET['in_side'] ?? 'enemy');
+            if (!in_array($side, ['all', 'enemy'], true)) $side = 'enemy';
         }
 
         $items = [];
