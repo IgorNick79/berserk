@@ -604,12 +604,11 @@ final class CardStats
             if (($m['stat'] ?? '') !== 'damage_reduction') continue;
             $types = $m['types'] ?? null;
             if ($types !== null && !in_array($actionType, $types, true)) continue;
+            if (!empty($r['levels'])) {
+                if ($level === null) continue;
+                if (!in_array($level, (array) $r['levels'], true)) continue;
+            }
             $total += (int) ($m['value'] ?? 0);
-        }
-
-        if (!empty($r['levels'])) {
-            if ($level === null) continue;
-            if (!in_array($level, (array) $r['levels'], true)) continue;
         }
 
         return $total;
