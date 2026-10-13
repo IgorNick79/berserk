@@ -68,6 +68,11 @@ final class TurnProcessor
         // Стартовые эффекты
         $this->applyStartEffects();
 
+        // Интрига Аристократки — выбор до начала боя
+        if ($this->collectPreBattleIntrigue($activeKey)) {
+            return;
+        }
+        
         // Проверка выбора в начале первого хода
         $needsChoice = $this->checkCardChoice($activeKey);
 
@@ -546,6 +551,73 @@ final class TurnProcessor
     }
 
     // ─── Выбор в начале хода ────────────────────────────────
+
+    private function collectPreBattleIntrigue(string $activeKey): bool
+    {
+        $queue = [];
+
+        foreach ($this->state->cards as $card) {
+            $config = $card->prop['start_pre_battle'] ?? null;
+            if (!is_array($config) || empty($config)) continue;
+            if ($card->zone !== CardInstance::ZONE_FIELD
+                && $card->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($card->dying || $card->hp <= 0) continue;
+
+            $ownerSide = (int) ($this->state->getPlayer($card->owner)->side ?? 0);
+
+            foreach ($config as $variant) {
+                if ((int) ($variant['side'] ?? 0) !== $ownerSide) continue;
+
+                $effect = (array) ($variant['effect'] ?? []);
+                $count  = (int) ($variant['count'] ?? 2);
+                if ($count <= 0) continue;
+
+                $candidates = $this->intrigueCandidates($card, (string) ($effect['type'] ?? ''));
+                if (empty($candidates)) continue;
+
+                $queue[] = [
+                    'owner'      => $card->owner,
+                    'source_id'  => $card->instanceId,
+                    'source_ukid'=> $card->ukid,
+                    'effect'     => $effect,
+                    'count'      => $count,
+                    'candidates' => $candidates,
+                ];
+                break;
+            }
+        }
+
+        // Сначала владелец, чья сторона = 1 (ходит первым)
+        usort($queue, function ($a, $b) {
+            $sa = (int) ($this->state->getPlayer($a['owner'])->side ?? 0);
+            $sb = (int) ($this->state->getPlayer($b['owner'])->side ?? 0);
+            return $sa <=> $sb;
+        });
+
+        if (empty($queue)) return false;
+
+        $this->state->battle['pending_intrigue_start'] = $queue;
+        return true;
+    }
+
+    private function intrigueCandidates(CardInstance $source, string $effectType): array
+    {
+        $ids = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            if ($effectType === 'close') {
+                // Только враги владельца Аристократки
+                if ($c->owner === $source->owner) continue;
+            }
+            // poison — любые существа, включая свои
+
+            $ids[] = $c->instanceId;
+        }
+        return $ids;
+    }
 
     public function checkCardChoice(string $activeKey): bool
     {
