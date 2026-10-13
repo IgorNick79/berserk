@@ -385,6 +385,37 @@ tisAssert(empty($source->flags['in_stack']), 'Rejected moved target must not mar
 tisAssert($ip->chooseTurnTarget(GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 15]))->success, 'Legal unmoved target should remain selectable.');
 tisAssert(count($state->battle['turn_instant_stack']['stack'] ?? []) === 1, 'Legal target should add one stack entry.');
 
+// action_type on turn instants is used for target defenses.
+$guardian = tisCard([
+    'instanceId' => 17,
+    'owner' => GameState::PLAYER_HOST,
+    'prop' => ['instants' => [[
+        'key' => 'okovy',
+        'name' => 'Оковы льда',
+        'trigger' => 'turn',
+        'target' => 'enemy',
+        'action_type' => 'cast',
+        'effect' => ['type' => 'close_target', 'condition' => 'target_not_moved'],
+    ]]],
+]);
+$hydra = tisCard([
+    'instanceId' => 18,
+    'owner' => GameState::PLAYER_PLAYER,
+    'row' => 4,
+    'closed' => false,
+    'prop' => ['zoz' => true],
+]);
+$state = tisState($guardian, $hydra);
+$ip = new InstantProcessor($state, new Engine());
+$ip->openTurnStackWindow(GameState::PLAYER_HOST, ['type' => 'manual'], 'turn');
+tisAssert($ip->playTurnInstant(GameState::PLAYER_HOST, new Command('play_turn_instant', ['card_id' => 17, 'instant_key' => 'okovy']))->success, 'Cast-class close target instant should open picker.');
+tisAssert($ip->chooseTurnTarget(GameState::PLAYER_HOST, new Command('choose_instant_pick', ['target_id' => 18]))->success, 'ZOZ target can be chosen before stack resolution.');
+tisAssert($ip->passTurnInstant(GameState::PLAYER_HOST)->success, 'Cast-class close target instant should resolve after pass.');
+$summary = $state->battle['instant_result']['summary'] ?? [];
+tisAssert($hydra->closed === false, 'ZOZ should block cast-class close_target turn instant.');
+tisAssert(($summary[0]['applied'] ?? true) === false, 'Defended cast-class close_target should be reported as not applied.');
+tisAssert(($summary[0]['reason'] ?? '') === 'цель защищена', 'Defended cast-class close_target should report target defense.');
+
 // Lord of the Dead style start-phase interrupt: ordinary key "bone", no special handler.
 $lord = tisCard([
     'instanceId' => 20,
