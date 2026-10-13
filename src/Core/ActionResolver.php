@@ -3988,6 +3988,89 @@ final class ActionResolver
         return Result::ok(['blood_storm_started']);
     }
 
+    public function chooseIntrigueStart(string $playerKey, Command $cmd): Result
+    {
+        $queue = $this->state->battle['pending_intrigue_start'] ?? [];
+        if (empty($queue)) {
+            return Result::error('Нет ожидающего выбора');
+        }
+
+        $item = $queue[0];
+        if (($item['owner'] ?? null) !== $playerKey) {
+            return Result::error('Не ваш выбор');
+        }
+
+        $source = $this->state->getCard((int) $item['source_id']);
+        if (!$source) {
+            array_shift($this->state->battle['pending_intrigue_start']);
+            if (empty($this->state->battle['pending_intrigue_start'])) {
+                unset($this->state->battle['pending_intrigue_start']);
+                $this->resumeAfterIntrigue();
+            }
+            return Result::error('Источник не найден');
+        }
+
+        $raw = $cmd->get('target_ids', []);
+        if (!is_array($raw)) $raw = [$raw];
+        $targetIds = array_values(array_unique(array_map('intval', $raw)));
+
+        $count = (int) $item['count'];
+        if (count($targetIds) !== $count) {
+            return Result::error('Нужно выбрать ровно ' . $count
+                . ' цел' . ($count === 1 ? 'ь' : 'и'));
+        }
+
+        foreach ($targetIds as $tid) {
+            if (!in_array($tid, $item['candidates'], true)) {
+                return Result::error('Неверная цель');
+            }
+        }
+
+        $effect     = (array) $item['effect'];
+        $effectType = (string) ($effect['type'] ?? '');
+
+        foreach ($targetIds as $tid) {
+            $target = $this->state->getCard($tid);
+            if (!$target) continue;
+            if ($target->dying || $target->hp <= 0) continue;
+
+            if ($effectType === 'poison') {
+                $value = (int) ($effect['value'] ?? 1);
+                $this->engine->applyPoison($target, $value, $playerKey);
+            } elseif ($effectType === 'close') {
+                $target->closed = true;
+                $target->markers['stun'] = [
+                    'value'  => 1,
+                    'expire' => 1,
+                    'timing' => 'owner_turn',
+                    'source' => $playerKey,
+                ];
+            }
+        }
+
+        array_shift($this->state->battle['pending_intrigue_start']);
+
+        if (empty($this->state->battle['pending_intrigue_start'])) {
+            unset($this->state->battle['pending_intrigue_start']);
+            $this->resumeAfterIntrigue();
+        }
+
+        $this->state->bumpVersion();
+        return Result::ok(['intrigue:' . $effectType . ':' . count($targetIds)]);
+    }
+
+    private function resumeAfterIntrigue(): void
+    {
+        $activeKey = $this->state->battle['active'] ?? null;
+        if ($activeKey === null) return;
+
+        $turn = new TurnProcessor($this->state, $this->engine);
+        if ($turn->checkCardChoice($activeKey)) {
+            return;   // ждём оборотня
+        }
+        $turn->continueStartTurn($activeKey);
+    }
+
     public function chooseBloodStormTarget(string $playerKey, Command $cmd): Result
     {
         $pending = $this->state->battle['pending_blood_storm'] ?? null;

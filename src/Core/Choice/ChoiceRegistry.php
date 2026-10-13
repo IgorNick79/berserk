@@ -46,6 +46,7 @@ final class ChoiceRegistry
                 new MultiDischargeChoice(),
                 new SelfWoundChoice(),
                 new CardChoice(),
+                new IntrigueStartChoice(),
                 new BloodTapChoice(),
                 new HealInsteadWoundChoice(),
                 new AttackSeriesContinueChoice(),
