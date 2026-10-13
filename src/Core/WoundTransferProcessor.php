@@ -26,6 +26,7 @@ final class WoundTransferProcessor
      *   max_transfer:  int (0 = без лимита сверх ран донора),
      *   coins_cost:    int,
      *   on_finish:     'strike_after'|'main_phase',
+     *   action_type:    optional attack type for target defenses, e.g. 'cast',
      * }
      */
     public function start(string $playerKey, CardInstance $source, array $options): Result
@@ -252,9 +253,26 @@ final class WoundTransferProcessor
             return Result::error('Донор не найден');
         }
 
-        // Лечим донора ровно на переданное (фикс утечки HP)
-        $transferred = 0;
+        $actionType = (string) ($pw['options']['action_type'] ?? '');
+        $damageType = $actionType !== '' ? $actionType : 'wound_transfer';
+
+        $appliedTransfers = [];
         foreach ($pw['transfers'] as $t) {
+            $target = $this->state->getCard($t['target_id']);
+            if (!$target) continue;
+
+            if ($actionType !== ''
+                && $target->owner !== $playerKey
+                && CardStats::hasDefense($this->state, $target, $actionType, $source)) {
+                continue;
+            }
+
+            $appliedTransfers[] = $t;
+        }
+
+        // Лечим донора ровно на реально переданное (фикс утечки HP)
+        $transferred = 0;
+        foreach ($appliedTransfers as $t) {
             $transferred += (int) $t['amount'];
         }
         if ($transferred > 0) {
@@ -262,11 +280,11 @@ final class WoundTransferProcessor
             if ($donor->hp > $donor->hpMax) $donor->hp = $donor->hpMax;
         }
 
-        foreach ($pw['transfers'] as $t) {
+        foreach ($appliedTransfers as $t) {
             $target = $this->state->getCard($t['target_id']);
             if (!$target) continue;
 
-            $this->engine->applyDamage($this->state, $target, (int) $t['amount'], 'wound_transfer', $source);
+            $this->engine->applyDamage($this->state, $target, (int) $t['amount'], $damageType, $source);
         }
 
         // Закрываем источник только для отложенных flow (для main_phase уже закрыт в start)

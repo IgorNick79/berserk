@@ -152,6 +152,7 @@ final class ActionResolver
                 'max_transfer'  => (int)    ($action['max_transfer']  ?? 2),
                 'coins_cost'    => (int)    ($action['coins']         ?? 0),
                 'on_finish'     => (string) ($action['on_finish']     ?? 'main_phase'),
+                'action_type'    => (string) ($action['action_type']    ?? ''),
             ];
             if (isset($action['donor_element'])) $options['donor_element'] = (string) $action['donor_element'];
             if (!empty($action['donor_near']))   $options['donor_near']    = true;
