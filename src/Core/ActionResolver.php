@@ -4005,8 +4005,8 @@ final class ActionResolver
             array_shift($this->state->battle['pending_intrigue_start']);
             if (empty($this->state->battle['pending_intrigue_start'])) {
                 unset($this->state->battle['pending_intrigue_start']);
-                $this->resumeAfterIntrigue();
             }
+            $this->resumeAfterIntrigue();
             return Result::error('Источник не найден');
         }
 
@@ -4052,8 +4052,8 @@ final class ActionResolver
 
         if (empty($this->state->battle['pending_intrigue_start'])) {
             unset($this->state->battle['pending_intrigue_start']);
-            $this->resumeAfterIntrigue();
         }
+        $this->resumeAfterIntrigue();
 
         $this->state->bumpVersion();
         return Result::ok(['intrigue:' . $effectType . ':' . count($targetIds)]);
@@ -4064,11 +4064,7 @@ final class ActionResolver
         $activeKey = $this->state->battle['active'] ?? null;
         if ($activeKey === null) return;
 
-        $turn = new TurnProcessor($this->state, $this->engine);
-        if ($turn->checkCardChoice($activeKey)) {
-            return;   // ждём оборотня
-        }
-        $turn->continueStartTurn($activeKey);
+        (new TurnProcessor($this->state, $this->engine))->continuePreBattleEffects();
     }
 
     public function chooseSeggerShield(string $playerKey, Command $cmd): Result

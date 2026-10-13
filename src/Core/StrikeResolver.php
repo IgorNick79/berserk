@@ -808,6 +808,7 @@ final class StrikeResolver
 
         $attackStrike = $table['attack'];
         $defendStrike = $table['defend'];
+        $woundsDealt = 0;
 
         if ($decrease) {
             $attackStrike = $this->decreaseStrike($attackStrike);
@@ -1052,6 +1053,11 @@ final class StrikeResolver
             'attacker_extra_this_strike' => max(0, $attackerDamageThisStrike - $answerDamage),
         ];
         $this->state->battle['strike']['damage_applied'] = true;
+
+        if ($attackStrike === 'strong') {
+            (new DegascaProcessor($this->state, $this->engine))
+                ->openStrongStrikeSequence($attacker, $defendCard, $attackStrike, $woundsDealt);
+        }
     }
 
     private function applyStrongStrikeFollowUpEffects(

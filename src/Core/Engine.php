@@ -27,6 +27,7 @@ final class Engine
     {
         unset($state->battle['instant_result']);
         unset($state->battle['any_death_messages']);
+        unset($state->battle['degasca_messages']);
 
         // Реестр ChoiceHandler — новые команды
         $activeChoice = Choice\ChoiceRegistry::current($state);

@@ -1431,6 +1431,15 @@ final class InfoPanel
                     }
                 }
             }
+            if (!empty($state->battle['degasca_messages'])) {
+                foreach ((array) $state->battle['degasca_messages'] as $message) {
+                    $text = (string) ($message['message'] ?? '');
+                    if ($text === '') continue;
+                    $vampireHtml .= '<div class="vampire">'
+                        . htmlspecialchars($text, ENT_QUOTES)
+                        . '</div>';
+                }
+            }
 
             if (!empty($strike['segger_shield_result'])) {
                 $sr = $strike['segger_shield_result'];
