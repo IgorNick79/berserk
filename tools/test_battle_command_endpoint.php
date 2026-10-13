@@ -9,6 +9,7 @@ use Berserk\Core\Autoloader;
 use Berserk\Core\CardInstance;
 use Berserk\Core\CommandJournalRepository;
 use Berserk\Core\Db;
+use Berserk\Core\GameLog;
 use Berserk\Core\GameRepository;
 
 Autoloader::register();
@@ -21,7 +22,7 @@ function battleCommandAssert(bool $condition, string $message): void
     }
 }
 
-function battleCommandRequest(array $query, array $post = [], string $method = 'POST'): array
+function battleCommandRawRequest(array $query, array $post = [], string $method = 'POST'): array
 {
     $runner = tempnam(sys_get_temp_dir(), 'berserk_battle_command_');
     if ($runner === false) {
@@ -46,7 +47,12 @@ function battleCommandRequest(array $query, array $post = [], string $method = '
 \$_SERVER['REQUEST_METHOD'] = {$methodPayload};
 \$_SERVER['REQUEST_URI'] = '/index.php?' . http_build_query(\$_GET);
 register_shutdown_function(static function (): void {
-    file_put_contents('{$statusPath}', (string) http_response_code());
+    file_put_contents('{$statusPath}', json_encode([
+        'status' => http_response_code() ?: 200,
+        'headers' => function_exists('xdebug_get_headers') ? xdebug_get_headers() : headers_list(),
+        'session_debug' => \$_SESSION['debug'] ?? null,
+        'session_debug_roll' => \$_SESSION['debug_roll'] ?? null,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 });
 require '{$index}';
 PHP);
@@ -70,18 +76,42 @@ PHP);
     fclose($pipes[2]);
     $exitCode = proc_close($process);
     @unlink($runner);
-    $status = is_file($statusFile) ? (int) file_get_contents($statusFile) : 0;
+    $statusPayload = is_file($statusFile) ? json_decode((string) file_get_contents($statusFile), true) : null;
     @unlink($statusFile);
 
-    $decoded = json_decode((string) $stdout, true);
+    return [
+        'stdout' => (string) $stdout,
+        'stderr' => (string) $stderr,
+        'exit_code' => $exitCode,
+        'status' => is_array($statusPayload) ? (int) ($statusPayload['status'] ?? 0) : 0,
+        'headers' => is_array($statusPayload) ? (array) ($statusPayload['headers'] ?? []) : [],
+        'session_debug' => is_array($statusPayload) ? ($statusPayload['session_debug'] ?? null) : null,
+        'session_debug_roll' => is_array($statusPayload) ? ($statusPayload['session_debug_roll'] ?? null) : null,
+    ];
+}
+
+function battleCommandRequest(array $query, array $post = [], string $method = 'POST'): array
+{
+    $raw = battleCommandRawRequest($query, $post, $method);
+    $decoded = json_decode((string) $raw['stdout'], true);
     if (!is_array($decoded)) {
         throw new RuntimeException(
-            "Endpoint did not return JSON. exit={$exitCode}; stdout={$stdout}; stderr={$stderr}"
+            "Endpoint did not return JSON. exit={$raw['exit_code']}; stdout={$raw['stdout']}; stderr={$raw['stderr']}"
         );
     }
-    $decoded['__http_status'] = $status;
+    $decoded['__http_status'] = $raw['status'];
 
     return $decoded;
+}
+
+function battleCommandHeader(array $raw, string $prefix): ?string
+{
+    foreach ($raw['headers'] as $header) {
+        if (stripos((string) $header, $prefix) === 0) {
+            return (string) $header;
+        }
+    }
+    return null;
 }
 
 function battleCommandCreateBattle(GameRepository $repo, array $cardRows): array
@@ -170,6 +200,95 @@ if (count($cardRows) < 2) {
     echo "Skipping battle_command endpoint tests: at least two cards are required\n";
     exit(0);
 }
+
+[$legacyState, $legacyVersion] = battleCommandCreateBattle($repo, $cardRows);
+$legacyJournalBefore = $db->fetchOne(
+    "SELECT COUNT(*) AS cnt FROM battle_command_journal WHERE game_id = " . $legacyState->gameId
+);
+$legacyBlocked = battleCommandRawRequest([
+    'first' => '',
+    'game' => (string) $legacyState->gameId,
+    'cmd' => 'end_turn',
+    'target_id' => '2',
+    'sel' => '1',
+    'mode' => 'strike',
+    'pile' => 'grave',
+], [], 'GET');
+$legacyLocation = battleCommandHeader($legacyBlocked, 'Location:');
+battleCommandAssert($legacyBlocked['status'] === 302, 'Legacy battle GET should redirect');
+if ($legacyLocation !== null) {
+    battleCommandAssert(str_contains($legacyLocation, '?first&game=' . $legacyState->gameId), 'Legacy redirect should keep role and game id');
+    battleCommandAssert(!str_contains($legacyLocation, 'cmd='), 'Legacy redirect must drop cmd');
+    battleCommandAssert(!str_contains($legacyLocation, 'target_id='), 'Legacy redirect must drop command payload');
+}
+
+$afterLegacyBlocked = $repo->findById($legacyState->gameId);
+battleCommandAssert($afterLegacyBlocked !== null, 'Blocked legacy battle should reload');
+battleCommandAssert($afterLegacyBlocked->status === 'battle', 'Blocked legacy GET must keep battle active');
+battleCommandAssert($afterLegacyBlocked->persistenceVersion === $legacyVersion, 'Blocked legacy GET must not advance persistence version');
+battleCommandAssert($afterLegacyBlocked->getCard(1)?->coins === 0, 'Blocked legacy GET must not execute Engine');
+$legacyJournalAfter = $db->fetchOne(
+    "SELECT COUNT(*) AS cnt FROM battle_command_journal WHERE game_id = " . $legacyState->gameId
+);
+battleCommandAssert(
+    (int) ($legacyJournalAfter['cnt'] ?? -1) === (int) ($legacyJournalBefore['cnt'] ?? -2),
+    'Blocked legacy GET must not create journal rows'
+);
+battleCommandAssert(GameLog::read($legacyState->gameId) === [], 'Blocked legacy GET must not append GameLog events');
+
+$legacyResign = battleCommandRawRequest([
+    'first' => '',
+    'game' => (string) $legacyState->gameId,
+    'cmd' => 'resign',
+], [], 'GET');
+battleCommandAssert($legacyResign['status'] === 302, 'Legacy battle resign should redirect');
+$afterLegacyResign = $repo->findById($legacyState->gameId);
+battleCommandAssert($afterLegacyResign !== null, 'Blocked legacy resign should reload');
+battleCommandAssert($afterLegacyResign->status === 'battle', 'Blocked legacy resign must not finish the game');
+battleCommandAssert($afterLegacyResign->winner === null, 'Blocked legacy resign must not set winner');
+battleCommandAssert($afterLegacyResign->persistenceVersion === $legacyVersion, 'Blocked legacy resign must not advance version');
+
+$debugRoll = battleCommandRawRequest([
+    'first' => '',
+    'game' => (string) $legacyState->gameId,
+    'debug_roll' => '6*',
+], [], 'GET');
+battleCommandAssert($debugRoll['status'] === 200, 'debug_roll without cmd should render normally');
+battleCommandAssert($debugRoll['session_debug_roll'] === '6*', 'debug_roll without cmd should update session state');
+
+$debugOn = battleCommandRawRequest([
+    'first' => '',
+    'game' => (string) $legacyState->gameId,
+    'debug' => '1',
+], [], 'GET');
+battleCommandAssert($debugOn['status'] === 200, 'debug without cmd should render normally');
+battleCommandAssert((int) $debugOn['session_debug'] === 1, 'debug=1 without cmd should update session state');
+
+$uiOnly = battleCommandRawRequest([
+    'first' => '',
+    'game' => (string) $legacyState->gameId,
+    'sel' => '1',
+    'mode' => 'strike',
+    'pile' => 'grave',
+], [], 'GET');
+battleCommandAssert($uiOnly['status'] === 200, 'Safe UI params without cmd should render normally');
+$afterUiOnly = $repo->findById($legacyState->gameId);
+battleCommandAssert($afterUiOnly !== null, 'UI-only battle should reload');
+battleCommandAssert($afterUiOnly->persistenceVersion === $legacyVersion, 'Safe UI params without cmd must not mutate battle');
+
+$preBattle = $repo->create(1, 2);
+$preBattleVersion = (int) $preBattle->persistenceVersion;
+$preBattleLegacy = battleCommandRawRequest([
+    'first' => '',
+    'game' => (string) $preBattle->gameId,
+    'cmd' => 'choose_mode',
+    'mode' => 'system',
+], [], 'GET');
+battleCommandAssert($preBattleLegacy['status'] === 302, 'Pre-battle legacy command should keep PRG redirect');
+$afterPreBattle = $repo->findById($preBattle->gameId);
+battleCommandAssert($afterPreBattle !== null, 'Pre-battle game should reload');
+battleCommandAssert($afterPreBattle->persistenceVersion > $preBattleVersion, 'Pre-battle legacy command should still persist');
+battleCommandAssert($afterPreBattle->status !== 'mode', 'Pre-battle legacy command should still execute');
 
 [$state, $version] = battleCommandCreateBattle($repo, $cardRows);
 $baseQuery = [

@@ -288,6 +288,36 @@ function sendUnknownCommandOutcome(string $commandId): never
     );
 }
 
+function redirectToGamePage(string $role, GameState $state, array $source = []): never
+{
+    $roleParam = $role === 'host' ? 'first' : 'second';
+    $redirectUrl = '?' . $roleParam . '&game=' . $state->gameId;
+
+    $mode = requestParamString($source, 'mode', 64);
+    if ($mode !== null && $mode !== '') {
+        $redirectUrl .= '&mode=' . urlencode($mode);
+    }
+
+    $sel = requestParamInt($source, 'sel');
+    if ($sel !== null) {
+        $redirectUrl .= '&sel=' . $sel;
+    }
+
+    $card = requestParamString($source, 'card', 128);
+    if ($card !== null && $card !== '') {
+        $redirectUrl .= '&card=' . urlencode($card);
+    }
+
+    $pile = requestParamString($source, 'pile', 32);
+    if ($pile !== null && $pile !== '') {
+        $redirectUrl .= '&pile=' . urlencode($pile);
+    }
+
+    http_response_code(302);
+    header('Location: ' . $redirectUrl);
+    exit;
+}
+
 function reloadPersistedBattleAjaxState(GameRepository $repo, int $gameId): GameState
 {
     $fresh = $repo->findById($gameId);
@@ -960,6 +990,12 @@ if ($isBattleCommand) {
 // ─── Обработка команды ────────────────────────────────────────
 $message = null;
 $commandType = $_GET['cmd'] ?? '';
+$hasLegacyCommand = array_key_exists('cmd', $_GET)
+    && (is_array($_GET['cmd']) || (string) $_GET['cmd'] !== '');
+
+if ($hasLegacyCommand && $state->status === 'battle') {
+    redirectToGamePage($role, $state, $_GET);
+}
 
 if ($commandType === 'draft_sync') {
     $changed = false;
