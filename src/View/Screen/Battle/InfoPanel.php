@@ -1038,9 +1038,7 @@ final class InfoPanel
                         $parts[] = $tn . ' −' . $t['damage'];
                     }
                     $resultText = $name
-                        . ': кубик ' . $rs['dice']
-                        . ' → ' . BattleHelper::strikeName($rs['level'])
-                        . ' (' . $rs['damage_per_target'] . ' урона): '
+                        . ': ' . $rs['damage_per_target'] . ' урона на цель: '
                         . implode(', ', $parts);
                 } else {
                     $resultText = $name;

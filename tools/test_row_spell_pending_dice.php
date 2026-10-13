@@ -13,6 +13,8 @@ use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\TurnPhaseProcessor;
 use Berserk\Core\Choice\RowSpellPickChoice;
+use Berserk\View\Screen\Battle\InfoPanel;
+use Berserk\View\Template;
 
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
@@ -142,5 +144,14 @@ rowSpellAssert($state->getCard(3)?->hp === 3, 'First target should take saved ro
 rowSpellAssert($state->getCard(4)?->hp === 3, 'Second target should take saved row spell damage');
 rowSpellAssert(($state->battle['strike']['row_spell']['dice'] ?? null) === 6, 'Result panel should use saved dice');
 rowSpellAssert(($state->battle['strike']['row_spell']['damage_per_target'] ?? null) === 2, 'Result panel should use saved damage');
+
+$resultHtml = (new InfoPanel(new Template(__DIR__ . '/../templates')))->render($state, GameState::PLAYER_HOST, 'host', [
+    's1_96' => ['name' => 'Тергала'],
+    'card_2' => ['name' => 'Союзник'],
+    'card_3' => ['name' => 'Враг 1'],
+    'card_4' => ['name' => 'Враг 2'],
+], '?first&game=196');
+rowSpellAssert(str_contains($resultHtml, '2 урона на цель'), 'Row spell result should show applied damage');
+rowSpellAssert(!str_contains($resultHtml, 'кубик 6'), 'Row spell result should not repeat dice after target choice');
 
 echo "Row spell pending dice tests passed.\n";
