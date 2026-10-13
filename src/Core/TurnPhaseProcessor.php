@@ -1181,6 +1181,11 @@ final class TurnPhaseProcessor
             return ['label' => 'Цветущие руны', 'items' => $events];
         }
 
+        $dice = Dice::roll();
+        $level = BattleHelper::diceToLevel($dice);
+        $val = BattleHelper::actionStrikeValue($action, $level);
+        $events[] = ['standalone_text' => "Кубик: {$dice}, урон: {$val} на цель"];
+
         // Открываем pending выбора X целей
         $this->state->battle['pending_row_spell_pick'] = [
             'owner'      => $activeKey,
@@ -1188,6 +1193,9 @@ final class TurnPhaseProcessor
             'x'          => $x,
             'candidates' => $enemies,
             'action'     => $action,
+            'dice'       => $dice,
+            'level'      => $level,
+            'val'        => $val,
         ];
 
         return ['label' => 'Цветущие руны', 'items' => $events];

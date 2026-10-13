@@ -44,6 +44,11 @@ final class RowSpellPickChoice implements ChoiceHandlerInterface
         }
 
         $x = (int) $p['x'];
+        $dice = isset($p['dice']) ? (int) $p['dice'] : 0;
+        $val = isset($p['val']) ? (int) $p['val'] : null;
+        $damageText = ($dice >= 1 && $dice <= 6 && $val !== null)
+            ? ' — кубик: ' . $dice . '. Урон: ' . $val . ' на цель.'
+            : ' — результат кубика не сохранён.';
         $items = [];
         foreach ($p['candidates'] as $tid) {
             $tc = $state->getCard((int) $tid);
@@ -60,7 +65,7 @@ final class RowSpellPickChoice implements ChoiceHandlerInterface
         $roleParam = $role === 'host' ? 'first' : 'second';
 
         return new PanelSpec(
-            title: $srcName . ': выбери ровно ' . $x . ' цел' . ($x === 1 ? 'ь' : 'и'),
+            title: $srcName . $damageText . ' Выбери ровно ' . $x . ' цел' . ($x === 1 ? 'ь' : 'и'),
             form: [
                 'type'   => 'checkbox',
                 'name'   => 'target_ids[]',

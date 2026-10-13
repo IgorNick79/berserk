@@ -29,6 +29,11 @@ final class BattleHelper
         return 'strong';
     }
 
+    public static function actionStrikeValue(array $action, string $level): int
+    {
+        return (int) ($action['strike'][$level] ?? 0);
+    }
+
     public static function strikeName(string $level): string
     {
         return match ($level) {

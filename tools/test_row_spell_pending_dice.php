@@ -1,0 +1,146 @@
+<?php
+// tools/test_row_spell_pending_dice.php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../src/Core/Autoloader.php';
+
+use Berserk\Core\Autoloader;
+use Berserk\Core\CardInstance;
+use Berserk\Core\Command;
+use Berserk\Core\Dice;
+use Berserk\Core\Engine;
+use Berserk\Core\GameState;
+use Berserk\Core\TurnPhaseProcessor;
+use Berserk\Core\Choice\RowSpellPickChoice;
+
+Autoloader::register();
+Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
+
+function rowSpellAssert(bool $condition, string $message): void
+{
+    if (!$condition) {
+        throw new RuntimeException($message);
+    }
+}
+
+function rowSpellApplyDebugRoll(string $value): void
+{
+    $_SESSION['debug_roll'] = $value;
+    unset($_SESSION['debug_roll_state']);
+    Dice::init();
+}
+
+function rowSpellCard(array $o): CardInstance
+{
+    return new CardInstance(
+        instanceId: $o['instanceId'],
+        ukid: $o['ukid'] ?? ('card_' . $o['instanceId']),
+        owner: $o['owner'],
+        zone: $o['zone'] ?? CardInstance::ZONE_FIELD,
+        row: $o['row'],
+        col: $o['col'],
+        hp: $o['hp'] ?? 5,
+        hpMax: $o['hpMax'] ?? ($o['hp'] ?? 5),
+        type: $o['type'] ?? 'creature',
+        move: 1,
+        moveMax: 1,
+        strikeWeak: 1,
+        strikeMedium: 2,
+        strikeStrong: 3,
+        prop: $o['prop'] ?? [],
+        flags: $o['flags'] ?? [],
+    );
+}
+
+$_SESSION = [];
+rowSpellApplyDebugRoll('6,1');
+
+$rowSpellAction = [
+    'key' => 'flower_runes',
+    'name' => 'Цветущие руны',
+    'type' => 'row_spell',
+    'strike' => ['weak' => 1, 'medium' => 2, 'strong' => 2],
+];
+
+$state = new GameState(196, 101, 202);
+$state->status = 'battle';
+$state->battle = [
+    'turn' => 2,
+    'active' => GameState::PLAYER_HOST,
+    'strike' => null,
+];
+$state->addCard(rowSpellCard([
+    'instanceId' => 1,
+    'ukid' => 's1_96',
+    'owner' => GameState::PLAYER_HOST,
+    'row' => 3,
+    'col' => 3,
+    'prop' => ['actions' => [$rowSpellAction]],
+    'flags' => [
+        'row_spell_pending' => [
+            'row' => 3,
+            'action' => $rowSpellAction,
+        ],
+    ],
+]));
+$state->addCard(rowSpellCard([
+    'instanceId' => 2,
+    'owner' => GameState::PLAYER_HOST,
+    'row' => 3,
+    'col' => 4,
+]));
+$state->addCard(rowSpellCard([
+    'instanceId' => 3,
+    'owner' => GameState::PLAYER_PLAYER,
+    'row' => 4,
+    'col' => 3,
+]));
+$state->addCard(rowSpellCard([
+    'instanceId' => 4,
+    'owner' => GameState::PLAYER_PLAYER,
+    'row' => 4,
+    'col' => 4,
+]));
+
+$engine = new Engine();
+(new TurnPhaseProcessor($state, $engine))->beginStartPhase(GameState::PLAYER_HOST);
+
+$pending = $state->battle['pending_row_spell_pick'] ?? null;
+rowSpellAssert(is_array($pending), 'Row spell pending should open during start phase');
+rowSpellAssert(($pending['dice'] ?? null) === 6, 'Row spell should roll dice when pending is created');
+rowSpellAssert(($pending['level'] ?? null) === 'strong', 'Row spell should save dice level in pending');
+rowSpellAssert(($pending['val'] ?? null) === 2, 'Row spell should save damage value in pending');
+rowSpellAssert(Dice::remaining() === [1], 'Row spell pending creation should consume exactly one debug roll');
+
+$choice = new RowSpellPickChoice();
+$specA = $choice->spec($state, GameState::PLAYER_HOST, [
+    's1_96' => ['name' => 'Тергала'],
+    'card_2' => ['name' => 'Союзник'],
+    'card_3' => ['name' => 'Враг 1'],
+    'card_4' => ['name' => 'Враг 2'],
+], '?first&game=196', 'host');
+$specB = $choice->spec($state, GameState::PLAYER_HOST, [
+    's1_96' => ['name' => 'Тергала'],
+    'card_2' => ['name' => 'Союзник'],
+    'card_3' => ['name' => 'Враг 1'],
+    'card_4' => ['name' => 'Враг 2'],
+], '?first&game=196', 'host');
+
+rowSpellAssert($specA !== null && str_contains($specA->title, 'кубик: 6'), 'Row spell choice should show saved dice');
+rowSpellAssert($specB !== null && $specB->title === $specA->title, 'Repeated row spell render should keep the same result');
+rowSpellAssert(Dice::remaining() === [1], 'Repeated row spell render should not consume another roll');
+
+$result = $engine->apply($state, GameState::PLAYER_HOST, new Command('choose_row_spell_targets', [
+    'target_ids' => [3, 4],
+]));
+
+rowSpellAssert($result->success, 'Choosing row spell targets should succeed: ' . ($result->error ?? ''));
+rowSpellAssert(empty($state->battle['pending_row_spell_pick']), 'Row spell pending should be removed after resolution');
+rowSpellAssert(Dice::remaining() === [1], 'Choosing row spell targets should not roll again');
+rowSpellAssert($state->getCard(3)?->hp === 3, 'First target should take saved row spell damage');
+rowSpellAssert($state->getCard(4)?->hp === 3, 'Second target should take saved row spell damage');
+rowSpellAssert(($state->battle['strike']['row_spell']['dice'] ?? null) === 6, 'Result panel should use saved dice');
+rowSpellAssert(($state->battle['strike']['row_spell']['damage_per_target'] ?? null) === 2, 'Result panel should use saved damage');
+
+echo "Row spell pending dice tests passed.\n";

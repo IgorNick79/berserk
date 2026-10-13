@@ -4530,14 +4530,16 @@ final class ActionResolver
         }
 
         $source = $this->state->getCard((int) $p['source_id']);
-        unset($this->state->battle['pending_row_spell_pick']);
 
-        // Один бросок кубика
         $action = $p['action'] ?? [];
+        $dice = isset($p['dice']) ? (int) $p['dice'] : 0;
+        $level = isset($p['level']) ? (string) $p['level'] : '';
+        $val = isset($p['val']) ? (int) $p['val'] : BattleHelper::actionStrikeValue($action, $level);
+        if ($dice < 1 || $dice > 6 || !in_array($level, ['weak', 'medium', 'strong'], true)) {
+            return Result::error('Результат кубика не сохранён');
+        }
 
-        $dice  = Dice::roll();
-        $level = BattleHelper::diceToLevel($dice);
-        $val   = (int) ($action['strike'][$level] ?? 0);
+        unset($this->state->battle['pending_row_spell_pick']);
 
         $results = [];
         foreach ($targetIds as $tid) {
