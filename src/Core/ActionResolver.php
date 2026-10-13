@@ -5357,4 +5357,54 @@ final class ActionResolver
 
         return Result::ok(["heal_instead_wound:{$value}->{$chosenId}"]);
     }
+
+    public function chooseShaksiRoll(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_shaksi_roll'] ?? null;
+        if (!$pending) return Result::error('Нет ожидающего выбора');
+        if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        if (!in_array($targetId, $pending['candidates'], true)) {
+            return Result::error('Неверная цель');
+        }
+
+        $source = $this->state->getCard((int) $pending['source_id']);
+        $target = $this->state->getCard($targetId);
+        if (!$source || !$target) {
+            unset($this->state->battle['pending_shaksi_roll']);
+            return Result::error('Карта не найдена');
+        }
+
+        $effect = (array) $pending['effect'];
+        $type   = (string) ($effect['type'] ?? '');
+        $value  = (int) ($effect['value'] ?? 0);
+
+        if ($type === 'damage') {
+            $this->engine->applyDamage($this->state, $target, $value, 'impact', $source);
+        } elseif ($type === 'heal') {
+            $hpBefore = $target->hp;
+            $target->hp = min($target->hpMax, $target->hp + $value);
+            $healed = $target->hp - $hpBefore;
+
+            if (!empty($this->state->battle['strike'])) {
+                $this->state->battle['strike']['shaksi_heal'][] = [
+                    'card_id' => $target->instanceId,
+                    'heal'    => $healed,
+                ];
+            }
+        } elseif ($type === 'get_coin') {
+            $max = (int) ($target->prop['coins']['max_value'] ?? 0);
+            $target->coins += $value;
+            if ($max > 0 && $target->coins > $max) $target->coins = $max;
+            $this->engine->syncCoinBonus($target);
+        }
+
+        unset($this->state->battle['pending_shaksi_roll']);
+
+        $this->engine->flushDeadeatQueue($this->state);
+        $this->engine->checkGameOver($this->state);
+        $this->state->bumpVersion();
+        return Result::ok(["shaksi_roll:{$pending['dice']}:{$type}:{$targetId}"]);
+    }
 }
