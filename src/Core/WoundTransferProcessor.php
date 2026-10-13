@@ -26,6 +26,7 @@ final class WoundTransferProcessor
      *   max_transfer:  int (0 = без лимита сверх ран донора),
      *   coins_cost:    int,
      *   on_finish:     'strike_after'|'main_phase',
+     *   action?:        array исходного действия для проверки защит,
      * }
      */
     public function start(string $playerKey, CardInstance $source, array $options): Result
@@ -201,6 +202,28 @@ final class WoundTransferProcessor
         }
         if ($targetFilter === 'enemy' && $target->owner === $playerKey) {
             return Result::error('Только на врагов');
+        }
+
+        $source = $this->state->getCard((int) ($pw['source_id'] ?? 0));
+        $hasAction = array_key_exists('action', (array) ($pw['options'] ?? []));
+        if ($source && $hasAction) {
+            $action = (array) ($pw['options']['action'] ?? []);
+            $actionType = trim((string) ($action['action_type'] ?? ''));
+            $resolver = new ActionResolver($this->state, $this->engine);
+            if ($actionType === '') {
+                return Result::error('Для перераспределения ран не задана категория защиты');
+            }
+            if ($resolver->defenseActionType($action) === null) {
+                return Result::error('Неизвестная категория защиты: ' . $actionType);
+            }
+            $defense = $resolver->checkTargetDefenseForAction(
+                $action,
+                $targetId,
+                $source,
+                'Цель защищена от заклинания',
+                ''
+            );
+            if ($defense) return $defense;
         }
 
         $this->state->battle['pending_wound_transfer']['step']      = 'target_amount';

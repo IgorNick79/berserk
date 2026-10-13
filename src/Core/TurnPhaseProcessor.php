@@ -727,6 +727,7 @@ final class TurnPhaseProcessor
                     'source_ukid' => $card->ukid,
                     'targets'     => $targets,
                     'value'       => (int) ($eff['value'] ?? 1),
+                    'action'      => $eff,
                 ];
                 return ['label' => $label, 'items' => []];
 

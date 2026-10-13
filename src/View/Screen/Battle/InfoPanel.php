@@ -1035,7 +1035,9 @@ final class InfoPanel
                     foreach ($rs['targets'] as $t) {
                         $tc = $state->getCard($t['target_id']);
                         $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
-                        $parts[] = $tn . ' −' . $t['damage'];
+                        $parts[] = !empty($t['defended'])
+                            ? $tn . ' — защита (0)'
+                            : $tn . ' −' . $t['damage'];
                     }
                     $resultText = $name
                         . ': ' . $rs['damage_per_target'] . ' урона на цель: '

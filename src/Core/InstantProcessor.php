@@ -1589,6 +1589,7 @@ final class InstantProcessor
                 'cost' => (int) ($payload['coins'] ?? 0),
                 'uses_per_turn' => (int) ($payload['uses_per_turn'] ?? 1),
                 'close_source' => $this->instantRequiresTap($payload),
+                'action_type' => (string) ($payload['action_type'] ?? ($payload['effect']['action_type'] ?? '')),
             ];
         }
         return null;
@@ -1670,6 +1671,7 @@ final class InstantProcessor
             'sequence' => $sequence,
             'cost' => $cost,
             'close_source' => !empty($inst['close_source']),
+            'action_type' => (string) ($inst['action_type'] ?? ''),
         ];
 
         $card->flags['in_stack'] = true;
@@ -1704,21 +1706,39 @@ final class InstantProcessor
             } elseif (empty($item['effect'])) {
                 $reason = 'нет эффекта';
             } else {
-                $this->engine->applyInstantEffect(
-                    $this->state,
-                    (array) $item['effect'],
-                    $source,
-                    $target,
-                    (string) $item['player']
-                );
-                $after = $this->captureTurnTargetSnapshot($target);
-                $effectResult = $this->buildTurnEffectResult((array) $item['effect'], $before, $after, $target);
                 $effectType = (string) (($item['effect']['type'] ?? '') ?: '');
-                $applied = $effectType === 'forced_strike_adjacent'
-                    ? !empty($this->state->battle['strike'])
-                    : $this->turnEffectChanged($before, $after);
-                if (!$applied) {
-                    $reason = 'эффект ничего не изменил';
+                $defense = null;
+                if ($this->shouldCheckTurnInstantDefense((array) $item['effect'])) {
+                    $defenseAction = (array) $item['effect'];
+                    if (!empty($item['action_type'])) {
+                        $defenseAction['action_type'] = (string) $item['action_type'];
+                    }
+                    $defense = (new ActionResolver($this->state, $this->engine))->checkTargetDefenseForAction(
+                        $defenseAction,
+                        $target->instanceId,
+                        $source,
+                        'Цель защищена',
+                        $effectType
+                    );
+                }
+                if ($defense) {
+                    $reason = $defense->error ?? 'Цель защищена';
+                } else {
+                    $this->engine->applyInstantEffect(
+                        $this->state,
+                        (array) $item['effect'],
+                        $source,
+                        $target,
+                        (string) $item['player']
+                    );
+                    $after = $this->captureTurnTargetSnapshot($target);
+                    $effectResult = $this->buildTurnEffectResult((array) $item['effect'], $before, $after, $target);
+                    $applied = $effectType === 'forced_strike_adjacent'
+                        ? !empty($this->state->battle['strike'])
+                        : $this->turnEffectChanged($before, $after);
+                    if (!$applied) {
+                        $reason = 'эффект ничего не изменил';
+                    }
                 }
             }
 
@@ -1755,6 +1775,18 @@ final class InstantProcessor
             'phase' => $phase,
         ];
         $this->state->battle['instant_result'] = ['summary' => $summary];
+    }
+
+    private function shouldCheckTurnInstantDefense(array $effect): bool
+    {
+        $type = (string) ($effect['type'] ?? '');
+        if ($type === 'damage') {
+            return true;
+        }
+        if ($type === 'open') {
+            return true;
+        }
+        return false;
     }
 
     public function ackTurnInstantResult(string $playerKey): Result

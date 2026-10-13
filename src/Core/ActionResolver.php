@@ -11,10 +11,82 @@ namespace Berserk\Core;
  */
 final class ActionResolver
 {
+    private const DEFENDED_ACTION_TYPES = [
+        'strike',
+        'tap',
+        'uchr',
+        'shot',
+        'throw',
+        'discharge',
+        'magic',
+        'cast',
+        'impact',
+    ];
+
+    private const DEFENSE_TYPE_FALLBACKS = [
+        'shot' => 'shot',
+        'throw' => 'throw',
+        'discharge' => 'discharge',
+        'magic' => 'magic',
+        'cast' => 'cast',
+        'tap' => 'tap',
+        'uchr' => 'uchr',
+        'strike' => 'strike',
+        'impact' => 'impact',
+        'execute' => 'impact',
+        'whip' => 'impact',
+        'open' => 'impact',
+        'damage' => 'impact',
+    ];
+
     public function __construct(
         private GameState $state,
         private Engine $engine,
     ) {}
+
+    public function defenseActionType(array $action, string $fallbackType = ''): ?string
+    {
+        $actionType = (string) ($action['action_type'] ?? '');
+        if ($actionType === '' && $fallbackType !== '') {
+            $actionType = self::DEFENSE_TYPE_FALLBACKS[$fallbackType] ?? '';
+        }
+        if ($actionType === '') {
+            $mechanicType = (string) ($action['type'] ?? '');
+            $actionType = self::DEFENSE_TYPE_FALLBACKS[$mechanicType] ?? '';
+        }
+        if (!in_array($actionType, self::DEFENDED_ACTION_TYPES, true)) {
+            return null;
+        }
+        return $actionType;
+    }
+
+    public function isTargetDefendedByAction(
+        array $action,
+        int $targetId,
+        CardInstance $attacker,
+        string $fallbackType = ''
+    ): bool {
+        $actionType = $this->defenseActionType($action, $fallbackType);
+        if ($actionType === null || $targetId <= 0) {
+            return false;
+        }
+
+        $target = $this->state->getCard($targetId);
+        return $target !== null && CardStats::hasDefense($this->state, $target, $actionType, $attacker);
+    }
+
+    public function checkTargetDefenseForAction(
+        array $action,
+        int $targetId,
+        CardInstance $attacker,
+        string $message = 'Цель защищена',
+        string $fallbackType = ''
+    ): ?Result {
+        if ($this->isTargetDefendedByAction($action, $targetId, $attacker, $fallbackType)) {
+            return Result::error($message);
+        }
+        return null;
+    }
 
     // ─── Команда action ───────────────────────────────────────
 
@@ -144,6 +216,14 @@ final class ActionResolver
 
         // ── Перераспределение ран (Волхв) ──────────────────────
         if ($type === 'wound_transfer') {
+            $actionType = trim((string) ($action['action_type'] ?? ''));
+            if ($actionType === '') {
+                return Result::error('Для перераспределения ран не задана категория защиты');
+            }
+            if ($this->defenseActionType($action) === null) {
+                return Result::error('Неизвестная категория защиты: ' . $actionType);
+            }
+
             $proc = new WoundTransferProcessor($this->state, $this->engine);
             $options = [
                 'kind'          => (string) ($action['kind']          ?? 'volkhv'),
@@ -152,6 +232,7 @@ final class ActionResolver
                 'max_transfer'  => (int)    ($action['max_transfer']  ?? 2),
                 'coins_cost'    => (int)    ($action['coins']         ?? 0),
                 'on_finish'     => (string) ($action['on_finish']     ?? 'main_phase'),
+                'action'        => $action,
             ];
             if (isset($action['donor_element'])) $options['donor_element'] = (string) $action['donor_element'];
             if (!empty($action['donor_near']))   $options['donor_near']    = true;
@@ -476,7 +557,7 @@ final class ActionResolver
             $this->state->battle['strike']['attack_value_reduction'][] = $event;
         }
 
-        $defended = CardStats::hasDefense($this->state, $target, 'uchr', $attacker);
+        $defended = $this->isTargetDefendedByAction(['type' => 'uchr'], $target->instanceId, $attacker);
         if ($defended) {
             $val = 0;
             $this->state->battle['strike']['defended'] = true;
@@ -1142,6 +1223,15 @@ final class ActionResolver
         CardInstance $attacker, CardInstance $target, array $action,
         int $cardId, int $targetId, string $playerKey
     ): Result {
+        $defense = $this->checkTargetDefenseForAction(
+            $action,
+            $targetId,
+            $attacker,
+            'Цель защищена от добивания',
+            'execute'
+        );
+        if ($defense) return $defense;
+
         // Структура до смерти цели
         $this->state->battle['strike'] = [
             'kind'        => 'execute',
@@ -1290,8 +1380,8 @@ final class ActionResolver
 
         // Защита цели
         $defended = false;
-        if (in_array($type, ['shot', 'throw', 'discharge', 'magic', 'cast'], true)) {
-            $defended = CardStats::hasDefense($this->state, $target, $type, $attacker);
+        if ($this->defenseActionType($action, $type) !== null) {
+            $defended = $this->isTargetDefendedByAction($action, $target->instanceId, $attacker, $type);
             if ($defended) $val = 0;
         }
 
@@ -2112,7 +2202,7 @@ final class ActionResolver
 
             $hpBefore = $target->hp;
 
-            if (CardStats::hasDefense($this->state, $target, 'discharge', $attacker)) {
+            if ($this->isTargetDefendedByAction($pmd['action'] ?? ['type' => 'discharge'], $tid, $attacker, 'discharge')) {
                 $results[] = ['target_id' => $tid, 'damage' => 0, 'defended' => true];
                 continue;
             }
@@ -2890,6 +2980,23 @@ final class ActionResolver
 
         $target = $this->state->getCard($targetId);
         if (!$target) return Result::error('Цель не найдена');
+
+        $defense = $this->checkTargetDefenseForAction(
+            $pw['action'] ?? ['type' => 'whip'],
+            $targetId,
+            $source,
+            'Цель защищена от воздействия',
+            'whip'
+        );
+        if ($defense) {
+            unset($this->state->battle['pending_whip']);
+            if (!empty($this->state->battle['turn_phase'])) {
+                (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+            }
+
+            $this->state->bumpVersion();
+            return Result::ok(['Цель защищена от воздействия']);
+        }
 
         $value = (int) $pw['value'];
 
@@ -3981,6 +4088,7 @@ final class ActionResolver
             'card_id'    => $cardId,
             'x'          => $x,
             'candidates' => $candidates,
+            'action'     => $action,
         ];
 
         $this->state->bumpVersion();
@@ -4011,7 +4119,7 @@ final class ActionResolver
 
         $x = (int) $pending['x'];
 
-        $defended = CardStats::hasDefense($this->state, $target, 'cast', $attacker);
+        $defended = $this->isTargetDefendedByAction($pending['action'] ?? ['type' => 'cast'], $target->instanceId, $attacker, 'cast');
 
         $hpBefore = $target->hp;
         if (!$defended) {
@@ -4236,7 +4344,7 @@ final class ActionResolver
         $attacker->closed = true;
 
         // Урон врагу — cast (защита zom)
-        $defended = CardStats::hasDefense($this->state, $enemy, 'cast', $attacker);
+        $defended = $this->isTargetDefendedByAction($action, $enemy->instanceId, $attacker, 'cast');
         $hpBefore = $enemy->hp;
         if (!$defended) {
             $this->engine->applyDamage($this->state, $enemy, $x, 'cast', $attacker);
@@ -4546,10 +4654,19 @@ final class ActionResolver
             $target = $this->state->getCard($tid);
             if (!$target) continue;
             $hpBefore = $target->hp;
+            if ($source && $this->isTargetDefendedByAction($action, $tid, $source, (string) ($action['type'] ?? ''))) {
+                $results[] = [
+                    'target_id' => $tid,
+                    'damage'    => 0,
+                    'defended'  => true,
+                ];
+                continue;
+            }
             $this->engine->applyDamage($this->state, $target, $val, 'discharge', $source);
             $results[] = [
                 'target_id' => $tid,
                 'damage'    => max(0, $hpBefore - $target->hp),
+                'defended'  => false,
             ];
         }
 

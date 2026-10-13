@@ -49,10 +49,11 @@ final class RowSpellPickChoice implements ChoiceHandlerInterface
         if ($dice >= 1 && $dice <= 6 && $val !== null) {
             $resultHtml = '<div class="dice-block">'
                 . '<div class="dice-column">'
+                . '<div class="label">Кубик</div>'
                 . '<div class="dice">' . $dice . '</div>'
                 . '</div>'
                 . '</div>'
-                . '<p><b>Урон: ' . $val . ' HP</b></p>';
+                . '<p><b>Урон: ' . $val . ' на цель</b></p>';
         } else {
             $resultHtml = '<p><b>Результат кубика не сохранён.</b></p>';
         }
