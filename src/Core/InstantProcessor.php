@@ -719,7 +719,7 @@ final class InstantProcessor
             }
         }
 
-        $this->resumeAfterWindow();
+        $this->continueAfterStrikeBeforeWindow();
     }
 
     public function resumeCombatResolution(): void
@@ -1279,8 +1279,12 @@ final class InstantProcessor
         return ZoneManager::adjacentFieldAllyIds($this->state, $currentTarget, $playerKey);
     }
 
-    private function resumeAfterWindow(): void
+    public function continueAfterStrikeBeforeWindow(): void
     {
+        if (empty($this->state->battle['strike'])) {
+            return;
+        }
+
         $strike = &$this->state->battle['strike'];
 
         if (!empty($strike['redirect_candidates'])) {
@@ -1798,7 +1802,7 @@ final class InstantProcessor
             return;
         }
         if ($type === 'strike_before') {
-            $this->resumeAfterWindow();
+            $this->continueAfterStrikeBeforeWindow();
             return;
         }
         if ($type === 'strike_after') {

@@ -332,16 +332,14 @@ final class StrikeResolver
 
         // Окно инстантов до броска — openWindow сам проверит, есть ли у кого
         $ip = new InstantProcessor($this->state, $this->engine);
-        $ip->openWindow('before', $playerKey);
+        $beforeWindowOpened = $ip->openWindow('before', $playerKey);
 
-        if (($this->state->battle['strike']['state'] ?? '') === 'waiting_instant') {
+        if ($beforeWindowOpened) {
             $this->state->bumpVersion();
             return Result::ok(["strike_declared:{$playerKey}:{$cardId}->{$targetId}", 'instant_window_opened']);
         }
 
-        if (empty($redirectCandidates) && empty($defenders) && empty($this->getMageRedirectOptions($oppKey))) {
-            $this->resolve();
-        }
+        $ip->continueAfterStrikeBeforeWindow();
 
         $this->state->bumpVersion();
         return Result::ok(["strike_declared:{$playerKey}:{$cardId}->{$targetId}"]);
@@ -420,15 +418,13 @@ final class StrikeResolver
         ];
 
         $ip = new InstantProcessor($this->state, $this->engine);
-        $ip->openWindow('before', $playerKey);
+        $beforeWindowOpened = $ip->openWindow('before', $playerKey);
 
-        if (($this->state->battle['strike']['state'] ?? '') === 'waiting_instant') {
+        if ($beforeWindowOpened) {
             return Result::ok(["forced_strike_declared:{$attacker->instanceId}->{$target->instanceId}", 'instant_window_opened']);
         }
 
-        if (empty($defenders) && empty($this->getMageRedirectOptions($oppKey))) {
-            $this->resolve();
-        }
+        $ip->continueAfterStrikeBeforeWindow();
 
         return Result::ok(["forced_strike_declared:{$attacker->instanceId}->{$target->instanceId}"]);
     }
