@@ -12,6 +12,8 @@ use Berserk\Core\Command;
 use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\WoundTransferProcessor;
+use Berserk\View\Screen\Battle\InfoPanel;
+use Berserk\View\Template;
 
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
@@ -79,6 +81,15 @@ function vwVolkhvProp(): array
     ];
 }
 
+function vwCardsInfo(): array
+{
+    return [
+        's1_3' => ['name' => 'Волхв'],
+        'hydra' => ['name' => 'Гидра'],
+        'donor' => ['name' => 'Раненый союзник'],
+    ];
+}
+
 $volkhv = vwCard([
     'instanceId' => 1,
     'ukid' => 's1_3',
@@ -127,5 +138,47 @@ vwAssert(empty($state->battle['pending_wound_transfer']), 'Volkhv pending should
 vwAssert($donor->hp === 6, 'Blocked cast transfer should not heal the donor.');
 vwAssert($hydra->hp === 8, 'ZOZ should block cast-class wound transfer damage.');
 vwAssert($volkhv->closed, 'Volkhv should close after the cast attempt.');
+$html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render(
+    $state,
+    GameState::PLAYER_HOST,
+    'host',
+    vwCardsInfo(),
+    '/battle?game=9701'
+);
+vwAssert(str_contains($html, 'цель защищена от заклинания'), 'Blocked Volkhv transfer should be explained in InfoPanel.');
+
+$volkhv = vwCard([
+    'instanceId' => 11,
+    'ukid' => 's1_3',
+    'owner' => GameState::PLAYER_HOST,
+    'coins' => 1,
+    'prop' => vwVolkhvProp(),
+]);
+$fullAlly = vwCard([
+    'instanceId' => 12,
+    'ukid' => 'donor',
+    'owner' => GameState::PLAYER_HOST,
+    'row' => 3,
+    'col' => 4,
+    'hp' => 8,
+    'hpMax' => 8,
+]);
+$enemy = vwCard(['instanceId' => 13, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4]);
+$state = vwState($volkhv, $fullAlly, $enemy);
+$result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('action', [
+    'card_id' => 11,
+    'action_key' => 'volkhvovanie',
+    'target_id' => 11,
+]));
+vwAssert(!$result->success, 'Volkhv action without wounded allies should not start pending.');
+vwAssert(empty($state->battle['pending_wound_transfer']), 'Volkhv action without wounded allies should leave no pending.');
+$html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render(
+    $state,
+    GameState::PLAYER_HOST,
+    'host',
+    vwCardsInfo(),
+    '/battle?game=9701'
+);
+vwAssert(str_contains($html, 'нет раненых союзников'), 'Volkhv without donors should be explained in InfoPanel.');
 
 echo "Volkhv wound transfer tests passed\n";

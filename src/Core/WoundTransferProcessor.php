@@ -52,6 +52,12 @@ final class WoundTransferProcessor
 
         $donors = $this->collectDonors($playerKey, $options, $source->instanceId);
         if (empty($donors)) {
+            if ($kind === 'volkhv') {
+                $this->state->battle['any_death_messages'][] = [
+                    'type' => 'message',
+                    'message' => 'Волхвование при луне: нет раненых союзников',
+                ];
+            }
             return Result::error('Нет подходящих доноров');
         }
 
@@ -257,6 +263,7 @@ final class WoundTransferProcessor
         $damageType = $actionType !== '' ? $actionType : 'wound_transfer';
 
         $appliedTransfers = [];
+        $blockedTransfers = 0;
         foreach ($pw['transfers'] as $t) {
             $target = $this->state->getCard($t['target_id']);
             if (!$target) continue;
@@ -264,10 +271,21 @@ final class WoundTransferProcessor
             if ($actionType !== ''
                 && $target->owner !== $playerKey
                 && CardStats::hasDefense($this->state, $target, $actionType, $source)) {
+                $blockedTransfers++;
                 continue;
             }
 
             $appliedTransfers[] = $t;
+        }
+
+        if ($blockedTransfers > 0) {
+            $message = $actionType === 'cast'
+                ? 'Волхвование при луне: цель защищена от заклинания'
+                : 'Волхвование при луне: цель защищена';
+            $this->state->battle['any_death_messages'][] = [
+                'type' => 'message',
+                'message' => $message,
+            ];
         }
 
         // Лечим донора ровно на реально переданное (фикс утечки HP)
