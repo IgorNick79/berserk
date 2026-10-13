@@ -15,6 +15,7 @@ use Berserk\Core\TurnPhaseProcessor;
 use Berserk\Core\Choice\RowSpellPickChoice;
 use Berserk\View\Screen\Battle\InfoPanel;
 use Berserk\View\Template;
+use Berserk\View\Ui\Panel;
 
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
@@ -129,8 +130,12 @@ $specB = $choice->spec($state, GameState::PLAYER_HOST, [
     'card_4' => ['name' => 'Враг 2'],
 ], '?first&game=196', 'host');
 
-rowSpellAssert($specA !== null && str_contains($specA->title, 'кубик: 6'), 'Row spell choice should show saved dice');
+rowSpellAssert($specA !== null && str_contains(implode('', $specA->text), '<div class="dice">6</div>'), 'Row spell choice should show saved dice');
 rowSpellAssert($specB !== null && $specB->title === $specA->title, 'Repeated row spell render should keep the same result');
+$choiceHtml = Panel::render($specA);
+rowSpellAssert(str_contains($choiceHtml, '<div class="label">Кубик</div>'), 'Rendered row spell choice should show dice label');
+rowSpellAssert(str_contains($choiceHtml, '<div class="dice">6</div>'), 'Rendered row spell choice should show saved dice');
+rowSpellAssert(str_contains($choiceHtml, 'Урон: 2 на цель'), 'Rendered row spell choice should show saved damage');
 rowSpellAssert(Dice::remaining() === [1], 'Repeated row spell render should not consume another roll');
 
 $result = $engine->apply($state, GameState::PLAYER_HOST, new Command('choose_row_spell_targets', [
