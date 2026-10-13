@@ -157,12 +157,7 @@ final class StrikeResolver
         }
         $isSeries = !empty($attacker->prop['attack_series']);
         $seriesActive = !empty($attacker->flags['attack_series_active']);
-
-        if ($isSeries && !$seriesActive) {
-            $attacker->flags['attack_series_active'] = true;
-            $attacker->flags['attack_series_hit_ids'] = [];
-            $seriesActive = true;
-        }
+        $attacksUsed = (int) ($attacker->flags['attacks_used_this_turn'] ?? 0);
 
         if (!$seriesActive) {
             $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
@@ -172,7 +167,6 @@ final class StrikeResolver
                 $attackLimit = 1;
             }
 
-            $attacksUsed = (int) ($attacker->flags['attacks_used_this_turn'] ?? 0);
             if ($attacksUsed >= $attackLimit) {
                 return Result::error('Уже атаковал в этот ход');
             }
@@ -310,6 +304,11 @@ final class StrikeResolver
         
         foreach ($this->state->cards as $card) {
             $card->flags['damage_taken_this_strike'] = 0;
+        }
+
+        if ($isSeries && !$seriesActive) {
+            $attacker->flags['attack_series_active'] = true;
+            $attacker->flags['attack_series_hit_ids'] = [];
         }
 
         $strike = [
@@ -1002,14 +1001,14 @@ final class StrikeResolver
         }
 
         if (empty($attacker->flags['attack_series_active'])) {
-            $attacker->flags['attacks_used_this_turn'] = 
+            $attacker->flags['attacks_used_this_turn'] =
                 ((int) ($attacker->flags['attacks_used_this_turn'] ?? 0)) + 1;
 
-            if (!empty($attacker->prop['strike_targets_unique']) 
+            if (!empty($attacker->prop['strike_targets_unique'])
                 && empty($attacker->flags['first_attack_target_id'])) {
                 $attacker->flags['first_attack_target_id'] = (int) ($strike['target_id'] ?? 0);
             }
-            
+
             $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
             $noClose     = !empty($attacker->prop['no_close_after_attack'])
                 || !empty($attacker->flags['no_close_this_turn']);
