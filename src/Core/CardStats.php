@@ -555,7 +555,8 @@ final class CardStats
         GameState $state,
         CardInstance $attacker,
         CardInstance $target,
-        string $actionType
+        string $actionType,
+        ?string $level = null
     ): int {
         if (self::isDefenseIgnored($attacker, 'damage_reduction')) return 0;
 
@@ -604,6 +605,11 @@ final class CardStats
             $types = $m['types'] ?? null;
             if ($types !== null && !in_array($actionType, $types, true)) continue;
             $total += (int) ($m['value'] ?? 0);
+        }
+
+        if (!empty($r['levels'])) {
+            if ($level === null) continue;
+            if (!in_array($level, (array) $r['levels'], true)) continue;
         }
 
         return $total;
@@ -948,6 +954,7 @@ final class CardStats
                     >= (int) ($condition['count'] ?? 4),
                 'ally_no_wounds_near' => self::countAlliesNoWoundsNear($state, $card)
                     >= (int) ($condition['count'] ?? 3),
+                'column' => in_array((int) $card->col, array_map('intval', (array) ($condition['values'] ?? [])), true),
                 default => true,
             };
         }

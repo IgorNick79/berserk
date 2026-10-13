@@ -261,3 +261,10 @@
   Везде toggle «Все / свои / чужие». Если соседей нет или они не подходят
   по фильтру — Choice не открывается. Отмены нет.
 - `ShaksiRollChoice`, `MovementResolver::tryShaksiRoll`.
+
+### Добавлено
+- Карта **Матросы Аделаиды** (`s1_182`): прыжок 3. В центральном столбце —
+  OVZ 1 и −1 от слабых strike. В крайних столбцах — OVA 1 и +1 к среднему
+  и сильному strike.
+- `checkCondition` — условие `column` (по значению столбца).
+- `CardStats::getDamageReduction` — фильтр `levels` (weak/medium/strong).
