@@ -153,5 +153,6 @@ $resultHtml = (new InfoPanel(new Template(__DIR__ . '/../templates')))->render($
 ], '?first&game=196');
 rowSpellAssert(str_contains($resultHtml, '2 урона на цель'), 'Row spell result should show applied damage');
 rowSpellAssert(!str_contains($resultHtml, 'кубик 6'), 'Row spell result should not repeat dice after target choice');
+rowSpellAssert(!str_contains($resultHtml, '<div class="dice">6</div>'), 'Row spell result should not render a dice block after target choice');
 
 echo "Row spell pending dice tests passed.\n";
