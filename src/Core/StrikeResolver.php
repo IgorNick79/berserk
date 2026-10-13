@@ -2049,6 +2049,9 @@ final class StrikeResolver
             'types'      => (array) ($attacker->prop['on_strike_ally_shield']['types'] ?? []),
         ];
 
+        $this->state->battle['strike']['state'] = 'waiting_segger_shield';
+        $this->state->battle['strike']['confirmed'] = [];
+
         return true;
     }
 }

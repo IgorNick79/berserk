@@ -4111,6 +4111,8 @@ final class ActionResolver
                 'value'   => $value,
                 'targets' => $pending['candidates'],
             ];
+            $this->state->battle['strike']['state']     = 'results';
+            $this->state->battle['strike']['confirmed'] = [];
         }
 
         $this->state->bumpVersion();
