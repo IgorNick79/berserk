@@ -187,6 +187,7 @@ final class MovementResolver
             movementType: MovementContext::TYPE_JUMP,
         );
         $this->effects->apply($context);
+        $this->tryShaksiRoll($card, $playerKey);
 
         $this->state->bumpVersion();
 
@@ -284,6 +285,79 @@ final class MovementResolver
         if (!is_array($moved)) $moved = [];
         if (in_array($card->instanceId, $moved, true)) return;
         $moved[] = $card->instanceId;
+    }
+
+    private function tryShaksiRoll(CardInstance $card, string $playerKey): void
+    {
+        $config = $card->prop['on_jump_roll'] ?? null;
+        if (!is_array($config) || empty($config)) return;
+        if ($card->zone !== CardInstance::ZONE_FIELD) return;
+        if ($card->row === null || $card->col === null) return;
+
+        $dice = \Berserk\Core\Dice::roll();
+
+        $matchedKey = null;
+        $effect = null;
+        foreach ($config as $range => $eff) {
+            $parts = explode('-', (string) $range);
+            if (count($parts) !== 2) continue;
+            $min = (int) $parts[0];
+            $max = (int) $parts[1];
+            if ($dice >= $min && $dice <= $max) {
+                $matchedKey = (string) $range;
+                $effect = (array) $eff;
+                break;
+            }
+        }
+        if ($effect === null) return;
+
+        $candidates = $this->shaksiCandidates($card, $effect);
+        if (empty($candidates)) return;
+
+        $this->state->battle['pending_shaksi_roll'] = [
+            'owner'      => $playerKey,
+            'source_id'  => $card->instanceId,
+            'dice'       => $dice,
+            'range'      => $matchedKey,
+            'effect'     => $effect,
+            'candidates' => $candidates,
+        ];
+    }
+
+    private function shaksiCandidates(CardInstance $card, array $effect): array
+    {
+        $nearby = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->instanceId === $card->instanceId) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+
+            $dr = abs($c->row - $card->row);
+            $dc = abs($c->col - $card->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+
+            $nearby[] = $c;
+        }
+
+        if (empty($nearby)) return [];
+
+        $type = (string) ($effect['type'] ?? '');
+        $candidates = [];
+
+        foreach ($nearby as $c) {
+            if ($type === 'get_coin') {
+                if (!empty($c->prop['coins_receive_deny'])) continue;
+                $max = (int) ($c->prop['coins']['max_value'] ?? 0);
+                if ($max > 0 && $c->coins >= $max) continue;
+            }
+            $candidates[] = $c->instanceId;
+        }
+
+        if (!empty($effect['include_self']) && $card->hp < $card->hpMax) {
+            $candidates[] = $card->instanceId;
+        }
+
+        return $candidates;
     }
 
 }

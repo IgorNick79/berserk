@@ -48,6 +48,7 @@ final class ChoiceRegistry
                 new CardChoice(),
                 new IntrigueStartChoice(),
                 new SeggerShieldChoice(),
+                new ShaksiRollChoice(),
                 new BloodTapChoice(),
                 new HealInsteadWoundChoice(),
                 new AttackSeriesContinueChoice(),
