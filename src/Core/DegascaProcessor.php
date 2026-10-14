@@ -20,12 +20,6 @@ final class DegascaProcessor
 
     public static function hasPreBattleTrigger(CardInstance $card): bool
     {
-        foreach ((array) ($card->prop['start_pre_battle'] ?? []) as $config) {
-            $effect = (array) ($config['effect'] ?? []);
-            if (($effect['type'] ?? '') === 'degasca_study') {
-                return true;
-            }
-        }
         return false;
     }
 
@@ -41,7 +35,7 @@ final class DegascaProcessor
 
     public static function isDegasca(CardInstance $card): bool
     {
-        return self::hasPreBattleTrigger($card) || self::hasStrongStrikeTrigger($card, 'strong');
+        return self::hasStrongStrikeTrigger($card, 'strong');
     }
 
     public static function isStrongOnlyEffect(array $effect): bool
@@ -54,17 +48,16 @@ final class DegascaProcessor
 
     public function openPreBattleSequence(CardInstance $source): bool
     {
-        if (!empty($this->state->battle['pending_degasca_sequence'])) {
-            return false;
-        }
-        if (!$this->canActivate($source) || !self::hasPreBattleTrigger($source)) {
-            return false;
-        }
-
-        return $this->startSequence($source, 'pre_battle', []);
+        return false;
     }
 
-    public function openStrongStrikeSequence(CardInstance $source, CardInstance $target, string $attackLevel, int $woundsDealt): bool
+    public function openStrongStrikeSequence(
+        CardInstance $source,
+        CardInstance $target,
+        string $attackLevel,
+        int $woundsDealt,
+        bool $continueAfterComplete = false
+    ): bool
     {
         $strike = $this->state->battle['strike'] ?? null;
         if (!$strike || $attackLevel !== 'strong') return false;
@@ -82,6 +75,8 @@ final class DegascaProcessor
             'target_id' => $target->instanceId,
             'attack_level' => $attackLevel,
             'wounds_dealt' => $woundsDealt,
+            'continue_after_result_ack' => $continueAfterComplete,
+            'strike' => $continueAfterComplete ? $this->state->battle['strike'] : null,
         ]);
     }
 
@@ -194,8 +189,6 @@ final class DegascaProcessor
 
         $this->addLearned($source, $card->ukid, $effects);
         $this->shuffleDeck($source->owner);
-        $this->recordMessage($source, 'Изучена способность: ' . $card->ukid);
-
         $this->finishSequence($pending, null, true);
         $this->state->bumpVersion();
         return Result::ok(['degasca_learned:' . $card->ukid]);
@@ -405,10 +398,19 @@ final class DegascaProcessor
         return true;
     }
 
-    private function continueAfterComplete(string $activation): void
+    private function continueAfterComplete(array $pending): void
     {
+        $activation = (string) ($pending['activation'] ?? '');
         if ($activation === 'pre_battle') {
             (new TurnProcessor($this->state, $this->engine))->continuePreBattleEffects();
+            return;
+        }
+
+        if ($activation === 'strong_strike'
+            && !empty($pending['context']['continue_after_result_ack'])
+            && is_array($pending['context']['strike'] ?? null)) {
+            (new StrikeResolver($this->state, $this->engine))
+                ->continueAfterStrikeResultAck((array) $pending['context']['strike']);
         }
     }
 
@@ -424,7 +426,7 @@ final class DegascaProcessor
         unset($this->state->battle['pending_degasca_sequence']);
 
         if ($continueOnComplete) {
-            $this->continueAfterComplete((string) ($pending['activation'] ?? ''));
+            $this->continueAfterComplete($pending);
         }
 
         $this->resumeDeferredContinuation();

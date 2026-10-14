@@ -1053,11 +1053,6 @@ final class StrikeResolver
             'attacker_extra_this_strike' => max(0, $attackerDamageThisStrike - $answerDamage),
         ];
         $this->state->battle['strike']['damage_applied'] = true;
-
-        if ($attackStrike === 'strong') {
-            (new DegascaProcessor($this->state, $this->engine))
-                ->openStrongStrikeSequence($attacker, $defendCard, $attackStrike, $woundsDealt);
-        }
     }
 
     private function applyStrongStrikeFollowUpEffects(
@@ -1462,6 +1457,21 @@ final class StrikeResolver
                 && ($forcedAttacker->zone === CardInstance::ZONE_FIELD
                     || $forcedAttacker->zone === CardInstance::ZONE_FLYING)) {
                 $forcedAttacker->closed = true;
+            }
+        }
+
+        $attackStrike = (string) ($strike['final']['attack'] ?? $strike['result']['attack'] ?? '');
+        if ($attackStrike === 'strong' && empty($strike['degasca_after_result_done'])) {
+            $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+            $target = $this->state->getCard((int) ($strike['defender_id'] ?: ($strike['target_id'] ?? 0)));
+            if ($attacker && $target) {
+                $this->state->battle['strike']['degasca_after_result_done'] = true;
+                $woundsDealt = (int) ($strike['damage_total'] ?? 0);
+                if ((new DegascaProcessor($this->state, $this->engine))
+                    ->openStrongStrikeSequence($attacker, $target, $attackStrike, $woundsDealt, true)) {
+                    $this->state->bumpVersion();
+                    return Result::ok(['degasca_pending']);
+                }
             }
         }
 
