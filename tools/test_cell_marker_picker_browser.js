@@ -239,6 +239,53 @@
                     assert(activeLinks().every(function(link) {return link.getAttribute('href').includes('game=77');}), 'Third pending restores only its own original URLs');
                     await restore();
 
+                    // The event path still reaches document if window capture detaches its target.
+                    // Use the same snapshot on purpose: identity equality alone must not authorize old nodes.
+                    for (var firstFragment of ['panel', 'field']) {
+                        for (var relocation of [false, true]) {
+                            await restore();
+                            if (firstFragment === 'panel') panel().replaceWith(sourcePanel.cloneNode(true));
+                            else field().replaceWith(sourceField.cloneNode(true));
+                            await tick();
+                            var oldRoot = firstFragment === 'panel' ? field() : panel();
+                            var oldLink = firstFragment === 'panel'
+                                ? oldRoot.querySelector('[data-cell-marker-link][href]')
+                                : oldRoot.querySelector('[data-picker-group="' + current() + '"] [data-picker-column]:not([hidden])');
+                            var replacement = firstFragment === 'panel' ? sourceField.cloneNode(true) : sourcePanel.cloneNode(true);
+                            var wasBlocked = false;
+                            oldLink.addEventListener('click', function(event) {wasBlocked = event.defaultPrevented; event.preventDefault();}, {once: true});
+                            window.addEventListener('click', function() {
+                                oldRoot.replaceWith(replacement);
+                                if (relocation) document.body.append(oldRoot);
+                            }, {capture: true, once: true});
+                            oldLink.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+                            assert(wasBlocked, 'Retained ' + (firstFragment === 'panel' ? 'field' : 'column')
+                                + ' event rejected after ' + (relocation ? 'relocation outside current container' : 'detachment during capture'));
+                            await tick();
+                            assert(panel().dataset.pickerEnhanced === 'true', 'Current fragments remain enhanced after rejecting old node');
+                            checkActive();
+                            if (relocation) {
+                                assertImmediatelyBlocked(oldLink, 'Reattached stale node cannot activate a command');
+                                oldRoot.remove();
+                                await tick();
+                            }
+                            assert(!oldLink.isConnected && !oldLink.hasAttribute('href'), 'Observer revokes detached command URLs');
+                            oldLink.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+                            assert(!oldLink.hasAttribute('href'), 'Clicking a detached reference cannot restore its command');
+
+                            var liveFieldLink = field().querySelector('[data-cell-marker-link][href]');
+                            var liveColumnLink = panel().querySelector('[data-picker-group="' + current() + '"] [data-picker-column]:not([hidden])');
+                            for (var liveLink of [liveFieldLink, liveColumnLink]) {
+                                var liveUrl = liveLink.getAttribute('href');
+                                var accepted = false;
+                                liveLink.addEventListener('click', function(event) {accepted = !event.defaultPrevented; event.preventDefault();}, {once: true});
+                                liveLink.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+                                assert(accepted && liveLink.getAttribute('href') === liveUrl, 'Current link accepted with its original command URL');
+                            }
+                        }
+                    }
+                    await restore();
+
                     // On the destination side retain a later row only; switch from a row absent there.
                     var sparsePanel = sourcePanel.cloneNode(true);
                     var sparseField = sourceField.cloneNode(true);

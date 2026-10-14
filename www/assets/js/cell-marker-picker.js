@@ -138,10 +138,17 @@
         // Validate final actions synchronously too: a fragment may have changed before the observer runs.
         if (target.matches("[data-cell-marker-link], [data-picker-column]")) sync();
         if (target.matches("[data-cell-marker-link]")) {
-            if (target.hidden || !target.hasAttribute("href") || target.getAttribute("aria-disabled") === "true") event.preventDefault();
+            var activeField = document.querySelector(".battle-field [data-cell-marker-field]");
+            if (!target.isConnected || !activeField || target.closest("[data-cell-marker-field]") !== activeField
+                || !activeField.contains(target) || target.hidden || !target.hasAttribute("href") || target.getAttribute("aria-disabled") === "true") event.preventDefault();
             return;
         }
         var panel = target.closest("[data-cell-marker-picker]");
+        var activePanel = document.querySelector(".info-panel [data-cell-marker-picker]");
+        if (!target.isConnected || !activePanel || panel !== activePanel || !activePanel.contains(target)) {
+            event.preventDefault();
+            return;
+        }
         if (target.matches("[data-picker-column]")) {
             var group = target.closest("[data-picker-group]");
             if (!panel || panel.dataset.pickerEnhanced !== "true" || target.hidden || !group || group.hidden) event.preventDefault();
@@ -153,7 +160,24 @@
         sync({side: target.dataset.pickerSide, row: target.dataset.pickerRow});
     }, true);
 
-    var observer = new MutationObserver(schedule);
+    var observer = new MutationObserver(function (records) {
+        // Detached events do not reach document delegation. Revoke commands on removed nodes
+        // before another task can activate retained references; connected/reparented nodes stay intact.
+        records.forEach(function (record) {
+            record.removedNodes.forEach(function (node) {
+                if (node.nodeType !== 1 || node.isConnected) return;
+                var selector = "[data-cell-marker-link], [data-picker-column]";
+                var links = Array.from(node.querySelectorAll(selector));
+                if (node.matches(selector)) links.push(node);
+                links.forEach(function (link) {
+                    link.removeAttribute("href");
+                    link.setAttribute("hidden", "");
+                    link.setAttribute("aria-disabled", "true");
+                });
+            });
+        });
+        schedule();
+    });
     observer.observe(document.body, {childList: true, subtree: true, attributes: true,
         attributeFilter: ["data-cell-marker-picker", "data-cell-marker-field"]});
     document.documentElement.dataset.cellMarkerController = "ready";
