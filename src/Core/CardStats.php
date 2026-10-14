@@ -179,7 +179,9 @@ final class CardStats
         $ovz = $card->prop['ovz'] ?? 0;
         if ($ovz) {
             if (is_array($ovz)) {
-                if (self::checkLineCondition($state, $card, $ovz)) {
+                $ok = self::checkLineCondition($state, $card, $ovz)
+                    && (empty($ovz['condition']) || self::checkCondition($ovz['condition'], $state, $card));
+                if ($ok) {
                     $val = (int) ($ovz['value'] ?? 0);
                 }
             } else {
@@ -567,6 +569,7 @@ final class CardStats
         CardInstance $attacker,
         CardInstance $target,
         string $actionType,
+        ?string $level = null,
         array $extraIgnore = []
     ): int {
         if (self::isDefenseIgnored($attacker, 'damage_reduction', $extraIgnore)) return 0;
@@ -577,7 +580,7 @@ final class CardStats
         $reductions = $target->prop['damage_reduction'] ?? [];
         if (is_array($reductions)) {
             foreach ($reductions as $r) {
-                $total += self::damageReductionValue($state, $attacker, $target, $actionType, (array) $r);
+                $total += self::damageReductionValue($state, $attacker, $target, $actionType, (array) $r, $level);
             }
         }
 
@@ -585,7 +588,7 @@ final class CardStats
             $list = (is_array($inherited) && array_is_list($inherited)) ? $inherited : [$inherited];
             foreach ($list as $r) {
                 if (!is_array($r)) continue;
-                $total += self::damageReductionValue($state, $attacker, $target, $actionType, $r);
+                $total += self::damageReductionValue($state, $attacker, $target, $actionType, $r, $level);
             }
         }
 
@@ -615,6 +618,10 @@ final class CardStats
             if (($m['stat'] ?? '') !== 'damage_reduction') continue;
             $types = $m['types'] ?? null;
             if ($types !== null && !in_array($actionType, $types, true)) continue;
+            if (!empty($m['levels'])) {
+                if ($level === null) continue;
+                if (!in_array($level, (array) $m['levels'], true)) continue;
+            }
             $total += (int) ($m['value'] ?? 0);
         }
 
@@ -850,10 +857,15 @@ final class CardStats
         CardInstance $attacker,
         CardInstance $target,
         string $actionType,
-        array $r
+        array $r,
+        ?string $level = null
     ): int {
         $types = $r['types'] ?? null;
         if ($types !== null && !in_array($actionType, $types, true)) return 0;
+        if (!empty($r['levels'])) {
+            if ($level === null) return 0;
+            if (!in_array($level, (array) $r['levels'], true)) return 0;
+        }
 
         if (!empty($r['require_no_wounds']) && $target->hp < $target->hpMax) return 0;
         if (isset($r['max_price']) && $attacker->price > (int) $r['max_price']) return 0;
@@ -960,6 +972,7 @@ final class CardStats
                     >= (int) ($condition['count'] ?? 4),
                 'ally_no_wounds_near' => self::countAlliesNoWoundsNear($state, $card)
                     >= (int) ($condition['count'] ?? 3),
+                'column' => in_array((int) $card->col, array_map('intval', (array) ($condition['values'] ?? [])), true),
                 default => true,
             };
         }

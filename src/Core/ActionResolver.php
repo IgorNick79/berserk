@@ -1380,7 +1380,7 @@ final class ActionResolver
         $nextActionBonus = CardStats::getNextActionBonus($attacker, $type);
         $val += $nextActionBonus;
 
-        $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, $type, $extraIgnore);
+        $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, $type, null, $extraIgnore);
         $val -= $reduction;
         if ($val < 0) $val = 0;
 

@@ -853,7 +853,7 @@ final class StrikeResolver
             $val += $abilityBonus;
             $nextStrikeBonus = CardStats::getNextStrikeBonus($attacker);
             $val += $nextStrikeBonus;
-            $reduction = CardStats::getDamageReduction($this->state, $attacker, $defendCard, 'strike');
+            $reduction = CardStats::getDamageReduction($this->state, $attacker, $defendCard, 'strike', $attackStrike);
             $val -= $reduction;
             if ($val < 0) $val = 0;
             if (!empty($strike['damage_cap'])) {
@@ -952,9 +952,7 @@ final class StrikeResolver
             $val += $defAbilityBonus;
 
             // Снижение у атакующего (Воин -1 от степных)
-            $defReduction = CardStats::getDamageReduction(
-                $this->state, $defendCard, $attacker, 'strike'
-            );
+            $defReduction = CardStats::getDamageReduction($this->state, $defendCard, $attacker, 'strike', $defendStrike);
             if ($defReduction > 0) {
                 $this->state->battle['strike']['defend_reduction'] = $defReduction;
             }
