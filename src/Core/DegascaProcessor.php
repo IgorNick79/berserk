@@ -409,6 +409,10 @@ final class DegascaProcessor
         if ($activation === 'strong_strike'
             && !empty($pending['context']['continue_after_result_ack'])
             && is_array($pending['context']['strike'] ?? null)) {
+            $currentStrike = $this->state->battle['strike'] ?? null;
+            if (!is_array($currentStrike) || empty($currentStrike['attacker_id'])) {
+                $this->state->battle['strike'] = (array) $pending['context']['strike'];
+            }
             (new StrikeResolver($this->state, $this->engine))
                 ->continueAfterStrikeResultAck((array) $pending['context']['strike']);
         }

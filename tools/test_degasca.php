@@ -229,6 +229,22 @@ function dgChooseNokami(GameState $state, int $targetId, string $playerKey = Gam
     dgAssert($result->success, $result->error ?? 'Nokami wound choice should succeed.');
 }
 
+function dgApplyStrikeResult(GameState $state, array $result): void
+{
+    (new StrikeResolver($state, new Engine()))->apply($result, false);
+    if (($state->battle['strike']['state'] ?? '') !== 'waiting_auto_target') {
+        $state->battle['strike']['state'] = 'results';
+    }
+}
+
+function dgConfirmStrikeBoth(GameState $state): void
+{
+    $result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike'));
+    dgAssert($result->success, $result->error ?? 'Host strike confirm should succeed.');
+    $result = (new Engine())->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike'));
+    dgAssert($result->success, $result->error ?? 'Player strike confirm should succeed.');
+}
+
 // Degasca no longer opens before battle: learning waits for the final strong-strike lifecycle.
 $degasca = dgCard([
     'instanceId' => 1,
@@ -404,7 +420,7 @@ $state->battle['strike'] = [
     'redirect_candidates' => [],
     'friendly_fire' => false,
 ];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
 dgAssert(empty($state->battle['pending_degasca_sequence']), 'Degasca should wait until the strong-strike result is fully acknowledged.');
 dgAssert((new Engine())->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike'))->success, 'Host confirm before Degasca should succeed.');
 dgAssert((new Engine())->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike'))->success, 'Player confirm should open Degasca after the fight lifecycle.');
@@ -468,16 +484,19 @@ $degasca = dgCard([
 ]);
 $target = dgCard(['instanceId' => 28, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4, 'hp' => 3]);
 $watcher = dgCard(['instanceId' => 29, 'ukid' => 'watcher', 'owner' => GameState::PLAYER_HOST, 'row' => 2, 'col' => 4, 'hp' => 10, 'prop' => dgAnyDeathWatcherProp()]);
+$survivor = dgCard(['instanceId' => 86, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 5, 'hp' => 10]);
 $deck = dgCard(['instanceId' => 36, 'ukid' => 'learn_chain', 'owner' => GameState::PLAYER_HOST, 'zone' => CardInstance::ZONE_DECK, 'order' => 1, 'prop' => dgChainProp()]);
-$state = dgState($degasca, $target, $watcher, $deck);
+$state = dgState($degasca, $target, $watcher, $survivor, $deck);
 $state->battle['strike'] = ['attacker_id' => 27, 'target_id' => 28, 'defender_id' => null, 'state' => 'waiting_choice', 'confirmed' => [], 'defenders' => [], 'redirect_candidates' => [], 'friendly_fire' => false];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
 dgAssert(!empty($state->battle['pending_any_death']), 'Primary strike death should create any-death pending before learned effects continue.');
 dgAssert(empty($state->battle['pending_degasca_sequence']), 'Degasca should hand off to primary-death pending before learned effects.');
 dgAssert(!isset($target->markers['stun']), 'Learned marker should not run before primary-death pending is resolved.');
 $state = GameState::fromArray($state->toArray());
 dgSkipAnyDeath($state);
-dgAssert(isset($state->getCard(28)->markers['stun']), 'Degasca should resume learned effects after primary-death pending.');
+dgAssert(!isset($state->getCard(28)->markers['stun']), 'Degasca should still wait for strike confirmation after primary-death pending.');
+dgConfirmStrikeBoth($state);
+dgAssert(isset($state->getCard(28)->markers['stun']), 'Degasca should resume learned effects after primary-death pending and result confirmation.');
 dgAssert(($state->battle['pending_degasca_sequence']['stage'] ?? '') === 'choose_card', 'Degasca should offer a new learned ability after primary-death pending.');
 dgAssert(($state->battle['pending_degasca_sequence']['index'] ?? -1) === 1, 'Primary-death resume should not repeat the learned marker effect.');
 
@@ -504,10 +523,11 @@ $state->battle['pending_any_death'] = [[
     'poison_value' => 1,
 ]];
 $state->battle['strike'] = ['attacker_id' => 37, 'target_id' => 38, 'defender_id' => null, 'state' => 'waiting_choice', 'confirmed' => [], 'defenders' => [], 'redirect_candidates' => [], 'friendly_fire' => false];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
 dgAssert(empty($state->battle['pending_degasca_sequence']), 'Degasca should hand off to pre-existing any-death pending before running learned marker.');
 dgAssert(!isset($target->markers['stun']), 'Learned marker should not run while pre-existing any-death pending is unresolved.');
 dgSkipAnyDeath($state);
+dgConfirmStrikeBoth($state);
 dgAssert(isset($target->markers['stun']), 'Degasca should resume learned marker after pre-existing any-death pending.');
 
 // Resolving a pre-existing any-death pending can resume Degasca into a learned effect that opens another pending.
@@ -536,9 +556,10 @@ $state->battle['pending_any_death'] = [[
     'poison_value' => 1,
 ]];
 $state->battle['strike'] = ['attacker_id' => 78, 'target_id' => 79, 'defender_id' => null, 'state' => 'waiting_choice', 'confirmed' => [], 'defenders' => [], 'redirect_candidates' => [], 'friendly_fire' => false];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
 dgAssert(empty($state->battle['pending_anubisar_chain']), 'Learned chain should not open while pre-existing any-death is active.');
 dgSkipAnyDeath($state);
+dgConfirmStrikeBoth($state);
 dgAssert(!empty($state->battle['pending_anubisar_chain']), 'Degasca should resume after any-death and hand off to pending created by the learned effect.');
 dgAssert(empty($state->battle['pending_degasca_sequence']), 'Degasca should wait while the learned chain choice is active.');
 $result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('choose_anubisar_chain', ['target_ids' => [81, 82]]));
@@ -786,14 +807,16 @@ $target = dgCard(['instanceId' => 31, 'owner' => GameState::PLAYER_PLAYER, 'row'
 $grave = dgCard(['instanceId' => 32, 'ukid' => 'grave', 'owner' => GameState::PLAYER_HOST, 'zone' => CardInstance::ZONE_GRAVEYARD, 'hp' => 0, 'prop' => ['incarnation' => 4]]);
 $state = dgState($degasca, $target, $grave);
 $state->battle['strike'] = ['attacker_id' => 30, 'target_id' => 31, 'defender_id' => null, 'state' => 'waiting_choice', 'confirmed' => [], 'defenders' => [], 'redirect_candidates' => [], 'friendly_fire' => false];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
+dgConfirmStrikeBoth($state);
 dgAssert(!isset($grave->markers['incarnation']), 'Learned Talion must not trigger at zero wounds.');
 
 $degasca->strikeStrong = 3;
 $grave->markers = [];
 $target->hp = 10;
 $state->battle['strike'] = ['attacker_id' => 30, 'target_id' => 31, 'defender_id' => null, 'state' => 'waiting_choice', 'confirmed' => [], 'defenders' => [], 'redirect_candidates' => [], 'friendly_fire' => false];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
+dgConfirmStrikeBoth($state);
 dgAssert((int) ($grave->markers['incarnation']['value'] ?? 0) === 1, 'Learned Talion should add token after strong wound.');
 
 // Talion migration: old and new configs together should not double-trigger, and zero wounds still block it.
@@ -813,14 +836,16 @@ $target = dgCard(['instanceId' => 34, 'owner' => GameState::PLAYER_PLAYER, 'row'
 $grave = dgCard(['instanceId' => 35, 'ukid' => 'grave', 'owner' => GameState::PLAYER_HOST, 'zone' => CardInstance::ZONE_GRAVEYARD, 'hp' => 0, 'prop' => ['incarnation' => 4]]);
 $state = dgState($talion, $target, $grave);
 $state->battle['strike'] = ['attacker_id' => 33, 'target_id' => 34, 'defender_id' => null, 'state' => 'waiting_choice', 'confirmed' => [], 'defenders' => [], 'redirect_candidates' => [], 'friendly_fire' => false];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
+dgConfirmStrikeBoth($state);
 dgAssert((int) ($grave->markers['incarnation']['value'] ?? 0) === 1, 'Talion old+new migration config should add exactly one token after wounds.');
 
 $talion->strikeStrong = 0;
 $grave->markers = [];
 $target->hp = 10;
 $state->battle['strike'] = ['attacker_id' => 33, 'target_id' => 34, 'defender_id' => null, 'state' => 'waiting_choice', 'confirmed' => [], 'defenders' => [], 'redirect_candidates' => [], 'friendly_fire' => false];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
+dgConfirmStrikeBoth($state);
 dgAssert(!isset($grave->markers['incarnation']), 'Talion old+new migration config should not trigger at zero wounds.');
 
 // Anubisar chain choice resumes and clears when no new deck candidates remain.
@@ -839,7 +864,8 @@ $c2 = dgCard(['instanceId' => 43, 'owner' => GameState::PLAYER_PLAYER, 'row' => 
 $c3 = dgCard(['instanceId' => 44, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 5, 'hp' => 10]);
 $state = dgState($degasca, $target, $c1, $c2, $c3);
 $state->battle['strike'] = ['attacker_id' => 40, 'target_id' => 41, 'defender_id' => null, 'state' => 'waiting_choice', 'confirmed' => [], 'defenders' => [], 'redirect_candidates' => [], 'friendly_fire' => false];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
+dgConfirmStrikeBoth($state);
 dgAssert(!empty($state->battle['pending_anubisar_chain']), 'Learned Anubisar should open the shared Anubisar chain choice.');
 $result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('choose_anubisar_chain', ['target_ids' => [42, 43]]));
 dgAssert($result->success, $result->error ?? 'Degasca chain choice should succeed.');
@@ -863,7 +889,8 @@ $c2 = dgCard(['instanceId' => 48, 'owner' => GameState::PLAYER_PLAYER, 'row' => 
 $c3 = dgCard(['instanceId' => 49, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 5, 'hp' => 10]);
 $state = dgState($degasca, $target, $c1, $c2, $c3);
 $state->battle['strike'] = ['attacker_id' => 45, 'target_id' => 46, 'defender_id' => null, 'state' => 'waiting_choice', 'confirmed' => [], 'defenders' => [], 'redirect_candidates' => [], 'friendly_fire' => false];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
+dgConfirmStrikeBoth($state);
 dgAssert(!empty($state->battle['pending_anubisar_chain']), 'First effect of a multi-effect learned card should open a shared choice.');
 $result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('choose_anubisar_chain', ['target_ids' => [47, 48]]));
 dgAssert($result->success, $result->error ?? 'First multi-effect choice should resolve.');
@@ -887,7 +914,8 @@ $c2 = dgCard(['instanceId' => 56, 'owner' => GameState::PLAYER_PLAYER, 'row' => 
 $c3 = dgCard(['instanceId' => 57, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 5, 'hp' => 10]);
 $state = dgState($degasca, $target, $c1, $c2, $c3);
 $state->battle['strike'] = ['attacker_id' => 53, 'target_id' => 54, 'defender_id' => null, 'state' => 'waiting_choice', 'confirmed' => [], 'defenders' => [], 'redirect_candidates' => [], 'friendly_fire' => false];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
+dgConfirmStrikeBoth($state);
 dgAssert(!empty($state->battle['pending_anubisar_chain']), 'First sequential effect should open a choice.');
 $result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('choose_anubisar_chain', ['target_ids' => [55, 56]]));
 dgAssert($result->success, $result->error ?? 'First sequential choice should resolve.');
@@ -914,7 +942,8 @@ $watcher = dgCard(['instanceId' => 68, 'ukid' => 'watcher', 'owner' => GameState
 $deck = dgCard(['instanceId' => 69, 'ukid' => 'learn_marker', 'owner' => GameState::PLAYER_HOST, 'zone' => CardInstance::ZONE_DECK, 'order' => 1, 'prop' => dgMarkerProp()]);
 $state = dgState($degasca, $target, $victim, $watcher, $deck);
 $state->battle['strike'] = ['attacker_id' => 65, 'target_id' => 66, 'defender_id' => null, 'state' => 'waiting_choice', 'confirmed' => [], 'defenders' => [], 'redirect_candidates' => [], 'friendly_fire' => false];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
+dgConfirmStrikeBoth($state);
 dgAssert(!empty($state->battle['pending_any_death']), 'Learned chain lethal damage should create any-death pending.');
 dgAssert(empty($state->battle['pending_degasca_sequence']), 'Degasca should hand off to any-death created by learned chain.');
 dgAssert($victim->hp === 0, 'Learned chain should apply lethal damage exactly once before pending.');
@@ -940,7 +969,8 @@ $watcher = dgCard(['instanceId' => 73, 'ukid' => 'watcher', 'owner' => GameState
 $deck = dgCard(['instanceId' => 74, 'ukid' => 'learn_marker', 'owner' => GameState::PLAYER_HOST, 'zone' => CardInstance::ZONE_DECK, 'order' => 1, 'prop' => dgMarkerProp()]);
 $state = dgState($degasca, $target, $behind, $watcher, $deck);
 $state->battle['strike'] = ['attacker_id' => 70, 'target_id' => 71, 'defender_id' => null, 'state' => 'waiting_choice', 'confirmed' => [], 'defenders' => [], 'redirect_candidates' => [], 'friendly_fire' => false];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
+dgConfirmStrikeBoth($state);
 dgAssert(!empty($state->battle['pending_any_death']), 'Learned behind weak strike lethal damage should create any-death pending.');
 dgAssert(empty($state->battle['pending_degasca_sequence']), 'Degasca should hand off to any-death created by behind weak strike.');
 dgSkipAnyDeath($state);
@@ -961,7 +991,8 @@ $target = dgCard(['instanceId' => 76, 'owner' => GameState::PLAYER_PLAYER, 'row'
 $behind = dgCard(['instanceId' => 77, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 5, 'hp' => 10, 'strikeWeak' => 2]);
 $state = dgState($degasca, $target, $behind);
 $state->battle['strike'] = ['attacker_id' => 75, 'target_id' => 76, 'defender_id' => null, 'state' => 'waiting_choice', 'confirmed' => [], 'defenders' => [], 'redirect_candidates' => [], 'friendly_fire' => false];
-(new StrikeResolver($state, new Engine()))->apply(['attack' => 'strong', 'defend' => '', 'winner' => 'attack'], false);
+dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
+dgConfirmStrikeBoth($state);
 dgAssert($target->hp === 5, 'Degasca learned Tich should add behind weak strike damage after primary strong damage.');
 
 echo "Degasca tests passed.\n";
