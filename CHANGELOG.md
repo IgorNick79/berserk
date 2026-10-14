@@ -261,3 +261,9 @@
   Везде toggle «Все / свои / чужие». Если соседей нет или они не подходят
   по фильтру — Choice не открывается. Отмены нет.
 - `ShaksiRollChoice`, `MovementResolver::tryShaksiRoll`.
+
+### Добавлено
+- Карта **Келе** (`s1_102`): магический удар на 3-4-5. При успешном strike —
+  авто-излечение на 2; если после этого HP полное, Келе не закрывается.
+- `StrikeResolver::apply` — поддержка `prop.on_strike_self_heal`
+  с флагами `value` и `no_close_if_full`.

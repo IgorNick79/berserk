@@ -1013,6 +1013,22 @@ final class StrikeResolver
             $noClose     = !empty($attacker->prop['no_close_after_attack'])
                 || !empty($attacker->flags['no_close_this_turn']);
 
+            // Келе и подобные: авто-heal при попадании, условное не-закрытие
+            $selfHeal = $attacker->prop['on_strike_self_heal'] ?? null;
+            if (is_array($selfHeal)
+                && !empty($strike['strike_hit'])
+                && $attacker->hp > 0) {
+
+                if ($attacker->hp < $attacker->hpMax) {
+                    $healValue = (int) ($selfHeal['value'] ?? 0);
+                    $attacker->hp = min($attacker->hpMax, $attacker->hp + $healValue);
+                }
+
+                if (!empty($selfHeal['no_close_if_full']) && $attacker->hp >= $attacker->hpMax) {
+                    $noClose = true;
+                }
+            }
+            
             if ($attacker->flags['attacks_used_this_turn'] >= $attackLimit && !$noClose) {
                 $attacker->closed = true;
             }
