@@ -93,15 +93,15 @@ $playerState = defenderUiState(GameState::PLAYER_HOST, [
 $playerHtml = defenderUiRender($playerState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 
 defenderUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Защитник A [4:4]'),
-    'Player-relative defender label should mirror row and column.'
+    str_contains($playerHtml['info_panel_html'], 'Защитник A Вражеский [1:4]'),
+    'Defender label should use side-relative row and viewer-relative column.'
 );
 defenderUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Защитник B [3:2]'),
+    str_contains($playerHtml['info_panel_html'], 'Защитник B Свой [1:2]'),
     'Second defender should use player-relative coordinates.'
 );
 defenderUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Защитник C [1:1]'),
+    str_contains($playerHtml['info_panel_html'], 'Защитник C Свой [3:1]'),
     'Third defender should use player-relative coordinates.'
 );
 defenderUiAssert(
@@ -119,8 +119,8 @@ $hostState = defenderUiState(GameState::PLAYER_PLAYER, [
 $hostHtml = defenderUiRender($hostState, GameState::PLAYER_HOST, 'host', $cardsInfo);
 
 defenderUiAssert(
-    str_contains($hostHtml['info_panel_html'], 'Защитник A [2:5]'),
-    'Host-relative defender label should keep absolute row and column.'
+    str_contains($hostHtml['info_panel_html'], 'Защитник A Свой [2:5]'),
+    'Host defender label should use game row and host column.'
 );
 defenderUiAssert(
     substr_count($hostHtml['field_html'], 'pending-defender-target') === 1,

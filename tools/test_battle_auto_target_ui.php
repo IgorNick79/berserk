@@ -122,15 +122,15 @@ $playerState = autoTargetUiState(GameState::PLAYER_PLAYER, [
 $playerHtml = autoTargetUiRender($playerState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 
 autoTargetUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Близнец [4:4]'),
+    str_contains($playerHtml['info_panel_html'], 'Близнец Вражеский [1:4]'),
     'Player-relative auto target label should mirror first candidate row and column.'
 );
 autoTargetUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Близнец [3:2]'),
+    str_contains($playerHtml['info_panel_html'], 'Близнец Свой [1:2]'),
     'Identical auto target cards should be distinguishable by mirrored coordinates.'
 );
 autoTargetUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Дальний [1:1]'),
+    str_contains($playerHtml['info_panel_html'], 'Дальний Свой [3:1]'),
     'Edge auto target coordinate should mirror for player viewer.'
 );
 autoTargetUiAssert(
@@ -157,7 +157,7 @@ $hostState = autoTargetUiState(GameState::PLAYER_HOST, [
 $hostHtml = autoTargetUiRender($hostState, GameState::PLAYER_HOST, 'host', $cardsInfo);
 
 autoTargetUiAssert(
-    str_contains($hostHtml['info_panel_html'], 'Близнец [2:5]'),
+    str_contains($hostHtml['info_panel_html'], 'Близнец Свой [2:5]'),
     'Host-relative auto target label should keep absolute row and column.'
 );
 autoTargetUiAssert(
@@ -176,7 +176,7 @@ $flyState = autoTargetUiState(GameState::PLAYER_PLAYER, [
 ]);
 $flyHtml = autoTargetUiRender($flyState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 autoTargetUiAssert(
-    str_contains($flyHtml['info_panel_html'], 'Летун [6:1]'),
+    str_contains($flyHtml['info_panel_html'], 'Летун Вражеский [3:1]'),
     'Flying auto target candidate should use viewer-relative coordinates when present.'
 );
 autoTargetUiAssert(

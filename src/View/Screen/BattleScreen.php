@@ -165,7 +165,13 @@ final class BattleScreen
         array $pendingAllyModifierTargets,
         bool $explicitAttackMode
     ): string {
-        $html = '';
+        $markerTargets = \Berserk\View\Ui\CellMarkerPicker::targets($state, $playerKey, $baseUrl);
+        $html = '<div class="battle-columns" aria-label="Столбцы">';
+        foreach ($colOrder as $c) {
+            $pos = \Berserk\View\Ui\BattlefieldPosition::display(1, $c, $playerKey);
+            $html .= '<span>' . $pos['col'] . '</span>';
+        }
+        $html .= '</div>';
         foreach ($rowOrder as $r) {
             $rowCells = '';
             foreach ($colOrder as $c) {
@@ -240,6 +246,13 @@ final class BattleScreen
                     $cellContent = '<a class="cell-link" href="' . $jumpUrl . '"></a>';
                 }
 
+                if (isset($markerTargets[$key]) && !$card) {
+                    $cellClass = 'cell-marker-target';
+                    $url = htmlspecialchars($markerTargets[$key]['url'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    $label = htmlspecialchars(\Berserk\View\Ui\BattlefieldPosition::label($r, $c, $playerKey), ENT_QUOTES, 'UTF-8');
+                    $cellContent = '<a class="cell-link" href="' . $url . '" aria-label="Выбрать клетку: ' . $label . '"></a>';
+                }
+
                 // ─── ОВЕРЛЕЙ: всегда в конце, на уровне клетки ───
                 $cellContent .= $this->buildCellMarkersOverlay($state, $key);
 
@@ -248,7 +261,11 @@ final class BattleScreen
                     'content' => $cellContent,
                 ]);
             }
-            $html .= '<div class="field-row">' . $rowCells . '</div>';
+            $pos = \Berserk\View\Ui\BattlefieldPosition::display($r, 1, $playerKey);
+            $side = $pos['side'] === 'own' ? 'Свой' : 'Вражеский';
+            $html .= '<div class="field-row battle-numbered-row"><span class="battle-row-number coords--'
+                . $pos['side'] . '" aria-label="' . $side . ' ' . $pos['row'] . '-й ряд">'
+                . $pos['row'] . '</span>' . $rowCells . '</div>';
         }
         return $html;
     }

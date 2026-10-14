@@ -138,15 +138,15 @@ allyModifierUiAssert(
     'Ally modifier text should keep the source card name.'
 );
 allyModifierUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Близнец [4:4]'),
+    str_contains($playerHtml['info_panel_html'], 'Близнец Вражеский [1:4]'),
     'Player-relative ally modifier label should mirror first candidate row and column.'
 );
 allyModifierUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Близнец [3:2]'),
+    str_contains($playerHtml['info_panel_html'], 'Близнец Свой [1:2]'),
     'Identical ally modifier cards should be distinguishable by mirrored coordinates.'
 );
 allyModifierUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Дальний [1:1]'),
+    str_contains($playerHtml['info_panel_html'], 'Дальний Свой [3:1]'),
     'Edge ally modifier coordinate should mirror for player viewer.'
 );
 allyModifierUiAssert(
@@ -168,7 +168,7 @@ $hostState = allyModifierUiState(GameState::PLAYER_HOST, [
 $hostHtml = allyModifierUiRender($hostState, GameState::PLAYER_HOST, 'host', $cardsInfo);
 
 allyModifierUiAssert(
-    str_contains($hostHtml['info_panel_html'], 'Близнец [2:5]'),
+    str_contains($hostHtml['info_panel_html'], 'Близнец Свой [2:5]'),
     'Host-relative ally modifier label should keep absolute row and column.'
 );
 allyModifierUiAssert(
@@ -191,7 +191,7 @@ $flyState = allyModifierUiState(GameState::PLAYER_PLAYER, [
 ]);
 $flyHtml = allyModifierUiRender($flyState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 allyModifierUiAssert(
-    str_contains($flyHtml['info_panel_html'], 'Летун [6:1]'),
+    str_contains($flyHtml['info_panel_html'], 'Летун Вражеский [3:1]'),
     'Flying ally modifier candidate should use viewer-relative coordinates.'
 );
 allyModifierUiAssert(

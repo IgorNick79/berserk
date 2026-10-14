@@ -252,9 +252,9 @@ $enemyValues = array_column($enemySpec->form['items'] ?? [], 'value');
 chAssert(in_array(2, $enemyValues, true) && in_array(6, $enemyValues, true), 'Enemy UI should include enemy creatures.');
 chAssert(!in_array(3, $enemyValues, true), 'Enemy UI should not display own creatures.');
 chAssert(in_array(4, $enemyValues, true), 'Enemy UI should include enemy flyers.');
-chAssert(in_array('Огненный имп [6:5]', $enemyLabels, true), 'Enemy label should use numeric row:col coordinates.');
-chAssert(in_array('Рогатый демон [5:4]', $enemyLabels, true), 'Duplicate enemy label should include coordinates.');
-chAssert(in_array('Рогатый демон [5:3]', $enemyLabels, true), 'Second duplicate enemy label should include different coordinates.');
+chAssert(in_array('Огненный имп Вражеский [3:5]', $enemyLabels, true), 'Enemy label should use numeric row:col coordinates.');
+chAssert(in_array('Рогатый демон Вражеский [2:4]', $enemyLabels, true), 'Duplicate enemy label should include coordinates.');
+chAssert(in_array('Рогатый демон Вражеский [2:3]', $enemyLabels, true), 'Second duplicate enemy label should include different coordinates.');
 chAssert(in_array('Вражеский летун [летун 2]', $enemyLabels, true), 'Flying enemy should use a clear flying-zone position.');
 foreach ($enemyLabels as $label) {
     chAssert(!str_contains($label, '#'), 'Target label should not expose instance ids.');
@@ -272,7 +272,7 @@ chAssert(in_array(3, $ownValues, true), 'Own UI should include own creatures.');
 chAssert(in_array(5, $ownValues, true), 'Own UI should include own flyers.');
 chAssert(!in_array(1, $ownValues, true), 'Own UI should exclude Charon himself.');
 chAssert(!in_array(2, $ownValues, true), 'Own UI should not display enemy creatures.');
-chAssert(in_array('Союзник [3:2]', $ownLabels, true), 'Own field creature should use numeric coordinates.');
+chAssert(in_array('Союзник Свой [1:2]', $ownLabels, true), 'Own field creature should use numeric coordinates.');
 chAssert(in_array('Свой летун [летун 1]', $ownLabels, true), 'Own flyer should use flying-zone position.');
 
 $enemySpecAgain = chSpec($state, 'enemy');

@@ -133,15 +133,15 @@ deathChoiceUiAssert(
     'Death choice text should keep the dead card name.'
 );
 deathChoiceUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Близнец [4:4]'),
+    str_contains($playerHtml['info_panel_html'], 'Близнец Вражеский [1:4]'),
     'Player-relative death target label should mirror first candidate row and column.'
 );
 deathChoiceUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Близнец [3:2]'),
+    str_contains($playerHtml['info_panel_html'], 'Близнец Свой [1:2]'),
     'Identical death target cards should be distinguishable by mirrored coordinates.'
 );
 deathChoiceUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Дальний [1:1]'),
+    str_contains($playerHtml['info_panel_html'], 'Дальний Свой [3:1]'),
     'Edge death target coordinate should mirror for player viewer.'
 );
 deathChoiceUiAssert(
@@ -163,7 +163,7 @@ $hostState = deathChoiceUiState(GameState::PLAYER_HOST, [
 $hostHtml = deathChoiceUiRender($hostState, GameState::PLAYER_HOST, 'host', $cardsInfo);
 
 deathChoiceUiAssert(
-    str_contains($hostHtml['info_panel_html'], 'Близнец [2:5]'),
+    str_contains($hostHtml['info_panel_html'], 'Близнец Свой [2:5]'),
     'Host-relative death target label should keep absolute row and column.'
 );
 deathChoiceUiAssert(
@@ -186,7 +186,7 @@ $flyState = deathChoiceUiState(GameState::PLAYER_PLAYER, [
 ]);
 $flyHtml = deathChoiceUiRender($flyState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 deathChoiceUiAssert(
-    str_contains($flyHtml['info_panel_html'], 'Летун [6:1]'),
+    str_contains($flyHtml['info_panel_html'], 'Летун Вражеский [3:1]'),
     'Flying death target candidate should use viewer-relative coordinates.'
 );
 deathChoiceUiAssert(

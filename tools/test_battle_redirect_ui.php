@@ -107,15 +107,15 @@ $playerState = redirectUiState(GameState::PLAYER_HOST, [
 $playerHtml = redirectUiRender($playerState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 
 redirectUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Близнец [4:4]'),
+    str_contains($playerHtml['info_panel_html'], 'Близнец Вражеский [1:4]'),
     'Player-relative redirect label should mirror first candidate row and column.'
 );
 redirectUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Близнец [3:2]'),
+    str_contains($playerHtml['info_panel_html'], 'Близнец Свой [1:2]'),
     'Identical redirect cards should be distinguishable by mirrored coordinates.'
 );
 redirectUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Дальний [1:1]'),
+    str_contains($playerHtml['info_panel_html'], 'Дальний Свой [3:1]'),
     'Edge redirect coordinate should mirror for player viewer.'
 );
 redirectUiAssert(
@@ -152,7 +152,7 @@ $hostState = redirectUiState(GameState::PLAYER_PLAYER, [
 $hostHtml = redirectUiRender($hostState, GameState::PLAYER_HOST, 'host', $cardsInfo);
 
 redirectUiAssert(
-    str_contains($hostHtml['info_panel_html'], 'Близнец [2:5]'),
+    str_contains($hostHtml['info_panel_html'], 'Близнец Свой [2:5]'),
     'Host-relative redirect label should keep absolute row and column.'
 );
 redirectUiAssert(
@@ -171,7 +171,7 @@ $flyState = redirectUiState(GameState::PLAYER_HOST, [
 ]);
 $flyHtml = redirectUiRender($flyState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 redirectUiAssert(
-    str_contains($flyHtml['info_panel_html'], 'Летун [6:1]'),
+    str_contains($flyHtml['info_panel_html'], 'Летун Вражеский [3:1]'),
     'Flying redirect candidate should still use viewer-relative coordinates when present.'
 );
 redirectUiAssert(

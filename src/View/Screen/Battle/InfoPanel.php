@@ -94,6 +94,9 @@ final class InfoPanel
         if ($handler !== null) {
             $spec = $handler->spec($state, $playerKey, $cardsInfo, $baseUrl, $role);
             if ($spec !== null) {
+                if ($handler instanceof \Berserk\Core\Choice\CellMarkerChoice) {
+                    \Berserk\View\Ui\CellMarkerPicker::decorate($spec, $state, $playerKey, $baseUrl);
+                }
                 return \Berserk\View\Ui\Panel::render($spec);
             }
         }
@@ -222,7 +225,7 @@ final class InfoPanel
             $cm = $strike['cell_marker'];
             $label = $strike['action_name'] ?? 'Маркер';
             $contentHtml = '<p>' . htmlspecialchars($label, ENT_QUOTES)
-                . ': клетка (' . $cm['row'] . ',' . $cm['col'] . ')</p>';
+                . ': клетка ' . \Berserk\View\Ui\Coords::render($cm['row'] ?? null, $cm['col'] ?? null, $playerKey) . '</p>';
 
             $confirmed = $strike['confirmed'] ?? [];
             if (!in_array($playerKey, $confirmed, true)) {

@@ -25,7 +25,9 @@ final class TaskCard
         array $task,
         string $url,
         array $cardsInfo = [],
-        bool $withCoords = true
+        bool $withCoords = true,
+        // Legacy callers omit orientation; migrate them individually without changing Core here.
+        ?string $viewerKey = null
     ): string {
         $name = null;
         if (!empty($task['card_ukid'])) {
@@ -36,7 +38,9 @@ final class TaskCard
 
         $coords = '';
         if ($withCoords && isset($task['row']) && $task['row'] !== null) {
-            $coords = ' (' . (int) $task['row'] . ',' . (int) $task['col'] . ')';
+            $coords = $viewerKey !== null
+                ? ' ' . Coords::render($task['row'], $task['col'] ?? null, $viewerKey)
+                : ' (' . (int) $task['row'] . ',' . (int) ($task['col'] ?? 0) . ')';
         }
 
         $hint = '';
