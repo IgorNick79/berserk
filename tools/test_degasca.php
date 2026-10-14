@@ -879,6 +879,7 @@ dgAssert(!empty($state->battle['pending_anubisar_chain']), 'Learned Anubisar sho
 $result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('choose_anubisar_chain', ['target_ids' => [42, 43]]));
 dgAssert($result->success, $result->error ?? 'Degasca chain choice should succeed.');
 dgAssert($c1->hp === 9 && $c2->hp === 9 && $c3->hp === 10, 'Degasca chain should damage chosen targets only.');
+dgAssert(count($state->battle['degasca_messages'][0]['items'] ?? []) === 2, 'Degasca chain damage should remain recorded for the result UI.');
 dgAssert(empty($state->battle['pending_degasca_sequence']), 'Degasca chain sequence should finish without deck candidates.');
 dgAssert(empty($state->battle['pending_anubisar_chain']), 'Shared Anubisar pending should be cleared after choice.');
 
@@ -1003,5 +1004,6 @@ $state->battle['strike'] = ['attacker_id' => 75, 'target_id' => 76, 'defender_id
 dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
 dgConfirmStrikeBoth($state);
 dgAssert($target->hp === 5, 'Degasca learned Tich should add behind weak strike damage after primary strong damage.');
+dgAssert((int) ($state->battle['degasca_messages'][0]['damage'] ?? 0) === 2, 'Degasca learned Tich should remain recorded for the result UI.');
 
 echo "Degasca tests passed.\n";

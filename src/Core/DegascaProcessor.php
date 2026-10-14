@@ -138,6 +138,8 @@ final class DegascaProcessor
                 }
 
                 $pendingSnapshot = $this->continuationPendingSnapshot();
+                $chainMessageOffset = count((array) ($this->state->battle['strike']['chain_damage'] ?? []));
+                $hadBehindWeakStrikeMessage = !empty($this->state->battle['strike']['behind_weak_strike_damage']);
                 (new StrikeResolver($this->state, $this->engine))->applyConfiguredStrikeEffects(
                     $source,
                     $target ?? $source,
@@ -145,6 +147,7 @@ final class DegascaProcessor
                     $effectList,
                     (int) ($pending['context']['wounds_dealt'] ?? 0)
                 );
+                $this->appendStrikeResultMessages($chainMessageOffset, $hadBehindWeakStrikeMessage);
                 if ($this->handoffChangedExternalPending($pendingSnapshot, $index + 1)) {
                     return;
                 }
@@ -482,6 +485,29 @@ final class DegascaProcessor
             return true;
         }
         return false;
+    }
+
+    private function appendStrikeResultMessages(int $chainOffset, bool $hadBehindWeakStrikeMessage): void
+    {
+        $strike = $this->state->battle['strike'] ?? null;
+        if (!is_array($strike)) return;
+
+        $chains = array_values((array) ($strike['chain_damage'] ?? []));
+        foreach (array_slice($chains, $chainOffset) as $chain) {
+            $items = array_values((array) ($chain['items'] ?? []));
+            if (empty($items)) continue;
+            $this->state->battle['degasca_messages'][] = [
+                'type' => 'chain_damage',
+                'items' => $items,
+            ];
+        }
+
+        if (!$hadBehindWeakStrikeMessage && !empty($strike['behind_weak_strike_damage'])) {
+            $this->state->battle['degasca_messages'][] = array_merge(
+                ['type' => 'behind_weak_strike_damage'],
+                (array) $strike['behind_weak_strike_damage']
+            );
+        }
     }
 
     /**

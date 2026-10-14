@@ -1170,7 +1170,7 @@ final class StrikeResolver
     /**
      * @param int[] $targetIds
      */
-    private function applyChainDamageToTargets(CardInstance $attacker, CardInstance $attacked, array $targetIds, int $damage): void
+    private function applyChainDamageToTargets(CardInstance $attacker, CardInstance $attacked, array $targetIds, int $damage): array
     {
         $applied = [];
         foreach ($targetIds as $targetId) {
@@ -1191,6 +1191,8 @@ final class StrikeResolver
                 'items' => $applied,
             ];
         }
+
+        return $applied;
     }
 
     public function chooseAnubisarChain(string $playerKey, Command $cmd): Result
@@ -1235,9 +1237,26 @@ final class StrikeResolver
         }
 
         $degascaSequence = $pending['degasca_sequence'] ?? null;
+        if (is_array($degascaSequence) && is_array($degascaSequence['context']['strike'] ?? null)) {
+            $currentStrike = $this->state->battle['strike'] ?? null;
+            if (!is_array($currentStrike) || empty($currentStrike['attacker_id'])) {
+                $this->state->battle['strike'] = (array) $degascaSequence['context']['strike'];
+            }
+        }
+
         unset($this->state->battle['pending_anubisar_chain']);
-        $this->applyChainDamageToTargets($attacker, $attacked, $targetIds, (int) ($pending['value'] ?? 1));
+        $applied = $this->applyChainDamageToTargets($attacker, $attacked, $targetIds, (int) ($pending['value'] ?? 1));
         if (is_array($degascaSequence)) {
+            if (!empty($applied)) {
+                $this->state->battle['degasca_messages'][] = [
+                    'type' => 'chain_damage',
+                    'items' => $applied,
+                ];
+            }
+            if (is_array($degascaSequence['context']['strike'] ?? null)
+                && is_array($this->state->battle['strike'] ?? null)) {
+                $degascaSequence['context']['strike'] = $this->state->battle['strike'];
+            }
             (new DegascaProcessor($this->state, $this->engine))->restoreAndResume($degascaSequence);
         }
         $this->state->bumpVersion();
