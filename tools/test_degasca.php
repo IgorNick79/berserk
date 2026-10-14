@@ -441,6 +441,33 @@ dgAssert(($degasca->flags['degasca_learned'] ?? []) === ['learn_marker', 'learn_
 dgAssert(empty($state->battle['pending_degasca_sequence']), 'Degasca pending should clear after strong pick.');
 dgAssert(empty($state->battle['strike']), 'Strike should close after Degasca finishes its post-fight sequence.');
 
+// Ost can upgrade a weak final strike to strong; Degasca must use the overridden result level.
+$degasca = dgCard([
+    'instanceId' => 110,
+    'ukid' => 'any_degasca',
+    'owner' => GameState::PLAYER_HOST,
+    'row' => 3,
+    'col' => 3,
+    'prop' => dgDegascaProp(),
+]);
+$target = dgCard(['instanceId' => 111, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4, 'hp' => 9]);
+$deck = dgCard(['instanceId' => 112, 'ukid' => 'learn_marker', 'owner' => GameState::PLAYER_HOST, 'zone' => CardInstance::ZONE_DECK, 'order' => 1, 'prop' => dgMarkerProp()]);
+$state = dgState($degasca, $target, $deck);
+$state->battle['strike'] = [
+    'attacker_id' => 110,
+    'target_id' => 111,
+    'defender_id' => null,
+    'state' => 'results',
+    'confirmed' => [GameState::PLAYER_HOST, GameState::PLAYER_PLAYER],
+    'result' => ['attack' => 'strong', 'defend' => '', 'winner' => 'attack'],
+    'final' => ['attack' => 'weak', 'defend' => '', 'decreased' => false],
+    'level_overridden' => true,
+    'damage_total' => 1,
+    'strike_hit' => true,
+];
+(new StrikeResolver($state, new Engine()))->continueAfterStrikeResultAck($state->battle['strike']);
+dgAssert(($state->battle['pending_degasca_sequence']['stage'] ?? '') === 'choose_card', 'Degasca should trigger when Ost changes a weak strike result to strong.');
+
 // Strong strike sequence opens after both result confirmations and does not reapply damage afterward.
 $degasca = dgCard([
     'instanceId' => 24,

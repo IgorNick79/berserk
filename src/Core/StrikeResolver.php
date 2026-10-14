@@ -1479,7 +1479,9 @@ final class StrikeResolver
             }
         }
 
-        $attackStrike = (string) ($strike['final']['attack'] ?? $strike['result']['attack'] ?? '');
+        $attackStrike = !empty($strike['level_overridden'])
+            ? (string) ($strike['result']['attack'] ?? $strike['final']['attack'] ?? '')
+            : (string) ($strike['final']['attack'] ?? $strike['result']['attack'] ?? '');
         if ($attackStrike === 'strong' && empty($strike['degasca_after_result_done'])) {
             $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
             $target = $this->state->getCard((int) ($strike['defender_id'] ?: ($strike['target_id'] ?? 0)));
