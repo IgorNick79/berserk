@@ -75,28 +75,47 @@ final class CardStats
         GameState $state,
         CardInstance $attacker,
         CardInstance $target,
-        int $value,
-        bool $near = false
+        int $value
     ): bool {
         if ($target->zone !== CardInstance::ZONE_FIELD
             && $target->zone !== CardInstance::ZONE_FLYING) {
             return false;
         }
         if ($target->dying || $target->hp <= 0) return false;
-        if ($target->owner === $attacker->owner) return false;
         if ($target->type === 'fly') return false;
         if (!empty($target->prop['incorporeal'])) return false;
         if ($target->hp > $value) return false;
 
-        if ($near) {
-            $dr = abs($target->row - $attacker->row);
-            $dc = abs($target->col - $attacker->col);
-            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
-                return false;
-            }
+        $dr = abs($target->row - $attacker->row);
+        $dc = abs($target->col - $attacker->col);
+        if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
+            return false;
         }
 
         return true;
+    }
+
+    public static function getExecuteValue(
+        GameState $state,
+        CardInstance $attacker,
+        CardInstance $target,
+        array $action
+    ): int {
+        if (($action['value_from'] ?? '') === 'poisoned_neighbors_plus_one') {
+            $x = 0;
+            foreach ($state->cards as $c) {
+                if ($c->zone !== CardInstance::ZONE_FIELD) continue;
+                if ($c->dying || $c->hp <= 0) continue;
+                if ($c->instanceId === $target->instanceId) continue;
+                if (empty($c->markers['poison'])) continue;
+                $dr = abs($c->row - $target->row);
+                $dc = abs($c->col - $target->col);
+                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
+                $x++;
+            }
+            return $x + 1;
+        }
+        return (int) ($action['value'] ?? 0);
     }
 
     /**
@@ -105,15 +124,14 @@ final class CardStats
     public static function findExecuteTargets(
         GameState $state,
         CardInstance $attacker,
-        int $value,
-        bool $near = false
+        int $value
     ): array {
         if ($value <= 0) return [];
 
         $targets = [];
         foreach ($state->cards as $target) {
             if ($target->instanceId === $attacker->instanceId) continue;
-            if (self::canExecuteTarget($state, $attacker, $target, $value, $near)) {
+            if (self::canExecuteTarget($state, $attacker, $target, $value)) {
                 $targets[] = $target;
             }
         }
@@ -221,6 +239,7 @@ final class CardStats
             'magic'     => ['zom'],
             'cast'      => ['zoz', 'zom'],
             'impact'    => ['stamina'],
+            'execute'    => ['stamina'],
         ];
 
         $defs = array_merge($map[$actionType] ?? [], $universal);

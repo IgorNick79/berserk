@@ -320,13 +320,9 @@ final class BattleHelper
                         if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
                     }
                 } elseif ($type === 'execute') {
-                    if (!CardStats::canExecuteTarget(
-                        $state,
-                        $card,
-                        $target,
-                        (int) ($action['value'] ?? 0),
-                        !empty($action['near'])
-                    )) continue;
+                    if (CardStats::hasDefense($state, $target, 'execute', $card)) continue;
+                    $executeValue = CardStats::getExecuteValue($state, $card, $target, $action);
+                    if (!CardStats::canExecuteTarget($state, $card, $target, $executeValue)) continue;
                 } elseif ($type === 'magic') {
                     if ($target->owner === $playerKey && !$allowFriendlyAction) continue;
 

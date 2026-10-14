@@ -609,8 +609,8 @@ final class ActionResolver
                 }
             }
         } elseif ($type === 'execute') {
-            if ($target->owner === $playerKey) {
-                return Result::error('Нельзя добить своих');
+            if (CardStats::hasDefense($this->state, $target, 'execute', $attacker)) {
+                return Result::error('Цель защищена');
             }
             if ($target->type === 'fly') {
                 return Result::error('Нельзя добить летающего');
@@ -618,17 +618,19 @@ final class ActionResolver
             if (!empty($target->prop['incorporeal'])) {
                 return Result::error('Нельзя добить бестелесного');
             }
-            if ($target->hp > (int) ($action['value'] ?? 0)) {
+            $value = CardStats::getExecuteValue($this->state, $attacker, $target, $action);
+            if ($target->hp > $value) {
                 return Result::error('У цели слишком много HP');
             }
-            if (!empty($action['near'])) {
-                $dr = abs($target->row - $attacker->row);
-                $dc = abs($target->col - $attacker->col);
-                if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
-                    return Result::error('Цель не соседняя');
-                }
+            $dr = abs($target->row - $attacker->row);
+            $dc = abs($target->col - $attacker->col);
+            if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) {
+                return Result::error('Цель не соседняя');
             }
         } elseif ($type === 'impact') {
+            if (CardStats::hasDefense($this->state, $target, 'impact', $attacker)) {
+                return Result::error('Цель защищена');
+            }
             if (!empty($action['self_destroy']) && $target->instanceId !== $attacker->instanceId) {
                 return Result::error('Цель — сам кастующий');
             }
@@ -1156,6 +1158,9 @@ final class ActionResolver
         CardInstance $attacker, CardInstance $target, array $action,
         int $cardId, int $targetId, string $playerKey
     ): Result {
+        if (CardStats::hasDefense($this->state, $target, 'execute', $attacker)) {
+            return Result::error('Цель защищена');
+        }
         // Структура до смерти цели
         $this->state->battle['strike'] = [
             'kind'        => 'execute',
