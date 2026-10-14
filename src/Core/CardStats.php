@@ -566,9 +566,10 @@ final class CardStats
         GameState $state,
         CardInstance $attacker,
         CardInstance $target,
-        string $actionType
+        string $actionType,
+        array $extraIgnore = []
     ): int {
-        if (self::isDefenseIgnored($attacker, 'damage_reduction')) return 0;
+        if (self::isDefenseIgnored($attacker, 'damage_reduction', $extraIgnore)) return 0;
 
         $total = 0;
 
