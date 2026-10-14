@@ -147,6 +147,14 @@ final class TurnProcessor
      */
     public function afterEndPhase(string $endingKey, string $nextActiveKey): void
     {
+        // Сброс выданных действий в конце хода источника
+        foreach ($this->state->cards as $card) {
+            foreach (array_keys($card->flags) as $k) {
+                if (!is_string($k) || !str_starts_with($k, 'granted_action:')) continue;
+                unset($card->flags[$k]);
+            }
+        }
+
         $this->activateScheduledCardMarkers($endingKey);
 
         // Ледяной дождь Криоманта — действует ровно один ход противника.
@@ -734,6 +742,13 @@ final class TurnProcessor
                         if ($mod['stat'] === '' || $mod['value'] === 0) continue;
                         $card->modifiers[] = $mod;
                     }
+                }
+                break;
+            case 'get_hp':
+                $hp = (int) ($start['hp'] ?? 0);
+                if ($hp > 0) {
+                    $card->hpMax += $hp;
+                    $card->hp += $hp;
                 }
                 break;
             case 'get_coins':
