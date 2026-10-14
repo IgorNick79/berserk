@@ -221,6 +221,14 @@ final class BattleHelper
                     break;
                 }
             }
+            // Выданное действие (Дверг и подобные)
+            if ($action === null) {
+                $grantedKey = 'granted_action:' . $actionKey;
+                $granted = $card->flags[$grantedKey] ?? null;
+                if (is_array($granted) && empty($granted['used'])) {
+                    $action = $granted;
+                }
+            }
             if (!$action) return [];
 
             $type = $action['type'] ?? '';

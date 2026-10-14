@@ -594,174 +594,192 @@ final class BattleScreen
                     . htmlspecialchars($reason !== '' ? $reason : 'Карта не может действовать', ENT_QUOTES)
                     . '</span> ';
             } else {
-            $abil = BattleHelper::abilities($c);
+                $abil = BattleHelper::abilities($c);
 
-            $attackLimit = (int) ($c->prop['attacks_per_turn'] ?? 1);
-            $attacksUsed = (int) ($c->flags['attacks_used_this_turn'] ?? 0);
-            $strikeBlocked = $attacksUsed >= $attackLimit;
+                $attackLimit = (int) ($c->prop['attacks_per_turn'] ?? 1);
+                $attacksUsed = (int) ($c->flags['attacks_used_this_turn'] ?? 0);
+                $strikeBlocked = $attacksUsed >= $attackLimit;
 
-            if ($abil['has_strike']) {
-                if ($strikeBlocked) {
-                    $modeButtons .= '<span class="button small disabled">Простой удар (уже атаковал)</span> ';
-                } else {
-                    $modeButtons .= $this->tpl->parse('includes/battle/mode_button.tpl', [
-                        'label'  => 'Простой удар',
-                        'link'   => "{$baseUrl}&sel={$c->instanceId}&mode=strike",
-                        'active' => $mode === 'strike' ? ' active' : '',
-                    ]);
-                }
-            }
-            if ($abil['has_uchr']) {
-                $modeButtons .= $this->tpl->parse('includes/battle/mode_button.tpl', [
-                    'label'  => 'УЧР',
-                    'link'   => "{$baseUrl}&sel={$c->instanceId}&mode=uchr",
-                    'active' => $mode === 'uchr' ? ' active' : '',
-                ]);
-            }
-
-            $labels = [
-                'shot'      => 'Выстрел',
-                'throw'     => 'Метание',
-                'discharge' => 'Разряд',
-                'tap'       => 'Особый удар',
-                'magic'     => 'Магический удар',
-                'cast'      => 'Заклинание',
-                'heal'      => 'Излечение',
-                'impact'    => 'Воздействие',
-                'execute'   => 'Добивание',
-                'jump'      => 'Прыжок',
-                'magic' => 'Магический удар',
-                'steal_strike' => 'Украсть оружие',
-                'sand_claws' => 'Песчаные когти',
-                'blood_tap' => 'Кровавый разряд',
-                'poison_target'   => 'Сладострастная аура',
-                'damage_poisoned' => 'Власть Ундины',
-                'dissonance' => 'Диссонанс',
-                'steal_coin' => 'Уловка',
-                'give_coin' => 'Передать монету',
-                'become_fly' => 'Получить полёт',
-                'dive' => 'Пикирование',
-                'bomb_shot' => 'Бомба',
-                'row_spell' => 'Цветущие руны',
-                'mark_opponent_row' => 'Заклинание ряда',
-                'apply_delayed_marker' => 'Воздействие',
-                'freeze_moves' => 'Ледяной дождь',
-                'particle'  => 'Частица души',
-                'life_gift' => 'Предсмертный дар',
-                'damage_ranged'   => 'Пламя бездны',
-                'teleport_target' => 'Дверь измерений',
-                'blood_storm' => 'Буря крови',
-                'attack_series' => 'Серия атак',
-            ];
-
-            foreach ($c->prop['actions'] ?? [] as $a) {
-                $type = $a['type'] ?? '';
-                if ($type === 'uchr') continue;
-                $key  = $a['key'] ?? $type;
-
-                $label = $a['name'] ?? ($labels[$type] ?? $type);
-
-                // Ведьма слуа — блокируем если нет доп. жизней
-                if ($type === 'blood_tap') {
-                    $base = (int) ($a['base_hp'] ?? 8);
-                    if (($c->hp - $base) <= 0) {
-                        $modeButtons .= '<span class="button small disabled">Кровавый разряд (нет доп. жизней)</span> ';
-                        continue;
+                if ($abil['has_strike']) {
+                    if ($strikeBlocked) {
+                        $modeButtons .= '<span class="button small disabled">Простой удар (уже атаковал)</span> ';
+                    } else {
+                        $modeButtons .= $this->tpl->parse('includes/battle/mode_button.tpl', [
+                            'label'  => 'Простой удар',
+                            'link'   => "{$baseUrl}&sel={$c->instanceId}&mode=strike",
+                            'active' => $mode === 'strike' ? ' active' : '',
+                        ]);
                     }
                 }
-
-                if ($type === 'steal_coin' && !empty($c->flags['steal_coin_used'])) {
-                    $modeButtons .= '<span class="button small disabled">Уловка (использована)</span> ';
-                    continue;
+                if ($abil['has_uchr']) {
+                    $modeButtons .= $this->tpl->parse('includes/battle/mode_button.tpl', [
+                        'label'  => 'УЧР',
+                        'link'   => "{$baseUrl}&sel={$c->instanceId}&mode=uchr",
+                        'active' => $mode === 'uchr' ? ' active' : '',
+                    ]);
                 }
 
-                if ($type === 'dive' && !empty($c->flags['dive_used'])) {
-                    $modeButtons .= '<span class="button small disabled">Пикирование (использовано)</span> ';
-                    continue;
-                }
+                $labels = [
+                    'shot'      => 'Выстрел',
+                    'throw'     => 'Метание',
+                    'discharge' => 'Разряд',
+                    'tap'       => 'Особый удар',
+                    'magic'     => 'Магический удар',
+                    'cast'      => 'Заклинание',
+                    'heal'      => 'Излечение',
+                    'impact'    => 'Воздействие',
+                    'execute'   => 'Добивание',
+                    'jump'      => 'Прыжок',
+                    'magic' => 'Магический удар',
+                    'steal_strike' => 'Украсть оружие',
+                    'sand_claws' => 'Песчаные когти',
+                    'blood_tap' => 'Кровавый разряд',
+                    'poison_target'   => 'Сладострастная аура',
+                    'damage_poisoned' => 'Власть Ундины',
+                    'dissonance' => 'Диссонанс',
+                    'steal_coin' => 'Уловка',
+                    'give_coin' => 'Передать монету',
+                    'become_fly' => 'Получить полёт',
+                    'dive' => 'Пикирование',
+                    'bomb_shot' => 'Бомба',
+                    'row_spell' => 'Цветущие руны',
+                    'mark_opponent_row' => 'Заклинание ряда',
+                    'apply_delayed_marker' => 'Воздействие',
+                    'freeze_moves' => 'Ледяной дождь',
+                    'particle'  => 'Частица души',
+                    'life_gift' => 'Предсмертный дар',
+                    'damage_ranged'   => 'Пламя бездны',
+                    'teleport_target' => 'Дверь измерений',
+                    'blood_storm' => 'Буря крови',
+                    'attack_series' => 'Серия атак',
+                ];
 
-                if ($type === 'give_coin' && $c->coins < 1) {
-                    $modeButtons .= '<span class="button small disabled">Передать монету (нет монет)</span> ';
-                    continue;
-                }
-                
-                if ($type === 'shot'
-                    && !empty($a['condition'])
-                    && ($a['condition']['type'] ?? '') === 'ally_price_near') {
+                foreach ($c->prop['actions'] ?? [] as $a) {
+                    $type = $a['type'] ?? '';
+                    if ($type === 'uchr') continue;
+                    $key  = $a['key'] ?? $type;
 
-                    $moved   = !empty($c->flags['moved_this_turn']);
-                    $used    = !empty($c->flags['shot_used_this_turn']);
-                    $hasAlly = CardStats::hasAllyPriceNear($state, $c, (int) $a['condition']['min']);
+                    $label = $a['name'] ?? ($labels[$type] ?? $type);
 
-                    if (!$moved || $used || !$hasAlly) {
+                    // Ведьма слуа — блокируем если нет доп. жизней
+                    if ($type === 'blood_tap') {
+                        $base = (int) ($a['base_hp'] ?? 8);
+                        if (($c->hp - $base) <= 0) {
+                            $modeButtons .= '<span class="button small disabled">Кровавый разряд (нет доп. жизней)</span> ';
+                            continue;
+                        }
+                    }
+
+                    if ($type === 'steal_coin' && !empty($c->flags['steal_coin_used'])) {
+                        $modeButtons .= '<span class="button small disabled">Уловка (использована)</span> ';
+                        continue;
+                    }
+
+                    if ($type === 'dive' && !empty($c->flags['dive_used'])) {
+                        $modeButtons .= '<span class="button small disabled">Пикирование (использовано)</span> ';
+                        continue;
+                    }
+
+                    if ($type === 'give_coin' && $c->coins < 1) {
+                        $modeButtons .= '<span class="button small disabled">Передать монету (нет монет)</span> ';
+                        continue;
+                    }
+                    
+                    if ($type === 'shot'
+                        && !empty($a['condition'])
+                        && ($a['condition']['type'] ?? '') === 'ally_price_near') {
+
+                        $moved   = !empty($c->flags['moved_this_turn']);
+                        $used    = !empty($c->flags['shot_used_this_turn']);
+                        $hasAlly = CardStats::hasAllyPriceNear($state, $c, (int) $a['condition']['min']);
+
+                        if (!$moved || $used || !$hasAlly) {
+                            $modeButtons .= '<span class="button small disabled">'
+                                . htmlspecialchars($label . ' (нужно подойти к 7+)', ENT_QUOTES)
+                                . '</span> ';
+                            continue;
+                        }
+                    }
+
+                    // Универсальное условие действия — просто disabled
+                    if (!empty($a['condition'])
+                        && !CardStats::checkCondition($a['condition'], $state, $c)) {
+
                         $modeButtons .= '<span class="button small disabled">'
-                            . htmlspecialchars($label . ' (нужно подойти к 7+)', ENT_QUOTES)
+                            . htmlspecialchars($label, ENT_QUOTES)
                             . '</span> ';
                         continue;
                     }
-                }
-
-                // Универсальное условие действия — просто disabled
-                if (!empty($a['condition'])
-                    && !CardStats::checkCondition($a['condition'], $state, $c)) {
-
-                    $modeButtons .= '<span class="button small disabled">'
-                        . htmlspecialchars($label, ENT_QUOTES)
-                        . '</span> ';
-                    continue;
-                }
-                
-                $cost = (int) ($a['coins'] ?? 0);
-                if ($cost > 0) {
-                    $label .= ' (' . $cost . ' мон.)';
-                    if ($c->coins < $cost) {
-                        $modeButtons .= '<span class="button small disabled">' . htmlspecialchars($label, ENT_QUOTES) . '</span> ';
-                        continue;
+                    
+                    $cost = (int) ($a['coins'] ?? 0);
+                    if ($cost > 0) {
+                        $label .= ' (' . $cost . ' мон.)';
+                        if ($c->coins < $cost) {
+                            $modeButtons .= '<span class="button small disabled">' . htmlspecialchars($label, ENT_QUOTES) . '</span> ';
+                            continue;
+                        }
                     }
-                }
 
-                // Проверка монет через prop.coins[type] (Мастер топора, Пустотник)
-                $coinConfig = $c->prop['coins'][$type] ?? null;
-                if (is_array($coinConfig) && ($coinConfig['spend'] ?? '') === 'choice') {
-                    $min = (int) ($coinConfig['min_value'] ?? 0);
-                    if ($min > 0 && $c->coins < $min) {
-                        $modeButtons .= '<span class="button small disabled">'
-                            . htmlspecialchars($label . ' (нужно ' . $min . ' мон.)', ENT_QUOTES)
-                            . '</span> ';
-                        continue;
+                    // Проверка монет через prop.coins[type] (Мастер топора, Пустотник)
+                    $coinConfig = $c->prop['coins'][$type] ?? null;
+                    if (is_array($coinConfig) && ($coinConfig['spend'] ?? '') === 'choice') {
+                        $min = (int) ($coinConfig['min_value'] ?? 0);
+                        if ($min > 0 && $c->coins < $min) {
+                            $modeButtons .= '<span class="button small disabled">'
+                                . htmlspecialchars($label . ' (нужно ' . $min . ' мон.)', ENT_QUOTES)
+                                . '</span> ';
+                            continue;
+                        }
                     }
-                }
 
-                $immediate = $this->isImmediateBattleAction($a);
+                    $immediate = $this->isImmediateBattleAction($a);
 
-                if ($immediate) {
-                    $link = "{$baseUrl}&cmd=action&action_key={$key}&card_id={$c->instanceId}&target_id={$c->instanceId}&sel={$c->instanceId}&mode=action:{$key}";
-                } else {
-                    $link = "{$baseUrl}&sel={$c->instanceId}&mode=action:{$key}";
-                }
+                    if ($immediate) {
+                        $link = "{$baseUrl}&cmd=action&action_key={$key}&card_id={$c->instanceId}&target_id={$c->instanceId}&sel={$c->instanceId}&mode=action:{$key}";
+                    } else {
+                        $link = "{$baseUrl}&sel={$c->instanceId}&mode=action:{$key}";
+                    }
 
-                $modeButtons .= $this->tpl->parse('includes/battle/mode_button.tpl', [
-                    'label'  => htmlspecialchars($label, ENT_QUOTES),
-                    'link'   => $link,
-                    'active' => $mode === "action:{$key}" ? ' active' : '',
-                ]);
-            }
-
-            if (!empty($c->prop['save_coins'])) {
-                $max     = (int) ($c->prop['coins']['max_value'] ?? 0);
-                $canGain = ($max === 0 || $c->coins < $max);
-
-                if ($canGain) {
-                    $coinUrl = "{$baseUrl}&cmd=gain_coin&card_id={$c->instanceId}&sel={$c->instanceId}";
                     $modeButtons .= $this->tpl->parse('includes/battle/mode_button.tpl', [
-                        'label'  => 'Накопить монету',
-                        'link'   => $coinUrl,
-                        'active' => '',
+                        'label'  => htmlspecialchars($label, ENT_QUOTES),
+                        'link'   => $link,
+                        'active' => $mode === "action:{$key}" ? ' active' : '',
                     ]);
-                } else {
-                    $modeButtons .= '<span class="button small disabled">Монет максимум</span> ';
                 }
-            }
+
+                // Выданные действия (Дверг и подобные)
+                foreach ($c->flags as $flagKey => $flagValue) {
+                    if (!is_string($flagKey) || !str_starts_with($flagKey, 'granted_action:')) continue;
+                    if (!is_array($flagValue)) continue;
+                    if (!empty($flagValue['used'])) continue;
+
+                    $grantKey = (string) ($flagValue['key'] ?? '');
+                    if ($grantKey === '') continue;
+                    $grantLabel = (string) ($flagValue['name'] ?? 'Действие');
+
+                    $link = "{$baseUrl}&sel={$c->instanceId}&mode=action:{$grantKey}";
+                    $modeButtons .= $this->tpl->parse('includes/battle/mode_button.tpl', [
+                        'label'  => htmlspecialchars($grantLabel, ENT_QUOTES),
+                        'link'   => $link,
+                        'active' => $mode === "action:{$grantKey}" ? ' active' : '',
+                    ]);
+                }
+
+                if (!empty($c->prop['save_coins'])) {
+                    $max     = (int) ($c->prop['coins']['max_value'] ?? 0);
+                    $canGain = ($max === 0 || $c->coins < $max);
+
+                    if ($canGain) {
+                        $coinUrl = "{$baseUrl}&cmd=gain_coin&card_id={$c->instanceId}&sel={$c->instanceId}";
+                        $modeButtons .= $this->tpl->parse('includes/battle/mode_button.tpl', [
+                            'label'  => 'Накопить монету',
+                            'link'   => $coinUrl,
+                            'active' => '',
+                        ]);
+                    } else {
+                        $modeButtons .= '<span class="button small disabled">Монет максимум</span> ';
+                    }
+                }
             }
         }
 

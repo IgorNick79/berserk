@@ -433,6 +433,13 @@ final class Engine
         $card->flags['shot_used_this_turn'] = false;
         $card->flags['after_strike_execute_used_this_turn'] = 0;
         unset($card->flags['first_attack_target_id']);
+
+        // Сброс использования выданных действий (Дверг / Ойуун)
+        foreach (array_keys($card->flags) as $k) {
+            if (!is_string($k) || !str_starts_with($k, 'granted_action:')) continue;
+            if (!is_array($card->flags[$k])) continue;
+            $card->flags[$k]['used'] = false;
+        }
     }
 
     public function applyDamage(

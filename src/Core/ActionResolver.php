@@ -199,6 +199,10 @@ final class ActionResolver
             return $this->startRevive($attacker, $action, $cardId, $playerKey);
         }
 
+        if ($type === 'dverg_gift') {
+            return $this->startDvergGift($attacker, $action, $cardId, $playerKey);
+        }
+
         // Таран (Центурион): выбор количества ран, урон X-1 напротив
         if ($type === 'self_wound_strike') {
             if (empty($action['target']) || $action['target'] !== 'opposite') {
@@ -547,6 +551,15 @@ final class ActionResolver
                 return $a;
             }
         }
+
+        // Выданное действие (Дверг и подобные)
+        $flagKey = 'granted_action:' . $actionKey;
+        $granted = $attacker->flags[$flagKey] ?? null;
+        if (is_array($granted) && empty($granted['used'])) {
+            $granted['_granted_flag_key'] = $flagKey;
+            return $granted;
+        }
+
         return null;
     }
 
@@ -1221,6 +1234,10 @@ final class ActionResolver
             return Result::ok(['ranged_attack_redirect_pending']);
         }
 
+        if (!empty($action['_granted_flag_key'])) {
+            $attacker->flags[$action['_granted_flag_key']]['used'] = true;
+        }
+
         $dice   = Dice::roll();
         $level  = BattleHelper::diceToLevel($dice);
 
@@ -1289,10 +1306,14 @@ final class ActionResolver
             }
         }
 
-        // Защита цели
+        // Защита цели. Action-специфичный ignore — только для shot/throw.
         $defended = false;
-        if (in_array($type, ['shot', 'throw', 'discharge', 'magic', 'cast'], true)) {
-            $defended = CardStats::hasDefense($this->state, $target, $type, $attacker);
+        $extraIgnore = [];
+        if (in_array($type, ['shot', 'throw'], true) && !empty($action['ignore'])) {
+            $extraIgnore = (array) $action['ignore'];
+        }
+        if (in_array($type, ['shot', 'throw', 'discharge', 'uchr', 'magic', 'cast'], true)) {
+            $defended = CardStats::hasDefense($this->state, $target, $type, $attacker, $extraIgnore);
             if ($defended) $val = 0;
         }
 
@@ -1359,7 +1380,7 @@ final class ActionResolver
         $nextActionBonus = CardStats::getNextActionBonus($attacker, $type);
         $val += $nextActionBonus;
 
-        $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, $type);
+        $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, $type, $extraIgnore);
         $val -= $reduction;
         if ($val < 0) $val = 0;
 
@@ -5406,5 +5427,87 @@ final class ActionResolver
         $this->engine->checkGameOver($this->state);
         $this->state->bumpVersion();
         return Result::ok(["shaksi_roll:{$pending['dice']}:{$type}:{$targetId}"]);
+    }
+
+    private function startDvergGift(
+        CardInstance $attacker, array $action,
+        int $cardId, string $playerKey
+    ): Result {
+        if ($attacker->closed) {
+            return Result::error('Карта закрыта');
+        }
+        if ($attacker->zone !== CardInstance::ZONE_FIELD) {
+            return Result::error('Не на поле');
+        }
+
+        $candidates = [];
+        foreach ($this->state->cards as $c) {
+            if ($c->owner !== $playerKey) continue;
+            if ($c->instanceId === $attacker->instanceId) continue;
+            if ($c->zone !== CardInstance::ZONE_FIELD
+                && $c->zone !== CardInstance::ZONE_FLYING) continue;
+            if ($c->dying || $c->hp <= 0) continue;
+            if ($c->closed) continue;
+            if (CardStats::hasDefense($this->state, $c, 'magic', $attacker)) continue;
+            if (!empty($c->flags['granted_action:dverg_magic'])) continue;
+            $candidates[] = $c->instanceId;
+        }
+
+        if (empty($candidates)) {
+            return Result::error('Нет подходящих союзников');
+        }
+
+        $this->state->battle['pending_dverg_gift'] = [
+            'owner'      => $playerKey,
+            'source_id'  => $cardId,
+            'candidates' => $candidates,
+        ];
+
+        $this->state->bumpVersion();
+        return Result::ok(['dverg_gift_started']);
+    }
+
+    public function chooseDvergGiftTarget(string $playerKey, Command $cmd): Result
+    {
+        $pending = $this->state->battle['pending_dverg_gift'] ?? null;
+        if (!$pending) return Result::error('Нет ожидающего выбора');
+        if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+
+        $dverg = $this->state->getCard((int) $pending['source_id']);
+        if (!$dverg) {
+            unset($this->state->battle['pending_dverg_gift']);
+            return Result::error('Источник не найден');
+        }
+
+        $targetId = (int) $cmd->get('target_id', 0);
+        if (!in_array($targetId, $pending['candidates'], true)) {
+            return Result::error('Неверная цель');
+        }
+
+        $target = $this->state->getCard($targetId);
+        if (!$target || $target->dying || $target->hp <= 0) {
+            return Result::error('Цель недоступна');
+        }
+
+        $target->flags['granted_action:dverg_magic'] = [
+            'key'         => 'dverg_magic',
+            'name'        => 'Магический удар Дверга',
+            'type'        => 'magic',
+            'action_type' => 'magic',
+            'strike'      => [
+                'weak'   => $target->strikeWeak   + 1,
+                'medium' => $target->strikeMedium + 1,
+                'strong' => $target->strikeStrong + 1,
+            ],
+            'source_id' => $dverg->instanceId,
+            'used'      => false,
+        ];
+
+        $dverg->closed = true;
+
+        unset($this->state->battle['pending_dverg_gift']);
+
+        $this->state->bumpVersion();
+        return Result::ok(["dverg_gift:{$targetId}"]);
     }
 }
