@@ -198,7 +198,8 @@ final class CardStats
         GameState $state,
         CardInstance $target,
         string $actionType,
-        ?CardInstance $attacker = null
+        ?CardInstance $attacker = null,
+        array $extraIgnore = []
     ): bool {
         $prop = $target->prop;
 
@@ -223,7 +224,7 @@ final class CardStats
         $defs = array_merge($map[$actionType] ?? [], $universal);
 
         foreach ($defs as $def) {
-            if ($attacker !== null && self::isDefenseIgnored($attacker, $def)) {
+            if ($attacker !== null && self::isDefenseIgnored($attacker, $def, $extraIgnore)) {
                 continue;
             }
 
@@ -249,17 +250,27 @@ final class CardStats
         return false;
     }
 
-    public static function isDefenseIgnored(CardInstance $attacker, string $defense): bool
-    {
+    public static function isDefenseIgnored(
+        CardInstance $attacker,
+        string $defense,
+        array $extraIgnore = []
+    ): bool {
+        // Общий ignore на карте (Мантикора)
         $ignore = $attacker->prop['ignore'] ?? null;
-        if (!$ignore) return false;
-
-        if (is_array($ignore) && array_is_list($ignore)) {
-            return in_array($defense, $ignore, true);
+        if (is_array($ignore)) {
+            if (array_is_list($ignore) && in_array($defense, $ignore, true)) {
+                return true;
+            }
+            if (!empty($ignore[$defense])) {
+                return true;
+            }
         }
-        if (is_array($ignore) && !empty($ignore[$defense])) {
+
+        // Action-специфичный ignore (Серый альв, огненная стрела)
+        if (!empty($extraIgnore) && in_array($defense, $extraIgnore, true)) {
             return true;
         }
+
         return false;
     }
 

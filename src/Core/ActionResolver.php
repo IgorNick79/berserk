@@ -1306,10 +1306,14 @@ final class ActionResolver
             }
         }
 
-        // Защита цели
+        // Защита цели. Action-специфичный ignore — только для shot/throw.
         $defended = false;
-        if (in_array($type, ['shot', 'throw', 'discharge', 'magic', 'cast'], true)) {
-            $defended = CardStats::hasDefense($this->state, $target, $type, $attacker);
+        $extraIgnore = [];
+        if (in_array($type, ['shot', 'throw'], true) && !empty($action['ignore'])) {
+            $extraIgnore = (array) $action['ignore'];
+        }
+        if (in_array($type, ['shot', 'throw', 'discharge', 'uchr', 'magic', 'cast'], true)) {
+            $defended = CardStats::hasDefense($this->state, $target, $type, $attacker, $extraIgnore);
             if ($defended) $val = 0;
         }
 
