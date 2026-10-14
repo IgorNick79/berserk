@@ -20,6 +20,12 @@ final class DegascaProcessor
 
     public static function hasPreBattleTrigger(CardInstance $card): bool
     {
+        foreach ((array) ($card->prop['start_pre_battle'] ?? []) as $entry) {
+            $effect = (array) ($entry['effect'] ?? []);
+            if (($effect['type'] ?? '') === 'degasca_study') {
+                return true;
+            }
+        }
         return false;
     }
 
@@ -48,7 +54,11 @@ final class DegascaProcessor
 
     public function openPreBattleSequence(CardInstance $source): bool
     {
-        return false;
+        if (!self::hasPreBattleTrigger($source)) return false;
+        if (!$this->canActivate($source)) return false;
+        if (!empty($this->state->battle['pending_degasca_sequence'])) return false;
+
+        return $this->startSequence($source, 'pre_battle', []);
     }
 
     public function openStrongStrikeSequence(

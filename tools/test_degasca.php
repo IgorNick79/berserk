@@ -245,7 +245,7 @@ function dgConfirmStrikeBoth(GameState $state): void
     dgAssert($result->success, $result->error ?? 'Player strike confirm should succeed.');
 }
 
-// Degasca no longer opens before battle: learning waits for the final strong-strike lifecycle.
+// Degasca opens a pre-battle chooser and learns a starter ability before battle continues.
 $degasca = dgCard([
     'instanceId' => 1,
     'ukid' => 'any_degasca',
@@ -257,9 +257,11 @@ $degasca = dgCard([
 $anubisarDeck = dgCard(['instanceId' => 3, 'ukid' => 'learn_chain', 'owner' => GameState::PLAYER_HOST, 'zone' => CardInstance::ZONE_DECK, 'order' => 1, 'prop' => dgChainProp()]);
 $state = dgState($degasca, $anubisarDeck);
 (new TurnProcessor($state, new Engine()))->startBattle();
-dgAssert(empty($state->battle['pending_degasca_sequence']), 'Degasca must not open a pre-battle chooser.');
-dgAssert(($degasca->flags['degasca_learned'] ?? []) === [], 'Degasca must not learn before a strong strike.');
-dgAssert($anubisarDeck->zone === CardInstance::ZONE_DECK, 'Pre-battle must not remove a learnable card from deck.');
+dgAssert(($state->battle['pending_degasca_sequence']['stage'] ?? '') === 'choose_card', 'Degasca must open a pre-battle chooser.');
+dgChooseLearn($state, 3);
+dgAssert(($degasca->flags['degasca_learned'] ?? []) === ['learn_chain'], 'Degasca should learn the chosen pre-battle ability.');
+dgAssert($anubisarDeck->zone === CardInstance::ZONE_DECK, 'Pre-battle learning must not remove a learnable card from deck.');
+dgAssert(!empty($state->battle['pre_battle_completed']), 'Pre-battle lifecycle should continue after Degasca choice.');
 
 // Pre-battle with no available new ability still finishes synchronously and does not open pending.
 $degasca = dgCard([
@@ -275,6 +277,7 @@ $state = dgState($degasca);
 (new TurnProcessor($state, new Engine()))->startBattle();
 dgAssert(empty($state->battle['pending_degasca_sequence']), 'Degasca should not leave pending when no new ability exists.');
 dgAssert(empty($state->battle['pending_intrigue_start']), 'Pre-battle queue should finish when Degasca has no deck candidates.');
+dgAssert(!empty($state->battle['pre_battle_completed']), 'Pre-battle should complete when Degasca has no deck candidates.');
 
 // A matching ukid alone is not enough: Degasca behavior is driven only by prop.
 $plainS132 = dgCard([
@@ -338,6 +341,8 @@ $anubisarDeck = dgCard(['instanceId' => 74, 'ukid' => 'learn_chain', 'owner' => 
 $state = dgState($degasca, $aristocrat, $enemyA, $enemyB, $anubisarDeck);
 (new TurnProcessor($state, new Engine()))->startBattle();
 dgAssert(($state->battle['pending_intrigue_start'][0]['type'] ?? '') === 'intrigue', 'Aristocrat should remain queued after Degasca.');
+dgAssert(($state->battle['pending_degasca_sequence']['stage'] ?? '') === 'choose_card', 'Degasca should open before Aristocrat when it is earlier in the pre-battle queue.');
+dgChooseLearn($state, 74);
 $result = (new ActionResolver($state, new Engine()))->chooseIntrigueStart(GameState::PLAYER_HOST, new Command('choose_intrigue_start', ['target_ids' => [72, 73]]));
 dgAssert($result->success, $result->error ?? 'Aristocrat should resolve while Degasca waits for a strong strike.');
 dgAssert(($enemyA->markers['poison']['value'] ?? null) === 1 && ($enemyB->markers['poison']['value'] ?? null) === 1, 'Aristocrat effect should still apply after Degasca.');
@@ -350,9 +355,13 @@ $hostDeck = dgCard(['instanceId' => 82, 'ukid' => 'host_chain', 'owner' => GameS
 $playerDeck = dgCard(['instanceId' => 83, 'ukid' => 'player_marker', 'owner' => GameState::PLAYER_PLAYER, 'zone' => CardInstance::ZONE_DECK, 'order' => 1, 'prop' => dgMarkerProp()]);
 $state = dgState($hostDegasca, $playerDegasca, $hostDeck, $playerDeck);
 (new TurnProcessor($state, new Engine()))->startBattle();
-dgAssert(empty($state->battle['pending_degasca_sequence']), 'Neither player Degasca should open during pre-battle.');
-dgAssert(($state->getCard(80)->flags['degasca_learned'] ?? []) === [], 'Host Degasca should not learn before striking.');
-dgAssert(($state->getCard(81)->flags['degasca_learned'] ?? []) === [], 'Player Degasca should not learn before striking.');
+dgAssert(($state->battle['pending_degasca_sequence']['source_id'] ?? null) === 80, 'First player Degasca should open first during pre-battle.');
+dgChooseLearn($state, 82, GameState::PLAYER_HOST);
+dgAssert(($state->battle['pending_degasca_sequence']['source_id'] ?? null) === 81, 'Second player Degasca should open after the first one resolves.');
+dgChooseLearn($state, 83, GameState::PLAYER_PLAYER);
+dgAssert(($state->getCard(80)->flags['degasca_learned'] ?? []) === ['host_chain'], 'Host Degasca should learn during pre-battle.');
+dgAssert(($state->getCard(81)->flags['degasca_learned'] ?? []) === ['player_marker'], 'Player Degasca should learn during pre-battle.');
+dgAssert(!empty($state->battle['pre_battle_completed']), 'Pre-battle should complete after both Degasca choices.');
 
 // Duplicate deck copies are offered once per ukid after a final strong strike, not before battle.
 $degasca = dgCard(['instanceId' => 90, 'ukid' => 'any_degasca', 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3, 'prop' => dgDegascaProp()]);
