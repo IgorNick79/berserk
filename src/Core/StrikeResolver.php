@@ -874,7 +874,9 @@ final class StrikeResolver
                 $hitWasBlocked = true;
             }
 
-            if ($attackStrike === 'weak' && !empty($defendCard->prop['block_weak_strike'])) {
+            if ($attackStrike === 'weak'
+                && !empty($defendCard->prop['block_weak_strike'])
+                && !CardStats::isDefenseIgnored($attacker, 'block_weak_strike')) {
                 $val = 0;
                 $hitWasBlocked = true;
                 $this->state->battle['strike']['blocked_by_weak'] = true;
