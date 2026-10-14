@@ -2347,6 +2347,19 @@ final class ActionResolver
             return false;
         }
 
+        foreach ((array) ($source->prop['strike_effects'] ?? []) as $effect) {
+            if (!empty($effect['incarnation_token_graveyard'])
+                || (($effect['type'] ?? '') === 'incarnation_token_graveyard')) {
+                return false;
+            }
+        }
+
+        return $this->triggerIncarnationTokenGraveyard($source);
+    }
+
+    public function triggerIncarnationTokenGraveyard(CardInstance $source): bool
+    {
+
         $candidateIds = $this->talionIncarnationCandidates($source->owner);
         if (empty($candidateIds)) return false;
 
@@ -2392,9 +2405,13 @@ final class ActionResolver
             return Result::error('Цель больше недоступна');
         }
 
+        $degascaSequence = $pending['degasca_sequence'] ?? null;
         unset($this->state->battle['pending_talion_incarnation']);
         $this->addIncarnationToken($target);
         $this->recordTalionIncarnationToken($source, $target);
+        if (is_array($degascaSequence)) {
+            (new DegascaProcessor($this->state, $this->engine))->restoreAndResume($degascaSequence);
+        }
 
         $this->state->bumpVersion();
         return Result::ok(["talion_incarnation:{$source->instanceId}:{$target->instanceId}"]);
@@ -4900,6 +4917,7 @@ final class ActionResolver
                 && !empty($this->state->battle['turn_phase'])) {
                 (new TurnPhaseProcessor($this->state, $this->engine))->resume();
             }
+            $this->resumeDegascaAfterNokamiIfDone();
             $this->state->bumpVersion();
             return Result::ok(['nokami_skipped']);
         }
@@ -4934,8 +4952,30 @@ final class ActionResolver
         }
 
         $this->engine->flushDeadeatQueue($this->state);
+        $this->resumeDegascaAfterNokamiIfDone();
         $this->state->bumpVersion();
         return Result::ok(["nokami_wound:{$targetId}"]);
+    }
+
+    private function resumeDegascaAfterNokamiIfDone(): bool
+    {
+        if (!empty($this->state->battle['pending_nokami_wound'])) {
+            return false;
+        }
+
+        $continuations = DegascaProcessor::drainSavedContinuations(
+            $this->state,
+            DegascaProcessor::NOKAMI_WOUND_CONTINUATION_KEY
+        );
+        if (empty($continuations)) {
+            return false;
+        }
+
+        $processor = new DegascaProcessor($this->state, $this->engine);
+        foreach ($continuations as $pending) {
+            $processor->restoreAndResume($pending);
+        }
+        return true;
     }
 
     private function resolveDamageRanged(

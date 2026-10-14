@@ -5,33 +5,51 @@ declare(strict_types=1);
 
 namespace Berserk\Core;
 
+use Berserk\Core\Choice\ChoiceRegistry;
+
 final class DegascaProcessor
 {
-    private const DEGASCA_UKID = 's1_32';
-
-    private const POOL = [
-        's1_26' => 'Анубисар',
-        's1_131' => 'Медуза Горгона',
-        's1_149' => 'Талион',
-        's1_199' => 'Тич',
-    ];
+    public const ANY_DEATH_CONTINUATION_KEY = 'pending_any_death_degasca_sequence';
+    public const NOKAMI_WOUND_CONTINUATION_KEY = 'pending_nokami_wound_degasca_sequence';
+    private const DEFERRED_CONTINUATIONS_KEY = 'pending_degasca_deferred_sequences';
 
     public function __construct(
         private GameState $state,
         private Engine $engine,
     ) {}
 
-    public static function isDegasca(CardInstance $card): bool
+    public static function hasPreBattleTrigger(CardInstance $card): bool
     {
-        return $card->ukid === self::DEGASCA_UKID || !empty($card->prop['degasca']);
+        foreach ((array) ($card->prop['start_pre_battle'] ?? []) as $config) {
+            $effect = (array) ($config['effect'] ?? []);
+            if (($effect['type'] ?? '') === 'degasca_study') {
+                return true;
+            }
+        }
+        return false;
     }
 
-    /**
-     * @return array<string,string>
-     */
-    public static function sourceNames(): array
+    public static function hasStrongStrikeTrigger(CardInstance $card, string $level): bool
     {
-        return self::POOL;
+        foreach ((array) ($card->prop['strike_effects'] ?? []) as $effect) {
+            if (($effect['type'] ?? '') !== 'degasca_sequence') continue;
+            if (!self::isStrongOnlyEffect($effect)) continue;
+            return $level === 'strong';
+        }
+        return false;
+    }
+
+    public static function isDegasca(CardInstance $card): bool
+    {
+        return self::hasPreBattleTrigger($card) || self::hasStrongStrikeTrigger($card, 'strong');
+    }
+
+    public static function isStrongOnlyEffect(array $effect): bool
+    {
+        $levels = $effect['levels'] ?? null;
+        if (!is_array($levels)) return false;
+        $levels = array_values(array_map('strval', $levels));
+        return $levels === ['strong'];
     }
 
     public function openPreBattleSequence(CardInstance $source): bool
@@ -39,8 +57,7 @@ final class DegascaProcessor
         if (!empty($this->state->battle['pending_degasca_sequence'])) {
             return false;
         }
-
-        if (!$this->canActivate($source)) {
+        if (!$this->canActivate($source) || !self::hasPreBattleTrigger($source)) {
             return false;
         }
 
@@ -51,6 +68,7 @@ final class DegascaProcessor
     {
         $strike = $this->state->battle['strike'] ?? null;
         if (!$strike || $attackLevel !== 'strong') return false;
+        if (!self::hasStrongStrikeTrigger($source, $attackLevel)) return false;
         if (!empty($strike['degasca_strong_done']) || !empty($this->state->battle['pending_degasca_sequence'])) {
             return false;
         }
@@ -69,14 +87,11 @@ final class DegascaProcessor
 
     private function startSequence(CardInstance $source, string $activation, array $context): bool
     {
-        // Before battle Degasca only learns a new ability. Learned strong-strike
-        // effects are resolved from an actual strong strike, not an artificial one.
-        $learned = $activation === 'pre_battle' ? [] : $this->learned($source);
         $this->state->battle['pending_degasca_sequence'] = [
             'owner' => $source->owner,
             'source_id' => $source->instanceId,
             'activation' => $activation,
-            'effects' => $learned,
+            'effects' => $activation === 'pre_battle' ? [] : $this->learnedEffectEntries($source),
             'index' => 0,
             'stage' => 'effects',
             'context' => $context,
@@ -105,11 +120,30 @@ final class DegascaProcessor
                     continue;
                 }
 
-                $ukid = (string) $effects[$index];
-                $openedChoice = $this->applyLearnedEffect($source, $ukid, (array) ($pending['context'] ?? []));
-                if ($openedChoice) {
+                $target = $this->state->getCard((int) (($pending['context']['target_id'] ?? 0)));
+                if ($this->handoffActiveExternalPending($index)) {
                     return;
                 }
+
+                $effectEntry = (array) $effects[$index];
+                $effectList = (array) ($effectEntry['effects'] ?? []);
+                if ($target === null && $this->effectListRequiresTarget($effectList)) {
+                    $this->state->battle['pending_degasca_sequence']['index'] = $index + 1;
+                    continue;
+                }
+
+                $pendingSnapshot = $this->continuationPendingSnapshot();
+                (new StrikeResolver($this->state, $this->engine))->applyConfiguredStrikeEffects(
+                    $source,
+                    $target ?? $source,
+                    (string) ($pending['context']['attack_level'] ?? 'strong'),
+                    $effectList,
+                    (int) ($pending['context']['wounds_dealt'] ?? 0)
+                );
+                if ($this->handoffChangedExternalPending($pendingSnapshot, $index + 1)) {
+                    return;
+                }
+
                 $this->state->battle['pending_degasca_sequence']['index'] = $index + 1;
                 continue;
             }
@@ -152,94 +186,19 @@ final class DegascaProcessor
             return Result::error('Карта больше недоступна');
         }
 
-        $this->addLearned($source, $card->ukid);
+        $effects = $this->learnableEffects($card);
+        if (empty($effects)) {
+            $this->finishSequence($pending, null, true);
+            return Result::error('У карты больше нет подходящей способности');
+        }
+
+        $this->addLearned($source, $card->ukid, $effects);
         $this->shuffleDeck($source->owner);
-        $this->recordMessage($source, 'Изучена способность: ' . self::POOL[$card->ukid]);
+        $this->recordMessage($source, 'Изучена способность: ' . $card->ukid);
 
         $this->finishSequence($pending, null, true);
         $this->state->bumpVersion();
         return Result::ok(['degasca_learned:' . $card->ukid]);
-    }
-
-    public function chooseChain(string $playerKey, Command $cmd): Result
-    {
-        $pending = $this->pendingFor($playerKey, 'choose_chain');
-        if (!$pending) return Result::error('Нет выбора цепей Дегаски');
-        $source = $this->state->getCard((int) ($pending['source_id'] ?? 0));
-        $attacked = $this->state->getCard((int) ($pending['attacked_id'] ?? 0));
-        if (!$this->canActivate($source) || !$attacked) {
-            $this->finishSequence($pending, null, true);
-            return Result::error('Исходный удар недоступен');
-        }
-
-        $raw = $cmd->get('target_ids', []);
-        if (!is_array($raw)) $raw = [$raw];
-        $targetIds = array_values(array_filter(array_map('intval', $raw), static fn(int $id): bool => $id > 0));
-        if (count($targetIds) !== count(array_unique($targetIds))) {
-            return Result::error('Нужно выбрать разные цели');
-        }
-
-        $maxTargets = (int) ($pending['max_targets'] ?? 2);
-        if (count($targetIds) !== $maxTargets) {
-            return Result::error('Нужно выбрать ' . $maxTargets . ' цели');
-        }
-
-        $validIds = $this->chainTargetIds($source, $attacked, (string) ($pending['filter'] ?? 'enemy'));
-        foreach ($targetIds as $targetId) {
-            if (!in_array($targetId, $validIds, true)) {
-                return Result::error('Недопустимая цель');
-            }
-        }
-
-        $this->applyChainDamage($source, $attacked, $targetIds, (int) ($pending['value'] ?? 1));
-        $this->state->battle['pending_degasca_sequence']['index'] =
-            (int) ($this->state->battle['pending_degasca_sequence']['index'] ?? 0) + 1;
-        $this->state->battle['pending_degasca_sequence']['stage'] = 'effects';
-        unset(
-            $this->state->battle['pending_degasca_sequence']['candidate_ids'],
-            $this->state->battle['pending_degasca_sequence']['attacked_id'],
-            $this->state->battle['pending_degasca_sequence']['value'],
-            $this->state->battle['pending_degasca_sequence']['max_targets'],
-            $this->state->battle['pending_degasca_sequence']['filter']
-        );
-
-        $this->resume(true);
-        $this->state->bumpVersion();
-        return Result::ok(['degasca_chain']);
-    }
-
-    public function chooseTalion(string $playerKey, Command $cmd): Result
-    {
-        $pending = $this->pendingFor($playerKey, 'choose_talion');
-        if (!$pending) return Result::error('Нет выбора жетона Дегаски');
-        $source = $this->state->getCard((int) ($pending['source_id'] ?? 0));
-        if (!$this->canActivate($source)) {
-            $this->finishSequence($pending, null, true);
-            return Result::error('Дегаска недоступна');
-        }
-
-        $targetId = (int) $cmd->get('target_id', 0);
-        $candidateIds = array_map('intval', (array) ($pending['candidate_ids'] ?? []));
-        if (!in_array($targetId, $candidateIds, true)) {
-            return Result::error('Нельзя выбрать эту карту');
-        }
-
-        $target = $this->state->getCard($targetId);
-        if (!$target || !$this->isTalionCandidate($target, $source->owner)) {
-            $this->finishSequence($pending, null, true);
-            return Result::error('Цель больше недоступна');
-        }
-
-        $this->addIncarnationToken($target);
-        $this->recordTalion($source, $target);
-        $this->state->battle['pending_degasca_sequence']['index'] =
-            (int) ($this->state->battle['pending_degasca_sequence']['index'] ?? 0) + 1;
-        $this->state->battle['pending_degasca_sequence']['stage'] = 'effects';
-        unset($this->state->battle['pending_degasca_sequence']['candidate_ids']);
-
-        $this->resume(true);
-        $this->state->bumpVersion();
-        return Result::ok(['degasca_talion']);
     }
 
     private function pendingFor(string $playerKey, string $stage): ?array
@@ -248,6 +207,202 @@ final class DegascaProcessor
         if (!$pending || ($pending['owner'] ?? null) !== $playerKey) return null;
         if (($pending['stage'] ?? '') !== $stage) return null;
         return $pending;
+    }
+
+    private function handoffActiveExternalPending(int $nextIndex): bool
+    {
+        $key = $this->currentExternalPendingKey();
+        if ($key !== null
+            && $this->supportsContinuation($key)
+            && !$this->hasContinuation($key)) {
+            return $this->handoffExternalPending($key, $nextIndex);
+        }
+        return false;
+    }
+
+    /**
+     * @param array<string,string> $before
+     */
+    private function handoffChangedExternalPending(array $before, int $nextIndex): bool
+    {
+        foreach (ChoiceRegistry::all() as $handler) {
+            $key = $handler->pendingKey();
+            if (!$this->supportsContinuation($key)) continue;
+            if (empty($this->state->battle[$key]) || !is_array($this->state->battle[$key])) continue;
+            if ($this->hasContinuation($key)) continue;
+            $current = serialize($this->state->battle[$key]);
+            if (($before[$key] ?? null) === $current) continue;
+            if ($this->currentExternalPendingKey() !== $key) continue;
+            return $this->handoffExternalPending($key, $nextIndex);
+        }
+        return false;
+    }
+
+    /**
+     * @return array<string,string>
+     */
+    private function continuationPendingSnapshot(): array
+    {
+        $snapshot = [];
+        foreach (ChoiceRegistry::all() as $handler) {
+            $key = $handler->pendingKey();
+            if (!$this->supportsContinuation($key)) continue;
+            if (empty($this->state->battle[$key]) || !is_array($this->state->battle[$key])) continue;
+            $snapshot[$key] = serialize($this->state->battle[$key]);
+        }
+        return $snapshot;
+    }
+
+    private function handoffExternalPending(string $key, int $nextIndex): bool
+    {
+        $pending = $this->state->battle['pending_degasca_sequence'] ?? null;
+        if (!$pending) return false;
+        $pending['index'] = $nextIndex;
+        $pending['stage'] = 'effects';
+
+        if ($key === 'pending_any_death') {
+            self::appendSavedContinuation($this->state, self::ANY_DEATH_CONTINUATION_KEY, $pending);
+            unset($this->state->battle['pending_degasca_sequence']);
+            return true;
+        }
+
+        if ($key === 'pending_nokami_wound') {
+            self::appendSavedContinuation($this->state, self::NOKAMI_WOUND_CONTINUATION_KEY, $pending);
+            unset($this->state->battle['pending_degasca_sequence']);
+            return true;
+        }
+
+        if ($key === 'pending_anubisar_chain' || $key === 'pending_talion_incarnation') {
+            $this->state->battle[$key]['degasca_sequence'] = $pending;
+            unset($this->state->battle['pending_degasca_sequence']);
+            return true;
+        }
+
+        return false;
+    }
+
+    private function currentExternalPendingKey(): ?string
+    {
+        foreach (ChoiceRegistry::all() as $handler) {
+            $key = $handler->pendingKey();
+            if ($key === 'pending_degasca_sequence') continue;
+            if (method_exists($handler, 'isActive')) {
+                if ($handler->isActive($this->state)) return $key;
+                continue;
+            }
+            if (!empty($this->state->battle[$key])) return $key;
+        }
+        return null;
+    }
+
+    private function supportsContinuation(string $key): bool
+    {
+        return in_array($key, [
+            'pending_anubisar_chain',
+            'pending_talion_incarnation',
+            'pending_any_death',
+            'pending_nokami_wound',
+        ], true);
+    }
+
+    private function hasContinuation(string $key): bool
+    {
+        if ($key === 'pending_any_death') {
+            return !empty($this->state->battle[self::ANY_DEATH_CONTINUATION_KEY]);
+        }
+        if ($key === 'pending_nokami_wound') {
+            return !empty($this->state->battle[self::NOKAMI_WOUND_CONTINUATION_KEY]);
+        }
+        return !empty($this->state->battle[$key]['degasca_sequence']);
+    }
+
+    public function restoreAndResume(array $pending): void
+    {
+        if (!empty($this->state->battle['pending_degasca_sequence'])) {
+            $this->deferContinuation($pending);
+            return;
+        }
+        $this->state->battle['pending_degasca_sequence'] = $pending;
+        $this->resume(true);
+    }
+
+    /**
+     * @return array<int,array<string,mixed>>
+     */
+    public static function drainSavedContinuations(GameState $state, string $key): array
+    {
+        $stored = $state->battle[$key] ?? null;
+        unset($state->battle[$key]);
+        return self::normalizeContinuationList($stored);
+    }
+
+    public static function appendSavedContinuation(GameState $state, string $key, array $pending): void
+    {
+        $queue = self::normalizeContinuationList($state->battle[$key] ?? null);
+        self::appendUniqueContinuation($queue, $pending);
+        $state->battle[$key] = $queue;
+    }
+
+    /**
+     * @param mixed $stored
+     * @return array<int,array<string,mixed>>
+     */
+    private static function normalizeContinuationList(mixed $stored): array
+    {
+        if (!is_array($stored) || empty($stored)) {
+            return [];
+        }
+        if (isset($stored['stage']) || isset($stored['source_id'])) {
+            return [$stored];
+        }
+
+        $queue = [];
+        foreach ($stored as $item) {
+            if (is_array($item)) {
+                $queue[] = $item;
+            }
+        }
+        return $queue;
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $queue
+     */
+    private static function appendUniqueContinuation(array &$queue, array $pending): void
+    {
+        $serialized = serialize($pending);
+        foreach ($queue as $existing) {
+            if (serialize($existing) === $serialized) {
+                return;
+            }
+        }
+        $queue[] = $pending;
+    }
+
+    private function deferContinuation(array $pending): void
+    {
+        self::appendSavedContinuation($this->state, self::DEFERRED_CONTINUATIONS_KEY, $pending);
+    }
+
+    private function resumeDeferredContinuation(): bool
+    {
+        if (!empty($this->state->battle['pending_degasca_sequence'])) {
+            return false;
+        }
+
+        $queue = self::drainSavedContinuations($this->state, self::DEFERRED_CONTINUATIONS_KEY);
+        if (empty($queue)) {
+            return false;
+        }
+
+        $first = array_shift($queue);
+        foreach ($queue as $pending) {
+            $this->deferContinuation($pending);
+        }
+
+        $this->state->battle['pending_degasca_sequence'] = $first;
+        $this->resume(true);
+        return true;
     }
 
     private function continueAfterComplete(string $activation): void
@@ -271,113 +426,76 @@ final class DegascaProcessor
         if ($continueOnComplete) {
             $this->continueAfterComplete((string) ($pending['activation'] ?? ''));
         }
-    }
 
-    private function applyLearnedEffect(CardInstance $source, string $ukid, array $context): bool
-    {
-        $target = $this->state->getCard((int) ($context['target_id'] ?? 0));
-        if (!$target) return false;
-
-        if ($ukid === 's1_131') {
-            $this->engine->applyStrikeEffects($source, $target, 'strong', [[
-                'levels' => ['strong'],
-                'marker' => ['type' => 'stun', 'expire' => 1, 'timing' => 'owner_turn'],
-            ]]);
-            $this->recordMessage($source, 'Взгляд Медузы');
-            return false;
-        }
-
-        if ($ukid === 's1_26') {
-            return $this->applyAnubisar($source, $target);
-        }
-
-        if ($ukid === 's1_149') {
-            if ((int) ($context['wounds_dealt'] ?? 0) <= 0) return false;
-            return $this->applyTalion($source);
-        }
-
-        if ($ukid === 's1_199') {
-            $behind = $this->behindTarget($source, $target);
-            if (!$behind) return false;
-            $damage = CardStats::getStrikeValue($this->state, $behind, $target, 'weak');
-            if ($damage <= 0) return false;
-            $this->engine->applyDamage($this->state, $target, $damage, 'impact', $source);
-            $this->state->battle['strike']['behind_weak_strike_damage'][] = [
-                'source_id' => $behind->instanceId,
-                'target_id' => $target->instanceId,
-                'damage' => $damage,
-                'degasca_source_id' => $source->instanceId,
-            ];
-            return false;
-        }
-
-        return false;
-    }
-
-    private function applyAnubisar(CardInstance $source, CardInstance $target): bool
-    {
-        $damage = 1;
-        $maxTargets = 2;
-        $filter = 'enemy';
-        $candidateIds = $this->chainTargetIds($source, $target, $filter);
-        if (empty($candidateIds)) return false;
-
-        if (count($candidateIds) > $maxTargets) {
-            $this->state->battle['pending_degasca_sequence']['stage'] = 'choose_chain';
-            $this->state->battle['pending_degasca_sequence']['candidate_ids'] = $candidateIds;
-            $this->state->battle['pending_degasca_sequence']['attacked_id'] = $target->instanceId;
-            $this->state->battle['pending_degasca_sequence']['value'] = $damage;
-            $this->state->battle['pending_degasca_sequence']['max_targets'] = $maxTargets;
-            $this->state->battle['pending_degasca_sequence']['filter'] = $filter;
-            return true;
-        }
-
-        $this->applyChainDamage($source, $target, array_slice($candidateIds, 0, $maxTargets), $damage);
-        return false;
-    }
-
-    private function applyTalion(CardInstance $source): bool
-    {
-        $candidateIds = $this->talionCandidateIds($source->owner);
-        if (empty($candidateIds)) return false;
-        if (count($candidateIds) === 1) {
-            $target = $this->state->getCard($candidateIds[0]);
-            if (!$target) return false;
-            $this->addIncarnationToken($target);
-            $this->recordTalion($source, $target);
-            return false;
-        }
-
-        $this->state->battle['pending_degasca_sequence']['stage'] = 'choose_talion';
-        $this->state->battle['pending_degasca_sequence']['candidate_ids'] = $candidateIds;
-        return true;
+        $this->resumeDeferredContinuation();
     }
 
     /**
-     * @return string[]
+     * @return array<int,array{ukid:string,effects:array}>
      */
-    private function learned(CardInstance $source): array
+    private function learnedEffectEntries(CardInstance $source): array
     {
-        $raw = $source->flags['degasca_learned'] ?? [];
-        if (!is_array($raw)) return [];
+        $entries = $source->flags['degasca_learned_effects'] ?? [];
+        if (!is_array($entries)) return [];
+
         $result = [];
-        foreach ($raw as $ukid) {
-            $ukid = (string) $ukid;
-            if (isset(self::POOL[$ukid]) && !in_array($ukid, $result, true)) {
-                $result[] = $ukid;
+        foreach ($entries as $entry) {
+            if (!is_array($entry)) continue;
+            $ukid = (string) ($entry['ukid'] ?? '');
+            $effects = (array) ($entry['effects'] ?? []);
+            if ($ukid === '' || empty($effects)) continue;
+            foreach (array_values($effects) as $effect) {
+                if (!is_array($effect)) continue;
+                $result[] = ['ukid' => $ukid, 'effects' => [$effect]];
             }
         }
         return $result;
     }
 
-    private function addLearned(CardInstance $source, string $ukid): void
+    /**
+     * @param array<int,array> $effects
+     */
+    private function effectListRequiresTarget(array $effects): bool
     {
-        if (!isset(self::POOL[$ukid])) return;
-        $learned = $this->learned($source);
+        foreach ($effects as $effect) {
+            if (!is_array($effect)) return true;
+            if (!empty($effect['incarnation_token_graveyard'])
+                || (($effect['type'] ?? '') === 'incarnation_token_graveyard')) {
+                continue;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function learnedUkids(CardInstance $source): array
+    {
+        $raw = $source->flags['degasca_learned'] ?? [];
+        if (!is_array($raw)) return [];
+        return array_values(array_unique(array_map('strval', $raw)));
+    }
+
+    private function addLearned(CardInstance $source, string $ukid, array $effects): void
+    {
+        $learned = $this->learnedUkids($source);
         if (!in_array($ukid, $learned, true)) {
             $learned[] = $ukid;
         }
         $source->flags['degasca_learned'] = $learned;
+
+        $entries = $source->flags['degasca_learned_effects'] ?? [];
+        if (!is_array($entries)) $entries = [];
+        foreach ($entries as $entry) {
+            if (is_array($entry) && ($entry['ukid'] ?? '') === $ukid) {
+                $source->flags['degasca_learned_effects'] = $entries;
+                return;
+            }
+        }
+        $entries[] = ['ukid' => $ukid, 'effects' => array_values($effects)];
+        $source->flags['degasca_learned_effects'] = $entries;
     }
 
     /**
@@ -400,120 +518,24 @@ final class DegascaProcessor
     {
         if ($card->owner !== $source->owner) return false;
         if ($card->zone !== CardInstance::ZONE_DECK) return false;
-        if (!isset(self::POOL[$card->ukid])) return false;
-        if ($card->ukid === $source->ukid) return false;
-        return !in_array($card->ukid, $this->learned($source), true);
+        if (self::isDegasca($card)) return false;
+        if (in_array($card->ukid, $this->learnedUkids($source), true)) return false;
+        return !empty($this->learnableEffects($card));
     }
 
     /**
-     * @return int[]
+     * @return array<int,array>
      */
-    private function chainTargetIds(CardInstance $source, CardInstance $target, string $filter): array
+    private function learnableEffects(CardInstance $card): array
     {
-        $ids = [];
-        foreach ($this->state->cards as $candidate) {
-            if ($candidate->instanceId === $target->instanceId) continue;
-            if ($candidate->zone !== CardInstance::ZONE_FIELD) continue;
-            if ($candidate->dying || $candidate->hp <= 0) continue;
-            if ($candidate->type !== 'creature') continue;
-            if ($filter === 'enemy' && $candidate->owner === $source->owner) continue;
-            if ($filter === 'ally' && $candidate->owner !== $source->owner) continue;
-            if (!ZoneManager::areAdjacentFieldCards($target, $candidate)) continue;
-            $ids[] = $candidate->instanceId;
+        $effects = [];
+        foreach ((array) ($card->prop['strike_effects'] ?? []) as $effect) {
+            if (!is_array($effect)) continue;
+            if (!self::isStrongOnlyEffect($effect)) continue;
+            if (($effect['type'] ?? '') === 'degasca_sequence') continue;
+            $effects[] = $effect;
         }
-        return $ids;
-    }
-
-    /**
-     * @param int[] $targetIds
-     */
-    private function applyChainDamage(CardInstance $source, CardInstance $attacked, array $targetIds, int $damage): void
-    {
-        $applied = [];
-        foreach ($targetIds as $targetId) {
-            $target = $this->state->getCard((int) $targetId);
-            if (!$target) continue;
-            $before = $target->hp;
-            $this->engine->applyDamage($this->state, $target, $damage, 'impact', $source);
-            $applied[] = [
-                'source_id' => $source->instanceId,
-                'target_id' => $target->instanceId,
-                'damage' => max(0, $before - $target->hp),
-            ];
-        }
-        if (!empty($applied)) {
-            $this->state->battle['strike']['chain_damage'][] = [
-                'source_id' => $source->instanceId,
-                'attacked_id' => $attacked->instanceId,
-                'items' => $applied,
-                'degasca' => true,
-            ];
-        }
-    }
-
-    private function behindTarget(CardInstance $source, CardInstance $target): ?CardInstance
-    {
-        if ($source->row === null || $source->col === null || $target->row === null || $target->col === null) {
-            return null;
-        }
-        $dRow = ($target->row - $source->row) <=> 0;
-        $dCol = ($target->col - $source->col) <=> 0;
-        if ($dRow === 0 && $dCol === 0) return null;
-        return (new ZoneManager($this->state))->getFieldCard($target->row + $dRow, $target->col + $dCol);
-    }
-
-    /**
-     * @return int[]
-     */
-    private function talionCandidateIds(string $owner): array
-    {
-        $ids = [];
-        foreach ($this->state->cards as $card) {
-            if ($this->isTalionCandidate($card, $owner)) {
-                $ids[] = $card->instanceId;
-            }
-        }
-        return $ids;
-    }
-
-    private function isTalionCandidate(CardInstance $card, string $owner): bool
-    {
-        if ($card->owner !== $owner) return false;
-        if ($card->zone !== CardInstance::ZONE_GRAVEYARD) return false;
-        return $card->type === 'creature' || $card->type === 'fly';
-    }
-
-    private function addIncarnationToken(CardInstance $card): void
-    {
-        if (!isset($card->markers['incarnation'])) {
-            $inc = $card->prop['incarnation'] ?? null;
-            $threshold = 0;
-            $open = false;
-            if (is_array($inc)) {
-                $threshold = (int) ($inc['turns'] ?? 0);
-                $open = !empty($inc['open']);
-            } elseif ($inc !== null) {
-                $threshold = (int) $inc;
-            }
-            $card->markers['incarnation'] = ['value' => 0, 'threshold' => $threshold, 'open' => $open];
-        }
-
-        $card->markers['incarnation']['value'] = (int) ($card->markers['incarnation']['value'] ?? 0) + 1;
-        (new IncarnationTokenProcessor($this->state, $this->engine))
-            ->onTokenGranted($card, (int) $card->markers['incarnation']['value']);
-    }
-
-    private function recordTalion(CardInstance $source, CardInstance $target): void
-    {
-        if (empty($this->state->battle['strike'])) return;
-        $this->state->battle['strike']['talion_incarnation_token'][] = [
-            'source_id' => $source->instanceId,
-            'target_id' => $target->instanceId,
-            'value' => (int) ($target->markers['incarnation']['value'] ?? 0),
-            'threshold' => (int) ($target->markers['incarnation']['threshold'] ?? 0),
-            'has_incarnation' => array_key_exists('incarnation', $target->prop),
-            'degasca' => true,
-        ];
+        return $effects;
     }
 
     private function shuffleDeck(string $owner): void

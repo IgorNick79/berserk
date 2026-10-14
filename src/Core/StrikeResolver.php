@@ -886,7 +886,7 @@ final class StrikeResolver
             $this->engine->applyDamage($this->state, $defendCard, $val, 'strike', $attacker);
             $woundsDealt = max(0, $hpBeforeStrikeDamage - $defendCard->hp);
             $this->state->battle['strike']['damage_total'] = $val;
-            $this->applyStrongStrikeFollowUpEffects($attacker, $defendCard, $attackStrike);
+            $this->applyStrongStrikeFollowUpEffects($attacker, $defendCard, $attackStrike, null, $woundsDealt);
 
             // Наложение маркера при попадании (Владыка небес)
             if ($val > 0 && !empty($attacker->prop['on_hit_marker'])) {
@@ -906,7 +906,7 @@ final class StrikeResolver
             $this->state->battle['strike']['strike_hit'] = true;
             if ($woundsDealt > 0) {
                 $actionResolver = new ActionResolver($this->state, $this->engine);
-                if ($attackStrike === 'strong') {
+                if ($attackStrike === 'strong' && !$this->hasIncarnationTokenStrikeEffect($attacker)) {
                     $actionResolver->triggerTalionIncarnationToken($attacker);
                 }
                 $actionResolver->triggerLineOpenOnStrike($attacker);
@@ -1063,14 +1063,25 @@ final class StrikeResolver
     private function applyStrongStrikeFollowUpEffects(
         CardInstance $attacker,
         CardInstance $target,
-        string $attackStrike
+        string $attackStrike,
+        ?array $effects = null,
+        int $woundsDealt = 0
     ): void {
-        foreach ($attacker->prop['strike_effects'] ?? [] as $effect) {
+        $effects = $effects ?? ($attacker->prop['strike_effects'] ?? []);
+        foreach ($effects as $effect) {
             $levels = $effect['levels'] ?? ['strong'];
             if (!in_array($attackStrike, $levels, true)) continue;
 
             if (!empty($effect['chain_damage']) && is_array($effect['chain_damage'])) {
                 $this->applyChainDamage($attacker, $target, $effect['chain_damage']);
+            }
+
+            if (!empty($effect['incarnation_token_graveyard'])
+                || (($effect['type'] ?? '') === 'incarnation_token_graveyard')) {
+                if ($woundsDealt > 0) {
+                    (new ActionResolver($this->state, $this->engine))
+                        ->triggerIncarnationTokenGraveyard($attacker);
+                }
             }
 
             if (empty($effect['wound_target_by_behind_weak_strike'])) continue;
@@ -1088,6 +1099,30 @@ final class StrikeResolver
                 'damage' => $damage,
             ];
         }
+    }
+
+    public function applyConfiguredStrikeEffects(
+        CardInstance $attacker,
+        CardInstance $target,
+        string $attackStrike,
+        array $effects,
+        int $woundsDealt = 0
+    ): void {
+        $this->engine->applyStrikeEffects($attacker, $target, $attackStrike, $effects);
+        $this->applyStrongStrikeFollowUpEffects($attacker, $target, $attackStrike, $effects, $woundsDealt);
+    }
+
+    private function hasIncarnationTokenStrikeEffect(CardInstance $attacker): bool
+    {
+        foreach ((array) ($attacker->prop['strike_effects'] ?? []) as $effect) {
+            $levels = $effect['levels'] ?? null;
+            if ($levels !== null && !in_array('strong', (array) $levels, true)) continue;
+            if (!empty($effect['incarnation_token_graveyard'])
+                || (($effect['type'] ?? '') === 'incarnation_token_graveyard')) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private function applyChainDamage(CardInstance $attacker, CardInstance $target, array $config): void
@@ -1204,8 +1239,12 @@ final class StrikeResolver
             }
         }
 
+        $degascaSequence = $pending['degasca_sequence'] ?? null;
         unset($this->state->battle['pending_anubisar_chain']);
         $this->applyChainDamageToTargets($attacker, $attacked, $targetIds, (int) ($pending['value'] ?? 1));
+        if (is_array($degascaSequence)) {
+            (new DegascaProcessor($this->state, $this->engine))->restoreAndResume($degascaSequence);
+        }
         $this->state->bumpVersion();
 
         return Result::ok(['anubisar_chain']);

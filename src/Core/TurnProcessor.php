@@ -564,7 +564,7 @@ final class TurnProcessor
 
             $ownerSide = (int) ($this->state->getPlayer($card->owner)->side ?? 0);
 
-            if (DegascaProcessor::isDegasca($card)) {
+            if (DegascaProcessor::hasPreBattleTrigger($card)) {
                 $queue[] = [
                     'type' => 'degasca',
                     'owner' => $card->owner,
