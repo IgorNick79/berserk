@@ -6,6 +6,7 @@ declare(strict_types=1);
 namespace Berserk\Core\Choice;
 
 use Berserk\Core\Command;
+use Berserk\Core\CardStats;
 use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\Result;
@@ -46,7 +47,7 @@ final class AfterStrikeExecuteChoice implements ChoiceHandlerInterface
         $buttons = [];
         foreach ((array) ($pending['candidate_ids'] ?? []) as $targetId) {
             $target = $state->getCard((int) $targetId);
-            if (!$target) continue;
+            if (!$source || !$target || !CardStats::canExecuteTarget($state, $source, $target, $value)) continue;
 
             $targetName = $cardsInfo[$target->ukid]['name'] ?? $target->ukid;
             $relation = $target->owner === ($pending['owner'] ?? null) ? 'Свой' : 'Чужой';
