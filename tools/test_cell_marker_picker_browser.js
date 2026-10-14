@@ -117,6 +117,154 @@
                 await tick();
                 assert(current() === firstGroup, "New pending reinitializes deterministically without stale nodes");
                 checkActive();
+                // Review regressions: validate before writes, and rollback after a fallible DOM write.
+                async function restore() {
+                    panel().replaceWith(sourcePanel.cloneNode(true));
+                    field().replaceWith(sourceField.cloneNode(true));
+                    await tick();
+                    assert(panel().dataset.pickerEnhanced === 'true', 'Valid fragments recover without reloading the controller');
+                }
+                function safeFallback(message) {
+                    assert(!panel().dataset.pickerEnhanced && panel().querySelector('[data-cell-marker-compact]').hidden
+                        && activeLinks().length === 0
+                        && Array.from(panel().querySelectorAll('[data-cell-marker-fallback]')).every(function(e) {return !e.hidden && e.hasAttribute('href');}), message);
+                }
+                var listenerAdds = 0;
+                var originalAdd = document.addEventListener;
+                document.addEventListener = function () { listenerAdds++; return originalAdd.apply(this, arguments); };
+                try {
+                    var badPanel = sourcePanel.cloneNode(true);
+                    var columnWrites = 0;
+                    var hiddenProperty = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'hidden');
+                    badPanel.querySelectorAll('[data-picker-column]').forEach(function(link) {
+                        Object.defineProperty(link, 'hidden', {
+                            get: function() {return hiddenProperty.get.call(this);},
+                            set: function(value) {columnWrites++; hiddenProperty.set.call(this, value);},
+                            configurable: true
+                        });
+                    });
+                    var badGroups = badPanel.querySelectorAll('[data-picker-group]');
+                    badGroups[badGroups.length - 1].dataset.pickerGroup = 'invalid-late-group';
+                    panel().replaceWith(badPanel);
+                    field().replaceWith(sourceField.cloneNode(true));
+                    await tick();
+                    assert(columnWrites === 0, 'Late validation failure does not partially change column visibility');
+                    safeFallback('Invalid group disables compact UI and all field links, preserving server actions');
+                    await restore();
+
+                    badPanel = sourcePanel.cloneNode(true);
+                    badPanel.querySelector('[data-cell-marker-compact]').append(badPanel.querySelector('[data-picker-column]').cloneNode(true));
+                    panel().replaceWith(badPanel);
+                    await tick();
+                    safeFallback('Column outside a validated group cannot remain an active compact command');
+                    await restore();
+
+                    // Same snapshot ID but a late inconsistent URL is rejected as a whole.
+                    badPanel = sourcePanel.cloneNode(true);
+                    var columns = badPanel.querySelectorAll('[data-picker-column]');
+                    columns[columns.length - 1].setAttribute('href', columns[columns.length - 1].getAttribute('href').replace('game=77', 'game=88'));
+                    panel().replaceWith(badPanel);
+                    await tick();
+                    safeFallback('Mixed URLs cannot partially enhance an otherwise matching snapshot');
+                    await restore();
+
+                    var badField = sourceField.cloneNode(true);
+                    var faultTarget = badField.querySelector('[data-cell-marker-link][href]');
+                    var toggle = faultTarget.closest('.field-cell').classList;
+                    var originalToggle = toggle.toggle;
+                    var faultInjected = false;
+                    toggle.toggle = function () {
+                        originalToggle.apply(this, arguments);
+                        faultInjected = true;
+                        throw new Error('Injected persistent field presentation error');
+                    };
+                    field().replaceWith(badField);
+                    await tick();
+                    assert(faultInjected, 'DOM error injected after a field update');
+                    safeFallback('Partial application error disables compact UI and restores every server action');
+                    await restore();
+                    checkActive();
+
+                    // An exception after fallback hiding has started must reveal the full original list again.
+                    badPanel = sourcePanel.cloneNode(true);
+                    var fallbackFault = false;
+                    var fallbackLink = badPanel.querySelector('[data-cell-marker-fallback]');
+                    Object.defineProperty(fallbackLink, 'hidden', {
+                        get: function() {return hiddenProperty.get.call(this);},
+                        set: function(value) {
+                            hiddenProperty.set.call(this, value);
+                            if (value && !fallbackFault) {fallbackFault = true; throw new Error('Injected during fallback hiding');}
+                        }, configurable: true
+                    });
+                    panel().replaceWith(badPanel);
+                    await tick();
+                    assert(fallbackFault, 'DOM error injected after fallback hiding starts');
+                    safeFallback('Late application error reveals original server actions and disables every field command');
+                    await restore();
+
+                    // Identical coordinate keys, but a different pending snapshot and different base URL.
+                    var nextPanel = sourcePanel.cloneNode(true);
+                    var nextField = sourceField.cloneNode(true);
+                    nextPanel.dataset.cellMarkerPicker = nextField.dataset.cellMarkerField = 'different-pending-snapshot';
+                    nextPanel.querySelectorAll('a[href]').forEach(function(link) {link.setAttribute('href', link.getAttribute('href').replace('game=77', 'game=88'));});
+                    nextField.querySelectorAll('[data-cell-marker-link]').forEach(function(link) {
+                        link.dataset.markerUrl = link.dataset.markerUrl.replace('game=77', 'game=88');
+                        if (link.hasAttribute('href')) link.setAttribute('href', link.dataset.markerUrl);
+                    });
+                    var previousFieldAction = field().querySelector('[data-cell-marker-link][href]');
+                    panel().replaceWith(nextPanel);
+                    function assertImmediatelyBlocked(link, message) {
+                        var blocked = false;
+                        link.addEventListener('click', function(event) {blocked = event.defaultPrevented; event.preventDefault();}, {once: true});
+                        link.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+                        assert(blocked, message);
+                    }
+                    assertImmediatelyBlocked(previousFieldAction, 'Old field action blocked synchronously before MutationObserver');
+                    assertImmediatelyBlocked(panel().querySelector('[data-picker-column]'), 'Unagreed compact action blocked before MutationObserver');
+                    await tick();
+                    safeFallback('New InfoPanel with identical coordinates cannot reactivate the old pending field');
+                    field().replaceWith(nextField);
+                    await tick();
+                    assert(panel().dataset.pickerEnhanced === 'true' && activeLinks().every(function(link) {return link.getAttribute('href').includes('game=88');}), 'Only new pending URLs activate after snapshot agreement');
+                    checkActive();
+                    // Then update the field first for a third pending; no old URL may survive.
+                    var thirdPanel = sourcePanel.cloneNode(true);
+                    var thirdField = sourceField.cloneNode(true);
+                    thirdPanel.dataset.cellMarkerPicker = thirdField.dataset.cellMarkerField = 'third-pending-snapshot';
+                    field().replaceWith(thirdField);
+                    await tick();
+                    safeFallback('Field-first new pending replacement cannot activate old URLs');
+                    panel().replaceWith(thirdPanel);
+                    await tick();
+                    assert(activeLinks().every(function(link) {return link.getAttribute('href').includes('game=77');}), 'Third pending restores only its own original URLs');
+                    await restore();
+
+                    // On the destination side retain a later row only; switch from a row absent there.
+                    var sparsePanel = sourcePanel.cloneNode(true);
+                    var sparseField = sourceField.cloneNode(true);
+                    var sourceGroups = Array.from(sparsePanel.querySelectorAll('[data-picker-group]'));
+                    var ownGroup = sourceGroups.find(function(group) {return group.dataset.pickerGroup.startsWith('own:');});
+                    var enemyGroup = sourceGroups.find(function(group) {return ownGroup && group.dataset.pickerGroup.startsWith('enemy:') && group.dataset.pickerGroup.split(':')[1] !== ownGroup.dataset.pickerGroup.split(':')[1];});
+                    if (ownGroup && enemyGroup) {
+                        var fromRow = ownGroup.dataset.pickerGroup.split(':')[1];
+                        var toRow = enemyGroup.dataset.pickerGroup.split(':')[1];
+                        var keepKeys = Array.from(ownGroup.querySelectorAll('[data-picker-column]')).concat(Array.from(enemyGroup.querySelectorAll('[data-picker-column]'))).map(function(link) {return link.dataset.pickerColumn;});
+                        sourceGroups.forEach(function(group) {if (group !== ownGroup && group !== enemyGroup) group.remove();});
+                        sparseField.querySelectorAll('[data-cell-marker-link]').forEach(function(link) {
+                            if (!keepKeys.includes(link.dataset.cellMarkerLink)) link.remove();
+                        });
+                        panel().replaceWith(sparsePanel);
+                        field().replaceWith(sparseField);
+                        await tick();
+                        panel().querySelector('[data-picker-side="own"]').click();
+                        panel().querySelector('[data-picker-row="' + fromRow + '"]').click();
+                        panel().querySelector('[data-picker-side="enemy"]').click();
+                        assert(current() === 'enemy:' + toRow, 'Changing side selects its first available row when previous row is absent');
+                        checkActive();
+                        await restore();
+                    }
+                    assert(listenerAdds === 0, 'Failure/recovery and successive pending register no additional handlers');
+                } finally { document.addEventListener = originalAdd; }
                 assert(Array.from(panel().querySelectorAll('[data-picker-column]')).every(function(e, i) {return e.getAttribute('href') === originalUrls[i];}), "All original system-coordinate URLs unchanged");
             }
             results.textContent = 'ALL PASSED (' + report.length + ')\n' + report.join('\n');
