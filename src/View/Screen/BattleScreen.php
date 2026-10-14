@@ -172,6 +172,7 @@ final class BattleScreen
             $html .= '<span>' . $pos['col'] . '</span>';
         }
         $html .= '</div>';
+        $pickerKey = \Berserk\View\Ui\CellMarkerPicker::identity($state, $playerKey);
         foreach ($rowOrder as $r) {
             $rowCells = '';
             foreach ($colOrder as $c) {
@@ -247,10 +248,13 @@ final class BattleScreen
                 }
 
                 if (isset($markerTargets[$key]) && !$card) {
-                    $cellClass = 'cell-marker-target';
+                    $cellClass = 'cell-marker-target cell-marker-available';
                     $url = htmlspecialchars($markerTargets[$key]['url'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                     $label = htmlspecialchars(\Berserk\View\Ui\BattlefieldPosition::label($r, $c, $playerKey), ENT_QUOTES, 'UTF-8');
-                    $cellContent = '<a class="cell-link" href="' . $url . '" aria-label="Выбрать клетку: ' . $label . '"></a>';
+                    $pos = \Berserk\View\Ui\BattlefieldPosition::display($r, $c, $playerKey);
+                    $groupAttr = $pickerKey !== '' ? ' data-cell-marker-link="' . $key . '" data-picker-group="'
+                        . $pos['side'] . ':' . $pos['row'] . '" data-marker-url="' . $url . '"' : '';
+                    $cellContent = '<a class="cell-link" href="' . $url . '" aria-label="Выбрать клетку: ' . $label . '"' . $groupAttr . '></a>';
                 }
 
                 // ─── ОВЕРЛЕЙ: всегда в конце, на уровне клетки ───
@@ -265,9 +269,9 @@ final class BattleScreen
             $side = $pos['side'] === 'own' ? 'Свой' : 'Вражеский';
             $html .= '<div class="field-row battle-numbered-row"><span class="battle-row-number coords--'
                 . $pos['side'] . '" aria-label="' . $side . ' ' . $pos['row'] . '-й ряд">'
-                . $pos['row'] . '</span>' . $rowCells . '</div>';
+                . \Berserk\View\Ui\Coords::rowLabel($pos['row']) . '</span>' . $rowCells . '</div>';
         }
-        return $html;
+        return $pickerKey !== '' ? '<div data-cell-marker-field="' . $pickerKey . '">' . $html . '</div>' : $html;
     }
 
     // ─── Летающие ────────────────────────────────────────────

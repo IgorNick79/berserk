@@ -78,6 +78,22 @@ foreach (['host', 'player'] as $viewer) {
     coordsAssert(array_column($spec->buttons, 'url') === array_column($originalButtons, 'url'), 'Choice action URLs or order changed');
     coordsAssert(end($spec->buttons) === end($originalButtons), 'Cancellation action changed');
     coordsAssert($spec->title === $originalTitle && $spec->isMine, 'Choice metadata changed');
+    coordsAssert(count($spec->cellPicker['targets']) === 30, 'Compact picker lost valid cells');
+    $groups = [];
+    foreach ($spec->cellPicker['targets'] as $target) {
+        $expectedSide = ($target['row'] <= 3 ? 'host' : 'player') === $viewer ? 'own' : 'enemy';
+        coordsAssert($target['side'] === $expectedSide && $target['game_row'] === $rows[$target['row']], 'Compact grouping disagrees with field');
+        coordsAssert($target['game_col'] === ($viewer === 'host' ? $target['col'] : 6 - $target['col']), 'Compact columns not viewer-relative');
+        $groups[$target['side'] . ':' . $target['game_row']][] = $target['game_col'];
+    }
+    coordsAssert(count($groups) === 6, 'All six groups required');
+    $compactHtml = Panel::render($spec);
+    coordsAssert(str_contains($compactHtml, 'data-cell-marker-compact hidden'), 'Compact UI must start hidden');
+    coordsAssert(substr_count($compactHtml, 'data-cell-marker-fallback') === 30, 'No-JS fallback missing');
+    coordsAssert(!str_contains($compactHtml, 'data-cell-marker-fallback hidden'), 'Fallback hidden before initialization');
+    coordsAssert(substr_count($compactHtml, 'data-picker-column=') === 30, 'Column links missing');
+    coordsAssert(str_contains($field, '>III</span>') && str_contains($field, '>II</span>') && str_contains($field, '>I</span>'), 'Field rows must be Roman');
+    coordsAssert(str_contains($field, 'data-cell-marker-field="' . $spec->cellPicker['id'] . '"'), 'Panel/field snapshot identity mismatch');
     $extra = ['label' => 'Другой вариант', 'url' => $baseUrl . '&cmd=custom&value=1', 'class' => 'extra'];
     $spec->buttons[] = $extra;
     $beforeRepeat = $spec->buttons;
@@ -110,6 +126,12 @@ foreach (['host', 'player'] as $viewer) {
     $stale = $screen->prepare($state, $viewer, $viewer, null, [])['data']['field_html'];
     coordsAssert(substr_count($stale, 'cell-marker-target') === 28, 'Stale pending list overwrites occupied cells');
     $state->battle['pending_cell_marker_pick']['cells'] = array_values(array_diff($cells, ['2_2', '5_4']));
+    $state->cell_markers['1_1'] = ['type' => 'bonfire'];
+    $state->battle['pending_cell_marker_pick']['cells'] = array_values(array_diff($cells, ['2_2', '5_4', '1_1']));
+    $marked = $screen->prepare($state, $viewer, $viewer, null, [])['data'];
+    coordsAssert(str_contains($marked['field_html'], 'class="cell-markers"') && str_contains($marked['field_html'], 'cell-marker-bonfire'), 'Marker overlays removed');
+    coordsAssert(!str_contains($marked['field_html'], 'data-cell-marker-link="1_1"'), 'Rule-excluded marked cell got a choice link');
+    coordsAssert(substr_count($marked['info_panel_html'], 'data-picker-column=') === 27, 'Rule-excluded cell appears in compact groups');
     unset($state->battle['pending_cell_marker_pick']);
     coordsAssert(!str_contains($screen->prepare($state, $viewer, $viewer, null, [])['data']['field_html'], 'cell-marker-target'), 'Completed choice stays clickable');
 }
@@ -131,4 +153,28 @@ CellMarkerPicker::decorate($spec, $state, 'host', '?first&bad="');
 $html = Panel::render($spec);
 coordsAssert(count($spec->buttons) === 2, 'Malformed coordinates not rejected safely');
 coordsAssert(str_contains($html, '&lt;script&gt;') && str_contains($html, '&quot;'), 'Panel escaping failed');
+$dom = new DOMDocument();
+@$dom->loadHTML($html);
+$xpath = new DOMXPath($dom);
+coordsAssert($xpath->query('//script')->length === 0, 'Picker HTML injected a script element');
+coordsAssert($xpath->query('//a[@data-picker-column]')->item(0)->getAttribute('href') === '?first&bad="&cmd=choose_cell_marker&row=3&col=5', 'Compact URL attributes not safely escaped');
+foreach ([['6_5'], ['4_1', '4_3'], ['1_1', '2_5', '3_4']] as $subset) {
+    foreach (['host', 'player'] as $viewer) {
+        $state = new GameState(77, 101, 202);
+        $state->battle['pending_cell_marker_pick'] = ['owner' => $viewer, 'card_id' => 0, 'label' => 'Костёр', 'marker' => 'bonfire', 'cells' => $subset];
+        $base = $viewer === 'host' ? '?first&game=77' : '?second&game=77';
+        $spec = (new CellMarkerChoice())->spec($state, $viewer, [], $base, $viewer);
+        CellMarkerPicker::decorate($spec, $state, $viewer, $base);
+        coordsAssert(count($spec->cellPicker['targets']) === count($subset), 'Sparse pending targets changed');
+        coordsAssert(count($spec->buttons) === count($subset) + 1, 'Sparse fallback or cancellation missing');
+        $dom = new DOMDocument();
+        @$dom->loadHTML(Panel::render($spec));
+        $xpath = new DOMXPath($dom);
+        coordsAssert($xpath->query('//a[@data-picker-column]')->length === count($subset), 'Unavailable columns invented');
+        $state->battle['pending_cell_marker_pick']['marker'] = 'other_marker';
+        CellMarkerPicker::decorate($spec, $state, $viewer, $base);
+        coordsAssert($spec->cellPicker === null, 'Other marker choices migrated unexpectedly');
+    }
+}
+coordsAssert(Coords::rowLabel(0) === '' && Coords::rowLabel(4) === '', 'Invalid Roman row');
 echo "Battle coordinates UI tests passed.\n";

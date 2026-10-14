@@ -13,7 +13,7 @@ final class CellMarkerPicker
         if (!$pending || ($pending['owner'] ?? null) !== $viewerKey) return [];
         if (!(\Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\CellMarkerChoice)) return [];
         $targets = [];
-        foreach ($pending['cells'] as $key) {
+        foreach ((array) ($pending['cells'] ?? []) as $key) {
             if (!is_string($key) || !preg_match('/^([1-6])_([1-5])$/D', $key, $m)) continue;
             $targets[$key] = [
                 'row' => (int) $m[1], 'col' => (int) $m[2],
@@ -26,6 +26,8 @@ final class CellMarkerPicker
     public static function decorate(PanelSpec $spec, GameState $state, string $viewerKey, string $baseUrl): void
     {
         if (!$spec->isMine) return;
+        $pickerKey = self::identity($state, $viewerKey);
+        $pickerTargets = [];
         $targetsByUrl = [];
         foreach (self::targets($state, $viewerKey, $baseUrl) as $target) {
             $targetsByUrl[$target['url']] = $target;
@@ -36,11 +38,65 @@ final class CellMarkerPicker
             $target = $targetsByUrl[$button['url']] ?? null;
             if ($target === null) continue;
             $pos = BattlefieldPosition::display($target['row'], $target['col'], $viewerKey);
+            if ($pickerKey !== '') {
+                $pickerTargets[] = $target + ['side' => $pos['side'], 'game_row' => $pos['row'], 'game_col' => $pos['col']];
+                $button['cell_marker_target'] = true;
+            }
             $button['label'] = (($state->battle['pending_cell_marker_pick']['marker'] ?? '') === 'bonfire' ? '🔥 ' : '')
                 . ($pos['side'] === 'own' ? 'Свой' : 'Вражеский') . ' ' . $pos['row'] . '-й ряд · столбец ' . $pos['col'];
             $classes = preg_split('/\s+/', trim(($button['class'] ?? '') . ' cell-marker-choice coords--' . $pos['side']));
             $button['class'] = implode(' ', array_unique($classes));
         }
         unset($button);
+        $spec->cellPicker = $pickerKey !== '' && $pickerTargets !== []
+            ? ['id' => $pickerKey, 'targets' => $pickerTargets] : null;
+    }
+
+    /** Snapshot identity only; no new pending state is written. */
+    public static function identity(GameState $state, string $viewerKey): string
+    {
+        $pending = $state->battle['pending_cell_marker_pick'] ?? null;
+        if (!$pending || ($pending['owner'] ?? null) !== $viewerKey || ($pending['marker'] ?? '') !== 'bonfire'
+            || !(\Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\CellMarkerChoice)) return '';
+        $snapshot = json_encode([$state->gameId, $state->version, $viewerKey, $pending], JSON_INVALID_UTF8_SUBSTITUTE);
+        return is_string($snapshot) ? hash('sha256', $snapshot) : '';
+    }
+
+    public static function render(array $picker): string
+    {
+        $groups = [];
+        foreach ($picker['targets'] as $target) {
+            $groups[$target['side']][$target['game_row']][$target['game_col']] = $target;
+        }
+        $html = '<div class="cell-picker-compact" data-cell-marker-compact hidden>'
+            . '<p class="cell-picker-title">🔥 Выберите клетку для костра</p>'
+            . '<div class="cell-picker-controls" role="group" aria-label="Сторона">';
+        foreach (['own' => 'Свои', 'enemy' => 'Вражеские'] as $side => $label) {
+            $disabled = empty($groups[$side]) ? ' disabled' : '';
+            $html .= '<button type="button" class="coords--' . $side . '" data-picker-side="' . $side
+                . '" aria-pressed="false"' . $disabled . '>' . $label . '</button>';
+        }
+        $html .= '</div><div class="cell-picker-controls" role="group" aria-label="Ряд">';
+        foreach ([1, 2, 3] as $row) {
+            $html .= '<button type="button" data-picker-row="' . $row . '" aria-pressed="false">'
+                . Coords::rowLabel($row) . '</button>';
+        }
+        $html .= '</div><div role="group" aria-label="Доступные столбцы">';
+        foreach (['own', 'enemy'] as $side) {
+            foreach ([1, 2, 3] as $row) {
+                if (empty($groups[$side][$row])) continue;
+                ksort($groups[$side][$row]);
+                $html .= '<div class="cell-picker-columns" data-picker-group="' . $side . ':' . $row . '" hidden>';
+                foreach ($groups[$side][$row] as $col => $target) {
+                    $url = htmlspecialchars($target['url'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    $key = $target['row'] . '_' . $target['col'];
+                    $label = ($side === 'own' ? 'Свой' : 'Вражеский') . ' ряд ' . Coords::rowLabel($row) . ', столбец ' . $col;
+                    $html .= '<a class="button" data-picker-column="' . $key . '" href="' . $url
+                        . '" aria-label="' . $label . '">' . $col . '</a>';
+                }
+                $html .= '</div>';
+            }
+        }
+        return $html . '</div></div>';
     }
 }

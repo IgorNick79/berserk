@@ -5,6 +5,11 @@ namespace Berserk\View\Ui;
 
 final class Coords
 {
+    public static function rowLabel(int $row): string
+    {
+        return [1 => 'I', 2 => 'II', 3 => 'III'][$row] ?? '';
+    }
+
     public static function render(?int $row, ?int $col, string $viewerKey): string
     {
         $pos = BattlefieldPosition::display($row, $col, $viewerKey);

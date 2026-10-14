@@ -19,7 +19,7 @@ final class Panel
                 . '</div>';
         }
 
-        $body = '';
+        $body = $spec->cellPicker !== null ? CellMarkerPicker::render($spec->cellPicker) : '';
 
         foreach ($spec->text as $t) {
             $body .= '<div class="panel-text">' . $t . '</div>';
@@ -35,7 +35,8 @@ final class Panel
                 $cls   = 'button' . (!empty($b['class']) ? ' ' . $b['class'] : '');
                 $url   = htmlspecialchars($b['url'], ENT_QUOTES);
                 $label = htmlspecialchars($b['label'], ENT_QUOTES);
-                $body .= '<a class="' . $cls . '" href="' . $url . '">' . $label . '</a> ';
+                $fallback = !empty($b['cell_marker_target']) ? ' data-cell-marker-fallback' : '';
+                $body .= '<a class="' . htmlspecialchars($cls, ENT_QUOTES) . '" href="' . $url . '"' . $fallback . '>' . $label . '</a> ';
             }
             $body .= '</div>';
         }
@@ -44,7 +45,9 @@ final class Panel
             $body .= self::renderForm($spec->form);
         }
 
-        return '<div class="card-choice">'
+        $pickerAttr = $spec->cellPicker !== null
+            ? ' data-cell-marker-picker="' . htmlspecialchars($spec->cellPicker['id'], ENT_QUOTES) . '"' : '';
+        return '<div class="card-choice"' . $pickerAttr . '>'
             . '<h3>' . htmlspecialchars($spec->title, ENT_QUOTES) . '</h3>'
             . $body
             . '</div>';

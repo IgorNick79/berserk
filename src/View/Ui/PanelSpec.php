@@ -14,6 +14,7 @@ final class PanelSpec
      * @param ?array   $form         ['type'=>'radio'|'checkbox', 'name'=>..., 'items'=>[...], 'hidden'=>[...], 'submit'=>..., 'cancel'=>...]
      * @param array    $buttons      [['label'=>..., 'url'=>..., 'class'=>...], ...]
      * @param bool     $isMine
+     * @param ?array   $cellPicker   View-only snapshot identity and coordinate targets for progressive enhancement.
      * @param string   $waitText
      */
     public function __construct(
@@ -24,5 +25,6 @@ final class PanelSpec
         public array  $buttons = [],
         public bool   $isMine = true,
         public string $waitText = 'Ожидание выбора оппонента...',
+        public ?array $cellPicker = null,
     ) {}
 }

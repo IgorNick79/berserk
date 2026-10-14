@@ -24,3 +24,5 @@
 {{pile_reveal_html}}
 
 {{debug_html}}
+
+<script src="/assets/js/cell-marker-picker.js?v=1" defer></script>

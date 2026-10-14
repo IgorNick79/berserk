@@ -1618,15 +1618,15 @@ body { padding-bottom: 46vh; }
 }
 
 /* Battle coordinates: reserve a gutter without changing the 100px cells. */
-.battle-field { --battle-cell-size: 102px; --battle-cell-gap: 4px; padding-left: 42px; flex-shrink: 0; }
+.battle-field { --battle-cell-size: 102px; --battle-cell-gap: 4px; padding-left: 52px; flex-shrink: 0; }
 .battle-numbered-row { position: relative; }
 .battle-field .field-cell { box-sizing: border-box; width: var(--battle-cell-size); height: var(--battle-cell-size); flex-shrink: 0; }
-.battle-row-number { position: absolute; left: -32px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; pointer-events: none; color: #222; }
+.battle-row-number { position: absolute; left: -42px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; font-size: 17px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; pointer-events: none; color: #222; }
 .coords--own { background: #cfc; color: #234523; }
 .coords--enemy { background: #fdd; color: #692b2b; }
 .coords { display: inline-block; padding: 2px 5px; border-radius: 4px; }
 .battle-columns, .battle-field .battle-numbered-row { display: grid; grid-template-columns: repeat(5, var(--battle-cell-size)); gap: var(--battle-cell-gap); width: max-content; }
-.battle-columns { margin-bottom: 6px; color: #333; font-weight: bold; pointer-events: none; }
+.battle-columns { margin-bottom: 6px; color: #777; font-size: 12px; font-weight: normal; pointer-events: none; }
 .battle-columns span { text-align: center; }
 .cell-marker-choice { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 6px 10px; white-space: normal; max-width: 100%; }
 .field-cell.cell-marker-target { background: #fff0c2; box-shadow: inset 0 0 0 2px #b8a04a; }
@@ -1637,3 +1637,10 @@ body { padding-bottom: 46vh; }
     .battle-layout { width: max-content; }
     .battle-main { flex-wrap: wrap; }
 }
+.cell-picker-compact[hidden], .cell-picker-columns[hidden], [data-cell-marker-fallback][hidden], [data-cell-marker-link][hidden], [data-picker-column][hidden] { display: none !important; }
+.cell-picker-title { font-weight: bold; }
+.cell-picker-controls, .cell-picker-columns { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.cell-picker-controls button, .cell-picker-columns .button { min-width: 44px; min-height: 44px; box-sizing: border-box; border: 1px solid #888; border-radius: 5px; padding: 8px 12px; font-size: 15px; cursor: pointer; }
+.cell-picker-controls button[aria-pressed="true"] { box-shadow: inset 0 0 0 2px #444; font-weight: bold; }
+.cell-picker-controls button:disabled { opacity: .4; cursor: default; }
+.cell-picker-controls button:focus-visible, .cell-picker-columns .button:focus-visible { outline: 3px solid #a63; outline-offset: 2px; }
