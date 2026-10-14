@@ -130,6 +130,11 @@ function strikeAndConfirm(GameState $state, int $targetId): void
     ]));
     assertTrue($result->success, $result->error ?? 'Kilsus strike failed.');
 
+    if (($state->battle['strike']['state'] ?? '') === 'waiting_defender') {
+        $result = $resolver->chooseDefender(GameState::PLAYER_PLAYER, new Command('choose_defender', ['defender_id' => 0]));
+        assertTrue($result->success, $result->error ?? 'Defender choice failed.');
+    }
+
     $result = $resolver->confirmStrike(GameState::PLAYER_HOST, new Command('confirm_strike'));
     assertTrue($result->success, $result->error ?? 'Host confirm failed.');
 
@@ -189,14 +194,14 @@ strikeAndConfirm($state, 2);
 assertTrue(empty($state->battle['pending_after_strike_execute']), 'No legal execute targets should avoid pending.');
 assertTrue(empty($state->battle['strike']), 'No legal execute targets should not create execute result.');
 
-$state = kilsusState(kilsusCard(), enemyCard(2, 4, 3, 20), enemyCard(3, 5, 5, 1));
+$state = kilsusState(kilsusCard(), enemyCard(2, 4, 3, 20), enemyCard(3, 4, 5, 1));
 moveKilsus($state, 3, 4);
 strikeAndConfirm($state, 2);
 assertTrue(($state->battle['strike']['kind'] ?? null) === 'execute', 'Single legal target should be executed automatically.');
 assertTrue($state->getCard(3)->dying, 'Auto execute should mark the target dying.');
 assertTrue(($state->getCard(1)->flags['after_strike_execute_used_this_turn'] ?? 0) === 1, 'Auto execute should spend one trigger.');
 
-$state = kilsusState(kilsusCard(), enemyCard(2, 4, 3, 20), enemyCard(3, 5, 5, 1), enemyCard(4, 6, 5, 1));
+$state = kilsusState(kilsusCard(), enemyCard(2, 4, 3, 20), enemyCard(3, 4, 5, 1), enemyCard(4, 3, 5, 1));
 moveKilsus($state, 3, 4);
 strikeAndConfirm($state, 2);
 $pending = $state->battle['pending_after_strike_execute'] ?? null;
@@ -215,6 +220,27 @@ $result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('cho
 assertTrue($result->success, $result->error ?? 'Choosing Kilsus execute target should succeed.');
 assertTrue($state->getCard(3)->dying, 'Chosen target should be executed.');
 
+// Protected neighbors must not create a mandatory choice or consume the trigger.
+$state = kilsusState(kilsusCard(), enemyCard(2, 4, 3, 20), enemyCard(3, 4, 5, 1, ['prop' => ['stamina' => true]]));
+moveKilsus($state, 3, 4);
+strikeAndConfirm($state, 2);
+assertTrue(empty($state->battle['pending_after_strike_execute']) && empty($state->battle['strike']), 'Stamina-only target should finish combat normally.');
+assertTrue(!$state->getCard(3)->dying, 'Stamina must prevent automatic execution.');
+assertTrue(empty($state->getCard(1)->flags['after_strike_execute_used_this_turn']), 'Blocked execution must not consume a trigger.');
+
+// Both ordinary and protected wounded cards exist: only ordinary cards enter pending.
+$state = kilsusState(kilsusCard(), enemyCard(2, 4, 3, 20), enemyCard(3, 4, 5, 1), enemyCard(4, 3, 5, 1), enemyCard(5, 2, 4, 1, ['prop' => ['stamina' => true]]));
+moveKilsus($state, 3, 4);
+strikeAndConfirm($state, 2);
+assertTrue(($state->battle['pending_after_strike_execute']['candidate_ids'] ?? []) === [3, 4], 'Stamina target must be excluded from pending candidates.');
+$state->getCard(3)->prop['stamina'] = true;
+$choice = ChoiceRegistry::current($state);
+$spec = $choice->spec($state, GameState::PLAYER_HOST, [], '/battle?game=18&first=', 'host');
+assertTrue(count($spec->buttons) === 1 && str_contains($spec->buttons[0]['url'], 'target_id=4'), 'Newly protected target must disappear from pending UI.');
+$result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('choose_after_strike_execute', ['target_id' => 3]));
+assertTrue(!$result->success && !$state->getCard(3)->dying, 'Newly protected pending target must be rejected.');
+assertTrue(empty($state->getCard(1)->flags['after_strike_execute_used_this_turn']), 'Rejected pending target must not consume a trigger.');
+
 $kilsus = kilsusCard([
     'move' => 0,
     'moveMax' => 0,
@@ -224,9 +250,9 @@ $kilsus = kilsusCard([
 $state = kilsusState(
     $kilsus,
     enemyCard(2, 4, 3, 20),
-    enemyCard(3, 5, 1, 1),
-    enemyCard(4, 5, 2, 5),
-    enemyCard(5, 5, 3, 5)
+    enemyCard(3, 3, 2, 1),
+    enemyCard(4, 4, 2, 5),
+    enemyCard(5, 4, 4, 5)
 );
 strikeAndConfirm($state, 2);
 assertTrue(($state->battle['strike']['kind'] ?? null) === 'execute', 'First execute in turn should fire.');

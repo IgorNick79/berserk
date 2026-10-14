@@ -82,6 +82,7 @@ final class CardStats
             return false;
         }
         if ($target->dying || $target->hp <= 0) return false;
+        if (self::hasDefense($state, $target, 'execute', $attacker)) return false;
         if ($target->type === 'fly') return false;
         if (!empty($target->prop['incorporeal'])) return false;
         if ($target->hp > $value) return false;
