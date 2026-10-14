@@ -719,7 +719,7 @@ final class InstantProcessor
             }
         }
 
-        $this->resumeAfterWindow();
+        $this->continueAfterStrikeBeforeWindow();
     }
 
     public function resumeCombatResolution(): void
@@ -1279,9 +1279,19 @@ final class InstantProcessor
         return ZoneManager::adjacentFieldAllyIds($this->state, $currentTarget, $playerKey);
     }
 
-    private function resumeAfterWindow(): void
+    public function continueAfterStrikeBeforeWindow(): void
     {
+        if (empty($this->state->battle['strike'])) {
+            return;
+        }
+
         $strike = &$this->state->battle['strike'];
+
+        if (!$this->strikeCanContinueAfterBeforeWindow($strike)) {
+            $this->state->battle['strike'] = null;
+            $this->engine->finalizeDying($this->state);
+            return;
+        }
 
         if (!empty($strike['redirect_candidates'])) {
             $strike['state'] = 'waiting_redirect';
@@ -1298,6 +1308,27 @@ final class InstantProcessor
             return;
         }
         (new StrikeResolver($this->state, $this->engine))->resolve();
+    }
+
+    private function strikeCanContinueAfterBeforeWindow(array $strike): bool
+    {
+        if (empty($strike['attacker_id']) && empty($strike['target_id'])) {
+            return true;
+        }
+
+        $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+        $target = $this->state->getCard((int) ($strike['target_id'] ?? 0));
+        if (!$this->isLiveCombatant($attacker) || !$this->isLiveCombatant($target)) {
+            return false;
+        }
+        return !$attacker->closed;
+    }
+
+    private function isLiveCombatant(?CardInstance $card): bool
+    {
+        if (!$card) return false;
+        if ($card->dying || $card->hp <= 0) return false;
+        return $card->zone === CardInstance::ZONE_FIELD || $card->zone === CardInstance::ZONE_FLYING;
     }
 
     // ═══════════════════════════════════════════════════════
@@ -1798,7 +1829,7 @@ final class InstantProcessor
             return;
         }
         if ($type === 'strike_before') {
-            $this->resumeAfterWindow();
+            $this->continueAfterStrikeBeforeWindow();
             return;
         }
         if ($type === 'strike_after') {

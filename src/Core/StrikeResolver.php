@@ -332,16 +332,14 @@ final class StrikeResolver
 
         // Окно инстантов до броска — openWindow сам проверит, есть ли у кого
         $ip = new InstantProcessor($this->state, $this->engine);
-        $ip->openWindow('before', $playerKey);
+        $beforeWindowOpened = $ip->openWindow('before', $playerKey);
 
-        if (($this->state->battle['strike']['state'] ?? '') === 'waiting_instant') {
+        if ($beforeWindowOpened) {
             $this->state->bumpVersion();
             return Result::ok(["strike_declared:{$playerKey}:{$cardId}->{$targetId}", 'instant_window_opened']);
         }
 
-        if (empty($redirectCandidates) && empty($defenders) && empty($this->getMageRedirectOptions($oppKey))) {
-            $this->resolve();
-        }
+        $ip->continueAfterStrikeBeforeWindow();
 
         $this->state->bumpVersion();
         return Result::ok(["strike_declared:{$playerKey}:{$cardId}->{$targetId}"]);
@@ -420,15 +418,13 @@ final class StrikeResolver
         ];
 
         $ip = new InstantProcessor($this->state, $this->engine);
-        $ip->openWindow('before', $playerKey);
+        $beforeWindowOpened = $ip->openWindow('before', $playerKey);
 
-        if (($this->state->battle['strike']['state'] ?? '') === 'waiting_instant') {
+        if ($beforeWindowOpened) {
             return Result::ok(["forced_strike_declared:{$attacker->instanceId}->{$target->instanceId}", 'instant_window_opened']);
         }
 
-        if (empty($defenders) && empty($this->getMageRedirectOptions($oppKey))) {
-            $this->resolve();
-        }
+        $ip->continueAfterStrikeBeforeWindow();
 
         return Result::ok(["forced_strike_declared:{$attacker->instanceId}->{$target->instanceId}"]);
     }
@@ -812,6 +808,7 @@ final class StrikeResolver
 
         $attackStrike = $table['attack'];
         $defendStrike = $table['defend'];
+        $woundsDealt = 0;
 
         if ($decrease) {
             $attackStrike = $this->decreaseStrike($attackStrike);
@@ -891,7 +888,7 @@ final class StrikeResolver
             $this->engine->applyDamage($this->state, $defendCard, $val, 'strike', $attacker);
             $woundsDealt = max(0, $hpBeforeStrikeDamage - $defendCard->hp);
             $this->state->battle['strike']['damage_total'] = $val;
-            $this->applyStrongStrikeFollowUpEffects($attacker, $defendCard, $attackStrike);
+            $this->applyStrongStrikeFollowUpEffects($attacker, $defendCard, $attackStrike, null, $woundsDealt);
 
             // Наложение маркера при попадании (Владыка небес)
             if ($val > 0 && !empty($attacker->prop['on_hit_marker'])) {
@@ -911,7 +908,7 @@ final class StrikeResolver
             $this->state->battle['strike']['strike_hit'] = true;
             if ($woundsDealt > 0) {
                 $actionResolver = new ActionResolver($this->state, $this->engine);
-                if ($attackStrike === 'strong') {
+                if ($attackStrike === 'strong' && !$this->hasIncarnationTokenStrikeEffect($attacker)) {
                     $actionResolver->triggerTalionIncarnationToken($attacker);
                 }
                 $actionResolver->triggerLineOpenOnStrike($attacker);
@@ -1077,14 +1074,25 @@ final class StrikeResolver
     private function applyStrongStrikeFollowUpEffects(
         CardInstance $attacker,
         CardInstance $target,
-        string $attackStrike
+        string $attackStrike,
+        ?array $effects = null,
+        int $woundsDealt = 0
     ): void {
-        foreach ($attacker->prop['strike_effects'] ?? [] as $effect) {
+        $effects = $effects ?? ($attacker->prop['strike_effects'] ?? []);
+        foreach ($effects as $effect) {
             $levels = $effect['levels'] ?? ['strong'];
             if (!in_array($attackStrike, $levels, true)) continue;
 
             if (!empty($effect['chain_damage']) && is_array($effect['chain_damage'])) {
                 $this->applyChainDamage($attacker, $target, $effect['chain_damage']);
+            }
+
+            if (!empty($effect['incarnation_token_graveyard'])
+                || (($effect['type'] ?? '') === 'incarnation_token_graveyard')) {
+                if ($woundsDealt > 0) {
+                    (new ActionResolver($this->state, $this->engine))
+                        ->triggerIncarnationTokenGraveyard($attacker);
+                }
             }
 
             if (empty($effect['wound_target_by_behind_weak_strike'])) continue;
@@ -1102,6 +1110,30 @@ final class StrikeResolver
                 'damage' => $damage,
             ];
         }
+    }
+
+    public function applyConfiguredStrikeEffects(
+        CardInstance $attacker,
+        CardInstance $target,
+        string $attackStrike,
+        array $effects,
+        int $woundsDealt = 0
+    ): void {
+        $this->engine->applyStrikeEffects($attacker, $target, $attackStrike, $effects);
+        $this->applyStrongStrikeFollowUpEffects($attacker, $target, $attackStrike, $effects, $woundsDealt);
+    }
+
+    private function hasIncarnationTokenStrikeEffect(CardInstance $attacker): bool
+    {
+        foreach ((array) ($attacker->prop['strike_effects'] ?? []) as $effect) {
+            $levels = $effect['levels'] ?? null;
+            if ($levels !== null && !in_array('strong', (array) $levels, true)) continue;
+            if (!empty($effect['incarnation_token_graveyard'])
+                || (($effect['type'] ?? '') === 'incarnation_token_graveyard')) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private function applyChainDamage(CardInstance $attacker, CardInstance $target, array $config): void
@@ -1154,7 +1186,7 @@ final class StrikeResolver
     /**
      * @param int[] $targetIds
      */
-    private function applyChainDamageToTargets(CardInstance $attacker, CardInstance $attacked, array $targetIds, int $damage): void
+    private function applyChainDamageToTargets(CardInstance $attacker, CardInstance $attacked, array $targetIds, int $damage): array
     {
         $applied = [];
         foreach ($targetIds as $targetId) {
@@ -1175,6 +1207,8 @@ final class StrikeResolver
                 'items' => $applied,
             ];
         }
+
+        return $applied;
     }
 
     public function chooseAnubisarChain(string $playerKey, Command $cmd): Result
@@ -1218,8 +1252,29 @@ final class StrikeResolver
             }
         }
 
+        $degascaSequence = $pending['degasca_sequence'] ?? null;
+        if (is_array($degascaSequence) && is_array($degascaSequence['context']['strike'] ?? null)) {
+            $currentStrike = $this->state->battle['strike'] ?? null;
+            if (!is_array($currentStrike) || empty($currentStrike['attacker_id'])) {
+                $this->state->battle['strike'] = (array) $degascaSequence['context']['strike'];
+            }
+        }
+
         unset($this->state->battle['pending_anubisar_chain']);
-        $this->applyChainDamageToTargets($attacker, $attacked, $targetIds, (int) ($pending['value'] ?? 1));
+        $applied = $this->applyChainDamageToTargets($attacker, $attacked, $targetIds, (int) ($pending['value'] ?? 1));
+        if (is_array($degascaSequence)) {
+            if (!empty($applied)) {
+                $this->state->battle['degasca_messages'][] = [
+                    'type' => 'chain_damage',
+                    'items' => $applied,
+                ];
+            }
+            if (is_array($degascaSequence['context']['strike'] ?? null)
+                && is_array($this->state->battle['strike'] ?? null)) {
+                $degascaSequence['context']['strike'] = $this->state->battle['strike'];
+            }
+            (new DegascaProcessor($this->state, $this->engine))->restoreAndResume($degascaSequence);
+        }
         $this->state->bumpVersion();
 
         return Result::ok(['anubisar_chain']);
@@ -1437,6 +1492,23 @@ final class StrikeResolver
                 && ($forcedAttacker->zone === CardInstance::ZONE_FIELD
                     || $forcedAttacker->zone === CardInstance::ZONE_FLYING)) {
                 $forcedAttacker->closed = true;
+            }
+        }
+
+        $attackStrike = !empty($strike['level_overridden'])
+            ? (string) ($strike['result']['attack'] ?? $strike['final']['attack'] ?? '')
+            : (string) ($strike['final']['attack'] ?? $strike['result']['attack'] ?? '');
+        if ($attackStrike === 'strong' && empty($strike['degasca_after_result_done'])) {
+            $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+            $target = $this->state->getCard((int) ($strike['defender_id'] ?: ($strike['target_id'] ?? 0)));
+            if ($attacker && $target) {
+                $this->state->battle['strike']['degasca_after_result_done'] = true;
+                $woundsDealt = (int) ($strike['damage_total'] ?? 0);
+                if ((new DegascaProcessor($this->state, $this->engine))
+                    ->openStrongStrikeSequence($attacker, $target, $attackStrike, $woundsDealt, true)) {
+                    $this->state->bumpVersion();
+                    return Result::ok(['degasca_pending']);
+                }
             }
         }
 

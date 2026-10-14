@@ -650,6 +650,10 @@ final class DamageResolver
         $this->pruneAnyDeathQueue();
         $queue = $this->state->battle['pending_any_death'] ?? [];
         if (empty($queue)) {
+            if ($this->resumeDegascaAfterAnyDeathIfDone()) {
+                $this->state->bumpVersion();
+                return Result::ok(['any_death_resumed_degasca']);
+            }
             return Result::error('Нет ожидающего выбора');
         }
 
@@ -663,6 +667,7 @@ final class DamageResolver
 
         if ($targetId === 0) {
             $this->shiftAnyDeathQueue();
+            $this->resumeDegascaAfterAnyDeathIfDone();
             $this->state->bumpVersion();
             return Result::ok(['any_death_skipped']);
         }
@@ -683,6 +688,7 @@ final class DamageResolver
                 ];
             }
             $this->shiftAnyDeathQueue();
+            $this->resumeDegascaAfterAnyDeathIfDone();
             $this->state->bumpVersion();
             return Result::ok(['any_death_effect_applied']);
         }
@@ -700,6 +706,7 @@ final class DamageResolver
         $this->applyPoison($target, $poisonValue, $sourceCard->owner);
 
         $this->shiftAnyDeathQueue();
+        $this->resumeDegascaAfterAnyDeathIfDone();
 
         $this->state->bumpVersion();
         return Result::ok(["any_death_target:{$targetId}"]);
@@ -809,6 +816,38 @@ final class DamageResolver
             && !empty($this->state->battle['turn_phase'])) {
             (new TurnPhaseProcessor($this->state, new Engine()))->resume();
         }
+    }
+
+    private function resumeDegascaAfterAnyDeathIfDone(): bool
+    {
+        if (!empty($this->state->battle['pending_any_death'])) {
+            return false;
+        }
+
+        $continuations = DegascaProcessor::drainSavedContinuations(
+            $this->state,
+            DegascaProcessor::ANY_DEATH_CONTINUATION_KEY
+        );
+        if (empty($continuations)) {
+            return false;
+        }
+
+        if (!empty($this->state->battle['pending_nokami_wound'])) {
+            foreach ($continuations as $pending) {
+                DegascaProcessor::appendSavedContinuation(
+                    $this->state,
+                    DegascaProcessor::NOKAMI_WOUND_CONTINUATION_KEY,
+                    $pending
+                );
+            }
+            return false;
+        }
+
+        $processor = new DegascaProcessor($this->state, new Engine());
+        foreach ($continuations as $pending) {
+            $processor->restoreAndResume($pending);
+        }
+        return true;
     }
 
     private function isLiveAnyDeathSource(?CardInstance $source): bool

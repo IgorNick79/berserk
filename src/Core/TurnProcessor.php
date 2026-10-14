@@ -68,7 +68,7 @@ final class TurnProcessor
         // Стартовые эффекты
         $this->applyStartEffects();
 
-        // Интрига Аристократки — выбор до начала боя
+        // Pre-battle effects: Aristocrat intrigue, Degasca study, etc.
         if ($this->collectPreBattleIntrigue($activeKey)) {
             return;
         }
@@ -563,15 +563,27 @@ final class TurnProcessor
     private function collectPreBattleIntrigue(string $activeKey): bool
     {
         $queue = [];
+        $order = 0;
 
         foreach ($this->state->cards as $card) {
-            $config = $card->prop['start_pre_battle'] ?? null;
-            if (!is_array($config) || empty($config)) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying || $card->hp <= 0) continue;
 
             $ownerSide = (int) ($this->state->getPlayer($card->owner)->side ?? 0);
+
+            if (DegascaProcessor::hasPreBattleTrigger($card)) {
+                $queue[] = [
+                    'type' => 'degasca',
+                    'owner' => $card->owner,
+                    'source_id' => $card->instanceId,
+                    'source_ukid' => $card->ukid,
+                    'order' => $order++,
+                ];
+            }
+
+            $config = $card->prop['start_pre_battle'] ?? null;
+            if (!is_array($config) || empty($config)) continue;
 
             foreach ($config as $variant) {
                 if ((int) ($variant['side'] ?? 0) !== $ownerSide) continue;
@@ -584,12 +596,14 @@ final class TurnProcessor
                 if (count($candidates) < $count) continue;
 
                 $queue[] = [
+                    'type'       => 'intrigue',
                     'owner'      => $card->owner,
                     'source_id'  => $card->instanceId,
                     'source_ukid'=> $card->ukid,
                     'effect'     => $effect,
                     'count'      => $count,
                     'candidates' => $candidates,
+                    'order'      => $order++,
                 ];
                 break;
             }
@@ -599,13 +613,51 @@ final class TurnProcessor
         usort($queue, function ($a, $b) {
             $sa = (int) ($this->state->getPlayer($a['owner'])->side ?? 0);
             $sb = (int) ($this->state->getPlayer($b['owner'])->side ?? 0);
-            return $sa <=> $sb;
+            return ($sa <=> $sb) ?: ((int) ($a['order'] ?? 0) <=> (int) ($b['order'] ?? 0));
         });
 
         if (empty($queue)) return false;
 
         $this->state->battle['pending_intrigue_start'] = $queue;
+        $this->continuePreBattleEffects();
         return true;
+    }
+
+    public function continuePreBattleEffects(): void
+    {
+        if (!empty($this->state->battle['pre_battle_completed'])) {
+            return;
+        }
+
+        while (!empty($this->state->battle['pending_intrigue_start'])) {
+            $item = $this->state->battle['pending_intrigue_start'][0];
+            $type = (string) ($item['type'] ?? 'intrigue');
+
+            if ($type === 'degasca') {
+                array_shift($this->state->battle['pending_intrigue_start']);
+                if (empty($this->state->battle['pending_intrigue_start'])) {
+                    unset($this->state->battle['pending_intrigue_start']);
+                }
+
+                $source = $this->state->getCard((int) ($item['source_id'] ?? 0));
+                if ($source && (new DegascaProcessor($this->state, $this->engine))->openPreBattleSequence($source)) {
+                    return;
+                }
+                continue;
+            }
+
+            return;
+        }
+
+        unset($this->state->battle['pending_intrigue_start']);
+        $this->state->battle['pre_battle_completed'] = true;
+
+        $activeKey = $this->state->battle['active'] ?? null;
+        if ($activeKey === null) return;
+        if ($this->checkCardChoice($activeKey)) {
+            return;
+        }
+        $this->continueStartTurn($activeKey);
     }
 
     private function intrigueCandidates(CardInstance $source, string $effectType): array

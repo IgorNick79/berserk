@@ -11,6 +11,7 @@ use Berserk\Core\Command;
 use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\InstantProcessor;
+use Berserk\Core\StrikeResolver;
 use Berserk\Core\TurnPhaseProcessor;
 use Berserk\View\Screen\Battle\InfoPanel;
 use Berserk\View\Template;
@@ -504,6 +505,109 @@ tisAssert($ip->openTurnStackWindow(GameState::PLAYER_HOST, ['type' => 'manual'],
 tisAssert($ip->passTurnInstant(GameState::PLAYER_HOST)->success, 'Host pass should hand priority to Player.');
 tisAssert(!empty($state->battle['turn_instant_stack']), 'Chronos declaration legality should prevent implicit auto-pass.');
 tisAssert(($state->battle['turn_instant_stack']['priority'] ?? null) === GameState::PLAYER_PLAYER, 'Player should keep priority with declaration-legal Chronos.');
+
+// Declaring a strike with strike_before instants must pause before redirects or dice.
+$attacker = tisCard(['instanceId' => 700, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3]);
+$target = tisCard(['instanceId' => 701, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4]);
+$beforeCaster = tisCard([
+    'instanceId' => 702,
+    'owner' => GameState::PLAYER_PLAYER,
+    'row' => 5,
+    'col' => 5,
+    'prop' => ['instants' => [tisInstant('before', 'Before', ['type' => 'damage', 'value' => 1])]],
+]);
+$state = tisState($attacker, $target, $beforeCaster);
+$result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('strike', [
+    'card_id' => 700,
+    'target_id' => 701,
+]));
+tisAssert($result->success, $result->error ?? 'Strike declaration with before instant should succeed.');
+tisAssert(!empty($state->battle['turn_instant_stack']), 'strike_before turn stack should be active after declaration.');
+tisAssert(($state->battle['strike']['attack_dice'] ?? null) === null, 'Dice must not roll while strike_before is ordering.');
+tisAssert(($state->battle['strike']['state'] ?? '') === 'waiting_defender', 'Strike should keep pre-window defender state while stack is active.');
+$blockedRedirect = (new Engine())->apply($state, GameState::PLAYER_PLAYER, new Command('choose_defender', ['defender_id' => 0]));
+tisAssert(!$blockedRedirect->success && ($blockedRedirect->error ?? '') === 'Ожидается выбор', 'Defender flow must be blocked while strike_before stack is active.');
+tisAssert((new InstantProcessor($state, new Engine()))->playTurnInstant(GameState::PLAYER_PLAYER, new Command('play_turn_instant', [
+    'card_id' => 702,
+    'instant_key' => 'before',
+]))->success, 'Player should stack strike_before instant.');
+tisAssert((new InstantProcessor($state, new Engine()))->passTurnInstant(GameState::PLAYER_PLAYER)->success, 'Passing should resolve strike_before stack.');
+tisAssert(!empty($state->battle['turn_instant_result']), 'Resolved strike_before stack should wait for OK.');
+tisAssert(($state->battle['strike']['attack_dice'] ?? null) === null, 'Dice must not roll before strike_before result OK.');
+tisAckTurnResult($state);
+tisAssert(($state->battle['strike']['attack_dice'] ?? null) !== null, 'Dice should roll after strike_before result OK when no redirects remain.');
+
+// Declaring a strike without before instants should continue immediately.
+$attacker = tisCard(['instanceId' => 710, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3]);
+$target = tisCard(['instanceId' => 711, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4]);
+$state = tisState($attacker, $target);
+$result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('strike', [
+    'card_id' => 710,
+    'target_id' => 711,
+]));
+tisAssert($result->success, $result->error ?? 'Strike declaration without before instant should succeed.');
+tisAssert(empty($state->battle['turn_instant_stack']), 'No strike_before stack should be opened without legal instants.');
+tisAssert(($state->battle['strike']['attack_dice'] ?? null) !== null, 'Dice should roll immediately when no before window and no redirects exist.');
+
+// Redirect window must open only after strike_before result OK.
+$attacker = tisCard([
+    'instanceId' => 720,
+    'owner' => GameState::PLAYER_HOST,
+    'row' => 3,
+    'col' => 3,
+    'prop' => ['strike' => ['redirect' => true]],
+]);
+$target = tisCard(['instanceId' => 721, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4]);
+$redirectTarget = tisCard(['instanceId' => 722, 'owner' => GameState::PLAYER_PLAYER, 'row' => 4, 'col' => 3]);
+$beforeCaster = tisCard([
+    'instanceId' => 723,
+    'owner' => GameState::PLAYER_PLAYER,
+    'row' => 4,
+    'col' => 4,
+    'prop' => ['instants' => [tisInstant('before_redirect', 'Before redirect', ['type' => 'damage', 'value' => 1])]],
+]);
+$state = tisState($attacker, $target, $redirectTarget, $beforeCaster);
+$result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('strike', [
+    'card_id' => 720,
+    'target_id' => 721,
+]));
+tisAssert($result->success, $result->error ?? 'Redirect strike declaration should succeed.');
+tisAssert(!empty($state->battle['turn_instant_stack']), 'Redirect strike should pause for strike_before stack.');
+$blockedRedirect = (new Engine())->apply($state, GameState::PLAYER_PLAYER, new Command('choose_redirect', ['target_id' => 722]));
+tisAssert(!$blockedRedirect->success && ($blockedRedirect->error ?? '') === 'Ожидается выбор', 'Redirect command must be blocked while strike_before stack is active.');
+tisAssert((new InstantProcessor($state, new Engine()))->playTurnInstant(GameState::PLAYER_PLAYER, new Command('play_turn_instant', [
+    'card_id' => 723,
+    'instant_key' => 'before_redirect',
+]))->success, 'Player should stack redirect strike_before instant.');
+tisAssert((new InstantProcessor($state, new Engine()))->passTurnInstant(GameState::PLAYER_PLAYER)->success, 'Passing should resolve redirect strike_before stack.');
+tisAssert(($state->battle['strike']['state'] ?? '') === 'waiting_redirect', 'Redirect state should not advance before result OK.');
+tisAckTurnResult($state);
+tisAssert(($state->battle['strike']['state'] ?? '') === 'waiting_redirect', 'Redirect state should be available after strike_before result OK.');
+tisAssert(($state->battle['strike']['attack_dice'] ?? null) === null, 'Dice must not roll before redirect choice.');
+
+// Forced adjacent strikes obey the same strike_before pause.
+$attacker = tisCard(['instanceId' => 730, 'owner' => GameState::PLAYER_HOST, 'row' => 3, 'col' => 3]);
+$target = tisCard(['instanceId' => 731, 'owner' => GameState::PLAYER_PLAYER, 'row' => 3, 'col' => 4]);
+$beforeCaster = tisCard([
+    'instanceId' => 732,
+    'owner' => GameState::PLAYER_PLAYER,
+    'row' => 5,
+    'col' => 5,
+    'prop' => ['instants' => [tisInstant('before_forced', 'Before forced', ['type' => 'damage', 'value' => 1])]],
+]);
+$state = tisState($attacker, $target, $beforeCaster);
+$result = (new StrikeResolver($state, new Engine()))->declareForcedAdjacent($attacker, $target);
+tisAssert($result->success, $result->error ?? 'Forced adjacent declaration should succeed.');
+tisAssert(!empty($state->battle['turn_instant_stack']), 'Forced adjacent should pause for strike_before stack.');
+tisAssert(($state->battle['strike']['attack_dice'] ?? null) === null, 'Forced adjacent dice must not roll while strike_before is active.');
+tisAssert((new InstantProcessor($state, new Engine()))->playTurnInstant(GameState::PLAYER_PLAYER, new Command('play_turn_instant', [
+    'card_id' => 732,
+    'instant_key' => 'before_forced',
+]))->success, 'Player should stack forced strike_before instant.');
+tisAssert((new InstantProcessor($state, new Engine()))->passTurnInstant(GameState::PLAYER_PLAYER)->success, 'Passing should resolve forced strike_before stack.');
+tisAssert(($state->battle['strike']['attack_dice'] ?? null) === null, 'Forced adjacent dice must wait for result OK.');
+tisAckTurnResult($state);
+tisAssert(($state->battle['strike']['attack_dice'] ?? null) !== null, 'Forced adjacent dice should roll after strike_before result OK.');
 
 // strike_before continuation waits until result OK.
 $source = tisCard([

@@ -1272,7 +1272,7 @@ final class InfoPanel
                 $targetName = $targetInfo ? htmlspecialchars($targetInfo['name'], ENT_QUOTES) : '?';
                 $damage = (int) ($bribe['damage'] ?? 0);
 
-                $behindWeakStrikeHtml = '<p class="bonus">Коварный подкуп: слабый удар <b>'
+                $behindWeakStrikeHtml = '<p class="bonus">Слабый удар карты позади: <b>'
                     . $sourceName . '</b> — +' . $damage . ' урона по <b>' . $targetName . '</b></p>';
             }
 
@@ -1429,6 +1429,48 @@ final class InfoPanel
                             . 'Цепи Анубисара: <b>' . $targetName . '</b> -' . $damage . ' HP'
                             . '</div>';
                     }
+                }
+            }
+            if (!empty($state->battle['degasca_messages'])) {
+                foreach ((array) $state->battle['degasca_messages'] as $message) {
+                    $type = (string) ($message['type'] ?? '');
+                    if ($type === 'chain_damage') {
+                        foreach ((array) ($message['items'] ?? []) as $item) {
+                            $target = $state->getCard((int) ($item['target_id'] ?? 0));
+                            $targetInfo = $target ? ($cardsInfo[$target->ukid] ?? null) : null;
+                            $targetName = $targetInfo ? htmlspecialchars($targetInfo['name'], ENT_QUOTES) : '?';
+                            $damage = (int) ($item['damage'] ?? 0);
+                            if ($damage <= 0) continue;
+
+                            $vampireHtml .= '<div class="vampire">'
+                                . 'Цепи Анубисара: <b>' . $targetName . '</b> -' . $damage . ' HP'
+                                . '</div>';
+                        }
+                        continue;
+                    }
+
+                    if ($type === 'behind_weak_strike_damage') {
+                        $source = $state->getCard((int) ($message['source_id'] ?? 0));
+                        $target = $state->getCard((int) ($message['target_id'] ?? 0));
+                        $sourceInfo = $source ? ($cardsInfo[$source->ukid] ?? null) : null;
+                        $targetInfo = $target ? ($cardsInfo[$target->ukid] ?? null) : null;
+                        $sourceName = $sourceInfo ? htmlspecialchars($sourceInfo['name'], ENT_QUOTES) : '?';
+                        $targetName = $targetInfo ? htmlspecialchars($targetInfo['name'], ENT_QUOTES) : '?';
+                        $damage = (int) ($message['damage'] ?? 0);
+                        if ($damage > 0) {
+                            $vampireHtml .= '<div class="vampire">'
+                                . 'Слабый удар карты позади: <b>' . $sourceName . '</b> -'
+                                . $damage . ' HP по <b>' . $targetName . '</b>'
+                                . '</div>';
+                        }
+                        continue;
+                    }
+
+                    $text = (string) ($message['message'] ?? '');
+                    if ($text === '') continue;
+                    $vampireHtml .= '<div class="vampire">'
+                        . htmlspecialchars($text, ENT_QUOTES)
+                        . '</div>';
                 }
             }
 
