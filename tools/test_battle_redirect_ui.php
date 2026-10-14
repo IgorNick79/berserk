@@ -108,15 +108,15 @@ $playerHtml = redirectUiRender($playerState, GameState::PLAYER_PLAYER, 'player',
 
 redirectUiAssert(
     str_contains($playerHtml['info_panel_html'], 'Близнец Вражеский [1:4]'),
-    'Player-relative redirect label should mirror first candidate row and column.'
+    'Player-relative redirect label should use enemy front row and mirrored column, independently of card owner.'
 );
 redirectUiAssert(
     str_contains($playerHtml['info_panel_html'], 'Близнец Свой [1:2]'),
-    'Identical redirect cards should be distinguishable by mirrored coordinates.'
+    'Identical redirect cards should be distinguishable by game rows and viewer-relative columns.'
 );
 redirectUiAssert(
     str_contains($playerHtml['info_panel_html'], 'Дальний Свой [3:1]'),
-    'Edge redirect coordinate should mirror for player viewer.'
+    'Edge redirect coordinate should use own game row 3 and player column 1.'
 );
 redirectUiAssert(
     substr_count($playerHtml['field_html'], 'pending-redirect-target') === 3,
@@ -153,7 +153,7 @@ $hostHtml = redirectUiRender($hostState, GameState::PLAYER_HOST, 'host', $cardsI
 
 redirectUiAssert(
     str_contains($hostHtml['info_panel_html'], 'Близнец Свой [2:5]'),
-    'Host-relative redirect label should keep absolute row and column.'
+    'Host-relative redirect label should use own game row 2 and host column 5, independently of card owner.'
 );
 redirectUiAssert(
     substr_count($hostHtml['field_html'], 'pending-redirect-target') === 1,

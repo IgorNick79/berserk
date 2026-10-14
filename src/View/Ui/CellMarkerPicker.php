@@ -26,16 +26,21 @@ final class CellMarkerPicker
     public static function decorate(PanelSpec $spec, GameState $state, string $viewerKey, string $baseUrl): void
     {
         if (!$spec->isMine) return;
-        $spec->buttons = [];
+        $targetsByUrl = [];
         foreach (self::targets($state, $viewerKey, $baseUrl) as $target) {
-            $pos = BattlefieldPosition::display($target['row'], $target['col'], $viewerKey);
-            $spec->buttons[] = [
-                'label' => (($state->battle['pending_cell_marker_pick']['marker'] ?? '') === 'bonfire' ? '🔥 ' : '')
-                    . ($pos['side'] === 'own' ? 'Свой' : 'Вражеский') . ' ' . $pos['row'] . '-й ряд · столбец ' . $pos['col'],
-                'url' => $target['url'],
-                'class' => 'cell-marker-choice coords--' . $pos['side'],
-            ];
+            $targetsByUrl[$target['url']] = $target;
         }
-        $spec->buttons[] = ['label' => 'Отмена', 'url' => $baseUrl . '&cmd=cancel_pending', 'class' => 'skip'];
+        // Decorate existing cell actions in place. Preserve URLs, order and other actions
+        // (especially cancellation) exactly as supplied by the choice handler.
+        foreach ($spec->buttons as &$button) {
+            $target = $targetsByUrl[$button['url']] ?? null;
+            if ($target === null) continue;
+            $pos = BattlefieldPosition::display($target['row'], $target['col'], $viewerKey);
+            $button['label'] = (($state->battle['pending_cell_marker_pick']['marker'] ?? '') === 'bonfire' ? '🔥 ' : '')
+                . ($pos['side'] === 'own' ? 'Свой' : 'Вражеский') . ' ' . $pos['row'] . '-й ряд · столбец ' . $pos['col'];
+            $classes = preg_split('/\s+/', trim(($button['class'] ?? '') . ' cell-marker-choice coords--' . $pos['side']));
+            $button['class'] = implode(' ', array_unique($classes));
+        }
+        unset($button);
     }
 }

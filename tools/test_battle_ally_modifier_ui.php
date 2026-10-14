@@ -139,15 +139,15 @@ allyModifierUiAssert(
 );
 allyModifierUiAssert(
     str_contains($playerHtml['info_panel_html'], 'Близнец Вражеский [1:4]'),
-    'Player-relative ally modifier label should mirror first candidate row and column.'
+    'Player-relative ally modifier label should use enemy front row and mirrored column, independently of card owner.'
 );
 allyModifierUiAssert(
     str_contains($playerHtml['info_panel_html'], 'Близнец Свой [1:2]'),
-    'Identical ally modifier cards should be distinguishable by mirrored coordinates.'
+    'Identical ally modifier cards should be distinguishable by game rows and viewer-relative columns.'
 );
 allyModifierUiAssert(
     str_contains($playerHtml['info_panel_html'], 'Дальний Свой [3:1]'),
-    'Edge ally modifier coordinate should mirror for player viewer.'
+    'Edge ally modifier coordinate should use own game row 3 and player column 1.'
 );
 allyModifierUiAssert(
     substr_count($playerHtml['info_panel_html'], 'cmd=choose_ally_modifier&amp;target_id=') === 3,
@@ -169,7 +169,7 @@ $hostHtml = allyModifierUiRender($hostState, GameState::PLAYER_HOST, 'host', $ca
 
 allyModifierUiAssert(
     str_contains($hostHtml['info_panel_html'], 'Близнец Свой [2:5]'),
-    'Host-relative ally modifier label should keep absolute row and column.'
+    'Host-relative ally modifier label should use own game row 2 and host column 5, independently of card owner.'
 );
 allyModifierUiAssert(
     substr_count($hostHtml['field_html'], 'pending-ally-modifier-target') === 1,

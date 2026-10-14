@@ -134,15 +134,15 @@ deathChoiceUiAssert(
 );
 deathChoiceUiAssert(
     str_contains($playerHtml['info_panel_html'], 'Близнец Вражеский [1:4]'),
-    'Player-relative death target label should mirror first candidate row and column.'
+    'Player-relative death target label should use enemy front row and mirrored column, independently of card owner.'
 );
 deathChoiceUiAssert(
     str_contains($playerHtml['info_panel_html'], 'Близнец Свой [1:2]'),
-    'Identical death target cards should be distinguishable by mirrored coordinates.'
+    'Identical death target cards should be distinguishable by game rows and viewer-relative columns.'
 );
 deathChoiceUiAssert(
     str_contains($playerHtml['info_panel_html'], 'Дальний Свой [3:1]'),
-    'Edge death target coordinate should mirror for player viewer.'
+    'Edge death target coordinate should use own game row 3 and player column 1.'
 );
 deathChoiceUiAssert(
     substr_count($playerHtml['info_panel_html'], 'cmd=choose_death_target&amp;target_id=') === 3,
@@ -164,7 +164,7 @@ $hostHtml = deathChoiceUiRender($hostState, GameState::PLAYER_HOST, 'host', $car
 
 deathChoiceUiAssert(
     str_contains($hostHtml['info_panel_html'], 'Близнец Свой [2:5]'),
-    'Host-relative death target label should keep absolute row and column.'
+    'Host-relative death target label should use own game row 2 and host column 5, independently of card owner.'
 );
 deathChoiceUiAssert(
     substr_count($hostHtml['field_html'], 'pending-death-target') === 1,

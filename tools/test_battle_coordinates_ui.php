@@ -4,6 +4,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/../src/Core/Autoloader.php';
 use Berserk\Core\Autoloader;
 use Berserk\Core\GameState;
+use Berserk\Core\CardInstance;
+use Berserk\Core\Choice\CellMarkerChoice;
+use Berserk\View\Ui\CardButton;
 use Berserk\View\Ui\BattlefieldPosition;
 use Berserk\View\Ui\Coords;
 use Berserk\View\Ui\CellMarkerPicker;
@@ -24,9 +27,18 @@ foreach (['host', 'player'] as $viewer) {
     foreach ($rows as $row => $gameRow) {
         for ($col = 1; $col <= 5; $col++) {
             $pos = BattlefieldPosition::display($row, $col, $viewer);
-            $side = (($row <= 3) === ($viewer === 'host')) ? 'own' : 'enemy';
+            $sides = $viewer === 'host'
+                ? [1 => 'own', 2 => 'own', 3 => 'own', 4 => 'enemy', 5 => 'enemy', 6 => 'enemy']
+                : [1 => 'enemy', 2 => 'enemy', 3 => 'enemy', 4 => 'own', 5 => 'own', 6 => 'own'];
+            $side = $sides[$row];
             coordsAssert($pos === ['row' => $gameRow, 'col' => $viewer === 'host' ? $col : 6 - $col, 'side' => $side], 'Wrong conversion');
             coordsAssert(str_contains(Coords::render($row, $col, $viewer), 'coords--' . $side), 'Wrong coordinate color');
+            foreach (['host', 'player'] as $cardOwner) {
+                $card = new CardInstance(instanceId: 1, ukid: 'test', owner: $cardOwner, zone: CardInstance::ZONE_FIELD, row: $row, col: $col);
+                $label = ($side === 'own' ? 'Свой' : 'Вражеский') . ' [' . $gameRow . ':' . ($viewer === 'host' ? $col : 6 - $col) . ']';
+                $button = CardButton::battle(new Template(__DIR__ . '/../templates'), $card, ['name' => 'Карта'], '?cmd=test', $viewer);
+                coordsAssert(str_contains($button, 'Карта ' . $label), 'CardButton side must follow field half, not card owner');
+            }
             $cells[] = $row . '_' . $col;
         }
     }
@@ -59,6 +71,45 @@ foreach (['host', 'player'] as $viewer) {
     $other = $screen->prepare($state, $opponent, $opponent, null, [])['data'];
     coordsAssert(!str_contains($other['field_html'], 'cell-marker-target'), 'Opponent can choose a cell');
     coordsAssert(!str_contains($other['info_panel_html'], 'choose_cell_marker'), 'Opponent sees choice buttons');
+    $spec = (new CellMarkerChoice())->spec($state, $viewer, [], $baseUrl, $viewer);
+    $originalButtons = $spec->buttons;
+    $originalTitle = $spec->title;
+    CellMarkerPicker::decorate($spec, $state, $viewer, $baseUrl);
+    coordsAssert(array_column($spec->buttons, 'url') === array_column($originalButtons, 'url'), 'Choice action URLs or order changed');
+    coordsAssert(end($spec->buttons) === end($originalButtons), 'Cancellation action changed');
+    coordsAssert($spec->title === $originalTitle && $spec->isMine, 'Choice metadata changed');
+    $extra = ['label' => 'Другой вариант', 'url' => $baseUrl . '&cmd=custom&value=1', 'class' => 'extra'];
+    $spec->buttons[] = $extra;
+    $beforeRepeat = $spec->buttons;
+    CellMarkerPicker::decorate($spec, $state, $viewer, $baseUrl);
+    coordsAssert(end($spec->buttons) === $extra, 'Additional action lost');
+    coordsAssert($spec->buttons === $beforeRepeat, 'Repeated decoration must not duplicate CSS classes');
+
+    // Occupied cells on both halves retain card links; only the 28 legal empty cells are choices.
+    $state->addCard(new CardInstance(instanceId: 1, ukid: 'own', owner: $viewer, zone: CardInstance::ZONE_FIELD, row: 2, col: 2, hp: 3, hpMax: 3));
+    $state->addCard(new CardInstance(instanceId: 2, ukid: 'enemy', owner: $opponent, zone: CardInstance::ZONE_FIELD, row: 5, col: 4, hp: 3, hpMax: 3));
+    $state->battle['pending_cell_marker_pick']['cells'] = array_values(array_diff($cells, ['2_2', '5_4']));
+    $occupiedData = $screen->prepare($state, $viewer, $viewer, null, ['own' => ['name' => 'Своя карта'], 'enemy' => ['name' => 'Чужая карта']])['data'];
+    coordsAssert(substr_count($occupiedData['field_html'], 'cell-marker-target') === 28, 'Occupied cells received choice targets');
+    coordsAssert(substr_count($occupiedData['info_panel_html'], 'cell-marker-choice') === 28, 'Occupied cells received choice buttons');
+    foreach (['row=2&amp;col=2', 'row=5&amp;col=4'] as $suffix) {
+        coordsAssert(!str_contains($occupiedData['field_html'], 'cmd=choose_cell_marker&amp;' . $suffix), 'Choice link overlays occupied cell');
+    }
+    $dom = new DOMDocument();
+    @$dom->loadHTML('<?xml encoding="UTF-8">' . $occupiedData['field_html']);
+    $xpath = new DOMXPath($dom);
+    foreach ([1, 2] as $id) {
+        $links = $xpath->query('//a[contains(@class,"card-link") and contains(@href,"&sel=' . $id . '")]');
+        coordsAssert($links->length === 1, 'Card selection link lost');
+        $cell = $links->item(0)->parentNode;
+        coordsAssert(!str_contains($cell->getAttribute('class'), 'cell-marker-target'), 'Card cell highlighted as a marker choice');
+        coordsAssert($xpath->query('.//a[contains(@href,"choose_cell_marker")]', $cell)->length === 0, 'Marker link overlaps card interaction');
+    }
+    // Even a stale pending list cannot replace card links with marker links on the field.
+    $state->battle['pending_cell_marker_pick']['cells'] = $cells;
+    $stale = $screen->prepare($state, $viewer, $viewer, null, [])['data']['field_html'];
+    coordsAssert(substr_count($stale, 'cell-marker-target') === 28, 'Stale pending list overwrites occupied cells');
+    $state->battle['pending_cell_marker_pick']['cells'] = array_values(array_diff($cells, ['2_2', '5_4']));
     unset($state->battle['pending_cell_marker_pick']);
     coordsAssert(!str_contains($screen->prepare($state, $viewer, $viewer, null, [])['data']['field_html'], 'cell-marker-target'), 'Completed choice stays clickable');
 }
@@ -71,7 +122,11 @@ $task = TaskCard::render(['label' => '<script>', 'row' => 6, 'col' => 5], '?seco
 coordsAssert(str_contains($task, 'Свой [3:1]') && str_contains($task, '&lt;script&gt;') && str_contains($task, '&quot;'), 'Task coordinates or escaping wrong');
 $state = new GameState(77, 101, 202);
 $state->battle['pending_cell_marker_pick'] = ['owner' => 'host', 'cells' => ['0_1', '1_6', '<script>', '3_5'], 'marker' => 'bonfire'];
-$spec = new PanelSpec(title: '<script>');
+$spec = new PanelSpec(title: '<script>', buttons: [
+    ['label' => '(3,5)', 'url' => '?first&bad="&cmd=choose_cell_marker&row=3&col=5'],
+    ['label' => 'Отмена', 'url' => '?first&bad="&cmd=cancel_pending', 'class' => 'skip'],
+]);
+coordsAssert(count(CellMarkerPicker::targets($state, 'host', '?first&bad="')) === 1, 'Malformed targets not rejected');
 CellMarkerPicker::decorate($spec, $state, 'host', '?first&bad="');
 $html = Panel::render($spec);
 coordsAssert(count($spec->buttons) === 2, 'Malformed coordinates not rejected safely');
