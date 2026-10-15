@@ -27,6 +27,7 @@ final class ChoiceRegistry
                 new DiceChoiceChoice(),
                 new AfterStrikeExecuteChoice(),
                 new CellMarkerChoice(),
+                new CellEffectDirectionChoice(),
                 new InstantPickChoice(),
                 new CombatPickChoice(),
                 new ForcedStrikeAdjacentChoice(),

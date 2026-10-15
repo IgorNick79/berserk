@@ -64,6 +64,7 @@ final class DamageResolver
         if ($val <= 0) return;
 
         $hpBefore = $target->hp;
+        $val += $this->lanternWoundBonus($target, $actionType, $attacker);
         $target->hp -= $val;
 
         $realDamage = $hpBefore - $target->hp;
@@ -136,6 +137,21 @@ final class DamageResolver
         }
 
         $this->checkGameOver();
+    }
+
+    private function lanternWoundBonus(CardInstance $target, string $actionType, ?CardInstance $attacker): int
+    {
+        if ($target->zone !== CardInstance::ZONE_FIELD || $target->row === null || $target->col === null) return 0;
+        $bonus = 0;
+        foreach (ZoneManager::markersAt($this->state, $target->row . '_' . $target->col) as $marker) {
+            if (($marker['type'] ?? '') !== 'lantern_light') continue;
+            $sourceStrike = $attacker && (int) ($marker['source_id'] ?? 0) === $attacker->instanceId
+                && CardStats::isMeleeAction($actionType);
+            if ($actionType !== 'poison' && !CardStats::isRangedAction($actionType) && !$sourceStrike) continue;
+            // Like reduce_attack cell markers, overlapping copies impose the strongest effect once.
+            $bonus = max($bonus, (int) ($marker['value'] ?? 1));
+        }
+        return $bonus;
     }
 
     public function forceDeath(CardInstance $target, string $cause, ?CardInstance $source = null): void

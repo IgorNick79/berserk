@@ -1580,6 +1580,12 @@ body { padding-bottom: 46vh; }
 .cell-marker-bomb {
     background-image: url("/assets/images/bomb.png");
 }
+.cell-marker-lantern_light {
+    background-image: url("/assets/images/lantern.png");
+    background-size: cover;
+    border: 1px solid #916314;
+    box-sizing: border-box;
+}
 .cell-marker-row_spell {
     background-image: url("/assets/images/flower.png");
 }

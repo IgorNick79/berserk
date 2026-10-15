@@ -27,6 +27,11 @@ final class CardStats
         return in_array($type, ['strike', 'answer', 'tap', 'magic', 'execute'], true);
     }
 
+    public static function isRangedAction(string $type): bool
+    {
+        return in_array($type, ['shot', 'throw', 'discharge'], true);
+    }
+
     public static function canHealInsteadWound(CardInstance $card): bool
     {
         if (empty($card->prop['on_heal_instead_wound'])) return false;
@@ -1630,7 +1635,7 @@ final class CardStats
     {
         foreach ($card->prop['actions'] ?? [] as $a) {
             $t = (string) ($a['type'] ?? '');
-            if (in_array($t, ['shot', 'throw', 'discharge'], true)) return true;
+            if (self::isRangedAction($t)) return true;
         }
         return false;
     }

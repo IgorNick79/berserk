@@ -202,6 +202,7 @@ final class TurnPhaseProcessor
 
     public function resume(): void
     {
+        if (!empty($this->state->battle['pending_cell_effect_direction'])) return;
         $tp = $this->state->battle['turn_phase'] ?? null;
         if (!$tp) return;
 
@@ -711,6 +712,18 @@ final class TurnPhaseProcessor
         $items = [];
 
         switch ($type) {
+            case 'cell_effect':
+                if (($eff['effect'] ?? '') !== 'lantern_light' || $card->dying || $card->hp <= 0 || CardStats::isDisabled($card)) break;
+                $range = (int) ($eff['range'] ?? 3);
+                $options = Choice\CellEffectDirectionChoice::options($card, $range);
+                if ($options) {
+                    $this->state->battle['pending_cell_effect_direction'] = [
+                        'owner' => $ownerKey, 'source_id' => $card->instanceId,
+                        'range' => $range, 'value' => (int) ($eff['value'] ?? 1), 'options' => $options,
+                    ];
+                }
+                return ['label' => 'Свет фонаря', 'items' => []];
+
             case 'whip':
                 $targets = [$card->instanceId];
                 foreach ($this->state->cards as $other) {
@@ -953,6 +966,7 @@ final class TurnPhaseProcessor
             && (!empty($battle['pending_incarnation'])
                 || !empty($battle['pending_incarnation_wound']))) return true;
         if ($base === 'turn_start' || $base === 'opponent_turn_start') {
+            if (!empty($battle['pending_cell_effect_direction'])) return true;
             if (!empty($battle['pending_whip'])) return true;
             if (!empty($battle['pending_gate_pick'])) return true;
             if (!empty($battle['pending_greed_teleport'])) return true;

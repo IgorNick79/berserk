@@ -937,6 +937,14 @@ final class BattleScreen
             }
         }
         $statusHtml .= $this->linkedRecruitBattleHint($state, $c, $cardsInfo);
+        foreach ($c->prop['opponent_turn_start'] ?? [] as $effect) {
+            if (($effect['type'] ?? '') !== 'cell_effect' || ($effect['effect'] ?? '') !== 'lantern_light') continue;
+            $regen = (new \Berserk\Core\Engine())->getRegenerationAmount($c);
+            if ($regen > 0) $statusHtml .= '<p>Регенерация ' . $regen . '.</p>';
+            if (!empty($c->prop['zoal'])) $statusHtml .= '<p>ЗОАЛ — защита от атак летающих.</p>';
+            $statusHtml .= '<p>' . htmlspecialchars(\Berserk\Core\Choice\CellEffectDirectionChoice::DESCRIPTION, ENT_QUOTES) . '</p>';
+            break;
+        }
 
         $coinsLine = '';
         if (!empty($c->prop['save_coins']) || $c->coins > 0) {
@@ -1377,7 +1385,9 @@ final class BattleScreen
         $html = '<div class="cell-markers">';
         foreach ($markers as $m) {
             $type = htmlspecialchars((string) ($m['type'] ?? ''), ENT_QUOTES);
-            $html .= '<div class="cell-marker cell-marker-' . $type . '"></div>';
+            $title = $type === 'lantern_light'
+                ? 'Свет фонаря: карты на этой клетке получают на 1 рану больше от дальних атак, отравления и удара источника света до конца следующего хода владельца.' : '';
+            $html .= '<div class="cell-marker cell-marker-' . $type . '" title="' . htmlspecialchars($title, ENT_QUOTES) . '"></div>';
         }
         $html .= '</div>';
 
