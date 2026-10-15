@@ -313,7 +313,7 @@ final class TurnPhaseProcessor
             if ($card->owner !== $passiveKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || CardStats::isDisabled($card)) continue;
+            if ($card->dying) continue;
             if (empty($card->prop['opponent_turn_start'])) continue;
             $otsCards[] = $card;
         }
@@ -494,6 +494,13 @@ final class TurnPhaseProcessor
 
             foreach ($effects as $eff) {
                 if (($eff['type'] ?? '') === 'get_coins') continue;
+
+                if ($propKey === 'opponent_turn_start' && CardStats::isDisabled($card)) {
+                    $passiveLight = ($eff['type'] ?? '') === 'cell_effect'
+                        && ($eff['effect'] ?? '') === 'lantern_light'
+                        && Choice\CellEffectDirectionChoice::canCreateLight($card);
+                    if (!$passiveLight) continue;
+                }
 
                 $stacked = !empty($eff['stacked']);
                 $label   = (string) ($eff['label'] ?? $card->ukid);
@@ -713,7 +720,7 @@ final class TurnPhaseProcessor
 
         switch ($type) {
             case 'cell_effect':
-                if (($eff['effect'] ?? '') !== 'lantern_light' || $card->dying || $card->hp <= 0 || CardStats::isDisabled($card)) break;
+                if (($eff['effect'] ?? '') !== 'lantern_light' || !Choice\CellEffectDirectionChoice::canCreateLight($card)) break;
                 $range = (int) ($eff['range'] ?? 3);
                 $options = Choice\CellEffectDirectionChoice::options($card, $range);
                 if ($options) {

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Berserk\Core\Choice;
 
-use Berserk\Core\{CardInstance, CardStats, Command, Engine, GameState, Result, TurnPhaseProcessor, ZoneManager};
+use Berserk\Core\{CardInstance, Command, Engine, GameState, Result, TurnPhaseProcessor, ZoneManager};
 use Berserk\View\Ui\PanelSpec;
 
 /** Direction choice for a turn-triggered line of cell markers. */
@@ -19,6 +19,13 @@ final class CellEffectDirectionChoice implements ChoiceHandlerInterface
 
     public function pendingKey(): string { return 'pending_cell_effect_direction'; }
     public function commandTypes(): array { return ['choose_cell_effect_direction']; }
+
+    /** Lantern is passive: closing alone does not disable it; other restrictions remain. */
+    public static function canCreateLight(CardInstance $card): bool
+    {
+        return $card->zone === CardInstance::ZONE_FIELD && !$card->dying && $card->hp > 0
+            && !isset($card->markers['spider_web']);
+    }
 
     /** Physical board directions, consistent with the field rendered for both players. */
     public static function options(CardInstance $card, int $range): array
@@ -59,7 +66,7 @@ final class CellEffectDirectionChoice implements ChoiceHandlerInterface
         $direction = (string) $cmd->get('direction', '');
         if (!isset($p['options'][$direction])) return Result::error('Неверное направление');
         $card = $state->getCard((int) $p['source_id']);
-        if ($card && $card->owner === $playerKey && $card->zone === CardInstance::ZONE_FIELD && !$card->dying && $card->hp > 0 && !CardStats::isDisabled($card)) {
+        if ($card && $card->owner === $playerKey && self::canCreateLight($card)) {
             $options = self::options($card, (int) $p['range']);
             if (!isset($options[$direction]) || $options[$direction]['cells'] !== $p['options'][$direction]['cells']) {
                 return Result::error('Положение источника изменилось');

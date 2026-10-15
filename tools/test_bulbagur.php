@@ -238,4 +238,80 @@ bbAssert($spec->cellPicker === null && count($spec->buttons) === count($choiceSt
 bbAssert(!$handler->spec($choiceState, 'player', $info, '?game=119', 'player')->isMine, 'Opponent sees waiting panel');
 $css = file_get_contents(__DIR__ . '/../www/assets/css/global.css');
 bbAssert(str_contains($css, '.cell-marker-lantern_light') && str_contains($css, 'pointer-events: none'), 'Placeholder belongs to existing nonblocking overlay');
+// Regression: documented Girrit shot path, base one wound, Minotaur at the lit cell.
+// No database dependency: exercise the real Engine -> ActionResolver -> DamageResolver chain.
+foreach ([[true, 0, 2], [false, 0, 1], [true, 1, 0]] as [$lit, $armor, $expected]) {
+    $s = GameState::fromArray($restored->toArray());
+    $s->battle['active'] = 'host';
+    if (!$lit) $s->cell_markers = [];
+    $girrit = bbCard(3, 'host', 1, 2, ['actions' => [[
+        'key' => 'shot', 'type' => 'shot', 'value' => 1, 'range' => 4,
+    ]]]);
+    $girrit->ukid = 's1_21'; // hunt scenario source; no runtime ukid conditions.
+    $s->addCard($girrit);
+    $minotaur = $s->getCard(2);
+    $minotaur->ukid = 's1_34';
+    $minotaur->armor = $armor;
+    $before = $minotaur->hp;
+    bbAssert($e->apply($s, 'host', new Command('action', ['card_id' => 3, 'target_id' => 2, 'action_key' => 'shot']))->success, 'Girrit shot resolves');
+    bbAssert($s->battle['strike']['kind'] === 'shot', 'Girrit action type stays shot');
+    bbAssert($before - $minotaur->hp === $expected, 'Girrit actual wounds: lit=' . (int) $lit . ', armor=' . $armor);
+    bbAssert($s->battle['strike']['damage_total'] === $expected, 'Displayed wounds must include lantern and armor result');
+    $panel = (new \Berserk\View\Screen\Battle\InfoPanel(new Template(__DIR__ . '/../templates')))->render(
+        $s, 'host', 'host', ['s1_21' => ['name' => 'Гиррит'], 's1_34' => ['name' => 'Минотавр']], '?game=119'
+    );
+    bbAssert(str_contains($panel, '(' . $expected . ' урона)'), 'InfoPanel reports actual shot wounds');
+    bbAssert($minotaur->armor === 0, 'Armor absorption unchanged');
+}
+$s = GameState::fromArray($restored->toArray());
+$minotaur = $s->getCard(2);
+$minotaur->armor = 5;
+$e->applyPoison($minotaur, 1, 'host');
+$s->getCard(1)->prop = [];
+(new TurnPhaseProcessor($s, $e))->beginStartPhase('player');
+bbAssert($minotaur->hp === 28 && $minotaur->armor === 5, 'Poison phase ignores armor and adds lantern wound');
+
+// Closed source is eligible for this passive only, at queue, execution and confirmation.
+foreach ([false, true] as $closed) {
+    $s = bbState();
+    $s->getCard(1)->closed = $closed;
+    (new TurnPhaseProcessor($s, $e))->beginStartPhase('player');
+    bbAssert(!empty($s->battle['pending_cell_effect_direction']), 'Open/closed source creates pending: ' . (int) $closed);
+    $s = GameState::fromArray($s->toArray());
+    (new TurnPhaseProcessor($s, $e))->resume();
+    bbAssert($e->apply($s, 'host', new Command('choose_cell_effect_direction', ['direction' => 'right']))->success, 'Open/closed source choice resolves');
+    bbAssert(count($s->cell_markers) === 3 && $s->getCard(1)->closed === $closed, 'Open/closed source creates exactly three markers without changing closed state');
+    bbDrain($s, $e);
+    (new TurnPhaseProcessor($s, $e))->resume();
+    bbAssert(empty($s->battle['pending_cell_effect_direction']), 'Resume never repeats resolved open/closed source pending');
+    bbAssert(count(ZoneManager::markersAt($s, '3_2')) === 1, 'Resume never duplicates markers');
+}
+
+// A closed source with mixed effects must not activate an unrelated opponent-start ability.
+$s = bbState();
+$s->getCard(1)->closed = true;
+$s->getCard(1)->prop['opponent_turn_start'][] = ['type' => 'modifier', 'stat' => 'ova', 'value' => 9, 'expire' => 'end_of_turn'];
+(new TurnPhaseProcessor($s, $e))->beginStartPhase('player');
+bbAssert(!empty($s->battle['pending_cell_effect_direction']), 'Only lantern survives closed-source task filtering');
+bbAssert($e->apply($s, 'host', new Command('choose_cell_effect_direction', ['direction' => 'right']))->success, 'Mixed source lantern resolves');
+bbDrain($s, $e);
+bbAssert(empty($s->getCard(1)->modifiers), 'Other closed-source passive stays disabled');
+bbAssert(CardStats::isDisabled($s->getCard(1)), 'Global closed-card disability is unchanged');
+$s = bbState();
+$s->getCard(1)->prop['opponent_turn_start'][] = ['type' => 'modifier', 'stat' => 'ova', 'value' => 9, 'expire' => 'end_of_turn'];
+(new TurnPhaseProcessor($s, $e))->beginStartPhase('player');
+$tasks = $s->battle['turn_phase']['passive_queue'];
+$lightTask = array_values(array_filter($tasks, fn($task) => ($task['payload']['effect'] ?? '') === 'lantern_light'))[0];
+$s->getCard(1)->closed = true;
+bbAssert($e->apply($s, 'host', new Command('turn_task', ['task_id' => $lightTask['id']]))->success, 'Queued light can start after source closes');
+bbAssert(!empty($s->battle['pending_cell_effect_direction']), 'Execution ignores closing after queue collection');
+$s = bbState();
+$s->getCard(1)->closed = true;
+$s->getCard(1)->prop = ['opponent_turn_start' => [['type' => 'modifier', 'stat' => 'ova', 'value' => 9, 'expire' => 'end_of_turn']]];
+(new TurnPhaseProcessor($s, $e))->beginStartPhase('player');
+bbAssert(empty($s->battle['turn_phase']) && empty($s->getCard(1)->modifiers), 'Unrelated closed opponent-start effect remains filtered');
+$s = bbState();
+$s->getCard(1)->markers['spider_web'] = ['value' => 1];
+(new TurnPhaseProcessor($s, $e))->beginStartPhase('player');
+bbAssert(empty($s->battle['pending_cell_effect_direction']), 'Existing spider-web restriction is preserved');
 echo "OK bulbagur: {$checks} checks\n";
