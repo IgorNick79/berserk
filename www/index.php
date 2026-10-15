@@ -434,6 +434,7 @@ $page = $tpl->parse('page.tpl', [
     'game_id' => $state->gameId,
     'role'    => $role,
     'screen'  => $screenHtml,
+    'page_class' => $screenName === 'battle' ? 'battle-page' : '',
 ]);
 
 echo $page;
