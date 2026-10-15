@@ -1,0 +1,81 @@
+{
+  "environment": "Isolated berserk_stage5d2_test_fixes; unmodified battle-sync.js; in-app browser",
+  "before_retry": {
+    "games": [
+      {
+        "ind": "100041",
+        "version": "3",
+        "status": "battle"
+      },
+      {
+        "ind": "100042",
+        "version": "2",
+        "status": "battle"
+      }
+    ],
+    "journal": [
+      {
+        "game_id": "100041",
+        "command_id": "a72adf3e-03b9-491c-9841-9954f0aa1889",
+        "status": "committed",
+        "before_version": "2",
+        "after_version": "3",
+        "error_code": null
+      },
+      {
+        "game_id": "100042",
+        "command_id": "82107a37-342c-45be-b5cc-843db8197b25",
+        "status": "failed",
+        "before_version": "2",
+        "after_version": "2",
+        "error_code": "persistence_failed"
+      }
+    ]
+  },
+  "after_retry": {
+    "games": [
+      {
+        "ind": "100041",
+        "version": "3",
+        "status": "battle"
+      },
+      {
+        "ind": "100042",
+        "version": "3",
+        "status": "battle"
+      }
+    ],
+    "journal": [
+      {
+        "game_id": "100041",
+        "command_id": "a72adf3e-03b9-491c-9841-9954f0aa1889",
+        "status": "committed",
+        "before_version": "2",
+        "after_version": "3",
+        "error_code": null
+      },
+      {
+        "game_id": "100042",
+        "command_id": "82107a37-342c-45be-b5cc-843db8197b25",
+        "status": "failed",
+        "before_version": "2",
+        "after_version": "2",
+        "error_code": "persistence_failed"
+      },
+      {
+        "game_id": "100042",
+        "command_id": "5faff914-bf40-47ec-b43e-0229562e1f15",
+        "status": "committed",
+        "before_version": "2",
+        "after_version": "3",
+        "error_code": null
+      }
+    ]
+  },
+  "observed_ui": [
+    "Successful gain_coin: card closed, coins=1",
+    "SQL failure: Command could not be saved; forced snapshot leaves card open, coins=0",
+    "After trigger removal: another user click succeeds, card closed, coins=1; new command_id"
+  ],
+  "result": "PASS"
+}

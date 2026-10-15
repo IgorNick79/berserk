@@ -61,7 +61,7 @@ function fixture(string $pending='',int $host=1,int $player=2): object {
 }
 function persisted(object $s): array {
     global $db;
-    return ['game_log'=>GameLog::read($s->gameId),'game'=>$db->fetchOne('SELECT status,version,json FROM games WHERE ind='.$s->gameId),'journal'=>$db->fetchAll('SELECT command_id,status,before_version,after_version FROM battle_command_journal WHERE game_id='.$s->gameId.' ORDER BY id')];
+    return ['game_log'=>GameLog::read($s->gameId),'game'=>$db->fetchOne('SELECT status,version,json FROM games WHERE ind='.$s->gameId),'journal'=>$db->fetchAll('SELECT command_id,status,before_version,after_version,error_code FROM battle_command_journal WHERE game_id='.$s->gameId.' ORDER BY id')];
 }
 function query(object $s,string $role='first',string $route='battle_command'): string {return "$role&game=$s->gameId&ajax=$route";}
 function post(object $s,string $id='audit'): array {return ['cmd'=>'gain_coin','card_id'=>'1','expected_version'=>(string)$s->persistenceVersion,'command_id'=>$id];}
@@ -97,8 +97,17 @@ foreach(['','&debug_roll=6*','&debug_roll[]=6'] as $extra){
 }
 $s=fixture();$b=persisted($s);$p=post($s);$p['card_id']='2';$r=request(query($s),$p);$a=persisted($s);$r2=request(query($s),$p);
 check('rejected/replay','200 ok=false; rejected once; unchanged game',$r['status']===200 && ($r['json']['ok']??true)===false && $a['game']===$b['game'] && count($a['journal'])===1 && $a['journal'][0]['status']==='rejected' && persisted($s)===$a,['first'=>brief($r),'replay'=>brief($r2),'journal'=>$a['journal']]);
-$s=fixture();$p=post($s);unset($p['command_id']);$r=request(query($s).'&debug_roll=6*',$p);$a=persisted($s);
-check('mutation without command_id','every successful game mutation has a committed journal record',!($r['json']['ok']??false) || count($a['journal'])===1,['response'=>brief($r),'ok'=>$r['json']['ok']??null,'version_before'=>$s->persistenceVersion,'version_after'=>$a['game']['version'],'journal'=>$a['journal']]);
+foreach (['missing' => '', 'GET only' => '&command_id=query-only'] as $name => $extra) {
+ $s=fixture();$b=persisted($s);$p=post($s);unset($p['command_id']);
+ $r=request(query($s).$extra.'&debug_roll=6*',$p);
+ check('mandatory id '.$name,'400 missing_command_id; no Engine, State/version/journal changes',$r['status']===400 && ($r['json']['error']??'')==='missing_command_id' && persisted($s)===$b,['response'=>$r['json'],'http_status'=>$r['status']]);
+}
+$s=fixture();$p=post($s);$r=request(query($s),$p);$a=persisted($s);
+$p['expected_version']=(string)($s->persistenceVersion+1);$r=request(query($s),$p);
+check('same id changed expected_version','409 command_id_conflict; no writes',$r['status']===409 && ($r['json']['error']??'')==='command_id_conflict' && persisted($s)===$a,brief($r));
+$s=fixture();$p=post($s,'stale-replay');$p['expected_version']=(string)($s->persistenceVersion-1);
+$r=request(query($s),$p);$a=persisted($s);$r2=request(query($s),$p);
+check('conflict replay','409 conflict preserved; no Engine',$r['status']===409 && $r2['status']===409 && ($r2['json']['command_status']??'')==='conflict' && count($a['game_log'])===0 && persisted($s)===$a,['first'=>brief($r),'replay'=>brief($r2),'journal'=>$a['journal']]);
 
 foreach(['games','battle_command_journal'] as $table){
  $s=fixture();$b=persisted($s);$id='fault-'.$table;$p=post($s,$id);
@@ -106,8 +115,16 @@ foreach(['games','battle_command_journal'] as $table){
  $db->query("CREATE TRIGGER stage5d2_save_fault BEFORE UPDATE ON $table FOR EACH ROW BEGIN IF $condition THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='stage5d2 injected write failure'; END IF; END");
  try{$r=request(query($s),$p);}finally{$db->query('DROP TRIGGER stage5d2_save_fault');}
  $a=persisted($s);$r2=request(query($s),$p);$after=persisted($s);
- check("atomic rollback $table",'500; State/version rolled back; no false committed journal',$r['status']===500 && $a['game']===$b['game'] && count($a['journal'])===1 && $a['journal'][0]['status']==='processing',['response'=>brief($r),'journal'=>$a['journal'],'game_unchanged'=>$a['game']===$b['game'],'engine_game_log'=>$a['game_log']]);
- check("known failure terminal outcome $table",'known rolled-back command obtains a terminal recoverable outcome',($after['journal'][0]['status']??'processing')!=='processing',['replay'=>brief($r2),'command_status'=>$r2['json']['command_status']??null,'journal'=>$after['journal']]);
+ $record=$a['journal'][0]??[];
+ check("atomic rollback $table",'500 terminal failed/persistence_failed; unchanged State/version; before=after',
+  $r['status']===500 && ($r['json']['ok']??true)===false && ($r['json']['command_status']??'')==='failed' && ($r['json']['terminal']??false)===true && ($r['json']['command_id']??'')===$id
+  && $a['game']===$b['game'] && count($a['journal'])===1 && ($record['status']??'')==='failed' && ($record['error_code']??'')==='persistence_failed'
+  && (int)$record['before_version']===$s->persistenceVersion && $record['before_version']===$record['after_version'],
+  ['response'=>$r['json'],'http_status'=>$r['status'],'journal'=>$a['journal'],'game_unchanged'=>$a['game']===$b['game'],'engine_calls'=>count($a['game_log'])]);
+ $status=request(query($s,'first','battle_command_status').'&command_id='.$id);
+ check("failed replay/status $table",'saved failed outcome; no second Engine or State update',
+  ($r2['json']['command_status']??'')==='failed' && ($r2['json']['terminal']??false)===true && ($status['json']['command_status']??'')==='failed'
+  && count($a['game_log'])===1 && $after===$a,['replay'=>$r2['json'],'status'=>$status['json'],'engine_calls'=>count($after['game_log'])]);
 }
 $s=fixture();$p=post($s,'render-failure');
 $db->query('RENAME TABLE cards TO stage5d2_cards_unavailable');
@@ -115,6 +132,23 @@ try{$r=request(query($s),$p);}finally{$db->query('RENAME TABLE stage5d2_cards_un
 $a=persisted($s);$status=request(query($s,'first','battle_command_status').'&command_id=render-failure');$r2=request(query($s),$p);
 check('response failure after commit','500 unknown; status/replay recover committed result without reexecution',$r['status']===500 && $a['journal'][0]['status']==='committed' && $status['status']===200 && ($status['json']['command_status']??'')==='committed' && $r2['status']===200 && persisted($s)===$a,['response'=>brief($r),'status'=>$status['json'],'replay'=>brief($r2)]);
 
+// Send a real POST and discard the entire response. Recovery must not resend the action.
+$s=fixture();$p=post($s,'response-discarded');$body=http_build_query($p);
+$target=parse_url($url);$socket=stream_socket_client('tcp://'.$target['host'].':'.$target['port'],$errno,$error,5);
+if($socket===false)throw new RuntimeException('Unable to open isolated HTTP connection');
+$wire="POST ".$target['path'].'?'.query($s)." HTTP/1.1\r\nHost: ".$target['host'].':'.$target['port']."\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: ".strlen($body)."\r\nConnection: close\r\n\r\n".$body;
+$sent=0;
+try{while($sent<strlen($wire)){$n=fwrite($socket,substr($wire,$sent));if(!$n)throw new RuntimeException('Incomplete HTTP request');$sent+=$n;}}
+finally{fclose($socket);}
+for($attempt=0;$attempt<5;$attempt++){
+ $status=request(query($s,'first','battle_command_status').'&command_id=response-discarded');
+ if(($status['json']['command_status']??'')==='committed')break;
+}
+$a=persisted($s);$r2=request(query($s),$p);
+check('HTTP response discarded','status/replay recover one committed command after unread response',
+ ($status['json']['command_status']??'')==='committed' && ($r2['json']['command_status']??'')==='committed'
+ && (int)$a['game']['version']===$s->persistenceVersion+1 && count($a['journal'])===1 && count($a['game_log'])===1 && persisted($s)===$a,
+ ['status'=>$status['json'],'journal'=>$a['journal'],'engine_calls'=>count($a['game_log']),'response_read'=>false]);
 foreach(['host','player'] as $owner)foreach(['first','second'] as $role){
  $s=fixture($owner);$p=post($s,'resign');$p['cmd']='resign';unset($p['card_id']);$r=request(query($s,$role),$p);$a=persisted($s);$loaded=$repo->findById($s->gameId);$r2=request(query($s,$role),$p);
  check("pending $owner resign $role",'game_over; opponent wins; one commit; replay no-op',$r['status']===200 && $loaded->status==='game_over' && $loaded->winner===($role==='first'?'player':'host') && count($a['journal'])===1 && $a['journal'][0]['status']==='committed' && persisted($s)===$a,['response'=>brief($r),'winner'=>$loaded->winner,'journal'=>$a['journal']]);
@@ -128,6 +162,76 @@ check('debug disabled legacy command','302; game/journal unchanged (debug_roll r
 $s=fixture();$b=persisted($s);$r=request(query($s,'first','battle_sync').'&debug_roll[]=6');
 check('debug_roll array','valid JSON; no warnings or game writes',$r['json_valid'] && $r['status']===200 && persisted($s)===$b,brief($r));
 foreach(['game_over','mode'] as $stateStatus){$s=fixture();$s->status=$stateStatus;$repo->save($s);$b=persisted($s);$r=request("first&game=$s->gameId&cmd[]=resign");check("legacy array outside battle $stateStatus",'no uncaught error; unchanged State/version/journal',$r['status']<500 && !str_contains($r['body_prefix']??'','Fatal error') && persisted($s)===$b,brief($r));}
+// Source faults are restricted to the already verified disposable copy. Real SQL still runs.
+function withCopiedDbFault(string $needle, string $replacement, callable $run): mixed {
+    $path=__DIR__.'/../src/Core/Db.php';
+    $original=file_get_contents($path);
+    if(substr_count($original,$needle)!==1)throw new RuntimeException('DB fault anchor changed');
+    file_put_contents($path,str_replace($needle,$replacement,$original));
+    try{return $run();}finally{file_put_contents($path,$original);}
+}
+
+// A second SQL error prevents markFailed: no fabricated failed is allowed.
+$s=fixture();$b=persisted($s);$p=post($s,'failed-update-fault');
+$db->query("CREATE TRIGGER stage5d2_state_fault BEFORE UPDATE ON games FOR EACH ROW BEGIN IF NEW.ind=$s->gameId THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='state write failed'; END IF; END");
+$db->query("CREATE TRIGGER stage5d2_terminal_fault BEFORE UPDATE ON battle_command_journal FOR EACH ROW BEGIN IF NEW.game_id=$s->gameId AND NEW.status='failed' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='failed write failed'; END IF; END");
+try{$r=request(query($s),$p);}finally{$db->query('DROP TRIGGER stage5d2_state_fault');$db->query('DROP TRIGGER stage5d2_terminal_fault');}
+$a=persisted($s);$r2=request(query($s),$p);
+check('markFailed UPDATE fails','500 unknown, journal processing; no false failed or second Engine',
+ $r['status']===500 && ($r['json']['command_status']??'')==='unknown' && ($r['json']['terminal']??true)===false
+ && $a['game']===$b['game'] && $a['journal'][0]['status']==='processing' && ($r2['json']['command_status']??'')==='processing'
+ && persisted($s)===$a && count($a['game_log'])===1,['response'=>$r['json'],'journal'=>$a['journal'],'replay'=>$r2['json']]);
+
+foreach([false,true] as $readAlsoFails){
+ $s=fixture();$b=persisted($s);$p=post($s,$readAlsoFails?'failed-read-lost':'failed-ack-lost');
+ $db->query("CREATE TRIGGER stage5d2_state_fault BEFORE UPDATE ON games FOR EACH ROW BEGIN IF NEW.ind=$s->gameId THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='state write failed'; END IF; END");
+ $needle='$result = $this->connection->query($sql);';
+ $replacement=$needle.' if (str_contains($sql, "UPDATE battle_command_journal") && str_contains($sql, "status = \'failed\'")) { '.($readAlsoFails?'$GLOBALS["stage5d2_read_fault"] = true; ':'').'throw new \\Berserk\\Core\\DbQueryException("Injected lost failed UPDATE acknowledgement"); }';
+ // PHP source needs namespace separators, not the escaped string representation.
+ $replacement=str_replace('\\\\','\\',$replacement);
+ try{
+  $r=withCopiedDbFault($needle,$replacement,function()use($s,$p,$readAlsoFails){
+   if(!$readAlsoFails)return request(query($s),$p);
+   $needle='public function query(string $sql): mysqli_result|bool';
+   // Add a one-shot read error after the failed UPDATE; no production hook is introduced.
+   $path=__DIR__.'/../src/Core/Db.php';$original=file_get_contents($path);
+   $anchor='try {';
+   $queryStart=strpos($original,$needle);$try=strpos($original,$anchor,$queryStart);
+   $injection='if (!empty($GLOBALS["stage5d2_read_fault"])) { $GLOBALS["stage5d2_read_fault"]=false; throw new \\Berserk\\Core\\DbQueryException("Injected journal reread failure"); } ';
+   $injection=str_replace('\\\\','\\',$injection);
+   file_put_contents($path,substr($original,0,$try).$injection.substr($original,$try));
+   try{return request(query($s),$p);}finally{file_put_contents($path,$original);}
+  });
+ }finally{$db->query('DROP TRIGGER stage5d2_state_fault');}
+ $a=persisted($s);$status=request(query($s,'first','battle_command_status').'&command_id='.$p['command_id']);$r2=request(query($s),$p);
+ check($readAlsoFails?'failed persisted but reread unavailable':'failed UPDATE acknowledgement lost',
+  $readAlsoFails?'initial unknown; subsequent status/replay failed, no reexecution':'reread recovers terminal failed after lost UPDATE reply',
+  $r['status']===500 && ($r['json']['command_status']??'')===($readAlsoFails?'unknown':'failed') && $a['game']===$b['game'] && $a['journal'][0]['status']==='failed'
+  && ($status['json']['command_status']??'')==='failed' && ($r2['json']['command_status']??'')==='failed' && persisted($s)===$a && count($a['game_log'])===1,
+  ['response'=>$r['json'],'status'=>$status['json'],'journal'=>$a['journal']]);
+}
+
+foreach(['commit-ack-lost','commit-not-confirmed','rollback-ack-lost'] as $fault){
+ $s=fixture();$b=persisted($s);$p=post($s,$fault);
+ if($fault==='rollback-ack-lost'){
+  $db->query("CREATE TRIGGER stage5d2_state_fault BEFORE UPDATE ON games FOR EACH ROW BEGIN IF NEW.ind=$s->gameId THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='state write failed'; END IF; END");
+  $needle='$rolledBack = $this->connection->rollback();';
+  $replacement=$needle.' $this->transactionActive=false; throw new \\Berserk\\Core\\TransactionRollbackUnknownException("Injected lost ROLLBACK acknowledgement");';
+ }else{
+  $needle='$committed = $this->connection->commit();';
+  $replacement=$fault==='commit-ack-lost'?$needle.' $this->transactionActive=false; throw new \\Berserk\\Core\\TransactionCommitUnknownException("Injected lost COMMIT acknowledgement");'
+   :'$this->connection->rollback(); $this->transactionActive=false; throw new \\Berserk\\Core\\TransactionCommitUnknownException("Injected unknown COMMIT outcome");';
+ }
+ $replacement=str_replace('\\\\','\\',$replacement);
+ try{$r=withCopiedDbFault($needle,$replacement,fn()=>request(query($s),$p));}
+ finally{if($fault==='rollback-ack-lost')$db->query('DROP TRIGGER stage5d2_state_fault');}
+ $a=persisted($s);$r2=request(query($s),$p);$committed=$fault==='commit-ack-lost';
+ check($fault,$committed?'real COMMIT recovered as committed; replay does not execute':'unknown stays nonterminal; processing never becomes failed; no reexecution',
+  $r['status']===($committed?200:500) && ($r['json']['command_status']??'')===($committed?'committed':'unknown')
+  && $a['journal'][0]['status']===($committed?'committed':'processing') && ($committed?(int)$a['game']['version']===$s->persistenceVersion+1:$a['game']===$b['game'])
+  && persisted($s)===$a && count($a['game_log'])===1,
+  ['response'=>$r['json']===null?brief($r):['http_status'=>$r['status'],'command_status'=>$r['json']['command_status']??null,'terminal'=>$r['json']['terminal']??null],'journal'=>$a['journal'],'replay'=>brief($r2),'engine_calls'=>count($a['game_log'])]);
+}
 $failed=count(array_filter($results,fn($r)=>$r['result']==='FAIL'));
 $report=['environment'=>$meta,'engines'=>$tables,'cases'=>$results,'total'=>count($results),'failed'=>$failed];
 echo json_encode($report,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),"\n";

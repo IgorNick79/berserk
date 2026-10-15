@@ -1,0 +1,1070 @@
+{
+    "environment": {
+        "db": "berserk_stage5d2_test_fixes",
+        "port": "33875",
+        "datadir": "C:\\Users\\mi\\Documents\\Berserk\\stage5d2-d1d2-verification\\test-db\\",
+        "version": "10.6.9-MariaDB"
+    },
+    "engines": [
+        {
+            "TABLE_NAME": "battle_command_journal",
+            "ENGINE": "InnoDB"
+        },
+        {
+            "TABLE_NAME": "cards",
+            "ENGINE": "InnoDB"
+        },
+        {
+            "TABLE_NAME": "elements",
+            "ENGINE": "InnoDB"
+        },
+        {
+            "TABLE_NAME": "games",
+            "ENGINE": "InnoDB"
+        }
+    ],
+    "cases": [
+        {
+            "scenario": "legacy cmd=end_turn",
+            "expected": "302 clean Location; unchanged State/version/journal",
+            "actual": {
+                "status": 302,
+                "location": "?first&game=100043&mode=move&sel=1",
+                "json_valid": false,
+                "body_prefix": ""
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "legacy cmd[]=end_turn",
+            "expected": "302 clean Location; unchanged State/version/journal",
+            "actual": {
+                "status": 302,
+                "location": "?first&game=100043&mode=move&sel=1",
+                "json_valid": false,
+                "body_prefix": ""
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "legacy cmd=end_turn&cmd[]=resign",
+            "expected": "302 clean Location; unchanged State/version/journal",
+            "actual": {
+                "status": 302,
+                "location": "?first&game=100043&mode=move&sel=1",
+                "json_valid": false,
+                "body_prefix": ""
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "legacy cmd[]=resign&cmd=end_turn",
+            "expected": "302 clean Location; unchanged State/version/journal",
+            "actual": {
+                "status": 302,
+                "location": "?first&game=100043&mode=move&sel=1",
+                "json_valid": false,
+                "body_prefix": ""
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "legacy cmd[deep][x]=resign",
+            "expected": "302 clean Location; unchanged State/version/journal",
+            "actual": {
+                "status": 302,
+                "location": "?first&game=100043&mode=move&sel=1",
+                "json_valid": false,
+                "body_prefix": ""
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "legacy cmd=resign&debug_roll=6*",
+            "expected": "302 clean Location; unchanged State/version/journal",
+            "actual": {
+                "status": 302,
+                "location": "?first&game=100043&mode=move&sel=1",
+                "json_valid": false,
+                "body_prefix": ""
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "sync first ignores cmd",
+            "expected": "200 snapshot, no writes",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "sync second ignores cmd",
+            "expected": "200 snapshot, no writes",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "sync no_change",
+            "expected": "200 no_change, no writes",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "cmd array",
+            "expected": "400 JSON; unchanged State/version/journal",
+            "actual": {
+                "status": 400,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "payload array",
+            "expected": "400 JSON; unchanged State/version/journal",
+            "actual": {
+                "status": 400,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "version array",
+            "expected": "400 JSON; unchanged State/version/journal",
+            "actual": {
+                "status": 400,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "id array",
+            "expected": "400 JSON; unchanged State/version/journal",
+            "actual": {
+                "status": 400,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "empty id",
+            "expected": "400 JSON; unchanged State/version/journal",
+            "actual": {
+                "status": 400,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "empty cmd",
+            "expected": "400 JSON; unchanged State/version/journal",
+            "actual": {
+                "status": 400,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "command GET method",
+            "expected": "405 JSON; no writes",
+            "actual": {
+                "status": 405,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "missing role",
+            "expected": "400 JSON; no writes",
+            "actual": {
+                "status": 400,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "nonparticipant",
+            "expected": "403 JSON; no writes",
+            "actual": {
+                "status": 403,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "keyed success/replay",
+            "expected": "one committed record; version +1; identical persisted state on replay",
+            "actual": {
+                "first": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "replay": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "journal": [
+                    {
+                        "command_id": "audit",
+                        "status": "committed",
+                        "before_version": "2",
+                        "after_version": "3",
+                        "error_code": null
+                    }
+                ]
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "key reused with different payload",
+            "expected": "409; unchanged persisted state",
+            "actual": {
+                "status": 409,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "stale version",
+            "expected": "409 conflict; no game update",
+            "actual": {
+                "status": 409,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "keyed success/replay&debug_roll=6*",
+            "expected": "one committed record; version +1; identical persisted state on replay",
+            "actual": {
+                "first": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "replay": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "journal": [
+                    {
+                        "command_id": "audit",
+                        "status": "committed",
+                        "before_version": "2",
+                        "after_version": "3",
+                        "error_code": null
+                    }
+                ]
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "key reused with different payload&debug_roll=6*",
+            "expected": "409; unchanged persisted state",
+            "actual": {
+                "status": 409,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "stale version&debug_roll=6*",
+            "expected": "409 conflict; no game update",
+            "actual": {
+                "status": 409,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "keyed success/replay&debug_roll[]=6",
+            "expected": "one committed record; version +1; identical persisted state on replay",
+            "actual": {
+                "first": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "replay": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "journal": [
+                    {
+                        "command_id": "audit",
+                        "status": "committed",
+                        "before_version": "2",
+                        "after_version": "3",
+                        "error_code": null
+                    }
+                ]
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "key reused with different payload&debug_roll[]=6",
+            "expected": "409; unchanged persisted state",
+            "actual": {
+                "status": 409,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "stale version&debug_roll[]=6",
+            "expected": "409 conflict; no game update",
+            "actual": {
+                "status": 409,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "rejected/replay",
+            "expected": "200 ok=false; rejected once; unchanged game",
+            "actual": {
+                "first": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "replay": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "journal": [
+                    {
+                        "command_id": "audit",
+                        "status": "rejected",
+                        "before_version": "2",
+                        "after_version": "2",
+                        "error_code": "command_rejected"
+                    }
+                ]
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "mandatory id missing",
+            "expected": "400 missing_command_id; no Engine, State/version/journal changes",
+            "actual": {
+                "response": {
+                    "ok": false,
+                    "type": "command_status",
+                    "error": "missing_command_id"
+                },
+                "http_status": 400
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "mandatory id GET only",
+            "expected": "400 missing_command_id; no Engine, State/version/journal changes",
+            "actual": {
+                "response": {
+                    "ok": false,
+                    "type": "command_status",
+                    "error": "missing_command_id"
+                },
+                "http_status": 400
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "same id changed expected_version",
+            "expected": "409 command_id_conflict; no writes",
+            "actual": {
+                "status": 409,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "conflict replay",
+            "expected": "409 conflict preserved; no Engine",
+            "actual": {
+                "first": {
+                    "status": 409,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "replay": {
+                    "status": 409,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "journal": [
+                    {
+                        "command_id": "stale-replay",
+                        "status": "conflict",
+                        "before_version": "2",
+                        "after_version": "2",
+                        "error_code": "stale_version"
+                    }
+                ]
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "atomic rollback games",
+            "expected": "500 terminal failed/persistence_failed; unchanged State/version; before=after",
+            "actual": {
+                "response": {
+                    "ok": false,
+                    "type": "command_status",
+                    "command_id": "fault-games",
+                    "command_status": "failed",
+                    "terminal": true,
+                    "sync_version": null,
+                    "before_version": 2,
+                    "after_version": 2,
+                    "error_code": "persistence_failed",
+                    "error": "Command could not be saved"
+                },
+                "http_status": 500,
+                "journal": [
+                    {
+                        "command_id": "fault-games",
+                        "status": "failed",
+                        "before_version": "2",
+                        "after_version": "2",
+                        "error_code": "persistence_failed"
+                    }
+                ],
+                "game_unchanged": true,
+                "engine_calls": 1
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "failed replay/status games",
+            "expected": "saved failed outcome; no second Engine or State update",
+            "actual": {
+                "replay": {
+                    "ok": false,
+                    "type": "command_status",
+                    "command_id": "fault-games",
+                    "command_status": "failed",
+                    "terminal": true,
+                    "sync_version": 2,
+                    "before_version": 2,
+                    "after_version": 2,
+                    "error_code": "persistence_failed",
+                    "error": "Command failed"
+                },
+                "status": {
+                    "ok": true,
+                    "type": "command_status",
+                    "command_id": "fault-games",
+                    "command_status": "failed",
+                    "terminal": true,
+                    "sync_version": 2,
+                    "before_version": 2,
+                    "after_version": 2,
+                    "error_code": "persistence_failed"
+                },
+                "engine_calls": 1
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "atomic rollback battle_command_journal",
+            "expected": "500 terminal failed/persistence_failed; unchanged State/version; before=after",
+            "actual": {
+                "response": {
+                    "ok": false,
+                    "type": "command_status",
+                    "command_id": "fault-battle_command_journal",
+                    "command_status": "failed",
+                    "terminal": true,
+                    "sync_version": null,
+                    "before_version": 2,
+                    "after_version": 2,
+                    "error_code": "persistence_failed",
+                    "error": "Command could not be saved"
+                },
+                "http_status": 500,
+                "journal": [
+                    {
+                        "command_id": "fault-battle_command_journal",
+                        "status": "failed",
+                        "before_version": "2",
+                        "after_version": "2",
+                        "error_code": "persistence_failed"
+                    }
+                ],
+                "game_unchanged": true,
+                "engine_calls": 1
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "failed replay/status battle_command_journal",
+            "expected": "saved failed outcome; no second Engine or State update",
+            "actual": {
+                "replay": {
+                    "ok": false,
+                    "type": "command_status",
+                    "command_id": "fault-battle_command_journal",
+                    "command_status": "failed",
+                    "terminal": true,
+                    "sync_version": 2,
+                    "before_version": 2,
+                    "after_version": 2,
+                    "error_code": "persistence_failed",
+                    "error": "Command failed"
+                },
+                "status": {
+                    "ok": true,
+                    "type": "command_status",
+                    "command_id": "fault-battle_command_journal",
+                    "command_status": "failed",
+                    "terminal": true,
+                    "sync_version": 2,
+                    "before_version": 2,
+                    "after_version": 2,
+                    "error_code": "persistence_failed"
+                },
+                "engine_calls": 1
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "response failure after commit",
+            "expected": "500 unknown; status/replay recover committed result without reexecution",
+            "actual": {
+                "response": {
+                    "status": 500,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "status": {
+                    "ok": true,
+                    "type": "command_status",
+                    "command_id": "render-failure",
+                    "command_status": "committed",
+                    "terminal": true,
+                    "sync_version": 3,
+                    "before_version": 2,
+                    "after_version": 3
+                },
+                "replay": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                }
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "HTTP response discarded",
+            "expected": "status/replay recover one committed command after unread response",
+            "actual": {
+                "status": {
+                    "ok": true,
+                    "type": "command_status",
+                    "command_id": "response-discarded",
+                    "command_status": "committed",
+                    "terminal": true,
+                    "sync_version": 3,
+                    "before_version": 2,
+                    "after_version": 3
+                },
+                "journal": [
+                    {
+                        "command_id": "response-discarded",
+                        "status": "committed",
+                        "before_version": "2",
+                        "after_version": "3",
+                        "error_code": null
+                    }
+                ],
+                "engine_calls": 1,
+                "response_read": false
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "pending host resign first",
+            "expected": "game_over; opponent wins; one commit; replay no-op",
+            "actual": {
+                "response": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "winner": "player",
+                "journal": [
+                    {
+                        "command_id": "resign",
+                        "status": "committed",
+                        "before_version": "2",
+                        "after_version": "3",
+                        "error_code": null
+                    }
+                ]
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "game_over sync host first",
+            "expected": "200 game_over status, no writes",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "command after game_over host first",
+            "expected": "rejected journal, unchanged game",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "pending host resign second",
+            "expected": "game_over; opponent wins; one commit; replay no-op",
+            "actual": {
+                "response": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "winner": "host",
+                "journal": [
+                    {
+                        "command_id": "resign",
+                        "status": "committed",
+                        "before_version": "2",
+                        "after_version": "3",
+                        "error_code": null
+                    }
+                ]
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "game_over sync host second",
+            "expected": "200 game_over status, no writes",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "command after game_over host second",
+            "expected": "rejected journal, unchanged game",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "pending player resign first",
+            "expected": "game_over; opponent wins; one commit; replay no-op",
+            "actual": {
+                "response": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "winner": "player",
+                "journal": [
+                    {
+                        "command_id": "resign",
+                        "status": "committed",
+                        "before_version": "2",
+                        "after_version": "3",
+                        "error_code": null
+                    }
+                ]
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "game_over sync player first",
+            "expected": "200 game_over status, no writes",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "command after game_over player first",
+            "expected": "rejected journal, unchanged game",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "pending player resign second",
+            "expected": "game_over; opponent wins; one commit; replay no-op",
+            "actual": {
+                "response": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "winner": "host",
+                "journal": [
+                    {
+                        "command_id": "resign",
+                        "status": "committed",
+                        "before_version": "2",
+                        "after_version": "3",
+                        "error_code": null
+                    }
+                ]
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "game_over sync player second",
+            "expected": "200 game_over status, no writes",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "command after game_over player second",
+            "expected": "rejected journal, unchanged game",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "debug disabled legacy command",
+            "expected": "302; game/journal unchanged (debug_roll remains an independent session option)",
+            "actual": {
+                "status": 302,
+                "location": "?first&game=100061",
+                "json_valid": false,
+                "body_prefix": ""
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "debug_roll array",
+            "expected": "valid JSON; no warnings or game writes",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": true,
+                "body_prefix": null
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "legacy array outside battle game_over",
+            "expected": "no uncaught error; unchanged State/version/journal",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": false,
+                "body_prefix": "<!DOCTYPE html>\r\n<html lang=\"ru\" class=\"\">\r\n<head>\r\n    <meta charset=\"UTF-8\">\r\n    <title>Berserk — партия #100063</title>\r\n    <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\r\n    <link rel=\"stylesheet\" href=\"/assets/css/global.css?v=1792076080\">\r\n</head>\r\n<body class=\"\">\r\n<div class=\"toolbar\">\r\n    <span>Партия #100063</span>\r\n    <span>Роль: <b>host</b><"
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "legacy array outside battle mode",
+            "expected": "no uncaught error; unchanged State/version/journal",
+            "actual": {
+                "status": 200,
+                "location": null,
+                "json_valid": false,
+                "body_prefix": "<!DOCTYPE html>\r\n<html lang=\"ru\" class=\"\">\r\n<head>\r\n    <meta charset=\"UTF-8\">\r\n    <title>Berserk — партия #100064</title>\r\n    <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\r\n    <link rel=\"stylesheet\" href=\"/assets/css/global.css?v=1792076081\">\r\n</head>\r\n<body class=\"\">\r\n<div class=\"toolbar\">\r\n    <span>Партия #100064</span>\r\n    <span>Роль: <b>host</b><"
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "markFailed UPDATE fails",
+            "expected": "500 unknown, journal processing; no false failed or second Engine",
+            "actual": {
+                "response": {
+                    "ok": false,
+                    "type": "command_status",
+                    "command_id": "failed-update-fault",
+                    "command_status": "unknown",
+                    "terminal": false,
+                    "sync_version": null,
+                    "error": "Command outcome is unknown"
+                },
+                "journal": [
+                    {
+                        "command_id": "failed-update-fault",
+                        "status": "processing",
+                        "before_version": null,
+                        "after_version": null,
+                        "error_code": null
+                    }
+                ],
+                "replay": {
+                    "ok": true,
+                    "type": "command_status",
+                    "command_id": "failed-update-fault",
+                    "command_status": "processing",
+                    "terminal": false,
+                    "sync_version": 2,
+                    "before_version": null,
+                    "after_version": null
+                }
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "failed UPDATE acknowledgement lost",
+            "expected": "reread recovers terminal failed after lost UPDATE reply",
+            "actual": {
+                "response": {
+                    "ok": false,
+                    "type": "command_status",
+                    "command_id": "failed-ack-lost",
+                    "command_status": "failed",
+                    "terminal": true,
+                    "sync_version": null,
+                    "before_version": 2,
+                    "after_version": 2,
+                    "error_code": "persistence_failed",
+                    "error": "Command could not be saved"
+                },
+                "status": {
+                    "ok": true,
+                    "type": "command_status",
+                    "command_id": "failed-ack-lost",
+                    "command_status": "failed",
+                    "terminal": true,
+                    "sync_version": 2,
+                    "before_version": 2,
+                    "after_version": 2,
+                    "error_code": "persistence_failed"
+                },
+                "journal": [
+                    {
+                        "command_id": "failed-ack-lost",
+                        "status": "failed",
+                        "before_version": "2",
+                        "after_version": "2",
+                        "error_code": "persistence_failed"
+                    }
+                ]
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "failed persisted but reread unavailable",
+            "expected": "initial unknown; subsequent status/replay failed, no reexecution",
+            "actual": {
+                "response": {
+                    "ok": false,
+                    "type": "command_status",
+                    "command_id": "failed-read-lost",
+                    "command_status": "unknown",
+                    "terminal": false,
+                    "sync_version": null,
+                    "error": "Command outcome is unknown"
+                },
+                "status": {
+                    "ok": true,
+                    "type": "command_status",
+                    "command_id": "failed-read-lost",
+                    "command_status": "failed",
+                    "terminal": true,
+                    "sync_version": 2,
+                    "before_version": 2,
+                    "after_version": 2,
+                    "error_code": "persistence_failed"
+                },
+                "journal": [
+                    {
+                        "command_id": "failed-read-lost",
+                        "status": "failed",
+                        "before_version": "2",
+                        "after_version": "2",
+                        "error_code": "persistence_failed"
+                    }
+                ]
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "commit-ack-lost",
+            "expected": "real COMMIT recovered as committed; replay does not execute",
+            "actual": {
+                "response": {
+                    "http_status": 200,
+                    "command_status": "committed",
+                    "terminal": true
+                },
+                "journal": [
+                    {
+                        "command_id": "commit-ack-lost",
+                        "status": "committed",
+                        "before_version": "2",
+                        "after_version": "3",
+                        "error_code": null
+                    }
+                ],
+                "replay": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "engine_calls": 1
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "commit-not-confirmed",
+            "expected": "unknown stays nonterminal; processing never becomes failed; no reexecution",
+            "actual": {
+                "response": {
+                    "http_status": 500,
+                    "command_status": "unknown",
+                    "terminal": false
+                },
+                "journal": [
+                    {
+                        "command_id": "commit-not-confirmed",
+                        "status": "processing",
+                        "before_version": null,
+                        "after_version": null,
+                        "error_code": null
+                    }
+                ],
+                "replay": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "engine_calls": 1
+            },
+            "result": "PASS"
+        },
+        {
+            "scenario": "rollback-ack-lost",
+            "expected": "unknown stays nonterminal; processing never becomes failed; no reexecution",
+            "actual": {
+                "response": {
+                    "http_status": 500,
+                    "command_status": "unknown",
+                    "terminal": false
+                },
+                "journal": [
+                    {
+                        "command_id": "rollback-ack-lost",
+                        "status": "processing",
+                        "before_version": null,
+                        "after_version": null,
+                        "error_code": null
+                    }
+                ],
+                "replay": {
+                    "status": 200,
+                    "location": null,
+                    "json_valid": true,
+                    "body_prefix": null
+                },
+                "engine_calls": 1
+            },
+            "result": "PASS"
+        }
+    ],
+    "total": 60,
+    "failed": 0
+}

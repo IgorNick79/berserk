@@ -306,8 +306,29 @@ $missingVersion = battleCommandRequest($baseQuery, ['cmd' => 'resign']);
 battleCommandAssert($missingVersion['ok'] === false, 'Missing expected_version should be rejected');
 battleCommandAssert($missingVersion['error'] === 'missing_expected_version', 'Missing version should be explicit');
 
+$beforeMissing = $repo->findById($state->gameId);
+$missingLog = GameLog::read($state->gameId);
+$missingJournal = $db->fetchOne("SELECT COUNT(*) AS cnt FROM battle_command_journal WHERE game_id = " . $state->gameId);
+foreach ([
+    'absent' => [[], [], 'missing_command_id'],
+    'GET only' => [['command_id' => 'query-only'], [], 'missing_command_id'],
+    'empty' => [[], ['command_id' => ''], 'invalid_command_id'],
+    'array' => [[], ['command_id' => ['x']], 'invalid_command_id'],
+    'invalid' => [[], ['command_id' => 'bad id'], 'invalid_command_id'],
+] as $name => [$queryExtra, $postExtra, $error]) {
+    $response = battleCommandRequest(array_merge($baseQuery, $queryExtra), array_merge([
+        'cmd' => 'resign', 'expected_version' => (string) $version,
+    ], $postExtra));
+    battleCommandAssert($response['__http_status'] === 400 && $response['error'] === $error, "Invalid/missing id: {$name}");
+    $freshMissing = $repo->findById($state->gameId);
+    battleCommandAssert($freshMissing?->persistenceJson === $beforeMissing?->persistenceJson && $freshMissing?->persistenceVersion === $version, 'Missing/invalid id must not change State/version');
+    battleCommandAssert(GameLog::read($state->gameId) === $missingLog, 'Missing/invalid id must not invoke Engine');
+    battleCommandAssert($db->fetchOne("SELECT COUNT(*) AS cnt FROM battle_command_journal WHERE game_id = " . $state->gameId) === $missingJournal, 'Missing/invalid id must not create journal rows');
+}
+
 $stale = battleCommandRequest($baseQuery, [
     'cmd' => 'resign',
+    'command_id' => 'migrated-endpoint-1',
     'expected_version' => (string) ($version - 1),
 ]);
 battleCommandAssert($stale['ok'] === false, 'Stale command should be rejected');
@@ -317,6 +338,7 @@ battleCommandAssert($stale['__http_status'] === 409, 'Stale command should use H
 
 $invalid = battleCommandRequest($baseQuery, [
     'cmd' => 'unknown_ajax_test_command',
+    'command_id' => 'migrated-endpoint-2',
     'expected_version' => (string) $version,
     'sel' => '1',
 ]);
@@ -337,6 +359,7 @@ battleCommandAssert(
 
 $nonFinishing = battleCommandRequest($baseQuery, [
     'cmd' => 'gain_coin',
+    'command_id' => 'migrated-endpoint-3',
     'expected_version' => (string) $version,
     'card_id' => '1',
 ]);
@@ -345,7 +368,7 @@ battleCommandAssert($nonFinishing['type'] === 'snapshot', 'Successful non-finish
 battleCommandAssert($nonFinishing['status'] === 'battle', 'Successful non-finishing command should keep battle active');
 battleCommandAssert($nonFinishing['sync_version'] > $version, 'Successful non-finishing command should advance persistence version');
 battleCommandAssert($nonFinishing['__http_status'] === 200, 'Successful non-finishing command should use HTTP 200');
-battleCommandAssert(!array_key_exists('command_status', $nonFinishing), 'Legacy command without command_id should not include journal metadata');
+battleCommandAssert($nonFinishing['command_status'] === CommandJournalRepository::STATUS_COMMITTED, 'Successful command must have committed journal metadata');
 foreach (['field_html', 'fly_zones_html', 'panel_html', 'piles_html', 'pile_reveal_html', 'info_panel_html'] as $fragment) {
     battleCommandAssert(array_key_exists($fragment, $nonFinishing['fragments']), "Snapshot should contain {$fragment}");
 }
@@ -372,6 +395,7 @@ battleCommandAssert($opponentSync['sync_version'] === $nonFinishing['sync_versio
 $version = (int) $nonFinishing['sync_version'];
 $success = battleCommandRequest($baseQuery, [
     'cmd' => 'resign',
+    'command_id' => 'migrated-endpoint-4',
     'expected_version' => (string) $version,
 ]);
 battleCommandAssert($success['ok'] === true, 'Successful command should return ok=true');
@@ -388,6 +412,7 @@ battleCommandAssert($committed->persistenceVersion === $success['sync_version'],
 
 $repeatOld = battleCommandRequest($baseQuery, [
     'cmd' => 'resign',
+    'command_id' => 'migrated-endpoint-5',
     'expected_version' => (string) $version,
 ]);
 battleCommandAssert($repeatOld['ok'] === false, 'Repeated old command should be rejected');
@@ -401,6 +426,7 @@ $secondSuccess = battleCommandRequest([
     'ajax' => 'battle_command',
 ], [
     'cmd' => 'resign',
+    'command_id' => 'migrated-endpoint-6',
     'expected_version' => (string) $secondVersion,
 ]);
 battleCommandAssert($secondSuccess['ok'] === true, 'Second player command should work');
@@ -417,6 +443,7 @@ $arrayParam = battleCommandRequest([
     'ajax' => 'battle_command',
 ], [
     'cmd' => ['resign'],
+    'command_id' => 'migrated-endpoint-7',
     'expected_version' => (string) $arrayVersion,
 ]);
 battleCommandAssert($arrayParam['ok'] === false, 'Array cmd should be rejected safely');
@@ -428,11 +455,12 @@ $arrayPayload = battleCommandRequest([
     'ajax' => 'battle_command',
 ], [
     'cmd' => 'resign',
+    'command_id' => 'migrated-endpoint-8',
     'expected_version' => (string) $arrayPayloadVersion,
     'target_id' => ['2'],
 ]);
 battleCommandAssert($arrayPayload['ok'] === false, 'Array command payload values should be rejected safely');
-battleCommandAssert($arrayPayload['error'] === 'Invalid command request', 'Array payload should use invalid request error');
+battleCommandAssert($arrayPayload['error'] === 'invalid_command_request', 'Array payload should use invalid request error');
 
 [$processingState, $processingVersion] = battleCommandCreateBattle($repo, $cardRows);
 $processingCommandId = 'journal-endpoint-' . $processingState->gameId . '-processing';
@@ -473,7 +501,7 @@ $failedRecord = $journal->registerProcessing(
     ['card_id' => '1'],
     $failedVersion
 );
-$journal->markFailed((int) $failedRecord['id'], $failedVersion, 'unknown_outcome');
+$journal->markFailed((int) $failedRecord['id'], $failedVersion, 'persistence_failed');
 $failedDuplicate = battleCommandRequest([
     'first' => '',
     'game' => (string) $failedState->gameId,
