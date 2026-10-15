@@ -110,13 +110,16 @@ final class BattleScreen
             $baseUrl, $mode, $isActive, $strike, $attackTargets, $explicitAttackMode
         );
         
-        $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl);
+        $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml);
 
         $debugHtml = '';
         if (isset($_SESSION['debug']) && $_SESSION['debug'] == '1') {
             $debugHtml = $this->buildDebug($state, $playerKey, $strike);
         }
 
+        // Debug travels in the existing InfoPanel fragment; no extra AJAX field.
+        $infoPanelHtml .= '<aside id="battle-debug" class="battle-debug-overlay" aria-label="Отладка боя" hidden>'
+            . $debugHtml . '</aside>';
         $pileRevealHtml = '';
         if ($ui['pile'] !== '') {
             $pileRevealHtml = $this->buildPileReveal($state, $playerKey, $oppKey, $cardsInfo, $ui['pile']);
@@ -131,7 +134,7 @@ final class BattleScreen
                     'pile' => $ui['pile'],
                     'mode_explicit' => $ui['mode_explicit'],
                 ],
-                'debug_html' => $debugHtml,
+                'debug_disabled' => $debugHtml === '' ? 'disabled' : '',
                 'field_html'       => $fieldHtml,
                 'panel_html'       => $panelHtml,
                 'fly_zones_html'    => $flyZonesHtml,

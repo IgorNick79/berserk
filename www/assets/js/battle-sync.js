@@ -19,12 +19,10 @@
         "info_panel_html"
     ];
 
-    var containers = {};
     for (var i = 0; i < fragmentKeys.length; i++) {
         var key = fragmentKeys[i];
         var node = root.querySelector("[data-battle-fragment='" + key + "']");
         if (!node) return;
-        containers[key] = node;
     }
 
     var syncVersion = parseInt(script.dataset.version || "-1", 10);
@@ -250,9 +248,24 @@
             return false;
         }
 
+        // panel_html now belongs to the replaceable InfoPanel content. Compose
+        // both fragments before replacement, never write into its detached node.
+        var info = document.createElement("template");
+        info.innerHTML = data.fragments.info_panel_html;
+        var selectedCard = info.content.querySelector("[data-battle-fragment='panel_html']");
+        if (!selectedCard) return false;
+        selectedCard.innerHTML = data.fragments.panel_html;
+        var targets = {};
         for (var i = 0; i < fragmentKeys.length; i++) {
             var key = fragmentKeys[i];
-            containers[key].innerHTML = data.fragments[key];
+            if (key === "panel_html") continue;
+            targets[key] = root.querySelector("[data-battle-fragment='" + key + "']");
+            if (!targets[key]) return false;
+        }
+        for (var j = 0; j < fragmentKeys.length; j++) {
+            var fragment = fragmentKeys[j];
+            if (fragment === "panel_html") continue;
+            targets[fragment].innerHTML = fragment === "info_panel_html" ? info.innerHTML : data.fragments[fragment];
         }
 
         syncVersion = incomingVersion;

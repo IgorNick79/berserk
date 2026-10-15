@@ -17,8 +17,8 @@ foreach (['host', 'player'] as $viewer) {
         battleSnapshotAssert($xpath->query('//*[@data-battle-fragment="'.$key.'"]')->length === 1, 'Exactly one fragment: '.$key);
         battleSnapshotAssert($xpath->query('.//*[@data-battle-fragment="'.$key.'"]', $root)->length === 1, 'Fragment must remain inside AJAX root: '.$key);
     }
-    battleSnapshotAssert($xpath->query('//*[@data-battle-fragment="info_panel_html"]//*[@data-battle-fragment="panel_html"]')->length === 0, 'Selected card remains separate in Stage 1A');
-    battleSnapshotAssert($xpath->query('//button[@disabled and contains(@class,"battle-menu-placeholder")]')->length === 1, 'Stage 1A burger remains a placeholder');
+    battleSnapshotAssert($xpath->query('//*[@data-battle-fragment="info_panel_html"]//*[@data-battle-fragment="panel_html"]')->length === 1, 'Selected card belongs to InfoPanel content in Stage 1B');
+    battleSnapshotAssert($xpath->query('//button[@aria-controls="battle-debug" and contains(@class,"battle-menu")]')->length === 1, 'Burger retains accessible debug target');
     $page = $tpl->parse('page.tpl', ['game_id'=>981,'role'=>$viewer,'screen'=>$html,'page_class'=>'battle-page','scripts'=>'<script src="/assets/js/battle-sync.js"></script>']);
     battleSnapshotAssert(substr_count($page, 'class="battle-page"') === 2 && str_contains($page, '/assets/js/battle-sync.js'), 'Page must retain viewport class and AJAX script');
 }

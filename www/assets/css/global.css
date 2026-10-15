@@ -1680,7 +1680,7 @@ body.battle-page > .screen {
 .battle-page .battle-left,
 .battle-page .battle-panel-side,
 .battle-page .info-panel,
-.battle-page .battle-menu-placeholder { box-sizing: border-box; }
+.battle-page .battle-menu { box-sizing: border-box; }
 .battle-page .battle-shell {
     position: relative;
     display: grid;
@@ -1692,7 +1692,7 @@ body.battle-page > .screen {
     min-height: 0;
     padding: 8px 8px 8px 48px;
 }
-.battle-page .battle-menu-placeholder {
+.battle-page .battle-menu {
     position: absolute;
     top: 8px;
     left: 4px;
@@ -1707,7 +1707,7 @@ body.battle-page > .screen {
 }
 .battle-page .battle-main {
     display: grid;
-    grid-template-columns: minmax(240px, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
     gap: 12px;
     min-width: 0;
@@ -1763,4 +1763,66 @@ body.battle-page > .screen {
     box-sizing: border-box;
     max-height: calc(100% - 16px);
     overflow: auto;
+}
+/* Stage 1B: one InfoPanel, with only its central content scrolling. */
+.battle-page .battle-main { overflow: hidden; }
+.battle-page .info-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: visible;
+}
+.battle-page .info-panel-header,
+.battle-page .info-panel-footer {
+    flex: 0 0 auto;
+    padding: 12px;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.battle-page .info-panel-header { border-bottom: 1px solid #ddd; }
+.battle-page .info-panel-header .info-status { margin: 0; }
+.battle-page .info-panel-footer { border-top: 1px solid #ddd; }
+.battle-page .info-panel-content {
+    flex: 1 1 0;
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 12px;
+    box-sizing: border-box;
+}
+.battle-page .info-panel-content > :empty { display: none; }
+.battle-page .info-panel-context:not(:empty) + .battle-selected-card:not(:empty) {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #ddd;
+}
+.battle-page .info-panel-footer .info-actions { margin: 0; }
+.battle-page .info-panel-footer .button { flex: 1 1 0; }
+.battle-page .info-panel-footer button:disabled { opacity: .5; cursor: default; }
+.battle-page .battle-selected-card h3 { margin: 0 0 10px; }
+.battle-page .battle-menu { z-index: 110; cursor: pointer; }
+.battle-page .battle-menu:disabled { opacity: .5; cursor: default; }
+.battle-page .battle-debug-overlay {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 48px;
+    right: calc(min(348px, 45%) + 20px);
+    z-index: 90;
+    overflow: auto;
+    background: #171717;
+    border: 1px solid #555;
+    box-sizing: border-box;
+}
+.battle-page .battle-debug-overlay[hidden] { display: none; }
+.battle-page .battle-debug-overlay .debug-panel {
+    margin: 0;
+    min-height: 100%;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    box-sizing: border-box;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }

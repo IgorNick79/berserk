@@ -40,7 +40,8 @@ final class InfoPanel
         string $playerKey,
         string $role,
         array $cardsInfo,
-        string $baseUrl
+        string $baseUrl,
+        string $selectedCardHtml = ''
     ): string {
         $this->state     = $state;
         $this->playerKey = $playerKey;
@@ -48,9 +49,38 @@ final class InfoPanel
         $this->cardsInfo = $cardsInfo;
         $this->baseUrl   = $baseUrl;
 
-        return $this->renderStatusHeader() . $this->renderBody();
+        return '<header class="info-panel-header">' . $this->renderStatusHeader() . '</header>'
+            . '<div class="info-panel-content" tabindex="0" aria-label="Контекст боя и выбранная карта">'
+            . '<div class="info-panel-context">' . $this->renderBody() . '</div>'
+            . '<div class="battle-selected-card" data-battle-fragment="panel_html">' . $selectedCardHtml . '</div>'
+            . '</div>'
+            . '<footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
     }
 
+    private function renderFooter(): string
+    {
+        $state = $this->state;
+        $inBattle = $state->status === 'battle' && $state->winner === null;
+        $canEnd = $inBattle && ($state->battle['active'] ?? null) === $this->playerKey
+            && ChoiceRegistry::current($state) === null && empty($state->battle['strike'])
+            && empty($state->battle['pending_prophecy']) && empty($state->battle['pending_dive']);
+        if ($canEnd) {
+            foreach ($state->cards as $card) {
+                if ($card->owner === $this->playerKey && $card->zone === CardInstance::ZONE_FIELD
+                    && CardStats::getForcedStrikeTarget($state, $card) !== null) {
+                    $canEnd = false;
+                    break;
+                }
+            }
+        }
+        $end = $canEnd
+            ? '<a class="button wide" href="' . $this->baseUrl . '&cmd=end_turn">Завершить ход</a>'
+            : '<button class="button wide" type="button" disabled>Завершить ход</button>';
+        $resign = $inBattle
+            ? '<a class="button wide resign" href="' . $this->baseUrl . '&cmd=resign" onclick="return confirm(\'Сдаться?\')">Сдаться</a>'
+            : '<button class="button wide resign" type="button" disabled>Сдаться</button>';
+        return '<div class="info-actions">' . $end . $resign . '</div>';
+    }
     private function renderStatusHeader(): string
     {
         $state     = $this->state;
@@ -181,12 +211,7 @@ final class InfoPanel
                 $instantBtn = '<span style="flex: 1"><a class="button instant" href="' . $baseUrl . '&cmd=open_turn_instants">Сыграть инстант</a></span>';
             }
 
-            return $anyDeathMessageHtml . $instantResultHtml . '<div class="info-actions">'
-                . '<a class="button wide" href="' . $baseUrl . '&cmd=end_turn">Завершить ход</a>'
-                . $instantBtn
-                . '<a class="button wide resign" href="' . $baseUrl . '&cmd=resign" '
-                . 'onclick="return confirm(\'Сдаться?\')">Сдаться</a>'
-                . '</div>';
+            return $anyDeathMessageHtml . $instantResultHtml . $instantBtn;
         }
 
         return $anyDeathMessageHtml . $instantResultHtml;
