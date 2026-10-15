@@ -179,7 +179,7 @@ $invalidUi = battleSyncRequest($base + [
     'pile' => 'broken',
 ]);
 battleSyncAssert(
-    $invalidUi['ui'] === ['sel' => 0, 'mode' => 'strike', 'pile' => ''],
+    $invalidUi['ui'] === ['sel' => 0, 'mode' => 'strike', 'pile' => '', 'mode_explicit' => false],
     'Invalid UI hints should normalize to safe defaults'
 );
 
