@@ -25,6 +25,11 @@ final class Engine
 
     private function doApply(GameState $state, string $playerKey, Command $cmd): Result
     {
+        // Сдача завершает матч независимо от активного обязательного выбора.
+        if ($cmd->type === 'resign') {
+            return $this->resign($state, $playerKey, $cmd);
+        }
+
         unset($state->battle['instant_result']);
         unset($state->battle['any_death_messages']);
         unset($state->battle['degasca_messages']);
@@ -87,7 +92,6 @@ final class Engine
             'uchr'                => $action->uchr($playerKey, $cmd),
             'action'              => $action->handle($playerKey, $cmd),
             'end_turn'            => $turn->endTurn($playerKey, $cmd),
-            'resign'              => $this->resign($state, $playerKey, $cmd),
             'gain_coin'               => $this->gainCoin($state, $playerKey, $cmd),
             'choose_teleport_cell'    => $action->chooseTeleportTargetCell($playerKey, $cmd),
             'choose_death_target'     => $this->damageResolver($state)->chooseDeathTarget($playerKey, $cmd),
@@ -550,6 +554,9 @@ final class Engine
 
     private function resign(GameState $state, string $playerKey, Command $cmd): Result
     {
+        if (!in_array($playerKey, [GameState::PLAYER_HOST, GameState::PLAYER_PLAYER], true)) {
+            return Result::error('Вы не участник партии');
+        }
         if ($state->status !== 'battle') {
             return Result::error('Сдаться можно только в бою');
         }
