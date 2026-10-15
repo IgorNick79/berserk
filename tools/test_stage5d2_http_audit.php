@@ -163,14 +163,43 @@ $s=fixture();$b=persisted($s);$r=request(query($s,'first','battle_sync').'&debug
 check('debug_roll array','valid JSON; no warnings or game writes',$r['json_valid'] && $r['status']===200 && persisted($s)===$b,brief($r));
 foreach(['game_over','mode'] as $stateStatus){$s=fixture();$s->status=$stateStatus;$repo->save($s);$b=persisted($s);$r=request("first&game=$s->gameId&cmd[]=resign");check("legacy array outside battle $stateStatus",'no uncaught error; unchanged State/version/journal',$r['status']<500 && !str_contains($r['body_prefix']??'','Fatal error') && persisted($s)===$b,brief($r));}
 // Source faults are restricted to the already verified disposable copy. Real SQL still runs.
-function withCopiedDbFault(string $needle, string $replacement, callable $run): mixed {
-    $path=__DIR__.'/../src/Core/Db.php';
-    $original=file_get_contents($path);
-    if(substr_count($original,$needle)!==1)throw new RuntimeException('DB fault anchor changed');
-    file_put_contents($path,str_replace($needle,$replacement,$original));
-    try{return $run();}finally{file_put_contents($path,$original);}
+function writeCopiedDbSource(string $path, string $contents, string $phase): void {
+    $written=file_put_contents($path,$contents,LOCK_EX);
+    if($written!==strlen($contents)){
+        throw new RuntimeException("Db.php {$phase}: expected ".strlen($contents).' bytes, wrote '.var_export($written,true));
+    }
+    $actual=file_get_contents($path);
+    if($actual!==$contents){
+        throw new RuntimeException("Db.php {$phase}: byte-for-byte verification failed");
+    }
 }
 
+function withCopiedDbMutation(callable $mutate, callable $run): mixed {
+    $path=__DIR__.'/../src/Core/Db.php';
+    $original=file_get_contents($path);
+    if($original===false)throw new RuntimeException('Unable to read original disposable Db.php');
+    $modified=$mutate($original);
+    try{
+        // Enter finally even if injection writes only part of the source.
+        writeCopiedDbSource($path,$modified,'injection');
+        return $run();
+    }finally{
+        try{
+            writeCopiedDbSource($path,$original,'restoration');
+        }catch(Throwable $error){
+            fwrite(STDERR,"FATAL: disposable Db.php restoration failed: ".$error->getMessage()
+                ."; path={$path}; original SHA256=".hash('sha256',$original).". Audit aborted.\n");
+            exit(1);
+        }
+    }
+}
+
+function withCopiedDbFault(string $needle, string $replacement, callable $run): mixed {
+    return withCopiedDbMutation(static function(string $original)use($needle,$replacement): string {
+        if(substr_count($original,$needle)!==1)throw new RuntimeException('DB fault anchor changed');
+        return str_replace($needle,$replacement,$original);
+    },$run);
+}
 // A second SQL error prevents markFailed: no fabricated failed is allowed.
 $s=fixture();$b=persisted($s);$p=post($s,'failed-update-fault');
 $db->query("CREATE TRIGGER stage5d2_state_fault BEFORE UPDATE ON games FOR EACH ROW BEGIN IF NEW.ind=$s->gameId THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='state write failed'; END IF; END");
@@ -194,13 +223,15 @@ foreach([false,true] as $readAlsoFails){
    if(!$readAlsoFails)return request(query($s),$p);
    $needle='public function query(string $sql): mysqli_result|bool';
    // Add a one-shot read error after the failed UPDATE; no production hook is introduced.
-   $path=__DIR__.'/../src/Core/Db.php';$original=file_get_contents($path);
-   $anchor='try {';
-   $queryStart=strpos($original,$needle);$try=strpos($original,$anchor,$queryStart);
-   $injection='if (!empty($GLOBALS["stage5d2_read_fault"])) { $GLOBALS["stage5d2_read_fault"]=false; throw new \\Berserk\\Core\\DbQueryException("Injected journal reread failure"); } ';
-   $injection=str_replace('\\\\','\\',$injection);
-   file_put_contents($path,substr($original,0,$try).$injection.substr($original,$try));
-   try{return request(query($s),$p);}finally{file_put_contents($path,$original);}
+   return withCopiedDbMutation(static function(string $original)use($needle): string {
+    $queryStart=strpos($original,$needle);
+    if($queryStart===false)throw new RuntimeException('DB query fault anchor changed');
+    $try=strpos($original,'try {',$queryStart);
+    if($try===false)throw new RuntimeException('DB query try anchor changed');
+    $injection='if (!empty($GLOBALS["stage5d2_read_fault"])) { $GLOBALS["stage5d2_read_fault"]=false; throw new \\Berserk\\Core\\DbQueryException("Injected journal reread failure"); } ';
+    $injection=str_replace('\\\\','\\',$injection);
+    return substr($original,0,$try).$injection.substr($original,$try);
+   },fn()=>request(query($s),$p));
   });
  }finally{$db->query('DROP TRIGGER stage5d2_state_fault');}
  $a=persisted($s);$status=request(query($s,'first','battle_command_status').'&command_id='.$p['command_id']);$r2=request(query($s),$p);
