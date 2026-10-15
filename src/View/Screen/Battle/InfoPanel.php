@@ -235,12 +235,8 @@ final class InfoPanel
             }
 
             // Сразу возвращаем — пропускаем всё остальное
-            return $this->tpl->parse('includes/battle/strike.tpl', [
-                'attacker_name' => $an,
-                'target_name'   => $tn,
-                'header_text'   => 'Костёр',
-                'content_html'  => $contentHtml,
-            ]);
+            return '<div class="strike-box"><p><b>' . $an . '</b></p>'
+                . $contentHtml . '</div>';
         }
 
         // Статьи без сражения — упрощённая панель
