@@ -1789,15 +1789,10 @@ body.battle-page > .screen {
     min-width: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 12px;
+    padding: 0;
     box-sizing: border-box;
 }
 .battle-page .info-panel-content > :empty { display: none; }
-.battle-page .info-panel-context:not(:empty) + .battle-selected-card:not(:empty) {
-    margin-top: 16px;
-    padding-top: 12px;
-    border-top: 1px solid #ddd;
-}
 .battle-page .info-panel-footer .info-actions { margin: 0; }
 .battle-page .info-panel-footer .button { flex: 1 1 0; }
 .battle-page .info-panel-footer button:disabled { opacity: .5; cursor: default; }
@@ -1827,3 +1822,17 @@ body.battle-page > .screen {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
+
+.battle-page .info-panel-context:not(:empty) { padding: 12px; }
+.battle-page .panel-card-preview { display: block; width: 100%; margin: 0; padding: 0; border: 0; background: #171717; cursor: zoom-in; }
+.battle-page .panel-card-preview img { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: contain; }
+.battle-page .panel-card-preview:focus-visible { outline: 3px solid #b88746; outline-offset: -3px; }
+.battle-page .panel-card-stats { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 10px 12px; background: #f1eee8; border-bottom: 1px solid #d8d0c3; color: #322c24; font-size: 13px; font-variant-numeric: tabular-nums; }
+.battle-page .panel-card-stats span { white-space: nowrap; }
+.battle-page .panel-card-details { padding: 12px; }
+.card-image-popup { border: 0; padding: 0; background: transparent; max-width: none; max-height: none; width: 100vw; height: 100dvh; color: white; overflow: hidden; }
+.card-image-popup[open] { display: flex; align-items: center; justify-content: center; }
+.card-image-popup::backdrop { background: rgba(8, 10, 14, .88); backdrop-filter: blur(5px); }
+.card-image-popup img { display: block; max-width: calc(100vw - 32px); max-height: calc(100dvh - 96px); width: auto; height: auto; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 64px #0009; }
+.card-image-popup-close { position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; border: 1px solid #ffffff55; border-radius: 50%; background: #242830; color: white; font-size: 28px; cursor: pointer; }
+.card-image-popup-close:focus-visible { outline: 2px solid white; outline-offset: 3px; }

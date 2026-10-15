@@ -51,8 +51,8 @@ final class InfoPanel
 
         return '<header class="info-panel-header">' . $this->renderStatusHeader() . '</header>'
             . '<div class="info-panel-content" tabindex="0" aria-label="Контекст боя и выбранная карта">'
-            . '<div class="info-panel-context">' . $this->renderBody() . '</div>'
             . '<div class="battle-selected-card" data-battle-fragment="panel_html">' . $selectedCardHtml . '</div>'
+            . '<div class="info-panel-context">' . $this->renderBody() . '</div>'
             . '</div>'
             . '<footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
     }

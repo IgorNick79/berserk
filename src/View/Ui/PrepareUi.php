@@ -54,7 +54,7 @@ final class PrepareUi
 
         $imageHtml = '';
         if ($ukid !== '') {
-            $imageHtml = '<img src="/assets/cards/s1/' . htmlspecialchars($ukid, ENT_QUOTES) . '.jpg"'
+            $imageHtml = '<img src="/assets/cards/s1/original/' . htmlspecialchars($ukid, ENT_QUOTES) . '.jpg"'
                 . ' alt="' . htmlspecialchars($name, ENT_QUOTES) . '"'
                 . ' class="prepare-card-preview__image"'
                 . ' onerror="this.style.display=\'none\'">';

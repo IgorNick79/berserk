@@ -715,10 +715,17 @@ final class BattleScreen
         $info = $cardsInfo[$c->ukid] ?? null;
         if (!$info) return '';
 
-        $imgHtml = '<img src="/assets/cards/s1/' . htmlspecialchars($c->ukid, ENT_QUOTES) . '.jpg"'
-            . ' alt="' . htmlspecialchars($info['name'], ENT_QUOTES) . '"'
-            . ' class="panel-card-img"'
-            . ' onerror="this.style.display=\'none\'">';
+        $imgHtml = '';
+        // Asset names follow the existing ukid convention; check the public root,
+        // independently of the process working directory or HTTP document root.
+        if (preg_match('/\A[a-zA-Z0-9_-]+\z/D', $c->ukid)
+            && is_file(dirname(__DIR__, 3) . '/www/assets/cards/s1/preview/' . $c->ukid . '.webp')) {
+            $imgHtml = $this->tpl->parse('includes/battle/card_preview.tpl', [
+                'preview_url' => '/assets/cards/s1/preview/' . rawurlencode($c->ukid) . '.webp',
+                'original_url' => '/assets/cards/s1/original/' . rawurlencode($c->ukid) . '.jpg',
+                'name' => htmlspecialchars($info['name'], ENT_QUOTES),
+            ]);
+        }
 
         // Кнопки режимов
         $modeButtons = '';
@@ -953,7 +960,7 @@ final class BattleScreen
         $coinsLine = '';
         if (!empty($c->prop['save_coins']) || $c->coins > 0 || !empty($c->prop['coin_block'])) {
             $max = (int) ($c->prop['coins']['max_value'] ?? 0);
-            $coinsLine = ' | Монеты: ' . $c->coins . ($max > 0 ? ' / ' . $max : '');
+            $coinsLine = 'Монеты: ' . $c->coins . ($max > 0 ? ' / ' . $max : '');
         }
 
         return $this->tpl->parse('includes/battle/panel.tpl', [
@@ -964,6 +971,7 @@ final class BattleScreen
             'hp_max'       => $this->displayHpMax($c, $info),
             'move'         => $c->move,
             'move_max'     => $c->moveMax,
+            'strike'       => $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
             'coins_line'   => $coinsLine,
             'status_html'  => $statusHtml,
         ]);

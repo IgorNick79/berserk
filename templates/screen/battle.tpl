@@ -17,3 +17,5 @@
 </div>
 <script src="/assets/js/cell-marker-picker.js?v=1" defer></script>
 <script src="/assets/js/battle-ui.js?v=1" defer></script>
+
+<script src="/assets/js/card-image-popup.js?v=1" defer></script>
