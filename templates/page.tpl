@@ -16,5 +16,6 @@
 <div class="screen">
     {{screen}}
 </div>
+{{scripts}}
 </body>
 </html>
