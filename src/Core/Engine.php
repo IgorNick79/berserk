@@ -19,6 +19,7 @@ final class Engine
     public function apply(GameState $state, string $playerKey, Command $cmd): Result
     {
         $result = $this->doApply($state, $playerKey, $cmd);
+        if ($result->success) (new CoinAbilities($state, $this))->advance();
         GameLog::append($state, $playerKey, $cmd, $result);
         return $result;
     }

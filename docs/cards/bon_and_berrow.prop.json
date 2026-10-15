@@ -1,0 +1,42 @@
+{
+  "ova": 1,
+  "armor": {
+    "value": 1
+  },
+  "has_armor": true,
+  "coins": {
+    "max_value": 1
+  },
+  "coins_receive_deny": true,
+  "actions": [
+    {
+      "key": "row_strike",
+      "name": "Удар через ряд на 2; можно получить монетку",
+      "type": "uchr",
+      "value": 2,
+      "coins_required": 0,
+      "optional_self_coin": 1
+    }
+  ],
+  "on_wounding_strike": {
+    "min_coins": 1,
+    "type": "discharge",
+    "name": "Разряд при ударе",
+    "strike": {
+      "weak": 1,
+      "medium": 2,
+      "strong": 2
+    },
+    "range": 3
+  },
+  "coin_block": {
+    "cost": 1,
+    "defense": "zoa",
+    "types": [
+      "strike",
+      "uchr",
+      "tap",
+      "magic"
+    ]
+  }
+}

@@ -1550,6 +1550,14 @@ final class InfoPanel
                 $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
             }
 
+            if (!empty($strike['coin_blocked'])) $resultText .= '<br>Удар заблокирован за монетку.';
+            foreach ($strike['triggered_discharges'] ?? [] as $discharge) {
+                $victim = $state->getCard((int) ($discharge['target_id'] ?? 0));
+                $victimName = $victim ? ($cardsInfo[$victim->ukid]['name'] ?? 'Цель') : 'Цель';
+                $resultText .= '<br>Разряд при ударе: ' . htmlspecialchars($victimName, ENT_QUOTES)
+                    . ', кубик ' . (int) ($discharge['attack_dice'] ?? 0)
+                    . ', урон ' . (int) ($discharge['damage_total'] ?? 0) . '.';
+            }
             $extraResultHtml = $autoHtml . $pushHtml . $impactHtml . $huntHtml
                 . $behindWeakStrikeHtml . $shotBonusHtml . $nextActionBonusHtml
                 . $nextStrikeBonusHtml . $rowsBonusHtml . $clumsyHtml

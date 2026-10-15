@@ -731,6 +731,12 @@ final class StrikeResolver
             ? $this->state->getCard($defenderId)
             : $this->state->getCard($targetId);
 
+        if (empty($strike['coin_block_checked'])
+            && (new CoinAbilities($this->state, $this->engine))->offerBlock($attacker, $defendCard, 'strike', ['kind' => 'strike'])) {
+            $strike['state'] = 'waiting_coin_block';
+            return;
+        }
+        $strike['coin_block_checked'] = true;
         $attackDice = Dice::roll();
 
         $defendWhileClosed = !empty($defendCard->prop['defend_while_closed']);
@@ -806,6 +812,7 @@ final class StrikeResolver
             ? $this->state->getCard($defenderId)
             : $this->state->getCard($targetId);
 
+        if (!empty($strike['damage_applied'])) return;
         $attackStrike = $table['attack'];
         $defendStrike = $table['defend'];
         $woundsDealt = 0;
@@ -828,7 +835,7 @@ final class StrikeResolver
         ];
 
         // Эффекты от удара (включая промах)
-        $this->engine->applyStrikeEffects($attacker, $defendCard, $attackStrike);
+        if (empty($strike['coin_blocked'])) $this->engine->applyStrikeEffects($attacker, $defendCard, $attackStrike);
 
         if ($attackStrike !== '') {
             if (!empty($attacker->prop['copy_target_strike'])) {
@@ -1069,6 +1076,9 @@ final class StrikeResolver
             'attacker_extra_this_strike' => max(0, $attackerDamageThisStrike - $answerDamage),
         ];
         $this->state->battle['strike']['damage_applied'] = true;
+        $coins = new CoinAbilities($this->state, $this->engine);
+        $coins->triggerDischarge($attacker, $woundsDealt, 'strike');
+        if (isset($answerWoundsDealt)) $coins->triggerDischarge($defendCard, $answerWoundsDealt, 'answer');
     }
 
     private function applyStrongStrikeFollowUpEffects(
@@ -1382,6 +1392,7 @@ final class StrikeResolver
             $this->state->battle['strike']['confirmed'] = $confirmed;
 
             if (count($confirmed) >= 2) {
+                (new CoinAbilities($this->state, $this->engine))->completeCombat($this->state->battle['strike']);
                 $this->state->battle['strike'] = null;
                 $this->engine->finalizeDying($this->state);
             }
@@ -1477,6 +1488,14 @@ final class StrikeResolver
             $ip = new InstantProcessor($this->state, $this->engine);
             $ip->openWindow('after', $attackerKey);
 
+            if (!empty($this->state->battle['turn_instant_stack']) && !empty($strike['coin_post_combat_effects'])) {
+                // The existing turn-stack continuation owns this resolved context while after-instants run.
+                $this->state->battle['turn_instant_stack']['continuation']['coin_origin_strike'] = $strike;
+                $this->state->battle['strike'] = null;
+                $this->engine->finalizeDying($this->state);
+                $this->state->bumpVersion();
+                return Result::ok(['instant_after_opened']);
+            }
             if (($this->state->battle['strike']['state'] ?? '') === 'waiting_instant') {
                 $this->state->battle['strike']['confirmed'] = [];
                 $this->state->bumpVersion();
@@ -1512,6 +1531,8 @@ final class StrikeResolver
             }
         }
 
+        // Release only after result ACK, wounds, after-instant window and local continuations.
+        (new CoinAbilities($this->state, $this->engine))->completeCombat($strike);
         // Закрываем сражение перед возможным обязательным добиванием после удара.
         $this->state->battle['strike'] = null;
         $this->engine->finalizeDying($this->state);

@@ -56,7 +56,9 @@ final class ActionResolver
             return Result::error('Действие не найдено');
         }
 
+        if (!CoinAbilities::actionAvailable($attacker, $action)) return Result::error('Действие недоступно при этом количестве монет');
         $type = $action['type'] ?? '';
+        if ($type === 'uchr') return $this->uchr($playerKey, $cmd);
         if (CardStats::hasCannotAttack($attacker) && CardStats::isOffensiveAction($type)) {
             return Result::error('Карта не может атаковать до конца хода');
         }
@@ -331,7 +333,7 @@ final class ActionResolver
 
     // ─── УЧР ──────────────────────────────────────────────────
 
-    public function uchr(string $playerKey, Command $cmd): Result
+    public function uchr(string $playerKey, Command $cmd, bool $coinBlockChecked = false): Result
     {
         if ($this->state->status !== 'battle') {
             return Result::error('Сейчас не бой');
@@ -365,7 +367,7 @@ final class ActionResolver
         if (!$attacker || $attacker->owner !== $playerKey || $attacker->zone !== CardInstance::ZONE_FIELD) {
             return Result::error('Атакующий не на поле');
         }
-        if (CardStats::isDisabled($attacker)) {
+        if (!$coinBlockChecked && CardStats::isDisabled($attacker)) {
             $reason = CardStats::disabledReason($attacker);
             return Result::error($reason !== '' ? $reason : 'Атакующий не может действовать');
         }
@@ -394,7 +396,7 @@ final class ActionResolver
 
         $uchrAction = null;
         foreach ($attacker->prop['actions'] ?? [] as $a) {
-            if (($a['type'] ?? '') === 'uchr') {
+            if (($a['type'] ?? '') === 'uchr' && CoinAbilities::actionAvailable($attacker, $a)) {
                 $uchrAction = $a;
                 break;
             }
@@ -413,9 +415,10 @@ final class ActionResolver
         }
 
         // Пророчество-блок (Дочь перламутра)
-        if ($this->engine->tryProphecyBlock($this->state, $attacker, $target, 'uchr')) {
+        if (!$coinBlockChecked && $this->engine->tryProphecyBlock($this->state, $attacker, $target, 'uchr')) {
             $attacker->closed = true;
             $this->state->bumpVersion();
+            (new CoinAbilities($this->state, $this->engine))->offerGain($attacker, $uchrAction);
             return Result::ok(["uchr_blocked:{$cardId}->{$targetId}"]);
         }
 
@@ -446,6 +449,14 @@ final class ActionResolver
             }
         }
 
+        $attacker->closed = true;
+        $coins = new CoinAbilities($this->state, $this->engine);
+        if (!$coinBlockChecked && $coins->offerBlock($attacker, $target, 'uchr', [
+            'kind' => 'uchr', 'player' => $playerKey, 'card_id' => $cardId, 'target_id' => $targetId,
+        ])) {
+            $this->state->bumpVersion();
+            return Result::ok(['coin_block_pending']);
+        }
         $dice   = Dice::roll();
         $level  = BattleHelper::diceToLevel($dice);
 
@@ -491,7 +502,9 @@ final class ActionResolver
         }
         $successfulHit = $val > 0;
 
+        $hpBefore = $target->hp;
         $this->engine->applyDamage($this->state, $target, $val, 'uchr', $attacker);
+        $woundsDealt = max(0, $hpBefore - $target->hp);
         $this->state->battle['strike']['damage_reduction'] = $reduction;
         $this->state->battle['strike']['damage_total'] = $val;
 
@@ -523,6 +536,8 @@ final class ActionResolver
         $attacker->closed = true;
 
         $this->state->bumpVersion();
+        $coins->offerGain($attacker, $uchrAction);
+        $coins->triggerDischarge($attacker, $woundsDealt, 'uchr');
         return Result::ok(["uchr:{$playerKey}:{$cardId}->{$targetId}:dice={$dice}:dmg={$val}"]);
     }
 
@@ -1228,17 +1243,44 @@ final class ActionResolver
         return Result::ok(["modifier:{$playerKey}:{$cardId}:{$modifier['stat']}"]);
     }
 
+    public function resumeCoinAttack(array $context): Result
+    {
+        $attacker = $this->state->getCard((int) $context['card_id']);
+        $target = $this->state->getCard((int) $context['target_id']);
+        if (!$attacker || !$target) return Result::error('Атака недоступна');
+        return $this->resolveDamage($attacker, $target, $context['action'], $context['type'],
+            $attacker->instanceId, $target->instanceId, $context['player'], $context['forced_coin_spend'], true, true);
+    }
+
+    public function triggeredDischarge(CardInstance $source, CardInstance $target, array $action): Result
+    {
+        $this->engine->revealCard($this->state, $target);
+        $action['no_close'] = true;
+        $action['_coin_post_combat'] = true;
+        return $this->resolveDamage($source, $target, $action, 'discharge',
+            $source->instanceId, $target->instanceId, $source->owner);
+    }
+
     private function resolveDamage(
         CardInstance $attacker, CardInstance $target, array $action,
         string $type, int $cardId, int $targetId, string $playerKey,
         ?int $forcedCoinSpend = null,
-        bool $skipRedirect = false
+        bool $skipRedirect = false,
+        bool $coinBlockChecked = false
     ): Result {
         if (!$skipRedirect && $this->maybeStartRangedAttackRedirect($attacker, $target, $action, $type, $cardId, $targetId, $playerKey, $forcedCoinSpend)) {
             $this->state->bumpVersion();
             return Result::ok(['ranged_attack_redirect_pending']);
         }
 
+        if (!$coinBlockChecked && (new CoinAbilities($this->state, $this->engine))->offerBlock($attacker, $target, $type, [
+            'kind' => 'damage', 'player' => $playerKey, 'card_id' => $cardId,
+            'target_id' => $targetId, 'action' => $action, 'type' => $type,
+            'forced_coin_spend' => $forcedCoinSpend,
+        ])) {
+            $this->state->bumpVersion();
+            return Result::ok(['coin_block_pending']);
+        }
         if (!empty($action['_granted_flag_key'])) {
             $attacker->flags[$action['_granted_flag_key']]['used'] = true;
         }
@@ -1408,7 +1450,9 @@ final class ActionResolver
             $val = 0;
         }
 
+        $hpBefore = $target->hp;
         $this->engine->applyDamage($this->state, $target, $val, $type, $attacker);
+        $woundsDealt = max(0, $hpBefore - $target->hp);
 
         if ($closeAfter) {
             $target->closed = true;
@@ -1457,6 +1501,9 @@ final class ActionResolver
         }
 
         $this->state->bumpVersion();
+        if (empty($action['_coin_post_combat'])) {
+            (new CoinAbilities($this->state, $this->engine))->triggerDischarge($attacker, $woundsDealt, $type);
+        }
         return Result::ok(["action:{$playerKey}:{$type}:{$cardId}->{$targetId}:dmg={$val}"]);
     }
 
@@ -5455,7 +5502,8 @@ final class ActionResolver
                     'heal'    => $healed,
                 ];
             }
-        } elseif ($type === 'get_coin') {
+        } elseif ($type === 'get_coin' && (empty($target->prop['coins_receive_deny'])
+            || $target->instanceId === $source->instanceId)) {
             $max = (int) ($target->prop['coins']['max_value'] ?? 0);
             $target->coins += $value;
             if ($max > 0 && $target->coins > $max) $target->coins = $max;
