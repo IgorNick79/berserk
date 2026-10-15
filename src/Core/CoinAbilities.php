@@ -28,9 +28,38 @@ final class CoinAbilities
     {
         $value = (int) ($action['optional_self_coin'] ?? 0);
         if ($value <= 0 || $card->coins > 0 || $card->dying || $card->hp <= 0) return;
-        $this->state->battle['pending_coin_ability'] = [
-            'id' => bin2hex(random_bytes(12)), 'kind' => 'gain', 'owner' => $card->owner, 'card_id' => $card->instanceId, 'value' => $value,
-        ];
+        $this->defer([
+            'kind' => 'gain', 'owner' => $card->owner,
+            'card_id' => $card->instanceId, 'value' => $value,
+        ]);
+    }
+
+    /** Record an effect, never open a choice inside the originating combat. */
+    private function defer(array $effect): void
+    {
+        $effect['id'] = bin2hex(random_bytes(12));
+        $effect['executed'] = false;
+        if (!empty($this->state->battle['strike'])) {
+            $this->state->battle['strike']['coin_post_combat_effects'][$effect['id']] = $effect;
+        } else {
+            // A prophecy-blocked UCHR has no strike, but its mandatory prophecy UI still gates advance().
+            $effect['combat_result'] = null;
+            $this->state->battle['coin_post_combat_queue'][$effect['id']] = $effect;
+        }
+    }
+
+    /** Called by existing combat completion paths, before they discard the resolved context. */
+    public function completeCombat(array $strike): void
+    {
+        $effects = $strike['coin_post_combat_effects'] ?? [];
+        if (!$effects) return;
+        unset($strike['coin_post_combat_effects']);
+        foreach ($effects as $id => $effect) {
+            if (isset($this->state->battle['coin_post_combat_history'][$id])
+                || isset($this->state->battle['coin_post_combat_queue'][$id])) continue;
+            $effect['combat_result'] = $strike;
+            $this->state->battle['coin_post_combat_queue'][$id] = $effect;
+        }
     }
 
     public function offerBlock(CardInstance $source, CardInstance $target, string $type, array $continuation): bool
@@ -58,7 +87,7 @@ final class CoinAbilities
         $probe->closed = false;
         $probe->flags['attacks_used_this_turn'] = 0;
         $probe->prop['actions'] = [array_merge($action, ['key' => 'triggered_discharge'])];
-        $targets = BattleHelper::getAttackTargets($this->state, $probe, 'action:triggered_discharge', $source->owner);
+        $targets = BattleHelper::getAttackTargets($this->state, $probe, 'action:triggered_discharge', $source->owner, true);
         return array_filter($targets, function ($allowed, $id): bool {
             $target = $this->state->getCard((int) $id);
             return $target && !$target->dying && $target->hp > 0;
@@ -74,15 +103,10 @@ final class CoinAbilities
         $strike = &$this->state->battle['strike'];
         if (isset($strike['coin_discharge_sources'][$source->instanceId])) return;
         $strike['coin_discharge_sources'][$source->instanceId] = true;
-        $targets = $this->dischargeTargets($source, $config);
-        if (!$targets) return;
-        $entry = ['id' => bin2hex(random_bytes(12)), 'kind' => 'discharge', 'owner' => $source->owner, 'card_id' => $source->instanceId,
-            'action' => $config, 'candidates' => array_keys($targets)];
-        if (!empty($this->state->battle['pending_coin_ability'])) {
-            $this->state->battle['coin_ability_queue'][] = $entry;
-        } else {
-            $this->state->battle['pending_coin_ability'] = $entry;
-        }
+        $this->defer([
+            'kind' => 'discharge', 'owner' => $source->owner, 'card_id' => $source->instanceId,
+            'wounds' => $wounds, 'strike_type' => $type, 'action' => $config,
+        ]);
     }
 
     public function choose(string $owner, Command $cmd): Result
@@ -136,9 +160,47 @@ final class CoinAbilities
 
     public function advance(): void
     {
-        if (empty($this->state->battle['pending_ranged_attack_redirect'])
-            && empty($this->state->battle['pending_coin_ability']) && !empty($this->state->battle['coin_ability_queue'])) {
-            $this->state->battle['pending_coin_ability'] = array_shift($this->state->battle['coin_ability_queue']);
+        if (empty($this->state->battle['coin_post_combat_queue'])
+            && empty($this->state->battle['coin_post_combat_continuation'])) return;
+        if ($this->state->status !== 'battle' || $this->state->winner !== null) return;
+        if (!empty($this->state->battle['strike'])
+            || Choice\ChoiceRegistry::current($this->state) !== null) return;
+        // Some older mandatory continuations are not ChoiceHandlers (notably prophecy).
+        foreach ($this->state->battle as $key => $value) {
+            if (str_starts_with((string) $key, 'pending_') && !empty($value)) return;
+        }
+        if (!empty($this->state->battle['turn_instant_stack'])
+            || !empty($this->state->battle['turn_instant_result'])) return;
+
+        if (!empty($this->state->battle['coin_post_combat_continuation'])) {
+            $origin = $this->state->battle['coin_post_combat_continuation'];
+            unset($this->state->battle['coin_post_combat_continuation']);
+            $origin['instant_phase'] = 'after';
+            $this->state->battle['strike'] = $origin;
+            (new StrikeResolver($this->state, $this->engine))->continueAfterStrikeResultAck($origin);
+            $this->advance();
+            return;
+        }
+        while (!empty($this->state->battle['coin_post_combat_queue'])) {
+            $id = array_key_first($this->state->battle['coin_post_combat_queue']);
+            $effect = $this->state->battle['coin_post_combat_queue'][$id];
+            unset($this->state->battle['coin_post_combat_queue'][$id]);
+            if (isset($this->state->battle['coin_post_combat_history'][$id])) continue;
+            $effect['executed'] = true;
+            $this->state->battle['coin_post_combat_history'][$id] = $effect;
+            $source = $this->state->getCard((int) $effect['card_id']);
+            if (!$source || $source->owner !== $effect['owner'] || $source->dying || $source->hp <= 0
+                || !in_array($source->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) continue;
+            if ($effect['kind'] === 'discharge') {
+                if ($effect['wounds'] <= 0 || $source->coins < (int) ($effect['action']['min_coins'] ?? 1)) continue;
+                $targets = $this->dischargeTargets($source, $effect['action']);
+                if (!$targets) continue;
+                $effect['candidates'] = array_keys($targets);
+            } elseif ($source->coins > 0) {
+                continue;
+            }
+            $this->state->battle['pending_coin_ability'] = $effect;
+            return;
         }
     }
 

@@ -1392,6 +1392,7 @@ final class StrikeResolver
             $this->state->battle['strike']['confirmed'] = $confirmed;
 
             if (count($confirmed) >= 2) {
+                (new CoinAbilities($this->state, $this->engine))->completeCombat($this->state->battle['strike']);
                 $this->state->battle['strike'] = null;
                 $this->engine->finalizeDying($this->state);
             }
@@ -1487,6 +1488,14 @@ final class StrikeResolver
             $ip = new InstantProcessor($this->state, $this->engine);
             $ip->openWindow('after', $attackerKey);
 
+            if (!empty($this->state->battle['turn_instant_stack']) && !empty($strike['coin_post_combat_effects'])) {
+                // The existing turn-stack continuation owns this resolved context while after-instants run.
+                $this->state->battle['turn_instant_stack']['continuation']['coin_origin_strike'] = $strike;
+                $this->state->battle['strike'] = null;
+                $this->engine->finalizeDying($this->state);
+                $this->state->bumpVersion();
+                return Result::ok(['instant_after_opened']);
+            }
             if (($this->state->battle['strike']['state'] ?? '') === 'waiting_instant') {
                 $this->state->battle['strike']['confirmed'] = [];
                 $this->state->bumpVersion();
@@ -1522,6 +1531,8 @@ final class StrikeResolver
             }
         }
 
+        // Release only after result ACK, wounds, after-instant window and local continuations.
+        (new CoinAbilities($this->state, $this->engine))->completeCombat($strike);
         // Закрываем сражение перед возможным обязательным добиванием после удара.
         $this->state->battle['strike'] = null;
         $this->engine->finalizeDying($this->state);

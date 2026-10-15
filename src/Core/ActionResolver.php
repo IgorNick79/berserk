@@ -1255,14 +1255,8 @@ final class ActionResolver
     public function triggeredDischarge(CardInstance $source, CardInstance $target, array $action): Result
     {
         $this->engine->revealCard($this->state, $target);
-        if ($this->engine->tryProphecyBlock($this->state, $source, $target, 'discharge')) {
-            $this->state->battle['strike']['triggered_discharges'][] = [
-                'target_id' => $target->instanceId, 'damage_total' => 0, 'defended' => true, 'attack_dice' => 0,
-            ];
-            return Result::ok(['triggered_discharge_blocked']);
-        }
         $action['no_close'] = true;
-        $action['_parent_strike'] = $this->state->battle['strike'];
+        $action['_coin_post_combat'] = true;
         return $this->resolveDamage($source, $target, $action, 'discharge',
             $source->instanceId, $target->instanceId, $source->owner);
     }
@@ -1507,12 +1501,7 @@ final class ActionResolver
         }
 
         $this->state->bumpVersion();
-        if (isset($action['_parent_strike'])) {
-            $child = $this->state->battle['strike'];
-            $this->state->battle['strike'] = $action['_parent_strike'];
-            $this->state->battle['strike']['triggered_discharges'][] = $child;
-            (new CoinAbilities($this->state, $this->engine))->advance();
-        } else {
+        if (empty($action['_coin_post_combat'])) {
             (new CoinAbilities($this->state, $this->engine))->triggerDischarge($attacker, $woundsDealt, $type);
         }
         return Result::ok(["action:{$playerKey}:{$type}:{$cardId}->{$targetId}:dmg={$val}"]);
@@ -1686,7 +1675,7 @@ final class ActionResolver
             true
         );
 
-        if ($redirectInfo !== null && !isset($pending['action']['_parent_strike']) && !empty($this->state->battle['strike'])) {
+        if ($redirectInfo !== null && !empty($this->state->battle['strike'])) {
             $this->state->battle['strike']['ranged_redirect'] = $redirectInfo;
             $this->state->battle['strike']['target_id'] = $target->instanceId;
         }

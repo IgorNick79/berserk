@@ -20,12 +20,21 @@ final class CoinAbilityChoice implements ChoiceHandlerInterface
         $baseUrl .= '&choice_id=' . rawurlencode($p['id']);
         $buttons = [];
         if ($p['kind'] === 'discharge') {
+            $items = [];
             foreach ($p['candidates'] as $id) {
                 $target = $state->getCard((int) $id);
-                if (!$target) continue;
-                $buttons[] = ['label' => ($cardsInfo[$target->ukid]['name'] ?? 'Цель') . " ({$target->row},{$target->col})",
-                    'url' => $baseUrl . '&cmd=choose_coin_ability&target_id=' . $id];
+                if (!$target || $target->dying || $target->hp <= 0) continue;
+                $items[] = [
+                    'value' => $id,
+                    'label' => ($cardsInfo[$target->ukid]['name'] ?? 'Цель') . " ({$target->row},{$target->col})",
+                ];
             }
+            return new PanelSpec(title: $title, form: [
+                'type' => 'radio', 'name' => 'target_id', 'items' => $items,
+                'hidden' => array_merge(\Berserk\View\Ui\Form::battleHidden($role, $state->gameId, 'choose_coin_ability'),
+                    ['choice_id' => $p['id']]),
+                'submit' => 'Подтвердить',
+            ]);
         } else {
             $buttons = [
                 ['label' => $p['kind'] === 'gain' ? 'Получить монетку' : 'Блокировать атаку',

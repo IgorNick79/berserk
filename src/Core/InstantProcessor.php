@@ -678,6 +678,12 @@ final class InstantProcessor
         unset($strike['instant_phase']);
 
         if ($phase === 'after') {
+            if (!empty($strike['coin_post_combat_effects'])) {
+                $strike['instant_phase'] = 'after';
+                (new StrikeResolver($this->state, $this->engine))->continueAfterStrikeResultAck($strike);
+                return;
+            }
+            (new CoinAbilities($this->state, $this->engine))->completeCombat($strike);
             $this->state->battle['strike'] = null;
             $this->engine->finalizeDying($this->state);
             return;
@@ -1811,6 +1817,9 @@ final class InstantProcessor
         }
 
         $continuation = (array) ($pending['continuation'] ?? ['type' => 'manual']);
+        if (!empty($continuation['coin_origin_strike'])) {
+            $continuation['coin_origin_strike']['after_instant_summary'] = $pending['summary'] ?? [];
+        }
         unset($this->state->battle['turn_instant_result']);
         unset($this->state->battle['instant_result']);
         $this->continueAfterTurnStack($continuation);
@@ -1833,6 +1842,12 @@ final class InstantProcessor
             return;
         }
         if ($type === 'strike_after') {
+            if (!empty($continuation['coin_origin_strike'])) {
+                // An after-instant may start another mandatory combat; resume the origin only after it.
+                $this->state->battle['coin_post_combat_continuation'] = $continuation['coin_origin_strike'];
+                return;
+            }
+            (new CoinAbilities($this->state, $this->engine))->completeCombat($this->state->battle['strike'] ?? []);
             $this->state->battle['strike'] = null;
             $this->engine->finalizeDying($this->state);
             return;
