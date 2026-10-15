@@ -61,14 +61,48 @@
             menu.click(); assert(menu.getAttribute('aria-expanded')==='false','Repeated initialization does not duplicate handlers');
             menu.click();
             var rect=document.querySelector('.battle-field').getBoundingClientRect();
+            var oldOverlay=document.querySelector('#battle-debug');
+            var inner=oldOverlay.querySelector('.debug-panel');inner.tabIndex=0;inner.focus();
+            assert(oldOverlay.contains(document.activeElement),'Focus is inside old overlay before AJAX');
             document.querySelectorAll('.battle-field .card-link')[1].click();
-            await until(function(){return selectedName()===names[1];});
-            assert(menu.getAttribute('aria-expanded')==='true' && !document.querySelector('#battle-debug').hidden,'Debug stays open after AJAX');
+            await until(function(){return selectedName()===names[1] && document.querySelector('#battle-debug')!==oldOverlay;});
+            var newOverlay=document.querySelector('#battle-debug');
+            assert(newOverlay.contains(document.activeElement),'Focus restored inside replacement overlay');
+            assert(menu.getAttribute('aria-expanded')==='true' && !newOverlay.hidden,'Debug stays open after AJAX');
+            menu.focus();
+            document.querySelectorAll('.battle-field .card-link')[0].click();
+            await until(function(){return selectedName()===names[0] && document.querySelector('#battle-debug')!==newOverlay;});
+            assert(document.activeElement===menu,'AJAX does not steal focus from outside overlay');
+            assert(menu.getAttribute('aria-expanded')==='true','Outside focus does not close debug');
+            var blurredOverlay=document.querySelector('#battle-debug');
+            blurredOverlay.focus();blurredOverlay.blur();
+            await new Promise(function(resolve){setTimeout(resolve,0);});
+            document.querySelectorAll('.battle-field .card-link')[1].click();
+            await until(function(){return selectedName()===names[1] && document.querySelector('#battle-debug')!==blurredOverlay;});
+            assert(!document.querySelector('#battle-debug').contains(document.activeElement),'Explicit blur is not mistaken for focus lost through replacement');
+            var ariaWrites=0, originalSetAttribute=menu.setAttribute;
+            menu.setAttribute=function(name,value){if(name==='aria-expanded') ariaWrites++;return originalSetAttribute.call(this,name,value);};
+            try {
+                var probes=['.battle-field','.battle-selected-card','.info-panel-header'].map(function(selector){
+                    var node=document.createElement('span');document.querySelector(selector).appendChild(node);return node;
+                });
+                await new Promise(function(resolve){setTimeout(resolve,0);});
+                probes.forEach(function(node){node.remove();});
+                await new Promise(function(resolve){setTimeout(resolve,0);});
+                assert(ariaWrites===0,'Unrelated field/card/header mutations do not synchronize debug');
+            } finally { menu.setAttribute=originalSetAttribute; }
             assert(document.querySelectorAll('#battle-debug').length===1 && document.querySelectorAll('.debug-panel').length===1,'Debug is not duplicated');
             var next=document.querySelector('.battle-field').getBoundingClientRect();
             assert(rect.width===next.width && rect.height===next.height,'Debug does not resize battlefield');
             document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
             assert(menu.getAttribute('aria-expanded')==='false','Escape closes debug');
+            assert(document.activeElement===menu,'Escape returns focus to burger');
+            var debugPanel=document.querySelector('#battle-debug .debug-panel');
+            debugPanel.remove();await until(function(){return menu.disabled;});
+            assert(menu.getAttribute('aria-expanded')==='false','Missing server debug disables burger');
+            document.querySelector('#battle-debug').appendChild(debugPanel);
+            await until(function(){return !menu.disabled;});
+            assert(menu.getAttribute('aria-expanded')==='false','Restored server debug enables burger without opening it');
             [document.documentElement,document.body].forEach(function(e){
                 assert(e.scrollWidth===e.clientWidth && e.scrollHeight===e.clientHeight,'No page scroll: '+e.tagName);
             });
