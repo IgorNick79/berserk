@@ -254,7 +254,8 @@ final class ValhallaProcessor
                 break;
 
             case 'get_coins':
-                if (!$target) return;
+                if (!$target || (!empty($target->prop['coins_receive_deny'])
+                    && $target->instanceId !== $source->instanceId)) return;
                 if ($this->engine === null && !empty($target->prop['coin_strike_bonus'])) {
                     throw new \LogicException('Valhalla get_coins requires Engine coin bonus synchronization');
                 }

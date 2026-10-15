@@ -790,6 +790,7 @@ final class BattleScreen
                 ];
 
                 foreach ($c->prop['actions'] ?? [] as $a) {
+                    if (!\Berserk\Core\CoinAbilities::actionAvailable($c, $a)) continue;
                     $type = $a['type'] ?? '';
                     if ($type === 'uchr') continue;
                     $key  = $a['key'] ?? $type;
@@ -939,10 +940,18 @@ final class BattleScreen
                 $statusHtml = '<p>Кликни по существу оппонента для атаки.</p>';
             }
         }
+        if (!empty($c->prop['on_wounding_strike'])) {
+            $effect = $c->prop['on_wounding_strike'];
+            $values = array_map('intval', (array) ($effect['strike'] ?? []));
+            $hint = $c->coins >= (int) ($effect['min_coins'] ?? 1)
+                ? 'При нанесении ран ударом — разряд ' . implode('–', $values) . ', дальность ' . (int) ($effect['range'] ?? 0) . '. Монетка сохраняется.'
+                : 'Без монетки: доступен удар через ряд; после него можно получить монетку.';
+            $statusHtml .= '<p>' . htmlspecialchars($hint, ENT_QUOTES) . '</p>';
+        }
         $statusHtml .= $this->linkedRecruitBattleHint($state, $c, $cardsInfo);
 
         $coinsLine = '';
-        if (!empty($c->prop['save_coins']) || $c->coins > 0) {
+        if (!empty($c->prop['save_coins']) || $c->coins > 0 || !empty($c->prop['coin_block'])) {
             $max = (int) ($c->prop['coins']['max_value'] ?? 0);
             $coinsLine = ' | Монеты: ' . $c->coins . ($max > 0 ? ' / ' . $max : '');
         }

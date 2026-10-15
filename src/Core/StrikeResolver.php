@@ -731,6 +731,12 @@ final class StrikeResolver
             ? $this->state->getCard($defenderId)
             : $this->state->getCard($targetId);
 
+        if (empty($strike['coin_block_checked'])
+            && (new CoinAbilities($this->state, $this->engine))->offerBlock($attacker, $defendCard, 'strike', ['kind' => 'strike'])) {
+            $strike['state'] = 'waiting_coin_block';
+            return;
+        }
+        $strike['coin_block_checked'] = true;
         $attackDice = Dice::roll();
 
         $defendWhileClosed = !empty($defendCard->prop['defend_while_closed']);
@@ -806,6 +812,7 @@ final class StrikeResolver
             ? $this->state->getCard($defenderId)
             : $this->state->getCard($targetId);
 
+        if (!empty($strike['damage_applied'])) return;
         $attackStrike = $table['attack'];
         $defendStrike = $table['defend'];
         $woundsDealt = 0;
@@ -828,7 +835,7 @@ final class StrikeResolver
         ];
 
         // Эффекты от удара (включая промах)
-        $this->engine->applyStrikeEffects($attacker, $defendCard, $attackStrike);
+        if (empty($strike['coin_blocked'])) $this->engine->applyStrikeEffects($attacker, $defendCard, $attackStrike);
 
         if ($attackStrike !== '') {
             if (!empty($attacker->prop['copy_target_strike'])) {
@@ -1069,6 +1076,9 @@ final class StrikeResolver
             'attacker_extra_this_strike' => max(0, $attackerDamageThisStrike - $answerDamage),
         ];
         $this->state->battle['strike']['damage_applied'] = true;
+        $coins = new CoinAbilities($this->state, $this->engine);
+        $coins->triggerDischarge($attacker, $woundsDealt, 'strike');
+        if (isset($answerWoundsDealt)) $coins->triggerDischarge($defendCard, $answerWoundsDealt, 'answer');
     }
 
     private function applyStrongStrikeFollowUpEffects(

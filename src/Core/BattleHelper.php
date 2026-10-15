@@ -52,7 +52,7 @@ final class BattleHelper
     {
         $hasUchr = false;
         foreach ($card->prop['actions'] ?? [] as $a) {
-            if (($a['type'] ?? '') === 'uchr') { $hasUchr = true; break; }
+            if (($a['type'] ?? '') === 'uchr' && CoinAbilities::actionAvailable($card, $a)) { $hasUchr = true; break; }
         }
         return [
             'has_strike' => self::hasAnyStrike($card),
@@ -537,6 +537,7 @@ final class BattleHelper
                 $result[$target->instanceId] = true;
             }
         } elseif ($mode === 'uchr') {
+            if (!self::abilities($card)['has_uchr']) return [];
             foreach ($state->cards as $target) {
                 if ($target->zone !== CardInstance::ZONE_FIELD
                     && $target->zone !== CardInstance::ZONE_FLYING) continue;
