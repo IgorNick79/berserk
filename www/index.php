@@ -408,7 +408,7 @@ if (isset($_GET['debug']) && $_GET['debug'] === '0') {
 }
 
 // Debug roll: ?debug_roll=6,1,4 или ?debug_roll=6* или ?debug_roll=off
-if (isset($_GET['debug_roll'])) {
+if (is_string($_GET['debug_roll'] ?? null)) {
     $v = (string) $_GET['debug_roll'];
     unset($_SESSION['debug_roll_state']);
     if ($v === '' || $v === 'off') {
@@ -989,7 +989,7 @@ if ($isBattleCommand) {
 
 // ─── Обработка команды ────────────────────────────────────────
 $message = null;
-$commandType = $_GET['cmd'] ?? '';
+$commandType = is_string($_GET['cmd'] ?? null) ? $_GET['cmd'] : '';
 $hasLegacyCommand = array_key_exists('cmd', $_GET)
     && (is_array($_GET['cmd']) || (string) $_GET['cmd'] !== '');
 
