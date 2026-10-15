@@ -54,9 +54,21 @@ final class CellEffectDirectionChoice implements ChoiceHandlerInterface
         if ($p['owner'] !== $playerKey) return new PanelSpec(title: $name . ' — Свет фонаря: выбор направления', isMine: false);
         $buttons = [];
         foreach ($p['options'] as $key => $option) {
-            $buttons[] = ['label' => $option['label'], 'url' => $baseUrl . '&cmd=choose_cell_effect_direction&direction=' . $key];
+            $buttons[] = ['label' => self::displayLabel($key, $p['owner']), 'url' => $baseUrl . '&cmd=choose_cell_effect_direction&direction=' . $key];
         }
         return new PanelSpec(title: $name . ' — Свет фонаря: выберите направление (3 клетки)', text: [self::DESCRIPTION], buttons: $buttons);
+    }
+
+    private static function displayLabel(string $direction, string $owner): string
+    {
+        [$dr, $dc] = self::DIRECTIONS[$direction];
+        // BattleScreen renders host rows 6..1, player rows 1..6 and columns 5..1.
+        $visualDr = $owner === GameState::PLAYER_HOST ? -$dr : $dr;
+        $visualDc = $owner === GameState::PLAYER_PLAYER ? -$dc : $dc;
+        foreach (self::DIRECTIONS as [$labelDr, $labelDc, $label]) {
+            if ($labelDr === $visualDr && $labelDc === $visualDc) return $label;
+        }
+        return self::DIRECTIONS[$direction][2];
     }
 
     public function apply(GameState $state, Engine $engine, string $playerKey, Command $cmd): Result

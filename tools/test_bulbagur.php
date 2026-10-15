@@ -314,4 +314,100 @@ $s = bbState();
 $s->getCard(1)->markers['spider_web'] = ['value' => 1];
 (new TurnPhaseProcessor($s, $e))->beginStartPhase('player');
 bbAssert(empty($s->battle['pending_cell_effect_direction']), 'Existing spider-web restriction is preserved');
+// Direction captions follow the actual DOM order of BattleScreen, not the active turn.
+$captionMap = [
+    'host' => ['up' => 'ВНИЗ', 'up_right' => 'ВНИЗ-ВПРАВО', 'right' => 'ВПРАВО', 'down_right' => 'ВВЕРХ-ВПРАВО',
+        'down' => 'ВВЕРХ', 'down_left' => 'ВВЕРХ-ВЛЕВО', 'left' => 'ВЛЕВО', 'up_left' => 'ВНИЗ-ВЛЕВО'],
+    'player' => ['up' => 'ВВЕРХ', 'up_right' => 'ВВЕРХ-ВЛЕВО', 'right' => 'ВЛЕВО', 'down_right' => 'ВНИЗ-ВЛЕВО',
+        'down' => 'ВНИЗ', 'down_left' => 'ВНИЗ-ВПРАВО', 'left' => 'ВПРАВО', 'up_left' => 'ВВЕРХ-ВПРАВО'],
+];
+$visualOffsets = ['ВВЕРХ' => [-1, 0], 'ВВЕРХ-ВПРАВО' => [-1, 1], 'ВПРАВО' => [0, 1], 'ВНИЗ-ВПРАВО' => [1, 1],
+    'ВНИЗ' => [1, 0], 'ВНИЗ-ВЛЕВО' => [1, -1], 'ВЛЕВО' => [0, -1], 'ВВЕРХ-ВЛЕВО' => [-1, -1]];
+$directionOrigins = ['up' => [4, 3], 'up_right' => [4, 1], 'right' => [3, 1], 'down_right' => [1, 1],
+    'down' => [1, 3], 'down_left' => [1, 5], 'left' => [3, 5], 'up_left' => [4, 5]];
+$directionHandler = new CellEffectDirectionChoice();
+foreach (['host', 'player'] as $owner) {
+    foreach ($directionOrigins as $direction => [$row, $col]) {
+        $s = bbState();
+        $source = $s->getCard(1);
+        $source->owner = $owner;
+        $source->row = $row; $source->col = $col;
+        $opponent = $s->getOpponentKey($owner);
+        $s->getCard(2)->owner = $opponent;
+        $s->battle['active'] = $opponent;
+        (new TurnPhaseProcessor($s, $e))->beginStartPhase($opponent);
+        $pendingBefore = $s->battle['pending_cell_effect_direction'];
+        $spec = $directionHandler->spec($s, $owner, [], '?game=119', $owner);
+        bbAssert(count($spec->buttons) === count($pendingBefore['options']), 'Only legal direction buttons offered');
+        $selectedButton = null;
+        foreach ($spec->buttons as $button) {
+            parse_str(parse_url($button['url'], PHP_URL_QUERY), $query);
+            $key = $query['direction'];
+            bbAssert(isset($pendingBefore['options'][$key]), 'Button keeps an original legal command direction');
+            bbAssert($button['label'] === $captionMap[$owner][$key], 'Caption follows viewer orientation, including both diagonal axes');
+            bbAssert($query['cmd'] === 'choose_cell_effect_direction', 'Command unchanged');
+            if ($key === $direction) $selectedButton = $button;
+        }
+        bbAssert($s->battle['pending_cell_effect_direction'] === $pendingBefore, 'Rendering never rewrites pending');
+        bbAssert($selectedButton !== null, 'Requested legal ray is offered');
+        $s = GameState::fromArray($s->toArray());
+        (new TurnPhaseProcessor($s, $e))->resume();
+        bbAssert($directionHandler->spec($s, $owner, [], '?game=119', $owner)->buttons === $spec->buttons, 'Reload/resume preserves captions and commands');
+        $s->battle['active'] = $owner;
+        bbAssert($directionHandler->spec($s, $owner, [], '?game=119', $owner)->buttons === $spec->buttons, 'Captions depend on choice owner, not active player');
+        $s->battle['active'] = $opponent;
+        bbAssert(!$directionHandler->spec($s, $opponent, [], '?game=119', $opponent)->isMine, 'Other viewer receives waiting panel');
+        parse_str(parse_url($selectedButton['url'], PHP_URL_QUERY), $query);
+        bbAssert($e->apply($s, $owner, new Command($query['cmd'], ['direction' => $query['direction']]))->success, 'Click resolves original direction');
+        bbAssert(array_keys($s->cell_markers) === $pendingBefore['options'][$direction]['cells'], 'Click preserves original three-cell geometry');
+        bbDrain($s, $e);
+
+        // Verify the caption against marker positions in real rendered field rows/cells.
+        $_GET = $_SESSION = [];
+        $data = $screen->prepare($s, $owner, $owner, null, [
+            's1_119' => ['name' => 'UI_SOURCE', 'health' => 30], 'fixture_2' => ['name' => 'UI_TARGET', 'health' => 30],
+        ])['data'];
+        $dom = new DOMDocument();
+        @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $data['field_html']);
+        $xpath = new DOMXPath($dom);
+        $rows = $xpath->query('//div[contains(concat(" ", normalize-space(@class), " "), " battle-numbered-row ")]');
+        $sourcePos = null; $markerPositions = [];
+        foreach ($rows as $ri => $rowNode) {
+            $cells = $xpath->query('./div[contains(concat(" ", normalize-space(@class), " "), " field-cell ")]', $rowNode);
+            foreach ($cells as $ci => $cellNode) {
+                if (str_contains($cellNode->textContent, 'UI_SOURCE')) $sourcePos = [$ri, $ci];
+                if ($xpath->query('.//div[contains(concat(" ", normalize-space(@class), " "), " cell-marker-lantern_light ")]', $cellNode)->length) {
+                    $markerPositions[] = [$ri, $ci];
+                }
+            }
+        }
+        bbAssert($sourcePos !== null && count($markerPositions) === 3, 'DOM contains source and all three markers');
+        [$vr, $vc] = $visualOffsets[$selectedButton['label']];
+        $expectedPositions = [];
+        for ($i = 1; $i <= 3; $i++) $expectedPositions[] = [$sourcePos[0] + $vr * $i, $sourcePos[1] + $vc * $i];
+        sort($expectedPositions); sort($markerPositions);
+        bbAssert($markerPositions === $expectedPositions, 'Markers appear exactly along the caption in rendered ' . $owner . ' field');
+    }
+
+    // Two consecutive sources of the same owner retain orientation through task handoff.
+    $s = bbState();
+    $opponent = $s->getOpponentKey($owner);
+    $s->getCard(1)->owner = $owner;
+    $s->getCard(2)->owner = $opponent;
+    $s->addCard(bbCard(3, $owner, 3, 5, bbProp()));
+    $s->battle['active'] = $opponent;
+    (new TurnPhaseProcessor($s, $e))->beginStartPhase($opponent);
+    $tasks = $s->battle['turn_phase']['passive_queue'];
+    bbAssert($e->apply($s, $owner, new Command('turn_task', ['task_id' => $tasks[0]['id']]))->success, 'First of two source choices begins');
+    for ($i = 0; $i < 2; $i++) {
+        $spec = $directionHandler->spec($s, $owner, [], '?game=119', $owner);
+        foreach ($spec->buttons as $button) {
+            parse_str(parse_url($button['url'], PHP_URL_QUERY), $query);
+            bbAssert($button['label'] === $captionMap[$owner][$query['direction']], 'Sequential source captions follow their owner');
+        }
+        parse_str(parse_url($spec->buttons[0]['url'], PHP_URL_QUERY), $query);
+        bbAssert($e->apply($s, $owner, new Command($query['cmd'], ['direction' => $query['direction']]))->success, 'Sequential choice resolves');
+    }
+    bbAssert(empty($s->battle['pending_cell_effect_direction']), 'Both sequential choices complete');
+}
 echo "OK bulbagur: {$checks} checks\n";
