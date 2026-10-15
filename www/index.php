@@ -1271,6 +1271,7 @@ $page = $tpl->parse('page.tpl', [
     'role'    => $role,
     'screen'  => $screenHtml,
     'scripts' => $scriptsHtml,
+    'page_class' => $screenName === 'battle' ? 'battle-page' : '',
 ]);
 
 echo $page;

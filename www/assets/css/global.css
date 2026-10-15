@@ -1658,3 +1658,109 @@ body { padding-bottom: 46vh; }
 .cell-picker-controls button[aria-pressed="true"] { box-shadow: inset 0 0 0 2px #444; font-weight: bold; }
 .cell-picker-controls button:disabled { opacity: .4; cursor: default; }
 .cell-picker-controls button:focus-visible, .cell-picker-columns .button:focus-visible { outline: 3px solid #a63; outline-offset: 2px; }
+/* Stage 1A: viewport shell only; existing card/cell content keeps its sizing model. */
+html.battle-page, body.battle-page {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+body.battle-page > .toolbar { display: none; }
+body.battle-page > .screen {
+    max-width: none;
+    margin: 0;
+    height: 100vh;
+    height: 100dvh;
+    min-width: 0;
+    min-height: 0;
+}
+.battle-page .battle-shell,
+.battle-page .battle-main,
+.battle-page .battle-left,
+.battle-page .battle-panel-side,
+.battle-page .info-panel,
+.battle-page .battle-menu-placeholder { box-sizing: border-box; }
+.battle-page .battle-shell {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) min(348px, 45%);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 12px;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 8px 8px 8px 48px;
+}
+.battle-page .battle-menu-placeholder {
+    position: absolute;
+    top: 8px;
+    left: 4px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid #aaa;
+    border-radius: 6px;
+    background: #fff;
+    color: #555;
+    font-size: 24px;
+}
+.battle-page .battle-main {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) 320px;
+    grid-template-rows: minmax(0, 1fr);
+    gap: 12px;
+    min-width: 0;
+    min-height: 0;
+    align-items: stretch;
+    overflow: auto;
+}
+/* Every potentially long region has a reachable local scrollport. */
+.battle-page .battle-left,
+.battle-page .battle-panel-side,
+.battle-page .info-panel {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+}
+.battle-page .battle-layout { width: max-content; }
+.battle-page .battle-field {
+    margin: 0;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+.battle-page .battle-panel-side {
+    width: auto;
+    padding: 12px;
+}
+.battle-page .info-panel {
+    position: static;
+    max-height: none;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: none;
+    z-index: auto;
+}
+.battle-page .info-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.battle-page .info-actions .button.wide {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+}
+.battle-page .info-panel .button { overflow-wrap: anywhere; }
+.battle-page .info-panel .task-card { min-width: 0; overflow-wrap: anywhere; }
+/* AJAX notices must not become a third item in the two-column grid. */
+.battle-page .battle-shell > .battle-ajax-message {
+    position: absolute;
+    top: 8px;
+    left: 48px;
+    right: 8px;
+    z-index: 100;
+    box-sizing: border-box;
+    max-height: calc(100% - 16px);
+    overflow: auto;
+}
