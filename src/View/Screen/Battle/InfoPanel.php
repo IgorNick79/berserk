@@ -225,7 +225,7 @@ final class InfoPanel
             $cm = $strike['cell_marker'];
             $label = $strike['action_name'] ?? 'Маркер';
             $contentHtml = '<p>' . htmlspecialchars($label, ENT_QUOTES)
-                . ': клетка ' . \Berserk\View\Ui\Coords::render($cm['row'] ?? null, $cm['col'] ?? null, $playerKey) . '</p>';
+                . ': ' . \Berserk\View\Ui\Coords::renderResult($cm['row'] ?? null, $cm['col'] ?? null, $playerKey) . '</p>';
 
             $confirmed = $strike['confirmed'] ?? [];
             if (!in_array($playerKey, $confirmed, true)) {
@@ -739,13 +739,13 @@ final class InfoPanel
                 $resultText = $name . ': '
                     . (empty($parts) ? 'нет целей с выстрелом/метанием/разрядом' : implode(', ', $parts));
             } elseif ($kind === 'teleport_target') {
-                $name = $strike['action_name'] ?? 'Дверь измерений';
+                $name = htmlspecialchars((string) ($strike['action_name'] ?? 'Дверь измерений'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $tp   = $strike['teleport'] ?? null;
                 if ($tp) {
                     $tCard = $state->getCard($tp['target_id']);
                     $tName = $tCard ? ($cardsInfo[$tCard->ukid]['name'] ?? '?') : '?';
                     $resultText = $name . ': ' . htmlspecialchars($tName, ENT_QUOTES)
-                        . ' перемещён на (' . $tp['new_row'] . ',' . $tp['new_col'] . ')';
+                        . ' перемещён на ' . \Berserk\View\Ui\Coords::renderResult($tp['new_row'] ?? null, $tp['new_col'] ?? null, $playerKey);
                 } else {
                     $resultText = $name;
                 }
@@ -982,15 +982,15 @@ final class InfoPanel
                         . htmlspecialchars($redirectName, ENT_QUOTES);
                 }
             } elseif ($kind === 'bomb_shot') {
-                $name = $strike['action_name'] ?? 'Бомба';
+                $name = htmlspecialchars((string) ($strike['action_name'] ?? 'Бомба'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $bomb = $strike['bomb'] ?? null;
                 if ($bomb) {
                     $tName = $state->getCard($strike['target_id']);
                     $tInfo = $tName ? ($cardsInfo[$tName->ukid] ?? null) : null;
                     $tn2 = $tInfo ? htmlspecialchars($tInfo['name'], ENT_QUOTES) : '?';
                     $resultText = $name . ': ' . $tn2 . ' получает '
-                        . $strike['damage'] . ' урона. Бомба поставлена на клетку ('
-                        . $bomb['row'] . ';' . $bomb['col'] . ').';
+                        . $strike['damage'] . ' урона. Бомба поставлена на '
+                        . \Berserk\View\Ui\Coords::renderResult($bomb['row'] ?? null, $bomb['col'] ?? null, $playerKey) . '.';
                 } else {
                     $resultText = $name;
                 }
@@ -1239,8 +1239,8 @@ final class InfoPanel
             if (!empty($strike['push_result'])) {
                 $pr = $strike['push_result'];
                 if ($pr['type'] === 'moved') {
-                    $pushHtml = '<p class="bonus">Карта перемещена на ('
-                        . $pr['new_row'] . ',' . $pr['new_col'] . ')</p>';
+                    $pushHtml = '<p class="bonus">Карта перемещена на '
+                        . \Berserk\View\Ui\Coords::renderResult($pr['new_row'] ?? null, $pr['new_col'] ?? null, $playerKey) . '</p>';
                 } elseif ($pr['type'] === 'damage') {
                     $pushHtml = '<p class="penalty">Отказ от перемещения: '
                         . $pr['damage'] . ' урона</p>';

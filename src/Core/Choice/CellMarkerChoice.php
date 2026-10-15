@@ -20,7 +20,7 @@ final class CellMarkerChoice implements ChoiceHandlerInterface
 
     public function commandTypes(): array
     {
-        return ['choose_cell_marker'];
+        return ['choose_cell_marker', 'cancel_pending'];
     }
 
     public function spec(
@@ -70,6 +70,9 @@ final class CellMarkerChoice implements ChoiceHandlerInterface
         Command $cmd
     ): Result {
         $ar = new \Berserk\Core\ActionResolver($state, $engine);
+        if ($cmd->type === 'cancel_pending') {
+            return $ar->cancelPending($playerKey, $cmd);
+        }
         return $ar->chooseCellMarker($playerKey, $cmd);
     }
 }
