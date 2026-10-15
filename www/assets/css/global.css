@@ -1682,9 +1682,10 @@ body.battle-page > .screen {
 .battle-page .info-panel,
 .battle-page .battle-menu { box-sizing: border-box; }
 .battle-page .battle-shell {
+    --battle-info-width: min(440px, 45%);
     position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) min(348px, 45%);
+    grid-template-columns: minmax(0, 1fr) var(--battle-info-width);
     grid-template-rows: minmax(0, 1fr);
     gap: 12px;
     height: 100%;
@@ -1808,7 +1809,7 @@ body.battle-page > .screen {
     top: 8px;
     bottom: 8px;
     left: 48px;
-    right: calc(min(348px, 45%) + 20px);
+    right: calc(var(--battle-info-width) + 20px);
     z-index: 90;
     overflow: auto;
     background: #171717;

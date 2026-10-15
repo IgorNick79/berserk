@@ -970,7 +970,7 @@ final class BattleScreen
         bool $explicitAttackMode
     ): bool {
         if (!$explicitAttackMode || !$isActive || $strike !== null) return false;
-        if ($card->owner !== $playerKey) return false;
+        if ($card->owner !== $playerKey || CardStats::isDisabled($card)) return false;
         if ($this->hasActiveServerPending($state)) return false;
 
         $abil = BattleHelper::abilities($card);

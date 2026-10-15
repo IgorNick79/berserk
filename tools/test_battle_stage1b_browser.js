@@ -61,6 +61,10 @@
             menu.click(); assert(menu.getAttribute('aria-expanded')==='false','Repeated initialization does not duplicate handlers');
             menu.click();
             var rect=document.querySelector('.battle-field').getBoundingClientRect();
+            if (window.innerWidth===1600) assert(document.querySelector('.info-panel').getBoundingClientRect().width===440,'InfoPanel is 440px at standard viewport');
+            var leftRect=document.querySelector('.battle-main').getBoundingClientRect();
+            var debugRect=document.querySelector('#battle-debug').getBoundingClientRect();
+            assert(debugRect.x===leftRect.x && debugRect.width===leftRect.width && debugRect.height===leftRect.height,'Debug overlay matches left area at current panel width');
             var oldOverlay=document.querySelector('#battle-debug');
             var inner=oldOverlay.querySelector('.debug-panel');inner.tabIndex=0;inner.focus();
             assert(oldOverlay.contains(document.activeElement),'Focus is inside old overlay before AJAX');

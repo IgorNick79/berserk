@@ -8,6 +8,8 @@ require_once __DIR__ . '/../src/Core/Autoloader.php';
 use Berserk\Core\Autoloader;
 use Berserk\Core\CardInstance;
 use Berserk\Core\GameState;
+use Berserk\Core\Engine;
+use Berserk\Core\Command;
 use Berserk\View\Screen\BattleScreen;
 use Berserk\View\Template;
 
@@ -80,13 +82,13 @@ function cancelActionState(array $attackerProp = [], bool $withEnemy = true): Ga
     return $state;
 }
 
-function cancelActionRender(GameState $state, array $get): array
+function cancelActionRender(GameState $state, array $get, string $viewer = GameState::PLAYER_HOST): array
 {
     $_GET = $get;
     $_SESSION = [];
 
     $screen = new BattleScreen(new Template(__DIR__ . '/../templates'));
-    return $screen->prepare($state, GameState::PLAYER_HOST, 'host', null, [
+    return $screen->prepare($state, $viewer, $viewer, null, [
         'attacker' => ['name' => 'Атакующий', 'health' => 5, 'element' => 'neutral'],
         'enemy' => ['name' => 'Цель', 'health' => 5, 'element' => 'neutral'],
     ])['data'];
@@ -215,4 +217,45 @@ cancelActionAssert(
     'Immediate actions should not render cancel target selection action.'
 );
 
+// Engine writes logs: run this suite in an isolated copy; lifecycle fixtures use
+// negative synthetic IDs so they cannot address an existing database game.
+foreach (['host', 'player'] as $owner) {
+    $state = cancelActionState(['actions' => [['type'=>'shot','key'=>'shot','value'=>1,'range'=>2]]]);
+    $state->gameId = -random_int(1000000000, 2000000000);
+    $opponent = $state->getOpponentKey($owner);
+    $state->battle['active'] = $owner;
+    $state->getCard(1)->owner = $owner;
+    $state->getCard(2)->owner = $opponent;
+    $state->getCard(2)->col = 5;
+    $ui = ['sel'=>1,'mode'=>'action:shot'];
+    $engine = new Engine();
+    cancelActionAssert(str_contains(cancelActionRender($state,$ui,$owner)['panel_html'],'Отменить действие'), 'Open card must retain cancel before acting: '.$owner);
+    cancelActionAssert(!str_contains(cancelActionRender($state,$ui,$opponent)['panel_html'],'Отменить действие'), 'Passive player must not receive target-mode cancel');
+    $before = serialize($state->toArray());
+    cancelActionAssert(!str_contains(cancelActionRender($state,[],$owner)['panel_html'],'Отменить действие') && serialize($state->toArray())===$before, 'Clean cancel URL clears UI selection without changing game state');
+    cancelActionAssert(!str_contains(cancelActionRender($state,['sel'=>2],$owner)['panel_html'],'Отменить действие'), 'Switching cards clears target-mode cancel');
+    $rejected = $engine->apply($state,$owner,new Command('action',['card_id'=>1,'target_id'=>999,'action_key'=>'shot']));
+    cancelActionAssert(!$rejected->success && !$state->getCard(1)->closed, 'Invalid target must reject action without closing source');
+    cancelActionAssert(str_contains(cancelActionRender($state,$ui,$owner)['panel_html'],'Отменить действие'), 'Rejected action must retain cancel');
+    $state->getCard(1)->markers['spider_web'] = true;
+    cancelActionAssert(!str_contains(cancelActionRender($state,$ui,$owner)['panel_html'],'Отменить действие'), 'Disabled source must not offer target-mode cancel');
+    unset($state->getCard(1)->markers['spider_web']);
+    $result = $engine->apply($state,$owner,new Command('action',['card_id'=>1,'target_id'=>2,'action_key'=>'shot']));
+    cancelActionAssert($result->success && $state->getCard(1)->closed, 'Actual action must close source');
+    foreach ([$owner,$opponent] as $actor) {
+        $confirmed = $engine->apply($state,$actor,new Command('confirm_strike'));
+        cancelActionAssert($confirmed->success, 'Both viewers must confirm actual result');
+    }
+    cancelActionAssert(empty($state->battle['strike']), 'Result must finish before testing stale UI mode');
+    foreach (['strike','action:shot'] as $mode) {
+        $data = cancelActionRender($state,['sel'=>1,'mode'=>$mode],$owner);
+        cancelActionAssert(!str_contains($data['panel_html'],'Отменить действие') && !str_contains($data['info_panel_html'],'Отменить действие'), 'Completed action must not leave cancel in selected card or InfoPanel: '.$owner.'/'.$mode);
+        cancelActionAssert(str_contains($data['panel_html'],'Карта закрыта'), 'Closed-card status must remain visible');
+    }
+    // Test the exact fragments used by AJAX, retaining the old explicit mode.
+    $snapshot = (new \Berserk\View\Screen\BattleSnapshotRenderer(new Template(__DIR__.'/../templates')))->render(
+        $state,$owner,$owner,null,['attacker'=>['name'=>'Атакующий'],'enemy'=>['name'=>'Цель']],$ui
+    );
+    cancelActionAssert($snapshot['ui']['mode']==='action:shot' && !str_contains($snapshot['fragments']['panel_html'],'Отменить действие'), 'Fresh AJAX fragment must reject stale cancel despite retained explicit mode');
+}
 echo "Battle cancel action UI tests passed.\n";
