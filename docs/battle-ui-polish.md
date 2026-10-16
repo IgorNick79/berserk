@@ -78,3 +78,8 @@ Replace plain dots with supplied `page_active.png` (blue) and `page_inactive.png
 - `tools/test_battle_ui_polish_browser.cjs`: added exact centering checks where the board fits, six right-slot alignments, terrain/details controls, empty flying art and three end-turn states. Passed in headless Edge at 1600/800/375px alongside existing pagination, popup, controls and editable-exception tests.
 
 The supplied six files were copied without image editing. No gameplay, persistence, snapshot protocol or user settings logic changed. Real production actions and mobile Safari remain untested.
+
+
+## End-turn button rollback
+
+Restored the standard green end-turn button at user request. Removed the artwork class and CSS; the supplied three image assets remain unused. Playmat, auxiliary zones, icons and other UI polish remain unchanged.

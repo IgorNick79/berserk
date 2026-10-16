@@ -2003,23 +2003,3 @@ body.battle-page {
 .battle-side-slot .piles-count { font-size: 20px; line-height: 1; }
 .battle-terrain img { object-fit: contain; }
 .battle-side-slot .pile-open { padding: 3px 8px; }
-.battle-page .info-panel-footer .battle-end-turn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px 28px;
-    min-height: 80px;
-    max-width: 220px;
-    border: 0;
-    border-radius: 0;
-    background: url("/assets/images/battle/end_turn_normal.png") center / 100% 100% no-repeat;
-    color: #fff4ce;
-    font-size: 13px;
-    font-weight: 700;
-    text-shadow: 0 1px 3px #000;
-    text-decoration: none;
-}
-.battle-page .info-panel-footer a.battle-end-turn:hover,
-.battle-page .info-panel-footer a.battle-end-turn:focus-visible { background-image: url("/assets/images/battle/end_turn_hover.png"); }
-.battle-page .info-panel-footer .battle-end-turn:disabled { background-image: url("/assets/images/battle/end_turn_disabled.png"); color: #c8c6bd; opacity: 1; }
-.battle-end-turn:focus-visible { outline: 2px solid #f4d782; outline-offset: 2px; }

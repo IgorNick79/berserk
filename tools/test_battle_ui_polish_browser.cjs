@@ -40,12 +40,8 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  assert(await page.evaluate(()=>{const rows=[...document.querySelectorAll('.battle-numbered-row')];return [...document.querySelectorAll('.battle-side-slot')].every((slot,i)=>Math.abs(slot.getBoundingClientRect().top-rows[i].getBoundingClientRect().top)<.1);}), 'Terrain/grave/exile align with six field rows');
  assert(await page.locator('.battle-terrain img').count()===2,'Two empty terrain icons');
  assert(await page.locator('.battle-grave .pile-open').count()===2&&await page.locator('.battle-exile .pile-open').count()===2,'Grave/exile details for each side');
- const end=page.locator('a.battle-end-turn');
- assert(await end.evaluate(e=>getComputedStyle(e).backgroundImage.includes('end_turn_normal.png')),'Normal end-turn art');
- await end.hover();
- assert(await end.evaluate(e=>getComputedStyle(e).backgroundImage.includes('end_turn_hover.png')),'Hover end-turn art');
- await page.mouse.move(0,0);
- assert(await end.evaluate(e=>{const probe=document.createElement('button');probe.className=e.className;probe.disabled=true;probe.textContent='Завершить ход';e.parentElement.appendChild(probe);const ok=getComputedStyle(probe).backgroundImage.includes('end_turn_disabled.png');probe.remove();return ok;}),'Disabled end-turn art');
+ const end=page.locator('a[href*="cmd=end_turn"]');
+ assert(await end.evaluate(e=>getComputedStyle(e).backgroundImage==='none'&&e.textContent==='Завершить ход'),'Standard end-turn button restored');
  await update(0);
  assert(await page.evaluate(()=>{const empty=document.querySelector('.fly-zone.own [data-fly-page="0"]:empty');return !!empty&&getComputedStyle(empty,'::before').backgroundImage.includes('flying_empty.png');}),'Empty flying icon');
 
@@ -128,7 +124,7 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  await page.waitForFunction(()=>uiRequests.length===1);
  assert(await page.evaluate(()=>new URLSearchParams(uiRequests[0].body).get('cmd')==='resign'),'Original surrender command preserved');
  if(process.env.POLISH_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.POLISH_SCREENSHOT_DIR,'battle-polish-'+width+'.png')});
- console.log('PASS '+width+'px: playmat centering, side zones, empty flying icon, end-turn states, lower columns, landscape PNG popup, pagination, centered bullets, 40/48px icons, tooltips, stable layout, background, editable exceptions, inert log and original surrender confirmation/command.');
+ console.log('PASS '+width+'px: playmat centering, side zones, empty flying icon, standard end-turn button, lower columns, landscape PNG popup, pagination, centered bullets, 40/48px icons, tooltips, stable layout, background, editable exceptions, inert log and original surrender confirmation/command.');
  await page.close();
  }
  }finally{await browser.close();}
