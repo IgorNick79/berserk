@@ -2,6 +2,41 @@
     "use strict";
     var root = document.querySelector("[data-battle-sync-root]");
     if (!root || root.dataset.battleUiReady === "true") return;
+    // Client-only pages survive replacement of fly_zones_html. This does not
+    // change the selected card, command URLs, or server UI revision.
+    var flyPages = {own: 0, opp: 0};
+    var flyHost = root.querySelector("[data-battle-fragment='fly_zones_html']");
+    function restoreFlyPages() {
+        if (!flyHost) return;
+        flyHost.querySelectorAll('[data-fly-side]').forEach(function (zone) {
+            var side = zone.dataset.flySide;
+            if (!Object.prototype.hasOwnProperty.call(flyPages, side)) return;
+            if (Number(zone.dataset.flyCount) <= 3) flyPages[side] = 0;
+            zone.querySelectorAll('[data-fly-page]').forEach(function (card) {
+                card.hidden = Number(card.dataset.flyPage) !== flyPages[side];
+            });
+            zone.querySelectorAll('[data-fly-go]').forEach(function (control) {
+                control.setAttribute('aria-pressed', String(Number(control.dataset.flyGo) === flyPages[side]));
+            });
+        });
+    }
+    if (flyHost) {
+        flyHost.addEventListener('click', function (event) {
+            var control = event.target.closest('[data-fly-go]');
+            if (!control || !flyHost.contains(control)) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            var zone = control.closest('[data-fly-side]');
+            var page = Number(control.dataset.flyGo);
+            if (zone && Number(zone.dataset.flyCount) > 3 && (page === 0 || page === 1)) {
+                flyPages[zone.dataset.flySide] = page;
+                restoreFlyPages();
+            }
+        }, true);
+        // The existing sync replaces this host's children, never the host itself.
+        new MutationObserver(restoreFlyPages).observe(flyHost, {childList: true});
+        restoreFlyPages();
+    }
     var button = root.querySelector(".battle-menu");
     var host = root.querySelector("[data-battle-fragment='info_panel_html']");
     if (!button || !host) return;

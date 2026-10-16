@@ -440,10 +440,10 @@ final class BattleScreen
             $ownerKey = $who === 'opp' ? $oppKey : $playerKey;
 
             ksort($flyMap[$ownerKey]);
-            $slotsHtml = '';
+            $cardsHtml = [];
             foreach ($flyMap[$ownerKey] as $card) {
                 $cellContent = '';
-                $cellClass   = 'fly-slot';
+                $cellClass   = 'fly-card';
 
                 $info     = $cardsInfo[$card->ukid] ?? null;
                 $isHiddenForMe = (!$card->revealed && $card->owner !== $playerKey);
@@ -502,13 +502,28 @@ final class BattleScreen
                     $cellContent = $cardBody;
                 }
 
-                $slotsHtml .= $this->tpl->parse('includes/battle_cell.tpl', [
+                $cardsHtml[] = $this->tpl->parse('includes/battle_cell.tpl', [
                     'cl'      => $cellClass,
                     'content' => $cellContent,
                 ]);
             }
 
-            $html .= '<div class="fly-zone ' . $who . '">' . $slotsHtml . '</div>';
+            $slotsHtml = '';
+            for ($slot = 0; $slot < 3; $slot++) {
+                $contents = '';
+                for ($page = 0; $page < 2; $page++) {
+                    $contents .= '<div class="fly-page-card" data-fly-page="' . $page . '"'
+                        . ($page === 1 ? ' hidden' : '') . '>'
+                        . ($cardsHtml[$page * 3 + $slot] ?? '') . '</div>';
+                }
+                $slotsHtml .= '<div class="fly-slot">' . $contents . '</div>';
+            }
+            $controls = count($cardsHtml) > 3
+                ? $this->tpl->parse('includes/battle/fly_pagination.tpl', [
+                    'side' => $who === 'own' ? 'Свои летающие' : 'Летающие противника',
+                ]) : '';
+            $html .= '<div class="fly-zone ' . $who . '" data-fly-side="' . $who
+                . '" data-fly-count="' . count($cardsHtml) . '">' . $slotsHtml . $controls . '</div>';
         }
         return $html;
     }
