@@ -6,6 +6,7 @@ declare(strict_types=1);
 namespace Berserk\View\Screen;
 
 use Berserk\Core\GameState;
+use Berserk\Core\TurnTimer;
 use Berserk\View\Template;
 
 /**
@@ -20,6 +21,7 @@ final class BattleSnapshotRenderer
 
     /**
      * @return array{
+     *     turn_timer: ?array,
      *     ui: array{sel:int,mode:string,pile:string,mode_explicit:bool},
      *     fragments: array{
      *         field_html:string,
@@ -37,7 +39,8 @@ final class BattleSnapshotRenderer
         string $role,
         ?string $message,
         array $cardsInfo,
-        array $uiState = []
+        array $uiState = [],
+        ?int $serverNow = null
     ): array {
         $result = (new BattleScreen($this->tpl))->prepare(
             $state,
@@ -51,6 +54,7 @@ final class BattleSnapshotRenderer
         $data = $result['data'];
 
         return [
+            'turn_timer' => TurnTimer::snapshot($state, $serverNow ?? time()),
             'ui' => $data['ui'],
             'fragments' => [
                 'field_html' => (string) ($data['field_html'] ?? ''),

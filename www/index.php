@@ -10,6 +10,7 @@ use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\CardInstance;
 use Berserk\Core\GameState;
+use Berserk\Core\TurnTimer;
 use Berserk\Core\View;
 use Berserk\Core\DeckView;
 use Berserk\Core\ResourceCalculator;
@@ -197,6 +198,7 @@ function sendBattleAjaxState(
             'type' => $type === 'conflict' ? 'conflict' : 'status',
             'sync_version' => $syncVersion,
             'status' => $state->status,
+            'turn_timer' => TurnTimer::snapshot($state, time()),
         ];
         if ($error !== null) {
             $payload['error'] = $error;
@@ -222,6 +224,7 @@ function sendBattleAjaxState(
         'status' => $state->status,
         'ui' => $snapshot['ui'],
         'fragments' => $snapshot['fragments'],
+        'turn_timer' => $snapshot['turn_timer'],
     ];
     if ($error !== null) {
         $payload['error'] = $error;
@@ -250,7 +253,8 @@ function sendCommandStatus(
     ?string $error = null,
     int $statusCode = 200
 ): never {
-    sendCommandStatusPayload($commandId, $record, $ok, $error, $statusCode, $state->persistenceVersion ?? 0);
+    sendCommandStatusPayload($commandId, $record, $ok, $error, $statusCode, $state->persistenceVersion ?? 0,
+        ['turn_timer' => TurnTimer::snapshot($state, time())]);
 }
 
 function sendCommandStatusPayload(
@@ -259,7 +263,8 @@ function sendCommandStatusPayload(
     bool $ok = true,
     ?string $error = null,
     int $statusCode = 200,
-    ?int $syncVersion = null
+    ?int $syncVersion = null,
+    array $extra = []
 ): never {
     $payload = [
         'ok' => $ok,
@@ -285,7 +290,7 @@ function sendCommandStatusPayload(
         $payload['error'] = $error;
     }
 
-    sendAjaxJson($payload, $statusCode);
+    sendAjaxJson(array_merge($payload, $extra), $statusCode);
 }
 
 function sendUnknownCommandOutcome(string $commandId): never
@@ -561,6 +566,7 @@ if ($isBattleSync) {
                 'type' => 'status',
                 'sync_version' => $syncVersion,
                 'status' => $state->status,
+                'turn_timer' => TurnTimer::snapshot($state, time()),
             ]);
         }
 
@@ -569,6 +575,7 @@ if ($isBattleSync) {
                 'ok' => true,
                 'type' => 'no_change',
                 'sync_version' => $syncVersion,
+                'turn_timer' => TurnTimer::snapshot($state, time()),
             ]);
         }
 
@@ -1187,7 +1194,17 @@ switch ($state->status) {
         $roleParam = $role === 'host' ? 'first' : 'second';
         $syncUrl = '?' . $roleParam . '&game=' . $state->gameId . '&ajax=battle_sync';
         $ui = $screenData['ui'] ?? ['sel' => 0, 'mode' => 'strike', 'pile' => ''];
-        $scriptsHtml = '<script src="/assets/js/battle-sync.js?v={{rkey}}"'
+        $turnSoundUrl = '';
+        foreach (['mp3', 'ogg'] as $extension) {
+            if (is_file(__DIR__ . '/assets/sound/turn.' . $extension)) {
+                $turnSoundUrl = '/assets/sound/turn.' . $extension;
+                break;
+            }
+        }
+        $scriptsHtml = '<script src="/assets/js/battle-turn-timer.js?v={{rkey}}"></script>'
+            . '<script src="/assets/js/battle-sync.js?v={{rkey}}"'
+            . ' data-viewer-key="' . htmlspecialchars($playerKey, ENT_QUOTES) . '"'
+            . ' data-turn-sound-url="' . htmlspecialchars($turnSoundUrl, ENT_QUOTES) . '"'
             . ' data-sync-url="' . htmlspecialchars($syncUrl, ENT_QUOTES) . '"'
             . ' data-game-id="' . (int) $state->gameId . '"'
             . ' data-role="' . htmlspecialchars($role, ENT_QUOTES) . '"'

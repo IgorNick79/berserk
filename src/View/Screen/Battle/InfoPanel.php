@@ -6,6 +6,7 @@ declare(strict_types=1);
 namespace Berserk\View\Screen\Battle;
 
 use Berserk\Core\GameState;
+use Berserk\Core\TurnTimer;
 use Berserk\Core\CardInstance;
 use Berserk\Core\CardStats;
 use Berserk\Core\BattleHelper;
@@ -49,7 +50,7 @@ final class InfoPanel
         $this->cardsInfo = $cardsInfo;
         $this->baseUrl   = $baseUrl;
 
-        return '<header class="info-panel-header">' . $this->renderStatusHeader() . '</header>'
+        return '<header class="info-panel-header">' . $this->renderStatusHeader() . $this->renderTimer() . '</header>'
             . '<div class="info-panel-content" tabindex="0" aria-label="Контекст боя и выбранная карта">'
             . '<div class="info-panel-context">' . $this->renderBody() . '</div>'
             . '<div class="battle-selected-card" data-battle-fragment="panel_html">' . $selectedCardHtml . '</div>'
@@ -97,18 +98,37 @@ final class InfoPanel
         }
 
         $phaseLabel = match ($phase) {
-            'start' => 'Фаза начала хода',
-            'end'   => 'Фаза конца хода',
+            'start' => 'Начало',
+            'end'   => 'Завершение',
             default => 'Основная фаза',
         };
 
         if ($isMyTurn) {
-            $text = '#' . $turn . ' Мой ход — ' . $phaseLabel;
+            $text = '#' . $turn . ' · Ваш ход';
         } else {
-            $text = '#' . $turn . ' Ход оппонента — ' . $phaseLabel;
+            $text = '#' . $turn . ' · Ход соперника';
         }
 
-        return '<h1 class="info-status">' . htmlspecialchars($text, ENT_QUOTES) . '</h1>';
+        return '<div class="info-heading"><h1 class="info-status">' . htmlspecialchars($text, ENT_QUOTES) . '</h1>'
+            . '<span class="info-phase">' . $phaseLabel . '</span></div>';
+    }
+
+    private function renderTimer(): string
+    {
+        $timer = TurnTimer::snapshot($this->state, time());
+        $seconds = $timer['remaining_seconds'] ?? null;
+        $text = $seconds === null ? '—:—' : sprintf('%02d:%02d', intdiv($seconds, 60), $seconds % 60);
+        $mine = ($timer['owner'] ?? null) === $this->playerKey;
+        $status = $timer['status'] ?? 'unavailable';
+        $label = $timer === null ? 'Нет таймера' : ($mine ? 'Ваше время' : 'Соперник');
+        if ($status === 'paused') $label .= ' · Пауза';
+        if ($status === 'expired') $label .= ' · Истекло';
+        return '<div class="turn-timer" data-turn-timer data-turn-timer-state="'
+            . htmlspecialchars(json_encode($timer, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), ENT_QUOTES) . '"'
+            . ' data-status="' . $status . '" data-mine="' . ($mine ? '1' : '0') . '"'
+            . ' role="timer" aria-label="' . htmlspecialchars($label, ENT_QUOTES) . '">'
+            . '<span class="turn-timer-value" data-turn-timer-value>' . $text . '</span>'
+            . '<span class="turn-timer-label" data-turn-timer-label>' . $label . '</span></div>';
     }
 
     private function renderBody(): string
