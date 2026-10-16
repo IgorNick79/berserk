@@ -2022,3 +2022,7 @@ body.battle-page {
 .description-chevron { flex: 0 0 7px; width: 7px; height: 7px; margin-right: 4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
 .panel-card-description[open] > summary .description-chevron { transform: rotate(225deg); }
 .panel-card-description-body { padding: 4px 0 8px; }
+
+/* Keep InfoPanel scrollable without exposing the native scrollbar. */
+.battle-page .info-panel-content { scrollbar-width: none; }
+.battle-page .info-panel-content::-webkit-scrollbar { display: none; }
