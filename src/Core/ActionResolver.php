@@ -470,6 +470,7 @@ final class ActionResolver
             $val = (int) $uchrAction['value'];
         }
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'uchr',
             'attacker_id' => $cardId,
@@ -905,6 +906,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'apply_delayed_marker',
             'action_name' => $action['name'] ?? 'Способность',
@@ -946,6 +948,7 @@ final class ActionResolver
         (new ZoneManager($this->state))->toFlying($attacker);
 
         // Для отображения результата
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'become_fly',
             'action_name' => $action['name'] ?? 'Получить полёт',
@@ -984,6 +987,7 @@ final class ActionResolver
                     'candidates' => $this->findAdjacentCreatures($target),
                 ];
 
+                InformationalWaitManager::publish($this->state);
                 $this->state->battle['strike'] = [
                     'kind'        => 'multi_heal',
                     'action_name' => $action['name'] ?? 'Излечение',
@@ -1062,6 +1066,7 @@ final class ActionResolver
             $strike['heal_instead_open'] = ['target_id' => $target->instanceId];
         }
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = $strike;
 
         $this->state->bumpVersion();
@@ -1082,6 +1087,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'shield_light',
             'action_name' => $action['name'] ?? 'Щит света',
@@ -1109,6 +1115,7 @@ final class ActionResolver
         CardInstance $attacker, array $action,
         int $cardId, int $targetId, string $playerKey
     ): Result {
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'impact',
             'action_name' => $action['name'] ?? 'Воздействие',
@@ -1180,6 +1187,7 @@ final class ActionResolver
             return Result::error('Цель защищена');
         }
         // Структура до смерти цели
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'execute',
             'action_name' => $action['name'] ?? 'Добивание',
@@ -1226,6 +1234,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'             => 'modifier',
             'action_name'      => $action['name'] ?? 'Способность',
@@ -1380,6 +1389,7 @@ final class ActionResolver
             }
         }
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => $type,
             'action_name' => $action['name'] ?? '',
@@ -1833,6 +1843,7 @@ final class ActionResolver
         $damage   = 0;
         $diedSelf = false;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'self_wound',
             'action_name' => $action['name'] ?? 'Таран',
@@ -1978,6 +1989,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'multi_heal',
             'action_name' => $pmh['action']['name'] ?? 'Излечение',
@@ -2067,6 +2079,7 @@ final class ActionResolver
         $attacker->closed = true;
         $attacker->flags['steal_weapon_used'] = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'steal',
             'action_name' => $action['name'] ?? 'Украсть оружие',
@@ -2124,6 +2137,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'sand_claws',
             'action_name' => $action['name'] ?? 'Песчаные когти',
@@ -2209,6 +2223,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'multi_discharge',
             'action_name' => $pmd['action']['name'] ?? 'Тройной разряд',
@@ -3097,6 +3112,7 @@ final class ActionResolver
         }
         $source->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'destroy_self_and_target',
             'action_name' => $action['name'] ?? 'Последний путь',
@@ -3210,6 +3226,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'blood_tap',
             'action_name' => 'Кровавый разряд',
@@ -3263,6 +3280,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'poison_boost',
             'action_name' => $action['name'] ?? 'Вскипающий яд',
@@ -3304,6 +3322,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'poison_target',
             'action_name' => $action['name'] ?? 'Отравление',
@@ -3351,6 +3370,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'damage_poisoned',
             'action_name' => $action['name'] ?? 'Власть Ундины',
@@ -3477,6 +3497,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'cell_marker',
             'action_name' => $pm['label'],
@@ -3572,6 +3593,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'dissonance',
             'action_name' => $action['name'] ?? 'Диссонанс',
@@ -3641,6 +3663,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'give_coin',
             'action_name' => $action['name'] ?? 'Передать монету',
@@ -3675,6 +3698,7 @@ final class ActionResolver
         $attacker->prop[$propKey] = true;
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'modifier',
             'action_name' => $action['name'] ?? 'Свойство',
@@ -3729,6 +3753,7 @@ final class ActionResolver
         $attacker->closed = true;
         $attacker->flags['steal_coin_used'] = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'steal_coin',
             'action_name' => $action['name'] ?? 'Уловка',
@@ -3780,6 +3805,7 @@ final class ActionResolver
             'source_id'  => $cardId,
         ];
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'freeze_moves',
             'action_name' => $action['name'] ?? 'Ледяной дождь',
@@ -4055,6 +4081,7 @@ final class ActionResolver
 
         if (empty($candidates)) {
             $attacker->closed = true;
+            InformationalWaitManager::publish($this->state);
             $this->state->battle['strike'] = [
                 'kind'        => 'blood_storm',
                 'action_name' => $action['name'] ?? 'Буря крови',
@@ -4205,6 +4232,7 @@ final class ActionResolver
                 'value'   => $value,
                 'targets' => $pending['candidates'],
             ];
+            InformationalWaitManager::publish($this->state);
             $this->state->battle['strike']['state']     = 'results';
             $this->state->battle['strike']['confirmed'] = [];
         }
@@ -4248,6 +4276,7 @@ final class ActionResolver
         $attacker->closed = true;
         unset($this->state->battle['pending_blood_storm']);
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'blood_storm',
             'action_name' => 'Буря крови',
@@ -4355,6 +4384,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'particle',
             'action_name' => 'Частица души',
@@ -4474,6 +4504,7 @@ final class ActionResolver
         $ally->hp = min($ally->hpMax, $ally->hp + $x);
         $healed = $ally->hp - $allyHpBefore;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'life_gift',
             'action_name' => 'Предсмертный дар',
@@ -4556,6 +4587,7 @@ final class ActionResolver
             'label'  => $action['name'] ?? 'Бомба',
         ]);
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'bomb_shot',
             'action_name' => $action['name'] ?? 'Бомба',
@@ -4643,6 +4675,7 @@ final class ActionResolver
 
         unset($this->state->battle['pending_dive']);
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'dive',
             'action_name' => $action['name'] ?? 'Пикирование',
@@ -4779,6 +4812,7 @@ final class ActionResolver
             ];
         }
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'row_spell',
             'action_name' => 'Цветущие руны',
@@ -5087,6 +5121,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'damage_ranged',
             'action_name' => $action['name'] ?? 'Пламя бездны',
@@ -5200,6 +5235,7 @@ final class ActionResolver
 
         unset($this->state->battle['pending_teleport_target']);
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'teleport_target',
             'action_name' => $action['name'] ?? 'Дверь измерений',
@@ -5420,6 +5456,7 @@ final class ActionResolver
 
         // Дополняем существующий strike, не перезаписываем
         if (empty($this->state->battle['strike'])) {
+            InformationalWaitManager::publish($this->state);
             $this->state->battle['strike'] = [
                 'kind'        => 'multi_heal',
                 'action_name' => 'Излечение',

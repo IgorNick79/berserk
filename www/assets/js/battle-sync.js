@@ -27,6 +27,15 @@
 
     var syncVersion = parseInt(script.dataset.version || "-1", 10);
     if (!Number.isFinite(syncVersion)) syncVersion = -1;
+    var turnTimer = window.BerserkTurnTimer
+        ? window.BerserkTurnTimer.create(root, script.dataset.viewerKey, syncVersion, script.dataset.turnSoundUrl || "")
+        : null;
+
+    function updateTurnTimer(data) {
+        if (turnTimer && data && Object.prototype.hasOwnProperty.call(data, "turn_timer")) {
+            turnTimer.update(data.turn_timer, data.sync_version);
+        }
+    }
 
     var uiState = {
         sel: parseInt(script.dataset.sel || "0", 10) || 0,
@@ -87,10 +96,10 @@
 
     function scheduleNext() {
         clearPollTimer();
-        if (stopped || document.hidden || commandInFlight()) return;
+        if (stopped || commandInFlight()) return;
         pollTimer = window.setTimeout(function () {
             requestSnapshot(false);
-        }, 2000);
+        }, document.hidden ? 10000 : 2000);
     }
 
     function cancelActiveRequest() {
@@ -270,10 +279,13 @@
 
         syncVersion = incomingVersion;
         uiState = normalizeUi(data.ui);
+        updateTurnTimer(data);
+        if (turnTimer) turnTimer.render();
         return true;
     }
 
     function navigateToCurrentPage() {
+        if (turnTimer) turnTimer.destroy();
         stopped = true;
         clearPollTimer();
         cancelActiveRequest();
@@ -294,6 +306,7 @@
             if (Number.isFinite(incomingVersion)) {
                 syncVersion = Math.max(syncVersion, incomingVersion);
             }
+            updateTurnTimer(data);
             return "unchanged";
         }
 
@@ -477,6 +490,7 @@
                     continueCommandRecovery();
                     return;
                 }
+                updateTurnTimer(data);
 
                 if (isTerminalCommandStatus(data)) {
                     if (pendingCommand && data.command_status !== "committed") {
@@ -508,10 +522,20 @@
     }
 
     function handleJournalCommandResponse(data, status, commandId, requestUiRevision) {
+        // This request was definitively rejected before journal registration.
+        // Unknown/processing journal outcomes still use recovery below.
+        if (status >= 400 && status < 500 && data && data.command_id === commandId
+            && data.request_status === "rejected_before_registration") {
+            pendingCommand.finalError = data.error || "Действие не выполнено.";
+            startForcedCommandSync();
+            return;
+        }
         if (!validCommandStatus(data, commandId)) {
             enterCommandRecovery("Не удалось подтвердить результат действия. Проверяю журнал команды.");
             return;
         }
+
+        updateTurnTimer(data);
 
         if (isTerminalCommandStatus(data)) {
             if (pendingCommand && data.command_status !== "committed") {
@@ -533,7 +557,7 @@
     }
 
     function requestSnapshot(forceSnapshot, onComplete) {
-        if (stopped || document.hidden || (commandInFlight() && commandState !== "syncing")) {
+        if (stopped || (commandInFlight() && commandState !== "syncing")) {
             if (typeof onComplete === "function") onComplete(false);
             return;
         }
@@ -561,7 +585,7 @@
                 return response.json().catch(function () { return null; });
             })
             .then(function (data) {
-                if (stopped || document.hidden || sequence !== activeRequestSequence) {
+                if (stopped || sequence !== activeRequestSequence) {
                     completionResult = false;
                     return;
                 }
@@ -627,9 +651,26 @@
             formData = new FormData(form);
         }
 
+        // Clear old query values once, including unchecked checkbox fields.
+        var names = Object.create(null);
+        Array.prototype.forEach.call(form.elements, function (element) {
+            if (element.name) names[element.name] = true;
+        });
+        formData.forEach(function (value, key) { names[key] = true; });
+        Object.keys(names).forEach(function (key) {
+            url.searchParams.delete(key);
+            if (key.slice(-2) === "[]") {
+                var base = key.slice(0, -2);
+                var oldNames = [];
+                url.searchParams.forEach(function (value, name) {
+                    if (name === base || name.indexOf(base + "[") === 0) oldNames.push(name);
+                });
+                oldNames.forEach(function (name) { url.searchParams.delete(name); });
+            }
+        });
         formData.forEach(function (value, key) {
             if (typeof value === "string") {
-                url.searchParams.set(key, value);
+                url.searchParams.append(key, value);
             }
         });
 
@@ -680,7 +721,8 @@
                 return response.json()
                     .catch(function () { return null; })
                     .then(function (data) {
-                        if (!pendingCommand || pendingCommand.id !== commandId || commandState !== "sending") return;
+                        if (!pendingCommand || pendingCommand.id !== commandId
+                            || (commandState !== "sending" && commandState !== "recovering")) return;
                         handleJournalCommandResponse(data, response.status, commandId, commandUiRevision);
                     });
             })
@@ -792,6 +834,7 @@
 
     document.addEventListener("visibilitychange", function () {
         if (document.hidden) {
+            if (turnTimer) turnTimer.suspend();
             clearPollTimer();
             clearForcedSyncTimer();
             if (commandState === "syncing") {
@@ -802,11 +845,19 @@
             if (commandState === "recovering") {
                 cancelStatusRequest();
             }
+            // Reuse normal sync at a lower rate so an armed turn alert can sound in a background tab.
+            scheduleNext();
             return;
         }
 
+        if (turnTimer) turnTimer.resume();
+
         if (commandInFlight()) {
-            if (commandState === "recovering") {
+            if (commandState === "sending") {
+                // The POST may still be pending or its response may have been lost.
+                // Read its journal entry; never send the game command again.
+                enterCommandRecovery("Проверяю результат отправленного действия.");
+            } else if (commandState === "recovering") {
                 scheduleCommandRecovery(0);
             } else if (commandState === "syncing") {
                 startForcedCommandSync();
@@ -820,6 +871,7 @@
     });
 
     window.addEventListener("beforeunload", function () {
+        if (turnTimer) turnTimer.destroy();
         stopped = true;
         clearPollTimer();
         clearForcedSyncTimer();

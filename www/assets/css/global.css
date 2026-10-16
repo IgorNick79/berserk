@@ -1781,8 +1781,16 @@ body.battle-page > .screen {
     min-width: 0;
     box-sizing: border-box;
 }
-.battle-page .info-panel-header { border-bottom: 1px solid #ddd; }
-.battle-page .info-panel-header .info-status { margin: 0; }
+.battle-page .info-panel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.battle-page .info-panel-header .info-status { margin: 0; padding: 0; border: 0; font-size: 14px; line-height: 1.35; }
+.battle-page .info-heading { min-width: 0; }
+.battle-page .info-phase { font-size: 11px; color: #777; }
+.battle-page .turn-timer { flex: 0 0 auto; text-align: right; color: #555; }
+.battle-page .turn-timer-value { display: block; font: 600 23px/1.1 ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+.battle-page .turn-timer-label { display: block; margin-top: 3px; font-size: 10px; }
+.battle-page .turn-timer[data-mine="1"] { color: #254f2e; }
+.battle-page .turn-timer[data-status="paused"] { color: #88652a; }
+.battle-page .turn-timer[data-status="expired"] { color: #963737; }
 .battle-page .info-panel-footer { border-top: 1px solid #ddd; }
 .battle-page .info-panel-content {
     flex: 1 1 0;

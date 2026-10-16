@@ -1,0 +1,348 @@
+diff --git a/src/Core/Engine.php b/src/Core/Engine.php
+index fcd564c..f3b822b 100644
+--- a/src/Core/Engine.php
++++ b/src/Core/Engine.php
+@@ -26,6 +26,9 @@ final class Engine
+         TurnTimer::settle($state, $this->serverNow());
+         $result = $this->doApply($state, $playerKey, $cmd);
+         if ($result->success) (new CoinAbilities($state, $this))->advance();
++        if ($result->success && ($state->battle['turn_timer']['pause_reason'] ?? null) === 'start_resolution') {
++            (new TurnProcessor($state, $this))->afterStartPhase($state->battle['turn_timer']['owner']);
++        }
+         TurnTimer::settle($state, $this->serverNow());
+         GameLog::append($state, $playerKey, $cmd, $result);
+         return $result;
+diff --git a/src/Core/TurnProcessor.php b/src/Core/TurnProcessor.php
+index d246ff9..491ea50 100644
+--- a/src/Core/TurnProcessor.php
++++ b/src/Core/TurnProcessor.php
+@@ -453,16 +453,25 @@ final class TurnProcessor
+      */
+     public function afterStartPhase(string $activeKey): void
+     {
+-        if (!empty($this->state->battle['strike'])) return;
++        if (!empty($this->state->battle['turn_phase'])) return;
+         if ($this->state->winner !== null) return;
+ 
+         if (!isset($this->state->battle['turn_timer'])) {
+             TurnTimer::prepare($this->state, $activeKey);
+         }
++        TurnTimer::settle($this->state, $this->engine->serverNow());
+         $timer = $this->state->battle['turn_timer'] ?? null;
+-        if ($timer !== null && $timer['owner'] === $activeKey) {
+-            TurnTimer::resume($this->state, $timer['period_id'], 'start_phase', $this->engine->serverNow());
+-        }
++        if ($timer === null || $timer['owner'] !== $activeKey || $timer['status'] !== 'paused'
++            || !in_array($timer['pause_reason'], ['start_phase', 'start_resolution'], true)) return;
++
++        // The phase queue can finish before a task's combat result or nested choice.
++        // Remember that finish() was reached; only this deferred start is retried.
++        $this->state->battle['turn_timer']['pause_reason'] = 'start_resolution';
++        if (!empty($this->state->battle['strike'])
++            || !empty($this->state->battle['pending_prophecy'])
++            || Choice\ChoiceRegistry::current($this->state) !== null) return;
++
++        TurnTimer::resume($this->state, $timer['period_id'], 'start_resolution', $this->engine->serverNow());
+     }
+ 
+     /**
+diff --git a/tools/test_turn_timer.php b/tools/test_turn_timer.php
+index bc2d12e..29bfb08 100644
+--- a/tools/test_turn_timer.php
++++ b/tools/test_turn_timer.php
+@@ -76,6 +76,8 @@ $now = 3000;
+ $turn = new TurnProcessor($s, $engine);
+ $turn->startBattle();
+ ttAssert(!empty($s->battle['turn_phase']) && $s->battle['turn_timer']['status'] === 'paused', 'Start phase does not spend time');
++(new TurnProcessor($s, $engine))->afterStartPhase('host');
++ttAssert($s->battle['turn_timer']['status'] === 'paused', 'An early callback cannot bypass an existing start phase');
+ $now = 3100;
+ (new TurnPhaseProcessor($s, $engine))->closeSub('host', new Command('close_turn_sub'));
+ ttAssert($s->battle['turn_timer']['anchor_at'] === 3100, 'Starts at phase finish');
+@@ -97,5 +99,153 @@ $guestFirst->players['player']->side = 1;
+ (new TurnProcessor($guestFirst, $engine))->startBattle();
+ ttAssert($guestFirst->battle['turn_timer']['period_id'] === 1
+     && $guestFirst->battle['turn_timer']['owner'] === 'player', 'Guest can own the first period');
++// The only gameplay transition always alternates, including when guest moves first.
++foreach (['host', 'player'] as $first) {
++    $s = new GameState(-918277, 101, 202);
++    $s->status = 'battle';
++    $s->players[$first]->side = 1;
++    $now = 4000;
++    (new TurnProcessor($s, $engine))->startBattle();
++    for ($id = 1; $id <= 6; $id++) {
++        $owner = $s->battle['active'];
++        ttAssert($s->battle['turn_timer']['period_id'] === $id
++            && $s->battle['turn_timer']['owner'] === $owner, 'Every accepted turn has its own sequential period');
++        $now += 10;
++        $s = GameState::fromArray(json_decode(json_encode($s->toArray()), true));
++        (new TurnProcessor($s, $engine))->afterStartPhase($owner);
++        ttAssert($s->battle['turn_timer']['period_id'] === $id
++            && $s->battle['turn_timer']['remaining_seconds'] === 170, 'Reload and repeated start preserve period and elapsed time');
++        ttAssert($engine->apply($s, $owner, new Command('end_turn'))->success, 'Accepted end advances through existing lifecycle');
++        ttAssert($s->battle['active'] === $s->getOpponentKey($owner)
++            && $s->battle['turn_timer']['period_id'] === $id + 1, 'Next owner is always the opponent');
++        ttAssert(!$engine->apply($s, $owner, new Command('end_turn'))->success
++            && $s->battle['turn_timer']['period_id'] === $id + 1, 'Repeated end command cannot create another period');
++    }
++}
++
++// Repeating the end-phase continuation while the next turn waits is the same period.
++$s = new GameState(-918280, 101, 202);
++$s->status = 'battle';
++$s->players['host']->side = 1;
++$s->addCard(new CardInstance(instanceId:1, ukid:'timer_host', owner:'host',
++    zone:CardInstance::ZONE_FIELD, row:3, col:2, hp:20, hpMax:20));
++$s->addCard(new CardInstance(instanceId:2, ukid:'timer_guest_choice', owner:'player',
++    zone:CardInstance::ZONE_FIELD, row:4, col:2, hp:20, hpMax:20,
++    prop:['pre_turn_start'=>['options'=>[['modifiers'=>[]]]]]));
++$now = 4200;
++(new TurnProcessor($s, $engine))->startBattle();
++ttAssert($engine->apply($s, 'host', new Command('end_turn'))->success, 'Next guest turn reaches pre-turn pending');
++$s = GameState::fromArray(json_decode(json_encode($s->toArray()), true));
++$pausedPeriod = $s->battle['turn_timer'];
++$now = 4300;
++(new TurnProcessor($s, $engine))->afterEndPhase('host', 'player');
++ttAssert($s->battle['turn_timer'] === $pausedPeriod && $pausedPeriod['period_id'] === 2,
++    'Repeated restored end-phase continuation cannot allocate or reset the waiting guest period');
++ttAssert($engine->apply($s, 'player', new Command('choose_card_option', ['option_index'=>0]))->success,
++    'Guest pre-turn pending resolves');
++ttAssert($s->battle['turn_timer']['period_id'] === 2 && $s->battle['turn_timer']['anchor_at'] === 4300,
++    'Guest pending resumes the same period');
++
++// Pre-turn choice -> queued prophecy -> target pending -> result ACK -> ready.
++$s = new GameState(-918278, 101, 202);
++$s->status = 'battle';
++$s->players['host']->side = 1;
++$s->nextInstanceId = 10;
++$s->addCard(new CardInstance(instanceId:1, ukid:'timer_start_choices', owner:'host',
++    zone:CardInstance::ZONE_FIELD, row:3, col:2, hp:20, hpMax:20,
++    prop:['pre_turn_start'=>['options'=>[['modifiers'=>[]]]], 'prophecy'=>1,
++        'turn_start'=>[['type'=>'whip', 'value'=>1], ['type'=>'damage', 'target'=>'opposite', 'value'=>1]]]));
++$s->addCard(new CardInstance(instanceId:2, ukid:'timer_deck', owner:'host',
++    zone:CardInstance::ZONE_DECK, hp:5, hpMax:5));
++$s->addCard(new CardInstance(instanceId:3, ukid:'timer_opponent', owner:'player',
++    zone:CardInstance::ZONE_FIELD, row:4, col:2, hp:20, hpMax:20));
++$now = 4500;
++(new TurnProcessor($s, $engine))->startBattle();
++ttAssert(!empty($s->battle['pending_card_choice']) && empty($s->battle['turn_phase'])
++    && $s->battle['turn_timer']['status'] === 'paused', 'Pre-turn pending precedes start phase');
++$s = GameState::fromArray(json_decode(json_encode($s->toArray()), true));
++$now = 4510;
++ttAssert($engine->apply($s, 'host', new Command('choose_card_option', ['option_index'=>0]))->success, 'Resolve pre-turn choice');
++ttAssert($engine->apply($s, 'host', new Command('turn_task', ['task_id'=>'prophecy']))->success, 'Select queued prophecy');
++ttAssert($engine->apply($s, 'host', new Command('turn_sub', ['sub_id'=>'prophecy_1']))->success, 'Prophecy opens pending');
++ttAssert(!empty($s->battle['pending_prophecy']) && $s->battle['turn_timer']['status'] === 'paused', 'Prophecy is still a start wait');
++$s = GameState::fromArray(json_decode(json_encode($s->toArray()), true));
++$now = 4520;
++ttAssert($engine->apply($s, 'host', new Command('close_prophecy'))->success, 'Close restored prophecy');
++ttAssert($engine->apply($s, 'host', new Command('turn_task', ['task_id'=>'turn_start_1_0']))->success, 'Select next start task');
++ttAssert(!empty($s->battle['pending_whip']) && $s->battle['turn_timer']['status'] === 'paused', 'Next pending continues same paused period');
++$now = 4530;
++ttAssert($engine->apply($s, 'host', new Command('choose_whip_target', ['target_id'=>1]))->success, 'Resolve start target choice');
++ttAssert(!empty($s->battle['turn_phase']['pending_ack']) && $s->battle['turn_timer']['status'] === 'paused', 'Start result ACK still delays clock');
++$s = GameState::fromArray(json_decode(json_encode($s->toArray()), true));
++$now = 4540;
++ttAssert($engine->apply($s, 'host', new Command('turn_ack'))->success, 'Last start result ACK finishes phase');
++ttAssert($s->battle['turn_timer']['period_id'] === 1 && $s->battle['turn_timer']['anchor_at'] === 4540, 'All start waits share one period and full budget');
++$now = 4550;
++ttAssert(!$engine->apply($s, 'host', new Command('turn_ack'))->success
++    && $s->battle['turn_timer']['remaining_seconds'] === 170, 'Repeated ACK cannot restart or refund the timer');
++
++// Start-phase instants retain the phase until stack resolution and result OK.
++$s = new GameState(-918279, 101, 202);
++$s->status = 'battle';
++$s->players['host']->side = 1;
++$s->addCard(new CardInstance(instanceId:1, ukid:'timer_instant', owner:'host',
++    zone:CardInstance::ZONE_FIELD, row:3, col:2, hp:20, hpMax:20,
++    prop:['instants'=>[['key'=>'clock_test', 'name'=>'Clock test', 'trigger'=>'turn',
++        'target'=>'self', 'uses_per_turn'=>1, 'effect'=>['type'=>'damage', 'value'=>1]]]]));
++$s->addCard(new CardInstance(instanceId:2, ukid:'timer_opponent', owner:'player',
++    zone:CardInstance::ZONE_FIELD, row:4, col:2, hp:20, hpMax:20));
++$now = 4600;
++(new TurnProcessor($s, $engine))->startBattle();
++ttAssert($engine->apply($s, 'host', new Command('turn_sub', ['sub_id'=>'instant_1_clock_test']))->success, 'Declare start instant');
++ttAssert(!empty($s->battle['turn_instant_stack']) && $s->battle['turn_timer']['status'] === 'paused', 'Instant stack keeps start clock paused');
++$s = GameState::fromArray(json_decode(json_encode($s->toArray()), true));
++$now = 4610;
++ttAssert($engine->apply($s, 'host', new Command('pass_turn_instant'))->success, 'Resolve start instant stack');
++ttAssert(!empty($s->battle['turn_instant_result']) && $s->battle['turn_timer']['status'] === 'paused', 'Instant result still delays start');
++$s = GameState::fromArray(json_decode(json_encode($s->toArray()), true));
++$now = 4620;
++ttAssert($engine->apply($s, 'host', new Command('turn_instant_result_ok'))->success, 'Acknowledge instant result');
++ttAssert(empty($s->battle['turn_phase']) && $s->battle['turn_timer']['anchor_at'] === 4620, 'Clock starts after instant continuation finishes phase');
++$now = 4630;
++ttAssert(!$engine->apply($s, 'host', new Command('turn_instant_result_ok'))->success
++    && $s->battle['turn_timer']['remaining_seconds'] === 170, 'Repeated instant result command cannot restart period');
++
++// A start task can finish its phase while its combat result still needs both ACKs.
++$s = new GameState(-918276, 101, 202);
++$s->status = 'battle';
++$s->players['host']->side = 1;
++$s->addCard(new CardInstance(instanceId:1, ukid:'timer_runes', owner:'host',
++    zone:CardInstance::ZONE_FIELD, row:3, col:2, hp:20, hpMax:20,
++    flags:['row_spell_pending'=>['row'=>3, 'action'=>[
++        'strike'=>['weak'=>1, 'medium'=>1, 'strong'=>1],
++    ]]]));
++$s->addCard(new CardInstance(instanceId:2, ukid:'timer_enemy', owner:'player',
++    zone:CardInstance::ZONE_FIELD, row:4, col:2, hp:20, hpMax:20));
++$now = 5000;
++(new TurnProcessor($s, $engine))->startBattle();
++ttAssert(!empty($s->battle['pending_row_spell_pick']), 'Runes open a real start-phase pending');
++$now = 5100;
++ttAssert($engine->apply($s, 'host', new Command('choose_row_spell_targets', ['target_ids'=>[2]]))->success,
++    'Runes targets can be selected');
++ttAssert(empty($s->battle['turn_phase']) && !empty($s->battle['strike']), 'Phase finishes before combat result ACKs');
++ttAssert($s->battle['turn_timer']['status'] === 'paused', 'Combat results are still start waits');
++$s = GameState::fromArray(json_decode(json_encode($s->toArray()), true));
++$now = 5200;
++ttAssert($engine->apply($s, 'host', new Command('confirm_strike'))->success, 'First combat result ACK');
++ttAssert($s->battle['turn_timer']['status'] === 'paused', 'One ACK cannot start clock');
++$now = 5250;
++ttAssert(!$engine->apply($s, 'host', new Command('confirm_strike'))->success
++    && $s->battle['turn_timer']['status'] === 'paused', 'Repeated first ACK cannot start deferred clock');
++$s = GameState::fromArray(json_decode(json_encode($s->toArray()), true));
++$now = 5300;
++ttAssert($engine->apply($s, 'player', new Command('confirm_strike'))->success, 'Second combat result ACK');
++ttAssert(empty($s->battle['strike']) && $s->battle['turn_timer']['status'] === 'running'
++    && $s->battle['turn_timer']['anchor_at'] === 5300, 'Clock starts after final start combat result ACK');
++$now = 5310;
++ttAssert(!$engine->apply($s, 'player', new Command('confirm_strike'))->success
++    && $s->battle['turn_timer']['period_id'] === 1 && $s->battle['turn_timer']['remaining_seconds'] === 170,
++    'Repeated final ACK cannot allocate or refund a period');
+ echo "OK turn timer\n";
+ 
++
+diff --git a/docs/turn-timer-t1-lifecycle-followup.md b/docs/turn-timer-t1-lifecycle-followup.md
+new file mode 100644
+--- /dev/null
++++ b/docs/turn-timer-t1-lifecycle-followup.md
+@@ -0,0 +1,128 @@
++# Turn Timer T1 — проверка lifecycle
++
++## Последовательность выполнения
++
++1. `Engine::confirmPreparePlace` (`src/Core/Engine.php`, метод около строки 175)
++   вызывает `TurnProcessor::startBattle` только при событии `stage_changed:battle`.
++   `startBattle` создаёт первый период до pre-battle intrigue/Degasca и pre-turn choice;
++   период остаётся `paused/start_phase`.
++2. `continuePreBattleEffects` и `chooseCardOption` продолжают тот же ход через
++   `continueStartTurn`. Они не создают нового периода. `continueStartTurn(false)`
++   вызывает `TurnPhaseProcessor::beginStartPhase` (TurnProcessor.php:394).
++   Ветка `fromIncarnation=true` не запускает стартовую фазу повторно.
++3. `TurnPhaseProcessor::advance` (TurnPhaseProcessor.php:222) проходит passive/active
++   очереди. Подочередь, task pending и `pending_ack` останавливают продвижение.
++   Решения продолжают фазу через `resume`, `ackPending`, `runSub` или `closeSub`.
++   Стартовые инстанты продолжают её только после `ackTurnInstantResult` через
++   `continueAfterTurnStack(type=turn_phase)` (InstantProcessor.php:1830).
++4. `TurnPhaseProcessor::finish` (TurnPhaseProcessor.php:279) удаляет `turn_phase`.
++   Для start-фазы вызывает `afterStartPhase` (:295), для end-фазы —
++   `afterEndPhase(active_key, passive_key)` (:291).
++5. `endTurn` (TurnProcessor.php:88) проверяет команду, замораживает старый таймер,
++   выбирает `getOpponentKey(playerKey)`, меняет `battle.active` (:114), увеличивает
++   `battle.turn` при передаче host и запускает `beginEndPhase` (:145).
++   Пока end-фаза не закончена, таймер принадлежит прежнему владельцу.
++6. После end-фазы `afterEndPhase` (:154) подготавливает следующий период **до**
++   pre-turn choice. Затем путь возвращается к пунктам 2–4.
++
++## Достижимость двух последовательных периодов одного владельца
++
++В актуальных путях исполнения недостижима. `getOpponentKey` (GameState.php:154)
++для host возвращает player и наоборот. Единственное присваивание
++`battle['active']` после инициализации — в `endTurn`. `beginEndPhase` записывает
++того же противника в `passive_key`, который `finish` передаёт в `afterEndPhase`.
++Обработчиков дополнительного хода или пропуска игрока нет. Начало боя вызывается
++только при переходе из подготовки. Load/fromArray не вызывают начало хода.
++
++Таким образом, при текущих правилах совпадение владельца в `TurnTimer::prepare`
++означает повтор подготовки того же периода; следующий самостоятельный ход всегда
++принадлежит другому игроку. `TurnTimer.php` и идентификация периода не изменялись.
++Это доказательство относится к текущему графу вызовов, а не к произвольным прямым
++вызовам публичных методов с выдуманными аргументами.
++
++Повтор AJAX-команды с тем же command_id обрабатывается до Engine существующей
++веткой журнала в www/index.php:647–756. Повтор отправки end_turn через Engine
++прежним владельцем отклоняется либо текущим ChoiceHandler, либо проверкой active.
++Журнал и endpoints не менялись; DB-проверки повторов в этой среде недоступны.
++
++## Подтверждённая проблема запуска
++
++Стартовые «Цветущие руны» — воспроизводимый путь:
++
++`beginStartPhase -> executeRowSpell -> pending_row_spell_pick ->
++chooseRowSpellTargets -> strike(results) -> TurnPhaseProcessor::resume ->
++finish -> afterStartPhase`.
++
++В `ActionResolver::chooseRowSpellTargets` (ActionResolver.php:4735–4799) результат
++сражения создаётся до `resume`. Очередь уже может быть пуста, поэтому `finish`
++вызывается **до двух confirm_strike**, пока `strike` ещё существует.
++Прежний `afterStartPhase` возвращался из-за strike и терял единственную попытку
++запуска. `StrikeResolver::confirmStrike` (:1379) после второго подтверждения
++очищает strike, но стартовую фазу не возобновляет: она уже удалена.
++Таймер оставался paused навсегда. Новый тест сначала воспроизвёл этот отказ,
++затем прошёл с исправлением.
++
++Следовательно, `afterStartPhase` означает конец очередей фазы, но не гарантирует
++завершение всех вложенных результатов и ожиданий.
++
++## Точные изменения
++
++- `TurnProcessor::afterStartPhase`: не запускает таймер при существующем
++  `turn_phase`. После фактического finish сохраняет в таймере
++  `pause_reason=start_resolution`, если период ещё ждёт старта. Возобновляет
++  его только после исчезновения strike, pending_prophecy и активного обработчика
++  ChoiceRegistry. Уже running/expired периоды не перезапускаются; другой owner
++  не получает новый период из этого callback.
++- `Engine::apply`: после успешной команды и существующего CoinAbilities::advance
++  повторяет только отложенную попытку запуска с `start_resolution`, используя
++  сохранённого владельца таймера. Это не повтор исполнения start/end-фазы.
++- `test_turn_timer.php`: добавлены чередование host/player при обоих первых игроках,
++  повтор end_turn, повтор afterEndPhase во время pre-turn pending, ранний callback,
++  pre-turn choice/prophecy/whip/result ACK, start instant stack/result OK,
++  регрессия рунического результата и повторные ACK. Состояние сериализуется между
++  ожиданиями. Все временные значения поступают из управляемого серверного clock.
++
++Публичные сигнатуры не менялись. Единственное дополнение к сохраняемому состоянию —
++значение причины паузы `start_resolution`; лимит и остальные поля прежние.
++Новая система lifecycle не вводилась. Running-таймер не переводится автоматически
++в paused из-за pending: изменения относятся только к первоначальному запуску.
++
++## Проверки
++
++PHP 8.1 CLI, отдельная копия исходников без live storage:
++
++- `test_turn_timer.php` — PASS (включая дополнительный повтор end-phase после
++  основного прогона).
++- `test_turn_instant_stack.php`, `test_combat_instant_phases.php`,
++  `test_row_spell_pending_dice.php`, `test_whip_cancel.php`,
++  `test_dynamic_flying_lifecycle.php`, `test_damage_lifecycle.php`,
++  `test_resign_pending.php` — PASS.
++- Всего запущено 76 PHP-скриптов; 73 завершились с кодом 0. Из них 4 полностью
++  пропустили DB-проверки, ещё 3 пропустили DB-подпроверки.
++- `test_booster.php` и `test_cards.php` не запускаются без config/db.php.
++- `test_battle_vampire_hp_ui.php` падает на проверке infinity max. Повторная проверка
++  с Engine/TurnProcessor **до этой доработки** даёт ту же ошибку.
++- HTTP/browser harnesses, требующие изолированного сервера/БД, не запускались.
++- PHP lint изменённых PHP-файлов и `git diff --check` — PASS.
++
++Полный diff этой доработки относительно состояния в начале запроса находится
++в `turn-timer-t1-lifecycle-followup.diff`. Предыдущие незакоммиченные изменения T1
++в этот diff повторно не включены.
++
++## Оставшиеся риски
++
++- Если появятся дополнительные ходы/пропуски, инвариант чередования перестанет
++  действовать. Тогда понадобится явный идентификатор lifecycle-перехода в prepare;
++  менять правила или добавлять такой механизм заранее здесь не требуется.
++- Отложенный старт завершается в общем Engine::apply. Прямые вызовы низкоуровневых
++  процессоров вне Engine не являются полным командным путём и требуют отдельного
++  завершения обработки таймера. Текущие HTTP-команды проходят через Engine.
++- Уже сохранённый прежней версией зависший paused/start_phase без turn_phase
++  автоматически не мигрируется: отсутствует достоверный маркер достигнутого finish.
++  Новый start_resolution сохраняется и восстанавливается без такой неоднозначности.
++- Будущие стартовые ожидания должны сохранять фазу либо быть видны через текущий
++  серверный контракт ожиданий. Общий контракт владельца pending по-прежнему
++  отсутствует; автоматические паузы не подключались.
++
++Правила боя, лимит 180 секунд, AJAX UI, timeout-переход и Command Journal не менялись.
++Коммит не создавался.

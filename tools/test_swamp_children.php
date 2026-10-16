@@ -26,6 +26,8 @@ function scRoll(): void { $_SESSION = ['debug_roll' => '6,1,4']; Dice::init(); }
 function scStrike(GameState $s, bool $finish = true): void {
     $s->battle['strike'] = ['attacker_id' => 1, 'target_id' => 2, 'defender_id' => null, 'state' => 'waiting_defender', 'confirmed' => []];
     scRoll(); (new StrikeResolver($s, new Engine()))->resolve();
+    // Direct resolver fixtures need the reconciliation normally performed by Engine.
+    Berserk\Core\InformationalWaitManager::reconcile($s, time());
     if ($finish) scFinish($s);
 }
 function scChoose(GameState $s, string $owner, array $data): Berserk\Core\Result {
@@ -33,7 +35,7 @@ function scChoose(GameState $s, string $owner, array $data): Berserk\Core\Result
 }
 function scFinish(GameState $s): void {
     if (empty($s->battle['strike'])) return;
-    foreach (['host', 'player'] as $owner) scAssert((new Engine())->apply($s, $owner, new Command('confirm_strike'))->success, 'Combat acknowledgement');
+    foreach (['host', 'player'] as $owner) scAssert((new Engine())->apply($s, $owner, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($s)]))->success, 'Combat acknowledgement');
     scAssert(empty($s->battle['strike']), 'Combat completed');
 }
 
@@ -45,10 +47,10 @@ scAssert($s->battle['strike']['damage_total'] === 0 && $s->getCard(2)->hp === 20
 scAssert($s->getCard(1)->closed && $s->getCard(1)->flags['attacks_used_this_turn'] === 1, 'Attack action consumed once');
 scAssert(Dice::remaining() === [6,1,4], 'No dice for blocked strike');
 scAssert(empty($s->battle[FirstStrikeJump::PENDING]), 'No pending before combat ACKs');
-scAssert((new Engine())->apply($s,'host',new Command('confirm_strike'))->success, 'First result ACK');
+scAssert((new Engine())->apply($s,'host',new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($s)]))->success, 'First result ACK');
 scAssert(empty($s->battle[FirstStrikeJump::PENDING]), 'One result ACK does not open jump');
 $s=scReload($s);
-scAssert((new Engine())->apply($s,'player',new Command('confirm_strike'))->success, 'Second ACK after reload opens deferred effect');
+scAssert((new Engine())->apply($s,'player',new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($s)]))->success, 'Second ACK after reload opens deferred effect');
 scAssert(empty($s->battle['strike']), 'Combat finished before jump');
 $p = $s->battle[FirstStrikeJump::PENDING];
 scAssert($p['owner'] === 'player' && $p['stage'] === 'jump', 'Defender chooses jump');

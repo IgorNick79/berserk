@@ -10,6 +10,8 @@ use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\CardInstance;
 use Berserk\Core\GameState;
+use Berserk\Core\TurnTimer;
+use Berserk\Core\AutomaticBattleProgress;
 use Berserk\Core\View;
 use Berserk\Core\DeckView;
 use Berserk\Core\ResourceCalculator;
@@ -96,8 +98,13 @@ function ajaxFlag(string $key): bool
 
 function ajaxCommandPayload(): ?array
 {
+    if (count($_POST) > 64 || strlen(http_build_query($_POST, '', '&')) > 16384) return null;
     $payload = [];
     $commandType = requestParamString($_POST, 'cmd', 64) ?? '';
+    $idListCommands = [
+        'choose_multi_discharge', 'choose_multi_heal', 'choose_row_spell_targets',
+        'choose_anubisar_chain', 'choose_incarnation_wound', 'choose_intrigue_start',
+    ];
     $excluded = [
         'cmd' => true,
         'expected_version' => true,
@@ -117,8 +124,18 @@ function ajaxCommandPayload(): ?array
             continue;
         }
         if (is_array($value)) {
-            return null;
+            if ($key !== 'target_ids' || !in_array($commandType, $idListCommands, true)
+                || !array_is_list($value) || count($value) > 64) return null;
+            foreach ($value as $id) {
+                if ((!is_string($id) && !is_int($id))
+                    || !preg_match('/^[1-9][0-9]*$/D', (string) $id)
+                    || filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) return null;
+            }
+            $payload[$key] = array_map('strval', $value);
+            continue;
         }
+
+        if (!is_string($value) && !is_int($value)) return null;
 
         $stringValue = (string) $value;
         if (strlen($stringValue) > 1024) {
@@ -138,7 +155,8 @@ function requestCommandId(array $source): array
     }
 
     $commandId = requestParamString($source, 'command_id', 64);
-    if ($commandId === null || $commandId === '' || !isValidAjaxCommandId($commandId)) {
+    if ($commandId === null || $commandId === '' || !isValidAjaxCommandId($commandId)
+        || str_starts_with(strtolower($commandId), 'p2a:') || str_starts_with(strtolower($commandId), 't3e:')) {
         return ['present' => true, 'command_id' => null, 'error' => 'invalid_command_id'];
     }
 
@@ -174,6 +192,7 @@ function sendBattleAjaxState(
     int $statusCode = 200,
     array $extra = []
 ): never {
+    $state = applyAutomaticBattleProgress($db, $state, $playerKey);
     $syncVersion = $state->persistenceVersion ?? 0;
 
     if ($state->status !== 'battle') {
@@ -182,6 +201,7 @@ function sendBattleAjaxState(
             'type' => $type === 'conflict' ? 'conflict' : 'status',
             'sync_version' => $syncVersion,
             'status' => $state->status,
+            'turn_timer' => TurnTimer::snapshot($state, time()),
         ];
         if ($error !== null) {
             $payload['error'] = $error;
@@ -207,6 +227,7 @@ function sendBattleAjaxState(
         'status' => $state->status,
         'ui' => $snapshot['ui'],
         'fragments' => $snapshot['fragments'],
+        'turn_timer' => $snapshot['turn_timer'],
     ];
     if ($error !== null) {
         $payload['error'] = $error;
@@ -235,7 +256,12 @@ function sendCommandStatus(
     ?string $error = null,
     int $statusCode = 200
 ): never {
-    sendCommandStatusPayload($commandId, $record, $ok, $error, $statusCode, $state->persistenceVersion ?? 0);
+    if ($record !== null && ($record['status'] ?? 'processing') !== CommandJournalRepository::STATUS_PROCESSING) {
+        global $db;
+        $state = applyAutomaticBattleProgress($db, $state, (string) $record['player_key']);
+    }
+    sendCommandStatusPayload($commandId, $record, $ok, $error, $statusCode, $state->persistenceVersion ?? 0,
+        ['turn_timer' => TurnTimer::snapshot($state, time())]);
 }
 
 function sendCommandStatusPayload(
@@ -244,7 +270,8 @@ function sendCommandStatusPayload(
     bool $ok = true,
     ?string $error = null,
     int $statusCode = 200,
-    ?int $syncVersion = null
+    ?int $syncVersion = null,
+    array $extra = []
 ): never {
     $payload = [
         'ok' => $ok,
@@ -270,7 +297,7 @@ function sendCommandStatusPayload(
         $payload['error'] = $error;
     }
 
-    sendAjaxJson($payload, $statusCode);
+    sendAjaxJson(array_merge($payload, $extra), $statusCode);
 }
 
 function sendUnknownCommandOutcome(string $commandId): never
@@ -282,6 +309,23 @@ function sendUnknownCommandOutcome(string $commandId): never
         'Command outcome is unknown',
         500
     );
+}
+
+/** Definitive refusal of this request, never a guess about an unknown commit. */
+function sendPreRegistrationRejection(Db $db, GameState $state, string $playerKey, string $error, int $statusCode = 400): never
+{
+    $id = requestCommandId($_POST);
+    if ($id['error'] !== null) {
+        sendAjaxJson(['ok' => false, 'type' => 'command_status', 'error' => $error], $statusCode);
+    }
+    $commandId = (string) $id['command_id'];
+    // A reused ID may already have a real outcome; do not hide it with an early refusal.
+    $record = (new CommandJournalRepository($db))->find($state->gameId, $playerKey, $commandId);
+    if ($record !== null) sendCommandStatus($state, $commandId, $record, false, $error, $statusCode);
+    sendAjaxJson([
+        'ok' => false, 'type' => 'command_status', 'command_id' => $commandId,
+        'request_status' => 'rejected_before_registration', 'error' => $error,
+    ], $statusCode);
 }
 
 function redirectToGamePage(string $role, GameState $state, array $source = []): never
@@ -325,6 +369,24 @@ function reloadPersistedBattleAjaxState(GameRepository $repo, int $gameId): Game
     }
 
     return $fresh;
+}
+
+/** Optional due processing never changes the outcome/identity of a user's command. */
+function applyAutomaticBattleProgress(Db $db, GameState $state, string $requester): GameState
+{
+    // battle_sync may subsequently call sendBattleAjaxState. Never start a second
+    // ordered pass in the same request, especially after an unknown P2 outcome.
+    static $attempted = false;
+    if ($attempted) return $state;
+    $attempted = true;
+    try {
+        return (new AutomaticBattleProgress($db, new GameRepository($db), new Engine($db)))->check($state, $requester)->state;
+    } catch (Throwable) {
+        error_log('Automatic battle progress unavailable for game ' . $state->gameId);
+        // Unknown P2/T3 outcomes stop this ordered pass; never launch another auto operation.
+        try { return (new GameRepository($db))->findById($state->gameId) ?? $state; }
+        catch (Throwable) { return $state; }
+    }
 }
 
 function buildRenderCardInfo(Db $db, GameState $state): array
@@ -519,6 +581,7 @@ $oppKey    = $state->getOpponentKey($playerKey);
 
 if ($isBattleSync) {
     try {
+        $state = applyAutomaticBattleProgress($db, $state, $playerKey);
         $syncVersion = $state->persistenceVersion ?? 0;
         $sinceVersion = ajaxParamInt('since_version');
         $forceSnapshot = ajaxFlag('force_snapshot');
@@ -529,6 +592,7 @@ if ($isBattleSync) {
                 'type' => 'status',
                 'sync_version' => $syncVersion,
                 'status' => $state->status,
+                'turn_timer' => TurnTimer::snapshot($state, time()),
             ]);
         }
 
@@ -537,6 +601,7 @@ if ($isBattleSync) {
                 'ok' => true,
                 'type' => 'no_change',
                 'sync_version' => $syncVersion,
+                'turn_timer' => TurnTimer::snapshot($state, time()),
             ]);
         }
 
@@ -609,10 +674,7 @@ if ($isBattleCommand) {
     try {
         $expectedVersion = ajaxPostParamInt('expected_version');
         if ($expectedVersion === null) {
-            sendAjaxJson([
-                'ok' => false,
-                'error' => 'missing_expected_version',
-            ], 400);
+            sendPreRegistrationRejection($db, $state, $playerKey, 'missing_expected_version');
         }
 
         $uiState = [
@@ -623,23 +685,14 @@ if ($isBattleCommand) {
 
         $commandIdResult = requestCommandId($_POST);
         if ($commandIdResult['error'] !== null) {
-            sendAjaxJson([
-                'ok' => false,
-                'type' => 'command_status',
-                'error' => $commandIdResult['error'],
-            ], 400);
+            sendPreRegistrationRejection($db, $state, $playerKey, $commandIdResult['error']);
         }
 
         $commandId = (string) $commandIdResult['command_id'];
         $commandType = ajaxPostParamString('cmd', 64);
         $payload = ajaxCommandPayload();
         if ($commandType === null || $commandType === '' || $payload === null) {
-            sendAjaxJson([
-                'ok' => false,
-                'type' => 'command_status',
-                'command_id' => $commandId,
-                'error' => 'invalid_command_request',
-            ], 400);
+            sendPreRegistrationRejection($db, $state, $playerKey, 'invalid_command_request');
         }
 
         $journal = new CommandJournalRepository($db);
@@ -927,6 +980,7 @@ if ($isBattleCommand) {
 }
 
 // ─── Обработка команды ────────────────────────────────────────
+$state = applyAutomaticBattleProgress($db, $state, $playerKey);
 $message = null;
 $commandType = is_string($_GET['cmd'] ?? null) ? $_GET['cmd'] : '';
 $hasLegacyCommand = array_key_exists('cmd', $_GET)
@@ -1167,7 +1221,17 @@ switch ($state->status) {
         $roleParam = $role === 'host' ? 'first' : 'second';
         $syncUrl = '?' . $roleParam . '&game=' . $state->gameId . '&ajax=battle_sync';
         $ui = $screenData['ui'] ?? ['sel' => 0, 'mode' => 'strike', 'pile' => ''];
-        $scriptsHtml = '<script src="/assets/js/battle-sync.js?v={{rkey}}"'
+        $turnSoundUrl = '';
+        foreach (['mp3', 'ogg'] as $extension) {
+            if (is_file(__DIR__ . '/assets/sound/turn.' . $extension)) {
+                $turnSoundUrl = '/assets/sound/turn.' . $extension;
+                break;
+            }
+        }
+        $scriptsHtml = '<script src="/assets/js/battle-turn-timer.js?v={{rkey}}"></script>'
+            . '<script src="/assets/js/battle-sync.js?v={{rkey}}"'
+            . ' data-viewer-key="' . htmlspecialchars($playerKey, ENT_QUOTES) . '"'
+            . ' data-turn-sound-url="' . htmlspecialchars($turnSoundUrl, ENT_QUOTES) . '"'
             . ' data-sync-url="' . htmlspecialchars($syncUrl, ENT_QUOTES) . '"'
             . ' data-game-id="' . (int) $state->gameId . '"'
             . ' data-role="' . htmlspecialchars($role, ENT_QUOTES) . '"'

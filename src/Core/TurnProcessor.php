@@ -65,6 +65,8 @@ final class TurnProcessor
             'hidden_row_revealed' => false
         ];
 
+        TurnTimer::prepare($this->state, $activeKey);
+
         // Стартовые эффекты
         $this->applyStartEffects();
 
@@ -105,6 +107,10 @@ final class TurnProcessor
         }
 
         $oppKey = $this->state->getOpponentKey($playerKey);
+        $timerId = $this->state->battle['turn_timer']['period_id'] ?? null;
+        if ($timerId !== null) {
+            TurnTimer::pause($this->state, $timerId, 'end_phase', $this->engine->serverNow());
+        }
         $this->state->battle['active'] = $oppKey;
 
         if ($oppKey === 'host') {
@@ -147,6 +153,7 @@ final class TurnProcessor
      */
     public function afterEndPhase(string $endingKey, string $nextActiveKey): void
     {
+        TurnTimer::prepare($this->state, $nextActiveKey);
         // Сброс выданных действий в конце хода источника
         foreach ($this->state->cards as $card) {
             foreach (array_keys($card->flags) as $k) {
@@ -446,9 +453,25 @@ final class TurnProcessor
      */
     public function afterStartPhase(string $activeKey): void
     {
-        if (!empty($this->state->battle['strike'])) return;
+        if (!empty($this->state->battle['turn_phase'])) return;
         if ($this->state->winner !== null) return;
 
+        if (!isset($this->state->battle['turn_timer'])) {
+            TurnTimer::prepare($this->state, $activeKey);
+        }
+        TurnTimer::settle($this->state, $this->engine->serverNow());
+        $timer = $this->state->battle['turn_timer'] ?? null;
+        if ($timer === null || $timer['owner'] !== $activeKey || $timer['status'] !== 'paused'
+            || !in_array($timer['pause_reason'], ['start_phase', 'start_resolution'], true)) return;
+
+        // The phase queue can finish before a task's combat result or nested choice.
+        // Remember that finish() was reached; only this deferred start is retried.
+        $this->state->battle['turn_timer']['pause_reason'] = 'start_resolution';
+        if (!empty($this->state->battle['strike'])
+            || !empty($this->state->battle['pending_prophecy'])
+            || Choice\ChoiceRegistry::current($this->state) !== null) return;
+
+        TurnTimer::resume($this->state, $timer['period_id'], 'start_resolution', $this->engine->serverNow());
     }
 
     /**

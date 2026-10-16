@@ -303,8 +303,8 @@ $state->battle['strike'] = [
 ];
 (new ZoneManager($state))->toGraveyard($linnet);
 assertTrue($state->winner === null, 'Game over should not be checked before linked death cascade is finalized');
-$engine->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike'));
-$engine->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike'));
+$engine->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]));
+$engine->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]));
 assertTrue($gobrah->zone === CardInstance::ZONE_GRAVEYARD, 'Linked companion should be flushed to graveyard during strike finalization');
 assertTrue($state->status === 'game_over' && $state->winner === GameState::PLAYER_PLAYER, 'Linked companion cascade death should trigger game over after stabilized finalization');
 
@@ -324,8 +324,8 @@ $state->battle['strike'] = [
     'attacker_id' => $enemy->instanceId,
 ];
 (new ZoneManager($state))->toGraveyard($linnet);
-$engine->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike'));
-$engine->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike'));
+$engine->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]));
+$engine->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]));
 assertTrue($gobrah->zone === CardInstance::ZONE_GRAVEYARD, 'Linked companion should still die when another ally remains');
 assertTrue($ally->zone === CardInstance::ZONE_FIELD && $state->winner === null && $state->status === 'battle', 'Game should continue when stabilized battlefield still has an allied creature');
 

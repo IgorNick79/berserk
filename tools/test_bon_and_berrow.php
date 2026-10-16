@@ -19,7 +19,7 @@ function bbRawStrike(GameState $s,int $a=1,int $t=2):void {$s->battle['strike']=
 function bbFinish(GameState $s):void {
  $e=new Engine();
  foreach(['host','player'] as $owner){if($s->status==='battle' && ($s->battle['strike']['state']??'')==='results' && !in_array($owner,$s->battle['strike']['confirmed']??[],true)) {
-  $r=$e->apply($s,$owner,new Command('confirm_strike'));bbAssert($r->success,'Combat ACK: '.$r->error);
+  $r=$e->apply($s,$owner,new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($s)]));bbAssert($r->success,'Combat ACK: '.$r->error);
  }}
 }
 function bbStrike(GameState $s,int $a=1,int $t=2):void {bbRawStrike($s,$a,$t);bbFinish($s);}
@@ -113,7 +113,7 @@ $r=(new Engine())->apply($s,'host',new Command('choose_coin_ability',['choice'=>
 
 
 $s=bbState(true);$s->getCard(2)->hp=1;bbStrike($s);bbAssert(!isset($s->battle['pending_coin_ability']),'Lethal hit with no other living target has no pending');
-$s=bbState(true);bbStrike($s);bbRoll('4');bbChoose($s,'','host',2);$e=new Engine();bbAssert($e->apply($s,'host',new Command('confirm_strike'))->success,'Original strike first acknowledgement');bbAssert($e->apply($s,'player',new Command('confirm_strike'))->success,'Original strike second acknowledgement');bbAssert(empty($s->battle['strike']),'Original lifecycle finishes after discharge');
+$s=bbState(true);bbStrike($s);bbRoll('4');bbChoose($s,'','host',2);$e=new Engine();bbAssert($e->apply($s,'host',new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($s)]))->success,'Original strike first acknowledgement');bbAssert($e->apply($s,'player',new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($s)]))->success,'Original strike second acknowledgement');bbAssert(empty($s->battle['strike']),'Original lifecycle finishes after discharge');
 
 
 // Timing: the saved wound result survives the answer, both ACKs and reload.
@@ -124,9 +124,9 @@ bbAssert($s->getCard(1)->hp===8 && $s->getCard(2)->hp===18,'Attack and answer re
 bbAssert(!isset($s->battle['pending_coin_ability']),'No discharge while primary combat exists');
 $deferred=$s->battle['strike']['coin_post_combat_effects'];
 bbAssert(count($deferred)===1 && reset($deferred)['wounds']===2,'Actual wounds serialized in originating strike');
-$e=new Engine();bbAssert($e->apply($s,'host',new Command('confirm_strike'))->success,'First primary ACK');
+$e=new Engine();bbAssert($e->apply($s,'host',new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($s)]))->success,'First primary ACK');
 bbAssert(!isset($s->battle['pending_coin_ability']),'One ACK is insufficient');
-$s=bbReload($s);bbAssert($e->apply($s,'player',new Command('confirm_strike'))->success,'Primary ACK after reload');
+$s=bbReload($s);bbAssert($e->apply($s,'player',new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($s)]))->success,'Primary ACK after reload');
 bbAssert(empty($s->battle['strike']) && $s->battle['pending_coin_ability']['kind']==='discharge','Only completed primary combat opens discharge');
 bbAssert(bbParent($s)['defend_damage_total']===2,'Final answer retained in archived primary result');
 bbAssert(reset($s->battle['coin_post_combat_history'])['executed']===true,'Continuation recorded as executed');

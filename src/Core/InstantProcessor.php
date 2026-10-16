@@ -703,6 +703,7 @@ final class InstantProcessor
                 ->apply($table ?? ['attack' => '', 'defend' => '', 'winner' => ''], false);
 
             if (($strike['state'] ?? '') !== 'waiting_auto_target') {
+                InformationalWaitManager::publish($this->state);
                 $strike['state'] = 'results';
             }
             return;
@@ -987,6 +988,7 @@ final class InstantProcessor
                 return;
             }
             if (($strike['state'] ?? '') !== 'waiting_auto_target') {
+                InformationalWaitManager::publish($this->state);
                 $strike['state'] = 'results';
             }
             return;
@@ -1004,6 +1006,7 @@ final class InstantProcessor
             );
             (new StrikeResolver($this->state, $this->engine))->recalcTable();
             $strike['instant_result_stage'] = self::COMBAT_WINDOW_DICE;
+            InformationalWaitManager::publish($this->state);
             $strike['state'] = 'results';
             $strike['confirmed'] = [];
             return;
@@ -1038,6 +1041,7 @@ final class InstantProcessor
             ->apply($table ?? ['attack' => '', 'defend' => '', 'winner' => ''], false);
 
         if (($strike['state'] ?? '') !== 'waiting_auto_target') {
+            InformationalWaitManager::publish($this->state);
             $strike['state'] = 'results';
         }
     }
@@ -1270,6 +1274,7 @@ final class InstantProcessor
             ->apply($table ?? ['attack' => '', 'defend' => '', 'winner' => ''], false);
 
         if (($strike['state'] ?? '') !== 'waiting_auto_target') {
+            InformationalWaitManager::publish($this->state);
             $strike['state'] = 'results';
         }
     }
