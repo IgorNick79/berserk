@@ -508,6 +508,14 @@
     }
 
     function handleJournalCommandResponse(data, status, commandId, requestUiRevision) {
+        // This request was definitively rejected before journal registration.
+        // Unknown/processing journal outcomes still use recovery below.
+        if (status >= 400 && status < 500 && data && data.command_id === commandId
+            && data.request_status === "rejected_before_registration") {
+            pendingCommand.finalError = data.error || "Действие не выполнено.";
+            startForcedCommandSync();
+            return;
+        }
         if (!validCommandStatus(data, commandId)) {
             enterCommandRecovery("Не удалось подтвердить результат действия. Проверяю журнал команды.");
             return;
@@ -627,9 +635,26 @@
             formData = new FormData(form);
         }
 
+        // Clear old query values once, including unchecked checkbox fields.
+        var names = Object.create(null);
+        Array.prototype.forEach.call(form.elements, function (element) {
+            if (element.name) names[element.name] = true;
+        });
+        formData.forEach(function (value, key) { names[key] = true; });
+        Object.keys(names).forEach(function (key) {
+            url.searchParams.delete(key);
+            if (key.slice(-2) === "[]") {
+                var base = key.slice(0, -2);
+                var oldNames = [];
+                url.searchParams.forEach(function (value, name) {
+                    if (name === base || name.indexOf(base + "[") === 0) oldNames.push(name);
+                });
+                oldNames.forEach(function (name) { url.searchParams.delete(name); });
+            }
+        });
         formData.forEach(function (value, key) {
             if (typeof value === "string") {
-                url.searchParams.set(key, value);
+                url.searchParams.append(key, value);
             }
         });
 

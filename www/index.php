@@ -96,8 +96,13 @@ function ajaxFlag(string $key): bool
 
 function ajaxCommandPayload(): ?array
 {
+    if (count($_POST) > 64 || strlen(http_build_query($_POST, '', '&')) > 16384) return null;
     $payload = [];
     $commandType = requestParamString($_POST, 'cmd', 64) ?? '';
+    $idListCommands = [
+        'choose_multi_discharge', 'choose_multi_heal', 'choose_row_spell_targets',
+        'choose_anubisar_chain', 'choose_incarnation_wound', 'choose_intrigue_start',
+    ];
     $excluded = [
         'cmd' => true,
         'expected_version' => true,
@@ -117,8 +122,18 @@ function ajaxCommandPayload(): ?array
             continue;
         }
         if (is_array($value)) {
-            return null;
+            if ($key !== 'target_ids' || !in_array($commandType, $idListCommands, true)
+                || !array_is_list($value) || count($value) > 64) return null;
+            foreach ($value as $id) {
+                if ((!is_string($id) && !is_int($id))
+                    || !preg_match('/^[1-9][0-9]*$/D', (string) $id)
+                    || filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) return null;
+            }
+            $payload[$key] = array_map('strval', $value);
+            continue;
         }
+
+        if (!is_string($value) && !is_int($value)) return null;
 
         $stringValue = (string) $value;
         if (strlen($stringValue) > 1024) {
@@ -282,6 +297,23 @@ function sendUnknownCommandOutcome(string $commandId): never
         'Command outcome is unknown',
         500
     );
+}
+
+/** Definitive refusal of this request, never a guess about an unknown commit. */
+function sendPreRegistrationRejection(Db $db, GameState $state, string $playerKey, string $error, int $statusCode = 400): never
+{
+    $id = requestCommandId($_POST);
+    if ($id['error'] !== null) {
+        sendAjaxJson(['ok' => false, 'type' => 'command_status', 'error' => $error], $statusCode);
+    }
+    $commandId = (string) $id['command_id'];
+    // A reused ID may already have a real outcome; do not hide it with an early refusal.
+    $record = (new CommandJournalRepository($db))->find($state->gameId, $playerKey, $commandId);
+    if ($record !== null) sendCommandStatus($state, $commandId, $record, false, $error, $statusCode);
+    sendAjaxJson([
+        'ok' => false, 'type' => 'command_status', 'command_id' => $commandId,
+        'request_status' => 'rejected_before_registration', 'error' => $error,
+    ], $statusCode);
 }
 
 function redirectToGamePage(string $role, GameState $state, array $source = []): never
@@ -609,10 +641,7 @@ if ($isBattleCommand) {
     try {
         $expectedVersion = ajaxPostParamInt('expected_version');
         if ($expectedVersion === null) {
-            sendAjaxJson([
-                'ok' => false,
-                'error' => 'missing_expected_version',
-            ], 400);
+            sendPreRegistrationRejection($db, $state, $playerKey, 'missing_expected_version');
         }
 
         $uiState = [
@@ -623,23 +652,14 @@ if ($isBattleCommand) {
 
         $commandIdResult = requestCommandId($_POST);
         if ($commandIdResult['error'] !== null) {
-            sendAjaxJson([
-                'ok' => false,
-                'type' => 'command_status',
-                'error' => $commandIdResult['error'],
-            ], 400);
+            sendPreRegistrationRejection($db, $state, $playerKey, $commandIdResult['error']);
         }
 
         $commandId = (string) $commandIdResult['command_id'];
         $commandType = ajaxPostParamString('cmd', 64);
         $payload = ajaxCommandPayload();
         if ($commandType === null || $commandType === '' || $payload === null) {
-            sendAjaxJson([
-                'ok' => false,
-                'type' => 'command_status',
-                'command_id' => $commandId,
-                'error' => 'invalid_command_request',
-            ], 400);
+            sendPreRegistrationRejection($db, $state, $playerKey, 'invalid_command_request');
         }
 
         $journal = new CommandJournalRepository($db);
