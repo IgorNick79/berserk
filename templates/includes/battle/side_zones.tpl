@@ -5,11 +5,11 @@
     <div class="battle-side-slot battle-grave">
         <span class="piles-label">Кладбище</span>
         <span class="piles-count">{{grave_count}}</span>
-        <a class="pile-open" href="{{grave_url}}" aria-label="Подробнее: кладбище">Подробнее</a>
+        {{grave_details_html}}
     </div>
     <div class="battle-side-slot battle-exile">
         <span class="piles-label">Изгнание</span>
         <span class="piles-count">{{exile_count}}</span>
-        <a class="pile-open" href="{{exile_url}}" aria-label="Подробнее: изгнание">Подробнее</a>
+        {{exile_details_html}}
     </div>
 </div>

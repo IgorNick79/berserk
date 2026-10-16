@@ -6,6 +6,7 @@
 </div>
 <div class="panel-card-details">
     <h3>{{name}}</h3>
+    {{description_html}}
     <div class="battle-mode-buttons">{{mode_buttons}}</div>
     <p>{{coins_line}}</p>
     {{status_html}}

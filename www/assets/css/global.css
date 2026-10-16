@@ -2011,3 +2011,7 @@ body.battle-page {
 .battle-side-slot .piles-count { font-size: 20px; line-height: 1; }
 .battle-terrain img { object-fit: contain; }
 .battle-side-slot .pile-open { padding: 3px 8px; }
+
+.battle-side-slot button.pile-open:disabled { border: 0; background: #50565b; color: #bac0c4; cursor: default; opacity: .65; }
+.panel-card-description { margin: 0 0 12px; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.panel-card-description .card-description-icon { height: 18px; width: auto; max-width: 28px; object-fit: contain; vertical-align: middle; margin: 0 2px; }
