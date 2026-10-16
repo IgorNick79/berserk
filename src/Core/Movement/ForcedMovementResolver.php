@@ -46,6 +46,7 @@ final class ForcedMovementResolver
         if ($card->type !== 'creature') return false;
         if ($card->dying || $card->hp <= 0) return false;
         if (isset($card->markers['rooted'])) return false;
+        if ($this->checkMovesLimit($card) !== null) return false;
 
         return $this->destination($card, $deltaRow, $deltaCol) !== null;
     }

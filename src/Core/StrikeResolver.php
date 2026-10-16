@@ -721,6 +721,7 @@ final class StrikeResolver
     public function resolve(): void
     {
         $strike = &$this->state->battle['strike'];
+        if (!empty($strike['first_strike_blocked'])) return;
 
         $attackerId = $strike['attacker_id'];
         $targetId   = $strike['target_id'];
@@ -730,6 +731,8 @@ final class StrikeResolver
         $defendCard = $defenderId
             ? $this->state->getCard($defenderId)
             : $this->state->getCard($targetId);
+
+        if ((new FirstStrikeJump($this->state, $this->engine))->tryBlock($attacker, $defendCard, 'strike')) return;
 
         if (empty($strike['coin_block_checked'])
             && (new CoinAbilities($this->state, $this->engine))->offerBlock($attacker, $defendCard, 'strike', ['kind' => 'strike'])) {
@@ -835,7 +838,7 @@ final class StrikeResolver
         ];
 
         // Эффекты от удара (включая промах)
-        if (empty($strike['coin_blocked'])) $this->engine->applyStrikeEffects($attacker, $defendCard, $attackStrike);
+        if (empty($strike['coin_blocked']) && empty($strike['first_strike_blocked'])) $this->engine->applyStrikeEffects($attacker, $defendCard, $attackStrike);
 
         if ($attackStrike !== '') {
             if (!empty($attacker->prop['copy_target_strike'])) {
@@ -937,6 +940,11 @@ final class StrikeResolver
             }
         } else {
             $this->state->battle['strike']['strike_hit'] = false;
+        }
+        if ($defendStrike !== '' && (new FirstStrikeJump($this->state, $this->engine))->tryBlock($defendCard, $attacker, 'answer')) {
+            $defendStrike = '';
+            $strike['final']['defend'] = '';
+            $strike['defend_damage_total'] = 0;
         }
         if ($defendStrike !== '') {
             $val = match ($defendStrike) {

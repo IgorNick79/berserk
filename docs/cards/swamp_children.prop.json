@@ -1,0 +1,7 @@
+{
+  "first_strike_jump": {
+    "defense": "zoa",
+    "range": 2,
+    "pull_adjacent_enemy": true
+  }
+}

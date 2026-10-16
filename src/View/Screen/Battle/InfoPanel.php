@@ -1551,6 +1551,8 @@ final class InfoPanel
             }
 
             if (!empty($strike['coin_blocked'])) $resultText .= '<br>Удар заблокирован за монетку.';
+            if (!empty($strike['first_strike_blocked'])) $resultText .= '<br>Первый удар заблокирован.';
+            if (!empty($strike['first_answer_blocked'])) $resultText .= '<br>Ответный удар заблокирован защитой первого удара.';
             foreach ($strike['triggered_discharges'] ?? [] as $discharge) {
                 $victim = $state->getCard((int) ($discharge['target_id'] ?? 0));
                 $victimName = $victim ? ($cardsInfo[$victim->ukid]['name'] ?? 'Цель') : 'Цель';
