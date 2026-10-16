@@ -2,6 +2,10 @@
     "use strict";
     var root = document.querySelector("[data-battle-sync-root]");
     if (!root || root.dataset.battleUiReady === "true") return;
+    root.addEventListener('contextmenu', function (event) {
+        if (event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), .debug-panel, [data-allow-copy]')) return;
+        event.preventDefault();
+    });
     // Client-only pages survive replacement of fly_zones_html. This does not
     // change the selected card, command URLs, or server UI revision.
     var flyPages = {own: 0, opp: 0};

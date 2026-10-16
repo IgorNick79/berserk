@@ -1,0 +1,103 @@
+const fs = require('fs');
+const path = require('path');
+const {execFileSync} = require('child_process');
+const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const repo = path.resolve(__dirname, '..');
+const read = f => fs.readFileSync(path.join(repo,f),'utf8');
+const fixture = (own,opp) => {const raw=execFileSync(process.env.PHP_BINARY || 'php',[repo+'/tools/test_fly_pagination.php','--fixture',String(own),String(opp)],{encoding:'utf8'});return JSON.parse(raw.slice(raw.indexOf('{')));};
+const data = new Map();for(let i=0;i<=6;i++)data.set(i,fixture(i,6));
+function assert(ok,msg){if(!ok)throw Error(msg);}
+(async()=>{
+ const browser=await chromium.launch({...(process.env.BROWSER_EXECUTABLE ? {executablePath:process.env.BROWSER_EXECUTABLE} : {}),headless:true});
+ try {
+ for(const width of [1600,800,375]) {
+ const page=await browser.newPage({viewport:{width,height:800}});
+ await page.route('https://battle.test/**',r=>{
+ const url = new URL(r.request().url());
+ if(url.pathname.startsWith('/assets/images/battle/'))return r.fulfill({body:fs.readFileSync(path.join(repo,'www',url.pathname)),contentType:url.pathname.endsWith('.webp')?'image/webp':'image/png'});
+ return r.fulfill({body:'<html></html>',contentType:'text/html'});
+ });
+ await page.goto('https://battle.test/');
+ let html=read('templates/screen/battle.tpl').replace(/<script[\s\S]*?<\/script>/g,'');
+ const initial=data.get(3);html=html.replace(/{{(\w+)}}/g,(_,k)=>initial[k]||'');
+ await page.setContent('<style>'+read('www/assets/css/global.css')+'</style>'+html);
+ await page.evaluate(()=>{document.documentElement.classList.add('battle-page');document.body.classList.add('battle-page');});
+ await page.addScriptTag({content:read('www/assets/js/battle-ui.js')});
+ let sync=read('www/assets/js/battle-sync.js');
+ const last=sync.lastIndexOf('    requestSnapshot(false);');
+ sync=sync.slice(0,last)+'    window.testSnapshot = function(data) { return applySnapshot(data, uiRevision); };'+sync.slice(last+'    requestSnapshot(false);'.length);
+ await page.addScriptTag({content:sync.replace('var syncUrl = script.dataset.syncUrl || "";','var syncUrl = "https://battle.test/";')});
+ let version=0;
+ async function update(n) {
+ const d=data.get(n);
+ await page.evaluate(({d,v})=>{const fragments={};for(const key of ['field_html','fly_zones_html','panel_html','piles_html','pile_reveal_html','info_panel_html'])fragments[key]=d[key]||'';if(!window.testSnapshot({sync_version:v,fragments,ui:d.ui}))throw Error('Snapshot rejected');},{d,v:++version});
+ await page.waitForTimeout(20);
+ }
+ async function metrics(){return page.evaluate(()=>{const rows=[...document.querySelectorAll('.battle-numbered-row')].map(e=>e.querySelector('.field-cell').getBoundingClientRect());const slots=[...document.querySelectorAll('.fly-slot')].map(e=>e.getBoundingClientRect());return {tops:slots.map(r=>r.top),rowtops:rows.map(r=>r.top),aligned:slots.every((r,i)=>Math.abs(r.top-rows[i].top)<.1&&r.height===rows[i].height),pageHeight:document.documentElement.scrollHeight,boardHeight:document.querySelector('.battle-left').scrollHeight,zoneHeights:[...document.querySelectorAll('.fly-zone')].map(e=>e.getBoundingClientRect().height),slots:slots.length,visible:[...document.querySelectorAll('.fly-zone.own .fly-page-card')].filter(e=>!e.hidden).map(e=>e.querySelector('a')?.getAttribute('href')||'')};});}
+ const base=await metrics();assert(base.aligned,'Initial alignment '+width+JSON.stringify(base));
+ for(let n=0;n<=6;n++){await update(n);const m=await metrics();assert(m.slots===6&&m.aligned,'Fixed aligned slots '+n);assert(m.pageHeight===base.pageHeight&&m.boardHeight===base.boardHeight,'No added scroll '+n);}
+ await update(4);
+ await page.locator('.fly-zone.own [data-fly-go="1"]').click();
+ assert((await metrics()).visible.filter(Boolean).length===1,'Second page has one card');
+ assert(await page.locator('.fly-zone.opp [data-fly-go="0"]').getAttribute('aria-pressed')==='true','Independent sides');
+ await page.locator('.fly-zone.opp [data-fly-go="1"]').click();
+ await update(4);assert(await page.locator('.fly-zone.own [data-fly-go="1"]').getAttribute('aria-pressed')==='true','Page survives snapshot');
+ assert(await page.locator('.fly-zone.opp [data-fly-go="1"]').getAttribute('aria-pressed')==='true','Opp page survives snapshot');
+ const beforeHp=data.get(4).fly_zones_html;
+ data.get(4).fly_zones_html=beforeHp.replaceAll('3/3','2/3');
+ await update(4);
+ assert(await page.locator('.fly-zone.own [data-fly-go="1"]').getAttribute('aria-pressed')==='true','HP update preserves page');
+ assert((await page.locator('.fly-zone.own [data-fly-page="1"]:not([hidden])').allTextContents()).join('').includes('2/3'),'Visible HP updated');
+ data.get(4).fly_zones_html=beforeHp;
+ await update(5);assert((await metrics()).visible.filter(Boolean).length===2,'Two cards on second page');
+ await update(3);assert(await page.locator('.fly-zone.own [data-fly-go]').count()===0,'Controls removed');
+ await update(4);assert(await page.locator('.fly-zone.own [data-fly-go="0"]').getAttribute('aria-pressed')==='true','Reset persists after regrowth');
+ assert(await page.locator('.fly-zone.opp [data-fly-go="1"]').getAttribute('aria-pressed')==='true','Own reset leaves opponent alone');
+ // Both pagination groups must be centered on their own flying zone.
+ assert(await page.evaluate(()=>[...document.querySelectorAll('.fly-zone')].every(z=>{const c=z.querySelector('.fly-pagination');if(!c)return true;const a=z.getBoundingClientRect(),b=c.getBoundingClientRect();return Math.abs(a.x+a.width/2-b.x-b.width/2)<.1;})),'Centered bullets');
+ await page.waitForFunction(()=>[...document.querySelectorAll('.battle-icon-control img')].every(img=>img.complete&&img.naturalWidth===160));
+ const icons=page.locator('.battle-icon-control');
+ const baseline=await page.locator('.info-actions').boundingBox();
+ for(const icon of await icons.all()) {
+ const old=await icon.boundingBox();
+ assert(old.width===40 && old.height===40,'40px icon box');
+ await icon.hover();await page.waitForTimeout(250);
+ const m=await icon.evaluate(e=>{const i=e.querySelector('img').getBoundingClientRect(),t=e.querySelector('.battle-icon-tooltip'),r=t.getBoundingClientRect(),f=e.closest('footer').getBoundingClientRect();return {width:i.width,height:i.height,opacity:getComputedStyle(t).opacity,visible:getComputedStyle(t).visibility,inViewport:r.x>=0&&r.right<=innerWidth&&r.y>=0&&r.bottom<=innerHeight,footerOverflow:getComputedStyle(e.closest('footer')).overflow};});
+ assert(m.width===48&&m.height===48,'Hover scales image to 48px');
+ assert(m.opacity==='1'&&m.visible==='visible'&&m.inViewport&&m.footerOverflow==='visible','Tooltip is visible and not clipped '+JSON.stringify(m));
+ const now=await page.locator('.info-actions').boundingBox();
+ assert(now.x===baseline.x&&now.y===baseline.y&&now.width===baseline.width&&now.height===baseline.height,'No hover layout shift');
+ }
+ await page.mouse.move(0,0);
+ const bg=await page.evaluate(()=>{const s=getComputedStyle(document.body);return s.backgroundImage.includes('berserk_background.webp')&&s.backgroundSize==='cover'&&s.backgroundRepeat==='no-repeat'&&s.backgroundPosition==='50% 50%';});
+ assert(bg,'Battle background cover');
+ // Input/copy exceptions live inside the same permanent root as the cards.
+ await page.evaluate(()=>{const p=document.querySelector('.info-panel-content');p.insertAdjacentHTML('beforeend','<div id="edit-check"><input value="copy me"><textarea>test</textarea><select><option>A</option></select><div contenteditable="true"><span>editable</span></div><pre data-allow-copy>copy</pre><div class="debug-panel">debug</div></div>');});
+ for(const selector of ['.battle-card','#edit-check input','#edit-check textarea','#edit-check select','#edit-check [contenteditable] span','#edit-check [data-allow-copy]','#edit-check .debug-panel']){
+ const editable=selector.startsWith('#');
+ const result=await page.locator(selector).first().evaluate(e=>{const event=new MouseEvent('contextmenu',{bubbles:true,cancelable:true});return {allowed:e.dispatchEvent(event),selection:getComputedStyle(e).userSelect};});
+ assert(result.allowed===editable,'Context menu exception '+selector);
+ assert(result.selection===(editable?'text':'none'),'Selection exception '+selector);
+ }
+ await page.locator('#edit-check input').fill('Changed');assert(await page.locator('#edit-check input').inputValue()==='Changed','Input remains editable');
+ await page.evaluate(()=>document.querySelector('#edit-check').remove());
+ // Exercise existing command handlers with mocked fetch only, never a live game.
+ await page.evaluate(()=>{window.uiRequests=[];window.fetch=(url,opts)=>{window.uiRequests.push({url:String(url),body:opts&&opts.body||''});return new Promise(()=>{});};});
+ await page.locator('[data-action="battle-log"]').click({force:true});
+ assert(await page.evaluate(()=>uiRequests.length)===0,'Log icon sends no requests');
+ await page.locator('[data-action="battle-log"]').focus();await page.keyboard.press('Enter');
+ assert(await page.evaluate(()=>uiRequests.length)===0,'Log keyboard activation is inert');
+ // Cancel the original confirm: no command may be sent.
+ page.once('dialog',d=>d.dismiss());
+ await page.locator('a.resign').click();
+ assert(await page.evaluate(()=>uiRequests.length)===0,'Cancel surrender confirmation sends no command');
+ page.once('dialog',d=>d.accept());
+ await page.locator('a.resign').click();
+ await page.waitForFunction(()=>uiRequests.length===1);
+ assert(await page.evaluate(()=>new URLSearchParams(uiRequests[0].body).get('cmd')==='resign'),'Original surrender command preserved');
+ if(process.env.POLISH_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.POLISH_SCREENSHOT_DIR,'battle-polish-'+width+'.png')});
+ console.log('PASS '+width+'px: pagination, centered bullets, 40/48px icons, tooltips, stable layout, background, editable exceptions, inert log and original surrender confirmation/command.');
+ await page.close();
+ }
+ }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exit(1)});
