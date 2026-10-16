@@ -77,10 +77,17 @@ final class InfoPanel
         $end = $canEnd
             ? '<a class="button wide" href="' . $this->baseUrl . '&cmd=end_turn">Завершить ход</a>'
             : '<button class="button wide" type="button" disabled>Завершить ход</button>';
+        $resignIcon = $this->tpl->parse('includes/battle/control_icon.tpl', [
+            'file' => 'surrender_160.png', 'label' => 'Сдаться',
+        ]);
         $resign = $inBattle
-            ? '<a class="button wide resign" href="' . $this->baseUrl . '&cmd=resign" onclick="return confirm(\'Сдаться?\')">Сдаться</a>'
-            : '<button class="button wide resign" type="button" disabled>Сдаться</button>';
-        return '<div class="info-actions">' . $end . $resign . '</div>';
+            ? '<a class="battle-icon-control resign" aria-label="Сдаться" href="' . $this->baseUrl . '&cmd=resign" onclick="return confirm(\'Сдаться?\')">' . $resignIcon . '</a>'
+            : '<button class="battle-icon-control resign" aria-label="Сдаться" type="button" disabled>' . $resignIcon . '</button>';
+        $log = '<button class="battle-icon-control" type="button" data-action="battle-log" aria-label="Лог игры" aria-disabled="true">'
+            . $this->tpl->parse('includes/battle/control_icon.tpl', [
+                'file' => 'game_log_160.png', 'label' => 'Лог игры',
+            ]) . '</button>';
+        return '<div class="info-actions">' . $end . '<div class="battle-icon-actions">' . $log . $resign . '</div></div>';
     }
     private function renderStatusHeader(): string
     {
