@@ -57,7 +57,8 @@ foreach (['host', 'player'] as $viewer) {
     $screen = new BattleScreen(new Template(__DIR__ . '/../templates'));
     $data = $screen->prepare($state, $viewer, $viewer, null, [])['data'];
     $field = $data['field_html'];
-    coordsAssert(substr_count($field, 'class="battle-columns"') === 1, 'Column scale must be single');
+    coordsAssert(substr_count($field, 'class="battle-columns"') === 1, 'Upper column scale must be single');
+    coordsAssert(substr_count($field, 'class="battle-columns battle-columns-bottom"') === 1, 'Lower column scale must be single');
     coordsAssert(substr_count($field, 'class="battle-row-number coords--own"') === 3, 'Own row numbers missing');
     coordsAssert(substr_count($field, 'class="battle-row-number coords--enemy"') === 3, 'Enemy row numbers missing');
     coordsAssert(substr_count($field, 'cell-marker-target') === 30, 'Legal cells not clickable');

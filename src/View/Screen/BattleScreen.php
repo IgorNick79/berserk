@@ -305,6 +305,7 @@ final class BattleScreen
             $html .= '<span>' . $pos['col'] . '</span>';
         }
         $html .= '</div>';
+        $columnsHtml = $html;
         $pickerKey = \Berserk\View\Ui\CellMarkerPicker::identity($state, $playerKey);
         foreach ($rowOrder as $r) {
             $rowCells = '';
@@ -413,6 +414,7 @@ final class BattleScreen
                 . $pos['side'] . '" aria-label="' . $side . ' ' . $pos['row'] . '-й ряд">'
                 . \Berserk\View\Ui\Coords::rowLabel($pos['row']) . '</span>' . $rowCells . '</div>';
         }
+        $html .= str_replace('class="battle-columns"', 'class="battle-columns battle-columns-bottom"', $columnsHtml);
         return $pickerKey !== '' ? '<div data-cell-marker-field="' . $pickerKey . '">' . $html . '</div>' : $html;
     }
 
@@ -762,10 +764,10 @@ final class BattleScreen
         // Asset names follow the existing ukid convention; check the public root,
         // independently of the process working directory or HTTP document root.
         if (preg_match('/\A[a-zA-Z0-9_-]+\z/D', $c->ukid)
-            && is_file(dirname(__DIR__, 3) . '/www/assets/cards/s1/preview/' . $c->ukid . '.webp')) {
+            && is_file(dirname(__DIR__, 3) . '/www/assets/cards/s1/' . $c->ukid . '.webp')) {
             $imgHtml = $this->tpl->parse('includes/battle/card_preview.tpl', [
-                'preview_url' => '/assets/cards/s1/preview/' . rawurlencode($c->ukid) . '.webp',
-                'original_url' => '/assets/cards/s1/original/' . rawurlencode($c->ukid) . '.jpg',
+                'preview_url' => '/assets/cards/s1/' . rawurlencode($c->ukid) . '.webp',
+                'original_url' => '/assets/cards/s1/original/' . rawurlencode($c->ukid) . '.png',
                 'name' => htmlspecialchars($info['name'], ENT_QUOTES),
             ]);
         }

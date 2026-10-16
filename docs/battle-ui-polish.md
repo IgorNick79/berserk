@@ -52,3 +52,12 @@ No live game or production HTTP commands were executed. Testing used actual rend
 Game logic, routing, command URLs, confirmation behavior, database structure, `applySnapshot`, snapshot transport and flying pagination state logic are unchanged. The green end-turn command is unchanged. No journal functionality has been implemented.
 
 Per the user's clarification, push only this feature branch; do not merge into main.
+
+## Follow-up: columns and landscape art
+
+- Repeat the same viewer-oriented column labels below the field.
+- Preview lookup now uses `/assets/cards/s1/<ukid>.webp` (without `preview/`).
+- Popup uses `/assets/cards/s1/original/<ukid>.png`, with pointer cursor on the preview and responsive maximum dimensions of 800x500, preserving intrinsic proportions.
+- Background stays unchanged.
+- PHP preview, coordinate, Stage 1B, AJAX layout and card visual checks passed. Browser checks at 1600/800/375px cover matching lower labels, existing alignment/pagination, pointer cursor, a synthetic landscape image at the PNG URL with 8:5 proportions, 800x500 bounds and all three dismissal methods.
+- Production card assets are ignored and absent locally; no actual card artwork was moved or replaced. Place the real WebP directly in s1/ and the PNG in original/ on the server.

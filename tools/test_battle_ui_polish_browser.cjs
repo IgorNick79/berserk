@@ -53,6 +53,24 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  await update(3);assert(await page.locator('.fly-zone.own [data-fly-go]').count()===0,'Controls removed');
  await update(4);assert(await page.locator('.fly-zone.own [data-fly-go="0"]').getAttribute('aria-pressed')==='true','Reset persists after regrowth');
  assert(await page.locator('.fly-zone.opp [data-fly-go="1"]').getAttribute('aria-pressed')==='true','Own reset leaves opponent alone');
+ // Upper/lower columns use identical ordering and horizontal coordinates.
+ assert(await page.evaluate(()=>{const groups=[...document.querySelectorAll('.battle-columns')];return groups.length===2&&groups[0].textContent===groups[1].textContent&&[...groups[0].children].every((e,i)=>Math.abs(e.getBoundingClientRect().x-groups[1].children[i].getBoundingClientRect().x)<.1);}), 'Lower column labels match upper labels');
+ // Landscape popup uses the PNG URL, preserves 8:5 and stays within 800x500.
+ await page.route('https://battle.test/assets/cards/s1/original/ui-test.png',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000"/>'}));
+ await page.evaluate(html=>document.querySelector('.info-panel-content').insertAdjacentHTML('afterbegin',html),read('templates/includes/battle/card_preview.tpl').replaceAll('{{original_url}}','/assets/cards/s1/original/ui-test.png').replaceAll('{{preview_url}}','/assets/cards/s1/ui-test.webp').replaceAll('{{name}}','UI test'));
+ await page.addScriptTag({content:read('www/assets/js/card-image-popup.js')});
+ const preview=page.locator('.panel-card-preview');
+ assert(await preview.evaluate(e=>getComputedStyle(e).cursor)==='pointer','Preview pointer cursor');
+ for(const method of ['escape','button','outside']) {
+ await preview.click();
+ await page.waitForFunction(()=>document.querySelector('.card-image-popup img').naturalWidth===1600);
+ assert(await page.locator('.card-image-popup img').evaluate(img=>{const r=img.getBoundingClientRect();return img.src.endsWith('/original/ui-test.png')&&r.width<=800&&r.height<=500&&r.width<=innerWidth-32&&r.height<=innerHeight-96&&Math.abs(r.width/r.height-1.6)<.01;}),'Landscape popup limits and proportions');
+ if(method==='escape')await page.keyboard.press('Escape');
+ if(method==='button')await page.locator('.card-image-popup-close').click();
+ if(method==='outside')await page.mouse.click(2,400);
+ assert(await page.locator('.card-image-popup').evaluate(e=>!e.open),'Popup closes '+method);
+ }
+ await preview.evaluate(e=>e.remove());
  // Both pagination groups must be centered on their own flying zone.
  assert(await page.evaluate(()=>[...document.querySelectorAll('.fly-zone')].every(z=>{const c=z.querySelector('.fly-pagination');if(!c)return true;const a=z.getBoundingClientRect(),b=c.getBoundingClientRect();return Math.abs(a.x+a.width/2-b.x-b.width/2)<.1;})),'Centered bullets');
  await page.waitForFunction(()=>[...document.querySelectorAll('.battle-icon-control img')].every(img=>img.complete&&img.naturalWidth===160));
@@ -96,7 +114,7 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  await page.waitForFunction(()=>uiRequests.length===1);
  assert(await page.evaluate(()=>new URLSearchParams(uiRequests[0].body).get('cmd')==='resign'),'Original surrender command preserved');
  if(process.env.POLISH_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.POLISH_SCREENSHOT_DIR,'battle-polish-'+width+'.png')});
- console.log('PASS '+width+'px: pagination, centered bullets, 40/48px icons, tooltips, stable layout, background, editable exceptions, inert log and original surrender confirmation/command.');
+ console.log('PASS '+width+'px: lower columns, landscape PNG popup, pagination, centered bullets, 40/48px icons, tooltips, stable layout, background, editable exceptions, inert log and original surrender confirmation/command.');
  await page.close();
  }
  }finally{await browser.close();}
