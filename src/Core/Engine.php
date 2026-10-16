@@ -29,6 +29,7 @@ final class Engine
         if ($result->success && ($state->battle['turn_timer']['pause_reason'] ?? null) === 'start_resolution') {
             (new TurnProcessor($state, $this))->afterStartPhase($state->battle['turn_timer']['owner']);
         }
+        if ($result->success) TurnTimer::reconcileWaiting($state, $this->serverNow());
         TurnTimer::settle($state, $this->serverNow());
         GameLog::append($state, $playerKey, $cmd, $result);
         return $result;

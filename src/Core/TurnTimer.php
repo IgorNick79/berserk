@@ -72,6 +72,23 @@ final class TurnTimer
         $timer['pause_reason'] = null;
     }
 
+    /** Reconcile only the pause owned by P1; unknown waits preserve the current mode. */
+    public static function reconcileWaiting(GameState $state, int $now): void
+    {
+        $timer = $state->battle['turn_timer'] ?? null;
+        if ($timer === null || $state->status !== 'battle' || $state->winner !== null
+            || $timer['status'] === 'expired'
+            || ($timer['status'] === 'paused' && $timer['pause_reason'] !== 'opponent_wait')) return;
+        $wait = BattleWaitResolver::current($state);
+        if (($wait['kind'] ?? null) === 'unknown') return;
+        $opponent = $state->getOpponentKey($timer['owner']);
+        if (in_array($opponent, $wait['required_players'] ?? [], true)) {
+            self::pause($state, $timer['period_id'], 'opponent_wait', $now);
+        } else {
+            self::resume($state, $timer['period_id'], 'opponent_wait', $now);
+        }
+    }
+
     /** Read-only projection for a future AJAX snapshot; does not allocate or persist. */
     public static function snapshot(GameState $state, int $now): ?array
     {
