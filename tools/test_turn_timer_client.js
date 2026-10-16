@@ -62,6 +62,19 @@ function setup(boot=sample(),viewer='player') {
 }
 async function main(){
     await edgeCases();
+    // T3: a recovered user command may precede the server's subsequent auto-end.
+    // The client follows sync_version/snapshot, never emits another end_turn.
+    const timeout=setup(sample({status:'expired',remaining_seconds:0,anchor_at:null,server_now:1180}));await timeout.flush();
+    timeout.hold('battle_command');timeout.command('cmd=confirm_strike&wait_id=1');await timeout.flush();
+    timeout.document.hidden=true;timeout.fire('visibilitychange');timeout.tick(30000);
+    const next=sample({period_id:2,owner:'player',server_now:1210});
+    timeout.state(next,3);timeout.hold('battle_command_status');
+    timeout.document.hidden=false;timeout.fire('visibilitychange');await timeout.poll();
+    timeout.release('battle_command_status',{command_id:'timer-command',command_status:'committed',terminal:true,
+        before_version:1,after_version:2,sync_version:3,turn_timer:next});await timeout.flush();
+    assert.equal(timeout.node.dataset.mine,'1');assert.equal(timeout.value.textContent,'03:00','Recovery uses next server period after auto-end');
+    assert.equal(timeout.requests.filter(r=>r.route==='battle_command').length,1,'Hidden tab recovery never posts auto-end');
+    assert.equal(timeout.intervals.size,1);timeout.unload();
     const ack=setup();await ack.flush();
     await ack.accept(sample({server_now:1001,remaining_seconds:179}),9,true);
     ack.hold('battle_command');ack.command('cmd=confirm_strike&wait_id=old-screen-7');await ack.flush();

@@ -119,7 +119,7 @@ final class GameRepository
                 $result = $apply($working);
                 if (!$result instanceof Result) throw new \LogicException('Locked command must return Result');
                 if (!$result->success) {
-                    $journal->markRejected($journalId, $beforeVersion, 'auto_ack_not_current', $result->error);
+                    $journal->markRejected($journalId, $beforeVersion, 'automatic_command_rejected', $result->error);
                     $this->db->commit();
                     return;
                 }

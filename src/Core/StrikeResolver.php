@@ -256,13 +256,7 @@ final class StrikeResolver
         // Обязательная атака
         $forced = CardStats::getForcedStrikeTarget($this->state, $attacker);
         if ($forced !== null) {
-            $dr = abs($target->row - $attacker->row);
-            $dc = abs($target->col - $attacker->col);
-            $isValidTarget = $target->closed
-                && $target->owner !== $playerKey
-                && $dr <= 1 && $dc <= 1 && ($dr + $dc) > 0;
-
-            if (!$isValidTarget) {
+            if (!CardStats::isForcedStrikeTarget($attacker, $target)) {
                 return Result::error('Обязаны атаковать закрытое существо');
             }
         }

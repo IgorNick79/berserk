@@ -82,6 +82,20 @@ foreach(['running','paused','expired','legacy'] as $mode) {
     $h=tsRequest('first&'.$query.'&ajax=battle_sync&force_snapshot=1');
     $g=tsRequest('second&'.$query.'&ajax=battle_sync&force_snapshot=1');
     tsAssert($h['type']==='snapshot' && $g['type']==='snapshot','Both viewers receive snapshot');
+    if($mode==='expired') {
+        // T3 intentionally replaces the old read-only HTTP behaviour at expiry;
+        // the standalone renderer/TurnTimer snapshot checks above remain read-only.
+        tsAssert($h['turn_timer']['period_id']===2 && $g['turn_timer']['period_id']===2
+            && $h['turn_timer']['owner']==='player' && $h['turn_timer']['remaining_seconds']>=179,'Due sync starts one new period');
+        $loaded=$repo->findById($state->gameId);
+        tsAssert($loaded->battle['active']==='player' && $loaded->persistenceVersion===$state->persistenceVersion+1,'One atomic auto-end');
+        $unchanged=tsRequest('first&'.$query.'&ajax=battle_sync&since_version='.$loaded->persistenceVersion);
+        tsAssert($unchanged['type']==='no_change','Second poll cannot end next turn');
+        $next=tsRequest('second&'.$query.'&ajax=battle_command',['cmd'=>'end_turn','expected_version'=>$loaded->persistenceVersion,'command_id'=>'timer-explicit-end']);
+        tsAssert($next['command_status']==='committed' && $next['turn_timer']['period_id']===3
+            && $next['turn_timer']['owner']==='host' && $next['turn_timer']['remaining_seconds']>=179,'Explicit command still starts next server period');
+        continue;
+    }
     if($mode==='legacy')tsAssert($h['turn_timer']===null && $g['turn_timer']===null,'Legacy does not invent a period');
     else {
         foreach(['period_id','owner','status','limit_seconds','pause_reason'] as $key)tsAssert($h['turn_timer'][$key]===$g['turn_timer'][$key],'Shared timer identity/status');
@@ -94,14 +108,6 @@ foreach(['running','paused','expired','legacy'] as $mode) {
     tsAssert($status['command_status']==='unknown' && array_key_exists('turn_timer',$status),'Recovery status carries timer, remains unknown');
     tsAssert($before===$db->fetchOne('SELECT json,version FROM games WHERE ind='.$state->gameId),'Polling does not persist seconds/expiry');
     tsAssert($journal->find($state->gameId,'player','missing-timer-probe')===null,'Polling creates no journal entries');
-    if($mode==='expired') {
-        tsAssert($unchanged['turn_timer']['remaining_seconds']===0,'Expired no-change shows zero');
-        $loaded=$repo->findById($state->gameId);
-        tsAssert($loaded->battle['active']==='host' && $loaded->battle['turn_timer']['period_id']===1,'No automatic turn transition');
-        $next=tsRequest('first&'.$query.'&ajax=battle_command',['cmd'=>'end_turn','expected_version'=>$state->persistenceVersion,'command_id'=>'timer-explicit-end']);
-        tsAssert($next['command_status']==='committed' && $next['turn_timer']['period_id']===2
-            && $next['turn_timer']['owner']==='player' && $next['turn_timer']['remaining_seconds']>=179,'Explicit command starts next server period');
-    }
 }
 echo "Turn timer HTTP/no-change/read-only tests passed\n";
 

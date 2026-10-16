@@ -1108,6 +1108,15 @@ final class CardStats
      *
      * @return CardInstance|null  Цель для обязательной атаки, либо null если нет.
     */
+    /** Existing compulsory-strike target rule shared by declare and expiry routing. */
+    public static function isForcedStrikeTarget(CardInstance $attacker, CardInstance $target): bool
+    {
+        $dr = abs($target->row - $attacker->row);
+        $dc = abs($target->col - $attacker->col);
+        return $target->closed && $target->owner !== $attacker->owner
+            && $dr <= 1 && $dc <= 1 && ($dr + $dc) > 0;
+    }
+
     public static function getForcedStrikeTarget(GameState $state, CardInstance $card): ?CardInstance
     {
         if (empty($card->prop['forced_strike'])) return null;

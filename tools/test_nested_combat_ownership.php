@@ -92,6 +92,19 @@ try {
         // Serialize a real pending and re-check that no fallback to battle.active occurs.
         $s=GameState::fromArray(json_decode(json_encode($s->toArray(),JSON_THROW_ON_ERROR),true,512,JSON_THROW_ON_ERROR));
         ncProjection($s,'strike.'.$key,$expectedOwner);
+        // T3: the same real nested workflow remains completable with a persisted
+        // expired timer. Work on a clone so the P1 accounting assertions stay intact.
+        $expired=GameState::fromArray($s->toArray());
+        $expired->battle['turn_timer']=array_replace($expired->battle['turn_timer'],[
+            'status'=>'expired','remaining_seconds'=>0,'anchor_at'=>null,'pause_reason'=>null]);
+        $expiredEngine=new Engine(null,static fn():int=>1100);
+        ncApply($expiredEngine,$expired,$expectedOwner,$command,$payload);
+        ncAssert(empty($expired->battle['strike'][$key]),'Expired clock must allow real nested continuation: '.$case);
+        if(!empty($expired->battle['strike'])){
+            ncApply($expiredEngine,$expired,$opponent,'confirm_strike');
+            ncApply($expiredEngine,$expired,$attacker,'confirm_strike');
+        }
+        ncAssert(\Berserk\Core\TurnTimeoutEligibility::check($expired,1100)['allowed'],'Nested workflow releases timeout after final ACK: '.$case);
         $now=1100;ncApply($engine,$s,$expectedOwner,$command,$payload);
         ncAssert(empty($s->battle['strike'][$key]),'Authorized decision must consume pending: '.$case);
         $expectedRemaining=$expectedOwner===$attacker?90:($case==='death'?170:160);

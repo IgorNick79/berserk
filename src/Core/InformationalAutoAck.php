@@ -9,16 +9,21 @@ final class InformationalAutoAck
 
     public function check(GameState $state, string $requester): GameState
     {
-        if (!in_array($requester, ['host', 'player'], true)) return $state;
+        return $this->checkOutcome($state, $requester)->state;
+    }
+
+    public function checkOutcome(GameState $state, string $requester): AutomaticCommandResult
+    {
+        if (!in_array($requester, ['host', 'player'], true)) return new AutomaticCommandResult($state, true, 'invalid_requester');
         $wait = InformationalWaitManager::due($state, $this->engine->serverNow());
-        if ($wait === null || $state->persistenceVersion === null) return $state; // No journal or write on normal reads.
+        if ($wait === null || $state->persistenceVersion === null) return new AutomaticCommandResult($state, true, 'not_due'); // No journal or write on normal reads.
         $journal = new CommandJournalRepository($this->db);
-        if ($journal->findProcessingAutoAck($state->gameId, $wait['wait_id']) !== null) return $this->reload($state);
+        if ($journal->findProcessingAutoAck($state->gameId, $wait['wait_id']) !== null) return new AutomaticCommandResult($this->reload($state), false, 'processing');
         $actor = $wait['required_player'];
         $commandId = 'p2a:' . $wait['wait_id'] . ':' . $state->persistenceVersion;
         $command = new Command('confirm_strike', ['wait_id'=>(string) $wait['wait_id']]);
         $attempt = $journal->registerProcessing($state->gameId, $actor, $commandId, $command->type, $command->payload, $state->persistenceVersion);
-        if (!$attempt['is_new']) return $this->reload($state); // Includes processing and all terminal outcomes.
+        if (!$attempt['is_new']) return new AutomaticCommandResult($this->reload($state), $attempt['status'] !== CommandJournalRepository::STATUS_PROCESSING, (string) $attempt['status']);
         $id = (int) $attempt['id'];
         try {
             $this->repo->executeLockedCommand($state, $journal, $id, function (GameState $locked) use ($wait, $actor, $command, $journal, $id): Result {
@@ -34,12 +39,12 @@ final class InformationalAutoAck
         } catch (TransactionCommitUnknownException|TransactionRollbackUnknownException) {
             // Never turn an unknown outcome into failed or launch a competing command.
             // A fresh read observes atomic game+journal commit, or leaves processing for recovery.
-            return $this->reload($state);
+            return new AutomaticCommandResult($this->reload($state), false, 'unknown_transaction');
         } catch (DbQueryException) {
             // Repository reached this catch only after an acknowledged rollback.
             $journal->markFailed($id, $state->persistenceVersion, 'persistence_failed');
         }
-        return $this->reload($state);
+        return new AutomaticCommandResult($this->reload($state), true, 'completed');
     }
 
     private function reload(GameState $fallback): GameState

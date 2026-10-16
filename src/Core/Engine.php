@@ -23,6 +23,8 @@ final class Engine
 
     public function apply(GameState $state, string $playerKey, Command $cmd): Result
     {
+        $error = ExpiredCommandGuard::error($state, $playerKey, $cmd, $this->serverNow());
+        if ($error !== null) return Result::error($error);
         if ($cmd->type === 'confirm_strike') {
             $error = InformationalWaitManager::validateAck($state, $playerKey, $cmd->get('wait_id'));
             if ($error !== null) return Result::error($error);

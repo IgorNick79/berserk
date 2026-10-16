@@ -129,6 +129,21 @@ final class CommandJournalRepository
             . " AND command_id LIKE '" . $prefix . "%' AND status = 'processing' AND id <> " . (int) $exceptId . ' LIMIT 1');
     }
 
+    public function findProcessingTurnEnd(int $gameId, int $periodId, int $exceptId = 0): ?array
+    {
+        $prefix = $this->db->escape('t3e:' . $periodId . ':');
+        return $this->db->fetchOne("SELECT * FROM battle_command_journal WHERE game_id = " . (int) $gameId
+            . " AND command_id LIKE '" . $prefix . "%' AND status = 'processing' AND id <> " . (int) $exceptId . ' LIMIT 1');
+    }
+
+    public function latestTurnEndAttempt(int $gameId, int $periodId, string $owner, int $version): ?array
+    {
+        $this->validatePlayerKey($owner);
+        $base = $this->db->escape('t3e:' . $periodId . ':' . $owner . ':' . $version);
+        return $this->db->fetchOne("SELECT * FROM battle_command_journal WHERE game_id = " . (int) $gameId
+            . " AND (command_id = '" . $base . "' OR command_id LIKE '" . $base . ":%') ORDER BY id DESC LIMIT 1");
+    }
+
     public function statusFor(int $gameId, string $playerKey, string $commandId): ?string
     {
         $record = $this->find($gameId, $playerKey, $commandId);
