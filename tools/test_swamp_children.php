@@ -23,14 +23,16 @@ function scReload(GameState $s): GameState {
     return GameState::fromArray(json_decode(json_encode($s->toArray(), JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR));
 }
 function scRoll(): void { $_SESSION = ['debug_roll' => '6,1,4']; Dice::init(); }
-function scStrike(GameState $s): void {
+function scStrike(GameState $s, bool $finish = true): void {
     $s->battle['strike'] = ['attacker_id' => 1, 'target_id' => 2, 'defender_id' => null, 'state' => 'waiting_defender', 'confirmed' => []];
     scRoll(); (new StrikeResolver($s, new Engine()))->resolve();
+    if ($finish) scFinish($s);
 }
 function scChoose(GameState $s, string $owner, array $data): Berserk\Core\Result {
     return (new Engine())->apply($s, $owner, new Command('choose_first_strike_movement', $data + ['choice_id' => $s->battle[FirstStrikeJump::PENDING]['id'] ?? '']));
 }
 function scFinish(GameState $s): void {
+    if (empty($s->battle['strike'])) return;
     foreach (['host', 'player'] as $owner) scAssert((new Engine())->apply($s, $owner, new Command('confirm_strike'))->success, 'Combat acknowledgement');
     scAssert(empty($s->battle['strike']), 'Combat completed');
 }
@@ -42,6 +44,12 @@ scAssert($s->battle['strike']['first_strike_blocked'] === true, 'Automatic block
 scAssert($s->battle['strike']['damage_total'] === 0 && $s->getCard(2)->hp === 20 && $s->getCard(1)->hp === 20, 'No wounds or answer');
 scAssert($s->getCard(1)->closed && $s->getCard(1)->flags['attacks_used_this_turn'] === 1, 'Attack action consumed once');
 scAssert(Dice::remaining() === [6,1,4], 'No dice for blocked strike');
+scAssert(empty($s->battle[FirstStrikeJump::PENDING]), 'No pending before combat ACKs');
+scAssert((new Engine())->apply($s,'host',new Command('confirm_strike'))->success, 'First result ACK');
+scAssert(empty($s->battle[FirstStrikeJump::PENDING]), 'One result ACK does not open jump');
+$s=scReload($s);
+scAssert((new Engine())->apply($s,'player',new Command('confirm_strike'))->success, 'Second ACK after reload opens deferred effect');
+scAssert(empty($s->battle['strike']), 'Combat finished before jump');
 $p = $s->battle[FirstStrikeJump::PENDING];
 scAssert($p['owner'] === 'player' && $p['stage'] === 'jump', 'Defender chooses jump');
 scAssert(!in_array('3_3', $p['cells'], true) && !in_array('3_2', $p['cells'], true) && !in_array('6_5', $p['cells'], true), 'No origin, occupied or distant cells');
@@ -55,7 +63,7 @@ scAssert(!(new Engine())->apply($s, 'player', new Command('cancel_pending'))->su
 scAssert(!scChoose($s, 'host', ['row' => 1, 'col' => 3])->success, 'Wrong owner rejected');
 foreach ([[3,3],[3,2],[6,5],[0,3]] as [$r,$c]) scAssert(!scChoose($s, 'player', ['row'=>$r,'col'=>$c])->success, 'Invalid cell rejected');
 scAssert(!scChoose($s, 'player', ['row'=>1,'col'=>3,'choice_id'=>'old'])->success, 'Stale jump rejected');
-$s = scReload($s); $originResult = $s->battle['strike'];
+$s = scReload($s); $originResult = $s->battle['coin_post_combat_history'];
 scAssert(FirstStrikeJump::used($s, $s->getCard(2)), 'First use persists');
 scAssert(scChoose($s, 'player', ['row'=>1,'col'=>3])->success, 'Jump after reload');
 scAssert($s->getCard(2)->row === 1 && $s->getCard(2)->move === 2 && !$s->getCard(2)->closed && empty($s->getCard(2)->flags['moved_this_turn']), 'Jump preserves action');
@@ -69,7 +77,7 @@ scAssert(str_contains($spec->buttons[0]['label'], 'Враг (3, 2)') && !str_con
 $s = scReload($s);
 scAssert(scChoose($s,'host',['target_id'=>1])->success, 'Pull resumes');
 scAssert($s->getCard(1)->row === 3 && $s->getCard(1)->col === 3 && $s->getCard(1)->closed && $s->getCard(1)->flags['attacks_used_this_turn'] === 1, 'Forced move retains action state');
-scAssert($s->battle['strike'] === $originResult, 'Two choices preserve combat result');
+scAssert($s->battle['coin_post_combat_history'] === $originResult, 'Two choices preserve combat result');
 $s = scReload($s);
 scAssert(!scChoose($s,'host',['target_id'=>1,'choice_id'=>$pull['id']])->success, 'No replay after reload');
 scAssert(Dice::remaining() === [6,1,4], 'Choices never reroll'); scFinish($s);
@@ -100,9 +108,9 @@ foreach (['shot','throw','discharge','impact','execute','cast'] as $type) {
     $s = scState(); scAssert(!(new FirstStrikeJump($s,new Engine()))->tryBlock($s->getCard(1),$s->getCard(2),$type), 'Not a strike: '.$type);
     scAssert(!FirstStrikeJump::used($s,$s->getCard(2)), 'Non-strike does not consume');
 }
-$s = scState(); $s->getCard(1)->owner = 'player'; scStrike($s);
+$s = scState(); $s->getCard(1)->owner = 'player'; scStrike($s, false);
 scAssert(!FirstStrikeJump::used($s,$s->getCard(2)), 'Friendly strike does not consume');
-$s = scState(); $s->getCard(1)->type = 'artifact'; scStrike($s);
+$s = scState(); $s->getCard(1)->type = 'artifact'; scStrike($s, false);
 scAssert(!FirstStrikeJump::used($s,$s->getCard(2)), 'Non-creature does not consume');
 $s = scState(); $s->getCard(1)->type = 'fly'; scStrike($s);
 scAssert(!empty($s->battle[FirstStrikeJump::PENDING]), 'Flying creature strike protected');
@@ -142,6 +150,8 @@ foreach (['tap','magic','uchr'] as $type) {
         scRoll();$cmd=new Command($type==='uchr'?'uchr':'action',['card_id'=>1,'target_id'=>2,'action_key'=>'probe']);
         scAssert((new Engine())->apply($s,'host',$cmd)->success,'Special strike path: '.$type);
         scAssert(FirstStrikeJump::used($s,$s->getCard(2)),'Special consumes first');
+        scAssert(empty($s->battle[FirstStrikeJump::PENDING]),'Special waits for combat completion');
+        scFinish($s);
         scAssert(!empty($s->battle[FirstStrikeJump::PENDING])===!$ignore,'Special block and ignore: '.$type);
         scAssert($s->getCard(2)->hp===($ignore?18:20),'Special damage blocked once');
     }
@@ -151,6 +161,8 @@ $s=scState();$s->getCard(1)->prop=$s->getCard(2)->prop;$s->getCard(2)->prop=[];
 $s->battle['strike']=['attacker_id'=>1,'target_id'=>2,'defender_id'=>null,'state'=>'results','confirmed'=>[]];
 (new StrikeResolver($s,new Engine()))->apply(['attack'=>'weak','defend'=>'weak','winner'=>'attack'],false);
 scAssert($s->getCard(1)->hp===20 && $s->getCard(2)->hp===18 && !empty($s->battle['strike']['first_answer_blocked']),'Answer blocked without undoing primary damage');
+scAssert(empty($s->battle[FirstStrikeJump::PENDING]),'Answer effect deferred');
+scFinish($s);
 scAssert($s->battle[FirstStrikeJump::PENDING]['card_id']===1,'Answer recipient chooses jump');
 // Existing static defense remains independent.
 $s=scState();$s->getCard(2)->prop=['zoa'=>true];
@@ -178,11 +190,56 @@ scAssert(empty($s->battle[FirstStrikeJump::PENDING]),'Rooted enemy excluded');
 $s=scState();scStrike($s);scChoose($s,'player',['row'=>1,'col'=>3]);$s->cell_markers['3_3']=['type'=>'bonfire'];
 scAssert(!scChoose($s,'host',['target_id'=>1])->success,'Pull destination revalidated');
 // Resolving the saved blocked combat cannot spend another action or roll again.
-$s=scState();scStrike($s);$s=scReload($s);$before=$s->toArray();(new StrikeResolver($s,new Engine()))->resolve();
+$s=scState();scStrike($s,false);$s=scReload($s);$before=$s->toArray();(new StrikeResolver($s,new Engine()))->resolve();
 scAssert($s->toArray()===$before && Dice::remaining()===[6,1,4],'Blocked resolve replay is inert');
+scFinish($s);
 // During a suspended strike, normal commands and combat ACKs cannot advance it.
 foreach (['confirm_strike','end_turn','move','strike'] as $type) {
     scAssert(!(new Engine())->apply($s,'host',new Command($type,['card_id'=>1,'target_id'=>2,'row'=>1,'col'=>1]))->success,'Mandatory pending gates '.$type);
 }
+// Defense arrays behave like independent existing protections: any applicable unignored key blocks.
+foreach ([
+    ['creature',['zoa','zoan'],['zoa'],true],
+    ['creature',['zoa','zoan'],['zoa','zoan'],false],
+    ['fly',['zoa','zoan'],['zoa'],false],
+    ['fly',['zoa','zoal'],['zoa'],true],
+    ['fly',['zoa','zoal'],['zoa','zoal'],false],
+    ['creature',['zoan','zoal'],['zoal'],true],
+    ['creature',['zoal'],[],false],
+    ['creature',[],[],false],
+    ['creature',['zov'],[],false],
+] as [$type,$defenses,$ignore,$blocked]) {
+    $s=scState();$s->getCard(1)->type=$type;$s->getCard(1)->prop['ignore']=$ignore;
+    $s->getCard(2)->prop['first_strike_jump']['defense']=$defenses;
+    scStrike($s,false);
+    scAssert(!empty($s->battle['strike']['first_strike_blocked'])===$blocked,'Array protection and ignore by attacking type');
+    scAssert(FirstStrikeJump::used($s,$s->getCard(2)),'Array first strike consumed on bypass too');
+}
+// A real after-combat instant window, its result and reload must finish before the jump.
+$s=scState();$s->getCard(2)->coins=1;
+$s->addCard(new CardInstance(instanceId:3,ukid:'after_probe',owner:'player',zone:'field',row:5,col:4,hp:9,hpMax:10,
+    prop:['instants'=>[['key'=>'after_probe','name'=>'After probe','trigger'=>'turn','target'=>'self','effect'=>['type'=>'heal','value'=>1]]]]));
+scStrike($s,false);
+scAssert(empty($s->battle[FirstStrikeJump::PENDING]) && $s->getCard(2)->row===3,'No early jump or movement');
+scFinish($s);
+scAssert(!empty($s->battle['turn_instant_stack']['continuation']['coin_origin_strike']),'Shared continuation retains deferred jump');
+scAssert(empty($s->battle[FirstStrikeJump::PENDING]),'No jump during after-combat window');
+$s=scReload($s);$e=new Engine();
+scAssert($e->apply($s,'player',new Command('play_turn_instant',['card_id'=>3,'instant_key'=>'after_probe']))->success,'Play after-combat instant');
+scAssert($e->apply($s,'player',new Command('pass_turn_instant'))->success,'Resolve after-combat stack');
+scAssert(!empty($s->battle['turn_instant_result']) && empty($s->battle[FirstStrikeJump::PENDING]),'Jump waits for instant result ACK');
+$s=scReload($s);
+scAssert($e->apply($s,'player',new Command('turn_instant_result_ok'))->success,'Acknowledge after-combat instant');
+scAssert(empty($s->battle['strike']) && !empty($s->battle[FirstStrikeJump::PENDING]),'Jump starts only after complete combat, regardless of coins');
+$id=$s->battle[FirstStrikeJump::PENDING]['id'];$s=scReload($s);
+(new Berserk\Core\CoinAbilities($s,new Engine()))->advance();
+scAssert($s->battle[FirstStrikeJump::PENDING]['id']===$id,'Resume does not reopen pending');
+// Legal cells and origin are taken at effect execution, after combat has finished.
+$s=scState();scStrike($s,false);$s->getCard(2)->row=4;
+scFinish($s);
+scAssert($s->battle[FirstStrikeJump::PENDING]['from_row']===4,'Origin reflects actual pre-jump position');
+$s=scState();scStrike($s,false);$s->getCard(2)->markers['rooted']=['sources'=>[99]];scFinish($s);
+scAssert(empty($s->battle[FirstStrikeJump::PENDING]),'No unfulfillable pending if movement becomes unavailable');
+scAssert(count($s->battle['coin_post_combat_history'])===1,'Unavailable deferred jump consumed once');
 echo "Swamp children: {$checks} assertions passed.\n";
 

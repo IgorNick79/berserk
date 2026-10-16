@@ -34,6 +34,14 @@ final class CoinAbilities
         ]);
     }
 
+    public function deferFirstStrikeJump(CardInstance $card, array $config): void
+    {
+        $this->defer([
+            'kind' => 'first_strike_jump', 'owner' => $card->owner,
+            'card_id' => $card->instanceId, 'config' => $config,
+        ]);
+    }
+
     /** Record an effect, never open a choice inside the originating combat. */
     private function defer(array $effect): void
     {
@@ -191,6 +199,10 @@ final class CoinAbilities
             $source = $this->state->getCard((int) $effect['card_id']);
             if (!$source || $source->owner !== $effect['owner'] || $source->dying || $source->hp <= 0
                 || !in_array($source->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) continue;
+            if ($effect['kind'] === 'first_strike_jump') {
+                if ((new FirstStrikeJump($this->state, $this->engine))->openAfterCombat($source, $effect['config'])) return;
+                continue;
+            }
             if ($effect['kind'] === 'discharge') {
                 if ($effect['wounds'] <= 0 || $source->coins < (int) ($effect['action']['min_coins'] ?? 1)) continue;
                 $targets = $this->dischargeTargets($source, $effect['action']);

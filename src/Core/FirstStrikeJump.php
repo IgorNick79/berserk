@@ -33,9 +33,15 @@ final class FirstStrikeJump
 
         // The first qualifying strike is consumed even when its protection is ignored.
         $target->flags[self::FLAG] = self::turnStamp($this->state);
-        $defense = (string) ($config['defense'] ?? 'zoa');
-        if (!in_array($defense, ['zoa', $source->type === 'fly' ? 'zoal' : 'zoan'], true)
-            || CardStats::isDefenseIgnored($source, $defense)) return false;
+        $defenses = $config['defense'] ?? 'zoa';
+        $defenses = is_array($defenses) ? $defenses : [$defenses];
+        $protected = false;
+        foreach ($defenses as $defense) {
+            if (!is_string($defense)) continue;
+            if (in_array($defense, ['zoa', $source->type === 'fly' ? 'zoal' : 'zoan'], true)
+                && !CardStats::isDefenseIgnored($source, $defense)) $protected = true;
+        }
+        if (!$protected) return false;
 
         if ($type === 'strike') {
             $strike = &$this->state->battle['strike'];
@@ -67,6 +73,14 @@ final class FirstStrikeJump
                 }
             }
         }
+        (new CoinAbilities($this->state, $this->engine))->deferFirstStrikeJump($target, $config);
+        $this->state->bumpVersion();
+        return true;
+    }
+
+    /** Called only by the shared post-combat queue, after ACKs and combat continuations. */
+    public function openAfterCombat(CardInstance $target, array $config): bool
+    {
         $range = (int) ($config['range'] ?? 2);
         $cells = (new MovementResolver($this->state, $this->engine))->triggeredJumpCells($target, $range);
         if ($cells) {
@@ -77,8 +91,7 @@ final class FirstStrikeJump
                 'pull_adjacent_enemy' => !empty($config['pull_adjacent_enemy']),
             ];
         }
-        $this->state->bumpVersion();
-        return true;
+        return (bool) $cells;
     }
 
     public function candidates(array $pending): array
