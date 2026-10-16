@@ -43,7 +43,7 @@ foreach(['host','player'] as $viewer) foreach(['host','player'] as $active) {
         if($selection) battleSnapshotAssert(str_contains($data['info_panel_html'],$data['panel_html']) && $data['panel_html']!=='','Card rendered without losing existing HTML');
         if(in_array($context,['cell','result','ack'],true)) {
             $content=$x->query('//*[contains(@class,"info-panel-content")]')->item(0);
-            battleSnapshotAssert(str_contains($content->firstChild->getAttribute('class'),'info-panel-context'),'Mandatory context precedes card');
+            battleSnapshotAssert(str_contains($content->lastChild->getAttribute('class'),'info-panel-context'),'Mandatory context remains accessible after selected card');
             if($context==='result') battleSnapshotAssert($x->query('//a[contains(@href,"cmd=confirm_strike")]')->length===1,'Result confirmation remains accessible');
         }
         battleSnapshotAssert($x->query('//*[@id="battle-debug"]')->length===1 && $x->query('//*[contains(@class,"debug-panel")]')->length===0,'Empty debug contains no invented data');
