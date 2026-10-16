@@ -241,5 +241,43 @@ scAssert($s->battle[FirstStrikeJump::PENDING]['from_row']===4,'Origin reflects a
 $s=scState();scStrike($s,false);$s->getCard(2)->markers['rooted']=['sources'=>[99]];scFinish($s);
 scAssert(empty($s->battle[FirstStrikeJump::PENDING]),'No unfulfillable pending if movement becomes unavailable');
 scAssert(count($s->battle['coin_post_combat_history'])===1,'Unavailable deferred jump consumed once');
+// Opt-in ranged attacks use the actual ActionResolver path and the same defense/ignore keys.
+foreach (['shot'=>'zov','throw'=>'zot','discharge'=>'zom','magic'=>'zom'] as $type=>$defense) {
+    foreach (['block','ignore','unrelated'] as $mode) {
+        $s=scState();$s->getCard(1)->col=1;
+        $s->getCard(1)->prop=['actions'=>[['key'=>'ranged','type'=>$type,'range'=>3,'value'=>2,'near_shot'=>true]]];
+        $s->getCard(2)->prop['first_strike_jump']['types']=['strike','uchr','tap','magic','answer','shot','throw','discharge'];
+        $s->getCard(2)->prop['first_strike_jump']['defense']=[$defense];
+        if ($mode==='ignore') $s->getCard(1)->prop['ignore']=[$defense];
+        if ($mode==='unrelated') $s->getCard(1)->prop['ignore']=['zoal'];
+        scRoll();
+        scAssert((new Engine())->apply($s,'host',new Command('action',['card_id'=>1,'target_id'=>2,'action_key'=>'ranged']))->success,'Ranged command: '.$type);
+        scAssert(FirstStrikeJump::used($s,$s->getCard(2)),'Ranged first attack consumed');
+        scAssert($s->getCard(2)->hp===($mode==='ignore'?18:20),'Ranged defense/ignore damage: '.$type);
+        scAssert(empty($s->battle[FirstStrikeJump::PENDING]),'Ranged pending waits for result');
+        if ($mode!=='ignore') scAssert(Dice::remaining()===[6,1,4],'Blocked ranged attack does not roll');
+        $s=scReload($s);scFinish($s);
+        scAssert(!empty($s->battle[FirstStrikeJump::PENDING])===($mode!=='ignore'),'Deferred ranged jump after ACK');
+        if ($mode==='ignore') {
+            $s->getCard(1)->prop=[];scStrike($s,false);
+            scAssert(empty($s->battle['strike']['first_strike_blocked']),'Ignored ranged first attack prevents later melee block');
+        }
+    }
+}
+// Action-specific ignore is respected for shot/throw, but cannot bypass another listed protection.
+foreach (['shot'=>'zov','throw'=>'zot'] as $type=>$defense) {
+    foreach ([[$defense],['zoa',$defense]] as $defenses) {
+        $s=scState();$s->getCard(1)->col=1;
+        $s->getCard(1)->prop=['actions'=>[['key'=>'ranged','type'=>$type,'range'=>3,'value'=>2,'ignore'=>[$defense]]]];
+        $s->getCard(2)->prop['first_strike_jump']['types']=[$type];
+        $s->getCard(2)->prop['first_strike_jump']['defense']=$defenses;
+        scRoll();scAssert((new Engine())->apply($s,'host',new Command('action',['card_id'=>1,'target_id'=>2,'action_key'=>'ranged']))->success,'Action-specific ignore path');
+        scAssert(!empty($s->battle['strike']['first_strike_blocked'])===(count($defenses)>1),'Action ignore only bypasses matching protection');
+    }
+}
+// A triggered ranged effect must not close its source when no_close is set.
+$s=scState();$s->getCard(2)->prop['first_strike_jump']['types']=['discharge'];
+scRoll();scAssert((new Berserk\Core\ActionResolver($s,new Engine()))->triggeredDischarge($s->getCard(1),$s->getCard(2),['range'=>3,'value'=>2])->success,'Triggered discharge can be blocked');
+scAssert(!$s->getCard(1)->closed && $s->getCard(2)->hp===20,'Triggered attack preserves no_close');
 echo "Swamp children: {$checks} assertions passed.\n";
 

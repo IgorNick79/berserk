@@ -24,10 +24,13 @@ final class FirstStrikeJump
         return ($state->battle['turn'] ?? 0) . ':' . ($state->battle['active'] ?? '');
     }
 
-    public function tryBlock(CardInstance $source, CardInstance $target, string $type): bool
+    public function tryBlock(CardInstance $source, CardInstance $target, string $type, array $action = []): bool
     {
         $config = $target->prop['first_strike_jump'] ?? null;
-        if (!is_array($config) || !in_array($type, ['strike', 'uchr', 'tap', 'magic', 'answer'], true)) return false;
+        if (!is_array($config)) return false;
+        $types = $config['types'] ?? ['strike', 'uchr', 'tap', 'magic', 'answer'];
+        if (!is_array($types) || !in_array($type, $types, true)
+            || !in_array($type, ['strike', 'uchr', 'tap', 'magic', 'answer', 'shot', 'throw', 'discharge'], true)) return false;
         if ($source->owner === $target->owner || !in_array($source->type, ['creature', 'fly'], true)) return false;
         if ($target->dying || $target->hp <= 0 || self::used($this->state, $target)) return false;
 
@@ -35,11 +38,21 @@ final class FirstStrikeJump
         $target->flags[self::FLAG] = self::turnStamp($this->state);
         $defenses = $config['defense'] ?? 'zoa';
         $defenses = is_array($defenses) ? $defenses : [$defenses];
+        $specific = match ($type) {
+            'throw' => ['zot', 'zoda'],
+            'shot' => ['zov', 'zoda'],
+            'discharge' => ['zoda', 'zom', 'zor'],
+            'magic' => ['zom'],
+            default => [],
+        };
+        $applicable = array_merge(['zoa', $source->type === 'fly' ? 'zoal' : 'zoan'], $specific);
+        // Action-level ignore follows ActionResolver's existing shot/throw semantics.
+        $extraIgnore = in_array($type, ['shot', 'throw'], true) ? (array) ($action['ignore'] ?? []) : [];
         $protected = false;
         foreach ($defenses as $defense) {
             if (!is_string($defense)) continue;
-            if (in_array($defense, ['zoa', $source->type === 'fly' ? 'zoal' : 'zoan'], true)
-                && !CardStats::isDefenseIgnored($source, $defense)) $protected = true;
+            if (in_array($defense, $applicable, true)
+                && !CardStats::isDefenseIgnored($source, $defense, $extraIgnore)) $protected = true;
         }
         if (!$protected) return false;
 
@@ -54,7 +67,7 @@ final class FirstStrikeJump
         } elseif ($type === 'answer') {
             $this->state->battle['strike']['first_answer_blocked'] = true;
         } else {
-            $source->closed = true;
+            if (empty($action['no_close'])) $source->closed = true;
             $this->state->battle['strike'] = [
                 'kind' => $type, 'attacker_id' => $source->instanceId, 'target_id' => $target->instanceId,
                 'defender_id' => null, 'state' => 'results', 'confirmed' => [],

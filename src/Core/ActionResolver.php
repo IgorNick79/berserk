@@ -1276,7 +1276,7 @@ final class ActionResolver
             return Result::ok(['ranged_attack_redirect_pending']);
         }
 
-        if ((new FirstStrikeJump($this->state, $this->engine))->tryBlock($attacker, $target, $type)) {
+        if ((new FirstStrikeJump($this->state, $this->engine))->tryBlock($attacker, $target, $type, $action)) {
             if (!empty($action['_granted_flag_key'])) $attacker->flags[$action['_granted_flag_key']]['used'] = true;
             return Result::ok(['first_strike_blocked']);
         }

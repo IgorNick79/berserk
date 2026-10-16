@@ -1,0 +1,8 @@
+{
+  "first_strike_jump": {
+    "range": 2,
+    "types": ["strike", "uchr", "tap", "magic", "answer", "throw", "shot", "discharge"],
+    "defense": ["zoa", "zoal", "zot", "zov", "zom"],
+    "pull_adjacent_enemy": true
+  }
+}
