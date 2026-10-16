@@ -239,9 +239,9 @@ function dgApplyStrikeResult(GameState $state, array $result): void
 
 function dgConfirmStrikeBoth(GameState $state): void
 {
-    $result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike'));
+    $result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]));
     dgAssert($result->success, $result->error ?? 'Host strike confirm should succeed.');
-    $result = (new Engine())->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike'));
+    $result = (new Engine())->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]));
     dgAssert($result->success, $result->error ?? 'Player strike confirm should succeed.');
 }
 
@@ -431,8 +431,8 @@ $state->battle['strike'] = [
 ];
 dgApplyStrikeResult($state, ['attack' => 'strong', 'defend' => '', 'winner' => 'attack']);
 dgAssert(empty($state->battle['pending_degasca_sequence']), 'Degasca should wait until the strong-strike result is fully acknowledged.');
-dgAssert((new Engine())->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike'))->success, 'Host confirm before Degasca should succeed.');
-dgAssert((new Engine())->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike'))->success, 'Player confirm should open Degasca after the fight lifecycle.');
+dgAssert((new Engine())->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]))->success, 'Host confirm before Degasca should succeed.');
+dgAssert((new Engine())->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]))->success, 'Player confirm should open Degasca after the fight lifecycle.');
 dgAssert(isset($target->markers['stun']), 'Learned Medusa effect should stun target.');
 dgAssert(empty($state->battle['chain_damage'] ?? []), 'Newly learned Anubisar must not run in same sequence.');
 dgAssert(($state->battle['pending_degasca_sequence']['stage'] ?? '') === 'choose_card', 'Final strong strike should proceed to Degasca deck pick.');
@@ -498,10 +498,10 @@ $result = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('cho
 dgAssert($result->success, $result->error ?? 'Strong strike mode should resolve.');
 dgAssert(empty($state->battle['pending_degasca_sequence']), 'Degasca should not pause before result confirmation.');
 dgAssert($target->hp === 7, 'Primary strong strike should apply once before Degasca choice.');
-dgAssert((new Engine())->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike'))->success, 'Host confirm should succeed before Degasca opens.');
-dgAssert((new Engine())->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike'))->success, 'Player confirm should open Degasca.');
+dgAssert((new Engine())->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]))->success, 'Host confirm should succeed before Degasca opens.');
+dgAssert((new Engine())->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]))->success, 'Player confirm should open Degasca.');
 dgAssert(($state->battle['pending_degasca_sequence']['stage'] ?? '') === 'choose_card', 'Final strong strike should pause on Degasca deck pick.');
-$blocked = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike'));
+$blocked = (new Engine())->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]));
 dgAssert(!$blocked->success, 'Extra confirm must be blocked while Degasca pending is active.');
 dgChooseLearn($state, 26);
 dgAssert($target->hp === 7, 'Resolving Degasca choice must not repeat strike damage.');

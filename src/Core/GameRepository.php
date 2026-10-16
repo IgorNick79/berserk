@@ -18,10 +18,11 @@ final class GameRepository
         $this->ensurePersistenceVersionColumn();
     }
 
-    public function findById(int $gameId): ?GameState
+    public function findById(int $gameId, bool $forUpdate = false): ?GameState
     {
+        if ($forUpdate && !$this->db->inTransaction()) throw new \LogicException('A locking read requires a transaction');
         $row = $this->db->fetchOne(
-            "SELECT * FROM games WHERE ind = " . (int) $gameId
+            "SELECT * FROM games WHERE ind = " . (int) $gameId . ($forUpdate ? ' FOR UPDATE' : '')
         );
 
         if (!$row) {
@@ -86,6 +87,17 @@ final class GameRepository
         CommandJournalRepository $journal,
         int $journalId
     ): void {
+        $this->commitJournalCommand($state, $journal, $journalId, null);
+    }
+
+    /** Same journal/CAS transaction, with validation and Engine execution under the game lock. */
+    public function executeLockedCommand(GameState $state, CommandJournalRepository $journal, int $journalId, \Closure $apply): void
+    {
+        $this->commitJournalCommand($state, $journal, $journalId, $apply);
+    }
+
+    private function commitJournalCommand(GameState $state, CommandJournalRepository $journal, int $journalId, ?\Closure $apply): void
+    {
         if (!$journal->usesDb($this->db)) {
             throw new \RuntimeException('GameRepository and CommandJournalRepository must use the same DB connection');
         }
@@ -100,8 +112,20 @@ final class GameRepository
         $this->db->beginTransaction();
         try {
             $journal->requireProcessingForCommit($journalId, $state->gameId, $beforeVersion);
-            $this->save($state);
-            $afterVersion = $state->persistenceVersion;
+            $working = $state;
+            if ($apply !== null) {
+                $working = $this->findById($state->gameId, true);
+                if ($working === null || $working->persistenceVersion !== $beforeVersion) throw new StaleStateException('State changed before locked execution');
+                $result = $apply($working);
+                if (!$result instanceof Result) throw new \LogicException('Locked command must return Result');
+                if (!$result->success) {
+                    $journal->markRejected($journalId, $beforeVersion, 'auto_ack_not_current', $result->error);
+                    $this->db->commit();
+                    return;
+                }
+            }
+            $this->save($working);
+            $afterVersion = $working->persistenceVersion;
             if ($afterVersion === null) {
                 throw new \RuntimeException('Committed state did not receive persistence version');
             }

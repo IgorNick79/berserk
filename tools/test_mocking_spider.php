@@ -138,9 +138,9 @@ function msState(CardInstance ...$cards): GameState
 function msConfirm(GameState $state): void
 {
     $engine = new Engine();
-    $r = $engine->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike'));
+    $r = $engine->apply($state, GameState::PLAYER_HOST, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]));
     msAssert($r->success, $r->error ?? 'Host confirm failed.');
-    $r = $engine->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike'));
+    $r = $engine->apply($state, GameState::PLAYER_PLAYER, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]));
     msAssert($r->success, $r->error ?? 'Player confirm failed.');
 }
 
@@ -174,9 +174,9 @@ function msStrikeAndConfirm(GameState $state, string $playerKey, int $attackerId
     ]));
     msAssert($r->success, $r->error ?? 'Strike failed.');
     $snapshot = (array) ($state->battle['strike'] ?? []);
-    $r = $resolver->confirmStrike(GameState::PLAYER_HOST, new Command('confirm_strike'));
+    $r = $resolver->confirmStrike(GameState::PLAYER_HOST, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]));
     msAssert($r->success, $r->error ?? 'Host strike confirm failed.');
-    $r = $resolver->confirmStrike(GameState::PLAYER_PLAYER, new Command('confirm_strike'));
+    $r = $resolver->confirmStrike(GameState::PLAYER_PLAYER, new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]));
     msAssert($r->success, $r->error ?? 'Player strike confirm failed.');
     return $snapshot;
 }

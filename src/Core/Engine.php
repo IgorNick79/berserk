@@ -23,13 +23,20 @@ final class Engine
 
     public function apply(GameState $state, string $playerKey, Command $cmd): Result
     {
+        if ($cmd->type === 'confirm_strike') {
+            $error = InformationalWaitManager::validateAck($state, $playerKey, $cmd->get('wait_id'));
+            if ($error !== null) return Result::error($error);
+        }
         TurnTimer::settle($state, $this->serverNow());
         $result = $this->doApply($state, $playerKey, $cmd);
         if ($result->success) (new CoinAbilities($state, $this))->advance();
         if ($result->success && ($state->battle['turn_timer']['pause_reason'] ?? null) === 'start_resolution') {
             (new TurnProcessor($state, $this))->afterStartPhase($state->battle['turn_timer']['owner']);
         }
-        if ($result->success) TurnTimer::reconcileWaiting($state, $this->serverNow());
+        if ($result->success) {
+            InformationalWaitManager::reconcile($state, $this->serverNow());
+            TurnTimer::reconcileWaiting($state, $this->serverNow());
+        }
         TurnTimer::settle($state, $this->serverNow());
         GameLog::append($state, $playerKey, $cmd, $result);
         return $result;

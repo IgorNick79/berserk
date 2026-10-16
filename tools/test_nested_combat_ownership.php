@@ -10,6 +10,7 @@ set_error_handler(static function (int $severity, string $message, string $file,
 });
 function ncAssert(bool $ok, string $message): void { if (!$ok) throw new RuntimeException($message); }
 function ncApply(Engine $engine, GameState $s, string $actor, string $type, array $payload=[]): void {
+    if ($type==='confirm_strike') $payload['wait_id']=\Berserk\Core\InformationalWaitManager::token($s);
     $r=$engine->apply($s,$actor,new Command($type,$payload));
     ncAssert($r->success,$type.': '.$r->error);
 }
@@ -58,6 +59,7 @@ try {
         $_SESSION['debug_roll']='6,1';unset($_SESSION['debug_roll_state']);Dice::init();
         $now=1010;ncApply($engine,$s,$attacker,'strike',['card_id'=>1,'target_id'=>2]);
         ncAssert($s->battle['strike']['state']==='results','Real strike must reach results');
+        $firstWait=\Berserk\Core\InformationalWaitManager::token($s);
         if ($case!=='death') {
             $now=1020;ncApply($engine,$s,$opponent,'confirm_strike');
             ncAssert($s->battle['turn_timer']['status']==='running','Opponent ACK must return control to owner');
@@ -66,6 +68,8 @@ try {
         ncAssert($s->battle['strike']['state']===$stage && !empty($s->battle['strike'][$key]),'Engine failed to create '.$case);
         $expectedOwner=in_array($case,['auto','ally'],true)?$attacker:$opponent;
         ncProjection($s,'strike.'.$key,$expectedOwner);
+        ncAssert(\Berserk\Core\InformationalWaitManager::due($s,9999)===null
+            && !isset($s->battle['informational_wait']),'Nested decision cannot retain a P2 deadline');
         $id=$s->battle['strike'][$key][$field];
         ncAssert($s->getCard($id)->owner===$expectedOwner,'Created pending references the authorized card');
         $missing=GameState::fromArray($s->toArray());unset($missing->cards[$id]);
@@ -98,6 +102,9 @@ try {
         } else {
             $p=BattleWaitResolver::current($s);
             ncAssert($p['kind']==='informational' && $p['required_players']===['host','player'],'Nested decision must reveal parent result');
+            $info=$s->battle['informational_wait'];
+            ncAssert($info['started_at']===1100 && $info['deadline_at']===1110
+                && (string)$info['wait_id']!==$firstWait,'Real nested continuation publishes a fresh P2 window');
             ncAssert($s->battle['turn_timer']['status']==='paused','Result still requires opponent: no premature resume');
             $now=1200;ncApply($engine,$s,$opponent,'confirm_strike');
             ncAssert($s->battle['turn_timer']['status']==='running' && $s->battle['turn_timer']['remaining_seconds']===$expectedRemaining,'Opponent ACK resumes saved budget');

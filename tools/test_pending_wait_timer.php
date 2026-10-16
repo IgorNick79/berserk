@@ -156,6 +156,7 @@ pwAssert(serialize($s)===$before,'Legacy state must not allocate a clock');
 // End-to-end commands, controlled server clock, no sleep or replacement gameplay executor.
 $now=1000;$engine=new Engine(null,static function () use (&$now): int {return $now;});
 function pwApply(Engine $engine,GameState $s,string $owner,string $type,array $payload=[]): void {
+    if ($type==='confirm_strike') $payload['wait_id']=\Berserk\Core\InformationalWaitManager::token($s);
     $r=$engine->apply($s,$owner,new Command($type,$payload));pwAssert($r->success,$type.': '.$r->error);
 }
 foreach (['host','player'] as $firstAck) {

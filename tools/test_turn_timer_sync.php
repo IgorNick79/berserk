@@ -123,6 +123,7 @@ $pickPayload=['cmd'=>'choose_cell_marker','row'=>3,'col'=>2,'expected_version'=>
 $pick=tsRequest('first&'.$query.'&ajax=battle_command',$pickPayload);
 tsAssert($pick['command_status']==='committed' && $pick['turn_timer']['pause_reason']==='opponent_wait','Opponent result ACK pauses through journal');
 $clock=$pick['turn_timer'];$before=$db->fetchOne('SELECT json,version FROM games WHERE ind='.$state->gameId);
+$waitId=\Berserk\Core\InformationalWaitManager::token($repo->findById($state->gameId));
 $journalBefore=$db->fetchOne('SELECT COUNT(*) AS n FROM battle_command_journal WHERE game_id='.$state->gameId);
 foreach(['first','second'] as $role) {
     $sync=tsRequest($role.'&'.$query.'&ajax=battle_sync&since_version='.$pick['sync_version']);
@@ -138,11 +139,11 @@ tsAssert($before===$db->fetchOne('SELECT json,version FROM games WHERE ind='.$st
 $replay=tsRequest('first&'.$query.'&ajax=battle_command',$pickPayload);
 tsAssert($replay['command_status']==='committed' && $replay['sync_version']===$pick['sync_version']
     && $replay['turn_timer']['remaining_seconds']===$clock['remaining_seconds'],'Same command_id cannot apply choice twice');
-$stale=tsRequest('second&'.$query.'&ajax=battle_command',['cmd'=>'confirm_strike','expected_version'=>$open['sync_version'],'command_id'=>'p1-stale']);
+$stale=tsRequest('second&'.$query.'&ajax=battle_command',['cmd'=>'confirm_strike','wait_id'=>$waitId,'expected_version'=>$open['sync_version'],'command_id'=>'p1-stale']);
 tsAssert($stale['command_status']==='conflict' && $stale['turn_timer']['status']==='paused','Stale ACK cannot release pause');
-$ack=tsRequest('second&'.$query.'&ajax=battle_command',['cmd'=>'confirm_strike','expected_version'=>$pick['sync_version'],'command_id'=>'p1-opponent-ack']);
+$ack=tsRequest('second&'.$query.'&ajax=battle_command',['cmd'=>'confirm_strike','wait_id'=>$waitId,'expected_version'=>$pick['sync_version'],'command_id'=>'p1-opponent-ack']);
 tsAssert($ack['command_status']==='committed' && $ack['turn_timer']['status']==='running'
     && $ack['turn_timer']['period_id']===$clock['period_id'] && $ack['turn_timer']['remaining_seconds']<=$clock['remaining_seconds'],'Opponent ACK resumes same budget while own ACK remains');
-$done=tsRequest('first&'.$query.'&ajax=battle_command',['cmd'=>'confirm_strike','expected_version'=>$ack['sync_version'],'command_id'=>'p1-owner-ack']);
+$done=tsRequest('first&'.$query.'&ajax=battle_command',['cmd'=>'confirm_strike','wait_id'=>$waitId,'expected_version'=>$ack['sync_version'],'command_id'=>'p1-owner-ack']);
 tsAssert($done['command_status']==='committed' && empty($repo->findById($state->gameId)->battle['strike']),'Existing command closes combat');
 echo "P1 HTTP ownership/pause/reload/replay/CAS tests passed\n";

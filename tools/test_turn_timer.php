@@ -232,20 +232,21 @@ ttAssert(empty($s->battle['turn_phase']) && !empty($s->battle['strike']), 'Phase
 ttAssert($s->battle['turn_timer']['status'] === 'paused', 'Combat results are still start waits');
 $s = GameState::fromArray(json_decode(json_encode($s->toArray()), true));
 $now = 5200;
-ttAssert($engine->apply($s, 'host', new Command('confirm_strike'))->success, 'First combat result ACK');
+ttAssert($engine->apply($s, 'host', new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($s)]))->success, 'First combat result ACK');
 ttAssert($s->battle['turn_timer']['status'] === 'paused', 'One ACK cannot start clock');
 $now = 5250;
-ttAssert(!$engine->apply($s, 'host', new Command('confirm_strike'))->success
+ttAssert(!$engine->apply($s, 'host', new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($s)]))->success
     && $s->battle['turn_timer']['status'] === 'paused', 'Repeated first ACK cannot start deferred clock');
 $s = GameState::fromArray(json_decode(json_encode($s->toArray()), true));
 $now = 5300;
-ttAssert($engine->apply($s, 'player', new Command('confirm_strike'))->success, 'Second combat result ACK');
+ttAssert($engine->apply($s, 'player', new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($s)]))->success, 'Second combat result ACK');
 ttAssert(empty($s->battle['strike']) && $s->battle['turn_timer']['status'] === 'running'
     && $s->battle['turn_timer']['anchor_at'] === 5300, 'Clock starts after final start combat result ACK');
 $now = 5310;
-ttAssert(!$engine->apply($s, 'player', new Command('confirm_strike'))->success
-    && $s->battle['turn_timer']['period_id'] === 1 && $s->battle['turn_timer']['remaining_seconds'] === 170,
-    'Repeated final ACK cannot allocate or refund a period');
+ttAssert(!$engine->apply($s, 'player', new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($s)]))->success
+    && $s->battle['turn_timer']['period_id'] === 1 && $s->battle['turn_timer']['remaining_seconds'] === 180
+    && TurnTimer::snapshot($s, $now)['remaining_seconds'] === 170,
+    'Rejected final ACK is mutation-free; read-only snapshot still accounts for elapsed time');
 echo "OK turn timer\n";
 
 

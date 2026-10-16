@@ -11,6 +11,7 @@ use Berserk\Core\Command;
 use Berserk\Core\CardInstance;
 use Berserk\Core\GameState;
 use Berserk\Core\TurnTimer;
+use Berserk\Core\InformationalAutoAck;
 use Berserk\Core\View;
 use Berserk\Core\DeckView;
 use Berserk\Core\ResourceCalculator;
@@ -154,7 +155,7 @@ function requestCommandId(array $source): array
     }
 
     $commandId = requestParamString($source, 'command_id', 64);
-    if ($commandId === null || $commandId === '' || !isValidAjaxCommandId($commandId)) {
+    if ($commandId === null || $commandId === '' || !isValidAjaxCommandId($commandId) || str_starts_with($commandId, 'p2a:')) {
         return ['present' => true, 'command_id' => null, 'error' => 'invalid_command_id'];
     }
 
@@ -190,6 +191,7 @@ function sendBattleAjaxState(
     int $statusCode = 200,
     array $extra = []
 ): never {
+    $state = applyDueInformationalAck($db, $state, $playerKey);
     $syncVersion = $state->persistenceVersion ?? 0;
 
     if ($state->status !== 'battle') {
@@ -253,6 +255,10 @@ function sendCommandStatus(
     ?string $error = null,
     int $statusCode = 200
 ): never {
+    if ($record !== null && ($record['status'] ?? 'processing') !== CommandJournalRepository::STATUS_PROCESSING) {
+        global $db;
+        $state = applyDueInformationalAck($db, $state, (string) $record['player_key']);
+    }
     sendCommandStatusPayload($commandId, $record, $ok, $error, $statusCode, $state->persistenceVersion ?? 0,
         ['turn_timer' => TurnTimer::snapshot($state, time())]);
 }
@@ -362,6 +368,19 @@ function reloadPersistedBattleAjaxState(GameRepository $repo, int $gameId): Game
     }
 
     return $fresh;
+}
+
+/** Optional due processing never changes the outcome/identity of a user's command. */
+function applyDueInformationalAck(Db $db, GameState $state, string $requester): GameState
+{
+    try {
+        return (new InformationalAutoAck($db, new GameRepository($db), new Engine($db)))->check($state, $requester);
+    } catch (Throwable) {
+        error_log('Informational auto-ACK unavailable for game ' . $state->gameId);
+        // Unknown auto outcomes remain in Journal; do not invent a failure or a second attempt.
+        try { return (new GameRepository($db))->findById($state->gameId) ?? $state; }
+        catch (Throwable) { return $state; }
+    }
 }
 
 function buildRenderCardInfo(Db $db, GameState $state): array
@@ -556,6 +575,7 @@ $oppKey    = $state->getOpponentKey($playerKey);
 
 if ($isBattleSync) {
     try {
+        $state = applyDueInformationalAck($db, $state, $playerKey);
         $syncVersion = $state->persistenceVersion ?? 0;
         $sinceVersion = ajaxParamInt('since_version');
         $forceSnapshot = ajaxFlag('force_snapshot');
@@ -954,6 +974,7 @@ if ($isBattleCommand) {
 }
 
 // ─── Обработка команды ────────────────────────────────────────
+$state = applyDueInformationalAck($db, $state, $playerKey);
 $message = null;
 $commandType = is_string($_GET['cmd'] ?? null) ? $_GET['cmd'] : '';
 $hasLegacyCommand = array_key_exists('cmd', $_GET)

@@ -328,6 +328,7 @@ final class StrikeResolver
         if ($ragnarUnanswer !== null) {
             $strike['ragnar_unanswer'] = $ragnarUnanswer;
         }
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = $strike;
 
         // Окно инстантов до броска — openWindow сам проверит, есть ли у кого
@@ -400,6 +401,7 @@ final class StrikeResolver
             ? []
             : $this->findDefenders($attacker, $target, $oppKey);
 
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'attacker_id' => $attacker->instanceId,
             'target_id'   => $target->instanceId,
@@ -797,6 +799,7 @@ final class StrikeResolver
 
         $this->apply($table, false);
         if (($strike['state'] ?? '') !== 'waiting_auto_target') {
+            InformationalWaitManager::publish($this->state);
             $strike['state'] = 'results';
         }
     }
@@ -1361,6 +1364,7 @@ final class StrikeResolver
 
         $this->apply($strike['result'], $mode === 'decrease');
         if (($this->state->battle['strike']['state'] ?? '') !== 'waiting_auto_target') {
+            InformationalWaitManager::publish($this->state);
             $this->state->battle['strike']['state'] = 'results';
         }
         $this->state->bumpVersion();
@@ -1392,6 +1396,7 @@ final class StrikeResolver
             $this->state->battle['strike']['confirmed'] = $confirmed;
 
             if (count($confirmed) >= 2) {
+                InformationalWaitManager::publish($this->state);
                 (new CoinAbilities($this->state, $this->engine))->completeCombat($this->state->battle['strike']);
                 $this->state->battle['strike'] = null;
                 $this->engine->finalizeDying($this->state);
@@ -1413,6 +1418,7 @@ final class StrikeResolver
         $this->state->battle['strike']['confirmed'] = $confirmed;
 
         if (count($confirmed) >= 2) {
+            InformationalWaitManager::publish($this->state);
             if (($this->state->battle['strike']['instant_result_stage'] ?? '') === 'dice') {
                 (new InstantProcessor($this->state, $this->engine))->continueAfterCombatDiceResult();
                 $this->state->bumpVersion();
@@ -1758,6 +1764,7 @@ final class StrikeResolver
                 'damage' => $dmg,
                 'reason' => 'no_space',
             ];
+            InformationalWaitManager::publish($this->state);
             $this->state->battle['strike']['state'] = 'waiting_push_ack';
             $this->state->battle['strike']['confirmed'] = [];
             return true;   // ← было false
@@ -1829,6 +1836,7 @@ final class StrikeResolver
         }
 
         unset($this->state->battle['strike']['pending_push']);
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike']['state'] = 'results';
         $this->state->battle['strike']['confirmed'] = [];
 
@@ -2009,6 +2017,7 @@ final class StrikeResolver
         }
 
         unset($this->state->battle['strike']['pending_close_or_damage']);
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike']['state']    = 'results';
         $this->state->battle['strike']['confirmed'] = [];
 
@@ -2111,6 +2120,7 @@ final class StrikeResolver
         ];
 
         unset($this->state->battle['strike']['pending_ally_modifier']);
+        InformationalWaitManager::publish($this->state);
         $this->state->battle['strike']['state']     = 'results';
         $this->state->battle['strike']['confirmed'] = [];
 

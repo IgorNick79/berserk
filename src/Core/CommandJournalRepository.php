@@ -122,6 +122,13 @@ final class CommandJournalRepository
         );
     }
 
+    public function findProcessingAutoAck(int $gameId, int $waitId, int $exceptId = 0): ?array
+    {
+        $prefix = $this->db->escape('p2a:' . $waitId . ':');
+        return $this->db->fetchOne("SELECT * FROM battle_command_journal WHERE game_id = " . (int) $gameId
+            . " AND command_id LIKE '" . $prefix . "%' AND status = 'processing' AND id <> " . (int) $exceptId . ' LIMIT 1');
+    }
+
     public function statusFor(int $gameId, string $playerKey, string $commandId): ?string
     {
         $record = $this->find($gameId, $playerKey, $commandId);

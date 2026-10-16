@@ -458,6 +458,7 @@ final class DamageResolver
         ];
 
         unset($this->state->battle['strike']['pending_choice']);
+        InformationalWaitManager::publish($this->state);
 
         $this->state->bumpVersion();
         return Result::ok(["death_choice:{$targetId}"]);

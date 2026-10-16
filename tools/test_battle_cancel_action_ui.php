@@ -243,7 +243,7 @@ foreach (['host', 'player'] as $owner) {
     $result = $engine->apply($state,$owner,new Command('action',['card_id'=>1,'target_id'=>2,'action_key'=>'shot']));
     cancelActionAssert($result->success && $state->getCard(1)->closed, 'Actual action must close source');
     foreach ([$owner,$opponent] as $actor) {
-        $confirmed = $engine->apply($state,$actor,new Command('confirm_strike'));
+        $confirmed = $engine->apply($state,$actor,new Command('confirm_strike', ['wait_id'=>\Berserk\Core\InformationalWaitManager::token($state)]));
         cancelActionAssert($confirmed->success, 'Both viewers must confirm actual result');
     }
     cancelActionAssert(empty($state->battle['strike']), 'Result must finish before testing stale UI mode');

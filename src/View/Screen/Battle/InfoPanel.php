@@ -274,7 +274,7 @@ final class InfoPanel
 
             $confirmed = $strike['confirmed'] ?? [];
             if (!in_array($playerKey, $confirmed, true)) {
-                $contentHtml .= '<a class="button" href="' . $baseUrl . '&cmd=confirm_strike">Продолжить</a>';
+                $contentHtml .= $this->confirmStrikeLink($state, $baseUrl);
             } else {
                 $contentHtml .= '<p class="wait">Ожидание оппонента...</p>';
             }
@@ -293,7 +293,7 @@ final class InfoPanel
 
             $confirmed = $strike['confirmed'] ?? [];
             if (!in_array($playerKey, $confirmed, true)) {
-                $confirmHtml = '<a class="button" href="' . $baseUrl . '&cmd=confirm_strike">Продолжить</a>';
+                $confirmHtml = $this->confirmStrikeLink($state, $baseUrl);
             } else {
                 $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
             }
@@ -677,7 +677,7 @@ final class InfoPanel
 
             $confirmed = $strike['confirmed'] ?? [];
             if (!in_array($playerKey, $confirmed, true)) {
-                $confirmHtml = '<a class="button" href="' . $baseUrl . '&cmd=confirm_strike">Продолжить</a>';
+                $confirmHtml = $this->confirmStrikeLink($state, $baseUrl);
             } else {
                 $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
             }
@@ -1565,7 +1565,7 @@ final class InfoPanel
                     $confirmHtml = '<p class="wait">Ожидание выбора цели оппонентом...</p>';
                 }
             } elseif (!in_array($playerKey, $confirmed, true)) {
-                $confirmHtml = '<a class="button" href="' . $baseUrl . '&cmd=confirm_strike">Продолжить</a>';
+                $confirmHtml = $this->confirmStrikeLink($state, $baseUrl);
             } else {
                 $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
             }
@@ -2175,4 +2175,10 @@ final class InfoPanel
         return $label;
     }
 
+    private function confirmStrikeLink(GameState $state, string $baseUrl): string
+    {
+        $token = \Berserk\Core\InformationalWaitManager::token($state);
+        return '<a class="button" href="' . $baseUrl . '&cmd=confirm_strike&wait_id='
+            . rawurlencode($token ?? 'unavailable') . '">Продолжить</a>';
+    }
 }

@@ -56,12 +56,19 @@ function setup(boot=sample(),viewer='player') {
         async accept(next,v=version,full=false){current=next;version=v;
             queue.push(full?{ok:true,type:'snapshot',sync_version:v,turn_timer:next,ui:{},fragments:Object.fromEntries(keys.map(k=>[k,'']))}
                 :{ok:true,type:'no_change',sync_version:v,turn_timer:next});await poll();},
-        command(){const link={href:'http://localhost/index.php?first&game=1&cmd=end_turn',target:''};
+        command(query='cmd=end_turn'){const link={href:'http://localhost/index.php?first&game=1&'+query,target:''};
             for(const fn of events.click||[])fn({button:0,defaultPrevented:false,target:{closest:()=>link},preventDefault(){}});},
         unload(){windowEvents.beforeunload();}};
 }
 async function main(){
     await edgeCases();
+    const ack=setup();await ack.flush();
+    await ack.accept(sample({server_now:1001,remaining_seconds:179}),9,true);
+    ack.hold('battle_command');ack.command('cmd=confirm_strike&wait_id=old-screen-7');await ack.flush();
+    const ackBody=new URLSearchParams(ack.requests.find(r=>r.route==='battle_command').options.body);
+    assert.equal(ackBody.get('expected_version'),'9','ACK uses fresh sync version');
+    assert.equal(ackBody.get('wait_id'),'old-screen-7','Fresh version must not replace the old HTML wait identity');
+    assert.equal(ackBody.get('cmd'),'confirm_strike');ack.unload();
     const t=setup();await t.flush();
     assert.equal(t.value.textContent,'03:00');assert.equal(t.node.dataset.mine,'0');
     assert.equal(t.intervals.size,1);

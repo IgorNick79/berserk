@@ -216,10 +216,12 @@ final class CoinAbilities
             $s['defend_dice'] = 0;
             $s['result'] = ['attack' => '', 'defend' => '', 'winner' => ''];
             (new StrikeResolver($this->state, $this->engine))->apply($s['result'], false);
+            InformationalWaitManager::publish($this->state);
             $s['state'] = 'results';
             $s['damage_total'] = 0;
         } else {
             $source->closed = true;
+            InformationalWaitManager::publish($this->state);
             $this->state->battle['strike'] = [
                 'kind' => $pending['type'], 'attacker_id' => $source->instanceId,
                 'target_id' => $pending['card_id'], 'defender_id' => null, 'state' => 'results',
