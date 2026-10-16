@@ -35,6 +35,20 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  }
  async function metrics(){return page.evaluate(()=>{const rows=[...document.querySelectorAll('.battle-numbered-row')].map(e=>e.querySelector('.field-cell').getBoundingClientRect());const slots=[...document.querySelectorAll('.fly-slot')].map(e=>e.getBoundingClientRect());return {tops:slots.map(r=>r.top),rowtops:rows.map(r=>r.top),aligned:slots.every((r,i)=>Math.abs(r.top-rows[i].top)<.1&&r.height===rows[i].height),pageHeight:document.documentElement.scrollHeight,boardHeight:document.querySelector('.battle-left').scrollHeight,zoneHeights:[...document.querySelectorAll('.fly-zone')].map(e=>e.getBoundingClientRect().height),slots:slots.length,visible:[...document.querySelectorAll('.fly-zone.own .fly-page-card')].filter(e=>!e.hidden).map(e=>e.querySelector('a')?.getAttribute('href')||'')};});}
  const base=await metrics();assert(base.aligned,'Initial alignment '+width+JSON.stringify(base));
+ assert(await page.evaluate(()=>{const l=document.querySelector('.battle-layout').getBoundingClientRect(),c=document.querySelector('.battle-left').getBoundingClientRect();return l.width>c.width||Math.abs(l.x+l.width/2-c.x-c.width/2)<1;}),'Playmat horizontally centered when it fits');
+ assert(await page.evaluate(()=>{const l=document.querySelector('.battle-layout').getBoundingClientRect(),c=document.querySelector('.battle-left').getBoundingClientRect();return l.height>c.height||Math.abs(l.y+l.height/2-c.y-c.height/2)<1;}),'Playmat vertically centered when it fits');
+ assert(await page.evaluate(()=>{const rows=[...document.querySelectorAll('.battle-numbered-row')];return [...document.querySelectorAll('.battle-side-slot')].every((slot,i)=>Math.abs(slot.getBoundingClientRect().top-rows[i].getBoundingClientRect().top)<.1);}), 'Terrain/grave/exile align with six field rows');
+ assert(await page.locator('.battle-terrain img').count()===2,'Two empty terrain icons');
+ assert(await page.locator('.battle-grave .pile-open').count()===2&&await page.locator('.battle-exile .pile-open').count()===2,'Grave/exile details for each side');
+ const end=page.locator('a.battle-end-turn');
+ assert(await end.evaluate(e=>getComputedStyle(e).backgroundImage.includes('end_turn_normal.png')),'Normal end-turn art');
+ await end.hover();
+ assert(await end.evaluate(e=>getComputedStyle(e).backgroundImage.includes('end_turn_hover.png')),'Hover end-turn art');
+ await page.mouse.move(0,0);
+ assert(await end.evaluate(e=>{const probe=document.createElement('button');probe.className=e.className;probe.disabled=true;probe.textContent='Завершить ход';e.parentElement.appendChild(probe);const ok=getComputedStyle(probe).backgroundImage.includes('end_turn_disabled.png');probe.remove();return ok;}),'Disabled end-turn art');
+ await update(0);
+ assert(await page.evaluate(()=>{const empty=document.querySelector('.fly-zone.own [data-fly-page="0"]:empty');return !!empty&&getComputedStyle(empty,'::before').backgroundImage.includes('flying_empty.png');}),'Empty flying icon');
+
  for(let n=0;n<=6;n++){await update(n);const m=await metrics();assert(m.slots===6&&m.aligned,'Fixed aligned slots '+n);assert(m.pageHeight===base.pageHeight&&m.boardHeight===base.boardHeight,'No added scroll '+n);}
  await update(4);
  await page.locator('.fly-zone.own [data-fly-go="1"]').click();
@@ -114,7 +128,7 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  await page.waitForFunction(()=>uiRequests.length===1);
  assert(await page.evaluate(()=>new URLSearchParams(uiRequests[0].body).get('cmd')==='resign'),'Original surrender command preserved');
  if(process.env.POLISH_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.POLISH_SCREENSHOT_DIR,'battle-polish-'+width+'.png')});
- console.log('PASS '+width+'px: lower columns, landscape PNG popup, pagination, centered bullets, 40/48px icons, tooltips, stable layout, background, editable exceptions, inert log and original surrender confirmation/command.');
+ console.log('PASS '+width+'px: playmat centering, side zones, empty flying icon, end-turn states, lower columns, landscape PNG popup, pagination, centered bullets, 40/48px icons, tooltips, stable layout, background, editable exceptions, inert log and original surrender confirmation/command.');
  await page.close();
  }
  }finally{await browser.close();}

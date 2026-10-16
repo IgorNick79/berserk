@@ -66,3 +66,15 @@ Per the user's clarification, push only this feature branch; do not merge into m
 ## Pagination chips
 
 Replace plain dots with supplied `page_active.png` (blue) and `page_inactive.png` (dark) in `www/assets/images/battle/`. The chip artwork is 20x20 inside the existing fixed 24x22 button, preserving zone geometry; hover/keyboard focus scales only the artwork by 1.2 over 200ms ease-out, matching the surrender/log animation. Reduced-motion preference is respected. Active state continues to follow existing aria-pressed; no pagination JS changes.
+
+## Playmat, auxiliary zones and end-turn artwork
+
+- `www/assets/images/battle/playmat_default.webp`: supplied default playmat; applied only to `.battle-layout`, centered in the available battlefield viewport with automatic margins. Padding is 28px vertically and 26px horizontally. Narrow/short viewports retain the existing local scrollport instead of clipping the board. The CSS `--battle-playmat` variable is ready for a future user-selected image; no settings implementation was added.
+- `www/assets/images/battle/flying_empty.png`: supplied centered icon on empty flying page positions, hidden with its page and absent on occupied positions.
+- `templates/includes/battle/side_zones.tpl` and `BattleScreen::buildPiles`: three separate row-aligned slots per side. Terrain is permanently empty with `terrain_empty.webp`; graveyard and exile have text labels, actual existing counts and existing pile-view URLs labelled Подробнее. No terrain rules were added.
+- `InfoPanel.php`: only an end-turn CSS class was added; the command URL, anchor, disabled button and availability conditions are unchanged.
+- Supplied `end_turn_normal.png`, `end_turn_hover.png`, `end_turn_disabled.png`: backgrounds for enabled, hover/focus and disabled end-turn states.
+- `global.css`: local playmat, auxiliary zone and end-turn styling.
+- `tools/test_battle_ui_polish_browser.cjs`: added exact centering checks where the board fits, six right-slot alignments, terrain/details controls, empty flying art and three end-turn states. Passed in headless Edge at 1600/800/375px alongside existing pagination, popup, controls and editable-exception tests.
+
+The supplied six files were copied without image editing. No gameplay, persistence, snapshot protocol or user settings logic changed. Real production actions and mobile Safari remain untested.

@@ -1947,3 +1947,79 @@ body.battle-page {
 }
 
 .battle-columns.battle-columns-bottom { margin-top: 2px; margin-bottom: 0; }
+
+/* Default playmat; a user-selected mat can later override this image variable. */
+.battle-page .battle-left { display: flex; flex-direction: column; }
+.battle-page .battle-layout {
+    --battle-playmat: url("/assets/images/battle/playmat_default.webp");
+    flex: 0 0 auto;
+    margin: auto;
+    padding: 28px 26px;
+    background-image: var(--battle-playmat);
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    border: 1px solid #607b69;
+    border-radius: 12px;
+    box-shadow: 0 10px 36px #0009;
+}
+.battle-page .battle-field { background: rgba(11, 25, 20, .32); }
+.battle-page .battle-columns { color: #fff4d6; text-shadow: 0 1px 3px #000; }
+.fly-page-card:empty::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url("/assets/images/battle/flying_empty.png") center / 32px auto no-repeat;
+    pointer-events: none;
+}
+.battle-layout .grave-zone-side { justify-content: flex-start; gap: var(--battle-cell-gap); padding-top: 6px; }
+.battle-layout .grave-zone-side::before { content: "\00a0"; font-size: 12px; margin-bottom: 2px; flex: 0 0 auto; }
+.battle-layout .piles {
+    display: grid;
+    grid-template-rows: repeat(3, var(--battle-cell-size));
+    gap: var(--battle-cell-gap);
+    width: var(--battle-cell-size);
+    height: calc(3 * var(--battle-cell-size) + 2 * var(--battle-cell-gap));
+    padding: 0;
+    border: 0;
+    background: transparent;
+    flex: 0 0 auto;
+}
+.battle-side-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: var(--battle-cell-size);
+    height: var(--battle-cell-size);
+    box-sizing: border-box;
+    border: 1px solid #d8caa3;
+    border-radius: 4px;
+    background: rgba(15, 25, 22, .8);
+    color: #fff3d7;
+}
+.battle-side-slot .piles-label { color: #fff3d7; }
+.battle-side-slot .piles-count { font-size: 20px; line-height: 1; }
+.battle-terrain img { object-fit: contain; }
+.battle-side-slot .pile-open { padding: 3px 8px; }
+.battle-page .info-panel-footer .battle-end-turn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 28px;
+    min-height: 80px;
+    max-width: 220px;
+    border: 0;
+    border-radius: 0;
+    background: url("/assets/images/battle/end_turn_normal.png") center / 100% 100% no-repeat;
+    color: #fff4ce;
+    font-size: 13px;
+    font-weight: 700;
+    text-shadow: 0 1px 3px #000;
+    text-decoration: none;
+}
+.battle-page .info-panel-footer a.battle-end-turn:hover,
+.battle-page .info-panel-footer a.battle-end-turn:focus-visible { background-image: url("/assets/images/battle/end_turn_hover.png"); }
+.battle-page .info-panel-footer .battle-end-turn:disabled { background-image: url("/assets/images/battle/end_turn_disabled.png"); color: #c8c6bd; opacity: 1; }
+.battle-end-turn:focus-visible { outline: 2px solid #f4d782; outline-offset: 2px; }

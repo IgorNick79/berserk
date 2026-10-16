@@ -546,16 +546,14 @@ final class BattleScreen
 
             $grave = $zone->countInZone($ownerKey, CardInstance::ZONE_GRAVEYARD);
             $exile = $zone->countInZone($ownerKey, CardInstance::ZONE_EXILE);
-            $total = $grave + $exile;
-
-            $html .= '<div class="piles ' . $who . '">'
-                . '<div class="piles-label">Вне игры</div>'
-                . '<div class="piles-count">' . $total . '</div>'
-                . '<div class="piles-buttons">'
-                . '<a class="pile-open" href="' . $baseUrl . '&pile=' . $who . '_grave">Кладбище ' . $grave . '</a>'
-                . '<a class="pile-open" href="' . $baseUrl . '&pile=' . $who . '_exile">Изгнание ' . $exile . '</a>'
-                . '</div>'
-                . '</div>';
+            $html .= $this->tpl->parse('includes/battle/side_zones.tpl', [
+                'side' => $who,
+                'terrain_label' => $who === 'own' ? 'Своя местность: пусто' : 'Местность противника: пусто',
+                'grave_count' => $grave,
+                'exile_count' => $exile,
+                'grave_url' => htmlspecialchars($baseUrl . '&pile=' . $who . '_grave', ENT_QUOTES),
+                'exile_url' => htmlspecialchars($baseUrl . '&pile=' . $who . '_exile', ENT_QUOTES),
+            ]);
         }
         return $html;
     }
