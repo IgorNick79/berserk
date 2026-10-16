@@ -21,12 +21,16 @@ if (in_array('--panel', $argv ?? [], true)) {
     echo json_encode($data['panel_html'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
-battleSnapshotAssert(preg_match('~</h3>\s*<div class="panel-card-description">~', $data['panel_html']) === 1, 'Description immediately follows name');
+battleSnapshotAssert(preg_match('~</h3>\s*<details class="panel-card-description">~', $data['panel_html']) === 1, 'Description immediately follows name');
 battleSnapshotAssert(substr_count($data['panel_html'], 'card-description-icon') === 4, 'All Kshar icons retained');
 battleSnapshotAssert(substr_count($data['panel_html'], '<br>') === 2, 'Line breaks retained');
 battleSnapshotAssert(str_contains($data['panel_html'], 'молниеносный выпад'), 'Cyrillic text retained');
 battleSnapshotAssert(!str_contains($render(3)['panel_html'], 'panel-card-description'), 'Changing card clears previous description');
 battleSnapshotAssert(CardDescription::render('') === '', 'Empty description leaves no container');
+battleSnapshotAssert(!str_contains($data['panel_html'], '<details class="panel-card-description" open'), 'Description starts collapsed');
+battleSnapshotAssert(str_contains($data['panel_html'], '/assets/images/icons/icon-tap.png') && !str_contains($data['panel_html'], 'src="/images/icons/'), 'Old database paths resolve to assets');
+battleSnapshotAssert(str_contains(CardDescription::render('<img src="/assets/images/icons/icon-tap.png" alt="tap">'), 'src="/assets/images/icons/icon-tap.png"'), 'New paths are also supported without duplicate prefix');
+
 $unsafe = CardDescription::render('<script>alert(1)</script><img src="/images/icons/icon-tap.png" onerror="alert(1)" style="position:fixed">'
     . '<img src="https://evil.invalid/test.png"><img src="javascript:alert(1)"><b onclick="bad()">safe</b>');
 battleSnapshotAssert(!str_contains($unsafe, 'alert') && !str_contains($unsafe, 'onerror') && !str_contains($unsafe, 'onclick') && !str_contains($unsafe, 'style=') && !str_contains($unsafe, 'evil.invalid'), 'Executable markup and external image URLs removed');

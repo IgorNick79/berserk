@@ -14,6 +14,7 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  const page=await browser.newPage({viewport:{width,height:800}});
  await page.route('https://battle.test/**',r=>{
  const url = new URL(r.request().url());
+ if(url.pathname.startsWith('/assets/images/icons/')&&fs.existsSync(path.join(repo,'www',url.pathname)))return r.fulfill({body:fs.readFileSync(path.join(repo,'www',url.pathname)),contentType:'image/png'});
  if(url.pathname.startsWith('/assets/images/battle/'))return r.fulfill({body:fs.readFileSync(path.join(repo,'www',url.pathname)),contentType:url.pathname.endsWith('.webp')?'image/webp':'image/png'});
  return r.fulfill({body:'<html></html>',contentType:'text/html'});
  });
@@ -42,6 +43,16 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  await update(4);
  assert(await page.locator('.panel-card-description .card-description-icon').count()===4,'Description icons survive snapshot composition');
  assert(await page.locator('.panel-card-description').evaluate(e=>e.previousElementSibling.tagName==='H3'&&e.scrollWidth<=e.clientWidth), 'Description below name fits panel');
+ assert(await page.locator('.panel-card-description').evaluate(e=>e.tagName==='DETAILS'&&!e.open),'Description collapsed initially');
+ const chevronClosed=await page.locator('.description-chevron').evaluate(e=>getComputedStyle(e).transform);
+ await page.locator('.panel-card-description > summary').click();
+ assert(await page.locator('.panel-card-description').evaluate(e=>e.open),'Pointer expands description');
+ await page.waitForFunction(()=>[...document.querySelectorAll('.panel-card-description .card-description-icon')].every(i=>i.complete&&i.naturalWidth>0));
+ assert(await page.locator('.description-chevron').evaluate((e,closed)=>getComputedStyle(e).transform!==closed,chevronClosed),'Chevron points up when expanded');
+ assert(await page.locator('.card-description-icon').first().getAttribute('src')==='/assets/images/icons/icon-tap.png','Assets icon URL');
+ await page.locator('.panel-card-description > summary').focus();await page.keyboard.press('Enter');
+ assert(await page.locator('.panel-card-description').evaluate(e=>!e.open),'Keyboard collapses description');
+
  data.get(4).panel_html=savedPanel;
  await update(4);
  assert(await page.locator('.panel-card-description').count()===0,'Snapshot card replacement clears description');

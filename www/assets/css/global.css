@@ -2015,3 +2015,10 @@ body.battle-page {
 .battle-side-slot button.pile-open:disabled { border: 0; background: #50565b; color: #bac0c4; cursor: default; opacity: .65; }
 .panel-card-description { margin: 0 0 12px; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .panel-card-description .card-description-icon { height: 18px; width: auto; max-width: 28px; object-fit: contain; vertical-align: middle; margin: 0 2px; }
+
+.panel-card-description > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; cursor: pointer; list-style: none; font-weight: 600; }
+.panel-card-description > summary::-webkit-details-marker { display: none; }
+.panel-card-description > summary:focus-visible { outline: 2px solid #987044; outline-offset: 2px; border-radius: 3px; }
+.description-chevron { flex: 0 0 7px; width: 7px; height: 7px; margin-right: 4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+.panel-card-description[open] > summary .description-chevron { transform: rotate(225deg); }
+.panel-card-description-body { padding: 4px 0 8px; }
