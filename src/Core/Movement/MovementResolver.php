@@ -162,17 +162,26 @@ final class MovementResolver
             return $err;
         }
 
+        return $this->executeJump($card, $row, $col, true);
+    }
+
+    private function executeJump(CardInstance $card, int $row, int $col, bool $spendAction): Result
+    {
+        $playerKey = $card->owner;
+        $cardId = $card->instanceId;
         $oldRow = $card->row;
         $oldCol = $card->col;
 
         $card->row = $row;
         $card->col = $col;
-        $card->move = 0;
-        $card->flags['moved_this_turn'] = true;
+        if ($spendAction) {
+            $card->move = 0;
+            $card->flags['moved_this_turn'] = true;
+        }
         $this->markMovedUnderLimit($card);
 
         // Берсерк: движение после атаки ломает цепочку
-        if (!empty($card->prop['strike_consecutive'])
+        if ($spendAction && !empty($card->prop['strike_consecutive'])
             && (int) ($card->flags['attacks_used_this_turn'] ?? 0) > 0) {
             $card->flags['strike_chain_broken'] = true;
         }
@@ -192,6 +201,26 @@ final class MovementResolver
         $this->state->bumpVersion();
 
         return Result::ok(["card_jumped:{$playerKey}:{$cardId}:{$row}_{$col}"]);
+    }
+
+    /** Effect-driven jump: the same destinations and movement effects, without paying an action. */
+    public function triggeredJumpCells(CardInstance $card, int $range): array
+    {
+        if ($card->zone !== CardInstance::ZONE_FIELD || $card->dying || $card->hp <= 0) return [];
+        $cells = \Berserk\Core\BattleHelper::getJumpCells($this->state, $card, $range);
+        foreach (array_keys($cells) as $key) {
+            [$row, $col] = array_map('intval', explode('_', $key));
+            if (!$this->keepsForcedStrikeTarget($card, $row, $col)) unset($cells[$key]);
+        }
+        return $cells;
+    }
+
+    public function triggeredJump(CardInstance $card, int $range, int $row, int $col): Result
+    {
+        if (!isset($this->triggeredJumpCells($card, $range)["{$row}_{$col}"])) {
+            return Result::error('Недопустимая клетка прыжка');
+        }
+        return $this->executeJump($card, $row, $col, false);
     }
 
     private function validateTurn(string $playerKey): ?Result

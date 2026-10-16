@@ -280,6 +280,25 @@ final class BattleScreen
         bool $explicitAttackMode
     ): string {
         $markerTargets = \Berserk\View\Ui\CellMarkerPicker::targets($state, $playerKey, $baseUrl);
+        $movementCells = $movementCards = [];
+        $movementUrl = '';
+        $movementPending = $state->battle[\Berserk\Core\FirstStrikeJump::PENDING] ?? null;
+        if ($movementPending && $movementPending['owner'] === $playerKey
+            && ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\FirstStrikeJumpChoice) {
+            $movementUrl = $baseUrl . '&cmd=choose_first_strike_movement&choice_id=' . rawurlencode($movementPending['id']);
+            if ($movementPending['stage'] === 'jump') {
+                $source = $state->getCard((int) $movementPending['card_id']);
+                if ($source) {
+                    $movementCells = array_intersect_key(
+                        (new \Berserk\Core\Movement\MovementResolver($state, new \Berserk\Core\Engine()))->triggeredJumpCells($source, (int) $movementPending['range']),
+                        array_fill_keys($movementPending['cells'], true),
+                    );
+                }
+            } else {
+                $movementCards = array_fill_keys(array_intersect($movementPending['candidates'],
+                    (new \Berserk\Core\FirstStrikeJump($state, new \Berserk\Core\Engine()))->candidates($movementPending)), true);
+            }
+        }
         $html = '<div class="battle-columns" aria-label="Столбцы">';
         foreach ($colOrder as $c) {
             $pos = \Berserk\View\Ui\BattlefieldPosition::display(1, $c, $playerKey);
@@ -316,7 +335,11 @@ final class BattleScreen
 
                     $cardBody = $this->buildBattleCard($card, $state, $info, $isHiddenForMe, $nameHtml, $hpText);
 
-                    if (isset($pendingDefenderTargets[$card->instanceId])) {
+                    if (isset($movementCards[$card->instanceId])) {
+                        $cellClass .= ' attack-target pending-first-strike-target';
+                        $url = htmlspecialchars($movementUrl . '&target_id=' . $card->instanceId, ENT_QUOTES, 'UTF-8');
+                        $cellContent = '<a class="card-link" href="' . $url . '">' . $cardBody . '</a>';
+                    } elseif (isset($pendingDefenderTargets[$card->instanceId])) {
                         $cellClass  .= ' attack-target pending-defender-target';
                         $cellContent = '<a class="card-link" href="' . $pendingDefenderTargets[$card->instanceId] . '">' . $cardBody . '</a>';
                     } elseif (isset($pendingRedirectTargets[$card->instanceId])) {
@@ -351,6 +374,11 @@ final class BattleScreen
                     } else {
                         $cellContent = $cardBody;
                     }
+                } elseif (isset($movementCells[$key])) {
+                    $url = htmlspecialchars($movementUrl . "&row={$r}&col={$c}", ENT_QUOTES, 'UTF-8');
+                    $label = htmlspecialchars(\Berserk\View\Ui\BattlefieldPosition::label($r, $c, $playerKey), ENT_QUOTES, 'UTF-8');
+                    $cellClass = 'jump-target pending-first-strike-cell';
+                    $cellContent = '<a class="cell-link" href="' . $url . '" aria-label="Выбрать клетку прыжка: ' . $label . '"></a>';
                 } elseif (isset($moveCells[$key])) {
                     $moveUrl     = "{$baseUrl}&cmd=move&card_id={$selectedCardId}&row={$r}&col={$c}&sel={$selectedCardId}";
                     $cellClass   = 'move-target';
@@ -956,6 +984,10 @@ final class BattleScreen
             $statusHtml .= '<p>' . htmlspecialchars($hint, ENT_QUOTES) . '</p>';
         }
         $statusHtml .= $this->linkedRecruitBattleHint($state, $c, $cardsInfo);
+        if (!empty($c->prop['first_strike_jump'])) {
+            $statusHtml .= '<p>Защита первого удара: '
+                . (\Berserk\Core\FirstStrikeJump::used($state, $c) ? 'использована в этом ходу' : 'доступна') . '.</p>';
+        }
 
         $coinsLine = '';
         if (!empty($c->prop['save_coins']) || $c->coins > 0 || !empty($c->prop['coin_block'])) {

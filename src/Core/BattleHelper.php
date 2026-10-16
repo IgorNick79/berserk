@@ -130,9 +130,11 @@ final class BattleHelper
         return $result;
     }
 
-    public static function getJumpCells(GameState $state, CardInstance $card): array
+    public static function getJumpCells(GameState $state, CardInstance $card, ?int $triggeredRange = null): array
     {
-        if (CardStats::isDisabled($card) || !empty($card->flags['moved_this_turn']) || isset($card->markers['rooted'])) {
+        $probe = clone $card;
+        if ($triggeredRange !== null) $probe->closed = false;
+        if (CardStats::isDisabled($probe) || ($triggeredRange === null && !empty($card->flags['moved_this_turn'])) || isset($card->markers['rooted'])) {
             return [];
         }
 
@@ -147,9 +149,9 @@ final class BattleHelper
                 break;
             }
         }
-        if (!$jumpAction) return [];
+        if (!$jumpAction && $triggeredRange === null) return [];
 
-        $range = (int) ($jumpAction['range'] ?? 0);
+        $range = $triggeredRange ?? (int) ($jumpAction['range'] ?? 0);
         if ($range <= 0) return [];
 
         $occupied = [];

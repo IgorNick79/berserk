@@ -451,6 +451,9 @@ final class ActionResolver
 
         $attacker->closed = true;
         $coins = new CoinAbilities($this->state, $this->engine);
+        if ((new FirstStrikeJump($this->state, $this->engine))->tryBlock($attacker, $target, 'uchr')) {
+            return Result::ok(['first_strike_blocked']);
+        }
         if (!$coinBlockChecked && $coins->offerBlock($attacker, $target, 'uchr', [
             'kind' => 'uchr', 'player' => $playerKey, 'card_id' => $cardId, 'target_id' => $targetId,
         ])) {
@@ -1273,6 +1276,10 @@ final class ActionResolver
             return Result::ok(['ranged_attack_redirect_pending']);
         }
 
+        if ((new FirstStrikeJump($this->state, $this->engine))->tryBlock($attacker, $target, $type, $action)) {
+            if (!empty($action['_granted_flag_key'])) $attacker->flags[$action['_granted_flag_key']]['used'] = true;
+            return Result::ok(['first_strike_blocked']);
+        }
         if (!$coinBlockChecked && (new CoinAbilities($this->state, $this->engine))->offerBlock($attacker, $target, $type, [
             'kind' => 'damage', 'player' => $playerKey, 'card_id' => $cardId,
             'target_id' => $targetId, 'action' => $action, 'type' => $type,
