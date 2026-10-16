@@ -540,6 +540,12 @@ final class BattleScreen
     ): string {
         $zone = new ZoneManager($state);
         $html = '';
+        $details = static function (int $count, string $url, string $label): string {
+            $label = htmlspecialchars('Подробнее: ' . $label, ENT_QUOTES);
+            return $count > 0
+                ? '<a class="pile-open" href="' . htmlspecialchars($url, ENT_QUOTES) . '" aria-label="' . $label . '">Подробнее</a>'
+                : '<button class="pile-open" type="button" disabled aria-label="' . $label . '">Подробнее</button>';
+        };
 
         foreach (['opp', 'own'] as $who) {
             $ownerKey = $who === 'opp' ? $oppKey : $playerKey;
@@ -551,8 +557,8 @@ final class BattleScreen
                 'terrain_label' => $who === 'own' ? 'Своя местность: пусто' : 'Местность противника: пусто',
                 'grave_count' => $grave,
                 'exile_count' => $exile,
-                'grave_url' => htmlspecialchars($baseUrl . '&pile=' . $who . '_grave', ENT_QUOTES),
-                'exile_url' => htmlspecialchars($baseUrl . '&pile=' . $who . '_exile', ENT_QUOTES),
+                'grave_details_html' => $details($grave, $baseUrl . '&pile=' . $who . '_grave', 'кладбище'),
+                'exile_details_html' => $details($exile, $baseUrl . '&pile=' . $who . '_exile', 'изгнание'),
             ]);
         }
         return $html;
@@ -1013,6 +1019,7 @@ final class BattleScreen
         return $this->tpl->parse('includes/battle/panel.tpl', [
             'image_html'   => $imgHtml,
             'name'         => htmlspecialchars($info['name'], ENT_QUOTES),
+            'description_html' => \Berserk\View\Ui\CardDescription::render((string) ($info['descr'] ?? '')),
             'mode_buttons' => $modeButtons,
             'hp'           => $c->hp,
             'hp_max'       => $this->displayHpMax($c, $info),

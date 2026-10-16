@@ -14,6 +14,7 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  const page=await browser.newPage({viewport:{width,height:800}});
  await page.route('https://battle.test/**',r=>{
  const url = new URL(r.request().url());
+ if(url.pathname.startsWith('/assets/images/icons/')&&fs.existsSync(path.join(repo,'www',url.pathname)))return r.fulfill({body:fs.readFileSync(path.join(repo,'www',url.pathname)),contentType:'image/png'});
  if(url.pathname.startsWith('/assets/images/battle/'))return r.fulfill({body:fs.readFileSync(path.join(repo,'www',url.pathname)),contentType:url.pathname.endsWith('.webp')?'image/webp':'image/png'});
  return r.fulfill({body:'<html></html>',contentType:'text/html'});
  });
@@ -35,6 +36,27 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  }
  async function metrics(){return page.evaluate(()=>{const rows=[...document.querySelectorAll('.battle-numbered-row')].map(e=>e.querySelector('.field-cell').getBoundingClientRect());const slots=[...document.querySelectorAll('.fly-slot')].map(e=>e.getBoundingClientRect());return {tops:slots.map(r=>r.top),rowtops:rows.map(r=>r.top),aligned:slots.every((r,i)=>Math.abs(r.top-rows[i].top)<.1&&r.height===rows[i].height),pageHeight:document.documentElement.scrollHeight,boardHeight:document.querySelector('.battle-left').scrollHeight,zoneHeights:[...document.querySelectorAll('.fly-zone')].map(e=>e.getBoundingClientRect().height),slots:slots.length,visible:[...document.querySelectorAll('.fly-zone.own .fly-page-card')].filter(e=>!e.hidden).map(e=>e.querySelector('a')?.getAttribute('href')||'')};});}
  const base=await metrics();assert(base.aligned,'Initial alignment '+width+JSON.stringify(base));
+ assert(await page.evaluate(()=>[...document.querySelectorAll('.battle-grave,.battle-exile')].every(slot=>{const n=Number(slot.querySelector('.piles-count').textContent),control=slot.querySelector('.pile-open');return n===0?control.tagName==='BUTTON'&&control.disabled&&!control.hasAttribute('href'):control.tagName==='A'&&!!control.getAttribute('href');})), 'Empty zones disabled; nonempty zones retain links');
+ const descriptionPanel=JSON.parse(execFileSync(process.env.PHP_BINARY||'php',[repo+'/tools/test_card_description_ui.php','--panel'],{encoding:'utf8'}));
+ const savedPanel=data.get(4).panel_html;
+ data.get(4).panel_html=descriptionPanel;
+ await update(4);
+ assert(await page.locator('.panel-card-description .card-description-icon').count()===4,'Description icons survive snapshot composition');
+ assert(await page.locator('.panel-card-description').evaluate(e=>e.previousElementSibling.tagName==='H3'&&e.scrollWidth<=e.clientWidth), 'Description below name fits panel');
+ assert(await page.locator('.panel-card-description').evaluate(e=>e.tagName==='DETAILS'&&!e.open),'Description collapsed initially');
+ const chevronClosed=await page.locator('.description-chevron').evaluate(e=>getComputedStyle(e).transform);
+ await page.locator('.panel-card-description > summary').click();
+ assert(await page.locator('.panel-card-description').evaluate(e=>e.open),'Pointer expands description');
+ await page.waitForFunction(()=>[...document.querySelectorAll('.panel-card-description .card-description-icon')].every(i=>i.complete&&i.naturalWidth>0));
+ assert(await page.locator('.description-chevron').evaluate((e,closed)=>getComputedStyle(e).transform!==closed,chevronClosed),'Chevron points up when expanded');
+ assert(await page.locator('.card-description-icon').first().getAttribute('src')==='/assets/images/icons/icon-tap.png','Assets icon URL');
+ await page.locator('.panel-card-description > summary').focus();await page.keyboard.press('Enter');
+ assert(await page.locator('.panel-card-description').evaluate(e=>!e.open),'Keyboard collapses description');
+
+ data.get(4).panel_html=savedPanel;
+ await update(4);
+ assert(await page.locator('.panel-card-description').count()===0,'Snapshot card replacement clears description');
+
  assert(await page.evaluate(()=>{const l=document.querySelector('.battle-layout').getBoundingClientRect(),c=document.querySelector('.battle-left').getBoundingClientRect();return l.width>c.width||Math.abs(l.x+l.width/2-c.x-c.width/2)<1;}),'Playmat horizontally centered when it fits');
  assert(await page.evaluate(()=>{const l=document.querySelector('.battle-layout').getBoundingClientRect(),c=document.querySelector('.battle-left').getBoundingClientRect();return l.height>c.height||Math.abs(l.y+l.height/2-c.y-c.height/2)<1;}),'Playmat vertically centered when it fits');
  assert(await page.evaluate(()=>{const rows=[...document.querySelectorAll('.battle-numbered-row')];return [...document.querySelectorAll('.battle-side-slot')].every((slot,i)=>Math.abs(slot.getBoundingClientRect().top-rows[i].getBoundingClientRect().top)<.1);}), 'Terrain/grave/exile align with six field rows');
