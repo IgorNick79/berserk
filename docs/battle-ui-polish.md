@@ -61,3 +61,8 @@ Per the user's clarification, push only this feature branch; do not merge into m
 - Background stays unchanged.
 - PHP preview, coordinate, Stage 1B, AJAX layout and card visual checks passed. Browser checks at 1600/800/375px cover matching lower labels, existing alignment/pagination, pointer cursor, a synthetic landscape image at the PNG URL with 8:5 proportions, 800x500 bounds and all three dismissal methods.
 - Production card assets are ignored and absent locally; no actual card artwork was moved or replaced. Place the real WebP directly in s1/ and the PNG in original/ on the server.
+
+
+## Pagination chips
+
+Replace plain dots with supplied `page_active.png` (blue) and `page_inactive.png` (dark) in `www/assets/images/battle/`. The chip artwork is 20x20 inside the existing fixed 24x22 button, preserving zone geometry; hover/keyboard focus scales only the artwork by 1.2 over 200ms ease-out, matching the surrender/log animation. Reduced-motion preference is respected. Active state continues to follow existing aria-pressed; no pagination JS changes.
