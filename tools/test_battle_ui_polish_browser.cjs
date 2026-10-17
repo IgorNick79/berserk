@@ -45,19 +45,23 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  await page.route('https://battle.test/assets/cards/s1/*.webp',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250"/>'}));
  await update(4);
  assert(await page.locator('.panel-stat-icon').count()===2,'Rarity and element icons present');
+ await page.waitForFunction(()=>[...document.querySelectorAll('.panel-stat-value-icon')].every(i=>i.complete&&i.naturalWidth>0));
+ assert(await page.locator('.panel-stat-value').count()===6,'HP movement strike and three active abilities');
+ assert(await page.locator('.panel-card-stats').evaluate(e=>{const children=[...e.children];return children.at(-2).querySelector('img').src.includes('/element/')&&children.at(-1).querySelector('img').src.includes('/rarity/')&&e.scrollWidth<=e.clientWidth;}),'Element and rarity finish wrapping stats row');
+
  assert(await page.locator('.panel-card-cost img').getAttribute('src')==='/assets/images/card/elite-unique.png','Elite unique cost icon');
  await page.waitForFunction(()=>document.querySelector('.panel-card-cost img').naturalWidth>0);
  assert(await page.locator('.panel-card-cost').innerText()==='7','Price before card name');
  assert(await page.locator('.panel-card-heading').evaluate(e=>{const cost=e.querySelector('.panel-card-cost').getBoundingClientRect(),name=e.querySelector('.panel-card-title').getBoundingClientRect();return cost.right<=name.left&&e.scrollWidth<=e.clientWidth;}),'Cost icon and value fit before title');
 
  await page.waitForFunction(()=>[...document.querySelectorAll('.panel-stat-icon')].every(i=>i.complete&&i.naturalWidth>0&&!i.hidden));
- assert(await page.locator('.panel-stat-icon').first().getAttribute('src')==='/assets/images/rarity/s1_rare.png','Rarity path follows set and value');
- assert(await page.locator('.panel-stat-icon').last().getAttribute('src')==='/assets/images/element/mountains.png','New element directory');
+ assert(await page.locator('.panel-stat-icon').last().getAttribute('src')==='/assets/images/rarity/s1_rare.png','Rarity path follows set and value');
+ assert(await page.locator('.panel-stat-icon').first().getAttribute('src')==='/assets/images/element/mountains.png','New element directory');
  assert(await page.locator('.panel-card-class').evaluate(e=>{const c=e.getBoundingClientRect(),title=e.parentElement.querySelector('.panel-card-title').getBoundingClientRect();return e.parentElement.classList.contains('panel-card-heading')&&c.left>=title.right&&getComputedStyle(e).position==='static';}),'Class is plain text to right of title');
- assert(await page.locator('.panel-card-cost img').evaluate(e=>e.getBoundingClientRect().width===32),'Larger crystal');
+ assert(await page.locator('.panel-card-cost img').evaluate(e=>e.getBoundingClientRect().width===24),'Current crystal size');
  assert(await page.locator('.panel-card-cost').evaluate(e=>getComputedStyle(e).fontSize==='14px'),'Smaller price');
  for(const hint of await page.locator('.panel-stat-hint').all()) {
- assert(await hint.locator('img').evaluate(e=>e.getBoundingClientRect().width===28&&!e.hasAttribute('title')),'Larger stat icon without native title');
+ assert(await hint.locator('img').evaluate(e=>e.getBoundingClientRect().width===24&&!e.hasAttribute('title')),'Larger stat icon without native title');
  await hint.hover();await page.waitForTimeout(250);
  assert(await hint.locator('.battle-icon-tooltip').evaluate(e=>{const r=e.getBoundingClientRect();return getComputedStyle(e).opacity==='1'&&r.left>=0&&r.right<=innerWidth;}),'Custom tooltip visible inside viewport');
  await hint.focus();await page.keyboard.press('Tab');

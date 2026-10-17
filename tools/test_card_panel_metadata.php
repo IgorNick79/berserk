@@ -7,6 +7,8 @@ $state = battleSnapshotState();
 $card = $state->getCard(1);
 $card->ukid = 's1_ui-' . bin2hex(random_bytes(6));
 $card->element = 'mountains';
+$card->prop['ova']=1; $card->prop['ovz']=2; $card->prop['regeneration']=['value'=>3];
+$card->modifiers=[['stat'=>'ova','value'=>1],['stat'=>'regeneration','value'=>1]];
 $cardsInfo[$card->ukid] = ['name'=>'Metadata card', 'health'=>3, 'rarity'=>'rare', 'price'=>7, 'elite'=>true, 'single'=>true, 'class'=>'Эльф, Воин', 'element'=>'Горы'];
 $path = __DIR__ . '/../www/assets/cards/s1/' . $card->ukid . '.webp';
 $created=[]; $dir=dirname($path);
@@ -21,6 +23,19 @@ try {
         echo json_encode($render(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     } else {
         $html = $render();
+        foreach (['Здоровье: 3, максимальное значение: 3','Ход: 1, всего: 1','Простой удар: 1/2/3','Опыт в атаке: 2','Опыт в защите: 2','Регенерация: 4'] as $label) {
+            battleSnapshotAssert(str_contains($html, 'aria-label="'.$label.'"'), 'Stat hint uses existing values: '.$label);
+        }
+        battleSnapshotAssert(!str_contains($html, '@2x'), 'Normal-resolution assets used');
+        $card->type='fly';
+        battleSnapshotAssert(!str_contains($render(), 'data-stat="move"'), 'Intrinsic flying card hides movement');
+        $card->type='creature'; $card->zone='flying';
+        battleSnapshotAssert(!str_contains($render(), 'data-stat="move"'), 'Acquired flight hides movement');
+        $card->zone='field';
+        $prop=$card->prop; $mods=$card->modifiers; $card->prop=[]; $card->modifiers=[];
+        foreach (['ova','ovz','regen'] as $stat) battleSnapshotAssert(!str_contains($render(),'data-stat="'.$stat.'"'), 'Absent ability omitted');
+        $card->prop=$prop; $card->modifiers=$mods;
+
         foreach ([[false,false,'ordinary'],[false,true,'ordinary-unique'],[true,false,'elite'],[true,true,'elite-unique']] as [$elite,$single,$icon]) {
             $cardsInfo[$card->ukid]['elite']=$elite;
             $cardsInfo[$card->ukid]['single']=$single;

@@ -8,14 +8,7 @@
 </div>
 {{image_html}}
 <div class="panel-card-stats" aria-label="Характеристики карты">
-    <span class="panel-stat-item" tabindex="0" role="img">
-        <img class="panel-stat-icon" src="/assets/images/card/aef97d1e-fb9d-45b6-87ff-56bbe75b296e.png" alt="" width="24" height="24" >
-        <span>{{hp}}/{{hp_max}}</span>
-    </span>
-
-    <span><b>HP</b> {{hp}}/{{hp_max}}</span>
-    <span><b>Move</b> {{move}}/{{move_max}}</span>
-    <span><b>Strike</b> {{strike}}</span>
+    {{stat_values_html}}
     {{stat_icons_html}}
 </div>
 <div class="panel-card-details">

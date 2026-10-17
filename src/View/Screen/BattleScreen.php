@@ -1018,7 +1018,38 @@ final class BattleScreen
             $coinsLine = 'Монеты: ' . $c->coins . ($max > 0 ? ' / ' . $max : '');
         }
 
+        $statValue = fn(string $stat, string $icon, string $value, string $label): string =>
+            $this->tpl->parse('includes/battle/stat_value.tpl', [
+                'stat' => $stat, 'icon' => $icon,
+                'value' => htmlspecialchars($value, ENT_QUOTES),
+                'label' => htmlspecialchars($label, ENT_QUOTES),
+            ]);
+        $hpMax = $this->displayHpMax($c, $info);
+        $statValues = $statValue('hp', 'heart', $c->hp . '/' . $hpMax,
+            'Здоровье: ' . $c->hp . ', максимальное значение: ' . $hpMax);
+        if (!CardStats::isFlyingCreature($c)) {
+            $statValues .= $statValue('move', 'move', $c->move . '/' . $c->moveMax,
+                'Ход: ' . $c->move . ', всего: ' . $c->moveMax);
+        }
+        $statValues .= $statValue('strike', 'sword', $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
+            'Простой удар: ' . $c->strikeWeak . '/' . $c->strikeMedium . '/' . $c->strikeStrong);
+        foreach ([
+            ['ova', 'ova', CardStats::getOva($state, $c), 'Опыт в атаке'],
+            ['ovz', 'ovz', CardStats::getOvz($state, $c), 'Опыт в защите'],
+            ['regen', 'regen', CardStats::getStat($c, 'regeneration'), 'Регенерация'],
+        ] as [$stat, $icon, $value, $label]) {
+            if ($value !== 0) $statValues .= $statValue($stat, $icon, (string) $value, $label . ': ' . $value);
+        }
+
+        // Element and rarity finish the stats row, in that order.
         $statIcons = '';
+        $elementIcon = $this->elementIconPath($c);
+        if ($elementIcon !== null) {
+            $statIcons .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
+                'url' => $elementIcon,
+                'label' => htmlspecialchars('Стихия: ' . ($info['element'] ?? $c->element), ENT_QUOTES),
+            ]);
+        }
         $rarity = (string) ($info['rarity'] ?? '');
         $rarityLabels = ['common' => 'Обычная', 'uncommon' => 'Необычная', 'rare' => 'Редкая', 'ultrarare' => 'Ультраредкая'];
         if (isset($rarityLabels[$rarity]) && preg_match('/\As([0-9]+)_/', $c->ukid, $set)) {
@@ -1027,16 +1058,10 @@ final class BattleScreen
                 'label' => 'Редкость: ' . $rarityLabels[$rarity],
             ]);
         }
-        $elementIcon = $this->elementIconPath($c);
-        if ($elementIcon !== null) {
-            $statIcons .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
-                'url' => $elementIcon,
-                'label' => htmlspecialchars('Стихия: ' . ($info['element'] ?? $c->element), ENT_QUOTES),
-            ]);
-        }
 
         return $this->tpl->parse('includes/battle/panel.tpl', [
             'image_html'   => $imgHtml,
+            'stat_values_html' => $statValues,
             'stat_icons_html' => $statIcons,
             'cost_icon_url' => '/assets/images/card/' . (!empty($info['elite']) ? 'elite' : 'ordinary') . (!empty($info['single']) ? '-unique' : '') . '.png',
             'cost_icon_label' => (!empty($info['elite']) ? 'Элитная' : 'Обычная') . (!empty($info['single']) ? ', уникальная' : ''),
