@@ -1024,7 +1024,7 @@ final class BattleScreen
         $rarityLabels = ['common' => 'Обычная', 'uncommon' => 'Необычная', 'rare' => 'Редкая', 'ultrarare' => 'Ультраредкая'];
         if (isset($rarityLabels[$rarity]) && preg_match('/\As([0-9]+)_/', $c->ukid, $set)) {
             $statIcons .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
-                'url' => '/assets/rarity/s' . $set[1] . '_' . $rarity . '.png',
+                'url' => '/assets/images/rarity/s' . $set[1] . '_' . $rarity . '.png',
                 'label' => 'Редкость: ' . $rarityLabels[$rarity],
             ]);
         }

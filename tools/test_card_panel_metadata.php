@@ -26,7 +26,7 @@ try {
         battleSnapshotAssert(str_contains($html, 'panel-card-class') && str_contains($html, 'Эльф, Воин'), 'Class over artwork');
         foreach (['common','uncommon','rare','ultrarare'] as $rarity) {
             $cardsInfo[$card->ukid]['rarity']=$rarity;
-            battleSnapshotAssert(str_contains($render(), '/assets/rarity/s1_'.$rarity.'.png'), 'Rarity follows database value');
+            battleSnapshotAssert(str_contains($render(), '/assets/images/rarity/s1_'.$rarity.'.png'), 'Rarity follows database value');
         }
         $cardsInfo[$card->ukid]['class']='<script>test</script>';
         battleSnapshotAssert(!str_contains($render(), '<script>') && str_contains($render(), '&lt;script&gt;'), 'Class text escaped');
@@ -35,7 +35,7 @@ try {
         unset($cardsInfo[$card->ukid]['class']); $card->classes=['Воин'];
         battleSnapshotAssert(str_contains($render(), 'Воин'), 'Existing class list fallback');
         $cardsInfo[$card->ukid]['rarity']='../bad';
-        battleSnapshotAssert(!str_contains($render(), '/assets/rarity/'), 'Invalid rarity omitted');
+        battleSnapshotAssert(!str_contains($render(), '/assets/images/rarity/'), 'Invalid rarity omitted');
         unlink($path);
         battleSnapshotAssert(!str_contains($render(), 'panel-card-class') && !str_contains($render(), 'panel-card-preview'), 'Absent preview leaves no floating badge');
         echo "Card panel metadata tests passed.\n";
