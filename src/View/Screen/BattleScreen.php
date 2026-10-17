@@ -1039,6 +1039,9 @@ final class BattleScreen
         return $this->tpl->parse('includes/battle/panel.tpl', [
             'image_html'   => $imgHtml,
             'stat_icons_html' => $statIcons,
+            'cost_icon_url' => '/assets/images/card/' . (!empty($info['elite']) ? 'elite' : 'ordinary') . (!empty($info['single']) ? '-unique' : '') . '.png',
+            'cost_icon_label' => (!empty($info['elite']) ? 'Элитная' : 'Обычная') . (!empty($info['single']) ? ', уникальная' : ''),
+            'price' => (int) ($info['price'] ?? $c->price),
             'name'         => htmlspecialchars($info['name'], ENT_QUOTES),
             'description_html' => \Berserk\View\Ui\CardDescription::render((string) ($info['descr'] ?? '')),
             'mode_buttons' => $modeButtons,

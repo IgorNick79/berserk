@@ -15,7 +15,7 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  await page.route('https://battle.test/**',r=>{
  const url = new URL(r.request().url());
  if(url.pathname.startsWith('/assets/images/icons/')&&fs.existsSync(path.join(repo,'www',url.pathname)))return r.fulfill({body:fs.readFileSync(path.join(repo,'www',url.pathname)),contentType:'image/png'});
- if((url.pathname.startsWith('/assets/images/rarity/')||url.pathname.startsWith('/assets/images/element/'))&&fs.existsSync(path.join(repo,'www',url.pathname)))return r.fulfill({body:fs.readFileSync(path.join(repo,'www',url.pathname)),contentType:'image/png'});
+ if((url.pathname.startsWith('/assets/images/rarity/')||url.pathname.startsWith('/assets/images/element/')||url.pathname.startsWith('/assets/images/card/'))&&fs.existsSync(path.join(repo,'www',url.pathname)))return r.fulfill({body:fs.readFileSync(path.join(repo,'www',url.pathname)),contentType:'image/png'});
  if(url.pathname.startsWith('/assets/images/battle/'))return r.fulfill({body:fs.readFileSync(path.join(repo,'www',url.pathname)),contentType:url.pathname.endsWith('.webp')?'image/webp':'image/png'});
  return r.fulfill({body:'<html></html>',contentType:'text/html'});
  });
@@ -45,6 +45,11 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  await page.route('https://battle.test/assets/cards/s1/*.webp',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250"/>'}));
  await update(4);
  assert(await page.locator('.panel-stat-icon').count()===2,'Rarity and element icons present');
+ assert(await page.locator('.panel-card-cost img').getAttribute('src')==='/assets/images/card/elite-unique.png','Elite unique cost icon');
+ await page.waitForFunction(()=>document.querySelector('.panel-card-cost img').naturalWidth>0);
+ assert(await page.locator('.panel-card-cost').innerText()==='7','Price before card name');
+ assert(await page.locator('.panel-card-heading').evaluate(e=>{const cost=e.querySelector('.panel-card-cost').getBoundingClientRect(),name=e.querySelector('.panel-card-title').getBoundingClientRect();return cost.right<=name.left&&e.scrollWidth<=e.clientWidth;}),'Cost icon and value fit before title');
+
  await page.waitForFunction(()=>[...document.querySelectorAll('.panel-stat-icon')].every(i=>i.complete&&i.naturalWidth>0&&!i.hidden));
  assert(await page.locator('.panel-stat-icon').first().getAttribute('src')==='/assets/images/rarity/s1_rare.png','Rarity path follows set and value');
  assert(await page.locator('.panel-stat-icon').last().getAttribute('src')==='/assets/images/element/mountains.png','New element directory');

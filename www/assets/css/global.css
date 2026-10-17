@@ -2066,3 +2066,8 @@ body.battle-page {
 .panel-stat-icon[hidden] { display: none; }
 .battle-page .panel-card-preview { position: relative; }
 .battle-page .panel-card-class { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); box-sizing: border-box; max-width: calc(100% - 20px); padding: 4px 10px; border-radius: 5px; background: rgba(15, 18, 23, .72); color: #fff; font: 600 12px/1.35 system-ui, sans-serif; text-align: center; overflow-wrap: anywhere; pointer-events: none; }
+
+.battle-page .panel-card-heading { display: flex; align-items: center; gap: 9px; padding: 12px; }
+.battle-page .panel-card-heading .panel-card-title { flex: 1 1 auto; min-width: 0; padding: 0; }
+.panel-card-cost { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.panel-card-cost img { display: block; width: 24px; height: 24px; object-fit: contain; }

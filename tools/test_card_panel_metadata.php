@@ -7,7 +7,7 @@ $state = battleSnapshotState();
 $card = $state->getCard(1);
 $card->ukid = 's1_ui-' . bin2hex(random_bytes(6));
 $card->element = 'mountains';
-$cardsInfo[$card->ukid] = ['name'=>'Metadata card', 'health'=>3, 'rarity'=>'rare', 'class'=>'Эльф, Воин', 'element'=>'Горы'];
+$cardsInfo[$card->ukid] = ['name'=>'Metadata card', 'health'=>3, 'rarity'=>'rare', 'price'=>7, 'elite'=>true, 'single'=>true, 'class'=>'Эльф, Воин', 'element'=>'Горы'];
 $path = __DIR__ . '/../www/assets/cards/s1/' . $card->ukid . '.webp';
 $created=[]; $dir=dirname($path);
 while (!is_dir($dir)) { $created[]=$dir; $dir=dirname($dir); }
@@ -21,6 +21,16 @@ try {
         echo json_encode($render(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     } else {
         $html = $render();
+        foreach ([[false,false,'ordinary'],[false,true,'ordinary-unique'],[true,false,'elite'],[true,true,'elite-unique']] as [$elite,$single,$icon]) {
+            $cardsInfo[$card->ukid]['elite']=$elite;
+            $cardsInfo[$card->ukid]['single']=$single;
+            battleSnapshotAssert(str_contains($render(), '/assets/images/card/'.$icon.'.png'), 'Cost icon follows elite/single');
+        }
+        battleSnapshotAssert(str_contains($html, 'Стоимость: 7'), 'Database price displayed');
+        $cardsInfo[$card->ukid]['price']=0;
+        battleSnapshotAssert(str_contains($render(), 'Стоимость: 0'), 'Zero cost preserved');
+        $cardsInfo[$card->ukid]['price']=7;
+
         battleSnapshotAssert(strpos($html, 'panel-card-title') < strpos($html, 'panel-card-preview'), 'Title above artwork');
         battleSnapshotAssert(str_contains($html, '/assets/images/element/mountains.png'), 'Element icon uses new directory');
         battleSnapshotAssert(str_contains($html, 'panel-card-class') && str_contains($html, 'Эльф, Воин'), 'Class over artwork');
