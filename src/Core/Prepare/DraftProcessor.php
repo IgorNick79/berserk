@@ -31,10 +31,10 @@ final class DraftProcessor
             && !($allowRandomPickMode && $settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM)) {
             return Result::error('Неподдерживаемый способ драфта');
         }
-        if ($settings->draftType() !== GameSettings::DRAFT_TYPE_GRID) {
+        if (!in_array($settings->draftType(), [GameSettings::DRAFT_TYPE_GRID, GameSettings::DRAFT_TYPE_SOLOMON], true)) {
             return Result::error('Неподдерживаемый тип драфта');
         }
-        if ($settings->draftGridSize() !== 3) {
+        if (!$settings->isSolomonDraft() && $settings->draftGridSize() !== 3) {
             return Result::error('Неподдерживаемый размер сетки драфта');
         }
         if ($settings->draftBoosters() < GameSettings::DRAFT_BOOSTERS_MIN
@@ -49,6 +49,10 @@ final class DraftProcessor
             return Result::error('Db недоступен для драфта');
         }
 
+        if ($settings->isSolomonDraft() && ($error = $settings->validateDraftSettings()) !== null) {
+            return Result::error($error);
+        }
+
         try {
             $pool = (new BoosterGenerator($this->db, $settings->boosterConfig()))->generatePool($settings->draftBoosters());
         } catch (\RuntimeException $e) {
@@ -57,8 +61,14 @@ final class DraftProcessor
 
         shuffle($pool);
 
+        if ($settings->isSolomonDraft() && !DraftCopyRules::canCompleteDistribution(
+            ['host' => [], 'player' => []], $pool, $this->loadCopyRuleCards($pool), GameSettings::MIN_DECK_SIZE
+        )) {
+            return Result::error('Пул не позволяет собрать две допустимые колоды по 30 карт');
+        }
+
         $grid = [];
-        for ($i = 0; $i < 9; $i++) {
+        for ($i = 0; $i < ($settings->isSolomonDraft() ? $settings->draftStackSize() : 9); $i++) {
             $grid[] = array_shift($pool);
         }
 
@@ -75,16 +85,18 @@ final class DraftProcessor
             'round_picks' => 0,
             'initial_count' => count($pool) + count(array_filter($grid, fn($ukid) => $ukid !== null)),
         ];
+        if ($settings->isSolomonDraft()) $this->state->draft['decision_id'] = 1;
 
         return Result::ok([
             'draft_started',
-            'draft_grid:3',
+            $settings->isSolomonDraft() ? 'draft_stack:' . $settings->draftStackSize() : 'draft_grid:3',
             'draft_boosters:' . $settings->draftBoosters(),
         ]);
     }
 
     public function pickRow(string $playerKey, int $row): Result
     {
+        if ($this->state->settings->isSolomonDraft()) return Result::error('В Solomon выбирают карты стека');
         if ($row < 1 || $row > 3) return Result::error('Неверная строка');
 
         $positions = [];
@@ -96,6 +108,7 @@ final class DraftProcessor
 
     public function pickCol(string $playerKey, int $col): Result
     {
+        if ($this->state->settings->isSolomonDraft()) return Result::error('В Solomon выбирают карты стека');
         if ($col < 1 || $col > 3) return Result::error('Неверная колонка');
 
         $positions = [];
@@ -107,6 +120,9 @@ final class DraftProcessor
 
     public function pickSelection(string $playerKey, array $selection, string $eventPrefix = 'picked'): Result
     {
+        if ($this->state->settings->isSolomonDraft()) {
+            return $this->confirmStack($playerKey, $selection['positions'] ?? null, $eventPrefix);
+        }
         $positions = array_values(array_map('intval', $selection['positions'] ?? []));
         if (!$this->isValidSelectionPositions($positions)) {
             return Result::error('Неверный вариант драфта');
@@ -125,6 +141,21 @@ final class DraftProcessor
 
         $grid = $draft['grid'] ?? [];
         $selections = [];
+
+        if ($this->state->settings->isSolomonDraft()) {
+            // At most 2^8 candidates. Each accepted partition preserves an exact completion witness.
+            $count = count($grid);
+            if ($count === 0 || $count > 8) return [];
+            for ($mask = 0; $mask < (1 << $count); $mask++) {
+                $positions = [];
+                for ($i = 0; $i < $count; $i++) if ($mask & (1 << $i)) $positions[] = $i;
+                $taken = $this->cardsAt($grid, $positions);
+                if ($this->isViableSelection((string) $draft['turn'], $taken, $positions)) {
+                    $selections[] = ['positions' => $positions, 'cards' => $taken];
+                }
+            }
+            return $selections;
+        }
 
         for ($row = 0; $row < 3; $row++) {
             $positions = [$row * 3, $row * 3 + 1, $row * 3 + 2];
@@ -218,6 +249,18 @@ final class DraftProcessor
         $draft = $this->state->draft ?? null;
         if (!$draft) return Result::error('Драфт не активен');
         if ($draft['turn'] !== $playerKey) return Result::error('Не ваш ход');
+        if ($this->state->settings->isSolomonDraft()) {
+            $this->state->draft['consecutive_passes'] = (int) ($draft['consecutive_passes'] ?? 0) + 1;
+            $this->state->draft['decision_id'] = (int) ($draft['decision_id'] ?? 1) + 1;
+            if ($this->state->draft['consecutive_passes'] >= 2) {
+                $this->recycleGridRemainder();
+                $this->openStack();
+                $this->state->draft['consecutive_passes'] = 0;
+                return Result::ok(['draft_stack_recycled']);
+            }
+            $this->state->draft['turn'] = $this->opponent($playerKey);
+            return Result::ok(['passed']);
+        }
         $this->ensureDraftRuntime();
         if ($this->isDiscreteMode()) {
             return Result::error('Пас недоступен в дискретном драфте');
@@ -270,6 +313,7 @@ final class DraftProcessor
 
     public function finish(string $playerKey): Result
     {
+        if ($this->state->settings->isSolomonDraft()) return Result::error('В Solomon нужно распределить все стеки');
         if ($this->state->status !== 'draft') {
             return Result::error('Сейчас не стадия драфта');
         }
@@ -316,6 +360,9 @@ final class DraftProcessor
 
     private function canFinish(array $draft): bool
     {
+        if ($this->state->settings->isSolomonDraft()) {
+            return $this->canComplete($draft['picked'], []);
+        }
         return count($draft['picked']['host'] ?? []) >= GameSettings::MIN_DECK_SIZE
             && count($draft['picked']['player'] ?? []) >= GameSettings::MIN_DECK_SIZE;
     }
@@ -393,6 +440,7 @@ final class DraftProcessor
 
     private function isDiscreteMode(): bool
     {
+        if ($this->state->settings->isSolomonDraft()) return false;
         $this->ensureDraftRuntime();
         return ($this->state->draft['grid_mode'] ?? GameSettings::DRAFT_GRID_MODE_CONTINUOUS)
             === GameSettings::DRAFT_GRID_MODE_DISCRETE;
@@ -438,6 +486,20 @@ final class DraftProcessor
     {
         if ($this->state->draft === null || $playerKey === '') return false;
 
+        if ($this->state->settings->isSolomonDraft()) {
+            $picked = $this->state->draft['picked'];
+            $picked[$playerKey] = array_merge($picked[$playerKey], $taken);
+            $opponentCards = [];
+            foreach ($this->state->draft['grid'] as $pos => $ukid) {
+                if ($ukid !== null && !in_array($pos, $positions, true)) $opponentCards[] = $ukid;
+            }
+            $other = $this->opponent($playerKey);
+            $picked[$other] = array_merge($picked[$other], $opponentCards);
+            return $this->canComplete($picked, array_merge(
+                $this->state->draft['pool'], $this->state->draft['recycle'] ?? []
+            ));
+        }
+
         $hostPicked = count($this->state->draft['picked'][GameState::PLAYER_HOST] ?? []);
         $playerPicked = count($this->state->draft['picked'][GameState::PLAYER_PLAYER] ?? []);
         if ($playerKey === GameState::PLAYER_HOST) {
@@ -472,6 +534,14 @@ final class DraftProcessor
         $hostDeckCards = $builder->buildDeckCards($hostUkids);
         $playerDeckCards = $builder->buildDeckCards($playerUkids);
 
+        if ($this->state->settings->isSolomonDraft()) {
+            if (!$this->canFinish($this->state->draft)
+                || array_sum(array_column($hostDeckCards, 'count')) !== count($hostUkids)
+                || array_sum(array_column($playerDeckCards, 'count')) !== count($playerUkids)) {
+                return Result::error('Не удалось создать две полные допустимые колоды');
+            }
+        }
+
         $this->state->getPlayer('host')->deckCards   = $hostDeckCards;
         $this->state->getPlayer('player')->deckCards = $playerDeckCards;
         $this->state->getPlayer('host')->deckId   = 0;
@@ -488,6 +558,70 @@ final class DraftProcessor
     private function opponent(string $key): string
     {
         return $key === 'host' ? 'player' : 'host';
+    }
+
+    private function canComplete(array $picked, array $remaining): bool
+    {
+        $all = array_merge($picked['host'], $picked['player'], $remaining);
+        return DraftCopyRules::canCompleteDistribution($picked, $remaining, $this->loadCopyRuleCards($all), GameSettings::MIN_DECK_SIZE);
+    }
+
+    /** Uses the same draw/recycle mechanism as Grid; never pads a short final stack. */
+    private function openStack(): void
+    {
+        $this->state->draft['grid'] = [];
+        for ($i = 0; $i < $this->state->settings->draftStackSize(); $i++) {
+            $card = $this->drawDraftCard();
+            if ($card === null) break;
+            $this->state->draft['grid'][] = $card;
+        }
+    }
+
+    public function confirmStack(string $playerKey, mixed $positions, string $event = 'picked'): Result
+    {
+        if ($this->state->status !== 'draft' || !$this->state->settings->isSolomonDraft() || $this->state->draft === null) {
+            return Result::error('Solomon Draft не активен');
+        }
+        $draft = $this->state->draft;
+        if (($draft['turn'] ?? '') !== $playerKey) return Result::error('Не ваш ход');
+        if (!is_array($positions) || count($positions) > count($draft['grid'])) return Result::error('Неверные позиции карт');
+        $normalized = [];
+        foreach ($positions as $position) {
+            if (!is_int($position) && !(is_string($position) && preg_match('/^[0-7]$/D', $position))) {
+                return Result::error('Неверные позиции карт');
+            }
+            $position = (int) $position;
+            if (!isset($draft['grid'][$position]) || isset($normalized[$position])) return Result::error('Неверные позиции карт');
+            $normalized[$position] = true;
+        }
+        $positions = array_keys($normalized);
+        $taken = $this->cardsAt($draft['grid'], $positions);
+        if (!$this->isViableSelection($playerKey, $taken, $positions)) {
+            return Result::error('Распределение нарушает лимит копий (3 обычные / 5 Орда) или возможность двух колод по 30 карт');
+        }
+        // All validation precedes mutation; finalization failures restore the complete state.
+        $snapshot = clone $this->state;
+        $snapshot->players = array_map(fn($player) => clone $player, $this->state->players);
+        $other = $this->opponent($playerKey);
+        $rest = [];
+        foreach ($draft['grid'] as $pos => $ukid) if (!isset($normalized[$pos])) $rest[] = $ukid;
+        $this->state->draft['picked'][$playerKey] = array_merge($draft['picked'][$playerKey], $taken);
+        $this->state->draft['picked'][$other] = array_merge($draft['picked'][$other], $rest);
+        foreach ([$playerKey => $taken, $other => $rest] as $owner => $cards) {
+            $this->state->draft['history'][] = ['player' => $owner, 'cards' => $cards];
+        }
+        $this->state->draft['consecutive_passes'] = 0;
+        $this->state->draft['turn'] = $other;
+        $this->state->draft['decision_id'] = (int) ($draft['decision_id'] ?? 1) + 1;
+        $this->openStack();
+        try {
+            $result = $this->checkEnd($event . ':' . count($taken));
+        } catch (\Throwable $e) {
+            foreach (get_object_vars($snapshot) as $key => $value) $this->state->$key = $value;
+            throw $e;
+        }
+        if (!$result->success) foreach (get_object_vars($snapshot) as $key => $value) $this->state->$key = $value;
+        return $result;
     }
 
     private function createDraftDeckInstances(string $owner, array $deckCards): void

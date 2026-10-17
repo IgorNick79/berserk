@@ -47,6 +47,11 @@
             .then(function (response) { return response.ok ? response.json() : null; })
             .then(function (data) {
                 if (!data) return;
+                if (data.ok === false) {
+                    var flash = document.querySelector('.screen-draft .flash');
+                    if (flash) flash.textContent = data.error || 'Не удалось продолжить драфт. Обновите страницу.';
+                    return;
+                }
                 if (data.version !== loadedVersion || data.changed || data.status !== "draft") {
                     window.location.reload();
                     return;
@@ -55,8 +60,10 @@
                 if (data.timer) {
                     serverNow = parseInt(data.timer.server_now || serverNow, 10);
                     deadlineAt = parseInt(data.timer.deadline_at || deadlineAt, 10);
-                    hostTotal = parseInt((data.timer.remaining_total || {}).host || hostTotal, 10);
-                    playerTotal = parseInt((data.timer.remaining_total || {}).player || playerTotal, 10);
+                    if (data.timer.remaining_total) {
+                        hostTotal = parseInt(data.timer.remaining_total.host, 10);
+                        playerTotal = parseInt(data.timer.remaining_total.player, 10);
+                    }
                     loadedAt = Math.floor(Date.now() / 1000);
                     render();
                 }

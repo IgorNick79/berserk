@@ -439,6 +439,22 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
     box-shadow: inset 0 0 0 1px #4a4;
 }
 
+/* The mode selector is a growing vertical list using the settings radio component. */
+.mode-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 520px;
+    box-sizing: border-box;
+}
+.mode-actions .settings-option { width: 100%; min-height: 52px; }
+.mode-actions .settings-option span { min-width: 0; overflow-wrap: anywhere; }
+.mode-actions .settings-option input { margin: 0; accent-color: #4a4; }
+.mode-actions .settings-option:hover { border-color: #4a4; }
+.mode-actions .settings-option:focus-within { outline: 2px solid #286428; outline-offset: 3px; }
+.mode-actions > .button { width: 100%; box-sizing: border-box; margin-top: 4px; }
+
 .settings-dependent {
     display: grid;
     gap: 10px;
@@ -2026,3 +2042,20 @@ body.battle-page {
 /* Keep InfoPanel scrollable without exposing the native scrollbar. */
 .battle-page .info-panel-content { scrollbar-width: none; }
 .battle-page .info-panel-content::-webkit-scrollbar { display: none; }
+/* Solomon uses the existing card, preview and bottom bar components. */
+.solomon-stack { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.solomon-stack__card { min-width: 0; }
+.solomon-stack .prepare-card-link { display: block; width: 100%; box-sizing: border-box; }
+.solomon-stack .prepare-card { width: 100%; min-width: 0; margin: 0; box-sizing: border-box; overflow-wrap: anywhere; }
+.screen-draft--solomon { padding-bottom: 180px; }
+.screen-draft--solomon .draft-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 560px); }
+.screen-draft--solomon .draft-preview-slot { width: 100%; min-width: 0; }
+@media (max-width: 1000px) {
+    .screen-draft--solomon .draft-main { grid-template-columns: minmax(0, 1fr); }
+    .screen-draft--solomon .prepare-card-preview { flex-wrap: wrap; }
+    .screen-draft--solomon .prepare-card-preview__media { min-width: 0; flex: 0 1 280px; }
+    .screen-draft--solomon .prepare-card-preview__info { min-width: 0; }
+    .screen-draft--solomon .prepare-bottom-bar { flex-wrap: wrap; }
+}
+.solomon-stack__select { display: flex; align-items: center; gap: 6px; padding: 6px 0; cursor: pointer; }
+@media (max-width: 600px) { .solomon-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } }

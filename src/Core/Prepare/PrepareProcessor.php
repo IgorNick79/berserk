@@ -37,12 +37,21 @@ final class PrepareProcessor
         }
 
         $mode = (string) $cmd->get('mode', '');
+        $solomonChoice = $mode === GameSettings::DRAFT_TYPE_SOLOMON;
+        if ($solomonChoice) $mode = GameSettings::MODE_DRAFT;
         if (!in_array($mode, [GameSettings::MODE_DRAFT, GameSettings::MODE_SYSTEM, GameSettings::MODE_SEALED], true)) {
             return Result::error('Неверный режим');
         }
 
+        // The radio value is only a transport alias; the persisted mode stays draft.
+        $type = $solomonChoice ? GameSettings::DRAFT_TYPE_SOLOMON : $cmd->get('draft_type', GameSettings::DRAFT_TYPE_GRID);
+        if ($mode === GameSettings::MODE_DRAFT && !in_array($type, [GameSettings::DRAFT_TYPE_GRID, GameSettings::DRAFT_TYPE_SOLOMON], true)) {
+            return Result::error('Неподдерживаемый тип драфта');
+        }
+
         $this->state->mode = $mode;
         $this->state->settings = GameSettings::defaults();
+        if ($mode === GameSettings::MODE_DRAFT) $this->state->settings->draft['type'] = $type;
         $this->state->status = $mode === GameSettings::MODE_SYSTEM ? 'deck' : 'settings';
 
         $this->state->bumpVersion();
@@ -197,9 +206,48 @@ final class PrepareProcessor
         return $this->draftManualCommand($playerKey, fn(DraftProcessor $p) => $p->pickCol($playerKey, (int) $cmd->get('col', 0)));
     }
 
-    public function draftPass(string $playerKey): Result
+    public function draftPass(string $playerKey, ?Command $cmd = null): Result
     {
+        if ($this->state->settings->isSolomonDraft()) {
+            return $this->solomonCommand($playerKey, $cmd, fn(DraftProcessor $p) => $p->pass($playerKey));
+        }
         return $this->draftManualCommand($playerKey, fn(DraftProcessor $p) => $p->pass($playerKey));
+    }
+
+    public function draftConfirm(string $playerKey, Command $cmd): Result
+    {
+        return $this->solomonCommand($playerKey, $cmd, fn(DraftProcessor $p) => $p->confirmStack($playerKey, $cmd->get('positions', [])));
+    }
+
+    private function solomonCommand(string $playerKey, ?Command $cmd, callable $apply): Result
+    {
+        if ($this->state->status !== 'draft' || !$this->state->settings->isSolomonDraft() || $this->state->draft === null) {
+            return Result::error('Solomon Draft не активен');
+        }
+        if (($this->state->draft['turn'] ?? '') !== $playerKey) return Result::error('Не ваш ход');
+        foreach (['decision_id' => $this->state->draft['decision_id'] ?? 1, 'expected_version' => $this->state->version] as $key => $expected) {
+            $value = $cmd?->get($key);
+            if ((!is_int($value) && !(is_string($value) && preg_match('/^(0|[1-9][0-9]*)$/D', $value)))
+                || (string) $value !== (string) $expected) {
+                return Result::error('Решение устарело. Обновите страницу и повторите выбор');
+            }
+        }
+        return $this->atomicSolomon(fn() => $this->draftManualCommand($playerKey, $apply));
+    }
+
+    /** Keep failed automatic batches (including finalization) out of both memory and persistence. */
+    private function atomicSolomon(callable $apply): Result
+    {
+        $snapshot = clone $this->state;
+        $snapshot->players = array_map(fn($player) => clone $player, $this->state->players);
+        try {
+            $result = $apply();
+        } catch (\Throwable $e) {
+            foreach (get_object_vars($snapshot) as $key => $value) $this->state->$key = $value;
+            throw $e;
+        }
+        if (!$result->success) foreach (get_object_vars($snapshot) as $key => $value) $this->state->$key = $value;
+        return $result;
     }
 
     public function finishDraft(string $playerKey): Result
@@ -1396,6 +1444,7 @@ final class PrepareProcessor
             'grid_mode' => 'draft_grid_mode',
             'auto_side' => 'draft_auto_side',
             'grid_size' => 'grid_size',
+            'stack_size' => 'stack_size',
             'boosters' => 'boosters',
             'booster_profile' => 'booster_profile',
             'timer_mode' => 'draft_timer_mode',
@@ -1622,6 +1671,14 @@ final class PrepareProcessor
 
     public function resolveDraftTimeouts(?int $now = null): Result
     {
+        if ($this->state->settings->isSolomonDraft()) {
+            return $this->atomicSolomon(fn() => $this->resolveDraftTimeoutsInternal($now));
+        }
+        return $this->resolveDraftTimeoutsInternal($now);
+    }
+
+    private function resolveDraftTimeoutsInternal(?int $now = null): Result
+    {
         if ($this->db === null && $this->draftAutoPickerOverride === null) {
             return Result::error('Db недоступен для драфта');
         }
@@ -1662,12 +1719,14 @@ final class PrepareProcessor
         $processor = $this->draftProcessor();
         $autoPicker = $this->draftAutoPicker();
         $guard = 0;
+        // Custom 30 min / 10 sec plus zero-budget passes can exceed 500 after reconnect.
+        $guardLimit = $this->state->settings->isSolomonDraft() ? 1000 : 500;
 
         while ($this->state->status === 'draft'
             && $this->state->draft !== null
             && DraftTimer::hasTimer($this->state)
             && DraftTimer::isExpired($this->state, $now)) {
-            if (++$guard > 500) {
+            if (++$guard > $guardLimit) {
                 return Result::error('Таймаут драфта не смог выбрать допустимое действие');
             }
 
@@ -1676,6 +1735,18 @@ final class PrepareProcessor
 
             $chargeAt = DraftTimer::chargeLimitAt($this->state) ?? $now;
             DraftTimer::settleAction($this->state, $turn, $chargeAt);
+
+            if ($this->state->settings->isSolomonDraft()) {
+                // Action timeout is a pass. Only exhausted TOTAL budgets enable auto picks.
+                $result = $processor->pass($turn);
+                if (!$result->success) return $result;
+                $events = array_merge($events, $result->events);
+                DraftTimer::startAction($this->state, $chargeAt);
+                $autoResult = $this->runDraftAutoTurns($chargeAt);
+                if (!$autoResult->success) return $autoResult;
+                $events = array_merge($events, $autoResult->events);
+                continue;
+            }
 
             $validSelections = $processor->validSelections();
             $selection = $autoPicker->pick(
@@ -1794,6 +1865,7 @@ final class PrepareProcessor
 
         while ($this->state->status === 'draft'
             && $this->state->draft !== null
+            && !$this->state->settings->isSolomonDraft()
             && (($this->state->draft['grid_mode'] ?? $this->state->settings->draftGridMode()) === GameSettings::DRAFT_GRID_MODE_DISCRETE)
             && empty($processor->validSelections())) {
             if (++$guard > 500) {
@@ -1841,6 +1913,9 @@ final class PrepareProcessor
                 $this->state->draft['picked'][$turn] ?? []
             );
             if ($selection === null) {
+                if ($this->state->settings->isSolomonDraft()) {
+                    return Result::error('Нет допустимого распределения для двух колод по 30 карт');
+                }
                 if (($this->state->draft['grid_mode'] ?? $this->state->settings->draftGridMode()) !== GameSettings::DRAFT_GRID_MODE_DISCRETE) {
                     $result = $processor->pass($turn);
                     if (!$result->success) {
@@ -1929,6 +2004,12 @@ final class PrepareProcessor
 
     private function isDraftAutoControlled(string $playerKey): bool
     {
+        if ($this->state->settings->isSolomonDraft()) {
+            $timer = $this->state->draft['timer'] ?? null;
+            return is_array($timer)
+                && (int) ($timer['elapsed']['host'] ?? 0) >= (int) $timer['total_limit']
+                && (int) ($timer['elapsed']['player'] ?? 0) >= (int) $timer['total_limit'];
+        }
         if ($this->state->settings->draftPickMode() !== GameSettings::DRAFT_PICK_MODE_RANDOM) {
             return false;
         }

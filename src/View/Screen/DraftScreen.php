@@ -51,6 +51,7 @@ final class DraftScreen
         $baseUrl   = "?{$roleParam}&game={$state->gameId}";
         $syncUrl   = "{$baseUrl}&cmd=draft_sync";
         $isMyTurn  = ($draft['turn'] === $playerKey);
+        $isSolomon = $state->settings->isSolomonDraft();
         $ui         = new PrepareUi($this->tpl);
 
         $selectedIdx = isset($_GET['card']) ? (int) $_GET['card'] : -1;
@@ -58,7 +59,7 @@ final class DraftScreen
 
         // ─── Сетка 3×3 ───────────────────────────────────
         $cells = [];
-        for ($i = 0; $i < 9; $i++) {
+        for ($i = 0; !$isSolomon && $i < 9; $i++) {
             $ukid = $draft['grid'][$i] ?? null;
 
             if ($ukid === null) {
@@ -83,10 +84,24 @@ final class DraftScreen
         }
 
         $gridHtml = '';
-        for ($r = 0; $r < 3; $r++) {
+        for ($r = 0; !$isSolomon && $r < 3; $r++) {
             $gridHtml .= '<div class="draft-row">';
             for ($c = 0; $c < 3; $c++) {
                 $gridHtml .= $cells[$r * 3 + $c];
+            }
+            $gridHtml .= '</div>';
+        }
+
+        if ($isSolomon) {
+            $gridHtml = '<div class="solomon-stack" data-solomon-stack data-selection-key="'
+                . (int) $state->gameId . '-' . $playerKey . '" data-decision="' . (int) ($draft['decision_id'] ?? 1) . '">';
+            foreach ($draft['grid'] as $position => $ukid) {
+                $info = $cardsInfo[$ukid] ?? ['name' => $ukid, 'strike' => []];
+                $gridHtml .= '<div class="solomon-stack__card" data-solomon-position="' . (int) $position . '">'
+                    . '<label class="solomon-stack__select"><input type="checkbox" name="positions[]" value="' . (int) $position
+                    . '" form="solomon-decision"' . ($isMyTurn ? '' : ' disabled') . '> Выбрать</label>'
+                    . $ui->card(['ukid' => $ukid, 'info' => $info, 'link' => $baseUrl . '&card=' . (int) $position])
+                    . '<template data-solomon-preview>' . $ui->preview(['ukid' => $ukid, 'info' => $info]) . '</template></div>';
             }
             $gridHtml .= '</div>';
         }
@@ -108,7 +123,7 @@ final class DraftScreen
         $playerPickedCount = count($draft['picked']['player'] ?? []);
         $isDiscrete = ($draft['grid_mode'] ?? $state->settings->draftGridMode()) === GameSettings::DRAFT_GRID_MODE_DISCRETE;
 
-        if ($isMyTurn) {
+        if ($isMyTurn && !$isSolomon) {
             for ($r = 1; $r <= 3; $r++) {
                 $actions[] = ['label' => 'Строка ' . $r, 'url' => $baseUrl . '&cmd=draft_row&row=' . $r];
             }
@@ -129,10 +144,21 @@ final class DraftScreen
         }
 
         $actionsHtml = $ui->actions($actions);
-        $previewHtml = $ui->preview($selectedCard, [], 'Выбери карту в сетке');
+        if ($isSolomon) {
+            $actionsHtml = '<form method="get" id="solomon-decision" class="prepare-actions">'
+                . '<input type="hidden" name="' . $roleParam . '" value="1">'
+                . '<input type="hidden" name="game" value="' . (int) $state->gameId . '">'
+                . '<input type="hidden" name="decision_id" value="' . (int) ($draft['decision_id'] ?? 1) . '">'
+                . '<input type="hidden" name="expected_version" value="' . (int) $state->version . '">'
+                . '<span>Выделено: <b data-solomon-selected>0</b></span>'
+                . '<button class="button prepare-action skip" name="cmd" value="draft_pass"' . ($isMyTurn ? '' : ' disabled') . '>Пас</button>'
+                . '<button class="button prepare-action" name="cmd" value="draft_confirm"' . ($isMyTurn ? '' : ' disabled') . '>Подтвердить</button></form>';
+        }
+        $previewHtml = $ui->preview($selectedCard, [], $isSolomon ? 'Выбери карту в стеке' : 'Выбери карту в сетке');
         $timerHtml = $this->timerHtml($state, $playerKey, $now);
         $historyHtml = $this->historyHtml($state, $playerKey, $cardsInfo, $ui);
         $scriptHtml = $this->scriptHtml($state, $syncUrl, $now);
+        if ($isSolomon) $scriptHtml .= '<script src="/assets/js/solomon_selection.js?v=1" defer></script>';
 
         // ─── Статистика набранного пула ──────────────────
         $myPicked = $draft['picked'][$playerKey] ?? [];
@@ -176,10 +202,11 @@ final class DraftScreen
         arsort($elementCounts);
 
         return ['screen' => 'draft', 'data' => [
+            'draft_class'   => $isSolomon ? 'screen-draft--solomon' : '',
             'turn_label'    => $isMyTurn ? 'Твой ход' : 'Ход оппонента',
             'host_picked'   => $hostPickedCount,
             'player_picked' => $playerPickedCount,
-            'pool_left'     => count($draft['pool'] ?? []),
+            'pool_left'     => count($draft['pool'] ?? []) + ($isSolomon ? count($draft['recycle'] ?? []) : 0),
 
             'my_total'      => $totalCount,
             'my_gold'       => $goldCount,
@@ -249,7 +276,7 @@ final class DraftScreen
     private function scriptHtml(GameState $state, string $syncUrl, int $now): string
     {
         $snapshot = DraftTimer::snapshot($state, (string) ($state->draft['turn'] ?? 'host'), $now);
-        if (($snapshot['mode'] ?? '') === GameSettings::DRAFT_TIMER_UNLIMITED) {
+        if (($snapshot['mode'] ?? '') === GameSettings::DRAFT_TIMER_UNLIMITED && !$state->settings->isSolomonDraft()) {
             return '';
         }
 

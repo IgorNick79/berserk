@@ -28,17 +28,15 @@ final class ModeScreen
         if (!$isHost) {
             $contentHtml = '<p class="wait">Ожидание, пока хост выберет режим игры...</p>';
         } else {
-            $draftUrl  = "{$baseUrl}&cmd=choose_mode&mode=draft";
-            $systemUrl = "{$baseUrl}&cmd=choose_mode&mode=system";
-            $sealedUrl = "{$baseUrl}&cmd=choose_mode&mode=sealed";
-
-            $contentHtml =
-                '<h1>Режим игры</h1>'
-                . '<div class="mode-actions">'
-                . '<a class="button wide" href="' . $systemUrl . '">Системные колоды</a>'
-                . '<a class="button wide" href="' . $draftUrl . '">Драфт</a>'
-                . '<a class="button wide" href="' . $sealedUrl . '">Sealed</a>'
-                . '</div>';
+            $contentHtml = '<h1>Режим игры</h1><form method="get" class="mode-actions">'
+                . '<input type="hidden" name="' . $roleParam . '" value="1">'
+                . '<input type="hidden" name="game" value="' . (int) $state->gameId . '">'
+                . '<input type="hidden" name="cmd" value="choose_mode">';
+            foreach (['draft' => 'Draft — сетка', 'solomon' => 'Solomon Draft', 'sealed' => 'Sealed', 'system' => 'Системные колоды'] as $value => $label) {
+                $contentHtml .= '<label class="settings-option"><input type="radio" name="mode" value="' . $value . '"'
+                    . ($value === 'draft' ? ' checked' : '') . '><span>' . $label . '</span></label>';
+            }
+            $contentHtml .= '<button class="button wide" type="submit">Подтвердить</button></form>';
         }
 
         return [

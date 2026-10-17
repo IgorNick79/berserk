@@ -19,6 +19,7 @@ final class GameSettings
     public const SYSTEM_DECK_SELECTION_MANUAL = 'manual';
 
     public const DRAFT_TYPE_GRID = 'grid';
+    public const DRAFT_TYPE_SOLOMON = 'solomon';
     public const DRAFT_PICK_MODE_MANUAL = 'manual';
     public const DRAFT_PICK_MODE_RANDOM = 'random';
     public const DRAFT_GRID_MODE_CONTINUOUS = 'continuous';
@@ -111,6 +112,16 @@ final class GameSettings
     public function draftGridSize(): int
     {
         return (int) ($this->draft['grid_size'] ?? 3);
+    }
+
+    public function isSolomonDraft(): bool
+    {
+        return $this->draftType() === self::DRAFT_TYPE_SOLOMON;
+    }
+
+    public function draftStackSize(): int
+    {
+        return (int) ($this->draft['stack_size'] ?? 6);
     }
 
     public function draftPickMode(): string
@@ -247,13 +258,24 @@ final class GameSettings
 
     public function validateDraftSettings(): ?string
     {
+        if (!in_array($this->draftType(), [self::DRAFT_TYPE_GRID, self::DRAFT_TYPE_SOLOMON], true)) {
+            return 'Неподдерживаемый тип драфта';
+        }
+        if ($this->isSolomonDraft()) {
+            if (!in_array($this->draft['stack_size'] ?? 6, [6, 8, '6', '8'], true)) {
+                return 'Размер стека должен быть 6 или 8';
+            }
+            if ($this->draftPickMode() !== self::DRAFT_PICK_MODE_MANUAL) {
+                return 'Solomon использует ручной выбор и автоматическое завершение по таймеру';
+            }
+        }
         $boosters = $this->draftBoosters();
         if ($boosters < self::DRAFT_BOOSTERS_MIN || $boosters > self::DRAFT_BOOSTERS_MAX) {
             return 'Неверное количество бустеров';
         }
 
         $gridMode = (string) ($this->draft['grid_mode'] ?? self::DRAFT_GRID_MODE_CONTINUOUS);
-        if (!in_array($gridMode, [
+        if (!$this->isSolomonDraft() && !in_array($gridMode, [
             self::DRAFT_GRID_MODE_CONTINUOUS,
             self::DRAFT_GRID_MODE_DISCRETE,
         ], true)) {

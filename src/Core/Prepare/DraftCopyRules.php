@@ -92,6 +92,39 @@ final class DraftCopyRules
         );
     }
 
+    /**
+     * Exact feasibility of distributing ALL remaining copies between two players.
+     * For each ukid, host can receive every integer in [max(0,n-capP), min(n,capH)].
+     * Sums of integer intervals have no gaps. Intersect that sum with both deck minima.
+     * This is a feasibility check, not a second auto picker. Existing picks are immutable.
+     *
+     * @param array{host:array,player:array} $picked
+     * @param string[] $remaining
+     * @param array<string,array|CardInstance> $cardsByUkid
+     */
+    public static function canCompleteDistribution(array $picked, array $remaining, array $cardsByUkid, int $minimum): bool
+    {
+        $host = array_count_values($picked['host'] ?? []);
+        $player = array_count_values($picked['player'] ?? []);
+        $reserve = array_count_values($remaining);
+        $lower = 0;
+        $upper = 0;
+        foreach (array_unique(array_merge(array_keys($host), array_keys($player), array_keys($reserve))) as $ukid) {
+            $card = $cardsByUkid[$ukid] ?? null;
+            if ($card === null || (is_array($card) && !empty($card['_missing_copy_data']))) return false;
+            $limit = self::deckLimit($card);
+            $capHost = $limit - ($host[$ukid] ?? 0);
+            $capPlayer = $limit - ($player[$ukid] ?? 0);
+            $count = $reserve[$ukid] ?? 0;
+            if ($capHost < 0 || $capPlayer < 0 || $count > $capHost + $capPlayer) return false;
+            $lower += max(0, $count - $capPlayer);
+            $upper += min($count, $capHost);
+        }
+        $needHost = max(0, $minimum - count($picked['host'] ?? []));
+        $needPlayer = max(0, $minimum - count($picked['player'] ?? []));
+        return max($lower, $needHost) <= min($upper, count($remaining) - $needPlayer);
+    }
+
     private static function isHordeCard(array|CardInstance|null $card): bool
     {
         if ($card instanceof CardInstance) {
