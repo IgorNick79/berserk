@@ -1,6 +1,5 @@
 {{message}}
 <div class="screen-settings screen-deck-select">
-    <h1>Выбор колод</h1>
     <p class="settings-mode-title">Системные колоды</p>
     {{empty_decks_html}}
     <form method="get" class="settings-form deck-select-form">

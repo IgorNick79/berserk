@@ -413,9 +413,11 @@ function buildRenderCardInfo(Db $db, GameState $state): array
     $ukids = array_unique($ukids);
 
     $elements = [];
+    $elementCodes = [];
     $elementLabels = [];
     foreach ($db->fetchAll("SELECT ind, code, name FROM elements") as $e) {
         $elements[(int) $e['ind']] = (string) $e['name'];
+        $elementCodes[(int) $e['ind']] = (string) $e['code'];
         $elementLabels[(string) $e['code']] = (string) $e['name'];
     }
 
@@ -424,13 +426,16 @@ function buildRenderCardInfo(Db $db, GameState $state): array
         $rows = $db->fetchAll(
             "SELECT ukid, name, price, health, move, elite,
                     strike_weak, strike_medium, strike_strong,
-                    element_id, descr
+                    element_id, descr, rarity
              FROM cards WHERE ukid IN ($in)"
         );
         foreach ($rows as $r) {
             $cardsInfo[$r['ukid']] = [
                 'name'    => $r['name'],
                 'descr'   => (string) ($r['descr'] ?? ''),
+                'rarity' => (string) ($r['rarity'] ?? ''),
+                'element_code' => $elementCodes[(int) $r['element_id']] ?? '',
+                'element_label' => $elements[(int) $r['element_id']] ?? '—',
                 'price'   => (int) $r['price'],
                 'health'  => (int) $r['health'],
                 'move'    => (int) $r['move'],
@@ -1270,14 +1275,26 @@ switch ($state->status) {
 }
 
 // ─── Рендерим ────────────────────────────────────────────────
-$screenHtml = $tpl->parse("screen/{$screenName}.tpl", $screenData);
+$isPreGame = \Berserk\View\Ui\PreGameLayout::supports($screenName);
+$screenHtml = $isPreGame
+    ? (new \Berserk\View\Ui\PreGameLayout($tpl))->renderScreen($screenName, $screenData)
+    : $tpl->parse("screen/{$screenName}.tpl", $screenData);
+
+// Resolve the URL before passing the HTML slot to the single-pass template parser.
+$preGameResourceKey = $isPreGame
+    ? hash('sha256', hash_file('sha256', __DIR__ . '/assets/css/global.css')
+        . hash_file('sha256', __DIR__ . '/assets/css/pregame.css'))
+    : null;
 
 $page = $tpl->parse('page.tpl', [
     'game_id' => $state->gameId,
     'role'    => $role,
     'screen'  => $screenHtml,
     'scripts' => $scriptsHtml,
-    'page_class' => $screenName === 'battle' ? 'battle-page' : '',
+    'page_class' => $screenName === 'battle' ? 'battle-page' : ($isPreGame ? 'pregame-page' : ''),
+    'page_styles' => $isPreGame ? '<link rel="stylesheet" href="/assets/css/pregame.css?v=' . $preGameResourceKey . '">' : '',
+    // PreGame opts into a stable CSS version; battle keeps its existing rkey policy.
+    'rkey' => $preGameResourceKey,
 ]);
 
 echo $page;

@@ -1,0 +1,163 @@
+<?php
+declare(strict_types=1);
+namespace Berserk\Core {
+    // Test-only catalog adapter: no connection, credentials or writes.
+    final class Db {
+        public function fetchAll(string $sql): array {
+            if (str_contains($sql, 'FROM decks')) return [['ind'=>1,'name'=>'Системная тестовая колода','image'=>'']];
+            if (str_contains($sql, 'FROM cards')) return [['ukid'=>'system-visible','name'=>'Системная карта','price'=>2,'health'=>6,'move'=>1,'elite'=>0,'single'=>0,'strike_weak'=>1,'strike_medium'=>2,'strike_strong'=>3,'prop'=>'{}','type'=>'creature','class'=>'','descr'=>'<p>system description</p>','rarity'=>'rare','element_code'=>'dark','element_name'=>'Тьма']];
+            throw new \RuntimeException('Unexpected fixture query');
+        }
+        public function fetchOne(string $sql): ?array { return ['ind'=>1,'name'=>'Системная тестовая колода','cards'=>json_encode([['ukid'=>'system-visible','count'=>30]])]; }
+        public function escape(string $value): string {return addslashes($value);}
+    }
+}
+namespace {
+    require_once __DIR__ . '/../src/Core/Autoloader.php';
+    use Berserk\Core\{Autoloader, CardInstance, Db, DeckView, GameState, GameSettings};
+    use Berserk\Core\Prepare\DraftTimer;
+    use Berserk\View\Template;
+    use Berserk\View\Ui\PreGameLayout;
+    use Berserk\View\Screen\{ModeScreen, SettingsScreen, DeckScreen, ViewScreen, DraftScreen, TurnScreen, SideScreen, DealScreen, PlaceScreen};
+    Autoloader::register(); Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
+    $checks = 0;
+    function integrationAssert(bool $ok, string $message): void { global $checks; $checks++; if (!$ok) throw new \RuntimeException($message); }
+    function integrationCard(GameState $state, string $owner, string $zone, string $ukid, array &$catalog, ?int $row = null): CardInstance {
+        $id=$state->nextInstanceId();
+        $card=new CardInstance(instanceId:$id, ukid:$ukid, owner:$owner, zone:$zone, row:$row, col:$row===null?null:1, hp:1, hpMax:99, price:2, element:'dark', moveMax:99, strikeWeak:99);
+        $state->cards[$id]=$card;
+        $catalog[$ukid]=['name'=>$ukid, 'health'=>5, 'move'=>2,'price'=>2,'strike'=>['weak'=>1,'medium'=>2,'strong'=>3], 'element'=>'Тьма','element_code'=>'dark','element_label'=>'Тьма','rarity'=>'rare','descr'=>str_repeat('<p>Описание карты. Длинный текст для проверки независимой прокрутки.</p>',90)];
+        return $card;
+    }
+    /** Execute the actual production page-assembly block without bootstrapping DB/commands. */
+    function integrationPage(Template $tpl, GameState $state, string $role, string $screenName, array $screenData, string $scriptsHtml = ''): string {
+        $source = file_get_contents(__DIR__ . '/../www/index.php');
+        $marker = '$isPreGame = \Berserk\View\Ui\PreGameLayout::supports($screenName);';
+        $start = strpos($source, $marker);
+        if ($start === false) throw new \RuntimeException('Production rendering block not found');
+        $render = str_replace('__DIR__', var_export(dirname(__DIR__) . '/www', true), substr($source, $start));
+        ob_start();
+        try { eval($render); return (string) ob_get_contents(); }
+        finally { ob_end_clean(); }
+    }
+    function integrationFixture(string $stage, string $role, string $variant = '', ?array $request = null): array {
+        global $tpl;
+        $_GET=[]; $catalog=[]; $state=new GameState(970001,1,2); $state->status=$stage; $state->mode='draft';
+        $state->getPlayer($role)->deckId=0; $state->getPlayer($role)->resources=['gold'=>30,'silver'=>30];
+        $state->firstPlayer='host'; $state->getPlayer('host')->dice=6; $state->getPlayer('player')->dice=1;
+        $opponent=$role==='host'?'player':'host';
+        integrationCard($state,$opponent,'deck','opponent-hidden',$catalog);
+        $selected=null;
+        if ($stage==='draft') {
+            $solomon=str_contains($variant,'solomon');
+            $state->settings->draft['type']=$solomon?'solomon':'grid';
+            $state->settings->draft['timer_mode']=str_contains($variant,'unlimited')?'unlimited':'default';
+            $state->draft=['turn'=>str_contains($variant,'player-active')?'player':'host','grid'=>['grid-visible-0','grid-visible-1','grid-visible-2','grid-visible-3','grid-visible-4','grid-visible-5','grid-visible-6','grid-visible-7'], 'pool'=>['future-hidden'], 'picked'=>['host'=>['host-picked'],'player'=>['player-picked']], 'history'=>[], 'recycle'=>[], 'decision_id'=>1];
+            if (!$solomon) $state->draft['grid'][]='grid-visible-8';
+            foreach(array_merge($state->draft['grid'],['future-hidden','host-picked','player-picked']) as $ukid) $catalog[$ukid]=['name'=>$ukid,'health'=>5,'move'=>2,'strike'=>['weak'=>1,'medium'=>2,'strong'=>3],'rarity'=>'common','element_code'=>'dark','element_label'=>'Тьма','descr'=>str_repeat('<p>Описание карты Draft.</p>',100)];
+            $state->version=7;
+            DraftTimer::initialize($state,$state->settings,time());
+            $_GET=['card'=>'0','card_ukid'=>'grid-visible-0','card_version'=>str_contains($variant,'stale')?'6':'7'];
+            if (str_contains($variant,'wrong-identity')) $_GET['card_ukid']='future-hidden';
+            if ($request !== null) $_GET = $request;
+            $result=(new DraftScreen($tpl))->prepare($state,$role,$role,null,$catalog);
+        } elseif ($stage==='view') {
+            if ($variant==='system') {
+                $state->getPlayer($role)->deckId=1;
+                $_GET=['card'=>'system-visible'];
+            } elseif ($variant!=='empty') {
+                for($i=0;$i<32;$i++) {
+                    $entry=integrationCard($state,$role,'deck',$role.'-deck-'.$i,$catalog);
+                    $selected ??= $entry;
+                }
+                $side=integrationCard($state,$role,'sideboard',$role.'-sideboard',$catalog);
+                $_GET=['card'=> $variant==='sideboard'?'sideboard:'.$side->instanceId:'deck:'.$selected->instanceId];
+                if($variant==='denied') $_GET=['card'=>'deck:1'];
+            }
+            if($variant==='waiting') $state->getPlayer($role)->confirmed['view']=true;
+            if ($request !== null) $_GET = $request;
+            $result=(new ViewScreen(new DeckView(new Db()),$tpl))->prepare($state,$role,$role,null,$catalog);
+        } elseif ($stage==='deal') {
+            $selected=integrationCard($state,$role,'hand',$role.'-hand',$catalog);
+            integrationCard($state,$role,'squad',$role.'-squad',$catalog);
+            for($i=0;$i<28;$i++) integrationCard($state,$role,'hand',$role.'-hand-extra-'.$i,$catalog);
+            if($variant==='waiting') $state->getPlayer($role)->confirmed['deal']=true;
+            $_GET=['card'=>$variant==='denied'?'hand:opponent-hidden':'hand:'.$selected->ukid];
+            if ($request !== null) $_GET = $request;
+            $result=(new DealScreen($tpl))->prepare($state,$role,$role,null,$catalog);
+        } elseif ($stage==='place') {
+            $selected=integrationCard($state,$role,'squad',$role.'-unplaced',$catalog);
+            $placed=integrationCard($state,$role,'field',$role.'-placed',$catalog,$role==='host'?1:6);
+            if($variant==='waiting') $state->getPlayer($role)->confirmed['place']=true;
+            $_GET=['card'=>$variant==='denied'?'1':(string)($variant==='placed'?$placed->instanceId:$selected->instanceId)];
+            if ($request !== null) $_GET = $request;
+            $result=(new PlaceScreen($tpl))->prepare($state,$role,$role,null,$catalog);
+        } else {
+            if($variant==='solomon') $state->settings->draft['type']='solomon';
+            if($variant==='sealed') $state->mode='sealed';
+            if($variant==='system') $state->mode='system';
+            if($variant==='waiting') $state->getPlayer($role)->confirmed['turn']=true;
+            $screen=match($stage) {'mode'=>new ModeScreen($tpl),'settings'=>new SettingsScreen(),'deck'=>new DeckScreen(new DeckView(new Db()),$tpl),'turn'=>new TurnScreen(),'side'=>new SideScreen()};
+            $result=$screen->prepare($state,$role,$role,null);
+        }
+        $shell=(new PreGameLayout($tpl))->renderScreen($result['screen'],$result['data']);
+        $dom=new \DOMDocument(); @$dom->loadHTML('<?xml encoding="UTF-8">'.$shell); $xp=new \DOMXPath($dom);
+        integrationAssert($xp->query('//aside[contains(@class,"pregame-info-panel")]')->length===1,'One panel '.$stage);
+        integrationAssert($xp->query('//main//h1')->length===0,'No duplicate stage heading '.$stage);
+        integrationAssert($xp->query('//aside//form|//aside//a[contains(@href,"cmd=")]')->length===0,'Commands stay in Main '.$stage);
+        integrationAssert(!str_contains($shell,'opponent-hidden') && !str_contains($shell,'future-hidden'),'No hidden cards in HTML '.$stage);
+        integrationAssert(!str_contains($shell,'battle-sync.js'),'No battle JS');
+        if($stage==='draft') {
+            integrationAssert($xp->query('//header//*[@data-draft-timer]')->length===1 || str_contains($variant,'unlimited'),'Timer in header');
+            integrationAssert($xp->query('//*[@data-draft-timer]')->length<=1,'One timer');
+            integrationAssert(str_contains($result['data']['draft_script_html'],'draft_timer.js') || str_contains($variant,'unlimited'),'Polling preserved');
+            if(str_contains($variant,'stale') || str_contains($variant,'wrong-identity')) integrationAssert($result['data']['panel_html']==='','Stale preview rejected');
+            if(str_contains($variant,'solomon') && $role !== $state->draft['turn']) integrationAssert(!str_contains($shell,'id="solomon-decision"') && str_contains($shell,'data-solomon-preview'),'Waiting preview without form');
+        }
+        if(in_array($variant,['denied','empty'],true)) integrationAssert(($result['data']['panel_html']??'')==='','Denied/empty selection');
+        if($selected && !in_array($variant,['denied','empty'],true) && ($request === null || ($result['data']['panel_html'] ?? '') !== '')) {
+            integrationAssert(str_contains($result['data']['panel_html'],'<b>HP</b> 5'),'Panel uses static catalog HP');
+            integrationAssert(!str_contains($result['data']['panel_html'],'<b>HP</b> 99'),'No runtime battle stats');
+        }
+        if(in_array($stage,['view','deal','place'],true) && $variant==='waiting') integrationAssert($xp->query('//main//a[contains(@href,"cmd=")]')->length===0,'No actions after confirmation');
+        if($stage==='view' && $variant==='system') integrationAssert(str_contains($result['data']['panel_html'],'system description'),'System catalog fallback');
+        $page = integrationPage($tpl, $state, $role, $result['screen'], $result['data']);
+        $expectedKey = hash('sha256', hash_file('sha256', __DIR__ . '/../www/assets/css/global.css')
+            . hash_file('sha256', __DIR__ . '/../www/assets/css/pregame.css'));
+        $pageDom = new \DOMDocument(); @$pageDom->loadHTML('<?xml encoding="UTF-8">' . $page);
+        $pageXp = new \DOMXPath($pageDom);
+        $links = $pageXp->query('//link[contains(@href,"/assets/css/pregame.css")]');
+        integrationAssert($links->length === 1, 'One PreGame stylesheet in actual page HTML');
+        $href = $links->item(0)->getAttribute('href');
+        integrationAssert($href === '/assets/css/pregame.css?v=' . $expectedKey, 'Actual CSS version matches resource contents');
+        integrationAssert(!preg_match('/[{}]|%7b|%7d|rkey/i', $href), 'No raw/encoded/unresolved CSS placeholders');
+        integrationAssert($page === integrationPage($tpl, $state, $role, $result['screen'], $result['data']), 'Stable page HTML across renders');
+        return ['html'=>$page, 'stage'=>$stage,'role'=>$role,'variant'=>$variant];
+    }
+    $tpl=new Template(__DIR__.'/../templates'); $fixtures=[];
+    if (in_array('--request', $argv, true)) {
+        echo integrationFixture($argv[2], $argv[3], $argv[4], json_decode($argv[5], true, 512, JSON_THROW_ON_ERROR))['html'];
+        exit;
+    }
+    foreach(['mode','settings','deck','view','turn','side','deal','place','draft'] as $stage) foreach(['host','player'] as $role) $fixtures[$stage.'-'.$role]=integrationFixture($stage,$role);
+    foreach(['solomon','sealed','system'] as $variant) foreach(['host','player'] as $role) $fixtures['settings-'.$variant.'-'.$role]=integrationFixture('settings',$role,$variant);
+    foreach(['sideboard','waiting','empty','denied','system'] as $variant) $fixtures['view-'.$variant]=integrationFixture('view','host',$variant);
+    foreach(['waiting','denied'] as $variant) foreach(['deal','place'] as $stage) $fixtures[$stage.'-'.$variant]=integrationFixture($stage,'host',$variant);
+    $fixtures['place-placed']=integrationFixture('place','host','placed');
+    foreach(['solomon','solomon-unlimited','stale','wrong-identity'] as $variant) foreach(['host','player'] as $role) $fixtures['draft-'.$variant.'-'.$role]=integrationFixture('draft',$role,$variant);
+    $fixtures['draft-solomon-player-active']=integrationFixture('draft','player','solomon-player-active');
+    $fixtures['draft-solomon-host-waiting']=integrationFixture('draft','host','solomon-player-active');
+    // Negative integration: production assembly must not add PreGame CSS to any non-PreGame screen.
+    foreach (['battle', 'game_over', 'debug', 'wait', 'deck'] as $screen) {
+        $state = new GameState(970002, 1, 2);
+        $page = integrationPage($tpl, $state, 'host', $screen, [], '<script src="/assets/js/battle-sync.js?v={{rkey}}"></script>');
+        integrationAssert(!str_contains($page, 'pregame.css') && !str_contains($page, 'pregame-page'), 'No PreGame CSS on ' . $screen);
+        if ($screen === 'battle') {
+            integrationAssert(str_contains($page, 'class="battle-page"'), 'Battle page class preserved');
+            integrationAssert((bool) preg_match('~/assets/css/global\.css\?v=[0-9]+~', $page), 'Battle time-based rkey fallback preserved');
+            integrationAssert((bool) preg_match('~/assets/js/battle-sync\.js\?v=[0-9]+~', $page), 'Battle script version preserved');
+        }
+    }
+    if(in_array('--fixtures',$argv,true)) echo json_encode($fixtures,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+    else echo 'PreGame screen integration: '.$checks.' checks passed across '.count($fixtures)." fixtures.\n";
+}

@@ -41,6 +41,17 @@ final class PrepareUi
         ]);
     }
 
+    /** $card must come from the current viewer's visible screen list, never directly from a request. */
+    public function information(?array $card, array $catalog): string
+    {
+        if ($card === null) return '';
+        $ukid = (string) ($card['ukid'] ?? '');
+        // Use catalog values rather than modified recruit costs or instance battle stats.
+        $info = $catalog[$ukid] ?? null;
+        if (!is_array($info)) return '';
+        return (new PreGameCard($this->tpl))->render($ukid, [$ukid => $info]);
+    }
+
     public function preview(?array $card, array $actions = [], string $emptyText = ''): string
     {
         if ($card === null) {

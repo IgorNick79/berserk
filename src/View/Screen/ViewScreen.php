@@ -165,7 +165,15 @@ final class ViewScreen
             }
         }
 
-        $previewHtml = $ui->preview($selectedCard, $actions, 'Выбери карту');
+        $previewHtml = $ui->actions($actions);
+        // Legacy system decks may not yet have instances or entries in the render catalog.
+        $panelCatalog = $cardsInfo;
+        if (!$usesRuntimeDeck && $me->deckId) {
+            foreach ($deckInfo['cards'] as $catalogCard) {
+                $panelCatalog[$catalogCard['ukid']] ??= $catalogCard;
+            }
+        }
+        $panelHtml = $ui->information($selectedCard, $panelCatalog);
         $bottomPanelHtml = '<div class="prepare-bottom-summary prepare-bottom-summary--stack">'
             . '<div class="prepare-bottom-row">'
             . '<span>Колода: <b>' . $deckCount . '</b></span>'
@@ -188,6 +196,7 @@ final class ViewScreen
                 'sideboard_html'=> $sideboardHtml,
                 'bottom_panel_html' => $bottomPanelHtml,
                 'preview_html'  => $previewHtml,
+                'panel_html'    => $panelHtml,
                 'confirm_html'  => $confirmHtml,
                 'message'       => $message ?? '',
             ],

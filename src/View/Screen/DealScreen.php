@@ -136,7 +136,9 @@ final class DealScreen
 
         $selectedCard = null;
         $cardActions = [];
-        if ($selectedUkid !== '') {
+        // Catalog membership alone is not permission to inspect or recruit a card.
+        $selectionGroups = $selectedZone === 'hand' ? $handGroups : $squadGroups;
+        if ($selectedUkid !== '' && isset($selectionGroups[$selectedUkid])) {
             $selectedInfo = $cardsInfo[$selectedUkid] ?? null;
             if ($selectedInfo) {
                 $recruitError = null;
@@ -161,7 +163,15 @@ final class DealScreen
                 }
             }
         }
-        $previewHtml = $ui->preview($selectedCard, $cardActions, 'Выбери карту');
+        $panelHtml = $ui->information($selectedCard, $cardsInfo);
+        $previewHtml = '';
+        if ($selectedCard !== null) {
+            $selectionInfo = $selectedCard['info'];
+            $previewHtml = '<section class="pregame-selection-actions" aria-label="Действия выбранной карты">'
+                . '<h3>' . htmlspecialchars((string) ($selectionInfo['name'] ?? $selectedUkid), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h3>'
+                . '<p>Цена: ' . htmlspecialchars((string) ($selectionInfo['price'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>'
+                . (string) ($selectionInfo['notes_html'] ?? '') . $ui->actions($cardActions) . '</section>';
+        }
 
         $elementsHtml = '';
         foreach ((array) ($calc['elements'] ?? []) as $code => $count) {
@@ -201,6 +211,7 @@ final class DealScreen
                 'hand_html'      => $handHtml,
                 'squad_html'     => $squadHtml,
                 'preview_html'   => $previewHtml,
+                'panel_html'     => $panelHtml,
                 'bottom_panel_html' => $bottomPanelHtml,
                 'message'        => $message ?? '',
             ],

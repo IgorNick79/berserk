@@ -28,7 +28,7 @@ final class ModeScreen
         if (!$isHost) {
             $contentHtml = '<p class="wait">Ожидание, пока хост выберет режим игры...</p>';
         } else {
-            $contentHtml = '<h1>Режим игры</h1><form method="get" class="mode-actions">'
+            $contentHtml = '<form method="get" class="mode-actions">'
                 . '<input type="hidden" name="' . $roleParam . '" value="1">'
                 . '<input type="hidden" name="game" value="' . (int) $state->gameId . '">'
                 . '<input type="hidden" name="cmd" value="choose_mode">';

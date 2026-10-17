@@ -73,7 +73,7 @@ final class DeckView
         $cardRows = $this->db->fetchAll(
             "SELECT t1.ukid, t1.name, t1.element_id, t1.elite, t1.single, t1.price,
                     t1.health, t1.move, t1.strike_weak, t1.strike_medium, t1.strike_strong,
-                    t1.prop, t1.type, t1.class,
+                    t1.prop, t1.type, t1.class, t1.descr, t1.rarity,
                     t2.code AS element_code, t2.name AS element_name
              FROM cards t1
              LEFT JOIN elements t2 ON t2.ind = t1.element_id
@@ -115,6 +115,10 @@ final class DeckView
             $result[] = [
                 'ukid'         => $ukid,
                 'name'         => $card['name'],
+                'descr'        => (string) ($card['descr'] ?? ''),
+                'rarity'       => (string) ($card['rarity'] ?? ''),
+                'element_code' => (string) ($card['element_code'] ?? ''),
+                'element_label' => (string) ($card['element_name'] ?? ''),
                 'element'      => $el,
                 'class'        => (string) ($card['class'] ?? ''),
                 'element_name' => $card['element_name'] ?: 'Нейтральная',

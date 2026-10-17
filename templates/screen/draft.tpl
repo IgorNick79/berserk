@@ -9,14 +9,10 @@
             <span>Пул: {{pool_left}}</span>
         </div>
     </div>
-    {{timer_html}}
 
-    <div class="draft-main">
+    <div class="pregame-draft-grid">
         <div class="draft-grid">
             {{grid_html}}
-        </div>
-        <div class="draft-preview-slot">
-            {{preview_html}}
         </div>
     </div>
 

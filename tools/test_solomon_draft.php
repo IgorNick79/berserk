@@ -456,16 +456,17 @@ namespace {
     check(count($preserved->cards) === 60, 'Recycle and existing picks conserve all cards at View');
     if (in_array('--render-mode', $argv, true)) {
         $mode = (new ModeScreen($tpl))->prepare(new GameState(900, 1, 2), 'host', 'host', null)['data'];
-        echo '<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            . '<link rel="stylesheet" href="/assets/css/global.css"><body><main class="screen">' . $mode['content_html'] . '</main></body></html>';
+        echo $tpl->parse('page.tpl', ['page_class' => 'pregame-page', 'game_id' => 900, 'role' => 'host',
+            'screen' => (new \Berserk\View\Ui\PreGameLayout($tpl))->renderScreen('mode', $mode),
+            'page_styles' => '<link rel="stylesheet" href="/assets/css/pregame.css">', 'scripts' => '']);
         exit;
     }
     if (in_array('--render', $argv, true) || in_array('--render-player', $argv, true)) {
         $who = in_array('--render-player', $argv, true) ? 'player' : 'host';
         $view = (new DraftScreen($tpl))->prepare($state, $who, $who, null, $db->cards)['data'];
-        echo '<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            . '<link rel="stylesheet" href="/assets/css/global.css"><body><main class="screen">'
-            . $tpl->parse('screen/draft.tpl', $view) . '</main></body></html>';
+        echo $tpl->parse('page.tpl', ['page_class' => 'pregame-page', 'game_id' => $state->gameId, 'role' => $who,
+            'screen' => (new \Berserk\View\Ui\PreGameLayout($tpl))->renderScreen('draft', $view),
+            'page_styles' => '<link rel="stylesheet" href="/assets/css/pregame.css">', 'scripts' => '']);
         exit;
     }
     echo "Solomon Draft: {$checks} checks passed (in-memory DB adapter; no live database).\n";

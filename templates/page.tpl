@@ -5,6 +5,7 @@
     <title>Berserk — партия #{{game_id}}</title>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <link rel="stylesheet" href="/assets/css/global.css?v={{rkey}}">
+    {{page_styles}}
 </head>
 <body class="{{page_class}}">
 <div class="toolbar">

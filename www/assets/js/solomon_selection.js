@@ -2,7 +2,7 @@
     "use strict";
     var stack = document.querySelector("[data-solomon-stack]");
     var form = document.getElementById("solomon-decision");
-    if (!stack || !form) return;
+    if (!stack) return;
     var prefix = "solomon-selection:" + stack.dataset.selectionKey + ":";
     var key = prefix + stack.dataset.decision;
     var selected = [];
@@ -18,6 +18,7 @@
         var positions = [];
         cards.forEach(function (card) {
             var checkbox = card.querySelector("input[type=checkbox]");
+            if (!checkbox) return;
             card.querySelector(".prepare-card").classList.toggle("prepare-card--selected", checkbox.checked);
             if (checkbox.checked) positions.push(checkbox.value);
         });
@@ -27,17 +28,23 @@
     }
     cards.forEach(function (card) {
         var checkbox = card.querySelector("input[type=checkbox]");
-        checkbox.checked = !checkbox.disabled && selected.indexOf(checkbox.value) !== -1;
-        checkbox.addEventListener("change", update);
+        if (checkbox) {
+            checkbox.checked = !checkbox.disabled && selected.indexOf(checkbox.value) !== -1;
+            checkbox.addEventListener("change", update);
+        }
         card.querySelector(".prepare-card-link").addEventListener("click", function (event) {
             event.preventDefault();
-            if (!checkbox.disabled) checkbox.checked = !checkbox.checked;
-            var preview = document.querySelector(".draft-preview-slot");
-            if (preview) preview.replaceChildren(card.querySelector("template").content.cloneNode(true));
+            if (checkbox && !checkbox.disabled) checkbox.checked = !checkbox.checked;
+            var preview = document.querySelector(".pregame-panel-content");
+            if (preview) {
+                preview.replaceChildren(card.querySelector("[data-solomon-preview]").content.cloneNode(true));
+                preview.dataset.pregameContent = "card";
+                preview.scrollTop = 0;
+            }
             update();
         });
     });
-    form.addEventListener("submit", function () {
+    if (form) form.addEventListener("submit", function () {
         form.querySelectorAll("button").forEach(function (button) { button.setAttribute("aria-disabled", "true"); });
     });
     update();

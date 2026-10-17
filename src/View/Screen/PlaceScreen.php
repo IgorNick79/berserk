@@ -58,7 +58,7 @@ final class PlaceScreen
 
         // Разрешённые клетки
         $allowedCells = [];
-        if ($selectedCard && $selectedCard->zone === CardInstance::ZONE_SQUAD) {
+        if ($selectedCard && $selectedCard->zone === CardInstance::ZONE_SQUAD && !$me->isConfirmed('place')) {
             $levels   = ZoneManager::cellLevels($playerKey);
             $occupied = [];
             foreach ($state->cards as $card) {
@@ -188,7 +188,7 @@ final class PlaceScreen
                 }
             }
         }
-        $previewHtml = $ui->preview($previewCard, [], 'Выбери карту отряда');
+        $previewHtml = $ui->information($previewCard, $cardsInfo);
         $cardActionsHtml = $ui->actions($cardActions);
 
         return [
@@ -197,7 +197,8 @@ final class PlaceScreen
                 'field_html'   => $fieldHtml,
                 'squad_html'   => $squadHtml,
                 'squad_count'  => $squadCount,
-                'preview_html' => $previewHtml,
+                'preview_html' => '',
+                'panel_html'   => $previewHtml,
                 'card_actions_html' => $cardActionsHtml,
                 'confirm_html' => $confirmHtml,
                 'message'      => $message ?? '',

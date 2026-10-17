@@ -51,7 +51,7 @@ class Template
             return false;
         }
 
-        $data['rkey'] = time();
+        $data['rkey'] ??= time();
         $data['http'] = $this->http;
 
         foreach ($data as $key => $value) {

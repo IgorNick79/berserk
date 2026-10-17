@@ -1,5 +1,4 @@
 {{message}}
-<h1>Бросок кубика</h1>
 
 <div class="dice-block">
     <div class="dice-column">

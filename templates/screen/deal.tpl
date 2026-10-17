@@ -1,9 +1,8 @@
 {{message}}
 <div class="screen-prepare screen-prepare-deal">
-    <h1>Выбор отряда</h1>
 
-    <div class="prepare-layout">
-        <div class="prepare-content">
+    <div class="pregame-stage-content">
+        <div class="pregame-stage-cards">
             <h2>Раздача</h2>
             <div class="cards">
                 {{hand_html}}
@@ -15,9 +14,7 @@
             </div>
         </div>
 
-        <div class="prepare-preview-slot">
-            {{preview_html}}
-        </div>
+        {{preview_html}}
     </div>
 
     <div class="prepare-bottom-bar">

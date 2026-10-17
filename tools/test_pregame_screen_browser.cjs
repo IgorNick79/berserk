@@ -1,0 +1,151 @@
+const fs = require('fs');
+const path = require('path');
+const assert = require('assert/strict');
+const {execFileSync} = require('child_process');
+const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const root = path.resolve(__dirname, '..');
+const php = process.env.PHP_BINARY || 'php';
+const testFile = path.join(root, 'tools/test_pregame_screen_integration.php');
+const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encoding:'utf8', maxBuffer:16*1024*1024}));
+(async () => {
+ const browser = await chromium.launch({headless:true, ...(process.env.BROWSER_EXECUTABLE ? {executablePath:process.env.BROWSER_EXECUTABLE} : {})});
+ const commands=[];
+ try {
+  for (const width of [1600,1280,1024]) {
+   const page = await browser.newPage({viewport:{width,height:900}});
+   const errors=[]; page.on('pageerror', e=>errors.push(e.message));
+   let currentKey='mode-host', transition=false, nextKey='', syncCount=0;
+   await page.route('https://pregame.test/**', async route=>{
+    const url = new URL(route.request().url());
+    if (url.pathname.startsWith('/assets/')) {
+     const file=path.join(root,'www',url.pathname);
+     if (!fs.existsSync(file)) return route.fulfill({status:404,body:''});
+     return route.fulfill({body:fs.readFileSync(file),contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.webp')?'image/webp':'image/png'});
+    }
+    const cmd=url.searchParams.get('cmd');
+    if(cmd==='draft_sync') {
+     syncCount++;
+     return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,version:transition?8:7,status:transition?'view':'draft',changed:transition})});
+    }
+    const key=fixtures[url.pathname.slice(1)]?url.pathname.slice(1):currentKey;
+    if (fixtures[url.pathname.slice(1)]) currentKey=key;
+    if (transition && nextKey) { currentKey=nextKey; transition=false; nextKey=''; }
+    const fixture=fixtures[currentKey];
+    if(cmd) { commands.push({cmd, query:Object.fromEntries(url.searchParams), positions:url.searchParams.getAll('positions[]')}); return route.fulfill({body:fixture.html,contentType:'text/html; charset=utf-8'}); }
+    if (url.searchParams.has('card')) {
+     const body=execFileSync(php,[testFile,'--request',fixture.stage,fixture.role,fixture.variant,JSON.stringify(Object.fromEntries(url.searchParams))],{encoding:'utf8'});
+     return route.fulfill({body,contentType:'text/html; charset=utf-8'});
+    }
+    return route.fulfill({body:fixture.html,contentType:'text/html; charset=utf-8'});
+   });
+   for(const [key,fixture] of Object.entries(fixtures)) {
+    await page.goto('https://pregame.test/'+key);
+    const css = await page.locator('link[href*="/assets/css/pregame.css"]').getAttribute('href');
+    assert.match(css, /^\/assets\/css\/pregame\.css\?v=[a-f0-9]{64}$/i, key+' resolved CSS version');
+    assert.ok(!/[{}]|%7b|%7d|rkey/i.test(css), key+' no CSS placeholders');
+    const cssStatus = await page.evaluate(href=>fetch(href).then(response=>response.status), css);
+    assert.equal(cssStatus, 200, key+' versioned CSS loads');
+    assert.equal(await page.locator('.pregame-layout').count(),1,key);
+    const panel=page.locator('.pregame-info-panel');
+    assert.equal((await panel.boundingBox()).width,440,key+' panel width at '+width);
+    assert.equal(await page.locator('.pregame-main h1').count(),0,key+' duplicate heading');
+    assert.equal(await page.locator('.pregame-panel-footer').textContent(),'');
+    assert.ok(await page.locator('.toolbar a[href="/reset"]').isVisible());
+    const dims=await page.evaluate(()=>({height:document.documentElement.scrollHeight, viewport:innerHeight, width:document.documentElement.scrollWidth,vw:innerWidth}));
+    assert.ok(dims.height<=dims.viewport+1,key+' page height');
+    assert.ok(dims.width<=dims.vw+1,key+' page width');
+    if(fixture.stage==='draft') {
+     assert.equal(await page.locator('.pregame-panel-header .draft-timer').count(),1,key+' header timer');
+     assert.equal(await page.locator('.pregame-main .draft-timer').count(),0,key+' duplicate timer');
+    }
+    const summary=page.locator('.pregame-panel-content summary');
+    if(await summary.count()) {
+     await summary.click();
+     const headerBefore=await page.locator('.pregame-panel-header').boundingBox(), footerBefore=await page.locator('.pregame-panel-footer').boundingBox();
+     const content=page.locator('.pregame-panel-content');
+     const overflows=await content.evaluate(el=>el.scrollHeight>el.clientHeight);
+     if(fixture.variant!=='system') assert.ok(overflows,key+' long description scroll');
+     await content.evaluate(el=>el.scrollTop=300);
+     if(overflows) assert.ok(await content.evaluate(el=>el.scrollTop)>0);
+     assert.deepEqual(await page.locator('.pregame-panel-header').boundingBox(),headerBefore,key+' header fixed');
+     assert.deepEqual(await page.locator('.pregame-panel-footer').boundingBox(),footerBefore,key+' footer fixed');
+     assert.equal(await page.locator('.pregame-main').evaluate(el=>el.scrollTop),0,key+' independent Main');
+     await content.focus();
+     assert.ok(await content.evaluate(el=>el===document.activeElement),key+' focus');
+    }
+    const main=page.locator('.pregame-main');
+    if(await main.evaluate(el=>el.scrollHeight>el.clientHeight)) {
+     const before=await page.locator('.pregame-panel-content').evaluate(el=>el.scrollTop);
+     await main.evaluate(el=>el.scrollTop=300);
+     assert.ok(await main.evaluate(el=>el.scrollTop)>0,key+' Main scroll');
+     assert.equal(await page.locator('.pregame-panel-content').evaluate(el=>el.scrollTop),before,key+' independent content');
+    }
+   }
+   // Real server presentation is re-run for navigation-only card clicks.
+   await page.goto('https://pregame.test/view-host');
+   const viewLink=page.locator('.pregame-main .cards a').nth(1), viewName=await viewLink.locator('.prepare-card__name').textContent();
+   await viewLink.click();
+   assert.equal(await page.locator('.pregame-card-details h3').textContent(),viewName);
+   await page.goto('https://pregame.test/view-sideboard');
+   assert.equal(await page.locator('.pregame-main a[href*="cmd=view_to_deck"]').count(),1);
+   await page.goto('https://pregame.test/deal-host');
+   const dealLink=page.locator('.pregame-main .cards a').nth(2),dealName=await dealLink.locator('.prepare-card__name').textContent();
+   await dealLink.click();
+   assert.equal(await page.locator('.pregame-card-details h3').textContent(),dealName);
+   assert.equal(await page.locator('.pregame-main a[href*="cmd=pick_card"]').count(),1);
+   await page.goto('https://pregame.test/place-placed');
+   assert.equal(await page.locator('.pregame-main a[href*="cmd=unplace_card"]').count(),1);
+   await page.goto('https://pregame.test/draft-host');
+   await page.locator('.draft-grid .prepare-card-link').nth(1).click();
+   assert.equal(await page.locator('.pregame-card-details h3').textContent(),'grid-visible-1');
+   // Countdown and polling use the unchanged draft_timer.js.
+   const timer=page.locator('[data-draft-action-time]'), beforeTime=await timer.textContent();
+   await page.waitForFunction(previous=>document.querySelector('[data-draft-action-time]').textContent!==previous,beforeTime,{timeout:4000});
+   const previousSync=syncCount;
+   await new Promise(resolve=>setTimeout(resolve,2100));
+   assert.ok(syncCount>previousSync,'Existing polling runs');
+   transition=true; nextKey='view-host';
+   await page.waitForFunction(()=>document.querySelector('.screen-prepare-view'),null,{timeout:6000});
+   assert.equal(await page.locator('[data-draft-timer]').count(),0,'Transition removes timer');
+   // Active Solomon: card click remains a toggle + preview; form keeps decision tokens.
+   await page.goto('https://pregame.test/draft-solomon-host');
+   const cards=page.locator('[data-solomon-position]');
+   await cards.nth(0).locator('.prepare-card-link').click();
+   await cards.nth(1).locator('input').check();
+   assert.equal(await page.locator('[data-solomon-selected]').textContent(),'2');
+   assert.equal(await page.locator('.pregame-card-details h3').textContent(),'grid-visible-0');
+   await page.reload();
+   assert.equal(await page.locator('[data-solomon-selected]').textContent(),'2','Selection survives reload');
+   const confirmRequest=page.waitForRequest(r=>new URL(r.url()).searchParams.get('cmd')==='draft_confirm');
+   await page.locator('button[value="draft_confirm"]').click(); await confirmRequest; await page.waitForLoadState();
+   const confirm=commands.at(-1); assert.equal(confirm.cmd,'draft_confirm'); assert.deepEqual(confirm.positions,['0','1']); assert.equal(confirm.query.decision_id,'1'); assert.equal(confirm.query.expected_version,'7');
+   const passRequest=page.waitForRequest(r=>new URL(r.url()).searchParams.get('cmd')==='draft_pass');
+   await page.locator('button[value="draft_pass"]').click(); await passRequest; await page.waitForLoadState();
+   assert.equal(commands.at(-1).cmd,'draft_pass');
+   // No form is required to inspect the public stack, for either waiting role.
+   for(const key of ['draft-solomon-player','draft-solomon-host-waiting']) {
+    await page.goto('https://pregame.test/'+key);
+    assert.equal(await page.locator('#solomon-decision').count(),0);
+    await page.locator('[data-solomon-position] .prepare-card-link').nth(2).click();
+    assert.equal(await page.locator('.pregame-card-details h3').textContent(),'grid-visible-2');
+    assert.equal(await page.locator('[name="positions[]"]').count(),0);
+   }
+   if(width===1600 && process.env.PREGAME_SCREENSHOT) await page.screenshot({path:process.env.PREGAME_SCREENSHOT});
+   assert.deepEqual(errors,[],'No JS errors');
+   await page.close();
+  }
+  const context=await browser.newContext({hasTouch:true,viewport:{width:1280,height:900}}),page=await context.newPage();
+  await page.route('https://touch.test/**',route=>{
+   const url=new URL(route.request().url());
+   if(url.pathname.startsWith('/assets/')) { const file=path.join(root,'www',url.pathname); return fs.existsSync(file)?route.fulfill({body:fs.readFileSync(file),contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'image/png'}):route.fulfill({status:404}); }
+   return route.fulfill({body:fixtures['draft-solomon-host'].html,contentType:'text/html; charset=utf-8'});
+  });
+  await page.goto('https://touch.test/');
+  await page.locator('[data-solomon-position] .prepare-card-link').first().tap();
+  assert.equal(await page.locator('[data-solomon-selected]').textContent(),'1');
+  await page.locator('.pregame-panel-content summary').tap();
+  assert.ok(await page.locator('.pregame-panel-content details').evaluate(el=>el.open));
+  await context.close();
+  console.log('PreGame screen browser tests passed: '+Object.keys(fixtures).length+' fixtures x 1600/1280/1024; cards, actions, scrolling, timer/poll transition, Solomon payloads, keyboard and touch.');
+ } finally {await browser.close();}
+})().catch(error=>{console.error(error);process.exit(1);});
