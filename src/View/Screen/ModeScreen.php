@@ -33,7 +33,7 @@ final class ModeScreen
                 . '<input type="hidden" name="game" value="' . (int) $state->gameId . '">'
                 . '<input type="hidden" name="cmd" value="choose_mode">';
             foreach (['draft' => 'Draft — сетка', 'solomon' => 'Solomon Draft', 'sealed' => 'Sealed', 'system' => 'Системные колоды'] as $value => $label) {
-                $contentHtml .= '<label class="settings-radio-tile"><input type="radio" name="mode" value="' . $value . '"'
+                $contentHtml .= '<label class="settings-option"><input type="radio" name="mode" value="' . $value . '"'
                     . ($value === 'draft' ? ' checked' : '') . '><span>' . $label . '</span></label>';
             }
             $contentHtml .= '<button class="button wide" type="submit">Подтвердить</button></form>';

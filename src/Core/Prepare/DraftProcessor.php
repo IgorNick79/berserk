@@ -611,6 +611,7 @@ final class DraftProcessor
             $this->state->draft['history'][] = ['player' => $owner, 'cards' => $cards];
         }
         $this->state->draft['consecutive_passes'] = 0;
+        $this->state->draft['turn'] = $other;
         $this->state->draft['decision_id'] = (int) ($draft['decision_id'] ?? 1) + 1;
         $this->openStack();
         try {

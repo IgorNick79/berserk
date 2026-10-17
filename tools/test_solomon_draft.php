@@ -164,19 +164,103 @@ namespace {
     $state = synthetic($db, 30, 24, 12);
     $old = token($state);
     check((new PrepareProcessor($state, $db))->draftConfirm('host', $old)->success, 'Empty selection accepted with enough reserve');
-    check($state->draft['turn'] === 'host' && count($state->draft['picked']['player']) === 30, 'Complement and initiative');
+    check($state->draft['turn'] === 'player' && count($state->draft['picked']['player']) === 30, 'Empty confirm assigns complement and switches initiative');
     $after = $state->toArray();
     check(!(new PrepareProcessor($state, $db))->draftConfirm('host', $old)->success, 'Old confirm cannot affect next stack');
     check($state->toArray() === $after, 'Replay changes nothing');
     $badToken = token($state);
     $badToken->payload['expected_version']--;
-    check(!(new PrepareProcessor($state, $db))->draftConfirm('host', $badToken)->success, 'Expected version mismatch rejected');
+    check(!(new PrepareProcessor($state, $db))->draftConfirm('player', $badToken)->success, 'Expected version mismatch rejected');
     check($state->toArray() === $after, 'Stale version does not mutate state');
-    check(!(new PrepareProcessor($state, $db))->draftPass('host', new Command('draft_pass'))->success, 'Missing token rejected');
+    check(!(new PrepareProcessor($state, $db))->draftPass('player', new Command('draft_pass'))->success, 'Missing token rejected');
     $state = synthetic($db, 24, 30, 12);
     check((new PrepareProcessor($state, $db))->draftConfirm('host', token($state, ['positions' => range(0, 5)]))->success, 'All selected accepted');
     check(count($state->draft['picked']['host']) === 30, 'All cards assigned');
     check(count($state->draft['grid']) === 6, 'Next stack is not padded');
+    check($state->draft['turn'] === 'player', 'All-card confirm switches initiative');
+
+    // Alternation is shared by manual and automatic confirmations; passes retain their own rules.
+    $state = synthetic($db, 30, 30, 36);
+    $p = new PrepareProcessor($state, $db);
+    $oldHostCommand = token($state, ['positions' => [0]]);
+    $decision = $state->draft['decision_id'];
+    check($p->draftConfirm('host', $oldHostCommand)->success, 'One-card confirm');
+    check($state->draft['turn'] === 'player' && $state->draft['decision_id'] === $decision + 1, 'Host confirm: player decision, exactly one increment');
+    check(count($state->draft['picked']['host']) === 31 && count($state->draft['picked']['player']) === 35, 'One-card partition assigned');
+    $before = $state->toArray();
+    check(!$p->draftConfirm('host', $oldHostCommand)->success && $state->toArray() === $before, 'Previous actor replay rejected');
+    check($p->draftConfirm('player', token($state, ['positions' => [0, 2]]))->success, 'Several-card player confirm');
+    check($state->draft['turn'] === 'host' && $state->draft['decision_id'] === $decision + 2, 'Host -> player -> host');
+    $before = $state->toArray();
+    check(!$p->draftConfirm('host', $oldHostCommand)->success && $state->toArray() === $before, 'Old token rejected even after initiative returns');
+    check($p->draftConfirm('host', token($state, ['positions' => [1]]))->success && $state->draft['turn'] === 'player', 'Third stack alternates');
+    $stack = $state->draft['grid'];
+    $picked = $state->draft['picked'];
+    $decision = $state->draft['decision_id'];
+    check($p->draftPass('player', token($state))->success, 'First pass after confirm');
+    check($state->draft['turn'] === 'host' && $state->draft['grid'] === $stack && $state->draft['picked'] === $picked
+        && $state->draft['decision_id'] === $decision + 1, 'First pass keeps allocation and stack, changes decision once');
+    check($p->draftPass('host', token($state))->success, 'Second pass after confirm');
+    check($state->draft['turn'] === 'host' && $state->draft['recycle'] === $stack
+        && $state->draft['consecutive_passes'] === 0 && $state->draft['decision_id'] === $decision + 2, 'Second passer retains next stack');
+    $state = synthetic($db, 30, 30, 24);
+    $p = new PrepareProcessor($state, $db);
+    check($p->draftPass('host', token($state))->success && $state->draft['turn'] === 'player', 'Host passes to player');
+    check($p->draftConfirm('player', token($state, ['positions' => [0, 1]]))->success
+        && $state->draft['turn'] === 'host' && $state->draft['consecutive_passes'] === 0, 'Confirm after first pass returns to host and resets chain');
+
+    // Existing lifecycle must settle the old actor, then start the new actor's action clock.
+    $state = synthetic($db, 30, 30, 24);
+    $state->settings->draft['timer_mode'] = 'default';
+    DraftTimer::initialize($state, $state->settings, time() - 7);
+    $p = new PrepareProcessor($state, $db);
+    check($p->draftConfirm('host', token($state, ['positions' => [0]]))->success, 'Timed confirm');
+    $started = $state->draft['timer']['action_started_at'];
+    check($state->draft['turn'] === 'player' && $state->draft['timer']['elapsed']['host'] >= 7
+        && $state->draft['timer']['elapsed']['host'] < 30 && $state->draft['timer']['elapsed']['player'] === 0, 'Only confirming actor charged');
+    check(DraftTimer::deadlineAt($state) === $started + 32, 'New actor receives full action limit and grace');
+    check($p->resolveDraftTimeouts($started + 1)->events === [], 'Switch does not immediately time out');
+    $restored = GameState::fromArray($state->toArray());
+    $snapshot = DraftTimer::snapshot($restored, 'player', $started + 2);
+    check($snapshot['turn'] === 'player' && $snapshot['remaining_action'] === 30
+        && $restored->draft['timer']['action_started_at'] === $started, 'Refresh/sync preserve new actor and deadline');
+    check($p->resolveDraftTimeouts($started + 32)->success && $state->draft['turn'] === 'host', 'New actor timeout passes back to host');
+    check($state->draft['timer']['elapsed']['player'] === 30, 'Timeout charges new actor');
+    $state = synthetic($db, 30, 30, 24);
+    $state->settings->draft['timer_mode'] = 'default';
+    DraftTimer::initialize($state, $state->settings, time() - 7);
+    $p = new PrepareProcessor($state, $db);
+    $decision = $state->draft['decision_id'];
+    check($p->draftPass('host', token($state))->success, 'Timed first pass');
+    $hostElapsed = $state->draft['timer']['elapsed']['host'];
+    check($state->draft['turn'] === 'player' && $hostElapsed >= 7 && $state->draft['timer']['elapsed']['player'] === 0
+        && $state->draft['decision_id'] === $decision + 1, 'First pass settles old actor and changes decision once');
+    $state->draft['timer']['action_started_at'] = time() - 4;
+    check($p->draftPass('player', token($state))->success, 'Timed second pass');
+    check($state->draft['turn'] === 'player' && $state->draft['timer']['elapsed']['player'] >= 4
+        && $state->draft['timer']['elapsed']['host'] === $hostElapsed && $state->draft['decision_id'] === $decision + 2,
+        'Second pass charges passer, retains initiative and increments decision once');
+    check(DraftTimer::deadlineAt($state) === $state->draft['timer']['action_started_at'] + 32, 'Second pass starts a new action limit');
+    $state = synthetic($db);
+    $state->settings->draft['timer_mode'] = 'default';
+    DraftTimer::initialize($state, $state->settings, time() - 5);
+    check((new PrepareProcessor($state, $db))->draftConfirm('host', token($state, ['positions' => [0, 1, 2]]))->success
+        && $state->status === 'view' && $state->draft === null, 'Final confirm starts no extra timed decision');
+
+    $state = synthetic($db, 30, 30, 24);
+    $state->settings->draft['timer_mode'] = 'default';
+    DraftTimer::initialize($state, $state->settings, 1000);
+    $state->draft['timer']['elapsed'] = ['host' => 600, 'player' => 600];
+    $spy = new class($state, new DraftAutoPicker(new DraftSelectionEvaluator($db->cards))) {
+        public array $actors = [];
+        public function __construct(private GameState $state, private DraftAutoPicker $picker) {}
+        public function pick(array $choices, array $current): ?array {
+            $this->actors[] = $this->state->draft['turn'];
+            return $this->picker->pick($choices, $current);
+        }
+    };
+    check((new PrepareProcessor($state, $db, $spy))->resolveDraftTimeouts(1002)->success && $state->status === 'view', 'Auto completion with alternating actors');
+    check($spy->actors === ['host', 'player', 'host', 'player'], 'Auto confirmations alternate on every stack');
     $state = fresh($db, 8);
     $state->draft['picked'] = ['host' => [], 'player' => []];
     $state->draft['grid'] = array_slice($state->draft['pool'], 0, 8);
@@ -370,6 +454,12 @@ namespace {
         foreach (array_count_values($ids) as $id => $count) check(($final[$id] ?? 0) >= $count, 'Confirmed ownership is immutable');
     }
     check(count($preserved->cards) === 60, 'Recycle and existing picks conserve all cards at View');
+    if (in_array('--render-mode', $argv, true)) {
+        $mode = (new ModeScreen($tpl))->prepare(new GameState(900, 1, 2), 'host', 'host', null)['data'];
+        echo '<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            . '<link rel="stylesheet" href="/assets/css/global.css"><body><main class="screen">' . $mode['content_html'] . '</main></body></html>';
+        exit;
+    }
     if (in_array('--render', $argv, true) || in_array('--render-player', $argv, true)) {
         $who = in_array('--render-player', $argv, true) ? 'player' : 'host';
         $view = (new DraftScreen($tpl))->prepare($state, $who, $who, null, $db->cards)['data'];
