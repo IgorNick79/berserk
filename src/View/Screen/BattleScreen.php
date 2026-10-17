@@ -1033,6 +1033,12 @@ final class BattleScreen
         }
         $statValues .= $statValue('strike', 'sword', $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
             'Простой удар: ' . $c->strikeWeak . '/' . $c->strikeMedium . '/' . $c->strikeStrong);
+        if (CardStats::isFlyingCreature($c)) {
+            $statValues .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
+                'url' => '/assets/images/card/fly.png',
+                'label' => 'Летающее существо',
+            ]);
+        }
         foreach ([
             ['ova', 'ova', CardStats::getOva($state, $c), 'Опыт в атаке'],
             ['ovz', 'ovz', CardStats::getOvz($state, $c), 'Опыт в защите'],

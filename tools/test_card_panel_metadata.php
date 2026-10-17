@@ -27,10 +27,16 @@ try {
             battleSnapshotAssert(str_contains($html, 'aria-label="'.$label.'"'), 'Stat hint uses existing values: '.$label);
         }
         battleSnapshotAssert(!str_contains($html, '@2x'), 'Normal-resolution assets used');
+        battleSnapshotAssert(!str_contains($render(), '/assets/images/card/fly.png'), 'Ground card has no flying icon');
         $card->type='fly';
         battleSnapshotAssert(!str_contains($render(), 'data-stat="move"'), 'Intrinsic flying card hides movement');
+        $flying = $render();
+        battleSnapshotAssert(preg_match('~data-stat="strike".*?</span>\s*</span>\s*<span class="panel-stat-hint"[^>]*aria-label="Летающее существо"~s', $flying) === 1, 'Flying hint directly after strike');
+        battleSnapshotAssert(str_contains($flying, '/assets/images/card/fly.png'), 'Normal flying asset');
+
         $card->type='creature'; $card->zone='flying';
         battleSnapshotAssert(!str_contains($render(), 'data-stat="move"'), 'Acquired flight hides movement');
+        battleSnapshotAssert(str_contains($render(), 'aria-label="Летающее существо"'), 'Acquired flight also shows hint');
         $card->zone='field';
         $prop=$card->prop; $mods=$card->modifiers; $card->prop=[]; $card->modifiers=[];
         foreach (['ova','ovz','regen'] as $stat) battleSnapshotAssert(!str_contains($render(),'data-stat="'.$stat.'"'), 'Absent ability omitted');
