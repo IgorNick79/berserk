@@ -27,11 +27,11 @@
         var media = card && card.querySelector('.panel-card-media');
         if (!media) { hideHint(); return; }
         var area = media.getBoundingClientRect();
-        hintNode.style.width = Math.min(area.width, window.innerWidth) + 'px';
-        hintNode.style.maxHeight = Math.max(40, Math.min(area.height, window.innerHeight - 16)) + 'px';
+        hintNode.style.width = Math.min(area.width - 8, window.innerWidth - 8) + 'px';
+        hintNode.style.maxHeight = Math.max(40, Math.min(area.height - 8, window.innerHeight - 16)) + 'px';
         var box = hintNode.getBoundingClientRect();
-        var top = hintSource.closest('.panel-card-heading-icons') ? area.top : area.bottom - box.height;
-        hintNode.style.left = Math.max(0, Math.min(area.left, window.innerWidth - box.width)) + 'px';
+        var top = hintSource.closest('.panel-card-heading-icons') ? area.top + 4 : area.bottom - box.height - 4;
+        hintNode.style.left = Math.max(0, Math.min(area.left + 4, window.innerWidth - box.width - 4)) + 'px';
         hintNode.style.top = Math.max(8, Math.min(top, window.innerHeight - box.height - 8)) + 'px';
     }
     function showHint(source) {

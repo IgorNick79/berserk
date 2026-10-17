@@ -2104,3 +2104,4 @@ body.battle-page {
 .panel-stat-hint:hover > img, .panel-stat-hint:focus-visible > img, .panel-stat-hint.is-hint-open > img { transform: scale(1.2); }
 .battle-stat-tooltip { border-radius: 0; background: rgba(34, 28, 22, .94); }
 @media (prefers-reduced-motion: reduce) { .panel-stat-hint > img { transition: none; } }
+.battle-icon-control .battle-icon-tooltip { font-size: 12px; }

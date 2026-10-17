@@ -66,7 +66,7 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  assert(await hint.locator('img').evaluate(e=>!e.hasAttribute('title')),'No native title');
  await hint.hover();await page.waitForTimeout(250);
  assert(await hint.locator('img').evaluate(e=>getComputedStyle(e).transform.includes('1.2')),'Icon scales smoothly');
- assert(await hint.evaluate(e=>{const r=document.querySelector('#battle-stat-tooltip').getBoundingClientRect(),m=e.closest('.battle-selected-card').querySelector('.panel-card-media').getBoundingClientRect();return Math.abs(r.width-m.width)<1&&Math.abs(r.left-m.left)<1&&(e.closest('.panel-card-heading-icons')?Math.abs(r.top-m.top)<1:Math.abs(r.bottom-m.bottom)<1);}), 'Full width hint at correct image edge');
+ assert(await hint.evaluate(e=>{const r=document.querySelector('#battle-stat-tooltip').getBoundingClientRect(),m=e.closest('.battle-selected-card').querySelector('.panel-card-media').getBoundingClientRect();return Math.abs(r.width-(m.width-8))<1&&Math.abs(r.left-(m.left+4))<1&&(e.closest('.panel-card-heading-icons')?Math.abs(r.top-(m.top+4))<1:Math.abs(r.bottom-(m.bottom-4))<1);}), 'Full width hint at correct image edge');
 
  assert(await page.locator('#battle-stat-tooltip').evaluate(e=>{const r=e.getBoundingClientRect();return !e.hidden&&r.left>=0&&r.right<=innerWidth&&getComputedStyle(e).fontSize==='13px';}),'Portal tooltip visible inside viewport');
  await hint.focus();await page.keyboard.press('Tab');
