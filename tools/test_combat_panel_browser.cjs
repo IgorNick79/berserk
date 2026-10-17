@@ -1,0 +1,50 @@
+const fs=require('fs'),path=require('path'),{execFileSync}=require('child_process');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const repo=path.resolve(__dirname,'..'),read=f=>fs.readFileSync(path.join(repo,f),'utf8');
+const fixture=(stage,viewer,sel)=>JSON.parse(execFileSync(process.env.PHP_BINARY||'php',[repo+'/tools/test_combat_panel_ui.php','--fixture',stage,viewer,String(sel)],{encoding:'utf8'}));
+const assert=(ok,msg)=>{if(!ok)throw Error(msg)};
+(async()=>{const browser=await chromium.launch({...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{}),headless:true});try{
+for(const width of [1600,800,375])for(const viewer of ['host','player']){
+ const page=await browser.newPage({viewport:{width,height:800}});
+ await page.route('https://combat.test/**',r=>{const u=new URL(r.request().url()),file=path.join(repo,'www',u.pathname);return r.fulfill({body:u.pathname.startsWith('/assets/')&&fs.existsSync(file)&&fs.statSync(file).isFile()?fs.readFileSync(file):'<html></html>',contentType:u.pathname.endsWith('.png')?'image/png':u.pathname.endsWith('.webp')?'image/webp':'text/html'});});
+ await page.goto('https://combat.test/');
+ const initial=fixture('normal',viewer,1);
+ const html=read('templates/screen/battle.tpl').replace(/<script[\s\S]*?<\/script>/g,'').replace(/{{(\w+)}}/g,(_,k)=>initial[k]||'');
+ await page.setContent('<style>'+read('www/assets/css/global.css')+'</style>'+html);
+ await page.evaluate(()=>{document.documentElement.classList.add('battle-page');document.body.classList.add('battle-page');window.uiRequests=[];window.fetch=(url,opts)=>{uiRequests.push({url:String(url),body:opts?.body||''});return new Promise(()=>{});};});
+ await page.addScriptTag({content:read('www/assets/js/battle-ui.js')});
+ let sync=read('www/assets/js/battle-sync.js');const last=sync.lastIndexOf('    requestSnapshot(false);');sync=sync.slice(0,last)+'    window.testSnapshot = data => applySnapshot(data, uiRevision);'+sync.slice(last+'    requestSnapshot(false);'.length);
+ await page.addScriptTag({content:sync.replace('var syncUrl = script.dataset.syncUrl || "";','var syncUrl = "https://combat.test/";')});
+ let version=0;
+ async function update(stage,sel){const d=fixture(stage,viewer,sel);await page.evaluate(({d,v})=>{const fragments={};for(const key of ['field_html','fly_zones_html','panel_html','piles_html','pile_reveal_html','info_panel_html'])fragments[key]=d[key]||'';if(!testSnapshot({sync_version:v,fragments,ui:d.ui}))throw Error('Snapshot failed');},{d,v:++version});await page.waitForTimeout(20);}
+ const card=page.locator('.battle-selected-card'),context=page.locator('.info-panel-context');
+ assert(await card.isVisible(),'Normal selected card visible');
+ await update('combat',1);
+ assert(await card.isHidden()&&await context.isVisible(),'Combat start closes old card');
+ assert(await page.locator('.info-phase').innerText()==='Фаза сражения','Combat phase label');
+ assert(await page.locator('.combat-panel-heading').innerText()==='Сражение','Combat heading');
+ await page.locator('.battle-field .card-link[href*="sel=2"]').click();
+ assert(await card.isHidden(),'Old card not shown while loading new selection');
+ await update('combat',2);
+ assert(await card.isVisible()&&await context.isHidden(),'Selected creature inspection replaces combat content');
+ assert(await card.locator('button').count()===1&&await card.locator('[data-combat-back]').count()===1,'Only Close button in inspection');
+ assert(await page.locator('.info-panel-footer').isHidden(),'Footer actions hidden during inspection');
+ assert(await card.locator('a[href*="cmd="]').count()===0,'No creature command links');
+ await update('combat',2);
+ assert(await card.isVisible(),'Inspection survives polling');
+ const requests=await page.evaluate(()=>uiRequests.length);
+ await card.locator('[data-combat-back]').click();
+ assert(await card.isHidden()&&await context.isVisible(),'Close restores combat view');
+ assert(await page.evaluate(()=>uiRequests.length)===requests,'Close makes no game/network request');
+ await update('combat',2);assert(await card.isHidden(),'Polling does not reopen closed creature');
+ await page.locator('.battle-field .card-link[href*="sel=2"]').click();assert(await card.isVisible(),'Same creature can be reopened');
+ await card.locator('[data-combat-back]').focus();await page.keyboard.press('Enter');assert(await card.isHidden(),'Keyboard closes inspection');
+ await page.locator('.battle-field .card-link[href*="sel=2"]').click();
+ await update('normal',2);assert(await card.isVisible()&&await context.evaluate(e=>!e.hidden),'Normal view restored after combat');
+ assert(await card.locator('[data-combat-back]').count()===0,'Close removed outside combat');
+ await update('combat',2);assert(await card.isHidden(),'Next combat always starts with combat content');
+ assert(await page.locator('.info-panel-context a[href*="cmd=confirm_strike"]').isVisible(),'Combat confirmation available');
+ console.log('PASS '+width+'px '+viewer+': phase, start/reset, async selection, read-only inspection, polling, Close/keyboard and combat controls.');
+ await page.close();
+}
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

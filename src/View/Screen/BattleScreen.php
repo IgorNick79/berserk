@@ -1076,7 +1076,14 @@ final class BattleScreen
             $infoIcon = $this->tpl->parse('includes/battle/info_icon.tpl', ['description_html' => $descriptionHtml]);
         }
 
+        // While combat is pending this card is informational only.
+        if ($strike) {
+            $modeButtons = '<button type="button" class="button small cancel" data-combat-back>Закрыть</button>';
+            $statusHtml = '';
+        }
+
         return $this->tpl->parse('includes/battle/panel.tpl', [
+            'card_id' => $c->instanceId,
             'image_html'   => $imgHtml,
             'stat_values_html' => $statValues,
             'stat_icons_html' => $statIcons,

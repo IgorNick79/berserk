@@ -2105,3 +2105,9 @@ body.battle-page {
 .battle-stat-tooltip { border-radius: 0; background: rgba(34, 28, 22, .94); }
 @media (prefers-reduced-motion: reduce) { .panel-stat-hint > img { transition: none; } }
 .battle-icon-control .battle-icon-tooltip { font-size: 12px; }
+
+.battle-selected-card[hidden], .info-panel-context[hidden] { display: none !important; }
+.combat-panel-heading { padding: 8px 12px; background: #f1eee8; border-top: 1px solid #d8d0c3; }
+.combat-panel-heading h3 { margin: 0; font-size: 18px; line-height: 1.3; }
+.combat-panel-heading h3:focus-visible { outline: 2px solid #987044; outline-offset: 3px; }
+.info-panel-footer[hidden] { display: none !important; }

@@ -1,4 +1,4 @@
-<div class="panel-card-heading">
+<div class="panel-card-heading" data-panel-card-id="{{card_id}}">
     <span class="panel-card-cost" aria-label="Стоимость: {{price}}">
         <img src="{{cost_icon_url}}" alt="{{cost_icon_label}}" width="32" height="32">
         <span>{{price}}</span>
