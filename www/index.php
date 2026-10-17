@@ -398,6 +398,7 @@ function buildRenderCardInfo(Db $db, GameState $state): array
     if (!empty($state->draft)) {
         foreach ($state->draft['grid'] ?? [] as $u) if ($u !== null) $ukids[] = $u;
         foreach ($state->draft['pool'] ?? [] as $u) if ($u !== null) $ukids[] = $u;
+        foreach ($state->draft['recycle'] ?? [] as $u) if ($u !== null) $ukids[] = $u;
         foreach ($state->draft['picked']['host']   ?? [] as $u) $ukids[] = $u;
         foreach ($state->draft['picked']['player'] ?? [] as $u) $ukids[] = $u;
     }
@@ -1010,6 +1011,7 @@ if ($commandType === 'draft_sync') {
     echo json_encode([
         'ok' => $result->success,
         'changed' => $changed,
+        'error' => $result->success ? null : $result->error,
         'version' => $state->version,
         'status' => $state->status,
         'events' => $events,

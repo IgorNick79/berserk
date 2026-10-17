@@ -1890,3 +1890,20 @@ body.battle-page > .screen {
 .fly-pagination button span { width: 8px; height: 8px; border-radius: 50%; background: #aaa; box-shadow: 0 0 0 1px #555; }
 .fly-pagination button[aria-pressed="true"] span { background: #344f78; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #344f78; }
 .fly-pagination button:focus-visible { outline: 2px solid #344f78; border-radius: 4px; }
+/* Solomon uses the existing card, preview and bottom bar components. */
+.solomon-stack { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.solomon-stack__card { min-width: 0; }
+.solomon-stack .prepare-card-link { display: block; width: 100%; box-sizing: border-box; }
+.solomon-stack .prepare-card { width: 100%; min-width: 0; margin: 0; box-sizing: border-box; overflow-wrap: anywhere; }
+.screen-draft--solomon { padding-bottom: 180px; }
+.screen-draft--solomon .draft-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 560px); }
+.screen-draft--solomon .draft-preview-slot { width: 100%; min-width: 0; }
+@media (max-width: 1000px) {
+    .screen-draft--solomon .draft-main { grid-template-columns: minmax(0, 1fr); }
+    .screen-draft--solomon .prepare-card-preview { flex-wrap: wrap; }
+    .screen-draft--solomon .prepare-card-preview__media { min-width: 0; flex: 0 1 280px; }
+    .screen-draft--solomon .prepare-card-preview__info { min-width: 0; }
+    .screen-draft--solomon .prepare-bottom-bar { flex-wrap: wrap; }
+}
+.solomon-stack__select { display: flex; align-items: center; gap: 6px; padding: 6px 0; cursor: pointer; }
+@media (max-width: 600px) { .solomon-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } }

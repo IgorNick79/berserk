@@ -1,4 +1,4 @@
-<div class="screen-draft">
+<div class="screen-draft {{draft_class}}">
     <p class="flash">{{message}}</p>
 
     <div class="draft-info">

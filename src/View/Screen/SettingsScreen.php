@@ -64,6 +64,7 @@ final class SettingsScreen
     private function draft(GameState $state, string $roleParam, ?string $message): array
     {
         $settings = $state->settings;
+        $isSolomon = $settings->isSolomonDraft();
         $boosters = max(GameSettings::DRAFT_BOOSTERS_MIN, min(GameSettings::DRAFT_BOOSTERS_MAX, $settings->draftBoosters()));
         $isRandom = $settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM;
         $gridMode = $settings->draftGridMode();
@@ -77,12 +78,13 @@ final class SettingsScreen
         if ($timerAction <= 0) {
             $timerAction = GameSettings::DRAFT_TIMER_DEFAULT_ACTION_SECONDS;
         }
-        $contentHtml = '<p class="settings-mode-title">Grid 3×3</p>';
+        $contentHtml = '<p class="settings-mode-title">' . ($isSolomon ? 'Solomon Draft' : 'Grid 3×3') . '</p>';
 
         $actionsHtml = '<form method="get" class="settings-form settings-draft-form" data-settings-form="draft">'
             . '<input type="hidden" name="' . $this->esc($roleParam) . '" value="1">'
             . '<input type="hidden" name="game" value="' . (int) $state->gameId . '">'
             . '<input type="hidden" name="cmd" value="confirm_settings">'
+            . '<input type="hidden" name="draft_type" value="' . $this->esc($settings->draftType()) . '">'
             . '<input type="hidden" name="draft_pick_mode" value="' . GameSettings::DRAFT_PICK_MODE_MANUAL . '">'
             . '<section class="settings-section">'
             . '<h2>Основные настройки</h2>'
@@ -91,13 +93,16 @@ final class SettingsScreen
             . '<div class="settings-option-grid settings-option-grid--compact">' . $this->boosterCountTiles('boosters', GameSettings::DRAFT_BOOSTERS_MIN, GameSettings::DRAFT_BOOSTERS_MAX, $boosters) . '</div>'
             . '</fieldset>'
             . $this->boosterSettingsHtml($settings)
-            . '<fieldset class="settings-fieldset">'
+            . ($isSolomon ? '<fieldset class="settings-fieldset"><legend>Размер стека</legend><div class="settings-option-grid">'
+                . $this->radioTile('stack_size', '6', '6 карт', $settings->draftStackSize() === 6)
+                . $this->radioTile('stack_size', '8', '8 карт', $settings->draftStackSize() === 8)
+                . '</div></fieldset>' : '<fieldset class="settings-fieldset">'
             . '<legend>Режим сетки</legend>'
             . '<div class="settings-option-grid">'
             . $this->radioTile('draft_grid_mode', GameSettings::DRAFT_GRID_MODE_CONTINUOUS, 'Обычный', $gridMode === GameSettings::DRAFT_GRID_MODE_CONTINUOUS, 'Пополнение после каждого выбора.')
             . $this->radioTile('draft_grid_mode', GameSettings::DRAFT_GRID_MODE_DISCRETE, 'Дискретный', $gridMode === GameSettings::DRAFT_GRID_MODE_DISCRETE, 'Два выбора на раунд без пополнения между ними.')
             . '</div>'
-            . '</fieldset>'
+            . '</fieldset>')
             . '</section>'
             . '<section class="settings-section">'
             . '<h2>Таймер</h2>'
@@ -130,7 +135,7 @@ final class SettingsScreen
             )
             . '</div>'
             . '</section>'
-            . '<section class="settings-section">'
+            . ($isSolomon ? '' : '<section class="settings-section">'
             . '<h2>Автоматический выбор</h2>'
             . '<label class="settings-toggle">'
             . '<input type="checkbox" name="draft_pick_mode" value="' . GameSettings::DRAFT_PICK_MODE_RANDOM . '" data-settings-toggle="auto-draft"'
@@ -147,7 +152,7 @@ final class SettingsScreen
             . '</div>'
             . '</fieldset>'
             . '</div>'
-            . '</section>'
+            . '</section>')
             . '<div class="settings-submit-row"><button class="button wide settings-submit" type="submit">Начать драфт</button></div>'
             . '</form>'
             . '<script src="/assets/js/settings.js?v=1" defer></script>';
