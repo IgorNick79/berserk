@@ -1,1 +1,4 @@
-<img class="panel-stat-icon" src="{{url}}" alt="{{label}}" title="{{label}}" width="22" height="22" onerror="this.hidden=true">
+<span class="panel-stat-hint" tabindex="0" role="button" aria-label="{{label}}">
+    <img class="panel-stat-icon" src="{{url}}" alt="" width="24" height="24" onerror="this.parentElement.hidden=true">
+    <span class="battle-icon-tooltip" aria-hidden="true">{{label}}</span>
+</span>

@@ -18,9 +18,7 @@ final class CardDescription
             libxml_clear_errors();
             libxml_use_internal_errors($previous);
         }
-        return trim($output) === '' ? '' : '<details class="panel-card-description">'
-            . '<summary>Описание<span class="description-chevron" aria-hidden="true"></span></summary>'
-            . '<div class="panel-card-description-body">' . $output . '</div></details>';
+        return trim($output) === '' ? '' : '<div class="panel-card-description">' . $output . '</div>';
     }
 
     private static function children(\DOMNode $parent): string

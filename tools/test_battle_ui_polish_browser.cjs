@@ -15,7 +15,7 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  await page.route('https://battle.test/**',r=>{
  const url = new URL(r.request().url());
  if(url.pathname.startsWith('/assets/images/icons/')&&fs.existsSync(path.join(repo,'www',url.pathname)))return r.fulfill({body:fs.readFileSync(path.join(repo,'www',url.pathname)),contentType:'image/png'});
- if((url.pathname.startsWith('/assets/images/rarity/')||url.pathname.startsWith('/assets/images/element/'))&&fs.existsSync(path.join(repo,'www',url.pathname)))return r.fulfill({body:fs.readFileSync(path.join(repo,'www',url.pathname)),contentType:'image/png'});
+ if((url.pathname.startsWith('/assets/images/rarity/')||url.pathname.startsWith('/assets/images/element/')||url.pathname.startsWith('/assets/images/card/'))&&fs.existsSync(path.join(repo,'www',url.pathname)))return r.fulfill({body:fs.readFileSync(path.join(repo,'www',url.pathname)),contentType:'image/png'});
  if(url.pathname.startsWith('/assets/images/battle/'))return r.fulfill({body:fs.readFileSync(path.join(repo,'www',url.pathname)),contentType:url.pathname.endsWith('.webp')?'image/webp':'image/png'});
  return r.fulfill({body:'<html></html>',contentType:'text/html'});
  });
@@ -44,29 +44,61 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  data.get(4).panel_html=metadataPanel;
  await page.route('https://battle.test/assets/cards/s1/*.webp',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250"/>'}));
  await update(4);
- assert(await page.locator('.panel-stat-icon').count()===2,'Rarity and element icons present');
+ assert(await page.locator('.panel-card-heading-icons .panel-stat-icon').count()===2,'Rarity and element icons present');
+ await page.waitForFunction(()=>[...document.querySelectorAll('.panel-stat-value-icon')].every(i=>i.complete&&i.naturalWidth>0));
+ assert(await page.locator('.panel-stat-value').count()===7,'HP movement strike active abilities and coins');
+ assert(await page.locator('.panel-card-heading-icons').evaluate(e=>e.children[0].querySelector('img').src.includes('/element/')&&e.children[1].querySelector('img').src.includes('/rarity/')),'Element and rarity beside title');
+ assert(await page.locator('.panel-stats-extra img').getAttribute('src')==='/assets/images/card/class.png','Class icon in right group');
+
+
+ assert(await page.locator('.panel-card-cost img').getAttribute('src')==='/assets/images/card/elite-unique.png','Elite unique cost icon');
+ await page.waitForFunction(()=>document.querySelector('.panel-card-cost img').naturalWidth>0);
+ assert(await page.locator('.panel-card-cost').innerText()==='7','Price before card name');
+ assert(await page.locator('.panel-card-heading').evaluate(e=>{const cost=e.querySelector('.panel-card-cost').getBoundingClientRect(),name=e.querySelector('.panel-card-title').getBoundingClientRect();return cost.right<=name.left&&e.scrollWidth<=e.clientWidth;}),'Cost icon and value fit before title');
+
  await page.waitForFunction(()=>[...document.querySelectorAll('.panel-stat-icon')].every(i=>i.complete&&i.naturalWidth>0&&!i.hidden));
- assert(await page.locator('.panel-stat-icon').first().getAttribute('src')==='/assets/images/rarity/s1_rare.png','Rarity path follows set and value');
- assert(await page.locator('.panel-stat-icon').last().getAttribute('src')==='/assets/images/element/mountains.png','New element directory');
- assert(await page.locator('.panel-card-class').evaluate(e=>{const badge=e.getBoundingClientRect(),img=e.closest('.panel-card-preview').getBoundingClientRect(),title=document.querySelector('.panel-card-title').getBoundingClientRect();return title.bottom<=img.top&&badge.top>=img.top&&badge.bottom<=img.bottom&&Math.abs(badge.x+badge.width/2-img.x-img.width/2)<1;}),'Title above preview and centered class inside top of artwork');
+ assert(await page.locator('.panel-card-heading-icons .panel-stat-icon').last().getAttribute('src')==='/assets/images/rarity/s1_rare.png','Rarity path follows set and value');
+ assert(await page.locator('.panel-card-heading-icons .panel-stat-icon').first().getAttribute('src')==='/assets/images/element/mountains.png','New element directory');
+
+ assert(await page.locator('.panel-card-cost img').evaluate(e=>e.getBoundingClientRect().width===24),'Current crystal size');
+ assert(await page.locator('.panel-card-cost').evaluate(e=>getComputedStyle(e).fontSize==='14px'),'Smaller price');
+ for(const hint of await page.locator('.panel-stat-hint').all()) {
+ assert(await hint.locator('img').evaluate(e=>!e.hasAttribute('title')),'No native title');
+ await hint.hover();await page.waitForTimeout(250);
+ assert(await hint.locator('img').evaluate(e=>getComputedStyle(e).transform.includes('1.2')),'Icon scales smoothly');
+ assert(await hint.evaluate(e=>{const r=document.querySelector('#battle-stat-tooltip').getBoundingClientRect(),m=e.closest('.battle-selected-card').querySelector('.panel-card-media').getBoundingClientRect();return Math.abs(r.width-(m.width-8))<1&&Math.abs(r.left-(m.left+4))<1&&(e.closest('.panel-card-heading-icons')?Math.abs(r.top-(m.top+4))<1:Math.abs(r.bottom-(m.bottom-4))<1);}), 'Full width hint at correct image edge');
+
+ assert(await page.locator('#battle-stat-tooltip').evaluate(e=>{const r=e.getBoundingClientRect();return !e.hidden&&r.left>=0&&r.right<=innerWidth&&getComputedStyle(e).fontSize==='13px';}),'Portal tooltip visible inside viewport');
+ await hint.focus();await page.keyboard.press('Tab');
+ }
+
 
  data.get(4).panel_html=descriptionPanel;
  await update(4);
- assert(await page.locator('.panel-card-description .card-description-icon').count()===4,'Description icons survive snapshot composition');
- assert(await page.locator('.panel-card-description').evaluate(e=>e.closest('.battle-selected-card').querySelector('.panel-card-title')&&e.scrollWidth<=e.clientWidth), 'Description below name fits panel');
- assert(await page.locator('.panel-card-description').evaluate(e=>e.tagName==='DETAILS'&&!e.open),'Description collapsed initially');
- const chevronClosed=await page.locator('.description-chevron').evaluate(e=>getComputedStyle(e).transform);
- await page.locator('.panel-card-description > summary').click();
- assert(await page.locator('.panel-card-description').evaluate(e=>e.open),'Pointer expands description');
- await page.waitForFunction(()=>[...document.querySelectorAll('.panel-card-description .card-description-icon')].every(i=>i.complete&&i.naturalWidth>0));
- assert(await page.locator('.description-chevron').evaluate((e,closed)=>getComputedStyle(e).transform!==closed,chevronClosed),'Chevron points up when expanded');
- assert(await page.locator('.card-description-icon').first().getAttribute('src')==='/assets/images/icons/icon-tap.png','Assets icon URL');
- await page.locator('.panel-card-description > summary').focus();await page.keyboard.press('Enter');
- assert(await page.locator('.panel-card-description').evaluate(e=>!e.open),'Keyboard collapses description');
-
+ const info=page.locator('.panel-stat-info');
+ assert(await page.locator('.panel-card-media').evaluate(e=>{const r=e.getBoundingClientRect();return !e.querySelector('img')&&Math.abs(r.width/r.height-1.6)<.01&&getComputedStyle(e).backgroundColor==='rgb(241, 238, 232)';}),'Empty artwork reserves 8:5 area with requested background');
+ assert(await info.count()===1,'Description in info icon');
+ assert(await info.evaluate(e=>e===e.parentElement.lastElementChild&&e.parentElement.classList.contains('panel-stats-extra')),'Info is last icon in right group');
+ assert(await page.locator('.panel-card-details .panel-card-description').count()===0,'No inline description');
+ await info.hover();
+ await page.waitForFunction(()=>!document.querySelector('#battle-stat-tooltip').hidden);
+ await page.waitForFunction(()=>[...document.querySelectorAll('#battle-stat-tooltip .card-description-icon')].every(i=>i.complete&&i.naturalWidth>0));
+ assert(await page.locator('#battle-stat-tooltip .card-description-icon').count()===4,'Description rich icons loaded');
+ await info.click();await page.mouse.move(0,0);
+ assert(await page.locator('#battle-stat-tooltip').isVisible(),'Click pins tooltip after pointer leaves');
+ await page.mouse.click(1,400);
+ assert(await page.locator('#battle-stat-tooltip').isHidden(),'Next click anywhere closes tooltip');
+ await info.click();await info.click();
+ assert(await page.locator('#battle-stat-tooltip').isHidden(),'Second click on icon closes without hover reopening');
+ await info.focus();await page.keyboard.press('Enter');
+ assert(await page.locator('#battle-stat-tooltip').isVisible(),'Keyboard opens info tooltip');
+ await page.keyboard.press('Escape');
+ assert(await page.locator('#battle-stat-tooltip').isHidden(),'Escape closes tooltip');
+ await info.click();
  data.get(4).panel_html=savedPanel;
  await update(4);
  assert(await page.locator('.panel-card-description').count()===0,'Snapshot card replacement clears description');
+ assert(await page.locator('#battle-stat-tooltip').isHidden(),'Snapshot replacement closes stale tooltip');
 
  assert(await page.evaluate(()=>{const l=document.querySelector('.battle-layout').getBoundingClientRect(),c=document.querySelector('.battle-left').getBoundingClientRect();return l.width>c.width||Math.abs(l.x+l.width/2-c.x-c.width/2)<1;}),'Playmat horizontally centered when it fits');
  assert(await page.evaluate(()=>{const l=document.querySelector('.battle-layout').getBoundingClientRect(),c=document.querySelector('.battle-left').getBoundingClientRect();return l.height>c.height||Math.abs(l.y+l.height/2-c.y-c.height/2)<1;}),'Playmat vertically centered when it fits');
