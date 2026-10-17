@@ -136,17 +136,18 @@
     }
     // Local combat/card view survives snapshots without changing game/UI URLs.
     var combatHost = root.querySelector("[data-battle-fragment='info_panel_html']");
-    var combatKey = null, inspectedCombatCard = 0;
+    var combatKey = null, inspectedCombatCard = 0, combatCardViewOpen = false;
     function syncCombatPanel() {
         if (!combatHost) return;
         var content = combatHost.querySelector('.info-panel-content');
         if (!content) return;
         var key = content.dataset.combatKey || '';
-        if (key !== combatKey) { combatKey = key; inspectedCombatCard = 0; hideHint(); }
+        if (key !== combatKey) { combatKey = key; inspectedCombatCard = 0; combatCardViewOpen = false; hideHint(); }
         var selected = content.querySelector("[data-battle-fragment='panel_html']");
         var context = content.querySelector('.info-panel-context');
         var card = selected && selected.querySelector('[data-panel-card-id]');
-        var inspect = !!(key && inspectedCombatCard && card && Number(card.dataset.panelCardId) === inspectedCombatCard);
+        var inspect = !!(key && inspectedCombatCard && card && (Number(card.dataset.panelCardId) === inspectedCombatCard || combatCardViewOpen));
+        combatCardViewOpen = inspect;
         if (selected) selected.hidden = !!key && !inspect;
         if (context) context.hidden = inspect;
         var footer = combatHost.querySelector('.info-panel-footer');

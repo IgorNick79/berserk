@@ -23,6 +23,7 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
  assert(await card.isHidden()&&await context.isVisible(),'Combat start closes old card');
  assert(await page.locator('.info-phase').innerText()==='Фаза сражения','Combat phase label');
  assert(await page.locator('.combat-panel-heading').innerText()==='Сражение','Combat heading');
+ const combatHeadingBox=await page.locator('.combat-panel-heading').boundingBox();
  await page.locator('.battle-field .card-link[href*="sel=2"]').click();
  assert(await card.isHidden(),'Old card not shown while loading new selection');
  await update('combat',2);
@@ -32,6 +33,16 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
  assert(await card.locator('a[href*="cmd="]').count()===0,'No creature command links');
  await update('combat',2);
  assert(await card.isVisible(),'Inspection survives polling');
+ const cardHeadingBox=await card.locator('.panel-card-heading').boundingBox();
+ assert(Math.abs(cardHeadingBox.x-combatHeadingBox.x)<1&&Math.abs(cardHeadingBox.width-combatHeadingBox.width)<1,'Combat heading edges match card heading');
+ await page.locator('.battle-field .card-link[href*="sel=1"]').click();
+ assert(await card.isVisible()&&await context.isHidden(),'Switching cards never flashes combat panel');
+ assert(await card.locator('[data-panel-card-id]').getAttribute('data-panel-card-id')==='2','Previous card remains while loading');
+ await update('combat',1);
+ assert(await card.isVisible()&&await context.isHidden()&&await card.locator('[data-panel-card-id]').getAttribute('data-panel-card-id')==='1','Fresh selected card replaces previous card');
+ await page.locator('.battle-field .card-link[href*="sel=2"]').click();
+ assert(await card.isVisible()&&await context.isHidden(),'Switching back also keeps card view');
+ await update('combat',2);
  const requests=await page.evaluate(()=>uiRequests.length);
  await card.locator('[data-combat-back]').click();
  assert(await card.isHidden()&&await context.isVisible(),'Close restores combat view');

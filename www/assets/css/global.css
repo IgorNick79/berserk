@@ -2111,3 +2111,5 @@ body.battle-page {
 .combat-panel-heading h3 { margin: 0; font-size: 18px; line-height: 1.3; }
 .combat-panel-heading h3:focus-visible { outline: 2px solid #987044; outline-offset: 3px; }
 .info-panel-footer[hidden] { display: none !important; }
+.battle-page .info-panel-context.info-panel-context--combat { padding: 0; }
+.combat-panel-body { padding: 12px; }

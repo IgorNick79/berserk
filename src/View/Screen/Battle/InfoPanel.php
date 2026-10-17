@@ -64,7 +64,7 @@ final class InfoPanel
         return '<header class="info-panel-header">' . $this->renderStatusHeader() . $this->renderTimer() . '</header>'
             . '<div class="info-panel-content" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
             . '<div class="battle-selected-card" data-battle-fragment="panel_html"' . ($inCombat ? ' hidden' : '') . '>' . $selectedCardHtml . '</div>'
-            . '<div class="info-panel-context">' . ($inCombat ? '<div class="combat-panel-heading"><h3 tabindex="-1">Сражение</h3></div>' : '') . $this->renderBody() . '</div>'
+            . '<div class="info-panel-context' . ($inCombat ? ' info-panel-context--combat' : '') . '">' . ($inCombat ? '<div class="combat-panel-heading"><h3 tabindex="-1">Сражение</h3></div><div class="combat-panel-body">' : '') . $this->renderBody() . ($inCombat ? '</div>' : '') . '</div>'
             . '</div>'
             . '<footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
     }
