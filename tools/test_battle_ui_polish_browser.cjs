@@ -44,10 +44,12 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  data.get(4).panel_html=metadataPanel;
  await page.route('https://battle.test/assets/cards/s1/*.webp',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250"/>'}));
  await update(4);
- assert(await page.locator('.panel-stat-icon').count()===2,'Rarity and element icons present');
+ assert(await page.locator('.panel-card-heading-icons .panel-stat-icon').count()===2,'Rarity and element icons present');
  await page.waitForFunction(()=>[...document.querySelectorAll('.panel-stat-value-icon')].every(i=>i.complete&&i.naturalWidth>0));
  assert(await page.locator('.panel-stat-value').count()===7,'HP movement strike active abilities and coins');
- assert(await page.locator('.panel-card-stats').evaluate(e=>{const children=[...e.children];return children.at(-2).querySelector('img').src.includes('/element/')&&children.at(-1).querySelector('img').src.includes('/rarity/')&&e.scrollWidth<=e.clientWidth;}),'Element and rarity finish wrapping stats row');
+ assert(await page.locator('.panel-card-heading-icons').evaluate(e=>e.children[0].querySelector('img').src.includes('/element/')&&e.children[1].querySelector('img').src.includes('/rarity/')),'Element and rarity beside title');
+ assert(await page.locator('.panel-stats-extra img').getAttribute('src')==='/assets/images/card/class.png','Class icon in right group');
+
 
  assert(await page.locator('.panel-card-cost img').getAttribute('src')==='/assets/images/card/elite-unique.png','Elite unique cost icon');
  await page.waitForFunction(()=>document.querySelector('.panel-card-cost img').naturalWidth>0);
@@ -55,14 +57,17 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  assert(await page.locator('.panel-card-heading').evaluate(e=>{const cost=e.querySelector('.panel-card-cost').getBoundingClientRect(),name=e.querySelector('.panel-card-title').getBoundingClientRect();return cost.right<=name.left&&e.scrollWidth<=e.clientWidth;}),'Cost icon and value fit before title');
 
  await page.waitForFunction(()=>[...document.querySelectorAll('.panel-stat-icon')].every(i=>i.complete&&i.naturalWidth>0&&!i.hidden));
- assert(await page.locator('.panel-stat-icon').last().getAttribute('src')==='/assets/images/rarity/s1_rare.png','Rarity path follows set and value');
- assert(await page.locator('.panel-stat-icon').first().getAttribute('src')==='/assets/images/element/mountains.png','New element directory');
- assert(await page.locator('.panel-card-class').evaluate(e=>{const c=e.getBoundingClientRect(),title=e.parentElement.querySelector('.panel-card-title').getBoundingClientRect();return e.parentElement.classList.contains('panel-card-heading')&&c.left>=title.right&&getComputedStyle(e).position==='static';}),'Class is plain text to right of title');
+ assert(await page.locator('.panel-card-heading-icons .panel-stat-icon').last().getAttribute('src')==='/assets/images/rarity/s1_rare.png','Rarity path follows set and value');
+ assert(await page.locator('.panel-card-heading-icons .panel-stat-icon').first().getAttribute('src')==='/assets/images/element/mountains.png','New element directory');
+
  assert(await page.locator('.panel-card-cost img').evaluate(e=>e.getBoundingClientRect().width===24),'Current crystal size');
  assert(await page.locator('.panel-card-cost').evaluate(e=>getComputedStyle(e).fontSize==='14px'),'Smaller price');
  for(const hint of await page.locator('.panel-stat-hint').all()) {
- assert(await hint.locator('img').evaluate(e=>[20,24].includes(e.getBoundingClientRect().width)&&!e.hasAttribute('title')),'Stat icon size without native title');
+ assert(await hint.locator('img').evaluate(e=>!e.hasAttribute('title')),'No native title');
  await hint.hover();await page.waitForTimeout(250);
+ assert(await hint.locator('img').evaluate(e=>getComputedStyle(e).transform.includes('1.2')),'Icon scales smoothly');
+ assert(await hint.evaluate(e=>{const r=document.querySelector('#battle-stat-tooltip').getBoundingClientRect(),m=e.closest('.battle-selected-card').querySelector('.panel-card-media').getBoundingClientRect();return Math.abs(r.width-m.width)<1&&Math.abs(r.left-m.left)<1&&(e.closest('.panel-card-heading-icons')?Math.abs(r.top-m.top)<1:Math.abs(r.bottom-m.bottom)<1);}), 'Full width hint at correct image edge');
+
  assert(await page.locator('#battle-stat-tooltip').evaluate(e=>{const r=e.getBoundingClientRect();return !e.hidden&&r.left>=0&&r.right<=innerWidth&&getComputedStyle(e).fontSize==='13px';}),'Portal tooltip visible inside viewport');
  await hint.focus();await page.keyboard.press('Tab');
  }
@@ -71,8 +76,9 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  data.get(4).panel_html=descriptionPanel;
  await update(4);
  const info=page.locator('.panel-stat-info');
+ assert(await page.locator('.panel-card-media').evaluate(e=>{const r=e.getBoundingClientRect();return !e.querySelector('img')&&Math.abs(r.width/r.height-1.6)<.01&&getComputedStyle(e).backgroundColor==='rgb(241, 238, 232)';}),'Empty artwork reserves 8:5 area with requested background');
  assert(await info.count()===1,'Description in info icon');
- assert(await info.evaluate(e=>e===e.parentElement.lastElementChild),'Info is last icon');
+ assert(await info.evaluate(e=>e===e.parentElement.lastElementChild&&e.parentElement.classList.contains('panel-stats-extra')),'Info is last icon in right group');
  assert(await page.locator('.panel-card-details .panel-card-description').count()===0,'No inline description');
  await info.hover();
  await page.waitForFunction(()=>!document.querySelector('#battle-stat-tooltip').hidden);

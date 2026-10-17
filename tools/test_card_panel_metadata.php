@@ -33,7 +33,7 @@ try {
         $card->type='fly';
         battleSnapshotAssert(!str_contains($render(), 'data-stat="move"'), 'Intrinsic flying card hides movement');
         $flying = $render();
-        battleSnapshotAssert(strpos($flying, '/assets/images/card/fly.png') > strpos($flying, 'data-stat="regen"') && strpos($flying, '/assets/images/card/fly.png') < strpos($flying, '/assets/images/element/'), 'Flying hint immediately before element');
+        battleSnapshotAssert(strpos($flying, '/assets/images/card/fly.png') > strpos($flying, 'data-stat="regen"'), 'Flying icon follows ability values');
         battleSnapshotAssert(str_contains($flying, '/assets/images/card/fly.png'), 'Normal flying asset');
 
         $card->type='creature'; $card->zone='flying';
@@ -56,7 +56,7 @@ try {
 
         battleSnapshotAssert(strpos($html, 'panel-card-title') < strpos($html, 'panel-card-preview'), 'Title above artwork');
         battleSnapshotAssert(str_contains($html, '/assets/images/element/mountains.png'), 'Element icon uses new directory');
-        battleSnapshotAssert(str_contains($html, 'panel-card-class') && str_contains($html, 'Эльф, Воин'), 'Class next to title');
+        battleSnapshotAssert(str_contains($html, '/assets/images/card/class.png') && str_contains($html, 'Класс существа: Эльф, Воин'), 'Class icon and hint');
         foreach (['common','uncommon','rare','ultrarare'] as $rarity) {
             $cardsInfo[$card->ukid]['rarity']=$rarity;
             battleSnapshotAssert(str_contains($render(), '/assets/images/rarity/s1_'.$rarity.'.png'), 'Rarity follows database value');
@@ -64,13 +64,13 @@ try {
         $cardsInfo[$card->ukid]['class']='<script>test</script>';
         battleSnapshotAssert(!str_contains($render(), '<script>') && str_contains($render(), '&lt;script&gt;'), 'Class text escaped');
         $cardsInfo[$card->ukid]['class']='';
-        battleSnapshotAssert(!str_contains($render(), 'panel-card-class'), 'No empty class badge');
+        battleSnapshotAssert(!str_contains($render(), '/assets/images/card/class.png'), 'No empty class icon');
         unset($cardsInfo[$card->ukid]['class']); $card->classes=['Воин'];
         battleSnapshotAssert(str_contains($render(), 'Воин'), 'Existing class list fallback');
         $cardsInfo[$card->ukid]['rarity']='../bad';
         battleSnapshotAssert(!str_contains($render(), '/assets/images/rarity/'), 'Invalid rarity omitted');
         unlink($path);
-        battleSnapshotAssert(str_contains($render(), 'panel-card-class') && !str_contains($render(), 'panel-card-preview'), 'Class remains in heading without preview');
+        battleSnapshotAssert(str_contains($render(), '/assets/images/card/class.png') && str_contains($render(), 'panel-card-media') && !str_contains($render(), 'panel-card-preview'), 'Class and reserved media remain without preview');
         echo "Card panel metadata tests passed.\n";
     }
 } finally {

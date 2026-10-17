@@ -14,6 +14,7 @@
         if (hintSource) {
             hintSource.removeAttribute('aria-describedby');
             hintSource.setAttribute('aria-expanded', 'false');
+            hintSource.classList.remove('is-hint-open');
         }
         hintNode.hidden = true;
         hintNode.innerHTML = '';
@@ -22,13 +23,16 @@
     }
     function positionHint() {
         if (!hintSource || !hintSource.isConnected) { hideHint(); return; }
-        hintNode.style.width = Math.min(360, window.innerWidth - 24) + 'px';
-        hintNode.style.maxHeight = Math.min(360, window.innerHeight - 24) + 'px';
-        var a = hintSource.getBoundingClientRect(), b = hintNode.getBoundingClientRect();
-        hintNode.style.left = Math.max(12, Math.min(a.left + a.width / 2 - b.width / 2, window.innerWidth - b.width - 12)) + 'px';
-        var top = a.top - b.height - 8;
-        if (top < 12) top = a.bottom + 8;
-        hintNode.style.top = Math.max(12, Math.min(top, window.innerHeight - b.height - 12)) + 'px';
+        var card = hintSource.closest('.battle-selected-card');
+        var media = card && card.querySelector('.panel-card-media');
+        if (!media) { hideHint(); return; }
+        var area = media.getBoundingClientRect();
+        hintNode.style.width = Math.min(area.width, window.innerWidth) + 'px';
+        hintNode.style.maxHeight = Math.max(40, Math.min(area.height, window.innerHeight - 16)) + 'px';
+        var box = hintNode.getBoundingClientRect();
+        var top = hintSource.closest('.panel-card-heading-icons') ? area.top : area.bottom - box.height;
+        hintNode.style.left = Math.max(0, Math.min(area.left, window.innerWidth - box.width)) + 'px';
+        hintNode.style.top = Math.max(8, Math.min(top, window.innerHeight - box.height - 8)) + 'px';
     }
     function showHint(source) {
         var content = source.querySelector('.battle-icon-tooltip');
@@ -39,6 +43,7 @@
         hintNode.hidden = false;
         source.setAttribute('aria-describedby', hintNode.id);
         source.setAttribute('aria-expanded', 'true');
+        source.classList.add('is-hint-open');
         positionHint();
     }
     function statHint(target) { return target && target.closest ? target.closest('.panel-stat-hint') : null; }

@@ -1067,8 +1067,9 @@ final class BattleScreen
         }
 
         $descriptionHtml = \Berserk\View\Ui\CardDescription::render((string) ($info['descr'] ?? ''));
+        $infoIcon = '';
         if ($descriptionHtml !== '') {
-            $statIcons .= $this->tpl->parse('includes/battle/info_icon.tpl', ['description_html' => $descriptionHtml]);
+            $infoIcon = $this->tpl->parse('includes/battle/info_icon.tpl', ['description_html' => $descriptionHtml]);
         }
 
         return $this->tpl->parse('includes/battle/panel.tpl', [
@@ -1079,8 +1080,12 @@ final class BattleScreen
             'cost_icon_label' => (!empty($info['elite']) ? 'Элитная' : 'Обычная') . (!empty($info['single']) ? ', уникальная' : ''),
             'price' => (int) ($info['price'] ?? $c->price),
             'name'         => htmlspecialchars($info['name'], ENT_QUOTES),
+            'info_icon_html' => $infoIcon,
             'class_html' => trim((string) ($info['class'] ?? implode(', ', $c->classes))) !== ''
-                    ? '<span class="panel-card-class">' . htmlspecialchars(trim((string) ($info['class'] ?? implode(', ', $c->classes))), ENT_QUOTES) . '</span>' : '',
+                ? $this->tpl->parse('includes/battle/stat_icon.tpl', [
+                    'url' => '/assets/images/card/class.png',
+                    'label' => htmlspecialchars('Класс существа: ' . trim((string) ($info['class'] ?? implode(', ', $c->classes))), ENT_QUOTES),
+                ]) : '',
             'mode_buttons' => $modeButtons,
             'hp'           => $c->hp,
             'hp_max'       => $this->displayHpMax($c, $info),
