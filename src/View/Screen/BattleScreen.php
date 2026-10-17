@@ -780,9 +780,11 @@ final class BattleScreen
 
         // Кнопки режимов
         $modeButtons = '';
+        $closedButtonShown = false;
         if ($isActive && !$strike && $c->owner === $playerKey) {
             if (CardStats::isDisabled($c)) {
                 $reason = CardStats::disabledReason($c);
+                $closedButtonShown = $c->closed;
                 $modeButtons .= '<span class="button small disabled">'
                     . htmlspecialchars($reason !== '' ? $reason : 'Карта не может действовать', ENT_QUOTES)
                     . '</span> ';
@@ -988,7 +990,9 @@ final class BattleScreen
         // Статус-строка
         $statusHtml = '';
         if ($c->closed) {
-            $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта закрыта']);
+            if (!$closedButtonShown) {
+                $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта закрыта']);
+            }
         } elseif (isset($c->markers['spider_web'])) {
             $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта находится в сети']);
         } elseif ($isActive && !$strike && $c->owner === $playerKey) {

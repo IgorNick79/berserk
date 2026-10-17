@@ -24,6 +24,13 @@ try {
         echo json_encode($render(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     } else {
         $html = $render();
+        $card->closed=true;
+        $closedHtml=$render();
+        battleSnapshotAssert(substr_count($closedHtml, 'Карта закрыта')===1 && str_contains($closedHtml, 'button small disabled'), 'Closed card keeps button without duplicate text');
+        $state->battle['active']='player';
+        battleSnapshotAssert(substr_count($render(), 'Карта закрыта')===1, 'Status remains when mode button is absent');
+        $state->battle['active']='host'; $card->closed=false;
+
         battleSnapshotAssert(str_contains($html, 'aria-label="Монеты: 0/4"') && str_contains($html, 'data-stat="coins"'), 'Coin-saving cards show zero coins and limit');
         foreach (['Здоровье: 3/3','Ходов: 1/1','Простой удар: 1/2/3','Опыт в атаке: 2','Опыт в защите: 2','Регенерация: 4'] as $label) {
             battleSnapshotAssert(str_contains($html, 'aria-label="'.$label.'"'), 'Stat hint uses existing values: '.$label);
