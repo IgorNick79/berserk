@@ -12,8 +12,6 @@
     {{stat_icons_html}}
 </div>
 <div class="panel-card-details">
-    {{description_html}}
     <div class="battle-mode-buttons">{{mode_buttons}}</div>
-    <p>{{coins_line}}</p>
     {{status_html}}
 </div>

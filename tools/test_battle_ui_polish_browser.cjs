@@ -46,7 +46,7 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  await update(4);
  assert(await page.locator('.panel-stat-icon').count()===2,'Rarity and element icons present');
  await page.waitForFunction(()=>[...document.querySelectorAll('.panel-stat-value-icon')].every(i=>i.complete&&i.naturalWidth>0));
- assert(await page.locator('.panel-stat-value').count()===6,'HP movement strike and three active abilities');
+ assert(await page.locator('.panel-stat-value').count()===7,'HP movement strike active abilities and coins');
  assert(await page.locator('.panel-card-stats').evaluate(e=>{const children=[...e.children];return children.at(-2).querySelector('img').src.includes('/element/')&&children.at(-1).querySelector('img').src.includes('/rarity/')&&e.scrollWidth<=e.clientWidth;}),'Element and rarity finish wrapping stats row');
 
  assert(await page.locator('.panel-card-cost img').getAttribute('src')==='/assets/images/card/elite-unique.png','Elite unique cost icon');
@@ -61,30 +61,38 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  assert(await page.locator('.panel-card-cost img').evaluate(e=>e.getBoundingClientRect().width===24),'Current crystal size');
  assert(await page.locator('.panel-card-cost').evaluate(e=>getComputedStyle(e).fontSize==='14px'),'Smaller price');
  for(const hint of await page.locator('.panel-stat-hint').all()) {
- assert(await hint.locator('img').evaluate(e=>e.getBoundingClientRect().width===24&&!e.hasAttribute('title')),'Larger stat icon without native title');
+ assert(await hint.locator('img').evaluate(e=>[20,24].includes(e.getBoundingClientRect().width)&&!e.hasAttribute('title')),'Stat icon size without native title');
  await hint.hover();await page.waitForTimeout(250);
- assert(await hint.locator('.battle-icon-tooltip').evaluate(e=>{const r=e.getBoundingClientRect();return getComputedStyle(e).opacity==='1'&&r.left>=0&&r.right<=innerWidth;}),'Custom tooltip visible inside viewport');
+ assert(await page.locator('#battle-stat-tooltip').evaluate(e=>{const r=e.getBoundingClientRect();return !e.hidden&&r.left>=0&&r.right<=innerWidth&&getComputedStyle(e).fontSize==='13px';}),'Portal tooltip visible inside viewport');
  await hint.focus();await page.keyboard.press('Tab');
  }
 
 
  data.get(4).panel_html=descriptionPanel;
  await update(4);
- assert(await page.locator('.panel-card-description .card-description-icon').count()===4,'Description icons survive snapshot composition');
- assert(await page.locator('.panel-card-description').evaluate(e=>e.closest('.battle-selected-card').querySelector('.panel-card-title')&&e.scrollWidth<=e.clientWidth), 'Description below name fits panel');
- assert(await page.locator('.panel-card-description').evaluate(e=>e.tagName==='DETAILS'&&!e.open),'Description collapsed initially');
- const chevronClosed=await page.locator('.description-chevron').evaluate(e=>getComputedStyle(e).transform);
- await page.locator('.panel-card-description > summary').click();
- assert(await page.locator('.panel-card-description').evaluate(e=>e.open),'Pointer expands description');
- await page.waitForFunction(()=>[...document.querySelectorAll('.panel-card-description .card-description-icon')].every(i=>i.complete&&i.naturalWidth>0));
- assert(await page.locator('.description-chevron').evaluate((e,closed)=>getComputedStyle(e).transform!==closed,chevronClosed),'Chevron points up when expanded');
- assert(await page.locator('.card-description-icon').first().getAttribute('src')==='/assets/images/icons/icon-tap.png','Assets icon URL');
- await page.locator('.panel-card-description > summary').focus();await page.keyboard.press('Enter');
- assert(await page.locator('.panel-card-description').evaluate(e=>!e.open),'Keyboard collapses description');
-
+ const info=page.locator('.panel-stat-info');
+ assert(await info.count()===1,'Description in info icon');
+ assert(await info.evaluate(e=>e===e.parentElement.lastElementChild),'Info is last icon');
+ assert(await page.locator('.panel-card-details .panel-card-description').count()===0,'No inline description');
+ await info.hover();
+ await page.waitForFunction(()=>!document.querySelector('#battle-stat-tooltip').hidden);
+ await page.waitForFunction(()=>[...document.querySelectorAll('#battle-stat-tooltip .card-description-icon')].every(i=>i.complete&&i.naturalWidth>0));
+ assert(await page.locator('#battle-stat-tooltip .card-description-icon').count()===4,'Description rich icons loaded');
+ await info.click();await page.mouse.move(0,0);
+ assert(await page.locator('#battle-stat-tooltip').isVisible(),'Click pins tooltip after pointer leaves');
+ await page.mouse.click(1,400);
+ assert(await page.locator('#battle-stat-tooltip').isHidden(),'Next click anywhere closes tooltip');
+ await info.click();await info.click();
+ assert(await page.locator('#battle-stat-tooltip').isHidden(),'Second click on icon closes without hover reopening');
+ await info.focus();await page.keyboard.press('Enter');
+ assert(await page.locator('#battle-stat-tooltip').isVisible(),'Keyboard opens info tooltip');
+ await page.keyboard.press('Escape');
+ assert(await page.locator('#battle-stat-tooltip').isHidden(),'Escape closes tooltip');
+ await info.click();
  data.get(4).panel_html=savedPanel;
  await update(4);
  assert(await page.locator('.panel-card-description').count()===0,'Snapshot card replacement clears description');
+ assert(await page.locator('#battle-stat-tooltip').isHidden(),'Snapshot replacement closes stale tooltip');
 
  assert(await page.evaluate(()=>{const l=document.querySelector('.battle-layout').getBoundingClientRect(),c=document.querySelector('.battle-left').getBoundingClientRect();return l.width>c.width||Math.abs(l.x+l.width/2-c.x-c.width/2)<1;}),'Playmat horizontally centered when it fits');
  assert(await page.evaluate(()=>{const l=document.querySelector('.battle-layout').getBoundingClientRect(),c=document.querySelector('.battle-left').getBoundingClientRect();return l.height>c.height||Math.abs(l.y+l.height/2-c.y-c.height/2)<1;}),'Playmat vertically centered when it fits');

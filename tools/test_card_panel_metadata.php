@@ -7,6 +7,7 @@ $state = battleSnapshotState();
 $card = $state->getCard(1);
 $card->ukid = 's1_ui-' . bin2hex(random_bytes(6));
 $card->element = 'mountains';
+$card->prop['save_coins']=true; $card->prop['coins']=['max_value'=>4];
 $card->prop['ova']=1; $card->prop['ovz']=2; $card->prop['regeneration']=['value'=>3];
 $card->modifiers=[['stat'=>'ova','value'=>1],['stat'=>'regeneration','value'=>1]];
 $cardsInfo[$card->ukid] = ['name'=>'Metadata card', 'health'=>3, 'rarity'=>'rare', 'price'=>7, 'elite'=>true, 'single'=>true, 'class'=>'Эльф, Воин', 'element'=>'Горы'];
@@ -23,7 +24,8 @@ try {
         echo json_encode($render(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     } else {
         $html = $render();
-        foreach (['Здоровье: 3, максимальное значение: 3','Ход: 1, всего: 1','Простой удар: 1/2/3','Опыт в атаке: 2','Опыт в защите: 2','Регенерация: 4'] as $label) {
+        battleSnapshotAssert(str_contains($html, 'aria-label="Монеты: 0/4"') && str_contains($html, 'data-stat="coins"'), 'Coin-saving cards show zero coins and limit');
+        foreach (['Здоровье: 3/3','Ходов: 1/1','Простой удар: 1/2/3','Опыт в атаке: 2','Опыт в защите: 2','Регенерация: 4'] as $label) {
             battleSnapshotAssert(str_contains($html, 'aria-label="'.$label.'"'), 'Stat hint uses existing values: '.$label);
         }
         battleSnapshotAssert(!str_contains($html, '@2x'), 'Normal-resolution assets used');
@@ -31,7 +33,7 @@ try {
         $card->type='fly';
         battleSnapshotAssert(!str_contains($render(), 'data-stat="move"'), 'Intrinsic flying card hides movement');
         $flying = $render();
-        battleSnapshotAssert(preg_match('~data-stat="strike".*?</span>\s*</span>\s*<span class="panel-stat-hint"[^>]*aria-label="Летающее существо"~s', $flying) === 1, 'Flying hint directly after strike');
+        battleSnapshotAssert(strpos($flying, '/assets/images/card/fly.png') > strpos($flying, 'data-stat="regen"') && strpos($flying, '/assets/images/card/fly.png') < strpos($flying, '/assets/images/element/'), 'Flying hint immediately before element');
         battleSnapshotAssert(str_contains($flying, '/assets/images/card/fly.png'), 'Normal flying asset');
 
         $card->type='creature'; $card->zone='flying';

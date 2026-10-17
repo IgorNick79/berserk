@@ -2081,3 +2081,14 @@ body.battle-page {
 .panel-stat-value-icon { display: block; flex: 0 0 24px; width: 24px; height: 24px; object-fit: contain; }
 .panel-stat-number { font-size: 13px; font-variant-numeric: tabular-nums; }
 .battle-page .panel-card-stats .battle-icon-tooltip { white-space: normal; overflow-wrap: anywhere; }
+
+.battle-page .panel-card-stats [data-stat="ova"] img,
+.battle-page .panel-card-stats [data-stat="ovz"] img,
+.battle-page .panel-card-stats [data-stat="regen"] img { width: 20px; height: 20px; flex-basis: 20px; }
+.panel-info-icon { display: block; width: 24px; height: 24px; object-fit: contain; }
+.panel-stat-hint { cursor: pointer; }
+.battle-page .panel-stat-hint > .battle-icon-tooltip { display: none; }
+.battle-stat-tooltip { position: fixed; z-index: 1000; box-sizing: border-box; padding: 10px 12px; border: 1px solid #b18d56; border-radius: 5px; background: #221c16; color: #fff3dd; font: 13px/1.3em system-ui, sans-serif; overflow-wrap: anywhere; overflow: auto; box-shadow: 0 4px 18px #0005; }
+.battle-stat-tooltip[hidden] { display: none; }
+.battle-stat-tooltip .panel-card-description { margin: 0; font-size: inherit; line-height: inherit; }
+.battle-icon-tooltip { font-size: 13px; line-height: 1.3em; }

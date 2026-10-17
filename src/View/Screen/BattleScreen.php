@@ -1012,11 +1012,7 @@ final class BattleScreen
                 . (\Berserk\Core\FirstStrikeJump::used($state, $c) ? 'использована в этом ходу' : 'доступна') . '.</p>';
         }
 
-        $coinsLine = '';
-        if (!empty($c->prop['save_coins']) || $c->coins > 0 || !empty($c->prop['coin_block'])) {
-            $max = (int) ($c->prop['coins']['max_value'] ?? 0);
-            $coinsLine = 'Монеты: ' . $c->coins . ($max > 0 ? ' / ' . $max : '');
-        }
+        $hasCoins = !empty($c->prop['save_coins']) || $c->coins > 0 || !empty($c->prop['coin_block']);
 
         $statValue = fn(string $stat, string $icon, string $value, string $label): string =>
             $this->tpl->parse('includes/battle/stat_value.tpl', [
@@ -1026,19 +1022,13 @@ final class BattleScreen
             ]);
         $hpMax = $this->displayHpMax($c, $info);
         $statValues = $statValue('hp', 'heart', $c->hp . '/' . $hpMax,
-            'Здоровье: ' . $c->hp . ', максимальное значение: ' . $hpMax);
+            'Здоровье: ' . $c->hp . '/' . $hpMax);
         if (!CardStats::isFlyingCreature($c)) {
             $statValues .= $statValue('move', 'move', $c->move . '/' . $c->moveMax,
-                'Ход: ' . $c->move . ', всего: ' . $c->moveMax);
+                'Ходов: ' . $c->move . '/' . $c->moveMax);
         }
         $statValues .= $statValue('strike', 'sword', $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
             'Простой удар: ' . $c->strikeWeak . '/' . $c->strikeMedium . '/' . $c->strikeStrong);
-        if (CardStats::isFlyingCreature($c)) {
-            $statValues .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
-                'url' => '/assets/images/card/fly.png',
-                'label' => 'Летающее существо',
-            ]);
-        }
         foreach ([
             ['ova', 'ova', CardStats::getOva($state, $c), 'Опыт в атаке'],
             ['ovz', 'ovz', CardStats::getOvz($state, $c), 'Опыт в защите'],
@@ -1047,6 +1037,17 @@ final class BattleScreen
             if ($value !== 0) $statValues .= $statValue($stat, $icon, (string) $value, $label . ': ' . $value);
         }
 
+        if ($hasCoins) {
+            $coinMax = (int) ($c->prop['coins']['max_value'] ?? 0);
+            $statValues .= $statValue('coins', 'counter', (string) $c->coins,
+                'Монеты: ' . $c->coins . ($coinMax > 0 ? '/' . $coinMax : ''));
+        }
+        if (CardStats::isFlyingCreature($c)) {
+            $statValues .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
+                'url' => '/assets/images/card/fly.png',
+                'label' => 'Летающее существо',
+            ]);
+        }
         // Element and rarity finish the stats row, in that order.
         $statIcons = '';
         $elementIcon = $this->elementIconPath($c);
@@ -1065,6 +1066,11 @@ final class BattleScreen
             ]);
         }
 
+        $descriptionHtml = \Berserk\View\Ui\CardDescription::render((string) ($info['descr'] ?? ''));
+        if ($descriptionHtml !== '') {
+            $statIcons .= $this->tpl->parse('includes/battle/info_icon.tpl', ['description_html' => $descriptionHtml]);
+        }
+
         return $this->tpl->parse('includes/battle/panel.tpl', [
             'image_html'   => $imgHtml,
             'stat_values_html' => $statValues,
@@ -1075,14 +1081,12 @@ final class BattleScreen
             'name'         => htmlspecialchars($info['name'], ENT_QUOTES),
             'class_html' => trim((string) ($info['class'] ?? implode(', ', $c->classes))) !== ''
                     ? '<span class="panel-card-class">' . htmlspecialchars(trim((string) ($info['class'] ?? implode(', ', $c->classes))), ENT_QUOTES) . '</span>' : '',
-            'description_html' => \Berserk\View\Ui\CardDescription::render((string) ($info['descr'] ?? '')),
             'mode_buttons' => $modeButtons,
             'hp'           => $c->hp,
             'hp_max'       => $this->displayHpMax($c, $info),
             'move'         => $c->move,
             'move_max'     => $c->moveMax,
             'strike'       => $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
-            'coins_line'   => $coinsLine,
             'status_html'  => $statusHtml,
         ]);
     }

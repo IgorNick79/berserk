@@ -2,6 +2,94 @@
     "use strict";
     var root = document.querySelector("[data-battle-sync-root]");
     if (!root || root.dataset.battleUiReady === "true") return;
+    // A single viewport tooltip avoids clipping inside the scrolling InfoPanel.
+    var hintNode = document.createElement('div');
+    hintNode.id = 'battle-stat-tooltip';
+    hintNode.className = 'battle-stat-tooltip';
+    hintNode.setAttribute('role', 'tooltip');
+    hintNode.hidden = true;
+    document.body.appendChild(hintNode);
+    var hintSource = null, hintPinned = false, hintSuppressed = null;
+    function hideHint() {
+        if (hintSource) {
+            hintSource.removeAttribute('aria-describedby');
+            hintSource.setAttribute('aria-expanded', 'false');
+        }
+        hintNode.hidden = true;
+        hintNode.innerHTML = '';
+        hintSource = null;
+        hintPinned = false;
+    }
+    function positionHint() {
+        if (!hintSource || !hintSource.isConnected) { hideHint(); return; }
+        hintNode.style.width = Math.min(360, window.innerWidth - 24) + 'px';
+        hintNode.style.maxHeight = Math.min(360, window.innerHeight - 24) + 'px';
+        var a = hintSource.getBoundingClientRect(), b = hintNode.getBoundingClientRect();
+        hintNode.style.left = Math.max(12, Math.min(a.left + a.width / 2 - b.width / 2, window.innerWidth - b.width - 12)) + 'px';
+        var top = a.top - b.height - 8;
+        if (top < 12) top = a.bottom + 8;
+        hintNode.style.top = Math.max(12, Math.min(top, window.innerHeight - b.height - 12)) + 'px';
+    }
+    function showHint(source) {
+        var content = source.querySelector('.battle-icon-tooltip');
+        if (!content) return;
+        hideHint();
+        hintSource = source;
+        hintNode.innerHTML = content.innerHTML;
+        hintNode.hidden = false;
+        source.setAttribute('aria-describedby', hintNode.id);
+        source.setAttribute('aria-expanded', 'true');
+        positionHint();
+    }
+    function statHint(target) { return target && target.closest ? target.closest('.panel-stat-hint') : null; }
+    root.addEventListener('mouseover', function (event) {
+        var source = statHint(event.target);
+        if (!hintPinned && source && source !== hintSuppressed && source !== hintSource) showHint(source);
+    });
+    root.addEventListener('mouseout', function (event) {
+        var source = statHint(event.target);
+        if (source && !source.contains(event.relatedTarget)) {
+            if (hintSuppressed === source) hintSuppressed = null;
+            if (!hintPinned && !hintNode.contains(event.relatedTarget)) hideHint();
+        }
+    });
+    root.addEventListener('focusin', function (event) {
+        var source = statHint(event.target);
+        if (!hintPinned && source && source !== hintSuppressed) showHint(source);
+    });
+    root.addEventListener('focusout', function (event) {
+        if (!hintPinned && statHint(event.target)) hideHint();
+    });
+    hintNode.addEventListener('mouseleave', function () { if (!hintPinned) hideHint(); });
+    document.addEventListener('click', function (event) {
+        var source = statHint(event.target);
+        if (source && !root.contains(source)) source = null;
+        if (hintPinned) {
+            hintSuppressed = source;
+            hideHint();
+            if (source) { event.preventDefault(); event.stopImmediatePropagation(); }
+            return;
+        }
+        if (source) {
+            event.preventDefault(); event.stopImmediatePropagation();
+            hintSuppressed = null;
+            showHint(source); hintPinned = true;
+        } else if (hintSource) hideHint();
+    }, true);
+    root.addEventListener('keydown', function (event) {
+        var source = statHint(event.target);
+        if (!source || (event.key !== 'Enter' && event.key !== ' ')) return;
+        event.preventDefault(); event.stopPropagation();
+        if (hintPinned) { hintSuppressed = source; hideHint(); }
+        else { hintSuppressed = null; showHint(source); hintPinned = true; }
+    });
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && hintSource) { hintSuppressed = hintSource; hideHint(); }
+    });
+    window.addEventListener('resize', function () { if (hintSource) positionHint(); });
+    document.addEventListener('scroll', function () { if (hintSource) positionHint(); }, true);
+    new MutationObserver(function () { if (hintSource && !hintSource.isConnected) hideHint(); })
+        .observe(root, {childList: true, subtree: true});
     root.addEventListener('contextmenu', function (event) {
         if (event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), .debug-panel, [data-allow-copy]')) return;
         event.preventDefault();
