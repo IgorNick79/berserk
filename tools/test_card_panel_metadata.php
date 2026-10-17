@@ -33,7 +33,7 @@ try {
 
         battleSnapshotAssert(strpos($html, 'panel-card-title') < strpos($html, 'panel-card-preview'), 'Title above artwork');
         battleSnapshotAssert(str_contains($html, '/assets/images/element/mountains.png'), 'Element icon uses new directory');
-        battleSnapshotAssert(str_contains($html, 'panel-card-class') && str_contains($html, 'Эльф, Воин'), 'Class over artwork');
+        battleSnapshotAssert(str_contains($html, 'panel-card-class') && str_contains($html, 'Эльф, Воин'), 'Class next to title');
         foreach (['common','uncommon','rare','ultrarare'] as $rarity) {
             $cardsInfo[$card->ukid]['rarity']=$rarity;
             battleSnapshotAssert(str_contains($render(), '/assets/images/rarity/s1_'.$rarity.'.png'), 'Rarity follows database value');
@@ -47,7 +47,7 @@ try {
         $cardsInfo[$card->ukid]['rarity']='../bad';
         battleSnapshotAssert(!str_contains($render(), '/assets/images/rarity/'), 'Invalid rarity omitted');
         unlink($path);
-        battleSnapshotAssert(!str_contains($render(), 'panel-card-class') && !str_contains($render(), 'panel-card-preview'), 'Absent preview leaves no floating badge');
+        battleSnapshotAssert(str_contains($render(), 'panel-card-class') && !str_contains($render(), 'panel-card-preview'), 'Class remains in heading without preview');
         echo "Card panel metadata tests passed.\n";
     }
 } finally {

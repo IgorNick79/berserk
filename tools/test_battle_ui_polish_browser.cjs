@@ -53,7 +53,16 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  await page.waitForFunction(()=>[...document.querySelectorAll('.panel-stat-icon')].every(i=>i.complete&&i.naturalWidth>0&&!i.hidden));
  assert(await page.locator('.panel-stat-icon').first().getAttribute('src')==='/assets/images/rarity/s1_rare.png','Rarity path follows set and value');
  assert(await page.locator('.panel-stat-icon').last().getAttribute('src')==='/assets/images/element/mountains.png','New element directory');
- assert(await page.locator('.panel-card-class').evaluate(e=>{const badge=e.getBoundingClientRect(),img=e.closest('.panel-card-preview').getBoundingClientRect(),title=document.querySelector('.panel-card-title').getBoundingClientRect();return title.bottom<=img.top&&badge.top>=img.top&&badge.bottom<=img.bottom&&Math.abs(badge.x+badge.width/2-img.x-img.width/2)<1;}),'Title above preview and centered class inside top of artwork');
+ assert(await page.locator('.panel-card-class').evaluate(e=>{const c=e.getBoundingClientRect(),title=e.parentElement.querySelector('.panel-card-title').getBoundingClientRect();return e.parentElement.classList.contains('panel-card-heading')&&c.left>=title.right&&getComputedStyle(e).position==='static';}),'Class is plain text to right of title');
+ assert(await page.locator('.panel-card-cost img').evaluate(e=>e.getBoundingClientRect().width===32),'Larger crystal');
+ assert(await page.locator('.panel-card-cost').evaluate(e=>getComputedStyle(e).fontSize==='14px'),'Smaller price');
+ for(const hint of await page.locator('.panel-stat-hint').all()) {
+ assert(await hint.locator('img').evaluate(e=>e.getBoundingClientRect().width===28&&!e.hasAttribute('title')),'Larger stat icon without native title');
+ await hint.hover();await page.waitForTimeout(250);
+ assert(await hint.locator('.battle-icon-tooltip').evaluate(e=>{const r=e.getBoundingClientRect();return getComputedStyle(e).opacity==='1'&&r.left>=0&&r.right<=innerWidth;}),'Custom tooltip visible inside viewport');
+ await hint.focus();await page.keyboard.press('Tab');
+ }
+
 
  data.get(4).panel_html=descriptionPanel;
  await update(4);

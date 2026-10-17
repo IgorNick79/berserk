@@ -1,9 +1,10 @@
 <div class="panel-card-heading">
     <span class="panel-card-cost" aria-label="Стоимость: {{price}}">
-        <img src="{{cost_icon_url}}" alt="{{cost_icon_label}}" title="{{cost_icon_label}}" width="24" height="24">
+        <img src="{{cost_icon_url}}" alt="{{cost_icon_label}}" width="32" height="32">
         <span>{{price}}</span>
     </span>
     <h3 class="panel-card-title">{{name}}</h3>
+    {{class_html}}
 </div>
 {{image_html}}
 <div class="panel-card-stats" aria-label="Характеристики карты">

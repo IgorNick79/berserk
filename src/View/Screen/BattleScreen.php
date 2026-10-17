@@ -773,8 +773,7 @@ final class BattleScreen
                 'preview_url' => '/assets/cards/s1/' . rawurlencode($c->ukid) . '.webp',
                 'original_url' => '/assets/cards/s1/original/' . rawurlencode($c->ukid) . '.png',
                 'name' => htmlspecialchars($info['name'], ENT_QUOTES),
-                'class_html' => trim((string) ($info['class'] ?? implode(', ', $c->classes))) !== ''
-                    ? '<span class="panel-card-class">' . htmlspecialchars(trim((string) ($info['class'] ?? implode(', ', $c->classes))), ENT_QUOTES) . '</span>' : '',
+
 
             ]);
         }
@@ -1043,6 +1042,8 @@ final class BattleScreen
             'cost_icon_label' => (!empty($info['elite']) ? 'Элитная' : 'Обычная') . (!empty($info['single']) ? ', уникальная' : ''),
             'price' => (int) ($info['price'] ?? $c->price),
             'name'         => htmlspecialchars($info['name'], ENT_QUOTES),
+            'class_html' => trim((string) ($info['class'] ?? implode(', ', $c->classes))) !== ''
+                    ? '<span class="panel-card-class">' . htmlspecialchars(trim((string) ($info['class'] ?? implode(', ', $c->classes))), ENT_QUOTES) . '</span>' : '',
             'description_html' => \Berserk\View\Ui\CardDescription::render((string) ($info['descr'] ?? '')),
             'mode_buttons' => $modeButtons,
             'hp'           => $c->hp,

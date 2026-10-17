@@ -2062,12 +2062,19 @@ body.battle-page {
 
 .battle-page .battle-selected-card .panel-card-title { margin: 0; padding: 12px; font-size: 18px; line-height: 1.3; overflow-wrap: anywhere; }
 .battle-page .panel-card-stats { align-items: center; }
-.panel-stat-icon { display: block; flex: 0 0 22px; width: 22px; height: 22px; object-fit: contain; }
+.panel-stat-icon { display: block; flex: 0 0 28px; width: 28px; height: 28px; object-fit: contain; }
 .panel-stat-icon[hidden] { display: none; }
 .battle-page .panel-card-preview { position: relative; }
-.battle-page .panel-card-class { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); box-sizing: border-box; max-width: calc(100% - 20px); padding: 4px 10px; border-radius: 5px; background: rgba(15, 18, 23, .72); color: #fff; font: 600 12px/1.35 system-ui, sans-serif; text-align: center; overflow-wrap: anywhere; pointer-events: none; }
+.battle-page .panel-card-class { flex: 0 1 auto; min-width: 0; max-width: 40%; font: 400 12px/1.35 system-ui, sans-serif; color: #666; text-align: right; overflow-wrap: anywhere; }
 
 .battle-page .panel-card-heading { display: flex; align-items: center; gap: 9px; padding: 12px; }
 .battle-page .panel-card-heading .panel-card-title { flex: 1 1 auto; min-width: 0; padding: 0; }
-.panel-card-cost { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.panel-card-cost img { display: block; width: 24px; height: 24px; object-fit: contain; }
+.panel-card-cost { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.panel-card-cost img { display: block; width: 32px; height: 32px; object-fit: contain; }
+
+.battle-page .panel-card-stats { position: relative; }
+.panel-stat-hint { display: inline-flex; flex: 0 0 28px; align-items: center; justify-content: center; }
+.panel-stat-hint[hidden] { display: none; }
+.panel-stat-hint:focus-visible { outline: 2px solid #bd8f46; outline-offset: 3px; border-radius: 3px; }
+.panel-stat-hint .battle-icon-tooltip { left: 8px; right: 8px; bottom: calc(100% + 8px); transform: translateY(4px); white-space: normal; text-align: center; }
+.panel-stat-hint:hover .battle-icon-tooltip, .panel-stat-hint:focus-visible .battle-icon-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
