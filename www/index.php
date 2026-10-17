@@ -424,13 +424,15 @@ function buildRenderCardInfo(Db $db, GameState $state): array
         $rows = $db->fetchAll(
             "SELECT ukid, name, price, health, move, elite,
                     strike_weak, strike_medium, strike_strong,
-                    element_id, descr
+                    element_id, descr, rarity, class
              FROM cards WHERE ukid IN ($in)"
         );
         foreach ($rows as $r) {
             $cardsInfo[$r['ukid']] = [
                 'name'    => $r['name'],
                 'descr'   => (string) ($r['descr'] ?? ''),
+                'rarity'  => (string) ($r['rarity'] ?? ''),
+                'class'   => (string) ($r['class'] ?? ''),
                 'price'   => (int) $r['price'],
                 'health'  => (int) $r['health'],
                 'move'    => (int) $r['move'],

@@ -773,6 +773,9 @@ final class BattleScreen
                 'preview_url' => '/assets/cards/s1/' . rawurlencode($c->ukid) . '.webp',
                 'original_url' => '/assets/cards/s1/original/' . rawurlencode($c->ukid) . '.png',
                 'name' => htmlspecialchars($info['name'], ENT_QUOTES),
+                'class_html' => trim((string) ($info['class'] ?? implode(', ', $c->classes))) !== ''
+                    ? '<span class="panel-card-class">' . htmlspecialchars(trim((string) ($info['class'] ?? implode(', ', $c->classes))), ENT_QUOTES) . '</span>' : '',
+
             ]);
         }
 
@@ -1016,8 +1019,26 @@ final class BattleScreen
             $coinsLine = 'Монеты: ' . $c->coins . ($max > 0 ? ' / ' . $max : '');
         }
 
+        $statIcons = '';
+        $rarity = (string) ($info['rarity'] ?? '');
+        $rarityLabels = ['common' => 'Обычная', 'uncommon' => 'Необычная', 'rare' => 'Редкая', 'ultrarare' => 'Ультраредкая'];
+        if (isset($rarityLabels[$rarity]) && preg_match('/\As([0-9]+)_/', $c->ukid, $set)) {
+            $statIcons .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
+                'url' => '/assets/rarity/s' . $set[1] . '_' . $rarity . '.png',
+                'label' => 'Редкость: ' . $rarityLabels[$rarity],
+            ]);
+        }
+        $elementIcon = $this->elementIconPath($c);
+        if ($elementIcon !== null) {
+            $statIcons .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
+                'url' => $elementIcon,
+                'label' => htmlspecialchars('Стихия: ' . ($info['element'] ?? $c->element), ENT_QUOTES),
+            ]);
+        }
+
         return $this->tpl->parse('includes/battle/panel.tpl', [
             'image_html'   => $imgHtml,
+            'stat_icons_html' => $statIcons,
             'name'         => htmlspecialchars($info['name'], ENT_QUOTES),
             'description_html' => \Berserk\View\Ui\CardDescription::render((string) ($info['descr'] ?? '')),
             'mode_buttons' => $modeButtons,
@@ -1157,12 +1178,12 @@ final class BattleScreen
     private function elementIconPath(CardInstance $card): ?string
     {
         return match ($card->element) {
-            'plains' => '/assets/images/element-plains.png',
-            'mountains' => '/assets/images/element-mountains.png',
-            'forests' => '/assets/images/element-forests.png',
-            'swamps' => '/assets/images/element-swamps.png',
-            'dark' => '/assets/images/element-dark.png',
-            'neutral' => '/assets/images/element-neutral.png',
+            'plains' => '/assets/images/element/plains.png',
+            'mountains' => '/assets/images/element/mountains.png',
+            'forests' => '/assets/images/element/forests.png',
+            'swamps' => '/assets/images/element/swamps.png',
+            'dark' => '/assets/images/element/dark.png',
+            'neutral' => '/assets/images/element/neutral.png',
             default => null,
         };
     }

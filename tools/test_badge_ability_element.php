@@ -46,7 +46,7 @@ $conditional = Badge::forCard(badgeCard([
 ]), $state);
 badgeAssert(str_contains($conditional, 'marker-conditional-strike'), 'Conditional element ability should use a conditional strike badge');
 badgeAssert(str_contains($conditional, 'удар +1'), 'Conditional element ability should show the strike value');
-badgeAssert(str_contains($conditional, '/assets/images/element-mountains.png'), 'Conditional element ability should show the element icon');
+badgeAssert(str_contains($conditional, '/assets/images/element/mountains.png'), 'Conditional element ability should show the element icon');
 badgeAssert(str_contains($conditional, 'alt="по горным"'), 'Conditional element ability should label the element icon');
 badgeAssert(!str_contains($conditional, 'marker-strike'), 'Conditional element ability should not also render as a permanent strike badge');
 

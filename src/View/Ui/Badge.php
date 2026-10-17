@@ -24,12 +24,12 @@ final class Badge
     ];
 
     private const ELEMENT_ICONS = [
-        'plains'    => '/assets/images/element-plains.png',
-        'mountains' => '/assets/images/element-mountains.png',
-        'forests'   => '/assets/images/element-forests.png',
-        'swamps'    => '/assets/images/element-swamps.png',
-        'dark'      => '/assets/images/element-dark.png',
-        'neutral'   => '/assets/images/element-neutral.png',
+        'plains'    => '/assets/images/element/plains.png',
+        'mountains' => '/assets/images/element/mountains.png',
+        'forests'   => '/assets/images/element/forests.png',
+        'swamps'    => '/assets/images/element/swamps.png',
+        'dark'      => '/assets/images/element/dark.png',
+        'neutral'   => '/assets/images/element/neutral.png',
     ];
 
     private const MARKER_NAMES = [

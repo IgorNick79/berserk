@@ -39,10 +39,19 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  assert(await page.evaluate(()=>[...document.querySelectorAll('.battle-grave,.battle-exile')].every(slot=>{const n=Number(slot.querySelector('.piles-count').textContent),control=slot.querySelector('.pile-open');return n===0?control.tagName==='BUTTON'&&control.disabled&&!control.hasAttribute('href'):control.tagName==='A'&&!!control.getAttribute('href');})), 'Empty zones disabled; nonempty zones retain links');
  const descriptionPanel=JSON.parse(execFileSync(process.env.PHP_BINARY||'php',[repo+'/tools/test_card_description_ui.php','--panel'],{encoding:'utf8'}));
  const savedPanel=data.get(4).panel_html;
+ const metadataPanel=JSON.parse(execFileSync(process.env.PHP_BINARY||'php',[repo+'/tools/test_card_panel_metadata.php','--panel'],{encoding:'utf8'}));
+ data.get(4).panel_html=metadataPanel;
+ await page.route('https://battle.test/assets/cards/s1/*.webp',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250"/>'}));
+ await update(4);
+ assert(await page.locator('.panel-stat-icon').count()===2,'Rarity and element icons present');
+ assert(await page.locator('.panel-stat-icon').first().getAttribute('src')==='/assets/rarity/s1_rare.png','Rarity path follows set and value');
+ assert(await page.locator('.panel-stat-icon').last().getAttribute('src')==='/assets/images/element/mountains.png','New element directory');
+ assert(await page.locator('.panel-card-class').evaluate(e=>{const badge=e.getBoundingClientRect(),img=e.closest('.panel-card-preview').getBoundingClientRect(),title=document.querySelector('.panel-card-title').getBoundingClientRect();return title.bottom<=img.top&&badge.top>=img.top&&badge.bottom<=img.bottom&&Math.abs(badge.x+badge.width/2-img.x-img.width/2)<1;}),'Title above preview and centered class inside top of artwork');
+
  data.get(4).panel_html=descriptionPanel;
  await update(4);
  assert(await page.locator('.panel-card-description .card-description-icon').count()===4,'Description icons survive snapshot composition');
- assert(await page.locator('.panel-card-description').evaluate(e=>e.previousElementSibling.tagName==='H3'&&e.scrollWidth<=e.clientWidth), 'Description below name fits panel');
+ assert(await page.locator('.panel-card-description').evaluate(e=>e.closest('.battle-selected-card').querySelector('.panel-card-title')&&e.scrollWidth<=e.clientWidth), 'Description below name fits panel');
  assert(await page.locator('.panel-card-description').evaluate(e=>e.tagName==='DETAILS'&&!e.open),'Description collapsed initially');
  const chevronClosed=await page.locator('.description-chevron').evaluate(e=>getComputedStyle(e).transform);
  await page.locator('.panel-card-description > summary').click();

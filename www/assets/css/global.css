@@ -2059,3 +2059,10 @@ body.battle-page {
 }
 .solomon-stack__select { display: flex; align-items: center; gap: 6px; padding: 6px 0; cursor: pointer; }
 @media (max-width: 600px) { .solomon-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } }
+
+.battle-page .battle-selected-card .panel-card-title { margin: 0; padding: 12px; font-size: 18px; line-height: 1.3; overflow-wrap: anywhere; }
+.battle-page .panel-card-stats { align-items: center; }
+.panel-stat-icon { display: block; flex: 0 0 22px; width: 22px; height: 22px; object-fit: contain; }
+.panel-stat-icon[hidden] { display: none; }
+.battle-page .panel-card-preview { position: relative; }
+.battle-page .panel-card-class { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); box-sizing: border-box; max-width: calc(100% - 20px); padding: 4px 10px; border-radius: 5px; background: rgba(15, 18, 23, .72); color: #fff; font: 600 12px/1.35 system-ui, sans-serif; text-align: center; overflow-wrap: anywhere; pointer-events: none; }

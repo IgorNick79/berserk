@@ -141,12 +141,12 @@ $html = $screen->prepare($state, GameState::PLAYER_HOST, 'host', null, $cardsInf
 
 battleCardVisualAssert(
     str_contains($html['field_html'], 'class="battle-card__icon"')
-        && str_contains($html['field_html'], '/assets/images/element-plains.png')
-        && str_contains($html['field_html'], '/assets/images/element-forests.png'),
+        && str_contains($html['field_html'], '/assets/images/element/plains.png')
+        && str_contains($html['field_html'], '/assets/images/element/forests.png'),
     'Field cards should render element icons for visible own and enemy cards.'
 );
 battleCardVisualAssert(
-    str_contains($html['fly_zones_html'], '/assets/images/element-mountains.png'),
+    str_contains($html['fly_zones_html'], '/assets/images/element/mountains.png'),
     'Flying cards should render element icons.'
 );
 battleCardVisualAssert(
@@ -159,7 +159,7 @@ battleCardVisualAssert(
     'Element icons should use CardInstance element codes, not localized card info labels.'
 );
 battleCardVisualAssert(
-    !str_contains($html['field_html'], '/assets/images/element-dark.png'),
+    !str_contains($html['field_html'], '/assets/images/element/dark.png'),
     'Hidden enemy cards should not reveal their element icon.'
 );
 battleCardVisualAssert(
@@ -179,13 +179,13 @@ battleCardVisualAssert(
     'Multiple card badges, armor, and coins should remain rendered.'
 );
 battleCardVisualAssert(
-    !str_contains($html['field_html'], '/assets/images/element-unknown.png'),
+    !str_contains($html['field_html'], '/assets/images/element/unknown.png'),
     'Unknown element codes should not render an icon.'
 );
 battleCardVisualAssert(
     str_contains($html['fly_zones_html'], '???')
         && !str_contains($html['fly_zones_html'], 'Скрытый летун тьмы')
-        && !str_contains($html['fly_zones_html'], '/assets/images/element-dark.png')
+        && !str_contains($html['fly_zones_html'], '/assets/images/element/dark.png')
         && !str_contains($html['fly_zones_html'], '<div class="barmor">6</div>')
         && !str_contains($html['fly_zones_html'], '<div class="bcoins">8</div>'),
     'Hidden flying enemy cards should not reveal name, element icon, armor, or coins.'
