@@ -464,17 +464,17 @@ $cardsInfo['extra_forest'] = ['name' => 'Extra Forest', 'price' => 1, 'health' =
 $elementLabels = ['plains' => 'Степи', 'forests' => 'Леса'];
 
 $data = viewScreenData($elementState, $cardsInfo, $elementLabels);
-assertTrue(str_contains($data['bottom_panel_html'], 'Степи: <b>2</b>'), 'View bottom panel should count plains in current deck');
+assertTrue(str_contains($data['panel_summary_html'], 'aria-label="Степи: 2"'), 'View bottom panel should count plains in current deck');
 $processor = new PrepareProcessor($elementState);
 $result = $processor->moveViewCardToSideboard(GameState::PLAYER_HOST, new Command('view_to_sideboard', ['card_id' => $plainsCard->instanceId]));
 assertTrue($result->success, $result->error ?? 'Element counter setup should allow sideboard move');
 $data = viewScreenData($elementState, $cardsInfo, $elementLabels);
-assertTrue(str_contains($data['bottom_panel_html'], 'Степи: <b>1</b>'), 'View element count should decrease after deck to sideboard');
+assertTrue(str_contains($data['panel_summary_html'], 'aria-label="Степи: 1"'), 'View element count should decrease after deck to sideboard');
 $result = $processor->moveViewCardToDeck(GameState::PLAYER_HOST, new Command('view_to_deck', ['card_id' => $plainsCard->instanceId]));
 assertTrue($result->success, $result->error ?? 'Element counter setup should allow sideboard return');
 $data = viewScreenData($elementState, $cardsInfo, $elementLabels);
-assertTrue(str_contains($data['bottom_panel_html'], 'Степи: <b>2</b>'), 'View element count should increase after sideboard to deck');
-assertTrue(!str_contains($data['bottom_panel_html'], 'plains'), 'View element badges should use labels, not internal codes');
+assertTrue(str_contains($data['panel_summary_html'], 'aria-label="Степи: 2"'), 'View element count should increase after sideboard to deck');
+assertTrue(str_contains($data['panel_summary_html'], '/assets/images/element/plains.png'), 'View uses the plains icon with a localized accessible hint');
 
 $state = draftViewState($minDeckSize + 2, 130);
 $hostCards = $state->getCardsInZone(GameState::PLAYER_HOST, CardInstance::ZONE_DECK);

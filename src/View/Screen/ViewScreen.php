@@ -120,7 +120,7 @@ final class ViewScreen
             }
 
             if ($sideboardHtml !== '') {
-                $sideboardHtml = '<h2>Сайдборд</h2><div class="cards">' . $sideboardHtml . '</div>';
+                $sideboardHtml = '<section class="pregame-view-group" data-view-group="sideboard" data-view-label="Сайдборд"><div class="cards">' . $sideboardHtml . '</div></section>';
             }
         }
 
@@ -174,15 +174,14 @@ final class ViewScreen
             }
         }
         $panelHtml = $ui->information($selectedCard, $panelCatalog);
-        $bottomPanelHtml = '<div class="prepare-bottom-summary prepare-bottom-summary--stack">'
-            . '<div class="prepare-bottom-row">'
-            . '<span>Колода: <b>' . $deckCount . '</b></span>'
-            . '<span>Сайдборд: <b>' . $sideboardCount . '</b></span>'
-            . ($usesRuntimeDeck ? '<span>Минимум: <b>' . GameSettings::MIN_DECK_SIZE . '</b></span>' : '')
-            . '</div>'
-            . '<div class="prepare-elements">' . $this->elementBadgesHtml($deckInfo['elements'], $elementLabels) . '</div>'
-            . '</div>'
-            . '<div class="prepare-bottom-actions">' . $confirmHtml . '</div>';
+        $panelSummary = '<section class="pregame-pool-stats" aria-label="Статистика колоды">'
+            . '<div class="pregame-pool-totals">Колода: <b>' . $deckCount . '</b> · Сайдборд: <b>' . $sideboardCount . '</b>'
+            . ($usesRuntimeDeck ? ' · Минимум: <b>' . GameSettings::MIN_DECK_SIZE . '</b>' : '') . '</div>'
+            . '<div class="pregame-pool-icons"><div class="pregame-pool-currencies">'
+            . $this->statisticIcon('/assets/images/card/elite.png', 'Золотые карты', (int) $deckInfo['elite'])
+            . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебряные карты', (int) $deckInfo['ordinary'])
+            . '</div><div class="pregame-pool-elements">'
+            . $this->elementBadgesHtml($deckInfo['elements'], $elementLabels) . '</div></div></section>';
 
         return [
             'screen' => 'view',
@@ -194,7 +193,9 @@ final class ViewScreen
                 'elements_html' => $elementsHtml,
                 'cards_html'    => $cardsHtml,
                 'sideboard_html'=> $sideboardHtml,
-                'bottom_panel_html' => $bottomPanelHtml,
+                'bottom_panel_html' => '',
+                'panel_summary_html' => $panelSummary,
+                'panel_actions_html' => '<div class="pregame-view-confirm">' . $confirmHtml . '</div>',
                 'preview_html'  => $previewHtml,
                 'panel_html'    => $panelHtml,
                 'confirm_html'  => $confirmHtml,
@@ -205,16 +206,27 @@ final class ViewScreen
 
     private function elementBadgesHtml(array $elements, array $elementLabels): string
     {
-        $html = '';
+        $names = ['dark' => 'Тьма', 'plains' => 'Степи', 'forests' => 'Леса',
+            'swamps' => 'Болота', 'mountains' => 'Горы', 'neutral' => 'Нейтральная'];
+        $counts = array_fill_keys(array_keys($names), 0);
         foreach ($elements as $code => $count) {
-            if ($count <= 0) continue;
-            $name = ElementLabels::label((string) $code, $elementLabels);
-            $html .= '<span class="prepare-element">'
-                . htmlspecialchars((string) $name, ENT_QUOTES)
-                . ': <b>' . (int) $count . '</b>'
-                . '</span>';
+            if (!isset($counts[$code])) $code = array_search($code, $names, true);
+            if (is_string($code) && isset($counts[$code])) $counts[$code] += (int) $count;
+        }
+        $html = '';
+        foreach ($names as $code => $name) {
+            $html .= $this->statisticIcon('/assets/images/element/' . $code . '.png',
+                ElementLabels::label($code, $elementLabels + $names), $counts[$code]);
         }
         return $html;
+    }
+
+    private function statisticIcon(string $url, string $label, int $count): string
+    {
+        $hint = htmlspecialchars($label . ': ' . $count, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        return '<button type="button" class="pregame-hint pregame-pool-stat" aria-label="' . $hint . '">'
+            . '<img src="' . $url . '" alt="" width="24" height="24"><span>' . $count . '</span>'
+            . '<template data-pregame-hint>' . $hint . '</template></button>';
     }
 
     private function buildFromInstances(array $instances, array $cardsInfo, string $name): ?array

@@ -115,6 +115,15 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
      if (fixture.variant.includes('unlimited')) assert.equal(await page.locator('.draft-timer--unlimited').textContent(), '—:—');
 
     }
+    if (fixture.stage === 'view') {
+     const dimensions = await page.locator('.pregame-main').evaluate(el=>({height:el.clientHeight, scroll:el.scrollHeight}));
+     assert.ok(dimensions.scroll <= dimensions.height + 1, key+' View has no central overflow');
+     assert.equal(await page.locator('.pregame-main .prepare-bottom-bar, .pregame-main a[href*="cmd=confirm_view"]').count(),0);
+     if (fixture.variant !== 'empty') {
+      assert.equal(await page.locator('.pregame-panel-summary .pregame-pool-stat').count(),8);
+      assert.equal(await page.locator('.pregame-panel-footer a[href*="cmd=confirm_view"]').count(),fixture.variant==='waiting'?0:1);
+     }
+    }
     const panel=page.locator('.pregame-info-panel');
     assert.equal((await panel.boundingBox()).width,440,key+' panel width at '+width);
     assert.equal(await page.locator('.pregame-main h1').count(),0,key+' duplicate heading');
@@ -167,6 +176,47 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
    assert.equal(await page.locator('.pregame-card-title').textContent(),viewName);
    await page.goto('https://pregame.test/view-sideboard');
    assert.equal(await page.locator('.pregame-main a[href*="cmd=view_to_deck"]').count(),1);
+   // All View pages remain reachable without scrolling, including on a short desktop.
+   for (const height of [900,450]) {
+    await page.setViewportSize({width,height});
+    await page.goto('https://pregame.test/view-host');
+    const bullets=page.locator('[data-view-pagination] button');
+    assert.ok(await bullets.count()>1,'View has multiple bullet pages');
+    const seen=new Set();
+    for (let i=0;i<await bullets.count();i++) {
+     await bullets.nth(i).click();
+     assert.equal(await bullets.nth(i).getAttribute('aria-current'),'page');
+     const geometry=await page.evaluate(()=>{
+      const main=document.querySelector('.pregame-main'), box=main.getBoundingClientRect();
+      const links=Array.from(document.querySelectorAll('.pregame-view-pages .prepare-card-link')).filter(el=>el.getClientRects().length);
+      return {overflow:main.scrollHeight>main.clientHeight+1,
+       cards:links.map(el=>({id:el.dataset.ukid,top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom})),
+       top:box.top,bottom:box.bottom,nav:document.querySelector('[data-view-pagination]').getBoundingClientRect().bottom};
+     });
+     assert.equal(geometry.overflow,false,'View does not scroll at '+width+'x'+height);
+     assert.ok(geometry.nav<=geometry.bottom && geometry.cards.length>0);
+     for (const card of geometry.cards) {
+      assert.ok(card.top>=geometry.top && card.bottom<=geometry.bottom,'Card fits without clipping');
+      assert.ok(!seen.has(card.id),'Card occurs on exactly one page');
+      seen.add(card.id);
+     }
+    }
+    assert.equal(seen.size,33,'All 32 deck cards and the sideboard are reachable');
+    await bullets.last().press('Home');
+    assert.equal(await bullets.first().getAttribute('aria-current'),'page');
+    await bullets.first().press('End');
+    assert.equal(await bullets.last().getAttribute('aria-current'),'page');
+    await page.getByRole('button',{name:'Тьма: 32',exact:true}).click();
+    assert.ok(await page.locator('.pregame-stat-tooltip').isVisible(),'View element hint');
+    await page.keyboard.press('Escape');
+    await bullets.nth(1).click();
+    const laterCard=page.locator('.pregame-view-pages .prepare-card-link:visible').first();
+    const laterName=await laterCard.locator('.prepare-card__name').textContent();
+    await laterCard.click();
+    assert.equal(await page.locator('.pregame-card-title').textContent(),laterName);
+    assert.equal(await page.locator('.pregame-view-pages .prepare-card--selected:visible').count(),1,'Selected card retains its page after navigation');
+   }
+   await page.setViewportSize({width,height:900});
    await page.goto('https://pregame.test/deal-host');
    const dealLink=page.locator('.pregame-main .cards a').nth(2),dealName=await dealLink.locator('.prepare-card__name').textContent();
    await dealLink.click();

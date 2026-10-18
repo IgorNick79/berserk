@@ -113,7 +113,16 @@ namespace {
         integrationAssert($xp->query('//main//h1')->length===0,'No duplicate stage heading '.$stage);
         $solomonPanel = $stage === 'draft' && $state->settings->isSolomonDraft();
         integrationAssert($xp->query('//aside//form')->length === ($solomonPanel && $state->draft['turn'] === $role ? 1 : 0), 'Solomon decisions in footer only');
-        integrationAssert($xp->query('//aside//a[contains(@href,"cmd=")]')->length===0,'No command links in information');
+        integrationAssert($xp->query('//aside//*[contains(@class,"pregame-panel-content")]//a[contains(@href,"cmd=")]')->length===0,'No command links in information');
+        if ($stage === 'view') {
+            integrationAssert($xp->query('//main//*[contains(@class,"prepare-bottom-bar")]')->length === 0, 'View has no Main bottom bar');
+            integrationAssert($xp->query('//main//*[@data-view-pagination]')->length === 1, 'View page navigation');
+            integrationAssert($xp->query('//main//a[contains(@href,"cmd=confirm_view")]')->length === 0, 'View confirm is not in Main');
+            if ($variant !== 'empty') {
+                integrationAssert($xp->query('//aside//button[contains(@class,"pregame-pool-stat")]')->length === 8, 'View currency and element hints');
+                integrationAssert($xp->query('//footer//a[contains(@href,"cmd=confirm_view")]')->length === ($variant === 'waiting' ? 0 : 1), 'View confirmation in footer');
+            }
+        }
         if ($solomonPanel) {
             integrationAssert($xp->query('//main//*[@class="draft-info"]|//main//*[@class="prepare-bottom-bar"]')->length === 0, 'No obsolete Main summary');
             integrationAssert($xp->query('//aside//button[contains(@class,"pregame-pool-stat")]')->length === 8, 'Six elements and two currencies');

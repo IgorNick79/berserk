@@ -170,3 +170,32 @@ body.pregame-page {
     z-index: 110;
     cursor: pointer;
 }
+
+/* View uses bounded pages rather than scrolling the deck list. */
+.pregame-main:has(.screen-prepare-view) { display: flex; overflow: hidden; background: transparent; }
+.pregame-main .screen-prepare-view {
+    flex: 0 1 auto;
+    width: 100%;
+    max-width: 720px;
+    min-width: 0;
+    margin: auto;
+    padding: 24px;
+    background: url("/assets/images/battle/playmat_default.webp") center / cover no-repeat;
+    border: 1px solid #607b69;
+    border-radius: 12px;
+    box-shadow: 0 10px 36px #0009;
+}
+.screen-prepare-view .flash:empty, .pregame-view-actions:empty { display: none; }
+.pregame-view-heading { margin: 0 0 12px; color: #fff4d6; text-shadow: 0 1px 3px #000; font-size: 16px; }
+.pregame-main .pregame-view-pages .cards { grid-template-columns: repeat(var(--view-columns, 3), minmax(0, 1fr)); gap: 12px; margin: 0; grid-template-rows: repeat(var(--view-rows, 2), var(--view-card-height, 144px)); }
+.pregame-view-pages .prepare-card-link { display: flex; }
+.pregame-view-pages .prepare-card { display: flex; flex-direction: column; height: 100%; }
+.pregame-view-pages .prepare-card__price { margin-top: auto; }
+.pregame-view-pages [hidden] { display: none !important; }
+.pregame-view-pagination { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; margin-top: 14px; min-height: 24px; }
+.pregame-view-pagination button { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.pregame-view-pagination button span { display: block; width: 16px; height: 16px; border-radius: 50%; background: #d8d0c3; border: 1px solid #766848; box-shadow: 0 1px 3px #0006; }
+.pregame-view-pagination button[aria-current="page"] span { background: #917137; border-color: #fff4d6; box-shadow: 0 0 0 2px #fff4d6; }
+.pregame-view-pagination button:hover span { transform: scale(1.15); }
+.pregame-view-actions:not(:empty) { margin-top: 12px; }
+.pregame-view-confirm .wait { margin: 0; }
