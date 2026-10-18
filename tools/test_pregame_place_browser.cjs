@@ -31,7 +31,7 @@ const fixture=path.join(root,'tools/test_pregame_place_fixture.php');
   assert.equal(await page.locator('.pregame-place-list .prepare-card-link').count(),2);
   assert.deepEqual(await page.locator('.pregame-place-row-number').allTextContents(),['I','II','III']);
   assert.deepEqual(await page.locator('.pregame-place-columns').first().locator('span').allTextContents(),['1','2','3','4','5']);
-  assert.deepEqual(await page.locator('.pregame-place-field .field-cell').first().evaluate(el=>[el.offsetWidth,el.offsetHeight]),[102,102]);
+  assert.deepEqual(await page.locator('.pregame-place-field .field-cell').first().evaluate(el=>[el.offsetWidth,el.offsetHeight]),[112,112]);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
   const ownId=role==='host'?1:3,foreignId=role==='host'?3:1;
   const open=async id=>{
@@ -62,12 +62,18 @@ const fixture=path.join(root,'tools/test_pregame_place_fixture.php');
   // Two fast clicks must not duplicate a command.
   const before=steps.length;delayNext=true;
   await page.locator('.field-cell.allowed .cell-link').first().dblclick();
-  await page.waitForSelector('.pregame-place-actions a[href*="cmd=unplace_card"]');
+  await page.waitForSelector('.pregame-place-list');
   await page.waitForFunction(()=>!document.querySelector('.pregame-layout').hasAttribute('aria-busy'));
   assert.equal(steps.length,before+1);
   assert.equal(await page.locator('.pregame-place-field .placed').count(),1);
   assert.equal(await page.evaluate(()=>window.placementDocumentIdentity),'same-document');
   assert.equal(navigations,startNavigations,'Selection and placement use fetch');
+  // Placement closes the preview; a placed card can still be opened for removal.
+  assert.equal(await page.locator('[data-place-close]').count(),0);
+  assert.equal(await page.locator('.pregame-place-list .prepare-card-link').count(),1);
+  await page.locator('.pregame-place-field .placed .prepare-card-link').click();
+  await page.waitForSelector('.pregame-place-actions a[href*="cmd=unplace_card"]');
+  await page.waitForFunction(()=>!document.querySelector('.pregame-layout').hasAttribute('aria-busy'));
   // A lost response after committing removal must not replay it during recovery.
   dropNext=true;const removeBefore=steps.filter(step=>step.cmd==='unplace_card').length;
   await page.locator('.pregame-place-actions a[href*="cmd=unplace_card"]').click();
@@ -80,9 +86,9 @@ const fixture=path.join(root,'tools/test_pregame_place_fixture.php');
   await close();
   for(const id of [ownId,ownId+1]){
    await open(id);await page.locator('.field-cell.allowed .cell-link').first().click();
-   await page.waitForSelector('.pregame-place-actions a[href*="cmd=unplace_card"]');
+   await page.waitForSelector('.pregame-place-list');
    await page.waitForFunction(()=>!document.querySelector('.pregame-layout').hasAttribute('aria-busy'));
-   await close();
+   assert.equal(await page.locator('[data-place-close]').count(),0);
   }
   assert.equal(await page.locator('.pregame-panel-footer a[href*="cmd=confirm_place"]').count(),1);
   await page.locator('.pregame-panel-footer a[href*="cmd=confirm_place"]').click();

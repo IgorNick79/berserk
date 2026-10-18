@@ -240,7 +240,8 @@ body.pregame-page {
 .pregame-main:has([data-place-screen]) { display: flex; background: transparent; }
 .pregame-main .screen-prepare-place { display: flex; flex-direction: column; align-items: safe center; justify-content: safe center; width: 100%; min-width: 0; min-height: 0; }
 .screen-prepare-place .flash:empty { display: none; }
-.pregame-place-field.place-field { --battle-cell-size: 102px; width: max-content; max-width: none; flex: 0 0 auto; margin: 0; padding: 18px 16px 18px 44px; background: url("/assets/images/battle/playmat_default.webp") center / cover no-repeat; border: 1px solid #607b69; border-radius: 12px; box-shadow: 0 10px 36px #0009; }
+.pregame-place-field.place-field { --battle-cell-size: 112px; width: max-content; max-width: none; flex: 0 0 auto; margin: 0; padding: 28px 26px; background: url("/assets/images/battle/playmat_default.webp") center / cover no-repeat; border: 1px solid #607b69; border-radius: 12px; box-shadow: 0 10px 36px #0009; }
+.pregame-place-grid { padding: 14px 14px 14px 48px; background: rgba(11, 25, 20, .32); border-radius: 8px; }
 .pregame-place-columns, .pregame-place-field .field-row { display: grid; grid-template-columns: repeat(5, var(--battle-cell-size)); gap: 4px; }
 .pregame-place-columns { color: #fff4d6; text-shadow: 0 1px 3px #000; text-align: center; font-size: 12px; line-height: 20px; }
 .pregame-place-field .field-row { position: relative; margin: 4px 0; }

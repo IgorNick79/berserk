@@ -1114,7 +1114,7 @@ if ($commandType !== '') {
             $redirectUrl .= '&sel=' . (int) $_GET['sel'];
         }
         if (isset($_GET['card']) && $_GET['card'] !== '') {
-            $redirectUrl .= '&card=' . urlencode((string) $_GET['card']);
+            $redirectUrl .= '&card=' . ($commandType === 'place_card' ? '0' : urlencode((string) $_GET['card']));
         }
 
         if (isset($_GET['pile']) && $_GET['pile'] !== '') {

@@ -31,6 +31,8 @@ foreach ($steps as $step) {
         default => throw new RuntimeException('Unexpected placement fixture command'),
     };
 }
+// Mirror the successful placement PRG: return to the unplaced cards list.
+if (($_GET['cmd'] ?? '') === 'place_card' && $last !== null && $last->success) $_GET['card'] = '0';
 $screenName = $state->status;
 if ($screenName === 'place') {
     $tpl = new Template(__DIR__ . '/../templates');
