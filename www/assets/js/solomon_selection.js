@@ -55,6 +55,7 @@
         });
     });
     var root = stack.closest('.pregame-layout');
+    var historyReturn = null;
     root.addEventListener('click', function (event) {
         var action = event.target.closest('[data-solomon-panel-action]');
         if (action && !action.disabled) {
@@ -68,6 +69,20 @@
         var historyEntry = event.target.closest('.pregame-history-entry .prepare-card-link');
         var content = root.querySelector('.pregame-panel-content');
         if (historyControl) {
+            if (historyControl.getAttribute('aria-pressed') === 'true' && historyReturn) {
+                content.replaceChildren.apply(content, historyReturn.nodes);
+                content.dataset.pregameContent = historyReturn.kind;
+                content.scrollTop = historyReturn.scroll;
+                historyControl.setAttribute('aria-pressed', 'false');
+                historyReturn = null;
+                update();
+                return;
+            }
+            historyReturn = {
+                nodes: Array.from(content.childNodes).map(function (node) { return node.cloneNode(true); }),
+                kind: content.dataset.pregameContent,
+                scroll: content.scrollTop
+            };
             content.replaceChildren(root.querySelector('[data-solomon-history-content]').content.cloneNode(true));
             content.dataset.pregameContent = 'history';
             content.scrollTop = 0;

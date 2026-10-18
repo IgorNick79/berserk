@@ -38,6 +38,7 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
     }
     return route.fulfill({body:fixture.html,contentType:'text/html; charset=utf-8'});
    });
+   let solomonGeometry = null;
    for(const [key,fixture] of Object.entries(fixtures)) {
     await page.goto('https://pregame.test/'+key);
     const css = await page.locator('link[href*="/assets/css/pregame.css"]').getAttribute('href');
@@ -60,14 +61,14 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
       const count=document.querySelector('.pregame-selection-count');
       const decisions=document.querySelector('.pregame-footer-decisions');
       const tooltip=document.querySelector('.pregame-history-tooltip').getBoundingClientRect();
-      const footer=document.querySelector('.pregame-draft-footer').getBoundingClientRect();
+      const footer=document.querySelector('.pregame-history-control').getBoundingClientRect();
       return {
        hidden:getComputedStyle(content).scrollbarWidth === 'none',
        gap:getComputedStyle(document.querySelector('.pregame-pool-stat')).gap,
        groups:getComputedStyle(document.querySelector('.pregame-pool-icons')).justifyContent,
        after:!count || decisions.getBoundingClientRect().right <= count.getBoundingClientRect().left,
        centered:Math.abs(rect.x+rect.width/2-main.x-main.width/2)<1,
-       compact:rect.width<=660 && rect.height<main.height,
+       compact:rect.width<=720 && rect.height<main.height,
        mat:getComputedStyle(mat).backgroundImage,
        hintCentered:Math.abs(tooltip.x+tooltip.width/2-footer.x-footer.width/2)<1
       };
@@ -76,6 +77,17 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
      assert.equal(layoutPolish.gap, '4px');
      assert.equal(layoutPolish.groups, 'space-between');
      assert.ok(layoutPolish.mat.includes('playmat_default.webp'));
+     if (fixture.variant === 'solomon') {
+      const geometry = await page.evaluate(()=>{
+       const mat=document.querySelector('.screen-draft--solomon').getBoundingClientRect();
+       const card=document.querySelector('.solomon-stack__card').getBoundingClientRect();
+       const link=document.querySelector('.solomon-stack__card .prepare-card-link').getBoundingClientRect();
+       return [mat.height, card.height, link.y-card.y];
+      });
+      if (solomonGeometry) assert.deepEqual(geometry, solomonGeometry, 'Turn change preserves card and selection-slot heights');
+      solomonGeometry = geometry;
+     }
+
 
      assert.equal(await stats.locator(':scope > :first-child').getAttribute('class'), 'pregame-pool-totals');
      assert.match(await stats.locator('.pregame-pool-stat').nth(0).getAttribute('aria-label'), /^Золотые/);
@@ -187,6 +199,10 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
    assert.equal(await page.locator('[data-solomon-selected]').textContent(),'2','Selection survives reload');
    await page.getByRole('button',{name:'История выбора',exact:true}).click();
    assert.equal(await page.locator('.pregame-panel-content').getAttribute('data-pregame-content'),'history');
+   await page.locator('[data-solomon-history]').click();
+   assert.equal(await page.locator('.pregame-panel-content').getAttribute('data-pregame-content'),'card');
+   assert.equal(await page.locator('[data-solomon-history]').getAttribute('aria-pressed'),'false');
+   await page.locator('[data-solomon-history]').click();
    assert.equal(await page.locator('.pregame-panel-summary .pregame-pool-stat').count(),8,'Statistics remain visible');
    const historyLink=page.locator('.pregame-history-entry .prepare-card-link').first();
    const historyName=await historyLink.locator('.prepare-card__name').textContent();

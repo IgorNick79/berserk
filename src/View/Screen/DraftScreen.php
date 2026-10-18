@@ -108,8 +108,10 @@ final class DraftScreen
             foreach ($draft['grid'] as $position => $ukid) {
                 $info = $cardsInfo[$ukid] ?? ['name' => $ukid, 'strike' => []];
                 $gridHtml .= '<div class="solomon-stack__card" data-solomon-position="' . (int) $position . '">'
+                    . '<div class="solomon-stack__selection">'
                     . ($isMyTurn ? '<label class="solomon-stack__select"><input type="checkbox" name="positions[]" value="' . (int) $position
                         . '" form="solomon-decision"><span>Выбрать</span></label>' : '')
+                    . '</div>'
                     . $ui->card(['ukid' => $ukid, 'info' => $info, 'link' => $baseUrl . '&card=' . (int) $position
                         . '&card_ukid=' . rawurlencode($ukid) . '&card_version=' . $state->version])
                     . '<template data-solomon-preview>' . $ui->information(['ukid' => $ukid], $cardsInfo) . $cardActionsHtml . '</template></div>';
@@ -169,7 +171,7 @@ final class DraftScreen
         $timerHtml = $this->timerHtml($state, $playerKey, $now);
         $historyHtml = $this->historyHtml($state, $playerKey, $cardsInfo, $ui, $isSolomon);
         $scriptHtml = $this->scriptHtml($state, $syncUrl, $now);
-        if ($isSolomon) $scriptHtml .= '<script src="/assets/js/solomon_selection.js?v=4" defer></script>';
+        if ($isSolomon) $scriptHtml .= '<script src="/assets/js/solomon_selection.js?v=5" defer></script>';
 
         // ─── Статистика набранного пула ──────────────────
         $myPicked = $draft['picked'][$playerKey] ?? [];
