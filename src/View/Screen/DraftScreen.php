@@ -224,15 +224,17 @@ final class DraftScreen
         $draftInfo = '';
         $draftBottom = '';
         if ($isSolomon) {
-            $panelSummary = '<section class="pregame-pool-stats" aria-label="Статистика выбранного пула">';
+            $panelSummary = '<section class="pregame-pool-stats" aria-label="Статистика выбранного пула">'
+                . '<div class="pregame-pool-totals">Выбрано: <b>' . $totalCount . '</b> · Средняя цена: <b>' . $avgPrice . '</b></div>'
+                . $this->statisticIcon('/assets/images/card/elite.png', 'Золотые карты', $goldCount)
+                . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебряные карты', $silverCount);
             foreach ($elementNames as $code => $label) {
                 $panelSummary .= $this->statisticIcon('/assets/images/element/' . $code . '.png', $label, $elementCodeCounts[$code]);
             }
-            $panelSummary .= $this->statisticIcon('/assets/images/card/elite.png', 'Золотые карты', $goldCount)
-                . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебряные карты', $silverCount)
-                . '<div class="pregame-pool-totals">Выбрано: <b>' . $totalCount . '</b> · Средняя цена: <b>' . $avgPrice . '</b></div></section>';
-            $panelFooter = '<div class="pregame-draft-footer"><div class="pregame-selection-count">Выделено: <b data-solomon-selected>0</b></div>'
-                . '<div class="pregame-footer-decisions">' . $actionsHtml . '</div>'
+            $panelSummary .= '</section>';
+            $panelFooter = '<div class="pregame-draft-footer">'
+                . ($isMyTurn ? '<div class="pregame-selection-count">Выбрано: <b data-solomon-selected>0</b></div>'
+                    . '<div class="pregame-footer-decisions">' . $actionsHtml . '</div>' : '')
                 . '<button type="button" class="pregame-history-control" data-solomon-history aria-label="История выбора" aria-pressed="false" title="История выбора">'
                 . '<img src="/assets/images/battle/game_log_160.png" alt="" width="40" height="40"><span class="pregame-history-tooltip" aria-hidden="true">История выбора</span></button></div>';
         } else {
@@ -279,7 +281,7 @@ final class DraftScreen
     {
         $snapshot = DraftTimer::snapshot($state, $playerKey, $now);
         if (($snapshot['mode'] ?? '') === GameSettings::DRAFT_TIMER_UNLIMITED) {
-            return '<div class="draft-timer draft-timer--unlimited">Без ограничений времени</div>';
+            return '<div class="draft-timer draft-timer--unlimited" role="timer" aria-label="Без ограничений времени">—:—</div>';
         }
 
         $turn = (string) ($snapshot['turn'] ?? '');

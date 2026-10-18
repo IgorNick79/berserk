@@ -51,6 +51,29 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
      assert.equal(await page.locator('.pregame-panel-summary .pregame-pool-stat').count(),8);
      assert.equal(await page.locator('.pregame-panel-footer [data-solomon-panel-action]').count(),0);
      assert.match(await page.locator('.pregame-panel-phase').textContent(), /^Соломон драфт · Пул: /);
+     const stats = page.locator('.pregame-pool-stats');
+     assert.equal(await stats.locator(':scope > :first-child').getAttribute('class'), 'pregame-pool-totals');
+     assert.match(await stats.locator('.pregame-pool-stat').nth(0).getAttribute('aria-label'), /^Золотые/);
+     assert.match(await stats.locator('.pregame-pool-stat').nth(1).getAttribute('aria-label'), /^Серебряные/);
+     assert.equal(await stats.locator('.pregame-pool-totals').evaluate(el=>getComputedStyle(el).fontSize), '13px');
+     const contentBox = await page.locator('.pregame-panel-content').boundingBox();
+     const summaryBox = await stats.boundingBox();
+     const footerBox = await page.locator('.pregame-panel-footer').boundingBox();
+     assert.ok(summaryBox.y >= contentBox.y + contentBox.height - 1 && summaryBox.y + summaryBox.height <= footerBox.y + 1);
+     const decisions = page.locator('#solomon-decision');
+     if (await decisions.count()) {
+      const count = await page.locator('[data-solomon-selected]').boundingBox();
+      for (const button of await decisions.locator('button').all()) {
+       const box = await button.boundingBox();
+       assert.ok(count.y >= box.y && count.y + count.height <= box.y + box.height);
+       assert.equal(await button.evaluate(el=>getComputedStyle(el).flexGrow), '0');
+       assert.equal(await button.evaluate(el=>getComputedStyle(el).paddingTop), '10px');
+      }
+     } else {
+      assert.equal(await page.locator('.pregame-panel-footer [data-solomon-selected], .pregame-panel-footer .wait').count(), 0);
+     }
+     if (fixture.variant.includes('unlimited')) assert.equal(await page.locator('.draft-timer--unlimited').textContent(), '—:—');
+
     }
     const panel=page.locator('.pregame-info-panel');
     assert.equal((await panel.boundingBox()).width,440,key+' panel width at '+width);

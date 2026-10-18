@@ -5,8 +5,8 @@
             <div class="pregame-panel-heading"><h2 class="pregame-panel-title">{{title}}</h2><span class="pregame-panel-phase">{{phase}}</span></div>
             <div class="pregame-panel-timer">{{timer_html}}</div>
         </header>
-        <div class="pregame-panel-summary">{{summary_html}}</div>
         <div class="pregame-panel-content" data-pregame-content="{{content_kind}}" tabindex="0" aria-label="Содержимое информационной панели">{{content_html}}</div>
+        <div class="pregame-panel-summary">{{summary_html}}</div>
         <footer class="pregame-panel-footer">{{footer_html}}</footer>
     </aside>
 </div>

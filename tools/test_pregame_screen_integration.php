@@ -119,7 +119,7 @@ namespace {
             integrationAssert($xp->query('//aside//button[contains(@class,"pregame-pool-stat")]')->length === 8, 'Six elements and two currencies');
             integrationAssert($xp->query('//footer//*[@data-solomon-history]')->length === 1, 'History icon in footer');
             integrationAssert($xp->query('//footer//*[@data-solomon-panel-action]')->length === 0, 'Small actions are not in footer');
-            integrationAssert($xp->query('//footer//*[@data-solomon-selected]')->length === 1, 'Footer selection count');
+            integrationAssert($xp->query('//footer//*[@data-solomon-selected]')->length === ($state->draft['turn'] === $role ? 1 : 0), 'Footer selection count only for active player');
         }
         integrationAssert(!str_contains($shell,'opponent-hidden') && !str_contains($shell,'future-hidden'),'No hidden cards in HTML '.$stage);
         integrationAssert(!str_contains($shell,'battle-sync.js'),'No battle JS');
