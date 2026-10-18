@@ -52,6 +52,31 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
      assert.equal(await page.locator('.pregame-panel-footer [data-solomon-panel-action]').count(),0);
      assert.match(await page.locator('.pregame-panel-phase').textContent(), /^Соломон драфт · Пул: /);
      const stats = page.locator('.pregame-pool-stats');
+     const layoutPolish = await page.evaluate(()=>{
+      const content=document.querySelector('.pregame-panel-content');
+      const main=document.querySelector('.pregame-main').getBoundingClientRect();
+      const mat=document.querySelector('.screen-draft--solomon');
+      const rect=mat.getBoundingClientRect();
+      const count=document.querySelector('.pregame-selection-count');
+      const decisions=document.querySelector('.pregame-footer-decisions');
+      const tooltip=document.querySelector('.pregame-history-tooltip').getBoundingClientRect();
+      const footer=document.querySelector('.pregame-draft-footer').getBoundingClientRect();
+      return {
+       hidden:getComputedStyle(content).scrollbarWidth === 'none',
+       gap:getComputedStyle(document.querySelector('.pregame-pool-stat')).gap,
+       groups:getComputedStyle(document.querySelector('.pregame-pool-icons')).justifyContent,
+       after:!count || decisions.getBoundingClientRect().right <= count.getBoundingClientRect().left,
+       centered:Math.abs(rect.x+rect.width/2-main.x-main.width/2)<1,
+       compact:rect.width<=660 && rect.height<main.height,
+       mat:getComputedStyle(mat).backgroundImage,
+       hintCentered:Math.abs(tooltip.x+tooltip.width/2-footer.x-footer.width/2)<1
+      };
+     });
+     assert.ok(layoutPolish.hidden && layoutPolish.after && layoutPolish.centered && layoutPolish.compact && layoutPolish.hintCentered);
+     assert.equal(layoutPolish.gap, '4px');
+     assert.equal(layoutPolish.groups, 'space-between');
+     assert.ok(layoutPolish.mat.includes('playmat_default.webp'));
+
      assert.equal(await stats.locator(':scope > :first-child').getAttribute('class'), 'pregame-pool-totals');
      assert.match(await stats.locator('.pregame-pool-stat').nth(0).getAttribute('aria-label'), /^Золотые/);
      assert.match(await stats.locator('.pregame-pool-stat').nth(1).getAttribute('aria-label'), /^Серебряные/);

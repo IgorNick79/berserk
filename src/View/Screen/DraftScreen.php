@@ -226,15 +226,17 @@ final class DraftScreen
         if ($isSolomon) {
             $panelSummary = '<section class="pregame-pool-stats" aria-label="Статистика выбранного пула">'
                 . '<div class="pregame-pool-totals">Выбрано: <b>' . $totalCount . '</b> · Средняя цена: <b>' . $avgPrice . '</b></div>'
+                . '<div class="pregame-pool-icons"><div class="pregame-pool-currencies">'
                 . $this->statisticIcon('/assets/images/card/elite.png', 'Золотые карты', $goldCount)
-                . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебряные карты', $silverCount);
+                . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебряные карты', $silverCount)
+                . '</div><div class="pregame-pool-elements">';
             foreach ($elementNames as $code => $label) {
                 $panelSummary .= $this->statisticIcon('/assets/images/element/' . $code . '.png', $label, $elementCodeCounts[$code]);
             }
-            $panelSummary .= '</section>';
+            $panelSummary .= '</div></div></section>';
             $panelFooter = '<div class="pregame-draft-footer">'
-                . ($isMyTurn ? '<div class="pregame-selection-count">Выбрано: <b data-solomon-selected>0</b></div>'
-                    . '<div class="pregame-footer-decisions">' . $actionsHtml . '</div>' : '')
+                . ($isMyTurn ? '<div class="pregame-footer-decisions">' . $actionsHtml . '</div>'
+                    . '<div class="pregame-selection-count">Выбрано: <b data-solomon-selected>0</b></div>' : '')
                 . '<button type="button" class="pregame-history-control" data-solomon-history aria-label="История выбора" aria-pressed="false" title="История выбора">'
                 . '<img src="/assets/images/battle/game_log_160.png" alt="" width="40" height="40"><span class="pregame-history-tooltip" aria-hidden="true">История выбора</span></button></div>';
         } else {
