@@ -66,11 +66,9 @@ $s=reloadState($s); check($s->battle[RangedNeighborTeleport::PENDING]['stage']==
 $picker=CellMarkerPicker::targets($s,'player','?game=153'); check(count($picker)===3,'three free neighbours at corner');
 check(CellMarkerPicker::targets($s,'host','?game=153')===[],'opponent no targets');
 check(CellMarkerPicker::identity($s,'player')!=='','picker identity');
-check(!choose($s,'confirm','1_2')->success,'must select first');
-check(choose($s,'select','1_2')->success,'select cell'); check($s->getCard(3)->row===3,'no teleport before confirmation');
-$s=reloadState($s); check($s->battle[RangedNeighborTeleport::PENDING]['selected']==='1_2','selection reload');
-$id=$s->battle[RangedNeighborTeleport::PENDING]['id'];
-check(choose($s,'confirm','1_2')->success,'confirm teleport'); check($s->getCard(3)->row===1 && $s->getCard(3)->col===2,'moved');
+$s=reloadState($s); $id=$s->battle[RangedNeighborTeleport::PENDING]['id'];
+check(choose($s,'select','1_2')->success,'cell click teleports immediately');
+check($s->getCard(3)->row===1 && $s->getCard(3)->col===2,'moved without confirmation');
 check(!empty($s->getCard(3)->flags['ranged_neighbor_teleport_used']),'spent once');
 check(!choose($s,'confirm','1_2','player',$id)->success,'duplicate rejected');
 $s->battle['turn']++; $s->getCard(1)->closed=false; $s->getCard(2)->row=2; $s->getCard(2)->col=3;
@@ -87,8 +85,8 @@ foreach (['cancel_offer','cancel_cell','occupied','moved_attacker','dead_attacke
         check(empty($s->battle[RangedNeighborTeleport::PENDING]),'no impossible pending '.$case); continue;
     }
     if ($case==='occupied') {
-        check(choose($s,'start')->success,'start'); check(choose($s,'select','1_2')->success,'select');
-        $s->addCard(card(10,'host',1,2)); check(!choose($s,'confirm','1_2')->success,'revalidate occupancy');
+        check(choose($s,'start')->success,'start');
+        $s->addCard(card(10,'host',1,2)); check(!choose($s,'select','1_2')->success,'revalidate occupancy');
     } else {
         if ($case==='cancel_cell') check(choose($s,'start')->success,'start then cancel');
         check(choose($s,'cancel')->success,'cancel');
@@ -133,20 +131,20 @@ foreach (['shot','throw','discharge'] as $type) {
     check(isset($s->battle[RangedNeighborTeleport::PENDING]),'proposal after complete stack');
     check(!empty($s->battle[RangedNeighborTeleport::PENDING]['combat_result']['after_instant_summary']),'archive full result');
 }
-// Render the actual field and InfoPanel, including selection restoration.
-$s=state(); attack($s); finish($s); choose($s,'start'); choose($s,'select','1_2'); $s=reloadState($s);
+// Render the actual field and InfoPanel after restoring cell choice.
+$s=state(); attack($s); finish($s); choose($s,'start'); $s=reloadState($s);
 $_GET=[]; $screen=new \Berserk\View\Screen\BattleScreen(new \Berserk\View\Template(__DIR__.'/../templates'));
 $data=$screen->prepare($s,'player','player',null,[])['data'];
 $html=implode('',array_filter($data,'is_string'));
 check(str_contains($html,'data-cell-marker-field='),'field picker rendered');
 check(str_contains($html,'data-cell-marker-picker='),'panel picker rendered');
-check(str_contains($html,'Подтвердить (1_2)'),'selection shown after reload');
-check(str_contains($html,'operation=select'),'cell click only selects');
-check(str_contains($html,'operation=confirm'),'separate confirmation');
+check(!str_contains($html,'Подтвердить'),'no extra confirmation after reload');
+check(str_contains($html,'operation=select'),'field cell action available');
+check(!str_contains($html,'operation=confirm'),'no confirm action rendered');
 check(!str_contains($html,'Выберите клетку для костра'),'teleport picker title');
 // An occupied selected cell cannot be submitted; select a different current free cell instead.
-$s->addCard(card(10,'host',1,2)); check(!choose($s,'confirm','1_2')->success,'stale selected cell');
-check(choose($s,'select','2_1')->success && choose($s,'confirm','2_1')->success,'valid reselection');
+$s->addCard(card(10,'host',1,2)); check(!choose($s,'select','1_2')->success,'stale cell');
+check(choose($s,'select','2_1')->success,'valid current destination');
 // Declining preserves the ability for a later attack.
 $s=state(); attack($s); finish($s); choose($s,'cancel'); $s->getCard(1)->closed=false; attack($s); finish($s);
 check(isset($s->battle[RangedNeighborTeleport::PENDING]),'offer again after decline');
@@ -159,8 +157,8 @@ foreach (['strike','uchr','impact','poison'] as $type) {
 
 // Separate instances can both spend their own once-per-battle limit.
 $s=state(); $s->addCard(card(5,'host',4,3,$s->getCard(3)->prop)); attack($s); finish($s);
-check(choose($s,'start')->success && choose($s,'select','1_2')->success && choose($s,'confirm','1_2')->success,'first instance teleport');
-check(choose($s,'start','','host')->success && choose($s,'select','2_1','host')->success && choose($s,'confirm','2_1','host')->success,'second instance teleport');
+check(choose($s,'start')->success && choose($s,'select','1_2')->success,'first instance teleport');
+check(choose($s,'start','','host')->success && choose($s,'select','2_1','host')->success,'second instance teleport');
 check(!empty($s->getCard(3)->flags['ranged_neighbor_teleport_used']) && !empty($s->getCard(5)->flags['ranged_neighbor_teleport_used']),'independent successful limits');
 // Damage shields and non-field targets are excluded at the real damage layer.
 $s=state(); $s->getCard(2)->modifiers[]=['stat'=>'shield_light']; attack($s); finish($s);
@@ -168,6 +166,14 @@ check(empty($s->battle[RangedNeighborTeleport::PENDING]),'full shield prevents t
 $s=state(); attack($s); finish($s); choose($s,'start');
 check(!choose($s,'select','0_1')->success && !choose($s,'select','7_1')->success,'field bounds checked');
 check(!choose($s,'select','6_5')->success,'only attacker neighbours');
+
+// Existing production prop names are shortened on the action button too.
+$s=state(); $s->battle['active']='player';
+$s->getCard(3)->prop['actions'][0]['name']='Магический удар на 2-3-4';
+$_GET=['sel'=>3];
+$data=$screen->prepare($s,'player','player',null,['test_3'=>['name'=>'Сайкорон','health'=>20]])['data'];
+check(str_contains($data['info_panel_html'],'Магический удар'),'short magic action available');
+check(!str_contains($data['info_panel_html'],'Магический удар на 2-3-4'),'old production name shortened');
 
 echo "Psycoron: {$count} assertions passed.\n";
 

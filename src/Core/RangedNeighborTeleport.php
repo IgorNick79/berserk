@@ -96,12 +96,9 @@ final class RangedNeighborTeleport
             return Result::ok(['ranged_neighbor_teleport_cell']);
         }
         $cell = (string) $cmd->get('cell', '');
-        if ($operation === 'select' && $pending['stage'] === 'cell' && in_array($cell, $cells, true)) {
-            $this->state->battle[self::PENDING]['selected'] = $cell;
-            $this->state->bumpVersion();
-            return Result::ok(['ranged_neighbor_teleport_selected']);
-        }
-        if ($operation !== 'confirm' || $pending['stage'] !== 'cell' || ($pending['selected'] ?? null) !== $cell || !in_array($cell, $cells, true)) {
+        // Selecting a current legal destination commits the optional teleport immediately.
+        // Accept old confirm links too, so an already open page can finish after deployment.
+        if (!in_array($operation, ['select', 'confirm'], true) || $pending['stage'] !== 'cell' || !in_array($cell, $cells, true)) {
             return Result::error('Недопустимая клетка');
         }
         [$row, $col] = array_map('intval', explode('_', $cell));

@@ -2,7 +2,7 @@
   "actions": [
     {
       "key": "magic",
-      "name": "Магический удар на 2-3-4",
+      "name": "Магический удар",
       "type": "magic",
       "strike": {
         "weak": 2,

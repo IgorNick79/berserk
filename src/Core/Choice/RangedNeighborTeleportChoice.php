@@ -24,11 +24,8 @@ final class RangedNeighborTeleportChoice implements ChoiceHandlerInterface
                 $buttons[] = ['label' => $cell, 'url' => $url . '&operation=select&cell=' . $cell];
             }
         }
-        if (isset($p['selected'])) {
-            $buttons[] = ['label' => 'Подтвердить (' . $p['selected'] . ')', 'url' => $url . '&operation=confirm&cell=' . $p['selected']];
-        }
         $buttons[] = ['label' => 'Отмена', 'url' => $url . '&operation=cancel', 'class' => 'skip'];
-        return new PanelSpec(title: $name . ': ' . ($p['stage'] === 'offer' ? 'телепортация' : 'выберите клетку и подтвердите'), buttons: $buttons);
+        return new PanelSpec(title: $name . ': ' . ($p['stage'] === 'offer' ? 'телепортация' : 'выберите клетку'), buttons: $buttons);
     }
     public function apply(GameState $state, Engine $engine, string $playerKey, Command $cmd): Result
     {
