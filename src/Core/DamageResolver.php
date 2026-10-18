@@ -157,6 +157,7 @@ final class DamageResolver
 
         $target->hp = 0;
         $target->dying = true;
+        Strangulation::refresh($this->state);
 
         (new ValhallaProcessor($this->state, damage: $this))->markPending($target, $cause);
 
@@ -194,13 +195,13 @@ final class DamageResolver
 
     private function shouldTriggerDeadeat(string $cause): bool
     {
-        return CardStats::isMeleeAction($cause);
+        return $cause === 'strangulation' || CardStats::isMeleeAction($cause);
     }
 
     private function shouldTriggerOnDeath(string $cause): bool
     {
         return in_array($cause,
-            ['strike', 'uchr', 'shot', 'throw', 'tap', 'discharge', 'answer', 'execute', 'self_destroy', 'destroy'],
+            ['strike', 'uchr', 'shot', 'throw', 'tap', 'discharge', 'answer', 'execute', 'self_destroy', 'destroy', 'strangulation'],
             true
         );
     }

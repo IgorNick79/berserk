@@ -58,9 +58,11 @@ final class ActionResolver
 
         if (!CoinAbilities::actionAvailable($attacker, $action)) return Result::error('Действие недоступно при этом количестве монет');
         $type = $action['type'] ?? '';
+        if (Strangulation::blocksAttack($attacker, $type)) return Result::error('Атаки запрещены маркерами удушения');
+        if ($type === 'strangle') return Strangulation::start($this->state, $attacker, $actionKey);
         if ($type === 'uchr') return $this->uchr($playerKey, $cmd);
         if (CardStats::hasCannotAttack($attacker) && CardStats::isOffensiveAction($type)) {
-            return Result::error('Карта не может атаковать до конца хода');
+            return Result::error(Strangulation::count($attacker) >= 2 ? 'Атаки запрещены маркерами удушения' : 'Карта не может атаковать до конца хода');
         }
 
         if ($type === 'place_cell_marker') {
@@ -372,7 +374,7 @@ final class ActionResolver
             return Result::error($reason !== '' ? $reason : 'Атакующий не может действовать');
         }
         if (CardStats::hasCannotAttack($attacker)) {
-            return Result::error('Карта не может атаковать до конца хода');
+            return Result::error(Strangulation::count($attacker) >= 2 ? 'Атаки запрещены маркерами удушения' : 'Карта не может атаковать до конца хода');
         }
         if (!$target || $target->zone !== CardInstance::ZONE_FIELD) {
             return Result::error('Цель не на поле');
@@ -843,6 +845,7 @@ final class ActionResolver
             return Result::error('Цель не найдена');
         }
 
+        if (Strangulation::blocksAttack($attacker, 'execute')) return Result::error('Атаки запрещены маркерами удушения');
         if (!CardStats::canExecuteTarget($this->state, $attacker, $target, $value)) {
             return Result::error('Нельзя добить эту цель');
         }
@@ -4861,6 +4864,7 @@ final class ActionResolver
             return Result::error('Карта недоступна');
         }
 
+        if (Strangulation::count($card) > 0) return Result::error('Самостоятельное передвижение запрещено маркерами удушения');
         $damage     = (int) $p['damage'];
         $gates      = $p['gates'];
         $ownerKey   = $playerKey;
@@ -5158,6 +5162,9 @@ final class ActionResolver
         if ($target->dying || $target->hp <= 0) {
             return Result::error('Цель мертва');
         }
+        if ($attacker->instanceId === $target->instanceId && Strangulation::count($target) > 0) {
+            return Result::error('Самостоятельное передвижение запрещено маркерами удушения');
+        }
 
         $cost = (int) ($action['coins'] ?? 0);
         if ($cost > 0 && $attacker->coins < $cost) {
@@ -5215,6 +5222,9 @@ final class ActionResolver
             return Result::error('Карта не найдена');
         }
 
+        if ($attacker->instanceId === $target->instanceId && Strangulation::count($target) > 0) {
+            return Result::error('Самостоятельное передвижение запрещено маркерами удушения');
+        }
         $action = $pt['action'];
 
         $oldRow = (int) $target->row;

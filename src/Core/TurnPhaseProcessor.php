@@ -892,6 +892,7 @@ final class TurnPhaseProcessor
                 }
 
                 // Нет свободных — сразу 3 impact, gates убираем
+                if (Strangulation::count($card) > 0) $freeGates = [];
                 if (empty($freeGates)) {
                     $selfDamage = (int) ($eff['self_damage'] ?? 3);
                     $hpBefore = $card->hp;

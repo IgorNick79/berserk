@@ -18,6 +18,7 @@ final class MovementEffectResolver
 
     public function apply(MovementContext $context): void
     {
+        \Berserk\Core\Strangulation::refresh($this->state);
         $card = $context->card;
 
         $this->applyMovePenalty($card);
@@ -36,6 +37,7 @@ final class MovementEffectResolver
 
     public function applyForcedPositionChange(MovementContext $context): void
     {
+        \Berserk\Core\Strangulation::refresh($this->state);
         $this->applyMovePenalty($context->card);
         $this->engine->syncCoinBonus($context->card);
         $this->applyAirinTriggers($context);

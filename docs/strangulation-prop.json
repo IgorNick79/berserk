@@ -1,0 +1,12 @@
+{
+  "deadeat": true,
+  "zov": true,
+  "actions": [
+    {
+      "key": "strangle",
+      "name": "Удушить",
+      "type": "strangle",
+      "tap": true
+    }
+  ]
+}

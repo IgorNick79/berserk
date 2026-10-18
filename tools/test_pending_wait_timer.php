@@ -43,7 +43,7 @@ $owned = [
     'pending_dverg_gift','pending_shaksi_roll','pending_heal_instead_wound','pending_attack_series_choice',
     'pending_wild_healer_move','pending_forced_directional_move','pending_forced_strike','pending_row_pick',
     'pending_opponent_row_marker','pending_row_spell_pick','pending_gate_pick','pending_greed_teleport',
-    'pending_destroy_self_and_target','pending_particle_pick','pending_blood_storm','pending_life_gift','pending_teleport_target','pending_ranged_neighbor_teleport',
+    'pending_strangulation','pending_destroy_self_and_target','pending_particle_pick','pending_blood_storm','pending_life_gift','pending_teleport_target','pending_ranged_neighbor_teleport',
 ];
 $cardOwned = ['pending_coin_spend'=>'attacker_id','pending_multi_heal'=>'attacker_id',
     'pending_multi_discharge'=>'attacker_id','pending_self_wound'=>'attacker_id','pending_blood_tap'=>'attacker_id',

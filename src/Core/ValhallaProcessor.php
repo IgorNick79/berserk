@@ -8,7 +8,7 @@ namespace Berserk\Core;
 final class ValhallaProcessor
 {
     public const TRIGGER_TYPES = [
-        'strike', 'tap', 'magic', 'shot', 'throw', 'uchr', 'discharge', 'answer'
+        'strike', 'tap', 'magic', 'shot', 'throw', 'uchr', 'discharge', 'answer', 'strangulation'
     ];
 
     public function __construct(

@@ -279,6 +279,12 @@ final class BattleScreen
         array $pendingAllyModifierTargets,
         bool $explicitAttackMode
     ): string {
+        $strangulationTargets = [];
+        $sp = $state->battle[\Berserk\Core\Strangulation::PENDING] ?? null;
+        if ($sp && $sp['owner'] === $playerKey) {
+            $ss = $state->getCard((int) $sp['source_id']);
+            if ($ss) $strangulationTargets = array_fill_keys(\Berserk\Core\Strangulation::targets($state, $ss), true);
+        }
         $markerTargets = \Berserk\View\Ui\CellMarkerPicker::targets($state, $playerKey, $baseUrl);
         $movementCells = $movementCards = [];
         $movementUrl = '';
@@ -336,7 +342,11 @@ final class BattleScreen
 
                     $cardBody = $this->buildBattleCard($card, $state, $info, $isHiddenForMe, $nameHtml, $hpText);
 
-                    if (isset($movementCards[$card->instanceId])) {
+                    if (isset($strangulationTargets[$card->instanceId])) {
+                        $cellClass .= ' attack-target';
+                        $url = htmlspecialchars($baseUrl . '&sel=' . $card->instanceId, ENT_QUOTES);
+                        $cellContent = '<a class="card-link" href="' . $url . '">' . $cardBody . '</a>';
+                    } elseif (isset($movementCards[$card->instanceId])) {
                         $cellClass .= ' attack-target pending-first-strike-target';
                         $url = htmlspecialchars($movementUrl . '&target_id=' . $card->instanceId, ENT_QUOTES, 'UTF-8');
                         $cellContent = '<a class="card-link" href="' . $url . '">' . $cardBody . '</a>';
@@ -795,6 +805,10 @@ final class BattleScreen
                 $attacksUsed = (int) ($c->flags['attacks_used_this_turn'] ?? 0);
                 $strikeBlocked = $attacksUsed >= $attackLimit;
 
+                if (\Berserk\Core\Strangulation::count($c) >= 2) {
+                    $abil['has_strike'] = $abil['has_uchr'] = false;
+                    $modeButtons .= '<span class="button small disabled">Атаки запрещены: удушение</span> ';
+                }
                 if ($abil['has_strike']) {
                     if ($strikeBlocked) {
                         $modeButtons .= '<span class="button small disabled">Простой удар (уже атаковал)</span> ';
@@ -853,6 +867,12 @@ final class BattleScreen
                     if (!\Berserk\Core\CoinAbilities::actionAvailable($c, $a)) continue;
                     $type = $a['type'] ?? '';
                     if ($type === 'uchr') continue;
+                    if (\Berserk\Core\Strangulation::blocksAttack($c, $type)
+                        || ($type === 'jump' && \Berserk\Core\Strangulation::count($c) > 0)) {
+                        $modeButtons .= '<span class="button small disabled">'
+                            . htmlspecialchars(($a['name'] ?? $type) . ' (удушение)', ENT_QUOTES) . '</span> ';
+                        continue;
+                    }
                     $key  = $a['key'] ?? $type;
 
                     $label = $a['name'] ?? ($labels[$type] ?? $type);
@@ -1013,6 +1033,8 @@ final class BattleScreen
                 : 'Без монетки: доступен удар через ряд; после него можно получить монетку.';
             $statusHtml .= '<p>' . htmlspecialchars($hint, ENT_QUOTES) . '</p>';
         }
+        $strangulationHint = \Berserk\Core\Strangulation::hint($c);
+        if ($strangulationHint !== '') $statusHtml .= '<p>' . htmlspecialchars($strangulationHint, ENT_QUOTES) . '</p>';
         $statusHtml .= $this->linkedRecruitBattleHint($state, $c, $cardsInfo);
         if (!empty($c->prop['first_strike_jump'])) {
             $statusHtml .= '<p>Защита первого удара: '
@@ -1165,6 +1187,7 @@ final class BattleScreen
             || $type === 'become_fly'
             || $type === 'row_spell'
             || $type === 'mark_opponent_row'
+            || $type === 'strangle'
             || $type === 'destroy_self_and_target'
             || $type === 'freeze_moves'
             || $type === 'multi_discharge'

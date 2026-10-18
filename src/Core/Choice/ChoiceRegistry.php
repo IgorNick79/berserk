@@ -67,6 +67,7 @@ final class ChoiceRegistry
                 new GatePickChoice(),
                 new GreedTeleportChoice(),
                 new DestroySelfAndTargetChoice(),
+                new StrangulationChoice(),
                 new ParticlePickChoice(),
                 new BloodStormChoice(),
                 new LifeGiftChoice(),

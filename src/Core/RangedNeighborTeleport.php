@@ -38,7 +38,7 @@ final class RangedNeighborTeleport
     private static function available(CardInstance $card): bool
     {
         return $card->zone === CardInstance::ZONE_FIELD && !$card->dying && $card->hp > 0
-            && empty($card->flags['ranged_neighbor_teleport_used']);
+            && Strangulation::count($card) === 0 && empty($card->flags['ranged_neighbor_teleport_used']);
     }
 
     /** A moved/departed attacker invalidates the anchor; never guess a new position. */
