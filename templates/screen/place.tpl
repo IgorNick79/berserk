@@ -2,4 +2,4 @@
     <p class="flash">{{message}}</p>
     <div class="place-field pregame-place-field" role="group" aria-label="Поле расстановки"><div class="pregame-place-grid">{{field_html}}</div></div>
 </div>
-<script src="/assets/js/pregame-place.js?v=1" defer></script>
+<script src="/assets/js/pregame-place.js?v=2" defer></script>

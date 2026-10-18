@@ -10,10 +10,13 @@
         ['cmd', 'card_id', 'row', 'col', 'ajax'].forEach(function (key) { url.searchParams.delete(key); });
         return url;
     }
+    function isWaiting() {
+        var screen = root.querySelector('[data-place-screen]');
+        return screen && screen.dataset.placeWaiting === '1';
+    }
     function schedule() {
         clearTimeout(poll);
-        var screen = root.querySelector('[data-place-screen]');
-        if (screen && screen.dataset.placeWaiting === '1') {
+        if (isWaiting()) {
             poll = setTimeout(function () {
                 if (!document.hidden && !busy) load(readUrl(location.href), false);
                 else schedule();
@@ -43,9 +46,11 @@
         busy = true;
         clearTimeout(poll);
         root.setAttribute('aria-busy', 'true');
+        var controller = new AbortController();
+        var timeout = setTimeout(function () { controller.abort(); }, 15000);
         try {
             var response = await fetch(url.href, {
-                credentials: 'same-origin', cache: 'no-store', headers: {'X-Requested-With': 'XMLHttpRequest'}
+                signal: controller.signal, credentials: 'same-origin', cache: 'no-store', headers: {'X-Requested-With': 'XMLHttpRequest'}
             });
             if (!response.ok) throw new Error('HTTP ' + response.status);
             var documentNext = new DOMParser().parseFromString(await response.text(), 'text/html');
@@ -73,6 +78,7 @@
             // A lost response may follow a committed command: recovery is a read, never a retry.
             showError();
         } finally {
+            clearTimeout(timeout);
             busy = false;
             root.removeAttribute('aria-busy');
             schedule();
@@ -88,6 +94,12 @@
         if (command ? commands.indexOf(command) === -1 : !url.searchParams.has('card')) return;
         event.preventDefault();
         load(url, event.detail === 0);
+    });
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && !busy && isWaiting()) load(readUrl(location.href), false);
+    });
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted && !busy && isWaiting()) load(readUrl(location.href), false);
     });
     history.replaceState(null, '', readUrl(location.href).href);
     schedule();

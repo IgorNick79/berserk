@@ -94,13 +94,22 @@ const fixture=path.join(root,'tools/test_pregame_place_fixture.php');
   await page.locator('.pregame-panel-footer a[href*="cmd=confirm_place"]').click();
   await page.waitForSelector('[data-place-waiting="1"]');
   assert.equal(navigations,startNavigations,'Confirmation also uses fetch');
+  // A player who confirmed first can reload the waiting page and still enter battle.
+  await page.reload();
+  const waitingNavigations=navigations;
+  await page.waitForSelector('[data-place-waiting="1"]');
+  assert.equal(await page.locator('script[src*="pregame-place.js?v=2"]').count(),1);
+  // Returning from a background tab refreshes immediately, without a manual reload.
+  await page.evaluate(()=>Object.defineProperty(document,'hidden',{configurable:true,value:true}));
   const opponent=role==='host'?'player':'host',opponentId=role==='host'?3:1;
   const row=opponent==='host'?1:4,col=opponent==='host'?2:1;
   steps.push({role:opponent,cmd:'place_card',card_id:opponentId,row,col},
    {role:opponent,cmd:'place_card',card_id:opponentId+1,row,col:col+1},
    {role:opponent,cmd:'confirm_place'});
+  if(width===1024) await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));});
+  else await page.evaluate(()=>Object.defineProperty(document,'hidden',{configurable:true,value:false}));
   await page.waitForSelector('[data-test-battle]',{timeout:12000});
-  assert.equal(navigations,startNavigations+1,'Battle initializes through a clean navigation');
+  assert.equal(navigations,waitingNavigations+1,'Battle initializes through a clean navigation');
   assert.ok(!new URL(page.url()).searchParams.has('cmd'));
   assert.equal(requests.filter(request=>request.query.cmd==='confirm_place').length,1,'Polling never repeats confirmation');
   assert.ok(requests.filter(request=>request.query.cmd).every(request=>request.type==='fetch'));
