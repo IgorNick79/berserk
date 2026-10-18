@@ -74,7 +74,7 @@ final class DealScreen
         }
         $summary = '<section class="pregame-pool-stats pregame-deal-stats" aria-label="Статистика отряда">';
         if ($calc['penalty'] > 0) $summary .= '<div class="penalty active">Штраф за стихии: −' . (int) $calc['penalty'] . ' золото</div>';
-        $summary .= '<div class="pregame-deal-resources">'
+        $summary .= '<div class="pregame-deal-icons"><div class="pregame-deal-resources">'
             . $this->statisticIcon('/assets/images/card/elite.png', 'Золото', $calc['gold_left'] . '/' . $calc['gold_total'], 'crystal:gold')
             . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебро', $calc['silver_left'] . '/' . $calc['silver_total'], 'crystal:silver')
             . $this->statisticIcon('/assets/images/card/fly.png', 'Стоимость летающих', $flyingCost . '/' . SquadRules::FLYING_COST_LIMIT)
@@ -83,7 +83,7 @@ final class DealScreen
             $summary .= $this->statisticIcon('/assets/images/element/' . $code . '.png',
                 ElementLabels::label($code, $elementLabels + self::ELEMENT_NAMES), (string) $elementCounts[$code], 'element:' . $code);
         }
-        $summary .= '</div></section>';
+        $summary .= '</div></div></section>';
 
         $pendingHtml = $this->pendingPanelHtml($state, $playerKey, $baseUrl, $role, $cardsInfo);
         $selectedCard = null;
