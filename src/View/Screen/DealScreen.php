@@ -72,18 +72,28 @@ final class DealScreen
         foreach ($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD) as $card) {
             $elementCounts[$this->elementCode($card->element)]++;
         }
+        $hasFlying = false;
+        $elementTotals = array_fill_keys(array_keys(self::ELEMENT_NAMES), 0);
+        foreach ($state->cards as $card) {
+            if ($card->owner === $playerKey && in_array($card->zone, [CardInstance::ZONE_HAND, CardInstance::ZONE_SQUAD], true)) {
+                $elementTotals[$this->elementCode($card->element)]++;
+                if ($card->type === 'fly') $hasFlying = true;
+            }
+        }
         $summary = '<section class="pregame-pool-stats pregame-deal-stats" aria-label="Статистика отряда">';
-        if ($calc['penalty'] > 0) $summary .= '<div class="penalty active">Штраф за стихии: −' . (int) $calc['penalty'] . ' золото</div>';
-        $summary .= '<div class="pregame-deal-icons"><div class="pregame-deal-resources">'
+        $summary .= '<div class="pregame-deal-resources">'
             . $this->statisticIcon('/assets/images/card/elite.png', 'Золото', $calc['gold_left'] . '/' . $calc['gold_total'], 'crystal:gold')
             . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебро', $calc['silver_left'] . '/' . $calc['silver_total'], 'crystal:silver')
-            . $this->statisticIcon('/assets/images/card/fly.png', 'Стоимость летающих', $flyingCost . '/' . SquadRules::FLYING_COST_LIMIT)
+            . ($hasFlying ? $this->statisticIcon('/assets/images/card/fly.png', 'Стоимость летающих', $flyingCost . '/' . SquadRules::FLYING_COST_LIMIT) : '')
+            . ($calc['penalty'] > 0 ? '<span class="penalty active">Штраф за стихии: −' . (int) $calc['penalty'] . ' золото</span>' : '')
             . '</div><div class="pregame-deal-elements">';
         foreach (self::ELEMENT_NAMES as $code => $label) {
-            $summary .= $this->statisticIcon('/assets/images/element/' . $code . '.png',
-                ElementLabels::label($code, $elementLabels + self::ELEMENT_NAMES), (string) $elementCounts[$code], 'element:' . $code);
+            $name = ElementLabels::label($code, $elementLabels + self::ELEMENT_NAMES);
+            $summary .= $this->statisticIcon('/assets/images/element/' . $code . '.png', $name,
+                $elementCounts[$code] . '/' . $elementTotals[$code], 'element:' . $code,
+                $name . ': выбрано ' . $elementCounts[$code] . ', всего ' . $elementTotals[$code]);
         }
-        $summary .= '</div></div></section>';
+        $summary .= '</div></section>';
 
         $pendingHtml = $this->pendingPanelHtml($state, $playerKey, $baseUrl, $role, $cardsInfo);
         $selectedCard = null;
@@ -147,9 +157,9 @@ final class DealScreen
         return isset(self::ELEMENT_NAMES[$code]) ? $code : (array_search($code, self::ELEMENT_NAMES, true) ?: 'neutral');
     }
 
-    private function statisticIcon(string $url, string $label, string $value, string $filter = ''): string
+    private function statisticIcon(string $url, string $label, string $value, string $filter = '', string $hintText = ''): string
     {
-        $hint = htmlspecialchars($label . ': ' . $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $hint = htmlspecialchars($hintText !== '' ? $hintText : $label . ': ' . $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $attrs = $filter === '' ? '' : ' data-view-filter="' . $filter . '" data-view-stat-static aria-pressed="false"';
         return '<button type="button" class="pregame-hint pregame-pool-stat"' . $attrs . ' aria-label="' . $hint . '">'
             . '<img src="' . $url . '" alt="" width="24" height="24"><span>' . htmlspecialchars($value, ENT_QUOTES) . '</span>'

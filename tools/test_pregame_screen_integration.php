@@ -105,6 +105,13 @@ namespace {
                 $catalog[$selected->ukid]['element_code'] = 'plains';
                 $catalog[$selected->ukid]['element'] = $catalog[$selected->ukid]['element_label'] = 'Степи';
             }
+            if ($variant === 'flying-hand') $selected->type = 'fly';
+            if ($variant === 'penalty') {
+                $other = integrationCard($state,$role,'squad',$role.'-forest-squad',$catalog);
+                $other->element = 'forests'; $other->type = 'fly';
+                $catalog[$other->ukid]['element_code'] = 'forests';
+                $catalog[$other->ukid]['element'] = $catalog[$other->ukid]['element_label'] = 'Леса';
+            }
             if ($variant === 'empty-squad') foreach ($state->getCardsInZone($role,'squad') as $card) $card->zone = 'hand';
             if ($variant === 'exhausted') $state->getPlayer($role)->reshuffles = 3;
             if ($variant === 'pending') $state->battle['pending_deal_variable_recruit'] = [
@@ -159,7 +166,7 @@ namespace {
             integrationAssert($xp->query('//main//*[contains(@class,"prepare-bottom-bar")]|//main//h2')->length === 0, 'Deal has no bottom bar or separate squad section');
             integrationAssert($xp->query('//main//a[contains(@href,"cmd=")]')->length === 0, 'All Deal actions in InfoPanel');
             integrationAssert($xp->query('//footer//*[@data-deal-selected]')->length === 1, 'Selected count in footer');
-            integrationAssert($xp->query('//aside//button[contains(@class,"pregame-pool-stat")]')->length === 9, 'Deal resource, flying and element icons');
+            integrationAssert($xp->query('//aside//button[contains(@class,"pregame-pool-stat")]')->length === (in_array($variant, ['mixed','flying-hand','penalty'], true) ? 9 : 8), 'Flying budget appears only when flying cards are available');
             integrationAssert($xp->query('//footer//a[contains(@href,"cmd=confirm_deal")]')->length === (in_array($variant, ['waiting','pending'], true) ? 0 : 1), 'Deal confirmation in footer');
         }
         if (in_array($stage, ['turn', 'side'], true)) {
@@ -229,7 +236,7 @@ namespace {
     foreach(['solomon','sealed','system'] as $variant) foreach(['host','player'] as $role) $fixtures['settings-'.$variant.'-'.$role]=integrationFixture('settings',$role,$variant);
     foreach(['sideboard','waiting','empty','denied','system','filters'] as $variant) $fixtures['view-'.$variant]=integrationFixture('view','host',$variant);
     foreach(['waiting','denied'] as $variant) foreach(['deal','place'] as $stage) $fixtures[$stage.'-'.$variant]=integrationFixture($stage,'host',$variant);
-    foreach (['mixed','selected','empty-squad','exhausted','pending'] as $variant) $fixtures['deal-'.$variant]=integrationFixture('deal','host',$variant);
+    foreach (['mixed','selected','empty-squad','exhausted','pending','penalty','flying-hand'] as $variant) $fixtures['deal-'.$variant]=integrationFixture('deal','host',$variant);
     $fixtures['place-placed']=integrationFixture('place','host','placed');
     foreach(['solomon','solomon-unlimited','solomon-empty-history','stale','wrong-identity'] as $variant) foreach(['host','player'] as $role) $fixtures['draft-'.$variant.'-'.$role]=integrationFixture('draft',$role,$variant);
     $fixtures['draft-solomon-player-active']=integrationFixture('draft','player','solomon-player-active');

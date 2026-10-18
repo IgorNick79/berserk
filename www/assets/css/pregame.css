@@ -214,10 +214,9 @@ body.pregame-page {
 .pregame-side-choice input { margin: 0; }
 .pregame-panel-footer button[form="pregame-side-choice"] { border: 0; font: inherit; cursor: pointer; }
 
-.pregame-deal-icons { display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; width: 100%; gap: 4px; }
-.pregame-deal-resources, .pregame-deal-elements { display: contents; }
-.pregame-deal-icons .pregame-pool-stat { gap: 2px; font-size: 12px; white-space: nowrap; }
-.pregame-deal-icons .pregame-pool-stat img { width: 20px; height: 20px; }
+.pregame-deal-resources, .pregame-deal-elements { display: flex; align-items: center; justify-content: flex-start; width: 100%; gap: 10px; }
+.pregame-deal-resources .pregame-pool-stat { font-size: 14px; }
+.pregame-deal-resources .penalty { white-space: nowrap; }
 .pregame-deal-footer { display: flex; align-items: center; gap: 10px; }
 .pregame-deal-selected { padding: 4px 0; border: 0; background: transparent; font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer; }
 .pregame-deal-selected[aria-pressed="true"] { text-decoration: underline; text-underline-offset: 3px; color: #806020; }

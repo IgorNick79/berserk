@@ -141,8 +141,14 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
     if (fixture.stage === 'deal') {
      assert.equal(await page.locator('[data-deal-pager]').count(),1);
      assert.equal(await page.locator('.pregame-main .prepare-bottom-bar, .pregame-main h2, .pregame-main a[href*="cmd="]').count(),0);
-     assert.equal(await page.locator('.pregame-panel-summary .pregame-pool-stat').count(),9);
+     assert.equal(await page.locator('.pregame-panel-summary .pregame-pool-stat').count(),['mixed','flying-hand','penalty'].includes(fixture.variant)?9:8);
      assert.equal(await page.locator('.pregame-panel-footer [data-deal-selected]').count(),1);
+     assert.equal(await page.locator('.pregame-deal-stats img[src$="/fly.png"]').count(),['mixed','flying-hand','penalty'].includes(fixture.variant)?1:0);
+     const element=page.locator('.pregame-deal-elements [data-view-filter="element:dark"]');
+     const ratio=await element.locator('span').textContent();
+     assert.match(ratio,/^\d+\/\d+$/);
+     assert.ok((await element.getAttribute('aria-label')).includes('выбрано '+ratio.split('/')[0]+', всего '+ratio.split('/')[1]));
+
      assert.equal(await page.locator('.pregame-panel-footer a[href*="cmd=confirm_deal"]').count(),['waiting','pending'].includes(fixture.variant)?0:1);
      assert.equal(await page.locator('.pregame-reshuffle').count(),['waiting','pending','exhausted'].includes(fixture.variant)?0:1);
      assert.ok(await page.locator('.pregame-main').evaluate(el=>el.scrollHeight<=el.clientHeight+1),key+' bounded Deal pages');

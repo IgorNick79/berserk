@@ -468,7 +468,7 @@ echo "Deal resource tests passed.\n";
 // Deal UI contract smoke: card action is in preview, status is in bottom panel.
 $_GET['card'] = 'hand:s1_171';
 $state = dealState();
-addDealCard($state, GameState::PLAYER_HOST, 's1_171', CardInstance::ZONE_HAND, 3, false, $marauderProp);
+addDealCard($state, GameState::PLAYER_HOST, 's1_171', CardInstance::ZONE_HAND, 3, false, $marauderProp, 'plains');
 $tpl = new Template(__DIR__ . '/../templates/');
 $elementLabels = ['plains' => 'Степи', 'forests' => 'Леса'];
 $screen = (new DealScreen($tpl))->prepare($state, GameState::PLAYER_HOST, 'host', null, [
@@ -488,7 +488,7 @@ assertTrue(!str_contains($screen['data']['preview_html'], 'prepare-card-preview_
 assertTrue(str_contains($screen['data']['panel_actions_html'], 'Выбрано:'), 'Bottom panel should render selected count');
 assertTrue(str_contains($screen['data']['panel_summary_html'], 'Золото:'), 'Bottom panel should render gold resources');
 assertTrue(str_contains($screen['data']['panel_summary_html'], 'Серебро:'), 'Bottom panel should render silver resources');
-assertTrue(str_contains($screen['data']['panel_summary_html'], 'aria-label="Степи: 0"'), 'Hand-only element should not appear in squad badges');
+assertTrue(str_contains($screen['data']['panel_summary_html'], 'aria-label="Степи: выбрано 0, всего 1"'), 'Hand-only element should not appear in squad badges');
 assertTrue(!str_contains($screen['data']['panel_summary_html'], 'В отряд'), 'Recruit action should not be rendered in bottom panel');
 unset($_GET['card']);
 
@@ -538,6 +538,10 @@ assertTrue(str_contains($screen['data']['panel_summary_html'], 'Леса'), 'Dea
 assertTrue(str_contains($screen['data']['panel_summary_html'], '/assets/images/element/plains.png'), 'Deal squad badges should not expose internal plains code');
 assertTrue(str_contains($screen['data']['panel_summary_html'], '/assets/images/element/forests.png'), 'Deal squad badges should not expose internal forest code');
 assertTrue(str_contains($screen['data']['panel_summary_html'], 'penalty active'), 'Element penalty should use existing active penalty style');
+assertTrue(str_contains($screen['data']['panel_summary_html'], 'aria-label="Степи: выбрано 1, всего 1"'), 'Plains ratio counts selected and all available copies');
+assertTrue(str_contains($screen['data']['panel_summary_html'], 'aria-label="Леса: выбрано 1, всего 1"'), 'Forest ratio counts selected and all available copies');
+assertTrue(!str_contains($screen['data']['panel_summary_html'], '/assets/images/card/fly.png'), 'No flying-budget icon when the deal contains no flying cards');
+
 
 $state = dealState();
 addSquadPrices($state, [3, 4, 5, 6, 7, 8]);
