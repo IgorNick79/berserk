@@ -1349,8 +1349,8 @@ body { padding-bottom: 46vh; }
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;
-    padding: 10px 0;
+    gap: 16px;
+    padding: 10px 0 0 10px;
 }
 .info-actions .button.wide {
     min-width: 160px;
@@ -1922,7 +1922,54 @@ body.battle-page {
     user-select: text;
 }
 .battle-page .info-panel-footer .info-actions { align-items: center; }
-.battle-page .info-panel-footer .info-actions > .button { flex-basis: 120px; }
+.battle-page .info-panel .button.green-btn { 
+    flex-basis: 180px; flex-grow: 0; height: 40px; background: none; font-weight: 700; position: relative; border: 0;
+    display: flex;
+    justify-content: center;
+    transition: transform 120ms ease-out;
+}
+.green-btn::after {
+    content: '';
+    background-image: url("/assets/images/battle/end_turn.png");
+    background-size: contain;
+    position: absolute;
+    left: -15px;
+    top: -9px;
+    width: 210px;
+    height: 58px;
+    z-index: 1;
+    transition:
+        filter 200ms ease-out,
+        transform 120ms ease-out;
+}
+.green-btn span {
+    position: relative;
+    z-index: 2;
+    font-size: 13px;
+}
+.battle-page .info-panel .button.green-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+}
+.green-btn:hover:not(:disabled)::after {
+    filter:
+        brightness(1.1)
+        drop-shadow(0 0 4px rgba(67, 207, 135, 0.85))
+        drop-shadow(0 0 8px rgba(25, 142, 86, 0.55));
+}
+.green-btn:active:not(:disabled)::after {
+    filter: brightness(0.9);
+    transform: translateY(1px);
+}
+.green-btn:disabled::after {
+    filter:
+        grayscale(0.65)
+        brightness(0.55)
+        saturate(0.5);
+    opacity: 0.95;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+}
 .battle-icon-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
 .battle-icon-control {
     position: relative;

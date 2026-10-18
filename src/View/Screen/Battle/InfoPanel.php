@@ -86,8 +86,8 @@ final class InfoPanel
             }
         }
         $end = $canEnd
-            ? '<a class="button wide" href="' . $this->baseUrl . '&cmd=end_turn">Завершить ход</a>'
-            : '<button class="button wide" type="button" disabled>Завершить ход</button>';
+            ? '<a class="button wide green-btn" href="' . $this->baseUrl . '&cmd=end_turn"><span>Завершить ход</span></a>'
+            : '<button class="button wide green-btn" type="button" disabled><span>Завершить ход</span></button>';
         $resignIcon = $this->tpl->parse('includes/battle/control_icon.tpl', [
             'file' => 'surrender_160.png', 'label' => 'Сдаться',
         ]);
