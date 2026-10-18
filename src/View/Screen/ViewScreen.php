@@ -29,7 +29,8 @@ final class ViewScreen
         string $role,
         ?string $message,
         array $cardsInfo = [],
-        array $elementLabels = []
+        array $elementLabels = [],
+        bool $readOnly = false
     ): array {
         $linkParam = $role === 'host' ? 'first' : 'second';
         $baseUrl   = "?{$linkParam}&game={$state->gameId}";
@@ -140,7 +141,9 @@ final class ViewScreen
         $isAboveMaximum = $usesRuntimeDeck && $deckCount > GameSettings::MAX_DECK_SIZE;
         $canSideboard = $usesRuntimeDeck && $deckCount > GameSettings::MIN_DECK_SIZE;
 
-        if (!$me->isConfirmed('view') && $isBelowMinimum) {
+        if ($readOnly) {
+            $confirmHtml = '';
+        } elseif (!$me->isConfirmed('view') && $isBelowMinimum) {
             $confirmHtml = '<span class="button disabled">Недостаточно карт</span>';
         } elseif (!$me->isConfirmed('view') && $isAboveMaximum) {
             $confirmHtml = '<span class="button disabled">Слишком много карт</span>';
@@ -152,7 +155,7 @@ final class ViewScreen
         }
 
         $actions = [];
-        if ($selectedCard !== null && !$me->isConfirmed('view') && $usesRuntimeDeck) {
+        if (!$readOnly && $selectedCard !== null && !$me->isConfirmed('view') && $usesRuntimeDeck) {
             $selectedInstanceId = (int) ($selectedCard['instance_id'] ?? 0);
             if ($selectedZone === CardInstance::ZONE_DECK && $canSideboard) {
                 $actions[] = [
@@ -205,6 +208,15 @@ final class ViewScreen
                 'message'       => $message ?? '',
             ],
         ];
+    }
+
+    /** Reuse the same deck presentation without View commands on later preparation screens. */
+    public function readOnlyDeck(GameState $state, string $playerKey, string $role, ?string $message,
+        array $cardsInfo = [], array $elementLabels = []): array
+    {
+        $data = $this->prepare($state, $playerKey, $role, $message, $cardsInfo, $elementLabels, true)['data'];
+        return ['deck_html' => (string) $this->tpl->parse('screen/view.tpl', $data),
+            'panel_summary_html' => $data['panel_summary_html'] ?? ''];
     }
 
     private function elementBadgesHtml(array $elements, array $elementLabels): string

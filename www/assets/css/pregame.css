@@ -204,3 +204,12 @@ body.pregame-page {
 [data-view-filter][aria-pressed="true"] { outline: 2px solid #917137; outline-offset: 3px; border-radius: 3px; }
 .pregame-view-pages { position: relative; min-height: calc(var(--view-rows, 2) * var(--view-card-height, 144px) + (var(--view-rows, 2) - 1) * 12px); }
 .pregame-view-empty { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 12px; color: #fff4d6; text-align: center; text-shadow: 0 1px 3px #000; }
+
+.pregame-turn-info, .pregame-side-info { padding: 20px 16px; }
+.pregame-turn-info .dice-block { justify-content: center; gap: 32px; margin: 0 0 24px; }
+.pregame-turn-info p { text-align: center; line-height: 1.5; }
+.pregame-side-choice fieldset { display: grid; gap: 16px; margin: 0; padding: 16px 12px; border: 1px solid #d8d0c3; border-radius: 6px; }
+.pregame-side-choice legend { padding: 0 6px; font-weight: 600; }
+.pregame-side-choice label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.pregame-side-choice input { margin: 0; }
+.pregame-panel-footer button[form="pregame-side-choice"] { border: 0; font: inherit; cursor: pointer; }

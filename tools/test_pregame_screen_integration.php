@@ -108,6 +108,19 @@ namespace {
             $_GET=['card'=>$variant==='denied'?'1':(string)($variant==='placed'?$placed->instanceId:$selected->instanceId)];
             if ($request !== null) $_GET = $request;
             $result=(new PlaceScreen($tpl))->prepare($state,$role,$role,null,$catalog);
+        } elseif (in_array($stage, ['turn', 'side'], true)) {
+            if ($variant === 'system') {
+                $state->getPlayer($role)->deckId = 1;
+            } else {
+                for ($i = 0; $i < 32; $i++) integrationCard($state, $role, 'deck', $role . '-deck-' . $i, $catalog);
+                integrationCard($state, $role, 'sideboard', $role . '-sideboard', $catalog);
+            }
+            if ($variant === 'waiting') $state->getPlayer($role)->confirmed['turn'] = true;
+            if ($variant === 'chooser') $state->firstPlayer = $role;
+            if ($request !== null) $_GET = $request;
+            $deckData = (new ViewScreen(new DeckView(new Db()), $tpl))->readOnlyDeck($state, $role, $role, null, $catalog);
+            $screen = $stage === 'turn' ? new TurnScreen() : new SideScreen();
+            $result = $screen->prepare($state, $role, $role, null, $deckData);
         } else {
             if($variant==='solomon') $state->settings->draft['type']='solomon';
             if($variant==='sealed') $state->mode='sealed';
@@ -126,8 +139,21 @@ namespace {
         integrationAssert($xp->query('//aside[contains(@class,"pregame-info-panel")]')->length===1,'One panel '.$stage);
         integrationAssert($xp->query('//main//h1')->length===0,'No duplicate stage heading '.$stage);
         $solomonPanel = $stage === 'draft' && $state->settings->isSolomonDraft();
-        integrationAssert($xp->query('//aside//form')->length === ($solomonPanel && $state->draft['turn'] === $role ? 1 : 0), 'Solomon decisions in footer only');
+        integrationAssert($xp->query('//aside//form')->length === (($solomonPanel && $state->draft['turn'] === $role) || ($stage === 'side' && $state->firstPlayer === $role) ? 1 : 0), 'Solomon decisions in footer only');
         integrationAssert($xp->query('//aside//*[contains(@class,"pregame-panel-content")]//a[contains(@href,"cmd=")]')->length===0,'No command links in information');
+        if (in_array($stage, ['turn', 'side'], true)) {
+            integrationAssert($xp->query('//main//*[@data-view-pager]')->length === 1, 'Shared deck pager on ' . $stage);
+            integrationAssert($xp->query('//main//a[contains(@href,"cmd=")]')->length === 0, 'Read-only deck has no commands on ' . $stage);
+            integrationAssert($xp->query('//main//*[contains(@class,"dice-block")]|//main//*[@name="side"]')->length === 0, 'Decision UI only in InfoPanel');
+            integrationAssert($xp->query('//aside//button[contains(@class,"pregame-pool-stat")]')->length === 8, 'Deck statistics on ' . $stage);
+            if ($stage === 'turn') {
+                integrationAssert($xp->query('//aside//*[contains(@class,"dice-column")]')->length === 2, 'Both dice in InfoPanel');
+                integrationAssert($xp->query('//footer//a[contains(@href,"cmd=confirm_turn")]')->length === ($variant === 'waiting' ? 0 : 1), 'Continue in Turn footer');
+            } else {
+                integrationAssert($xp->query('//aside//input[@name="side"]')->length === ($state->firstPlayer === $role ? 2 : 0), 'Only chooser has side options');
+                integrationAssert($xp->query('//footer//button[@form="pregame-side-choice"]')->length === ($state->firstPlayer === $role ? 1 : 0), 'Side continue in footer');
+            }
+        }
         if ($stage === 'view') {
             integrationAssert($xp->query('//main//*[contains(@class,"prepare-bottom-bar")]')->length === 0, 'View has no Main bottom bar');
             integrationAssert($xp->query('//main//*[@data-view-pagination]')->length === 1, 'View page navigation');
@@ -186,6 +212,9 @@ namespace {
     foreach(['solomon','solomon-unlimited','solomon-empty-history','stale','wrong-identity'] as $variant) foreach(['host','player'] as $role) $fixtures['draft-'.$variant.'-'.$role]=integrationFixture('draft',$role,$variant);
     $fixtures['draft-solomon-player-active']=integrationFixture('draft','player','solomon-player-active');
     $fixtures['draft-solomon-host-waiting']=integrationFixture('draft','host','solomon-player-active');
+    foreach (['turn','side'] as $stage) $fixtures[$stage.'-system']=integrationFixture($stage,'host','system');
+    $fixtures['turn-waiting']=integrationFixture('turn','host','waiting');
+    $fixtures['side-player-chooser']=integrationFixture('side','player','chooser');
     // Negative integration: production assembly must not add PreGame CSS to any non-PreGame screen.
     foreach (['battle', 'game_over', 'debug', 'wait', 'deck'] as $screen) {
         $state = new GameState(970002, 1, 2);

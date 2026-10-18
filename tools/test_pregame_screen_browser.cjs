@@ -124,6 +124,20 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
       assert.equal(await page.locator('.pregame-panel-footer a[href*="cmd=confirm_view"]').count(),fixture.variant==='waiting'?0:1);
      }
     }
+    if (['turn','side'].includes(fixture.stage)) {
+     assert.equal(await page.locator('[data-view-pager]').count(),1,key+' shared deck');
+     assert.equal(await page.locator('.pregame-main a[href*="cmd="]').count(),0,key+' no View commands');
+     assert.equal(await page.locator('.pregame-panel-summary .pregame-pool-stat').count(),8);
+     assert.ok(await page.locator('.pregame-main').evaluate(el=>el.scrollHeight<=el.clientHeight+1),key+' no central scroll');
+     if(fixture.stage==='turn') {
+      assert.equal(await page.locator('.pregame-panel-content .dice-column').count(),2);
+      assert.equal(await page.locator('.pregame-panel-footer a[href*="cmd=confirm_turn"]').count(),fixture.variant==='waiting'?0:1);
+     } else {
+      const chooser=fixture.role==='host'||fixture.variant==='chooser';
+      assert.equal(await page.locator('.pregame-panel-content input[name=side]').count(),chooser?2:0);
+      assert.equal(await page.locator('.pregame-panel-footer button[form=pregame-side-choice]').count(),chooser?1:0);
+     }
+    }
     const panel=page.locator('.pregame-info-panel');
     assert.equal((await panel.boundingBox()).width,440,key+' panel width at '+width);
     assert.equal(await page.locator('.pregame-main h1').count(),0,key+' duplicate heading');
@@ -261,6 +275,31 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
    await dealLink.click();
    assert.equal(await page.locator('.pregame-card-title').textContent(),dealName);
    assert.equal(await page.locator('.pregame-main a[href*="cmd=pick_card"]').count(),1);
+   await page.goto('https://pregame.test/turn-host');
+   assert.ok(await page.locator('[data-view-pagination] button').count()>1);
+   await page.locator('[data-view-pagination] button').nth(1).click();
+   await page.locator('.pregame-view-pages .prepare-card-link:visible').first().click();
+   assert.equal(await page.locator('.pregame-turn-info .dice-column').count(),2,'Card navigation preserves dice information');
+   assert.equal(await page.locator('.pregame-main a[href*="view_to_"]').count(),0);
+   await page.locator('.pregame-panel-footer a[href*="cmd=confirm_turn"]').click();
+   assert.equal(commands.at(-1).cmd,'confirm_turn');
+   assert.equal(commands.at(-1).query.game,'970001');
+   assert.ok(Object.hasOwn(commands.at(-1).query,'first'));
+   for (const [key,roleParam] of [['side-host','first'],['side-player-chooser','second']]) {
+    for (const side of ['1','2']) {
+     await page.goto('https://pregame.test/'+key);
+     await page.locator('input[name=side][value="'+side+'"]').check();
+     await page.locator('.pregame-panel-footer button[form=pregame-side-choice]').click();
+     assert.equal(commands.at(-1).cmd,'choose_side');
+     assert.equal(commands.at(-1).query.side,side);
+     assert.equal(commands.at(-1).query.game,'970001');
+     assert.equal(commands.at(-1).query[roleParam],'1');
+    }
+   }
+   await page.goto('https://pregame.test/side-player');
+   assert.equal(await page.locator('#pregame-side-choice').count(),0,'Waiting player cannot choose');
+   await page.locator('[data-view-zone=sideboard]').click();
+   assert.equal(await page.locator('.pregame-view-pages .prepare-card-link:visible').count(),1,'Waiting player can inspect their own deck and sideboard');
    await page.goto('https://pregame.test/place-placed');
    assert.equal(await page.locator('.pregame-main a[href*="cmd=unplace_card"]').count(),1);
    await page.goto('https://pregame.test/draft-host');

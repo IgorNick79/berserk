@@ -16,7 +16,8 @@ final class TurnScreen
         GameState $state,
         string $playerKey,
         string $role,
-        ?string $message
+        ?string $message,
+        array $deckData = []
     ): array {
         $linkParam = $role === 'host' ? 'first' : 'second';
 
@@ -34,15 +35,22 @@ final class TurnScreen
             $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
         }
 
+        $panelHtml = '<section class="pregame-turn-info"><div class="dice-block">'
+            . '<div class="dice-column"><div class="label">Ты</div><div class="dice dice-' . (int) $myDice . '">' . (int) $myDice . '</div></div>'
+            . '<div class="dice-column"><div class="label">Оппонент</div><div class="dice dice-' . (int) $oppDice . '">' . (int) $oppDice . '</div></div>'
+            . '</div><p><b>' . ($youFirst ? 'Ты выбираешь, кто ходит первым' : 'Оппонент выбирает, кто ходит первым') . '</b></p></section>';
+
         return [
             'screen' => 'turn',
-            'data'   => [
+            'data'   => array_merge($deckData, [
+                'panel_html' => $panelHtml,
+                'panel_actions_html' => $confirmHtml,
                 'my_dice'      => $myDice,
                 'opp_dice'     => $oppDice,
                 'first_text'   => $youFirst ? 'Ты ходишь первым' : 'Первым ходит оппонент',
                 'confirm_html' => $confirmHtml,
                 'message'      => $message ?? '',
-            ],
+            ]),
         ];
     }
 }

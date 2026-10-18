@@ -1,2 +1,1 @@
-{{message}}
-{{content_html}}
+{{deck_html}}

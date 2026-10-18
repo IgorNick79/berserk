@@ -12,7 +12,7 @@ final class PreGameLayout
     private const TITLES = [
         'mode' => 'Режим игры', 'settings' => 'Настройки', 'draft' => 'Grid Draft',
         'deck_host' => 'Выбор колод', 'deck_wait' => 'Выбор колод', 'view' => 'Просмотр колоды',
-        'turn' => 'Бросок кубика', 'side' => 'Выбор стороны', 'deal' => 'Выбор отряда', 'place' => 'Расстановка',
+        'turn' => 'Бросок кубика', 'side' => 'Выбор первого игрока', 'deal' => 'Выбор отряда', 'place' => 'Расстановка',
     ];
 
     public static function supports(string $screen): bool

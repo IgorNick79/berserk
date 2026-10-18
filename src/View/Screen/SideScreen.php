@@ -16,27 +16,35 @@ final class SideScreen
         GameState $state,
         string $playerKey,
         string $role,
-        ?string $message
+        ?string $message,
+        array $deckData = []
     ): array {
         $linkParam = $role === 'host' ? 'first' : 'second';
         $isChooser = ($state->firstPlayer === $playerKey);
 
         if ($isChooser) {
-            $side1Url = "?{$linkParam}&game={$state->gameId}&cmd=choose_side&side=1";
-            $side2Url = "?{$linkParam}&game={$state->gameId}&cmd=choose_side&side=2";
-            $contentHtml = '<p>Выбери сторону:</p>'
-                . '<a class="button" href="' . $side1Url . '">Сторона I (хожу первым)</a> '
-                . '<a class="button" href="' . $side2Url . '">Сторона II (хожу вторым)</a>';
+            $contentHtml = '<form id="pregame-side-choice" class="pregame-side-choice" method="get">'
+                . '<input type="hidden" name="' . $linkParam . '" value="1">'
+                . '<input type="hidden" name="game" value="' . (int) $state->gameId . '">'
+                . '<input type="hidden" name="cmd" value="choose_side">'
+                . '<fieldset><legend>Выбери, кто ходит первым:</legend>'
+                . '<label><input type="radio" name="side" value="1" checked> Ходить первым (сторона I)</label>'
+                . '<label><input type="radio" name="side" value="2"> Ходить вторым (сторона II)</label>'
+                . '</fieldset></form>';
+            $footerHtml = '<button type="submit" class="button" form="pregame-side-choice">Продолжить</button>';
         } else {
-            $contentHtml = '<p class="wait">Оппонент выбирает сторону...</p>';
+            $contentHtml = '<p class="wait">Оппонент выбирает, кто ходит первым...</p>';
+            $footerHtml = '';
         }
 
         return [
             'screen' => 'side',
-            'data'   => [
+            'data'   => array_merge($deckData, [
+                'panel_html' => '<section class="pregame-side-info">' . $contentHtml . '</section>',
+                'panel_actions_html' => $footerHtml,
                 'content_html' => $contentHtml,
                 'message'      => $message ?? '',
-            ],
+            ]),
         ];
     }
 }

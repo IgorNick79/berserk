@@ -1201,15 +1201,17 @@ switch ($state->status) {
         break;
 
     case 'turn':
+        $deckData = (new ViewScreen($deckView, $tpl))->readOnlyDeck($state, $playerKey, $role, $message, $cardsInfo, $elementLabels);
         $result = (new TurnScreen())
-            ->prepare($state, $playerKey, $role, $message);
+            ->prepare($state, $playerKey, $role, $message, $deckData);
         $screenName = $result['screen'];
         $screenData = $result['data'];
         break;
 
     case 'side':
+        $deckData = (new ViewScreen($deckView, $tpl))->readOnlyDeck($state, $playerKey, $role, $message, $cardsInfo, $elementLabels);
         $result = (new SideScreen())
-            ->prepare($state, $playerKey, $role, $message);
+            ->prepare($state, $playerKey, $role, $message, $deckData);
         $screenName = $result['screen'];
         $screenData = $result['data'];
         break;
