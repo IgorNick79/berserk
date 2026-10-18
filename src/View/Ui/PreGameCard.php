@@ -36,16 +36,42 @@ final class PreGameCard
             ? '<img class="pregame-card-image" src="' . $url . '" alt="' . $name . '" width="400" height="250">'
             : '<div class="pregame-card-image pregame-card-image--missing">Изображение недоступно</div>';
         $strike = (array) ($card['strike'] ?? []);
+        $stats = self::stat('hp', 'heart', self::value($card['health'] ?? null), 'Здоровье');
+        if (($card['type'] ?? '') !== 'fly') {
+            $stats .= self::stat('move', 'move', self::value($card['move'] ?? null), 'Ходов');
+        }
+        $stats .= self::stat('strike', 'sword', implode('-', array_map(fn($key) => self::value($strike[$key] ?? null), ['weak', 'medium', 'strong'])), 'Простой удар');
+        if (($card['type'] ?? '') === 'fly') $stats .= self::hint('/assets/images/card/fly.png', 'Летающее существо');
+        $description = CardDescription::render((string) ($card['descr'] ?? ''), false);
+        $costIcon = '/assets/images/card/' . (!empty($card['elite']) ? 'elite' : 'ordinary') . (!empty($card['single']) ? '-unique' : '') . '.png';
+        $class = trim((string) ($card['class'] ?? ''));
         return (string) $this->tpl->parse('includes/pregame/card.tpl', [
             'name' => $name,
             'image_html' => $image,
-            'hp' => self::value($card['health'] ?? null),
-            'move' => self::value($card['move'] ?? null),
-            'strike' => implode('–', array_map(fn($key) => self::value($strike[$key] ?? null), ['weak', 'medium', 'strong'])),
+            'price' => self::value($card['price'] ?? null),
+            'cost_icon_html' => self::assetExists($costIcon) ? '<img src="' . $costIcon . '" alt="' . (!empty($card['elite']) ? 'Элитная' : 'Обычная') . (!empty($card['single']) ? ', уникальная' : '') . '" width="24" height="24">' : '',
+            'stat_values_html' => $stats,
             'rarity_html' => self::icon((string) ($card['rarity'] ?? ''), self::RARITIES, '/assets/images/rarity/s1_', 'Редкость'),
-            'element_html' => self::icon((string) ($card['element_code'] ?? ''), self::ELEMENTS, '/assets/images/element-', 'Стихия', (string) ($card['element_label'] ?? '')),
-            'description_html' => CardDescription::render((string) ($card['descr'] ?? '')),
+            'element_html' => self::icon((string) ($card['element_code'] ?? ''), self::ELEMENTS, '/assets/images/element/', 'Стихия', (string) ($card['element_label'] ?? '')),
+            'class_html' => $class === '' ? '' : self::hint('/assets/images/card/class.png', 'Класс существа: ' . $class),
+            'description_html' => $description === '' ? '' : self::hint('/assets/images/card/info@2x.png', 'Описание карты', $description),
         ]);
+    }
+
+    private static function stat(string $stat, string $icon, string $value, string $label): string
+    {
+        return '<button type="button" class="pregame-hint pregame-stat-value" data-stat="' . $stat . '" aria-label="' . self::escape($label) . ': ' . $value . '">'
+            . '<img src="/assets/images/card/' . $icon . '.png" alt="" width="24" height="24">'
+            . '<span class="pregame-stat-number">' . $value . '</span>'
+            . '<template data-pregame-hint>' . self::escape($label) . ': ' . $value . '</template></button>';
+    }
+
+    private static function hint(string $url, string $label, string $content = ''): string
+    {
+        $text = self::escape($label);
+        return '<button type="button" class="pregame-hint" aria-label="' . $text . '" aria-expanded="false">'
+            . (self::assetExists($url) ? '<img src="' . $url . '" alt="" width="24" height="24">' : '<span>' . $text . '</span>')
+            . '<template data-pregame-hint>' . ($content === '' ? $text : $content) . '</template></button>';
     }
 
     private static function value(mixed $value): string
@@ -68,10 +94,7 @@ final class PreGameCard
     {
         if (!isset($allowed[$code])) return '<span title="' . $kind . '">' . $kind . ': —</span>';
         $label = $label !== '' ? $label : $allowed[$code];
-        $text = self::escape($kind . ': ' . $label);
         $url = $prefix . $code . '.png';
-        return '<span class="pregame-card-icon" title="' . $text . '">'
-            . (self::assetExists($url) ? '<img src="' . $url . '" alt="' . $text . '" width="20" height="20">' : $text)
-            . '</span>';
+        return self::hint($url, $kind . ': ' . $label);
     }
 }

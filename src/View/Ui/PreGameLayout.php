@@ -32,10 +32,11 @@ final class PreGameLayout
         };
         $content = (string) ($data['panel_html'] ?? '');
         return $this->render((string) $this->tpl->parse('screen/' . $screen . '.tpl', $data),
-            $title, $content, (string) ($data['timer_html'] ?? ''), '', $content === '' ? 'statistics' : 'card');
+            $title, $content, (string) ($data['timer_html'] ?? ''), (string) ($data['panel_actions_html'] ?? ''),
+            $content === '' ? 'statistics' : 'card', (string) ($data['panel_phase'] ?? ''));
     }
 
-    public function render(string $mainHtml, string $title, string $contentHtml = '', string $timerHtml = '', string $footerHtml = '', string $contentKind = 'statistics'): string
+    public function render(string $mainHtml, string $title, string $contentHtml = '', string $timerHtml = '', string $footerHtml = '', string $contentKind = 'statistics', string $phase = ''): string
     {
         if (!in_array($contentKind, ['statistics', 'card', 'history'], true)) {
             throw new \InvalidArgumentException('Unknown PreGame panel content');
@@ -47,6 +48,7 @@ final class PreGameLayout
             'timer_html' => $timerHtml,
             'footer_html' => $footerHtml,
             'content_kind' => $contentKind,
+            'phase' => htmlspecialchars($phase, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
         ]);
     }
 }

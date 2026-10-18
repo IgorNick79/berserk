@@ -39,6 +39,7 @@ const modeHtml = execFileSync(php, [path.join(__dirname, 'test_solomon_draft.php
             assert.equal(await cards.count(), 8);
             assert.equal(await page.locator('#solomon-decision button').count(), 2);
             await cards.nth(0).locator('.prepare-card-link').click();
+            await cards.nth(0).locator('input').check();
             await cards.nth(1).locator('input').check();
             assert.equal(await page.locator('[data-solomon-selected]').innerText(), '2');
             assert.equal(await page.locator('.pregame-panel-content .pregame-card-info').count(), 1);
@@ -50,6 +51,8 @@ const modeHtml = execFileSync(php, [path.join(__dirname, 'test_solomon_draft.php
             await page.reload();
             assert.equal(await page.locator('[data-solomon-selected]').innerText(), '2');
             await cards.nth(0).locator('.prepare-card-link').click();
+            assert.equal(await page.locator('[data-solomon-selected]').innerText(), '2');
+            await page.locator('[data-solomon-panel-action=cancel]').click();
             assert.equal(await page.locator('[data-solomon-selected]').innerText(), '1');
             nextDecision = true;
             await page.reload();

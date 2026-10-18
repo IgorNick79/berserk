@@ -426,7 +426,7 @@ function buildRenderCardInfo(Db $db, GameState $state): array
         $rows = $db->fetchAll(
             "SELECT ukid, name, price, health, move, elite,
                     strike_weak, strike_medium, strike_strong,
-                    element_id, descr, rarity
+                    element_id, descr, rarity, single, class, type
              FROM cards WHERE ukid IN ($in)"
         );
         foreach ($rows as $r) {
@@ -434,6 +434,9 @@ function buildRenderCardInfo(Db $db, GameState $state): array
                 'name'    => $r['name'],
                 'descr'   => (string) ($r['descr'] ?? ''),
                 'rarity' => (string) ($r['rarity'] ?? ''),
+                'single' => (bool) ($r['single'] ?? false),
+                'class' => (string) ($r['class'] ?? ''),
+                'type' => (string) ($r['type'] ?? ''),
                 'element_code' => $elementCodes[(int) $r['element_id']] ?? '',
                 'element_label' => $elements[(int) $r['element_id']] ?? '—',
                 'price'   => (int) $r['price'],
@@ -1118,8 +1121,8 @@ if ($commandType !== '') {
             $redirectUrl .= '&pile=' . urlencode((string) $_GET['pile']);
         }
 
-        // Одноразовое сообщение через сессию
-        $_SESSION['flash_message'] = 'OK: ' . implode(', ', $result->events);
+        // Successful commands redirect silently; keep service events out of the UI.
+        unset($_SESSION['flash_message']);
 
         header("Location: $redirectUrl");
         exit;
@@ -1141,8 +1144,12 @@ if ($commandType === '' && $state->status === 'draft') {
 
 // Читаем flash-сообщение
 if (isset($_SESSION['flash_message'])) {
-    $message = $_SESSION['flash_message'];
+    $flashMessage = (string) $_SESSION['flash_message'];
     unset($_SESSION['flash_message']);
+    // Discard service messages left in sessions created before this UI cleanup.
+    if (!str_starts_with($flashMessage, 'OK: ')) {
+        $message = $flashMessage;
+    }
 }
 
 // ─── Готовим данные для рендера ──────────────────────────────

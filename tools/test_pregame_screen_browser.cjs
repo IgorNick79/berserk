@@ -49,14 +49,24 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
     const panel=page.locator('.pregame-info-panel');
     assert.equal((await panel.boundingBox()).width,440,key+' panel width at '+width);
     assert.equal(await page.locator('.pregame-main h1').count(),0,key+' duplicate heading');
-    assert.equal(await page.locator('.pregame-panel-footer').textContent(),'');
-    assert.ok(await page.locator('.toolbar a[href="/reset"]').isVisible());
+    assert.equal(await page.locator('[data-solomon-panel-action]').count(), fixture.stage==='draft' && fixture.variant.includes('solomon') && !((fixture.role==='player' && !fixture.variant.includes('player-active')) || (fixture.role==='host' && fixture.variant.includes('player-active'))) ? 2 : 0);
+    assert.equal(await page.locator('.toolbar, a[href="/reset"]').count(),0,'Service toolbar removed');
     const dims=await page.evaluate(()=>({height:document.documentElement.scrollHeight, viewport:innerHeight, width:document.documentElement.scrollWidth,vw:innerWidth}));
     assert.ok(dims.height<=dims.viewport+1,key+' page height');
     assert.ok(dims.width<=dims.vw+1,key+' page width');
     if(fixture.stage==='draft') {
      assert.equal(await page.locator('.pregame-panel-header .draft-timer').count(),1,key+' header timer');
      assert.equal(await page.locator('.pregame-main .draft-timer').count(),0,key+' duplicate timer');
+    }
+    const info = page.getByRole('button', {name:'Описание карты',exact:true});
+    if (await info.count()) {
+     const heading=await page.locator('.pregame-card-heading').boundingBox(),media=await page.locator('.pregame-card-media').boundingBox();
+     assert.ok(heading.y+heading.height<=media.y+1, key+' heading above image');
+     await info.click();
+     assert.ok(await page.locator('.pregame-stat-tooltip').isVisible(), key+' description tooltip');
+     assert.ok((await page.locator('.pregame-stat-tooltip').textContent()).length>0);
+     await page.keyboard.press('Escape');
+     assert.ok(await page.locator('.pregame-stat-tooltip').isHidden());
     }
     const summary=page.locator('.pregame-panel-content summary');
     if(await summary.count()) {
@@ -85,19 +95,19 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
    await page.goto('https://pregame.test/view-host');
    const viewLink=page.locator('.pregame-main .cards a').nth(1), viewName=await viewLink.locator('.prepare-card__name').textContent();
    await viewLink.click();
-   assert.equal(await page.locator('.pregame-card-details h3').textContent(),viewName);
+   assert.equal(await page.locator('.pregame-card-title').textContent(),viewName);
    await page.goto('https://pregame.test/view-sideboard');
    assert.equal(await page.locator('.pregame-main a[href*="cmd=view_to_deck"]').count(),1);
    await page.goto('https://pregame.test/deal-host');
    const dealLink=page.locator('.pregame-main .cards a').nth(2),dealName=await dealLink.locator('.prepare-card__name').textContent();
    await dealLink.click();
-   assert.equal(await page.locator('.pregame-card-details h3').textContent(),dealName);
+   assert.equal(await page.locator('.pregame-card-title').textContent(),dealName);
    assert.equal(await page.locator('.pregame-main a[href*="cmd=pick_card"]').count(),1);
    await page.goto('https://pregame.test/place-placed');
    assert.equal(await page.locator('.pregame-main a[href*="cmd=unplace_card"]').count(),1);
    await page.goto('https://pregame.test/draft-host');
    await page.locator('.draft-grid .prepare-card-link').nth(1).click();
-   assert.equal(await page.locator('.pregame-card-details h3').textContent(),'grid-visible-1');
+   assert.equal(await page.locator('.pregame-card-title').textContent(),'grid-visible-1');
    // Countdown and polling use the unchanged draft_timer.js.
    const timer=page.locator('[data-draft-action-time]'), beforeTime=await timer.textContent();
    await page.waitForFunction(previous=>document.querySelector('[data-draft-action-time]').textContent!==previous,beforeTime,{timeout:4000});
@@ -111,9 +121,14 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
    await page.goto('https://pregame.test/draft-solomon-host');
    const cards=page.locator('[data-solomon-position]');
    await cards.nth(0).locator('.prepare-card-link').click();
+   assert.equal(await page.locator('[data-solomon-selected]').textContent(),'0','Preview does not select');
+   await page.locator('[data-solomon-panel-action=select]').click();
    await cards.nth(1).locator('input').check();
    assert.equal(await page.locator('[data-solomon-selected]').textContent(),'2');
-   assert.equal(await page.locator('.pregame-card-details h3').textContent(),'grid-visible-0');
+   assert.equal(await page.locator('.pregame-card-title').textContent(),'grid-visible-0');
+   await page.locator('[data-solomon-panel-action=cancel]').click();
+   assert.equal(await page.locator('[data-solomon-selected]').textContent(),'1','Cancel deselects only previewed card');
+   await page.locator('[data-solomon-panel-action=select]').click();
    await page.reload();
    assert.equal(await page.locator('[data-solomon-selected]').textContent(),'2','Selection survives reload');
    const confirmRequest=page.waitForRequest(r=>new URL(r.url()).searchParams.get('cmd')==='draft_confirm');
@@ -127,7 +142,7 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
     await page.goto('https://pregame.test/'+key);
     assert.equal(await page.locator('#solomon-decision').count(),0);
     await page.locator('[data-solomon-position] .prepare-card-link').nth(2).click();
-    assert.equal(await page.locator('.pregame-card-details h3').textContent(),'grid-visible-2');
+    assert.equal(await page.locator('.pregame-card-title').textContent(),'grid-visible-2');
     assert.equal(await page.locator('[name="positions[]"]').count(),0);
    }
    if(width===1600 && process.env.PREGAME_SCREENSHOT) await page.screenshot({path:process.env.PREGAME_SCREENSHOT});
@@ -142,9 +157,13 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
   });
   await page.goto('https://touch.test/');
   await page.locator('[data-solomon-position] .prepare-card-link').first().tap();
+  assert.equal(await page.locator('[data-solomon-selected]').textContent(),'0');
+  await page.locator('[data-solomon-panel-action=select]').tap();
   assert.equal(await page.locator('[data-solomon-selected]').textContent(),'1');
-  await page.locator('.pregame-panel-content summary').tap();
-  assert.ok(await page.locator('.pregame-panel-content details').evaluate(el=>el.open));
+  await page.getByRole('button', {name:'Описание карты',exact:true}).tap();
+  assert.ok(await page.locator('.pregame-stat-tooltip').isVisible());
+  await page.locator('[data-solomon-panel-action=cancel]').tap();
+  assert.equal(await page.locator('[data-solomon-selected]').textContent(),'0');
   await context.close();
   console.log('PreGame screen browser tests passed: '+Object.keys(fixtures).length+' fixtures x 1600/1280/1024; cards, actions, scrolling, timer/poll transition, Solomon payloads, keyboard and touch.');
  } finally {await browser.close();}

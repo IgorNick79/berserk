@@ -100,6 +100,11 @@ namespace {
             $screen=match($stage) {'mode'=>new ModeScreen($tpl),'settings'=>new SettingsScreen(),'deck'=>new DeckScreen(new DeckView(new Db()),$tpl),'turn'=>new TurnScreen(),'side'=>new SideScreen()};
             $result=$screen->prepare($state,$role,$role,null);
         }
+        if ($stage === 'draft' && str_contains($variant, 'solomon')) {
+            integrationAssert(str_contains($result['data']['panel_title'], '#1 · '), 'Existing decision number in title');
+            integrationAssert($result['data']['panel_phase'] === 'Solomon Draft', 'Solomon phase label');
+            integrationAssert(($result['data']['panel_actions_html'] !== '') === ($state->draft['turn'] === $role), 'Panel controls restricted to active player');
+        }
         $shell=(new PreGameLayout($tpl))->renderScreen($result['screen'],$result['data']);
         $dom=new \DOMDocument(); @$dom->loadHTML('<?xml encoding="UTF-8">'.$shell); $xp=new \DOMXPath($dom);
         integrationAssert($xp->query('//aside[contains(@class,"pregame-info-panel")]')->length===1,'One panel '.$stage);
@@ -116,8 +121,8 @@ namespace {
         }
         if(in_array($variant,['denied','empty'],true)) integrationAssert(($result['data']['panel_html']??'')==='','Denied/empty selection');
         if($selected && !in_array($variant,['denied','empty'],true) && ($request === null || ($result['data']['panel_html'] ?? '') !== '')) {
-            integrationAssert(str_contains($result['data']['panel_html'],'<b>HP</b> 5'),'Panel uses static catalog HP');
-            integrationAssert(!str_contains($result['data']['panel_html'],'<b>HP</b> 99'),'No runtime battle stats');
+            integrationAssert(str_contains($result['data']['panel_html'],'aria-label="Здоровье: 5"'),'Panel uses static catalog HP');
+            integrationAssert(!str_contains($result['data']['panel_html'],'aria-label="Здоровье: 99"'),'No runtime battle stats');
         }
         if(in_array($stage,['view','deal','place'],true) && $variant==='waiting') integrationAssert($xp->query('//main//a[contains(@href,"cmd=")]')->length===0,'No actions after confirmation');
         if($stage==='view' && $variant==='system') integrationAssert(str_contains($result['data']['panel_html'],'system description'),'System catalog fallback');

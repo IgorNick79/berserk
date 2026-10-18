@@ -15,11 +15,12 @@ function check(ok, text) { if (!ok) throw Error(text); }
     const url = new URL(route.request().url());
     if (url.pathname === '/') return route.fulfill({body:html, contentType:'text/html; charset=utf-8'});
     const file = path.join(repo, 'www', url.pathname);
-    if (fs.existsSync(file)) return route.fulfill({body:fs.readFileSync(file),contentType:file.endsWith('.css')?'text/css':file.endsWith('.webp')?'image/webp':'image/png'});
+    if (fs.existsSync(file)) return route.fulfill({body:fs.readFileSync(file),contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.webp')?'image/webp':'image/png'});
     return route.fulfill({status:404,body:''});
    });
    await page.goto('https://pregame.test/');
-   await page.locator('summary').click();
+   await page.getByRole('button',{name:'Описание карты',exact:true}).click();
+   await page.keyboard.press('Escape');
    const measure = () => page.evaluate(() => {
     const panel=document.querySelector('.pregame-info-panel'), content=document.querySelector('.pregame-panel-content');
     return {width:panel.getBoundingClientRect().width, header:document.querySelector('.pregame-panel-header').getBoundingClientRect().top,
@@ -43,7 +44,7 @@ function check(ok, text) { if (!ok) throw Error(text); }
    await page.locator('.pregame-panel-content').focus();
    check(await page.locator('.pregame-panel-content').evaluate(el=>el===document.activeElement),'Keyboard focus');
    await page.keyboard.press('Home');
-   check(await page.locator('.toolbar').isVisible(),'Toolbar retained');
+   check(await page.locator('.toolbar').count()===0,'Service toolbar removed');
    check(errors.length===0,'No JS errors');
    await page.close();
   }
@@ -51,8 +52,9 @@ function check(ok, text) { if (!ok) throw Error(text); }
   const page=await touch.newPage();
   await page.setContent(html.replace(/<link[^>]+>/g,''));
   await page.addStyleTag({content:fs.readFileSync(path.join(repo,'www/assets/css/pregame.css'),'utf8')});
-  await page.locator('summary').tap();
-  check(await page.locator('details').evaluate(el=>el.open),'Touch spoiler');
+  await page.addScriptTag({content:fs.readFileSync(path.join(repo,'www/assets/js/pregame-ui.js'),'utf8')});
+  await page.getByRole('button',{name:'Описание карты',exact:true}).tap();
+  check(await page.locator('.pregame-stat-tooltip').isVisible(),'Touch description');
   await touch.close();
   console.log('PreGame browser tests passed: 1600/1280/1024, scroll, keyboard, touch.');
  } finally {await browser.close();}

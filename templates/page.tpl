@@ -8,12 +8,6 @@
     {{page_styles}}
 </head>
 <body class="{{page_class}}">
-<div class="toolbar">
-    <span>Партия #{{game_id}}</span>
-    <span>Роль: <b>{{role}}</b></span>
-    <a href="/reset">Сброс</a>
-</div>
-
 <div class="screen">
     {{screen}}
 </div>

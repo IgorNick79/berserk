@@ -101,12 +101,12 @@ final class DraftScreen
 
         if ($isSolomon) {
             $gridHtml = '<div class="solomon-stack" data-solomon-stack data-selection-key="'
-                . (int) $state->gameId . '-' . $playerKey . '" data-decision="' . (int) ($draft['decision_id'] ?? 1) . '">';
+                . (int) $state->gameId . '-' . $playerKey . '" data-preview-position="' . $selectedIdx . '" data-decision="' . (int) ($draft['decision_id'] ?? 1) . '">';
             foreach ($draft['grid'] as $position => $ukid) {
                 $info = $cardsInfo[$ukid] ?? ['name' => $ukid, 'strike' => []];
                 $gridHtml .= '<div class="solomon-stack__card" data-solomon-position="' . (int) $position . '">'
                     . ($isMyTurn ? '<label class="solomon-stack__select"><input type="checkbox" name="positions[]" value="' . (int) $position
-                        . '" form="solomon-decision"> Выбрать</label>' : '')
+                        . '" form="solomon-decision"><span>Выбрать</span></label>' : '')
                     . $ui->card(['ukid' => $ukid, 'info' => $info, 'link' => $baseUrl . '&card=' . (int) $position
                         . '&card_ukid=' . rawurlencode($ukid) . '&card_version=' . $state->version])
                     . '<template data-solomon-preview>' . $ui->information(['ukid' => $ukid], $cardsInfo) . '</template></div>';
@@ -166,7 +166,7 @@ final class DraftScreen
         $timerHtml = $this->timerHtml($state, $playerKey, $now);
         $historyHtml = $this->historyHtml($state, $playerKey, $cardsInfo, $ui);
         $scriptHtml = $this->scriptHtml($state, $syncUrl, $now);
-        if ($isSolomon) $scriptHtml .= '<script src="/assets/js/solomon_selection.js?v=2" defer></script>';
+        if ($isSolomon) $scriptHtml .= '<script src="/assets/js/solomon_selection.js?v=3" defer></script>';
 
         // ─── Статистика набранного пула ──────────────────
         $myPicked = $draft['picked'][$playerKey] ?? [];
@@ -211,7 +211,9 @@ final class DraftScreen
 
         return ['screen' => 'draft', 'data' => [
             'draft_class'   => $isSolomon ? 'screen-draft--solomon' : '',
-            'panel_title'   => $isSolomon ? 'Solomon Draft' : 'Grid Draft',
+            'panel_title'   => $isSolomon ? '#' . (int) ($draft['decision_id'] ?? 1) . ' · ' . ($isMyTurn ? 'Ваш ход' : 'Ход противника') : 'Grid Draft',
+            'panel_phase'   => $isSolomon ? 'Solomon Draft' : '',
+            'panel_actions_html' => $isSolomon && $isMyTurn ? '<div class="pregame-card-actions"><button type="button" class="button" data-solomon-panel-action="select" disabled>Выбрать</button><button type="button" class="button" data-solomon-panel-action="cancel" disabled>Отмена</button></div>' : '',
             'turn_label'    => $isMyTurn ? 'Твой ход' : 'Ход оппонента',
             'host_picked'   => $hostPickedCount,
             'player_picked' => $playerPickedCount,
