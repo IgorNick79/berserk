@@ -201,12 +201,18 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
       seen.add(card.id);
      }
     }
-    assert.equal(seen.size,33,'All 32 deck cards and the sideboard are reachable');
+    assert.equal(seen.size,32,'All 32 deck cards are reachable');
+    await page.locator('[data-view-zone="sideboard"]').click();
+    const sideId=await page.locator('.pregame-view-pages .prepare-card-link:visible').getAttribute('data-ukid');
+    seen.add(sideId);
+    assert.equal(seen.size,33,'Sideboard is directly reachable through its section control');
+    assert.equal(await page.getByRole('button',{name:'Тьма: 1',exact:true}).count(),1,'Statistics follow the active section');
+    await page.locator('[data-view-zone="deck"]').click();
     await bullets.last().press('Home');
     assert.equal(await bullets.first().getAttribute('aria-current'),'page');
     await bullets.first().press('End');
     assert.equal(await bullets.last().getAttribute('aria-current'),'page');
-    await page.getByRole('button',{name:'Тьма: 32',exact:true}).click();
+    await page.getByRole('button',{name:'Тьма: 32',exact:true}).hover();
     assert.ok(await page.locator('.pregame-stat-tooltip').isVisible(),'View element hint');
     await page.keyboard.press('Escape');
     await bullets.nth(1).click();
@@ -217,6 +223,39 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
     assert.equal(await page.locator('.pregame-view-pages .prepare-card--selected:visible').count(),1,'Selected card retains its page after navigation');
    }
    await page.setViewportSize({width,height:900});
+   await page.goto('https://pregame.test/view-filters');
+   assert.equal(await page.locator('[data-view-heading]').count(),0,'No redundant card-list heading');
+   async function visibleViewIds() {
+    const result=new Set(), controls=page.locator('[data-view-pagination] button');
+    for(let i=0;i<await controls.count();i++) {
+     await controls.nth(i).click();
+     for(const id of await page.locator('.pregame-view-pages .prepare-card-link:visible').evaluateAll(nodes=>nodes.map(el=>el.dataset.ukid))) result.add(id);
+    }
+    return result;
+   }
+   await page.locator('[data-view-filter="element:plains"]').click();
+   assert.equal((await visibleViewIds()).size,16,'Element filter');
+   await page.locator('[data-view-filter="crystal:gold"]').click();
+   assert.equal((await visibleViewIds()).size,8,'Element and crystal filters combine');
+   await page.locator('[data-view-filter="crystal:gold"]').click();
+   assert.equal((await visibleViewIds()).size,16,'Repeated click removes only the crystal filter');
+   await page.locator('[data-view-filter="element:plains"]').press('Enter');
+   assert.equal((await visibleViewIds()).size,32,'Keyboard toggles element filter off');
+   await page.locator('[data-view-filter="element:forests"]').click();
+   assert.ok(await page.locator('[data-view-empty]').isVisible(),'Empty filter result is explicit');
+   assert.equal(await page.locator('[data-view-pagination] button').count(),0);
+   await page.locator('[data-view-zone="sideboard"]').click();
+   assert.equal((await visibleViewIds()).size,1,'Section switch clears filters');
+   assert.equal(await page.getByRole('button',{name:'Леса: 1',exact:true}).count(),1);
+   assert.equal(await page.getByRole('button',{name:'Золотые карты: 1',exact:true}).count(),1);
+   await page.locator('[data-view-filter="element:forests"]').click();
+   await page.locator('.pregame-view-pages .prepare-card-link:visible').click();
+   assert.equal(await page.locator('[data-view-zone="sideboard"]').getAttribute('aria-pressed'),'true');
+   assert.equal(await page.locator('[data-view-filter="element:forests"]').getAttribute('aria-pressed'),'true','Filter survives card navigation');
+   assert.equal(await page.locator('.pregame-card-title').textContent(),'host-sideboard');
+   await page.locator('[data-view-zone="deck"]').click();
+   assert.equal((await visibleViewIds()).size,32,'Clicking deck restores the full deck');
+   assert.equal(await page.locator('[data-view-filter][aria-pressed="true"]').count(),0);
    await page.goto('https://pregame.test/deal-host');
    const dealLink=page.locator('.pregame-main .cards a').nth(2),dealName=await dealLink.locator('.prepare-card__name').textContent();
    await dealLink.click();

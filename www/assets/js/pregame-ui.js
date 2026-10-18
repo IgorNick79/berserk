@@ -79,6 +79,7 @@
     document.addEventListener('click', function (event) {
         var source = statHint(event.target);
         if (source && !root.contains(source)) source = null;
+        if (source && source.hasAttribute('data-view-filter')) { hintSuppressed = source; hideHint(); return; }
         if (hintPinned) {
             hintSuppressed = source;
             hideHint();
@@ -93,6 +94,7 @@
     }, true);
     root.addEventListener('keydown', function (event) {
         var source = statHint(event.target);
+        if (source && source.hasAttribute('data-view-filter')) return;
         if (!source || (event.key !== 'Enter' && event.key !== ' ')) return;
         event.preventDefault(); event.stopPropagation();
         if (hintPinned) { hintSuppressed = source; hideHint(); }

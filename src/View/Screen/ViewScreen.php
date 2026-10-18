@@ -90,6 +90,7 @@ final class ViewScreen
             }
 
             $cardsHtml .= $ui->card([
+                'class'    => $this->filterClass($c, $cardsInfo[$ukid] ?? []),
                 'ukid'     => $ukid,
                 'info'     => $c,
                 'count'    => (int) ($c['count'] ?? 1),
@@ -110,6 +111,7 @@ final class ViewScreen
                 }
 
                 $sideboardHtml .= $ui->card([
+                    'class'    => $this->filterClass($c, $cardsInfo[$ukid] ?? []),
                     'ukid'     => $ukid,
                     'info'     => $c,
                     'count'    => (int) ($c['count'] ?? 1),
@@ -175,11 +177,12 @@ final class ViewScreen
         }
         $panelHtml = $ui->information($selectedCard, $panelCatalog);
         $panelSummary = '<section class="pregame-pool-stats" aria-label="Статистика колоды">'
-            . '<div class="pregame-pool-totals">Колода: <b>' . $deckCount . '</b> · Сайдборд: <b>' . $sideboardCount . '</b>'
+            . '<div class="pregame-pool-totals"><button type="button" class="pregame-view-zone" data-view-zone="deck" aria-pressed="true">Колода: <b>' . $deckCount . '</b></button> · '
+            . '<button type="button" class="pregame-view-zone" data-view-zone="sideboard" aria-pressed="false">Сайдборд: <b>' . $sideboardCount . '</b></button>'
             . ($usesRuntimeDeck ? ' · Минимум: <b>' . GameSettings::MIN_DECK_SIZE . '</b>' : '') . '</div>'
             . '<div class="pregame-pool-icons"><div class="pregame-pool-currencies">'
-            . $this->statisticIcon('/assets/images/card/elite.png', 'Золотые карты', (int) $deckInfo['elite'])
-            . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебряные карты', (int) $deckInfo['ordinary'])
+            . $this->statisticIcon('/assets/images/card/elite.png', 'Золотые карты', (int) $deckInfo['elite'], 'crystal:gold')
+            . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебряные карты', (int) $deckInfo['ordinary'], 'crystal:silver')
             . '</div><div class="pregame-pool-elements">'
             . $this->elementBadgesHtml($deckInfo['elements'], $elementLabels) . '</div></div></section>';
 
@@ -216,17 +219,27 @@ final class ViewScreen
         $html = '';
         foreach ($names as $code => $name) {
             $html .= $this->statisticIcon('/assets/images/element/' . $code . '.png',
-                ElementLabels::label($code, $elementLabels + $names), $counts[$code]);
+                ElementLabels::label($code, $elementLabels + $names), $counts[$code], 'element:' . $code);
         }
         return $html;
     }
 
-    private function statisticIcon(string $url, string $label, int $count): string
+    private function statisticIcon(string $url, string $label, int $count, string $filter): string
     {
         $hint = htmlspecialchars($label . ': ' . $count, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        return '<button type="button" class="pregame-hint pregame-pool-stat" aria-label="' . $hint . '">'
+        return '<button type="button" class="pregame-hint pregame-pool-stat" data-view-filter="' . $filter . '" data-view-stat-label="'
+            . htmlspecialchars($label, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '" aria-pressed="false" aria-label="' . $hint . '">'
             . '<img src="' . $url . '" alt="" width="24" height="24"><span>' . $count . '</span>'
             . '<template data-pregame-hint>' . $hint . '</template></button>';
+    }
+
+    private function filterClass(array $card, array $catalog): string
+    {
+        $names = ['dark' => 'Тьма', 'plains' => 'Степи', 'forests' => 'Леса',
+            'swamps' => 'Болота', 'mountains' => 'Горы', 'neutral' => 'Нейтральная'];
+        $code = (string) ($catalog['element_code'] ?? $card['element_code'] ?? $card['element'] ?? 'neutral');
+        if (!isset($names[$code])) $code = array_search($code, $names, true) ?: 'neutral';
+        return 'view-element-' . $code . ' view-crystal-' . (!empty($card['elite']) ? 'gold' : 'silver');
     }
 
     private function buildFromInstances(array $instances, array $cardsInfo, string $name): ?array

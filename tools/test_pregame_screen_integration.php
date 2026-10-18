@@ -70,9 +70,23 @@ namespace {
             } elseif ($variant!=='empty') {
                 for($i=0;$i<32;$i++) {
                     $entry=integrationCard($state,$role,'deck',$role.'-deck-'.$i,$catalog);
+                    if ($variant === 'filters') {
+                        $entry->elite = $i % 4 < 2;
+                        $entry->element = $i % 2 === 0 ? 'plains' : 'dark';
+                        $catalog[$entry->ukid]['elite'] = $entry->elite;
+                        $catalog[$entry->ukid]['element_code'] = $entry->element;
+                        $catalog[$entry->ukid]['element'] = $catalog[$entry->ukid]['element_label'] = $entry->element === 'plains' ? 'Степи' : 'Тьма';
+                    }
                     $selected ??= $entry;
                 }
                 $side=integrationCard($state,$role,'sideboard',$role.'-sideboard',$catalog);
+                if ($variant === 'filters') {
+                    $side->elite = true; $side->element = 'forests';
+                    $catalog[$side->ukid]['elite'] = true;
+                    $catalog[$side->ukid]['element_code'] = 'forests';
+                    $catalog[$side->ukid]['element'] = $catalog[$side->ukid]['element_label'] = 'Леса';
+                }
+
                 $_GET=['card'=> $variant==='sideboard'?'sideboard:'.$side->instanceId:'deck:'.$selected->instanceId];
                 if($variant==='denied') $_GET=['card'=>'deck:1'];
             }
@@ -166,7 +180,7 @@ namespace {
     }
     foreach(['mode','settings','deck','view','turn','side','deal','place','draft'] as $stage) foreach(['host','player'] as $role) $fixtures[$stage.'-'.$role]=integrationFixture($stage,$role);
     foreach(['solomon','sealed','system'] as $variant) foreach(['host','player'] as $role) $fixtures['settings-'.$variant.'-'.$role]=integrationFixture('settings',$role,$variant);
-    foreach(['sideboard','waiting','empty','denied','system'] as $variant) $fixtures['view-'.$variant]=integrationFixture('view','host',$variant);
+    foreach(['sideboard','waiting','empty','denied','system','filters'] as $variant) $fixtures['view-'.$variant]=integrationFixture('view','host',$variant);
     foreach(['waiting','denied'] as $variant) foreach(['deal','place'] as $stage) $fixtures[$stage.'-'.$variant]=integrationFixture($stage,'host',$variant);
     $fixtures['place-placed']=integrationFixture('place','host','placed');
     foreach(['solomon','solomon-unlimited','solomon-empty-history','stale','wrong-identity'] as $variant) foreach(['host','player'] as $role) $fixtures['draft-'.$variant.'-'.$role]=integrationFixture('draft',$role,$variant);

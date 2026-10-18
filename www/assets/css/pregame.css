@@ -186,7 +186,6 @@ body.pregame-page {
     box-shadow: 0 10px 36px #0009;
 }
 .screen-prepare-view .flash:empty, .pregame-view-actions:empty { display: none; }
-.pregame-view-heading { margin: 0 0 12px; color: #fff4d6; text-shadow: 0 1px 3px #000; font-size: 16px; }
 .pregame-main .pregame-view-pages .cards { grid-template-columns: repeat(var(--view-columns, 3), minmax(0, 1fr)); gap: 12px; margin: 0; grid-template-rows: repeat(var(--view-rows, 2), var(--view-card-height, 144px)); }
 .pregame-view-pages .prepare-card-link { display: flex; }
 .pregame-view-pages .prepare-card { display: flex; flex-direction: column; height: 100%; }
@@ -199,3 +198,9 @@ body.pregame-page {
 .pregame-view-pagination button:hover span { transform: scale(1.15); }
 .pregame-view-actions:not(:empty) { margin-top: 12px; }
 .pregame-view-confirm .wait { margin: 0; }
+
+.pregame-view-zone { border: 0; padding: 2px 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.pregame-view-zone[aria-pressed="true"] { color: #463411; text-decoration: underline; text-underline-offset: 3px; }
+[data-view-filter][aria-pressed="true"] { outline: 2px solid #917137; outline-offset: 3px; border-radius: 3px; }
+.pregame-view-pages { position: relative; min-height: calc(var(--view-rows, 2) * var(--view-card-height, 144px) + (var(--view-rows, 2) - 1) * 12px); }
+.pregame-view-empty { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 12px; color: #fff4d6; text-align: center; text-shadow: 0 1px 3px #000; }
