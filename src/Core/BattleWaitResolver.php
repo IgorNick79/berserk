@@ -20,7 +20,7 @@ final class BattleWaitResolver
         'pending_attack_series_choice', 'pending_wild_healer_move', 'pending_forced_directional_move',
         'pending_forced_strike', 'pending_row_pick', 'pending_opponent_row_marker', 'pending_row_spell_pick',
         'pending_gate_pick', 'pending_greed_teleport', 'pending_destroy_self_and_target',
-        'pending_particle_pick', 'pending_blood_storm', 'pending_life_gift', 'pending_teleport_target',
+        'pending_particle_pick', 'pending_blood_storm', 'pending_life_gift', 'pending_teleport_target', 'pending_ranged_neighbor_teleport',
     ];
     private const CARD_PENDING = [
         'pending_coin_spend' => 'attacker_id', 'pending_multi_heal' => 'attacker_id',

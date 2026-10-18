@@ -856,6 +856,9 @@ final class BattleScreen
                     $key  = $a['key'] ?? $type;
 
                     $label = $a['name'] ?? ($labels[$type] ?? $type);
+                    if ($type === 'magic') {
+                        $label = preg_replace('/^Магический удар на \d+-\d+-\d+$/u', 'Магический удар', $label);
+                    }
 
                     // Ведьма слуа — блокируем если нет доп. жизней
                     if ($type === 'blood_tap') {

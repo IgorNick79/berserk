@@ -2201,6 +2201,23 @@ final class ActionResolver
         $value   = (int) $pmd['value'];
         $results = [];
 
+        InformationalWaitManager::publish($this->state);
+        $this->state->battle['strike'] = [
+            'kind'        => 'multi_discharge',
+            'action_name' => $pmd['action']['name'] ?? 'Тройной разряд',
+            'attacker_id' => $attacker->instanceId,
+            'target_id'   => $targetIds[0] ?? 0,
+            'defender_id' => null,
+            'state'       => 'results',
+            'attack_dice' => 0,
+            'defend_dice' => 0,
+            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
+            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
+            'damage'      => 0,
+            'discharged'  => [],
+            'confirmed'   => [],
+        ];
+
         foreach ($targetIds as $tid) {
             $target = $this->state->getCard($tid);
             if (!$target) continue;
@@ -2223,22 +2240,7 @@ final class ActionResolver
 
         $attacker->closed = true;
 
-        InformationalWaitManager::publish($this->state);
-        $this->state->battle['strike'] = [
-            'kind'        => 'multi_discharge',
-            'action_name' => $pmd['action']['name'] ?? 'Тройной разряд',
-            'attacker_id' => $attacker->instanceId,
-            'target_id'   => $targetIds[0] ?? 0,
-            'defender_id' => null,
-            'state'       => 'results',
-            'attack_dice' => 0,
-            'defend_dice' => 0,
-            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
-            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
-            'damage'      => 0,
-            'discharged'  => $results,
-            'confirmed'   => [],
-        ];
+        $this->state->battle['strike']['discharged'] = $results;
 
         $this->engine->flushDeadeatQueue($this->state);
         $this->state->bumpVersion();

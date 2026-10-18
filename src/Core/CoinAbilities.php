@@ -43,7 +43,7 @@ final class CoinAbilities
     }
 
     /** Record an effect, never open a choice inside the originating combat. */
-    private function defer(array $effect): void
+    public function defer(array $effect): void
     {
         $effect['id'] = bin2hex(random_bytes(12));
         $effect['executed'] = false;
@@ -199,6 +199,10 @@ final class CoinAbilities
             $source = $this->state->getCard((int) $effect['card_id']);
             if (!$source || $source->owner !== $effect['owner'] || $source->dying || $source->hp <= 0
                 || !in_array($source->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) continue;
+            if ($effect['kind'] === 'ranged_neighbor_teleport') {
+                if ((new RangedNeighborTeleport($this->state, $this->engine))->open($effect)) return;
+                continue;
+            }
             if ($effect['kind'] === 'first_strike_jump') {
                 if ((new FirstStrikeJump($this->state, $this->engine))->openAfterCombat($source, $effect['config'])) return;
                 continue;

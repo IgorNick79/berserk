@@ -90,11 +90,11 @@
             if (!available.length) throw new Error("No matching targets");
             var id = panel.dataset.cellMarkerPicker;
             var next = selection && selection.id === id
-                ? {id: id, side: selection.side, row: selection.row} : {id: id, side: "own", row: "1"};
-            if (request && request.side) next.side = request.side;
+                ? {id: id, side: selection.side, row: selection.row} : {id: id, side: null, row: null};
+            if (request && request.side) { next.side = request.side; next.row = null; }
             if (request && request.row) next.row = request.row;
             var current = next.side + ":" + next.row;
-            if (!groups.has(current)) {
+            if (next.side !== null && !groups.has(current)) {
                 current = available.find(function (name) { return name.split(":")[0] === next.side; }) || available[0];
                 next.side = current.split(":")[0];
                 next.row = current.split(":")[1];
@@ -108,11 +108,11 @@
             });
             compact.querySelectorAll("[data-picker-row]").forEach(function (button) {
                 var row = button.dataset.pickerRow;
-                button.disabled = !groups.has(next.side + ":" + row);
+                button.disabled = next.side === null || !groups.has(next.side + ":" + row);
                 button.setAttribute("aria-pressed", String(row === next.row));
             });
             compact.querySelectorAll("[data-picker-group]").forEach(function (group) { group.hidden = group.dataset.pickerGroup !== current; });
-            var keys = groups.get(current);
+            var keys = next.side === null ? Array.from(byKey.keys()) : groups.get(current);
             fieldLinks.forEach(function (link) { setField(link, keys.indexOf(link.dataset.cellMarkerLink) !== -1); });
             // Commit enhancement only after controls and matching field targets have been updated.
             compact.hidden = false;

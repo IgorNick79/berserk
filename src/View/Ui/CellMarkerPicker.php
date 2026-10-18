@@ -9,6 +9,17 @@ final class CellMarkerPicker
 {
     public static function targets(GameState $state, string $viewerKey, string $baseUrl): array
     {
+        $teleport = $state->battle[\Berserk\Core\RangedNeighborTeleport::PENDING] ?? null;
+        if ($teleport && $teleport['owner'] === $viewerKey && $teleport['stage'] === 'cell'
+            && \Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\RangedNeighborTeleportChoice) {
+            $targets = [];
+            foreach ((new \Berserk\Core\RangedNeighborTeleport($state, new \Berserk\Core\Engine()))->cells($teleport) as $key) {
+                [$row, $col] = array_map('intval', explode('_', $key));
+                $targets[$key] = ['row' => $row, 'col' => $col, 'url' => $baseUrl
+                    . '&cmd=choose_ranged_neighbor_teleport&choice_id=' . rawurlencode($teleport['id']) . '&operation=select&cell=' . $key];
+            }
+            return $targets;
+        }
         $pending = $state->battle['pending_cell_marker_pick'] ?? null;
         if (!$pending || ($pending['owner'] ?? null) !== $viewerKey) return [];
         if (!(\Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\CellMarkerChoice)) return [];
@@ -49,12 +60,17 @@ final class CellMarkerPicker
         }
         unset($button);
         $spec->cellPicker = $pickerKey !== '' && $pickerTargets !== []
-            ? ['id' => $pickerKey, 'targets' => $pickerTargets] : null;
+            ? ['id' => $pickerKey, 'targets' => $pickerTargets, 'title' => isset($state->battle[\Berserk\Core\RangedNeighborTeleport::PENDING]) ? 'Выберите клетку для телепортации' : '🔥 Выберите клетку для костра'] : null;
     }
 
     /** Snapshot identity only; no new pending state is written. */
     public static function identity(GameState $state, string $viewerKey): string
     {
+        $teleport = $state->battle[\Berserk\Core\RangedNeighborTeleport::PENDING] ?? null;
+        if ($teleport && $teleport['owner'] === $viewerKey && $teleport['stage'] === 'cell'
+            && \Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\RangedNeighborTeleportChoice) {
+            return hash('sha256', json_encode([$state->gameId, $state->version, $viewerKey, $teleport], JSON_THROW_ON_ERROR));
+        }
         $pending = $state->battle['pending_cell_marker_pick'] ?? null;
         if (!$pending || ($pending['owner'] ?? null) !== $viewerKey || ($pending['marker'] ?? '') !== 'bonfire'
             || !(\Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\CellMarkerChoice)) return '';
@@ -69,7 +85,7 @@ final class CellMarkerPicker
             $groups[$target['side']][$target['game_row']][$target['game_col']] = $target;
         }
         $html = '<div class="cell-picker-compact" data-cell-marker-compact hidden>'
-            . '<p class="cell-picker-title">🔥 Выберите клетку для костра</p>'
+            . '<p class="cell-picker-title">' . htmlspecialchars($picker['title'] ?? '🔥 Выберите клетку для костра', ENT_QUOTES, 'UTF-8') . '</p>'
             . '<div class="cell-picker-controls" role="group" aria-label="Сторона">';
         foreach (['own' => 'Свои', 'enemy' => 'Вражеские'] as $side => $label) {
             $disabled = empty($groups[$side]) ? ' disabled' : '';

@@ -10,13 +10,19 @@
     function field() { return document.querySelector("[data-cell-marker-field]"); }
     function current() {
         var p = panel();
-        return p.querySelector('[data-picker-side][aria-pressed="true"]').dataset.pickerSide + ":"
-            + p.querySelector('[data-picker-row][aria-pressed="true"]').dataset.pickerRow;
+        var side = p.querySelector('[data-picker-side][aria-pressed="true"]');
+        var row = p.querySelector('[data-picker-row][aria-pressed="true"]');
+        return side && row ? side.dataset.pickerSide + ":" + row.dataset.pickerRow : null;
     }
     function activeLinks() { return Array.from(field().querySelectorAll('[data-cell-marker-link][href]')); }
     function checkActive() {
         var group = current();
         var active = activeLinks();
+        if (group === null) {
+            assert(active.length === field().querySelectorAll('[data-cell-marker-link]').length, 'Unfiltered field keeps every legal action');
+            assert(Array.from(panel().querySelectorAll('[data-picker-group]')).every(function(g) {return g.hidden;}), 'Unfiltered panel has no selected columns');
+            return;
+        }
         assert(active.length > 0 && active.every(function (e) { return e.dataset.pickerGroup === group && !e.hidden; }), "Only selected group has active field URLs");
         field().querySelectorAll('[data-cell-marker-link]').forEach(function (e) {
             if (e.dataset.pickerGroup !== group) assert(!e.hasAttribute("href") && e.hidden && e.getAttribute("tabindex") === "-1", "Inactive field target disabled");
@@ -47,16 +53,21 @@
                         return Array.from(sourceField.querySelectorAll('[data-cell-marker-link]')).some(function(link) {return link.dataset.cellMarkerLink === column.dataset.pickerColumn;});
                     });
                 }).dataset.pickerGroup;
-                assert(current() === firstGroup, 'Initial group is the first available side and row');
+                assert(current() === null, 'Initially no side or row selected');
+                assert(activeLinks().length === field().querySelectorAll('[data-cell-marker-link]').length, 'Initially all legal field cells are active');
+                assert(Array.from(p.querySelectorAll('[data-picker-group]')).every(function(g) {return g.hidden;}), 'Initially no column group displayed');
+                assert(Array.from(p.querySelectorAll('[data-picker-row]')).every(function(b) {return b.disabled;}), 'Choose a side before a row');
                 assert(p.querySelector('[data-cell-marker-compact]').hidden === false, "Compact picker initialized");
                 assert(Array.from(p.querySelectorAll('[data-cell-marker-fallback]')).every(function (e) {return e.hidden;}), "Fallback cell list hidden only after enhancement");
                 assert(Array.from(p.querySelectorAll('a')).some(function(e) {return e.getAttribute('href').endsWith('&cmd=cancel_pending') && !e.hidden;}), "Cancellation remains accessible");
-                checkActive();
                 // Visit every available side/row, including disabled variants in sparse fixtures.
                 for (var side of ['own', 'enemy']) {
                     var sideButton = panel().querySelector('[data-picker-side="' + side + '"]');
                     if (sideButton.disabled) continue;
                     sideButton.click();
+                    var firstRow = Array.from(panel().querySelectorAll('[data-picker-row]')).find(function(b) {return !b.disabled;}).dataset.pickerRow;
+                    assert(current() === side + ':' + firstRow, 'Choosing a side immediately selects its first available row');
+                    checkActive();
                     for (var row of ['1', '2', '3']) {
                         var rowButton = panel().querySelector('[data-picker-row="' + row + '"]');
                         if (rowButton.disabled) continue;
@@ -87,7 +98,7 @@
                 field().dataset.cellMarkerField = 'next-snapshot';
                 await tick();
                 assert(panel().dataset.pickerEnhanced === 'true', "Matching independently updated fragments reinitialize");
-                checkActive();
+                assert(current() === null && activeLinks().length === field().querySelectorAll('[data-cell-marker-link]').length, 'New snapshot resets to all legal cells');
                 // Failed initialization restores fallback rather than hiding permitted actions.
                 panel().querySelector('[data-picker-row]').remove();
                 await tick();
@@ -115,7 +126,8 @@
                 document.querySelector('.battle-field').append(sourceField.cloneNode(true));
                 document.querySelector('.info-panel').append(sourcePanel.cloneNode(true));
                 await tick();
-                assert(current() === firstGroup, "New pending reinitializes deterministically without stale nodes");
+                assert(current() === null, "New pending resets filters without stale nodes");
+                panel().querySelector('[data-picker-side]:not([disabled])').click();
                 checkActive();
                 // Review regressions: validate before writes, and rollback after a fallible DOM write.
                 async function restore() {
@@ -247,6 +259,7 @@
                             if (firstFragment === 'panel') panel().replaceWith(sourcePanel.cloneNode(true));
                             else field().replaceWith(sourceField.cloneNode(true));
                             await tick();
+                            panel().querySelector('[data-picker-side]:not([disabled])').click();
                             var oldRoot = firstFragment === 'panel' ? field() : panel();
                             var oldLink = firstFragment === 'panel'
                                 ? oldRoot.querySelector('[data-cell-marker-link][href]')
@@ -273,6 +286,7 @@
                             oldLink.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
                             assert(!oldLink.hasAttribute('href'), 'Clicking a detached reference cannot restore its command');
 
+                            panel().querySelector('[data-picker-side]:not([disabled])').click();
                             var liveFieldLink = field().querySelector('[data-cell-marker-link][href]');
                             var liveColumnLink = panel().querySelector('[data-picker-group="' + current() + '"] [data-picker-column]:not([hidden])');
                             for (var liveLink of [liveFieldLink, liveColumnLink]) {
