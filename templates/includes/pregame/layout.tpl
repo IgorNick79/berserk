@@ -1,4 +1,5 @@
 <div class="pregame-layout">
+    <button class="pregame-menu" type="button" aria-label="Меню" title="Меню"><span aria-hidden="true">☰</span></button>
     <main class="pregame-main" tabindex="0" aria-label="Подготовка к игре">{{main_html}}</main>
     <aside class="pregame-info-panel" aria-label="Информация о подготовке">
         <header class="pregame-panel-header">

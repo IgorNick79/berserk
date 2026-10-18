@@ -118,7 +118,7 @@ body.pregame-page {
 @media (prefers-reduced-motion: reduce) { .pregame-history-control img { transition: none; } }
 
 .pregame-panel-heading { flex: 1 1 0; }
-.pregame-panel-timer { flex: 0 1 190px; min-width: 0; }
+.pregame-panel-timer { min-width: 0; }
 .pregame-panel-timer:empty { display: none; }
 .pregame-panel-timer .draft-timer { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 3px 8px; }
 .pregame-panel-timer .draft-timer > span:first-child { grid-column: 1 / -1; }
@@ -152,3 +152,21 @@ body.pregame-page {
 .screen-draft--solomon .solomon-stack__select { height: 40px; margin-bottom: 0; }
 .screen-draft--solomon .solomon-stack .prepare-card-link { display: flex; }
 .screen-draft--solomon .solomon-stack .prepare-card { min-height: 128px; }
+
+/* Same menu treatment as origin/main; PreGame has no debug panel yet. */
+.pregame-layout { position: relative; padding-left: 44px; }
+.pregame-menu {
+    position: absolute;
+    top: 8px;
+    left: 4px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid #aaa;
+    border-radius: 6px;
+    background: #fff;
+    color: #555;
+    font-size: 24px;
+    z-index: 110;
+    cursor: pointer;
+}

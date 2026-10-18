@@ -47,6 +47,9 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
     const cssStatus = await page.evaluate(href=>fetch(href).then(response=>response.status), css);
     assert.equal(cssStatus, 200, key+' versioned CSS loads');
     assert.equal(await page.locator('.pregame-layout').count(),1,key);
+    assert.equal(await page.locator('.pregame-menu[type="button"]').count(),1,key+' menu button');
+    assert.equal(await page.locator('.pregame-panel-timer').evaluate(el=>getComputedStyle(el).flexBasis),'auto',key+' natural timer width');
+
     if(fixture.stage==='draft' && fixture.variant.includes('solomon')) {
      assert.equal(await page.locator('.pregame-main .draft-info, .pregame-main .prepare-bottom-bar').count(),0);
      assert.equal(await page.locator('.pregame-panel-summary .pregame-pool-stat').count(),8);
