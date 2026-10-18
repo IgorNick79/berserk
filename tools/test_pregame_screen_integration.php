@@ -164,8 +164,10 @@ namespace {
         if ($stage === 'deal') {
             integrationAssert($xp->query('//main//*[@data-deal-pager]')->length === 1, 'Deal uses the shared card pager');
             integrationAssert($xp->query('//main//*[contains(@class,"prepare-bottom-bar")]|//main//h2')->length === 0, 'Deal has no bottom bar or separate squad section');
-            integrationAssert($xp->query('//main//a[contains(@href,"cmd=")]')->length === 0, 'All Deal actions in InfoPanel');
+            integrationAssert($xp->query('//main//a[contains(@href,"cmd=")][not(@data-deal-quick)]')->length === 0, 'Only explicit quick-recruit controls can issue commands in Main');
             integrationAssert($xp->query('//footer//*[@data-deal-selected]')->length === 1, 'Selected count in footer');
+            integrationAssert($xp->query('//main//*[@data-deal-quick]')->length === (in_array($variant, ['waiting','pending'], true) ? 0 : 29 + ($variant === 'mixed' || $variant === 'empty-squad' ? 1 : 0)), 'Quick recruitment only for available hand cards');
+
             integrationAssert($xp->query('//aside//button[contains(@class,"pregame-pool-stat")]')->length === (in_array($variant, ['mixed','flying-hand','penalty'], true) ? 9 : 8), 'Flying budget appears only when flying cards are available');
             integrationAssert($xp->query('//footer//a[contains(@href,"cmd=confirm_deal")]')->length === (in_array($variant, ['waiting','pending'], true) ? 0 : 1), 'Deal confirmation in footer');
         }

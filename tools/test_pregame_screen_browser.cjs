@@ -140,7 +140,7 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
     }
     if (fixture.stage === 'deal') {
      assert.equal(await page.locator('[data-deal-pager]').count(),1);
-     assert.equal(await page.locator('.pregame-main .prepare-bottom-bar, .pregame-main h2, .pregame-main a[href*="cmd="]').count(),0);
+     assert.equal(await page.locator('.pregame-main .prepare-bottom-bar, .pregame-main h2, .pregame-main a[href*="cmd="]:not([data-deal-quick])').count(),0);
      assert.equal(await page.locator('.pregame-panel-summary .pregame-pool-stat').count(),['mixed','flying-hand','penalty'].includes(fixture.variant)?9:8);
      assert.equal(await page.locator('.pregame-panel-footer [data-deal-selected]').count(),1);
      assert.equal(await page.locator('.pregame-deal-stats img[src$="/fly.png"]').count(),['mixed','flying-hand','penalty'].includes(fixture.variant)?1:0);
@@ -286,10 +286,16 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
    assert.equal((await visibleViewIds()).size,32,'Clicking deck restores the full deck');
    assert.equal(await page.locator('[data-view-filter][aria-pressed="true"]').count(),0);
    await page.goto('https://pregame.test/deal-host');
-   const dealLink=page.locator('.pregame-main .cards a').nth(2),dealName=await dealLink.locator('.prepare-card__name').textContent();
+   const dealLink=page.locator('.pregame-main .cards .prepare-card-link').nth(2),dealName=await dealLink.locator('.prepare-card__name').textContent();
    await dealLink.click();
    assert.equal(await page.locator('.pregame-card-title').textContent(),dealName);
    assert.equal(await page.locator('.pregame-panel-content a[href*="cmd=pick_card"]').count(),1);
+   const quick=page.locator('.pregame-deal-tile:visible [data-deal-quick]').first();
+   const quickCard=await quick.locator('..').locator('..').locator('.prepare-card-link').getAttribute('data-ukid');
+   await quick.click();
+   assert.equal(commands.at(-1).cmd,'pick_card','Quick choice recruits without first opening its card');
+   assert.equal(commands.at(-1).query.ukid,quickCard);
+
    await page.goto('https://pregame.test/deal-mixed');
    assert.equal((await visibleViewIds()).size,30,'Hand and squad share one list with merged duplicates');
    assert.equal(await page.locator('.pregame-view-pages [data-ukid="host-squad"]').count(),1);

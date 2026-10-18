@@ -229,3 +229,9 @@ body.pregame-page {
 .pregame-view-pages .deal-in-squad .prepare-card { border-color: #4a4; }
 .pregame-deal-stats .penalty { font-size: 12px; }
 .pregame-deal-stats [aria-label^="Золото: -"] { color: #a22; }
+
+.pregame-deal-tile { display: grid; grid-template-rows: 40px minmax(0, 1fr); gap: 8px; min-width: 0; height: 100%; }
+.pregame-deal-quick-slot { height: 40px; }
+.pregame-deal-choose { display: inline-flex; align-items: center; height: 40px; padding: 8px 14px; border: 1px solid #aaa; border-radius: 4px; background: #f1eee8; color: inherit; font: inherit; text-decoration: none; cursor: pointer; }
+.pregame-deal-choose[aria-disabled="true"] { opacity: .55; cursor: default; }
+.pregame-deal-tile > .prepare-card-link { min-height: 0; }

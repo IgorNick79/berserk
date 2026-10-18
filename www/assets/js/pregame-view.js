@@ -62,7 +62,7 @@
                 card.href = url.href;
             });
         });
-        root.querySelectorAll('[data-deal-actions] a').forEach(function (link) {
+        root.querySelectorAll('[data-deal-actions] a, [data-deal-quick]').forEach(function (link) {
             var url = new URL(link.href);
             ['element', 'crystal'].forEach(function (type) {
                 if (filters[type]) url.searchParams.set('view_' + type, filters[type]);
@@ -86,7 +86,10 @@
         var page = pages[index];
         groups.forEach(function (group) {
             group.node.hidden = !page || group !== page.group;
-            group.cards.forEach(function (card) { card.hidden = !page || page.cards.indexOf(card) === -1; });
+            group.cards.forEach(function (card) {
+                card.hidden = !page || page.cards.indexOf(card) === -1;
+                if (isDeal) card.closest('.pregame-deal-tile').hidden = card.hidden;
+            });
         });
         if (page) {
             anchor = page.cards.indexOf(anchor) === -1 ? page.cards[0] : anchor;
@@ -124,7 +127,10 @@
     function layout() {
         groups.forEach(function (group) {
             group.node.hidden = false;
-            group.cards.forEach(function (card) { card.hidden = false; });
+            group.cards.forEach(function (card) {
+                card.hidden = false;
+                if (isDeal) card.closest('.pregame-deal-tile').hidden = false;
+            });
         });
         var width = view.querySelector('.pregame-view-pages').clientWidth;
         var columns = Math.max(1, Math.min(3, Math.floor((width + 12) / 172)));
@@ -132,7 +138,7 @@
         view.style.setProperty('--view-card-height', 'auto');
         var cardHeight = 144;
         groups.forEach(function (group) {
-            group.cards.forEach(function (card) { cardHeight = Math.max(cardHeight, card.querySelector('.prepare-card').scrollHeight + 2); });
+            group.cards.forEach(function (card) { cardHeight = Math.max(cardHeight, Math.max(144, card.querySelector('.prepare-card').scrollHeight + 2) + (isDeal ? 48 : 0)); });
         });
         var mainStyle = getComputedStyle(main), viewStyle = getComputedStyle(view);
         var budget = main.clientHeight - parseFloat(mainStyle.paddingTop) - parseFloat(mainStyle.paddingBottom)

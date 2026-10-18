@@ -50,19 +50,33 @@ final class DealScreen
         if (isset($groups[$selectedUkid]) && empty($groups[$selectedUkid][$selectedZone])) {
             $selectedZone = $groups[$selectedUkid]['hand'] > 0 ? 'hand' : 'squad';
         }
+        $pendingHtml = $this->pendingPanelHtml($state, $playerKey, $baseUrl, $role, $cardsInfo);
         $cardsHtml = '';
         foreach ($groups as $ukid => $group) {
             $zone = $group['hand'] > 0 ? 'hand' : 'squad';
             $info = $group['info'];
             $code = $this->elementCode((string) ($info['element_code'] ?? $group['card']->element));
-            $cardsHtml .= $ui->card([
+            $quickHtml = '';
+            if (!$me->isConfirmed('deal') && $pendingHtml === '') {
+                if ($group['hand'] > 0) {
+                    $candidate = $this->selectedCardInstance($state, $playerKey, 'hand', (string) $ukid);
+                    $error = $candidate ? SquadRules::validate($state, $playerKey, [$candidate]) : null;
+                    $quickHtml = $error === null
+                        ? '<a class="pregame-deal-choose" data-deal-quick href="' . $baseUrl . '&cmd=pick_card&ukid=' . rawurlencode((string) $ukid)
+                            . '&card=hand:' . rawurlencode((string) $ukid) . '">Выбрать</a>'
+                        : '<span class="pregame-deal-choose" aria-disabled="true" title="' . htmlspecialchars($error, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">Выбрать</span>';
+                } else {
+                    $quickHtml = '<span class="pregame-deal-choose" aria-disabled="true">Выбрано</span>';
+                }
+            }
+            $cardsHtml .= '<div class="pregame-deal-tile"><div class="pregame-deal-quick-slot">' . $quickHtml . '</div>' . $ui->card([
                 'ukid' => $ukid, 'info' => $info, 'count' => $group['hand'] + $group['squad'],
                 'count_note' => $group['squad'] > 0 ? 'В отряде: ' . $group['squad'] : '',
                 'class' => 'view-element-' . $code . ' view-crystal-' . ($group['card']->elite ? 'gold' : 'silver')
                     . ($group['squad'] > 0 ? ' deal-in-squad' : ''),
                 'link' => $baseUrl . '&card=' . $zone . ':' . rawurlencode((string) $ukid),
                 'selected' => $selectedUkid === (string) $ukid,
-            ]);
+            ]) . '</div>';
         }
 
         $calc = ResourceCalculator::compute($state, $playerKey);
@@ -95,7 +109,6 @@ final class DealScreen
         }
         $summary .= '</div></section>';
 
-        $pendingHtml = $this->pendingPanelHtml($state, $playerKey, $baseUrl, $role, $cardsInfo);
         $selectedCard = null;
         $cardActions = [];
         $previewHtml = '';

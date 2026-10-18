@@ -12,4 +12,4 @@
     <nav class="pregame-view-pagination" data-view-pagination aria-label="Страницы карт"></nav>
 
 </div>
-<script src="/assets/js/pregame-view.js?v=3" defer></script>
+<script src="/assets/js/pregame-view.js?v=4" defer></script>
