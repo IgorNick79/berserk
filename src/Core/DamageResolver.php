@@ -67,6 +67,9 @@ final class DamageResolver
         $target->hp -= $val;
 
         $realDamage = $hpBefore - $target->hp;
+        if ($realDamage > 0 && $attacker) {
+            RangedNeighborTeleport::record($this->state, $attacker, $target, $actionType, $realDamage);
+        }
         if ($realDamage > 0) {
             $target->flags['damage_taken_this_strike'] =
                 ((int) ($target->flags['damage_taken_this_strike'] ?? 0)) + $realDamage;

@@ -1,0 +1,26 @@
+{
+  "actions": [
+    {
+      "key": "magic",
+      "name": "Магический удар на 2-3-4",
+      "type": "magic",
+      "strike": {
+        "weak": 2,
+        "medium": 3,
+        "strong": 4
+      }
+    }
+  ],
+  "on_ranged_neighbor_wounded": {
+    "types": [
+      "shot",
+      "throw",
+      "discharge"
+    ],
+    "actual_wounds": true,
+    "exclude_self": true,
+    "destination": "adjacent_attacker",
+    "once_per_battle": true,
+    "optional": true
+  }
+}

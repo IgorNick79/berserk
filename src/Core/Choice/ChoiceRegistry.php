@@ -72,6 +72,7 @@ final class ChoiceRegistry
                 new LifeGiftChoice(),
                 new NokamiWoundChoice(),
                 new TeleportTargetChoice(),
+                new RangedNeighborTeleportChoice(),
                 // ─── Фаза хода ───────────────────────────────────────
                 new TurnAckChoice(),
                 new TurnInstantResultChoice(),

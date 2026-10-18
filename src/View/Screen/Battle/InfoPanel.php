@@ -164,7 +164,8 @@ final class InfoPanel
         if ($handler !== null) {
             $spec = $handler->spec($state, $playerKey, $cardsInfo, $baseUrl, $role);
             if ($spec !== null) {
-                if ($handler instanceof \Berserk\Core\Choice\CellMarkerChoice) {
+                if ($handler instanceof \Berserk\Core\Choice\CellMarkerChoice
+                    || $handler instanceof \Berserk\Core\Choice\RangedNeighborTeleportChoice) {
                     \Berserk\View\Ui\CellMarkerPicker::decorate($spec, $state, $playerKey, $baseUrl);
                 }
                 return \Berserk\View\Ui\Panel::render($spec);
