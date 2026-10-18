@@ -1,14 +1,7 @@
 <div class="screen-draft {{draft_class}}">
     <p class="flash">{{message}}</p>
 
-    <div class="draft-info">
-        <div class="draft-info__turn">{{turn_label}}</div>
-        <div class="draft-info__counts">
-            <span>host: {{host_picked}}</span>
-            <span>player: {{player_picked}}</span>
-            <span>Пул: {{pool_left}}</span>
-        </div>
-    </div>
+    {{draft_info_html}}
 
     <div class="pregame-draft-grid">
         <div class="draft-grid">
@@ -16,22 +9,7 @@
         </div>
     </div>
 
-    <div class="prepare-bottom-bar">
-        <div class="prepare-bottom-summary prepare-bottom-summary--stack">
-            <div class="prepare-bottom-row">
-                <span>Выбрано: <b>{{my_total}}</b></span>
-                <span>Золотых: <b>{{my_gold}}</b></span>
-                <span>Серебряных: <b>{{my_silver}}</b></span>
-                <span>Средняя цена: <b>{{my_avg_price}}</b></span>
-            </div>
-            <div class="prepare-elements">
-                {{my_elements_html}}
-            </div>
-        </div>
-        <div class="prepare-bottom-actions">
-            {{actions_html}}
-        </div>
-    </div>
+    {{draft_bottom_html}}
     {{history_html}}
     {{draft_script_html}}
 </div>

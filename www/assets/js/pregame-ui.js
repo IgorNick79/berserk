@@ -24,6 +24,15 @@
     }
     function positionHint() {
         if (!hintSource || !hintSource.isConnected) { hideHint(); return; }
+        if (hintSource.closest('.pregame-pool-stats')) {
+            var sourceBox = hintSource.getBoundingClientRect();
+            hintNode.style.width = Math.min(260, window.innerWidth - 16) + 'px';
+            hintNode.style.maxHeight = '120px';
+            var hintBox = hintNode.getBoundingClientRect();
+            hintNode.style.left = Math.max(8, Math.min(sourceBox.left, window.innerWidth - hintBox.width - 8)) + 'px';
+            hintNode.style.top = Math.max(8, Math.min(sourceBox.bottom + 8, window.innerHeight - hintBox.height - 8)) + 'px';
+            return;
+        }
         var card = hintSource.closest('.pregame-card-info');
         var media = card && card.querySelector('.pregame-card-media');
         if (!media) { hideHint(); return; }

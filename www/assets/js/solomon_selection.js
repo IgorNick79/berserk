@@ -43,6 +43,8 @@
         card.querySelector(".prepare-card-link").addEventListener("click", function (event) {
             event.preventDefault();
             previewPosition = card.dataset.solomonPosition;
+            var history = document.querySelector('[data-solomon-history]');
+            if (history) history.setAttribute('aria-pressed', 'false');
             var preview = document.querySelector(".pregame-panel-content");
             if (preview) {
                 preview.replaceChildren(card.querySelector("[data-solomon-preview]").content.cloneNode(true));
@@ -52,14 +54,33 @@
             update();
         });
     });
-    document.querySelectorAll('[data-solomon-panel-action]').forEach(function (button) {
-        button.addEventListener('click', function () {
+    var root = stack.closest('.pregame-layout');
+    root.addEventListener('click', function (event) {
+        var action = event.target.closest('[data-solomon-panel-action]');
+        if (action && !action.disabled) {
             var card = cards.find(function (entry) { return entry.dataset.solomonPosition === previewPosition; });
             var checkbox = card && card.querySelector('input[type=checkbox]');
             if (!checkbox || checkbox.disabled) return;
-            checkbox.checked = button.dataset.solomonPanelAction === 'select';
+            checkbox.checked = action.dataset.solomonPanelAction === 'select';
             update();
-        });
+        }
+        var historyControl = event.target.closest('[data-solomon-history]');
+        var historyEntry = event.target.closest('.pregame-history-entry .prepare-card-link');
+        var content = root.querySelector('.pregame-panel-content');
+        if (historyControl) {
+            content.replaceChildren(root.querySelector('[data-solomon-history-content]').content.cloneNode(true));
+            content.dataset.pregameContent = 'history';
+            content.scrollTop = 0;
+            historyControl.setAttribute('aria-pressed', 'true');
+        } else if (historyEntry) {
+            event.preventDefault();
+            previewPosition = '-1';
+            content.replaceChildren(historyEntry.closest('.pregame-history-entry').querySelector('[data-history-card-preview]').content.cloneNode(true));
+            content.dataset.pregameContent = 'card';
+            content.scrollTop = 0;
+            root.querySelector('[data-solomon-history]').setAttribute('aria-pressed', 'false');
+            update();
+        }
     });
     if (form) form.addEventListener("submit", function () {
         form.querySelectorAll("button").forEach(function (button) { button.setAttribute("aria-disabled", "true"); });

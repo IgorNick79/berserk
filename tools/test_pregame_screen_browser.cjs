@@ -46,6 +46,12 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
     const cssStatus = await page.evaluate(href=>fetch(href).then(response=>response.status), css);
     assert.equal(cssStatus, 200, key+' versioned CSS loads');
     assert.equal(await page.locator('.pregame-layout').count(),1,key);
+    if(fixture.stage==='draft' && fixture.variant.includes('solomon')) {
+     assert.equal(await page.locator('.pregame-main .draft-info, .pregame-main .prepare-bottom-bar').count(),0);
+     assert.equal(await page.locator('.pregame-panel-summary .pregame-pool-stat').count(),8);
+     assert.equal(await page.locator('.pregame-panel-footer [data-solomon-panel-action]').count(),0);
+     assert.match(await page.locator('.pregame-panel-phase').textContent(), /^Соломон драфт · Пул: /);
+    }
     const panel=page.locator('.pregame-info-panel');
     assert.equal((await panel.boundingBox()).width,440,key+' panel width at '+width);
     assert.equal(await page.locator('.pregame-main h1').count(),0,key+' duplicate heading');
@@ -117,7 +123,7 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
    transition=true; nextKey='view-host';
    await page.waitForFunction(()=>document.querySelector('.screen-prepare-view'),null,{timeout:6000});
    assert.equal(await page.locator('[data-draft-timer]').count(),0,'Transition removes timer');
-   // Active Solomon: card click remains a toggle + preview; form keeps decision tokens.
+   // Active Solomon: preview and local selection stay separate from the footer decision form.
    await page.goto('https://pregame.test/draft-solomon-host');
    const cards=page.locator('[data-solomon-position]');
    await cards.nth(0).locator('.prepare-card-link').click();
@@ -131,6 +137,22 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
    await page.locator('[data-solomon-panel-action=select]').click();
    await page.reload();
    assert.equal(await page.locator('[data-solomon-selected]').textContent(),'2','Selection survives reload');
+   await page.getByRole('button',{name:'История выбора',exact:true}).click();
+   assert.equal(await page.locator('.pregame-panel-content').getAttribute('data-pregame-content'),'history');
+   assert.equal(await page.locator('.pregame-panel-summary .pregame-pool-stat').count(),8,'Statistics remain visible');
+   const historyLink=page.locator('.pregame-history-entry .prepare-card-link').first();
+   const historyName=await historyLink.locator('.prepare-card__name').textContent();
+   await historyLink.click();
+   assert.equal(await page.locator('.pregame-card-title').textContent(),historyName);
+   assert.equal(await page.locator('.pregame-panel-content [data-solomon-panel-action]').count(),0,'History cards are read-only');
+   await page.getByRole('button',{name:'История выбора',exact:true}).click();
+   assert.equal(await page.locator('.pregame-draft-history').count(),1);
+   await cards.nth(0).locator('.prepare-card-link').click();
+   assert.equal(await page.locator('.pregame-panel-content [data-solomon-panel-action]').count(),2);
+   assert.equal(await page.locator('[data-solomon-selected]').textContent(),'2');
+   await page.getByRole('button',{name:'Тьма: 1',exact:true}).click();
+   assert.ok(await page.locator('.pregame-stat-tooltip').isVisible());
+   await page.keyboard.press('Escape');
    const confirmRequest=page.waitForRequest(r=>new URL(r.url()).searchParams.get('cmd')==='draft_confirm');
    await page.locator('button[value="draft_confirm"]').click(); await confirmRequest; await page.waitForLoadState();
    const confirm=commands.at(-1); assert.equal(confirm.cmd,'draft_confirm'); assert.deepEqual(confirm.positions,['0','1']); assert.equal(confirm.query.decision_id,'1'); assert.equal(confirm.query.expected_version,'7');

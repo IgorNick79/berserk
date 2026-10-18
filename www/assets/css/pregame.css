@@ -90,3 +90,32 @@ body.pregame-page {
 @media (prefers-reduced-motion: reduce) { .pregame-hint img { transition: none; } }
 
 .pregame-card-actions [data-solomon-panel-action="cancel"] { background: #888; }
+
+.pregame-panel-summary { flex: 0 0 auto; min-width: 0; border-bottom: 1px solid #ddd; }
+.pregame-panel-summary:empty { display: none; }
+.pregame-pool-stats { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 12px; }
+.pregame-pool-stat { gap: 5px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.pregame-pool-totals { flex-basis: 100%; color: #666; font-size: 12px; }
+.pregame-panel-content .pregame-card-actions { gap: 6px; padding: 10px 12px; }
+.pregame-panel-content .pregame-card-actions .button { flex: 0 0 auto; padding: 5px 10px; font-size: 12px; }
+.pregame-draft-footer { display: grid; grid-template-columns: minmax(0,1fr) 44px; gap: 8px 12px; align-items: center; }
+.pregame-selection-count { font-size: 13px; }
+.pregame-footer-decisions { min-width: 0; }
+.pregame-footer-decisions .prepare-actions { display: flex; flex-wrap: nowrap; gap: 8px; }
+.pregame-footer-decisions .button { flex: 1 1 0; min-width: 0; padding: 10px 12px; cursor: pointer; }
+.pregame-history-control { position: relative; grid-column: 2; grid-row: 1 / 3; display: flex; align-items: center; justify-content: center; width: 44px; height: 48px; border: 0; background: transparent; cursor: pointer; }
+.pregame-history-control img { width: 40px; height: 40px; transition: transform 200ms ease-out; }
+.pregame-history-control:hover img, .pregame-history-control:focus-visible img { transform: scale(1.2); }
+.pregame-history-tooltip { position: absolute; right: 0; bottom: calc(100% + 6px); padding: 8px 10px; background: #221c16; color: #fff3dd; white-space: nowrap; font-size: 12px; opacity: 0; visibility: hidden; pointer-events: none; }
+.pregame-history-control:hover .pregame-history-tooltip, .pregame-history-control:focus-visible .pregame-history-tooltip { opacity: 1; visibility: visible; }
+.pregame-draft-history { padding: 12px; }
+.pregame-draft-history h3 { margin: 0 0 12px; }
+.pregame-history-entry { min-width: 0; }
+.pregame-history-entry .prepare-card { width: 120px; margin: 0; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .pregame-history-control img { transition: none; } }
+
+.pregame-panel-heading { flex: 1 1 0; }
+.pregame-panel-timer { flex: 0 1 190px; min-width: 0; }
+.pregame-panel-timer:empty { display: none; }
+.pregame-panel-timer .draft-timer { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 3px 8px; }
+.pregame-panel-timer .draft-timer > span:first-child { grid-column: 1 / -1; }

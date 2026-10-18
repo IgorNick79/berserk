@@ -33,10 +33,10 @@ final class PreGameLayout
         $content = (string) ($data['panel_html'] ?? '');
         return $this->render((string) $this->tpl->parse('screen/' . $screen . '.tpl', $data),
             $title, $content, (string) ($data['timer_html'] ?? ''), (string) ($data['panel_actions_html'] ?? ''),
-            $content === '' ? 'statistics' : 'card', (string) ($data['panel_phase'] ?? ''));
+            $content === '' ? 'statistics' : 'card', (string) ($data['panel_phase'] ?? ''), (string) ($data['panel_summary_html'] ?? ''));
     }
 
-    public function render(string $mainHtml, string $title, string $contentHtml = '', string $timerHtml = '', string $footerHtml = '', string $contentKind = 'statistics', string $phase = ''): string
+    public function render(string $mainHtml, string $title, string $contentHtml = '', string $timerHtml = '', string $footerHtml = '', string $contentKind = 'statistics', string $phase = '', string $summaryHtml = ''): string
     {
         if (!in_array($contentKind, ['statistics', 'card', 'history'], true)) {
             throw new \InvalidArgumentException('Unknown PreGame panel content');
@@ -47,6 +47,7 @@ final class PreGameLayout
             'content_html' => $contentHtml === '' ? '<p class="pregame-empty">Дополнительная информация появится здесь.</p>' : $contentHtml,
             'timer_html' => $timerHtml,
             'footer_html' => $footerHtml,
+            'summary_html' => $summaryHtml,
             'content_kind' => $contentKind,
             'phase' => htmlspecialchars($phase, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
         ]);

@@ -64,6 +64,9 @@ final class DraftScreen
             $selectedIdx = -1;
         }
 
+        $cardActionsHtml = $isSolomon && $isMyTurn
+            ? '<div class="pregame-card-actions"><button type="button" class="button small" data-solomon-panel-action="select" disabled>Выбрать</button><button type="button" class="button small" data-solomon-panel-action="cancel" disabled>Отмена</button></div>' : '';
+
         // ─── Сетка 3×3 ───────────────────────────────────
         $cells = [];
         for ($i = 0; !$isSolomon && $i < 9; $i++) {
@@ -109,7 +112,7 @@ final class DraftScreen
                         . '" form="solomon-decision"><span>Выбрать</span></label>' : '')
                     . $ui->card(['ukid' => $ukid, 'info' => $info, 'link' => $baseUrl . '&card=' . (int) $position
                         . '&card_ukid=' . rawurlencode($ukid) . '&card_version=' . $state->version])
-                    . '<template data-solomon-preview>' . $ui->information(['ukid' => $ukid], $cardsInfo) . '</template></div>';
+                    . '<template data-solomon-preview>' . $ui->information(['ukid' => $ukid], $cardsInfo) . $cardActionsHtml . '</template></div>';
             }
             $gridHtml .= '</div>';
         }
@@ -158,15 +161,15 @@ final class DraftScreen
                 . '<input type="hidden" name="game" value="' . (int) $state->gameId . '">'
                 . '<input type="hidden" name="decision_id" value="' . (int) ($draft['decision_id'] ?? 1) . '">'
                 . '<input type="hidden" name="expected_version" value="' . (int) $state->version . '">'
-                . '<span>Выделено: <b data-solomon-selected>0</b></span>'
-                . '<button class="button prepare-action skip" name="cmd" value="draft_pass"' . ($isMyTurn ? '' : ' disabled') . '>Пас</button>'
-                . '<button class="button prepare-action" name="cmd" value="draft_confirm"' . ($isMyTurn ? '' : ' disabled') . '>Подтвердить</button></form>';
+                . '<button class="button prepare-action" name="cmd" value="draft_confirm"' . ($isMyTurn ? '' : ' disabled') . '>Подтвердить</button>'
+                . '<button class="button prepare-action skip" name="cmd" value="draft_pass"' . ($isMyTurn ? '' : ' disabled') . '>Пас</button></form>';
         }
         $previewHtml = $ui->information($selectedCard, $cardsInfo);
+        if ($previewHtml !== '' && $isSolomon) $previewHtml .= $cardActionsHtml;
         $timerHtml = $this->timerHtml($state, $playerKey, $now);
-        $historyHtml = $this->historyHtml($state, $playerKey, $cardsInfo, $ui);
+        $historyHtml = $this->historyHtml($state, $playerKey, $cardsInfo, $ui, $isSolomon);
         $scriptHtml = $this->scriptHtml($state, $syncUrl, $now);
-        if ($isSolomon) $scriptHtml .= '<script src="/assets/js/solomon_selection.js?v=3" defer></script>';
+        if ($isSolomon) $scriptHtml .= '<script src="/assets/js/solomon_selection.js?v=4" defer></script>';
 
         // ─── Статистика набранного пула ──────────────────
         $myPicked = $draft['picked'][$playerKey] ?? [];
@@ -176,6 +179,8 @@ final class DraftScreen
         $silverCount = 0;
         $priceSum    = 0;
         $priceCount  = 0;
+        $elementCodeCounts = array_fill_keys(['dark', 'plains', 'forests', 'swamps', 'mountains', 'neutral'], 0);
+        $elementNames = ['dark'=>'Тьма', 'plains'=>'Степи', 'forests'=>'Леса', 'swamps'=>'Болота', 'mountains'=>'Горы', 'neutral'=>'Нейтральная'];
         $elementCounts = [];   // ['Горы' => 3, 'Леса' => 2, ...]
 
         foreach ($myPicked as $u) {
@@ -189,6 +194,10 @@ final class DraftScreen
                 $priceSum += (int) $info['price'];
                 $priceCount++;
             }
+
+            $code = (string) ($info['element_code'] ?? $info['element'] ?? '');
+            if (!isset($elementCodeCounts[$code])) $code = array_search($code, $elementNames, true);
+            if (is_string($code) && isset($elementCodeCounts[$code])) $elementCodeCounts[$code]++;
 
             $el = isset($info['element']) ? ElementLabels::label((string) $info['element'], $elementLabels) : null;
             if ($el && $el !== '—') {
@@ -209,11 +218,40 @@ final class DraftScreen
         }
         arsort($elementCounts);
 
+        $poolLeft = count($draft['pool'] ?? []) + ($isSolomon ? count($draft['recycle'] ?? []) : 0);
+        $panelSummary = '';
+        $panelFooter = '';
+        $draftInfo = '';
+        $draftBottom = '';
+        if ($isSolomon) {
+            $panelSummary = '<section class="pregame-pool-stats" aria-label="Статистика выбранного пула">';
+            foreach ($elementNames as $code => $label) {
+                $panelSummary .= $this->statisticIcon('/assets/images/element/' . $code . '.png', $label, $elementCodeCounts[$code]);
+            }
+            $panelSummary .= $this->statisticIcon('/assets/images/card/elite.png', 'Золотые карты', $goldCount)
+                . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебряные карты', $silverCount)
+                . '<div class="pregame-pool-totals">Выбрано: <b>' . $totalCount . '</b> · Средняя цена: <b>' . $avgPrice . '</b></div></section>';
+            $panelFooter = '<div class="pregame-draft-footer"><div class="pregame-selection-count">Выделено: <b data-solomon-selected>0</b></div>'
+                . '<div class="pregame-footer-decisions">' . $actionsHtml . '</div>'
+                . '<button type="button" class="pregame-history-control" data-solomon-history aria-label="История выбора" aria-pressed="false" title="История выбора">'
+                . '<img src="/assets/images/battle/game_log_160.png" alt="" width="40" height="40"><span class="pregame-history-tooltip" aria-hidden="true">История выбора</span></button></div>';
+        } else {
+            $draftInfo = '<div class="draft-info"><div class="draft-info__turn">' . ($isMyTurn ? 'Твой ход' : 'Ход оппонента') . '</div>'
+                . '<div class="draft-info__counts"><span>host: ' . $hostPickedCount . '</span><span>player: ' . $playerPickedCount . '</span><span>Пул: ' . $poolLeft . '</span></div></div>';
+            $draftBottom = '<div class="prepare-bottom-bar"><div class="prepare-bottom-summary prepare-bottom-summary--stack">'
+                . '<div class="prepare-bottom-row"><span>Выбрано: <b>' . $totalCount . '</b></span><span>Золотых: <b>' . $goldCount . '</b></span>'
+                . '<span>Серебряных: <b>' . $silverCount . '</b></span><span>Средняя цена: <b>' . $avgPrice . '</b></span></div>'
+                . '<div class="prepare-elements">' . $elementsHtml . '</div></div><div class="prepare-bottom-actions">' . $actionsHtml . '</div></div>';
+        }
+
         return ['screen' => 'draft', 'data' => [
             'draft_class'   => $isSolomon ? 'screen-draft--solomon' : '',
             'panel_title'   => $isSolomon ? '#' . (int) ($draft['decision_id'] ?? 1) . ' · ' . ($isMyTurn ? 'Ваш ход' : 'Ход противника') : 'Grid Draft',
-            'panel_phase'   => $isSolomon ? 'Solomon Draft' : '',
-            'panel_actions_html' => $isSolomon && $isMyTurn ? '<div class="pregame-card-actions"><button type="button" class="button" data-solomon-panel-action="select" disabled>Выбрать</button><button type="button" class="button" data-solomon-panel-action="cancel" disabled>Отмена</button></div>' : '',
+            'panel_phase'   => $isSolomon ? 'Соломон драфт · Пул: ' . $poolLeft : '',
+            'panel_actions_html' => $panelFooter,
+            'panel_summary_html' => $panelSummary,
+            'draft_info_html' => $draftInfo,
+            'draft_bottom_html' => $draftBottom,
             'turn_label'    => $isMyTurn ? 'Твой ход' : 'Ход оппонента',
             'host_picked'   => $hostPickedCount,
             'player_picked' => $playerPickedCount,
@@ -257,9 +295,10 @@ final class DraftScreen
             . '</div>';
     }
 
-    private function historyHtml(GameState $state, string $playerKey, array $cardsInfo, PrepareUi $ui): string
+    private function historyHtml(GameState $state, string $playerKey, array $cardsInfo, PrepareUi $ui, bool $panel = false): string
     {
         $history = array_reverse((array) ($state->draft['history'] ?? []));
+        if ($panel) return '<template data-solomon-history-content>' . $this->panelHistoryHtml($history, $playerKey, $cardsInfo, $ui) . '</template>';
         if (empty($history)) {
             return '<details class="draft-history"><summary>История выбора</summary><p class="wait">Пока нет выбранных карт.</p></details>';
         }
@@ -283,6 +322,33 @@ final class DraftScreen
             $html .= '</div></div>';
         }
         return $html . '</details>';
+    }
+
+    private function statisticIcon(string $url, string $label, int $count): string
+    {
+        $label = htmlspecialchars($label, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        return '<button type="button" class="pregame-hint pregame-pool-stat" aria-label="' . $label . ': ' . $count . '">'
+            . '<img src="' . $url . '" alt="" width="24" height="24"><span>' . $count . '</span>'
+            . '<template data-pregame-hint>' . $label . ': ' . $count . '</template></button>';
+    }
+
+    /** Only historical allocations already visible in the existing Draft history. */
+    private function panelHistoryHtml(array $history, string $playerKey, array $cardsInfo, PrepareUi $ui): string
+    {
+        $html = '<section class="pregame-draft-history"><h3>История выбора</h3>';
+        if ($history === []) $html .= '<p class="wait">Пока нет выбранных карт.</p>';
+        foreach ($history as $event) {
+            $owner = (string) ($event['player'] ?? '');
+            $html .= '<div class="draft-history__event"><div class="draft-history__owner">' . ($owner === $playerKey ? 'Мой выбор' : 'Выбор противника') . '</div><div class="draft-history__cards">';
+            foreach ((array) ($event['cards'] ?? []) as $ukid) {
+                $ukid = (string) $ukid;
+                $info = $cardsInfo[$ukid] ?? ['name'=>$ukid, 'strike'=>[]];
+                $html .= '<div class="pregame-history-entry">' . $ui->card(['ukid'=>$ukid, 'info'=>$info, 'link'=>'#', 'class'=>'draft-history__card'])
+                    . '<template data-history-card-preview>' . $ui->information(['ukid'=>$ukid], $cardsInfo) . '</template></div>';
+            }
+            $html .= '</div></div>';
+        }
+        return $html . '</section>';
     }
 
     private function scriptHtml(GameState $state, string $syncUrl, int $now): string
