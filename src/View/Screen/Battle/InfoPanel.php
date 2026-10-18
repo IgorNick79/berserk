@@ -50,10 +50,21 @@ final class InfoPanel
         $this->cardsInfo = $cardsInfo;
         $this->baseUrl   = $baseUrl;
 
+        $inCombat = !empty($state->battle['strike']);
+        $combatKey = '';
+        if ($inCombat) {
+            $strike = $state->battle['strike'];
+            $attacker = $state->getCard((int) ($strike['attacker_id'] ?? 0));
+            $combatKey = implode(':', [
+                $state->battle['turn'] ?? 0, $strike['attacker_id'] ?? 0,
+                $strike['original_target_id'] ?? $strike['target_id'] ?? 0,
+                $strike['kind'] ?? 'strike', $attacker?->flags['attacks_used_this_turn'] ?? 0,
+            ]);
+        }
         return '<header class="info-panel-header">' . $this->renderStatusHeader() . $this->renderTimer() . '</header>'
-            . '<div class="info-panel-content" tabindex="0" aria-label="Контекст боя и выбранная карта">'
-            . '<div class="battle-selected-card" data-battle-fragment="panel_html">' . $selectedCardHtml . '</div>'
-            . '<div class="info-panel-context">' . $this->renderBody() . '</div>'
+            . '<div class="info-panel-content" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
+            . '<div class="battle-selected-card" data-battle-fragment="panel_html"' . ($inCombat ? ' hidden' : '') . '>' . $selectedCardHtml . '</div>'
+            . '<div class="info-panel-context' . ($inCombat ? ' info-panel-context--combat' : '') . '">' . ($inCombat ? '<div class="combat-panel-heading"><h3 tabindex="-1">Сражение</h3></div><div class="combat-panel-body">' : '') . $this->renderBody() . ($inCombat ? '</div>' : '') . '</div>'
             . '</div>'
             . '<footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
     }
@@ -75,8 +86,8 @@ final class InfoPanel
             }
         }
         $end = $canEnd
-            ? '<a class="button wide" href="' . $this->baseUrl . '&cmd=end_turn">Завершить ход</a>'
-            : '<button class="button wide" type="button" disabled>Завершить ход</button>';
+            ? '<a class="button wide green-btn" href="' . $this->baseUrl . '&cmd=end_turn"><span>Завершить ход</span></a>'
+            : '<button class="button wide green-btn" type="button" disabled><span>Завершить ход</span></button>';
         $resignIcon = $this->tpl->parse('includes/battle/control_icon.tpl', [
             'file' => 'surrender_160.png', 'label' => 'Сдаться',
         ]);
@@ -109,6 +120,8 @@ final class InfoPanel
             'end'   => 'Завершение',
             default => 'Основная фаза',
         };
+
+        if (!empty($state->battle['strike'])) $phaseLabel = 'Фаза сражения';
 
         if ($isMyTurn) {
             $text = '#' . $turn . ' · Ваш ход';
@@ -151,7 +164,8 @@ final class InfoPanel
         if ($handler !== null) {
             $spec = $handler->spec($state, $playerKey, $cardsInfo, $baseUrl, $role);
             if ($spec !== null) {
-                if ($handler instanceof \Berserk\Core\Choice\CellMarkerChoice) {
+                if ($handler instanceof \Berserk\Core\Choice\CellMarkerChoice
+                    || $handler instanceof \Berserk\Core\Choice\RangedNeighborTeleportChoice) {
                     \Berserk\View\Ui\CellMarkerPicker::decorate($spec, $state, $playerKey, $baseUrl);
                 }
                 return \Berserk\View\Ui\Panel::render($spec);

@@ -42,7 +42,7 @@ final class PreGameCard
         }
         $stats .= self::stat('strike', 'sword', implode('-', array_map(fn($key) => self::value($strike[$key] ?? null), ['weak', 'medium', 'strong'])), 'Простой удар');
         if (($card['type'] ?? '') === 'fly') $stats .= self::hint('/assets/images/card/fly.png', 'Летающее существо');
-        $description = CardDescription::render((string) ($card['descr'] ?? ''), false);
+        $description = CardDescription::render((string) ($card['descr'] ?? ''));
         $costIcon = '/assets/images/card/' . (!empty($card['elite']) ? 'elite' : 'ordinary') . (!empty($card['single']) ? '-unique' : '') . '.png';
         $class = trim((string) ($card['class'] ?? ''));
         return (string) $this->tpl->parse('includes/pregame/card.tpl', [

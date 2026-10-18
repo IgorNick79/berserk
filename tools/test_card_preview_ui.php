@@ -16,7 +16,7 @@ $render = function () use ($state, &$cardsInfo) {
 try {
     $html = $render();
     battleSnapshotAssert(!str_contains($html, 'panel-card-preview') && !str_contains($html, 'panel-image'), 'Missing image leaves no container');
-    battleSnapshotAssert(str_contains($html, '<b>HP</b> 3/3') && str_contains($html, '<b>Move</b> 1/1') && str_contains($html, '<b>Strike</b> 1-2-3'), 'Stats use current card data');
+    battleSnapshotAssert(str_contains($html, 'aria-label="Здоровье: 3/3"') && str_contains($html, 'aria-label="Ходов: 1/1"') && str_contains($html, 'aria-label="Простой удар: 1/2/3"'), 'Stats use current card data');
     // Only file existence is relevant to server rendering; never add fake assets to the project.
     file_put_contents($path, 'test');
     $html = $render();

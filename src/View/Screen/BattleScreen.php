@@ -773,14 +773,18 @@ final class BattleScreen
                 'preview_url' => '/assets/cards/s1/' . rawurlencode($c->ukid) . '.webp',
                 'original_url' => '/assets/cards/s1/original/' . rawurlencode($c->ukid) . '.png',
                 'name' => htmlspecialchars($info['name'], ENT_QUOTES),
+
+
             ]);
         }
 
         // Кнопки режимов
         $modeButtons = '';
+        $closedButtonShown = false;
         if ($isActive && !$strike && $c->owner === $playerKey) {
             if (CardStats::isDisabled($c)) {
                 $reason = CardStats::disabledReason($c);
+                $closedButtonShown = $c->closed;
                 $modeButtons .= '<span class="button small disabled">'
                     . htmlspecialchars($reason !== '' ? $reason : 'Карта не может действовать', ENT_QUOTES)
                     . '</span> ';
@@ -852,6 +856,9 @@ final class BattleScreen
                     $key  = $a['key'] ?? $type;
 
                     $label = $a['name'] ?? ($labels[$type] ?? $type);
+                    if ($type === 'magic') {
+                        $label = preg_replace('/^Магический удар на \d+-\d+-\d+$/u', 'Магический удар', $label);
+                    }
 
                     // Ведьма слуа — блокируем если нет доп. жизней
                     if ($type === 'blood_tap') {
@@ -986,7 +993,9 @@ final class BattleScreen
         // Статус-строка
         $statusHtml = '';
         if ($c->closed) {
-            $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта закрыта']);
+            if (!$closedButtonShown) {
+                $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта закрыта']);
+            }
         } elseif (isset($c->markers['spider_web'])) {
             $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта находится в сети']);
         } elseif ($isActive && !$strike && $c->owner === $playerKey) {
@@ -1010,23 +1019,93 @@ final class BattleScreen
                 . (\Berserk\Core\FirstStrikeJump::used($state, $c) ? 'использована в этом ходу' : 'доступна') . '.</p>';
         }
 
-        $coinsLine = '';
-        if (!empty($c->prop['save_coins']) || $c->coins > 0 || !empty($c->prop['coin_block'])) {
-            $max = (int) ($c->prop['coins']['max_value'] ?? 0);
-            $coinsLine = 'Монеты: ' . $c->coins . ($max > 0 ? ' / ' . $max : '');
+        $hasCoins = !empty($c->prop['save_coins']) || $c->coins > 0 || !empty($c->prop['coin_block']);
+
+        $statValue = fn(string $stat, string $icon, string $value, string $label): string =>
+            $this->tpl->parse('includes/battle/stat_value.tpl', [
+                'stat' => $stat, 'icon' => $icon,
+                'value' => htmlspecialchars($value, ENT_QUOTES),
+                'label' => htmlspecialchars($label, ENT_QUOTES),
+            ]);
+        $hpMax = $this->displayHpMax($c, $info);
+        $statValues = $statValue('hp', 'heart', $c->hp . '/' . $hpMax,
+            'Здоровье: ' . $c->hp . '/' . $hpMax);
+        if (!CardStats::isFlyingCreature($c)) {
+            $statValues .= $statValue('move', 'move', $c->move . '/' . $c->moveMax,
+                'Ходов: ' . $c->move . '/' . $c->moveMax);
+        }
+        $statValues .= $statValue('strike', 'sword', $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
+            'Простой удар: ' . $c->strikeWeak . '/' . $c->strikeMedium . '/' . $c->strikeStrong);
+        foreach ([
+            ['ova', 'ova', CardStats::getOva($state, $c), 'Опыт в атаке'],
+            ['ovz', 'ovz', CardStats::getOvz($state, $c), 'Опыт в защите'],
+            ['regen', 'regen', CardStats::getStat($c, 'regeneration'), 'Регенерация'],
+        ] as [$stat, $icon, $value, $label]) {
+            if ($value !== 0) $statValues .= $statValue($stat, $icon, (string) $value, $label . ': ' . $value);
+        }
+
+        if ($hasCoins) {
+            $coinMax = (int) ($c->prop['coins']['max_value'] ?? 0);
+            $statValues .= $statValue('coins', 'counter', (string) $c->coins,
+                'Монеты: ' . $c->coins . ($coinMax > 0 ? '/' . $coinMax : ''));
+        }
+        if (CardStats::isFlyingCreature($c)) {
+            $statValues .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
+                'url' => '/assets/images/card/fly.png',
+                'label' => 'Летающее существо',
+            ]);
+        }
+        // Element and rarity finish the stats row, in that order.
+        $statIcons = '';
+        $elementIcon = $this->elementIconPath($c);
+        if ($elementIcon !== null) {
+            $statIcons .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
+                'url' => $elementIcon,
+                'label' => htmlspecialchars('Стихия: ' . ($info['element'] ?? $c->element), ENT_QUOTES),
+            ]);
+        }
+        $rarity = (string) ($info['rarity'] ?? '');
+        $rarityLabels = ['common' => 'Обычная', 'uncommon' => 'Необычная', 'rare' => 'Редкая', 'ultrarare' => 'Ультраредкая'];
+        if (isset($rarityLabels[$rarity]) && preg_match('/\As([0-9]+)_/', $c->ukid, $set)) {
+            $statIcons .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
+                'url' => '/assets/images/rarity/s' . $set[1] . '_' . $rarity . '.png',
+                'label' => 'Редкость: ' . $rarityLabels[$rarity],
+            ]);
+        }
+
+        $descriptionHtml = \Berserk\View\Ui\CardDescription::render((string) ($info['descr'] ?? ''));
+        $infoIcon = '';
+        if ($descriptionHtml !== '') {
+            $infoIcon = $this->tpl->parse('includes/battle/info_icon.tpl', ['description_html' => $descriptionHtml]);
+        }
+
+        // While combat is pending this card is informational only.
+        if ($strike) {
+            $modeButtons = '<button type="button" class="button small cancel" data-combat-back>Закрыть</button>';
+            $statusHtml = '';
         }
 
         return $this->tpl->parse('includes/battle/panel.tpl', [
+            'card_id' => $c->instanceId,
             'image_html'   => $imgHtml,
+            'stat_values_html' => $statValues,
+            'stat_icons_html' => $statIcons,
+            'cost_icon_url' => '/assets/images/card/' . (!empty($info['elite']) ? 'elite' : 'ordinary') . (!empty($info['single']) ? '-unique' : '') . '.png',
+            'cost_icon_label' => (!empty($info['elite']) ? 'Элитная' : 'Обычная') . (!empty($info['single']) ? ', уникальная' : ''),
+            'price' => (int) ($info['price'] ?? $c->price),
             'name'         => htmlspecialchars($info['name'], ENT_QUOTES),
-            'description_html' => \Berserk\View\Ui\CardDescription::render((string) ($info['descr'] ?? '')),
+            'info_icon_html' => $infoIcon,
+            'class_html' => trim((string) ($info['class'] ?? implode(', ', $c->classes))) !== ''
+                ? $this->tpl->parse('includes/battle/stat_icon.tpl', [
+                    'url' => '/assets/images/card/class.png',
+                    'label' => htmlspecialchars('Класс существа: ' . trim((string) ($info['class'] ?? implode(', ', $c->classes))), ENT_QUOTES),
+                ]) : '',
             'mode_buttons' => $modeButtons,
             'hp'           => $c->hp,
             'hp_max'       => $this->displayHpMax($c, $info),
             'move'         => $c->move,
             'move_max'     => $c->moveMax,
             'strike'       => $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
-            'coins_line'   => $coinsLine,
             'status_html'  => $statusHtml,
         ]);
     }
@@ -1157,12 +1236,12 @@ final class BattleScreen
     private function elementIconPath(CardInstance $card): ?string
     {
         return match ($card->element) {
-            'plains' => '/assets/images/element-plains.png',
-            'mountains' => '/assets/images/element-mountains.png',
-            'forests' => '/assets/images/element-forests.png',
-            'swamps' => '/assets/images/element-swamps.png',
-            'dark' => '/assets/images/element-dark.png',
-            'neutral' => '/assets/images/element-neutral.png',
+            'plains' => '/assets/images/element/plains.png',
+            'mountains' => '/assets/images/element/mountains.png',
+            'forests' => '/assets/images/element/forests.png',
+            'swamps' => '/assets/images/element/swamps.png',
+            'dark' => '/assets/images/element/dark.png',
+            'neutral' => '/assets/images/element/neutral.png',
             default => null,
         };
     }

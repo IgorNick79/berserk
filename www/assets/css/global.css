@@ -1349,8 +1349,8 @@ body { padding-bottom: 46vh; }
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;
-    padding: 10px 0;
+    gap: 16px;
+    padding: 10px 0 0 10px;
 }
 .info-actions .button.wide {
     min-width: 160px;
@@ -1852,7 +1852,7 @@ body.battle-page > .screen {
 .battle-page .panel-card-preview { display: block; width: 100%; margin: 0; padding: 0; border: 0; background: #171717; cursor: pointer; }
 .battle-page .panel-card-preview img { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: contain; }
 .battle-page .panel-card-preview:focus-visible { outline: 3px solid #b88746; outline-offset: -3px; }
-.battle-page .panel-card-stats { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 10px 12px; background: #f1eee8; border-bottom: 1px solid #d8d0c3; color: #322c24; font-size: 13px; font-variant-numeric: tabular-nums; }
+.battle-page .panel-card-stats { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px; background: #f1eee8; border-bottom: 1px solid #d8d0c3; color: #322c24; font-size: 13px; font-variant-numeric: tabular-nums; }
 .battle-page .panel-card-stats span { white-space: nowrap; }
 .battle-page .panel-card-details { padding: 12px; }
 .card-image-popup { border: 0; padding: 0; background: transparent; max-width: none; max-height: none; width: 100vw; height: 100dvh; color: white; overflow: hidden; }
@@ -1922,7 +1922,54 @@ body.battle-page {
     user-select: text;
 }
 .battle-page .info-panel-footer .info-actions { align-items: center; }
-.battle-page .info-panel-footer .info-actions > .button { flex-basis: 120px; }
+.battle-page .info-panel .button.green-btn { 
+    flex-basis: 180px; flex-grow: 0; height: 40px; background: none; font-weight: 700; position: relative; border: 0;
+    display: flex;
+    justify-content: center;
+    transition: transform 120ms ease-out;
+}
+.green-btn::after {
+    content: '';
+    background-image: url("/assets/images/battle/end_turn.png");
+    background-size: contain;
+    position: absolute;
+    left: -15px;
+    top: -9px;
+    width: 210px;
+    height: 58px;
+    z-index: 1;
+    transition:
+        filter 200ms ease-out,
+        transform 120ms ease-out;
+}
+.green-btn span {
+    position: relative;
+    z-index: 2;
+    font-size: 13px;
+}
+.battle-page .info-panel .button.green-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+}
+.green-btn:hover:not(:disabled)::after {
+    filter:
+        brightness(1.1)
+        drop-shadow(0 0 4px rgba(67, 207, 135, 0.85))
+        drop-shadow(0 0 8px rgba(25, 142, 86, 0.55));
+}
+.green-btn:active:not(:disabled)::after {
+    filter: brightness(0.9);
+    transform: translateY(1px);
+}
+.green-btn:disabled::after {
+    filter:
+        grayscale(0.65)
+        brightness(0.55)
+        saturate(0.5);
+    opacity: 0.95;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+}
 .battle-icon-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
 .battle-icon-control {
     position: relative;
@@ -2059,3 +2106,57 @@ body.battle-page {
 }
 .solomon-stack__select { display: flex; align-items: center; gap: 6px; padding: 6px 0; cursor: pointer; }
 @media (max-width: 600px) { .solomon-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } }
+
+.battle-page .battle-selected-card .panel-card-title { margin: 0; padding: 12px; font-size: 18px; line-height: 1.3; overflow-wrap: anywhere; }
+.battle-page .panel-card-stats { align-items: center; position: relative; }
+.panel-stat-icon { display: block; flex: 0 0 24px; width: 24px; height: 24px; object-fit: contain; }
+.panel-stat-icon[hidden] { display: none; }
+.battle-page .panel-card-preview { position: relative; }
+.battle-page .panel-card-class { flex: 0 1 auto; min-width: 0; max-width: 40%; font: 400 12px/1.35 system-ui, sans-serif; color: #666; text-align: right; overflow-wrap: anywhere; }
+
+.battle-page .panel-card-heading { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: #f1eee8; border-top: 1px solid #d8d0c3; }
+.battle-page .panel-card-heading .panel-card-title { flex: 1 1 auto; min-width: 0; padding: 0; }
+.panel-card-cost { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.panel-card-cost img { display: block; width: 24px; height: 24px; object-fit: contain; }
+.panel-stat-hint { display: inline-flex; flex: 0 0 24px; align-items: center; justify-content: center; }
+.panel-stat-hint[hidden] { display: none; }
+.panel-stat-hint:focus-visible { outline: 2px solid #bd8f46; outline-offset: 3px; border-radius: 3px; }
+.panel-stat-hint .battle-icon-tooltip { left: 8px; right: 8px; bottom: calc(100% + 8px); transform: translateY(4px); white-space: normal; text-align: center; }
+.panel-stat-hint:hover .battle-icon-tooltip, .panel-stat-hint:focus-visible .battle-icon-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
+
+.panel-stat-hint.panel-stat-value { flex: 0 0 auto; gap: 5px; white-space: nowrap; }
+.panel-stat-value-icon { display: block; flex: 0 0 24px; width: 24px; height: 24px; object-fit: contain; }
+.panel-stat-number { font-size: 13px; font-variant-numeric: tabular-nums; }
+.battle-page .panel-card-stats .battle-icon-tooltip { white-space: normal; overflow-wrap: anywhere; }
+
+.battle-page .panel-card-stats [data-stat="ova"] img,
+.battle-page .panel-card-stats [data-stat="ovz"] img,
+.battle-page .panel-card-stats [data-stat="regen"] img { width: 20px; height: 20px; flex-basis: 20px; }
+.panel-info-icon { display: block; width: 24px; height: 24px; object-fit: contain; }
+.panel-stat-hint { cursor: pointer; }
+.battle-page .panel-stat-hint > .battle-icon-tooltip { display: none; }
+.battle-stat-tooltip { position: fixed; z-index: 1000; box-sizing: border-box; padding: 10px 12px; border: 1px solid #b18d56; border-radius: 5px; background: #221c16; color: #fff3dd; font: 13px/1.3em system-ui, sans-serif; overflow-wrap: anywhere; overflow: auto; box-shadow: 0 4px 18px #0005; }
+.battle-stat-tooltip[hidden] { display: none; }
+.battle-stat-tooltip .panel-card-description { margin: 0; font-size: inherit; line-height: inherit; }
+.battle-icon-tooltip { font-size: 13px; line-height: 1.3em; }
+
+.battle-page .panel-card-media { width: 100%; aspect-ratio: 8 / 5; background: #f1eee8; }
+.battle-page .panel-card-media .panel-card-preview { height: 100%; }
+.battle-page .panel-card-media .panel-card-preview img { height: 100%; object-fit: contain; }
+.panel-card-heading-icons { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; }
+.battle-page .panel-card-stats { flex-wrap: nowrap; align-items: flex-start; gap: 8px; }
+.panel-stats-main { display: flex; flex: 1 1 auto; min-width: 0; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.panel-stats-extra { display: flex; flex: 0 0 auto; margin-left: auto; align-items: center; gap: 6px; }
+.panel-stat-hint > img { transition: transform 200ms ease-out; }
+.panel-stat-hint:hover > img, .panel-stat-hint:focus-visible > img, .panel-stat-hint.is-hint-open > img { transform: scale(1.2); }
+.battle-stat-tooltip { border-radius: 0; background: rgba(34, 28, 22, .94); }
+@media (prefers-reduced-motion: reduce) { .panel-stat-hint > img { transition: none; } }
+.battle-icon-control .battle-icon-tooltip { font-size: 12px; }
+
+.battle-selected-card[hidden], .info-panel-context[hidden] { display: none !important; }
+.combat-panel-heading { padding: 8px 12px; background: #f1eee8; border-top: 1px solid #d8d0c3; }
+.combat-panel-heading h3 { margin: 0; font-size: 18px; line-height: 1.3; }
+.combat-panel-heading h3:focus-visible { outline: 2px solid #987044; outline-offset: 3px; }
+.info-panel-footer[hidden] { display: none !important; }
+.battle-page .info-panel-context.info-panel-context--combat { padding: 0; }
+.combat-panel-body { padding: 12px; }
