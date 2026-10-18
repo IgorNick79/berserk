@@ -1,28 +1,5 @@
-{{message}}
-<div class="screen-prepare screen-prepare-place">
-
-    <div class="pregame-stage-content">
-        <div class="pregame-stage-cards">
-            <div class="place-field">
-                {{field_html}}
-            </div>
-
-            <div class="place-squad">
-                <h2>Нерасставлено: {{squad_count}}</h2>
-                <div class="squad-cards">
-                    {{squad_html}}
-                </div>
-            </div>
-        </div>
-
-        {{preview_html}}
-    </div>
-
-    <div class="prepare-bottom-bar">
-        <div class="prepare-bottom-summary"></div>
-        <div class="prepare-bottom-actions">
-            {{confirm_html}}
-            {{card_actions_html}}
-        </div>
-    </div>
+<div class="screen-prepare screen-prepare-place" data-place-screen data-place-view="{{place_view}}" data-place-waiting="{{place_waiting}}">
+    <p class="flash">{{message}}</p>
+    <div class="place-field pregame-place-field" role="group" aria-label="Поле расстановки">{{field_html}}</div>
 </div>
+<script src="/assets/js/pregame-place.js?v=1" defer></script>

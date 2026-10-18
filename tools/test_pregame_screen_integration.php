@@ -124,8 +124,11 @@ namespace {
         } elseif ($stage==='place') {
             $selected=integrationCard($state,$role,'squad',$role.'-unplaced',$catalog);
             $placed=integrationCard($state,$role,'field',$role.'-placed',$catalog,$role==='host'?1:6);
+            if ($variant === 'many') for ($i=0;$i<14;$i++) integrationCard($state,$role,'squad',$role.'-extra-'.$i,$catalog);
+            if ($variant === 'complete') { $selected->zone = 'field'; $selected->row = $role==='host'?3:4; $selected->col = 2; }
             if($variant==='waiting') $state->getPlayer($role)->confirmed['place']=true;
             $_GET=['card'=>$variant==='denied'?'1':(string)($variant==='placed'?$placed->instanceId:$selected->instanceId)];
+            if (in_array($variant,['list','many','complete'],true)) $_GET['card'] = '0';
             if ($request !== null) $_GET = $request;
             $result=(new PlaceScreen($tpl))->prepare($state,$role,$role,null,$catalog);
         } elseif (in_array($stage, ['turn', 'side'], true)) {
@@ -160,7 +163,15 @@ namespace {
         integrationAssert($xp->query('//main//h1')->length===0,'No duplicate stage heading '.$stage);
         $solomonPanel = $stage === 'draft' && $state->settings->isSolomonDraft();
         integrationAssert($xp->query('//aside//form')->length === (($solomonPanel && $state->draft['turn'] === $role) || ($stage === 'side' && $state->firstPlayer === $role) || ($stage === 'deal' && $variant === 'pending') ? 1 : 0), 'Solomon decisions in footer only');
-        integrationAssert($xp->query('//aside//*[contains(@class,"pregame-panel-content")]//a[contains(@href,"cmd=")][not(ancestor::*[@data-deal-actions])][not(ancestor::*[contains(@class,"card-choice")])]')->length===0,'No command links in information');
+        integrationAssert($xp->query('//aside//*[contains(@class,"pregame-panel-content")]//a[contains(@href,"cmd=")][not(ancestor::*[@data-deal-actions])][not(ancestor::*[contains(@class,"pregame-place-actions")])][not(ancestor::*[contains(@class,"card-choice")])]')->length===0,'No command links in information');
+        if ($stage === 'place') {
+            integrationAssert($xp->query('//main//*[contains(@class,"place-squad")]|//main//*[contains(@class,"prepare-bottom-bar")]')->length === 0, 'Placement list and footer leave Main');
+            integrationAssert($xp->query('//main//*[contains(@class,"pregame-place-row-number")]')->length === 3, 'Three viewer-relative row labels');
+            integrationAssert($xp->query('//main//*[contains(@class,"pregame-place-columns")]/span')->length === 10, 'Column labels above and below');
+            integrationAssert($xp->query('//main//*[@data-place-row and @data-place-col]')->length === 15, 'Placement keeps 15 system-coordinate cells');
+            integrationAssert($xp->query('//main//a[contains(@href,"cmd=unplace_card")]|//main//a[contains(@href,"cmd=confirm_place")]')->length === 0, 'Placement actions in InfoPanel');
+            integrationAssert($xp->query('//aside//*[@data-place-close]')->length === ($result['data']['place_view'] === 'card' ? 1 : 0), 'Close switches card details back to placement list');
+        }
         if ($stage === 'deal') {
             integrationAssert($xp->query('//main//*[@data-deal-pager]')->length === 1, 'Deal uses the shared card pager');
             integrationAssert($xp->query('//main//*[contains(@class,"prepare-bottom-bar")]|//main//h2')->length === 0, 'Deal has no bottom bar or separate squad section');
@@ -209,8 +220,8 @@ namespace {
             if(str_contains($variant,'stale') || str_contains($variant,'wrong-identity')) integrationAssert($result['data']['panel_html']==='','Stale preview rejected');
             if(str_contains($variant,'solomon') && $role !== $state->draft['turn']) integrationAssert(!str_contains($shell,'id="solomon-decision"') && str_contains($shell,'data-solomon-preview'),'Waiting preview without form');
         }
-        if(in_array($variant,['denied','empty'],true)) integrationAssert(($result['data']['panel_html']??'')==='','Denied/empty selection');
-        if($selected && !in_array($variant,['denied','empty','pending','selected'],true) && ($request === null || ($result['data']['panel_html'] ?? '') !== '')) {
+        if(in_array($variant,['denied','empty'],true)) integrationAssert($stage === 'place' ? str_contains($result['data']['panel_html'],'pregame-place-list') : ($result['data']['panel_html']??'') === '', 'Denied/empty selection returns safe content');
+        if($selected && ($stage !== 'place' || $result['data']['place_view'] === 'card') && !in_array($variant,['denied','empty','pending','selected'],true) && ($request === null || ($result['data']['panel_html'] ?? '') !== '')) {
             integrationAssert(str_contains($result['data']['panel_html'],'aria-label="Здоровье: 5"'),'Panel uses static catalog HP');
             integrationAssert(!str_contains($result['data']['panel_html'],'aria-label="Здоровье: 99"'),'No runtime battle stats');
         }
@@ -240,6 +251,7 @@ namespace {
     foreach(['waiting','denied'] as $variant) foreach(['deal','place'] as $stage) $fixtures[$stage.'-'.$variant]=integrationFixture($stage,'host',$variant);
     foreach (['mixed','selected','empty-squad','exhausted','pending','penalty','flying-hand'] as $variant) $fixtures['deal-'.$variant]=integrationFixture('deal','host',$variant);
     $fixtures['place-placed']=integrationFixture('place','host','placed');
+    foreach(['list','many','complete'] as $variant) foreach(['host','player'] as $role) $fixtures['place-'.$variant.'-'.$role]=integrationFixture('place',$role,$variant);
     foreach(['solomon','solomon-unlimited','solomon-empty-history','stale','wrong-identity'] as $variant) foreach(['host','player'] as $role) $fixtures['draft-'.$variant.'-'.$role]=integrationFixture('draft',$role,$variant);
     $fixtures['draft-solomon-player-active']=integrationFixture('draft','player','solomon-player-active');
     $fixtures['draft-solomon-host-waiting']=integrationFixture('draft','host','solomon-player-active');

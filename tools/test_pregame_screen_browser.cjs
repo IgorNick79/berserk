@@ -153,6 +153,14 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
      assert.equal(await page.locator('.pregame-reshuffle').count(),['waiting','pending','exhausted'].includes(fixture.variant)?0:1);
      assert.ok(await page.locator('.pregame-main').evaluate(el=>el.scrollHeight<=el.clientHeight+1),key+' bounded Deal pages');
     }
+    if (fixture.stage === 'place') {
+     assert.equal(await page.locator('.pregame-main .place-squad, .pregame-main .prepare-bottom-bar').count(),0);
+     assert.equal(await page.locator('.pregame-place-row-number').allTextContents().then(values=>values.join(',')),'I,II,III');
+     assert.deepEqual(await page.locator('.pregame-place-columns').first().locator('span').allTextContents(),['1','2','3','4','5']);
+     const list=await page.locator('.pregame-place-list').count();
+     assert.equal(list,await page.locator('[data-place-close]').count()?0:1,'Placement list and card view are exclusive');
+     assert.equal(await page.locator('.pregame-main a[href*="cmd=confirm_place"], .pregame-main a[href*="cmd=unplace_card"]').count(),0);
+    }
     const panel=page.locator('.pregame-info-panel');
     assert.equal((await panel.boundingBox()).width,440,key+' panel width at '+width);
     assert.equal(await page.locator('.pregame-main h1').count(),0,key+' duplicate heading');
@@ -385,7 +393,7 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
    await page.locator('[data-view-zone=sideboard]').click();
    assert.equal(await page.locator('.pregame-view-pages .prepare-card-link:visible').count(),1,'Waiting player can inspect their own deck and sideboard');
    await page.goto('https://pregame.test/place-placed');
-   assert.equal(await page.locator('.pregame-main a[href*="cmd=unplace_card"]').count(),1);
+   assert.equal(await page.locator('.pregame-panel-content a[href*="cmd=unplace_card"]').count(),1);
    await page.goto('https://pregame.test/draft-host');
    await page.locator('.draft-grid .prepare-card-link').nth(1).click();
    assert.equal(await page.locator('.pregame-card-title').textContent(),'grid-visible-1');

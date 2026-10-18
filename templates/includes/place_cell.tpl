@@ -1,1 +1,1 @@
-<div class="field-cell {{cl}}">{{content}}</div>
+<div class="field-cell {{cl}}" data-place-row="{{row}}" data-place-col="{{col}}" aria-label="{{position_label}}">{{content}}</div>

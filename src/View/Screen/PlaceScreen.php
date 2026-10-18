@@ -10,6 +10,8 @@ use Berserk\Core\CardInstance;
 use Berserk\Core\ZoneManager;
 use Berserk\View\Template;
 use Berserk\View\Ui\PrepareUi;
+use Berserk\View\Ui\BattlefieldPosition;
+use Berserk\View\Ui\Coords;
 
 final class PlaceScreen
 {
@@ -78,7 +80,10 @@ final class PlaceScreen
         }
 
         // Рендер поля
-        $fieldHtml = '';
+        $columnsHtml = '<div class="pregame-place-columns" aria-label="Столбцы">';
+        foreach ($colOrder as $col) $columnsHtml .= '<span>' . BattlefieldPosition::display($rowOrder[0], $col, $playerKey)['col'] . '</span>';
+        $columnsHtml .= '</div>';
+        $fieldHtml = $columnsHtml;
         foreach ($rowOrder as $r) {
             $rowCells = '';
             foreach ($colOrder as $c) {
@@ -116,7 +121,7 @@ final class PlaceScreen
                     }
                 } elseif ($selectedCardId > 0 && $isMine && isset($allowedCells[$key])) {
                     $placeUrl    = "{$baseUrl}&cmd=place_card&card_id={$selectedCardId}&row={$r}&col={$c}&card={$selectedCardId}";
-                    $cellContent = '<a class="cell-link" href="' . $placeUrl . '"></a>';
+                    $cellContent = '<a class="cell-link" aria-label="Поставить карту: ' . BattlefieldPosition::label($r, $c, $playerKey) . '" href="' . $placeUrl . '"></a>';
                     $cellClass  .= ' allowed';
                 } elseif ($isMine) {
                     $cellClass .= ' own-empty';
@@ -126,11 +131,16 @@ final class PlaceScreen
 
                 $rowCells .= $this->tpl->parse('includes/place_cell.tpl', [
                     'cl'      => $cellClass,
+                    'row' => $r, 'col' => $c, 'position_label' => BattlefieldPosition::label($r, $c, $playerKey),
                     'content' => $cellContent,
                 ]);
             }
-            $fieldHtml .= '<div class="field-row">' . $rowCells . '</div>';
+            $position = BattlefieldPosition::display($r, $colOrder[0], $playerKey);
+            $fieldHtml .= '<div class="field-row pregame-place-row"><span class="pregame-place-row-number coords--own" aria-label="Свой ' . $position['row'] . '-й ряд">'
+                . Coords::rowLabel($position['row']) . '</span>' . $rowCells . '</div>';
         }
+
+        $fieldHtml .= $columnsHtml;
 
         // Отряд
         $squadCards = [];
@@ -159,7 +169,7 @@ final class PlaceScreen
             ]);
         }
 
-        $squadCount = count($squadCards);
+        $squadCount = count($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD));
 
         if ($me->isConfirmed('place')) {
             $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
@@ -190,6 +200,12 @@ final class PlaceScreen
         }
         $previewHtml = $ui->information($previewCard, $cardsInfo);
         $cardActionsHtml = $ui->actions($cardActions);
+        $showCard = $previewHtml !== '';
+        $panelHtml = $showCard
+            ? $previewHtml . '<div class="pregame-card-actions pregame-place-actions">' . $cardActionsHtml
+                . '<a class="button pregame-place-close" data-place-close href="' . $baseUrl . '&card=0">Закрыть</a></div>'
+            : '<section class="pregame-place-list"><h3>Нерасставленные карты</h3><div class="squad-cards">' . $squadHtml . '</div>'
+                . ($squadCount === 0 ? '<p class="pregame-empty">Все карты расставлены.</p>' : '') . '</section>';
 
         return [
             'screen' => 'place',
@@ -198,7 +214,10 @@ final class PlaceScreen
                 'squad_html'   => $squadHtml,
                 'squad_count'  => $squadCount,
                 'preview_html' => '',
-                'panel_html'   => $previewHtml,
+                'panel_html'   => $panelHtml,
+                'panel_actions_html' => $confirmHtml,
+                'place_view' => $showCard ? 'card' : 'list',
+                'place_waiting' => $me->isConfirmed('place') ? '1' : '0',
                 'card_actions_html' => $cardActionsHtml,
                 'confirm_html' => $confirmHtml,
                 'message'      => $message ?? '',
