@@ -31,191 +31,129 @@ final class DealScreen
         array $elementLabels = []
     ): array {
         $linkParam = $role === 'host' ? 'first' : 'second';
-        $baseUrl   = "?{$linkParam}&game={$state->gameId}";
-        $me        = $state->getPlayer($playerKey);
-        $ui        = new PrepareUi($this->tpl);
+        $baseUrl = "?{$linkParam}&game={$state->gameId}";
+        $me = $state->getPlayer($playerKey);
+        $ui = new PrepareUi($this->tpl);
         $selectedRaw = (string) ($_GET['card'] ?? '');
-        $selectedZone = '';
-        $selectedUkid = '';
-        if (str_contains($selectedRaw, ':')) {
-            [$selectedZone, $selectedUkid] = explode(':', $selectedRaw, 2);
-        }
-        if (!in_array($selectedZone, ['hand', 'squad'], true)) {
-            $selectedZone = '';
-            $selectedUkid = '';
-        }
+        [$selectedZone, $selectedUkid] = array_pad(explode(':', $selectedRaw, 2), 2, '');
+        if (!in_array($selectedZone, ['hand', 'squad'], true)) $selectedUkid = '';
 
-        // Группируем руку по ukid
-        $handGroups = [];
+        $groups = [];
         foreach ($state->cards as $card) {
-            if ($card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_HAND) continue;
-            $handGroups[$card->ukid] = ($handGroups[$card->ukid] ?? 0) + 1;
+            if ($card->owner !== $playerKey || !in_array($card->zone, [CardInstance::ZONE_HAND, CardInstance::ZONE_SQUAD], true)) continue;
+            if (!isset($cardsInfo[$card->ukid])) continue;
+            $groups[$card->ukid] ??= ['hand' => 0, 'squad' => 0, 'card' => $card, 'info' => $cardsInfo[$card->ukid]];
+            $groups[$card->ukid][$card->zone]++;
+        }
+        uasort($groups, fn($a, $b) => strcmp((string) $a['info']['name'], (string) $b['info']['name']));
+        // A command may have moved the last copy since its preview URL was generated.
+        if (isset($groups[$selectedUkid]) && empty($groups[$selectedUkid][$selectedZone])) {
+            $selectedZone = $groups[$selectedUkid]['hand'] > 0 ? 'hand' : 'squad';
+        }
+        $cardsHtml = '';
+        foreach ($groups as $ukid => $group) {
+            $zone = $group['hand'] > 0 ? 'hand' : 'squad';
+            $info = $group['info'];
+            $code = $this->elementCode((string) ($info['element_code'] ?? $group['card']->element));
+            $cardsHtml .= $ui->card([
+                'ukid' => $ukid, 'info' => $info, 'count' => $group['hand'] + $group['squad'],
+                'count_note' => $group['squad'] > 0 ? 'В отряде: ' . $group['squad'] : '',
+                'class' => 'view-element-' . $code . ' view-crystal-' . ($group['card']->elite ? 'gold' : 'silver')
+                    . ($group['squad'] > 0 ? ' deal-in-squad' : ''),
+                'link' => $baseUrl . '&card=' . $zone . ':' . rawurlencode((string) $ukid),
+                'selected' => $selectedUkid === (string) $ukid,
+            ]);
         }
 
-        // Группируем отряд по ukid
-        $squadGroups = [];
-        foreach ($state->cards as $card) {
-            if ($card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_SQUAD) continue;
-            $squadGroups[$card->ukid] = ($squadGroups[$card->ukid] ?? 0) + 1;
-        }
-
-        // Считаем ресурсы
         $calc = ResourceCalculator::compute($state, $playerKey);
-        $goldLeft      = $calc['gold_left'];
-        $silverLeft    = $calc['silver_left'];
-        $goldTotal     = (int) ($calc['gold_total'] ?? ($me->resources['gold'] ?? 0));
-        $silverTotal   = (int) ($calc['silver_total'] ?? ($me->resources['silver'] ?? 0));
-        $penalty       = $calc['penalty'];
         $selectedCount = count($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD));
         $flyingCost = SquadRules::flyingCost($state, $playerKey);
-
-        $goldClass = $goldLeft < 0 ? 'negative' : '';
-
-        // Сортируем руки по имени
-        $handItems = [];
-        foreach ($handGroups as $ukid => $count) {
-            $info = $cardsInfo[$ukid] ?? null;
-            if (!$info) continue;
-            $handItems[] = ['ukid' => $ukid, 'count' => $count, 'info' => $info];
+        $elementCounts = array_fill_keys(array_keys(self::ELEMENT_NAMES), 0);
+        foreach ($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD) as $card) {
+            $elementCounts[$this->elementCode($card->element)]++;
         }
-        usort($handItems, fn($a, $b) => strcmp($a['info']['name'], $b['info']['name']));
-
-        $handHtml = '';
-        foreach ($handItems as $item) {
-            $ukid = $item['ukid'];
-            $info = $item['info'];
-
-            $handHtml .= $ui->card([
-                'ukid'     => $ukid,
-                'info'     => $info,
-                'count'    => $item['count'],
-                'link'     => "{$baseUrl}&card=hand:" . urlencode($ukid),
-                'selected' => $selectedZone === 'hand' && $selectedUkid === $ukid,
-            ]);
+        $summary = '<section class="pregame-pool-stats pregame-deal-stats" aria-label="Статистика отряда">';
+        if ($calc['penalty'] > 0) $summary .= '<div class="penalty active">Штраф за стихии: −' . (int) $calc['penalty'] . ' золото</div>';
+        $summary .= '<div class="pregame-deal-resources">'
+            . $this->statisticIcon('/assets/images/card/elite.png', 'Золото', $calc['gold_left'] . '/' . $calc['gold_total'], 'crystal:gold')
+            . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебро', $calc['silver_left'] . '/' . $calc['silver_total'], 'crystal:silver')
+            . $this->statisticIcon('/assets/images/card/fly.png', 'Стоимость летающих', $flyingCost . '/' . SquadRules::FLYING_COST_LIMIT)
+            . '</div><div class="pregame-deal-elements">';
+        foreach (self::ELEMENT_NAMES as $code => $label) {
+            $summary .= $this->statisticIcon('/assets/images/element/' . $code . '.png',
+                ElementLabels::label($code, $elementLabels + self::ELEMENT_NAMES), (string) $elementCounts[$code], 'element:' . $code);
         }
+        $summary .= '</div></section>';
 
-        // Сортируем отряд по имени
-        $squadItems = [];
-        foreach ($squadGroups as $ukid => $count) {
-            $info = $cardsInfo[$ukid] ?? null;
-            if (!$info) continue;
-            $squadItems[] = ['ukid' => $ukid, 'count' => $count, 'info' => $info];
-        }
-        usort($squadItems, fn($a, $b) => strcmp($a['info']['name'], $b['info']['name']));
-
-        $squadHtml = '';
-        foreach ($squadItems as $item) {
-            $ukid = $item['ukid'];
-            $info = $item['info'];
-
-            $squadHtml .= $ui->card([
-                'ukid'     => $ukid,
-                'info'     => $info,
-                'count'    => $item['count'],
-                'link'     => "{$baseUrl}&card=squad:" . urlencode($ukid),
-                'selected' => $selectedZone === 'squad' && $selectedUkid === $ukid,
-            ]);
-        }
-
-        // Решафл
-        $reshuffleHtml = '';
-        if (!$me->isConfirmed('deal') && $me->reshuffles < 3) {
-            $reshuffleUrl  = "{$baseUrl}&cmd=reshuffle";
-            $reshuffleHtml = '<a class="button reshuffle" href="' . $reshuffleUrl . '"'
-                . ' onclick="return confirm(\'Пересдать карты?\')">'
-                . 'Пересдать (штраф 1 золото, осталось ' . (3 - $me->reshuffles) . ')'
-                . '</a>';
-        }
-
-        if (!$me->isConfirmed('deal')) {
-            $confirmHtml = '<a class="button" href="' . $baseUrl . '&cmd=confirm_deal"'
-                . ' onclick="return confirm(\'Подтвердить отряд?\')">Подтвердить отряд</a>';
-        } else {
-            $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
-        }
-
+        $pendingHtml = $this->pendingPanelHtml($state, $playerKey, $baseUrl, $role, $cardsInfo);
         $selectedCard = null;
         $cardActions = [];
-        // Catalog membership alone is not permission to inspect or recruit a card.
-        $selectionGroups = $selectedZone === 'hand' ? $handGroups : $squadGroups;
-        if ($selectedUkid !== '' && isset($selectionGroups[$selectedUkid])) {
-            $selectedInfo = $cardsInfo[$selectedUkid] ?? null;
-            if ($selectedInfo) {
-                $recruitError = null;
-                $selectedInfo = $this->selectedPreviewInfo($state, $playerKey, $selectedZone, $selectedUkid, $selectedInfo, $cardsInfo);
-                $selectedCard = ['ukid' => $selectedUkid, 'info' => $selectedInfo];
-                if (!$me->isConfirmed('deal') && $selectedZone === 'hand') {
-                    $candidate = $this->selectedCardInstance($state, $playerKey, $selectedZone, $selectedUkid);
-                    if ($candidate !== null) {
-                        $recruitError = SquadRules::validate($state, $playerKey, [$candidate]);
-                    }
-                    $cardActions[] = [
-                        'label' => 'В отряд',
-                        'url'   => "{$baseUrl}&cmd=pick_card&ukid=" . urlencode($selectedUkid),
-                        'enabled' => $recruitError === null,
-                    ];
-                } elseif (!$me->isConfirmed('deal') && $selectedZone === 'squad'
-                    && !$this->selectedSquadCardIsLinkedCompanion($state, $playerKey, $selectedUkid)) {
-                    $cardActions[] = [
-                        'label' => 'Вернуть',
-                        'url'   => "{$baseUrl}&cmd=unpick_card&ukid=" . urlencode($selectedUkid),
-                    ];
+        $previewHtml = '';
+        if (isset($groups[$selectedUkid])) {
+            $info = $this->selectedPreviewInfo($state, $playerKey, $selectedZone, $selectedUkid, $groups[$selectedUkid]['info'], $cardsInfo);
+            $selectedCard = ['ukid' => $selectedUkid, 'info' => $info];
+            if (!$me->isConfirmed('deal') && $pendingHtml === '') {
+                if ($groups[$selectedUkid]['hand'] > 0) {
+                    $candidate = $this->selectedCardInstance($state, $playerKey, 'hand', $selectedUkid);
+                    $error = $candidate ? SquadRules::validate($state, $playerKey, [$candidate]) : null;
+                    $cardActions[] = ['label' => 'В отряд', 'enabled' => $error === null,
+                        'url' => $baseUrl . '&cmd=pick_card&ukid=' . rawurlencode($selectedUkid) . '&card=hand:' . rawurlencode($selectedUkid)];
+                }
+                if ($groups[$selectedUkid]['squad'] > 0 && !$this->selectedSquadCardIsLinkedCompanion($state, $playerKey, $selectedUkid)) {
+                    $cardActions[] = ['label' => 'Вернуть',
+                        'url' => $baseUrl . '&cmd=unpick_card&ukid=' . rawurlencode($selectedUkid) . '&card=squad:' . rawurlencode($selectedUkid)];
                 }
             }
+            $actionHtml = $ui->actions($cardActions);
+            $notesHtml = (string) ($info['notes_html'] ?? '');
+            if ((string) ($info['price'] ?? '') !== (string) ($cardsInfo[$selectedUkid]['price'] ?? '')) {
+                $notesHtml = '<p>Цена: ' . htmlspecialchars((string) $info['price'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>' . $notesHtml;
+            }
+            if ($actionHtml !== '' || $notesHtml !== '') {
+                $previewHtml = '<section class="pregame-deal-card-actions" aria-label="Действия выбранной карты">'
+                    . ($actionHtml !== '' ? '<div class="pregame-card-actions" data-deal-actions>' . $actionHtml . '</div>' : '')
+                    . ($notesHtml !== '' ? '<div class="pregame-deal-notes">' . $notesHtml . '</div>' : '') . '</section>';
+            }
         }
-        $panelHtml = $ui->information($selectedCard, $cardsInfo);
-        $previewHtml = '';
-        if ($selectedCard !== null) {
-            $selectionInfo = $selectedCard['info'];
-            $previewHtml = '<section class="pregame-selection-actions" aria-label="Действия выбранной карты">'
-                . '<h3>' . htmlspecialchars((string) ($selectionInfo['name'] ?? $selectedUkid), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h3>'
-                . '<p>Цена: ' . htmlspecialchars((string) ($selectionInfo['price'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>'
-                . (string) ($selectionInfo['notes_html'] ?? '') . $ui->actions($cardActions) . '</section>';
+        $panelHtml = $pendingHtml !== '' ? $pendingHtml : $ui->information($selectedCard, $cardsInfo) . $previewHtml;
+        $footerHtml = '<div class="pregame-deal-footer">';
+        if ($pendingHtml === '') {
+            $footerHtml .= !$me->isConfirmed('deal')
+                ? '<a class="button" href="' . $baseUrl . '&cmd=confirm_deal" onclick="return confirm(\'Подтвердить отряд?\')">Подтвердить</a>'
+                : '<span class="wait">Ожидание оппонента...</span>';
         }
+        $footerHtml .= '<button type="button" class="pregame-deal-selected" data-deal-selected aria-pressed="false">Выбрано: <b>' . $selectedCount . '</b></button>';
+        if (!$me->isConfirmed('deal') && $me->reshuffles < 3 && $pendingHtml === '') {
+            $hint = 'Пересдать колоду (штраф: 1 золото, осталось: ' . (3 - $me->reshuffles) . ')';
+            $footerHtml .= '<a class="pregame-hint pregame-reshuffle" data-pregame-hint-action href="' . $baseUrl . '&cmd=reshuffle"'
+                . ' aria-label="' . $hint . '" onclick="return confirm(\'Пересдать карты?\')">'
+                . '<img src="/assets/images/battle/reshuffle_160.png" alt="" width="40" height="40">'
+                . '<template data-pregame-hint>' . $hint . '</template></a>';
+        }
+        $footerHtml .= '</div>';
+        return ['screen' => 'deal', 'data' => [
+            'cards_html' => $cardsHtml, 'hand_html' => $cardsHtml, 'squad_html' => '',
+            'preview_html' => $previewHtml, 'panel_html' => $panelHtml,
+            'panel_summary_html' => $summary, 'panel_actions_html' => $footerHtml,
+            'bottom_panel_html' => '', 'message' => $message ?? '',
+        ]];
+    }
 
-        $elementsHtml = '';
-        foreach ((array) ($calc['elements'] ?? []) as $code => $count) {
-            if ($count <= 0) continue;
-            $name = ElementLabels::label((string) $code, $elementLabels);
-            $elementsHtml .= '<span class="prepare-element">'
-                . htmlspecialchars((string) $name, ENT_QUOTES)
-                . ': <b>' . (int) $count . '</b>'
-                . '</span>';
-        }
+    private const ELEMENT_NAMES = ['dark' => 'Тьма', 'plains' => 'Степи', 'forests' => 'Леса',
+        'swamps' => 'Болота', 'mountains' => 'Горы', 'neutral' => 'Нейтральная'];
 
-        $penaltyHtml = '';
-        if ($penalty > 0) {
-            $penaltyHtml = '<div class="prepare-bottom-row">'
-                . '<span class="penalty active">Штраф за стихии: <b>−' . (int) $penalty . ' золото</b></span>'
-                . '</div>';
-        }
+    private function elementCode(string $code): string
+    {
+        return isset(self::ELEMENT_NAMES[$code]) ? $code : (array_search($code, self::ELEMENT_NAMES, true) ?: 'neutral');
+    }
 
-        $bottomPanelHtml = $this->pendingPanelHtml($state, $playerKey, $baseUrl, $role, $cardsInfo);
-        if ($bottomPanelHtml === '') {
-            $bottomPanelHtml = '<div class="prepare-bottom-summary prepare-bottom-summary--stack">'
-                . '<div class="prepare-bottom-row">'
-                . '<span>Выбрано: <b>' . $selectedCount . '</b></span>'
-                . '<span class="gold ' . htmlspecialchars($goldClass, ENT_QUOTES) . '">Золото: <b>' . $goldLeft . '</b>/' . $goldTotal . '</span>'
-                . '<span>Серебро: <b>' . $silverLeft . '</b>/' . $silverTotal . '</span>'
-                . '<span>Летающие: <b>' . $flyingCost . '</b>/' . SquadRules::FLYING_COST_LIMIT . '</span>'
-                . '</div>'
-                . $penaltyHtml
-                . '<div class="prepare-elements">' . $elementsHtml . '</div>'
-                . '</div>'
-                . '<div class="prepare-bottom-actions">' . $confirmHtml . $reshuffleHtml . '</div>';
-        }
-
-        return [
-            'screen' => 'deal',
-            'data'   => [
-                'hand_html'      => $handHtml,
-                'squad_html'     => $squadHtml,
-                'preview_html'   => $previewHtml,
-                'panel_html'     => $panelHtml,
-                'bottom_panel_html' => $bottomPanelHtml,
-                'message'        => $message ?? '',
-            ],
-        ];
+    private function statisticIcon(string $url, string $label, string $value, string $filter = ''): string
+    {
+        $hint = htmlspecialchars($label . ': ' . $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $attrs = $filter === '' ? '' : ' data-view-filter="' . $filter . '" data-view-stat-static aria-pressed="false"';
+        return '<button type="button" class="pregame-hint pregame-pool-stat"' . $attrs . ' aria-label="' . $hint . '">'
+            . '<img src="' . $url . '" alt="" width="24" height="24"><span>' . htmlspecialchars($value, ENT_QUOTES) . '</span>'
+            . '<template data-pregame-hint>' . $hint . '</template></button>';
     }
 
     private function pendingPanelHtml(GameState $state, string $playerKey, string $baseUrl, string $role, array $cardsInfo): string

@@ -174,8 +174,8 @@ $screen = (new DealScreen(new Template(__DIR__ . '/../templates/')))->prepare($s
         'strike' => ['weak' => 1, 'medium' => 1, 'strong' => 1],
     ],
 ]);
-assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Закрыть'), 'Scout reveal panel should ask only to close');
-assertTrue(!str_contains($screen['data']['bottom_panel_html'], 'Отмена'), 'Scout reveal panel should not render cancel action');
+assertTrue(str_contains($screen['data']['panel_html'], 'Закрыть'), 'Scout reveal panel should ask only to close');
+assertTrue(!str_contains($screen['data']['panel_html'], 'Отмена'), 'Scout reveal panel should not render cancel action');
 
 // Closing the reveal performs mandatory recruit with silver discount and locks return.
 $result = $processor->closeDealScoutRecruit(GameState::PLAYER_HOST);

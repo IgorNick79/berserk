@@ -1,23 +1,15 @@
-{{message}}
-<div class="screen-prepare screen-prepare-deal">
-
+<div class="screen-prepare screen-prepare-view screen-prepare-deal" data-view-pager data-deal-pager>
+    <p class="flash">{{message}}</p>
     <div class="pregame-stage-content">
-        <div class="pregame-stage-cards">
-            <h2>Раздача</h2>
-            <div class="cards">
-                {{hand_html}}
-            </div>
+        <div class="pregame-stage-cards pregame-view-pages">
+            <p class="pregame-view-empty" data-view-empty hidden>Нет карт по выбранным условиям.</p>
+            <section class="pregame-view-group" data-view-group="deck" data-view-label="Карты">
+                <div class="cards">{{cards_html}}</div>
+            </section>
 
-            <h2>Отряд</h2>
-            <div class="cards">
-                {{squad_html}}
-            </div>
         </div>
-
-        {{preview_html}}
     </div>
+    <nav class="pregame-view-pagination" data-view-pagination aria-label="Страницы карт"></nav>
 
-    <div class="prepare-bottom-bar">
-        {{bottom_panel_html}}
-    </div>
 </div>
+<script src="/assets/js/pregame-view.js?v=3" defer></script>

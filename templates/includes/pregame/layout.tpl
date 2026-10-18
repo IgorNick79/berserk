@@ -11,4 +11,4 @@
         <footer class="pregame-panel-footer">{{footer_html}}</footer>
     </aside>
 </div>
-<script src="/assets/js/pregame-ui.js?v=3" defer></script>
+<script src="/assets/js/pregame-ui.js?v=4" defer></script>

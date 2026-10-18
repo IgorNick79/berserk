@@ -24,13 +24,14 @@
     }
     function positionHint() {
         if (!hintSource || !hintSource.isConnected) { hideHint(); return; }
-        if (hintSource.closest('.pregame-pool-stats')) {
+        if (hintSource.closest('.pregame-pool-stats') || hintSource.hasAttribute('data-pregame-hint-action')) {
             var sourceBox = hintSource.getBoundingClientRect();
             hintNode.style.width = Math.min(260, window.innerWidth - 16) + 'px';
             hintNode.style.maxHeight = '120px';
             var hintBox = hintNode.getBoundingClientRect();
             hintNode.style.left = Math.max(8, Math.min(sourceBox.left, window.innerWidth - hintBox.width - 8)) + 'px';
-            hintNode.style.top = Math.max(8, Math.min(sourceBox.bottom + 8, window.innerHeight - hintBox.height - 8)) + 'px';
+            var preferredTop = hintSource.hasAttribute('data-pregame-hint-action') ? sourceBox.top - hintBox.height - 8 : sourceBox.bottom + 8;
+            hintNode.style.top = Math.max(8, Math.min(preferredTop, window.innerHeight - hintBox.height - 8)) + 'px';
             return;
         }
         var card = hintSource.closest('.pregame-card-info');
@@ -79,7 +80,7 @@
     document.addEventListener('click', function (event) {
         var source = statHint(event.target);
         if (source && !root.contains(source)) source = null;
-        if (source && source.hasAttribute('data-view-filter')) { hintSuppressed = source; hideHint(); return; }
+        if (source && (source.hasAttribute('data-view-filter') || source.hasAttribute('data-pregame-hint-action'))) { hintSuppressed = source; hideHint(); return; }
         if (hintPinned) {
             hintSuppressed = source;
             hideHint();
@@ -94,7 +95,7 @@
     }, true);
     root.addEventListener('keydown', function (event) {
         var source = statHint(event.target);
-        if (source && source.hasAttribute('data-view-filter')) return;
+        if (source && (source.hasAttribute('data-view-filter') || source.hasAttribute('data-pregame-hint-action'))) return;
         if (!source || (event.key !== 'Enter' && event.key !== ' ')) return;
         event.preventDefault(); event.stopPropagation();
         if (hintPinned) { hintSuppressed = source; hideHint(); }

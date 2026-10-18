@@ -30,7 +30,8 @@ final class PrepareUi
             'ukid'       => htmlspecialchars($ukid, ENT_QUOTES),
             'instance_id'=> isset($data['instance_id']) ? (int) $data['instance_id'] : '',
             'name'       => htmlspecialchars((string) ($info['name'] ?? $ukid ?: '—'), ENT_QUOTES),
-            'count_html' => isset($data['count']) ? '<div class="prepare-card__count">×' . (int) $data['count'] . '</div>' : '',
+            'count_html' => isset($data['count']) ? '<div class="prepare-card__count">×' . (int) $data['count']
+                . (!empty($data['count_note']) ? '<span class="prepare-card__count-note">' . htmlspecialchars((string) $data['count_note'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>' : '') . '</div>' : '',
             'element'    => htmlspecialchars((string) ($info['element'] ?? ''), ENT_QUOTES),
             'health'     => htmlspecialchars((string) ($info['health'] ?? '?'), ENT_QUOTES),
             'move'       => htmlspecialchars((string) ($info['move'] ?? '?'), ENT_QUOTES),

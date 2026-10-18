@@ -2,6 +2,7 @@
     "use strict";
     var view = document.querySelector('[data-view-pager]');
     if (!view) return;
+    var isDeal = view.hasAttribute('data-deal-pager');
     var main = view.closest('.pregame-main');
     var navigation = view.querySelector('[data-view-pagination]');
     var root = view.closest('.pregame-layout');
@@ -12,7 +13,8 @@
     var selected = view.querySelector('.prepare-card--selected');
     var anchor = selected ? selected.closest('.prepare-card-link') : null;
     var params = new URLSearchParams(window.location.search);
-    var activeZone = params.get('view_zone') === 'sideboard' ? 'sideboard'
+    var squadOnly = isDeal && params.get('deal_selected') === '1';
+    var activeZone = !isDeal && params.get('view_zone') === 'sideboard' ? 'sideboard'
         : anchor ? anchor.closest('[data-view-group]').dataset.viewGroup : 'deck';
     var filters = {element: params.get('view_element') || '', crystal: params.get('view_crystal') || ''};
     ['element', 'crystal'].forEach(function (type) {
@@ -20,7 +22,7 @@
     });
     var pages = [], current = 0;
     function matches(card) {
-        return (!filters.element || card.classList.contains('view-element-' + filters.element))
+        return (!squadOnly || card.classList.contains('deal-in-squad')) && (!filters.element || card.classList.contains('view-element-' + filters.element))
             && (!filters.crystal || card.classList.contains('view-crystal-' + filters.crystal));
     }
     function syncControls() {
@@ -29,8 +31,13 @@
         root.querySelectorAll('[data-view-zone]').forEach(function (button) {
             button.setAttribute('aria-pressed', String(button.dataset.viewZone === activeZone));
         });
+        root.querySelectorAll('[data-deal-selected]').forEach(function (button) { button.setAttribute('aria-pressed', String(squadOnly)); });
         root.querySelectorAll('[data-view-filter]').forEach(function (button) {
             var filter = button.dataset.viewFilter.split(':');
+            if (button.hasAttribute('data-view-stat-static')) {
+                button.setAttribute('aria-pressed', String(filters[filter[0]] === filter[1]));
+                return;
+            }
             var count = cards.reduce(function (sum, card) {
                 if (!card.classList.contains('view-' + filter[0] + '-' + filter[1])) return sum;
                 var amount = card.querySelector('.prepare-card__count');
@@ -50,8 +57,20 @@
                     if (filters[type]) url.searchParams.set('view_' + type, filters[type]);
                     else url.searchParams.delete('view_' + type);
                 });
+                if (isDeal && squadOnly) url.searchParams.set('deal_selected', '1');
+                else url.searchParams.delete('deal_selected');
                 card.href = url.href;
             });
+        });
+        root.querySelectorAll('[data-deal-actions] a').forEach(function (link) {
+            var url = new URL(link.href);
+            ['element', 'crystal'].forEach(function (type) {
+                if (filters[type]) url.searchParams.set('view_' + type, filters[type]);
+                else url.searchParams.delete('view_' + type);
+            });
+            if (squadOnly) url.searchParams.set('deal_selected', '1');
+            else url.searchParams.delete('deal_selected');
+            link.href = url.href;
         });
         var actions = view.querySelector('.pregame-view-actions');
         if (actions) actions.style.visibility = selected && group && group.cards.indexOf(selected.closest('.prepare-card-link')) !== -1
@@ -143,8 +162,13 @@
     root.addEventListener('click', function (event) {
         var zone = event.target.closest('[data-view-zone]');
         var filter = event.target.closest('[data-view-filter]');
-        if (!zone && !filter) return;
-        if (zone) {
+        var selectedControl = event.target.closest('[data-deal-selected]');
+        if (!zone && !filter && !selectedControl) return;
+        if (selectedControl) {
+            squadOnly = !squadOnly;
+            filters.element = '';
+            filters.crystal = '';
+        } else if (zone) {
             activeZone = zone.dataset.viewZone;
             filters.element = '';
             filters.crystal = '';

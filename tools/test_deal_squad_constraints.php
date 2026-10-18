@@ -169,7 +169,7 @@ $screen = (new DealScreen($tpl))->prepare(
     null,
     cardInfoFor(array_merge($uiFlyers, [$uiOverFly])),
 );
-assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Летающие:'), 'Deal bottom panel should show flying budget');
+assertTrue(str_contains($screen['data']['panel_summary_html'], 'Стоимость летающих:'), 'Deal bottom panel should show flying budget');
 assertTrue(str_contains($screen['data']['preview_html'], 'Нельзя взять в отряд'), 'Deal preview should explain impossible flying recruit');
 assertTrue(str_contains($screen['data']['preview_html'], (string) SquadRules::FLYING_COST_LIMIT), 'Deal preview should use canonical flying limit');
 assertTrue(str_contains($screen['data']['preview_html'], 'Стоимость летающих'), 'Deal preview should name flying cost rule');

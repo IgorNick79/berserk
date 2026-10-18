@@ -213,3 +213,18 @@ body.pregame-page {
 .pregame-side-choice label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .pregame-side-choice input { margin: 0; }
 .pregame-panel-footer button[form="pregame-side-choice"] { border: 0; font: inherit; cursor: pointer; }
+
+.pregame-deal-resources, .pregame-deal-elements { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; }
+.pregame-deal-resources .pregame-pool-stat { font-size: 14px; }
+.pregame-deal-footer { display: flex; align-items: center; gap: 10px; }
+.pregame-deal-selected { padding: 4px 0; border: 0; background: transparent; font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer; }
+.pregame-deal-selected[aria-pressed="true"] { text-decoration: underline; text-underline-offset: 3px; color: #806020; }
+.pregame-reshuffle { margin-left: auto; width: 44px; height: 44px; }
+.pregame-reshuffle img { width: 40px; height: 40px; }
+.pregame-deal-notes { padding: 0 12px 12px; font-size: 13px; }
+.pregame-deal-notes p { margin: 4px 0; }
+.pregame-card-actions .prepare-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.prepare-card__count-note { display: block; margin-top: 2px; color: #276329; font-weight: 600; }
+.pregame-view-pages .deal-in-squad .prepare-card { border-color: #4a4; }
+.pregame-deal-stats .penalty { font-size: 12px; }
+.pregame-deal-stats [aria-label^="Золото: -"] { color: #a22; }

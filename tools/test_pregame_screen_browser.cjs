@@ -138,6 +138,15 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
       assert.equal(await page.locator('.pregame-panel-footer button[form=pregame-side-choice]').count(),chooser?1:0);
      }
     }
+    if (fixture.stage === 'deal') {
+     assert.equal(await page.locator('[data-deal-pager]').count(),1);
+     assert.equal(await page.locator('.pregame-main .prepare-bottom-bar, .pregame-main h2, .pregame-main a[href*="cmd="]').count(),0);
+     assert.equal(await page.locator('.pregame-panel-summary .pregame-pool-stat').count(),9);
+     assert.equal(await page.locator('.pregame-panel-footer [data-deal-selected]').count(),1);
+     assert.equal(await page.locator('.pregame-panel-footer a[href*="cmd=confirm_deal"]').count(),['waiting','pending'].includes(fixture.variant)?0:1);
+     assert.equal(await page.locator('.pregame-reshuffle').count(),['waiting','pending','exhausted'].includes(fixture.variant)?0:1);
+     assert.ok(await page.locator('.pregame-main').evaluate(el=>el.scrollHeight<=el.clientHeight+1),key+' bounded Deal pages');
+    }
     const panel=page.locator('.pregame-info-panel');
     assert.equal((await panel.boundingBox()).width,440,key+' panel width at '+width);
     assert.equal(await page.locator('.pregame-main h1').count(),0,key+' duplicate heading');
@@ -274,7 +283,70 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
    const dealLink=page.locator('.pregame-main .cards a').nth(2),dealName=await dealLink.locator('.prepare-card__name').textContent();
    await dealLink.click();
    assert.equal(await page.locator('.pregame-card-title').textContent(),dealName);
-   assert.equal(await page.locator('.pregame-main a[href*="cmd=pick_card"]').count(),1);
+   assert.equal(await page.locator('.pregame-panel-content a[href*="cmd=pick_card"]').count(),1);
+   await page.goto('https://pregame.test/deal-mixed');
+   assert.equal((await visibleViewIds()).size,30,'Hand and squad share one list with merged duplicates');
+   assert.equal(await page.locator('.pregame-view-pages [data-ukid="host-squad"]').count(),1);
+   await page.locator('[data-deal-selected]').click();
+   assert.equal(await page.locator('[data-deal-selected]').getAttribute('aria-pressed'),'true');
+   assert.equal(await page.locator('.pregame-view-pages .prepare-card-link:visible').count(),1);
+   await page.locator('.pregame-view-pages .prepare-card-link:visible').click();
+   assert.equal(await page.locator('[data-deal-selected]').getAttribute('aria-pressed'),'true','Squad filter persists after card navigation');
+   assert.equal(await page.locator('[data-deal-actions] a[href*="cmd=pick_card"]').count(),1,'Remaining copy can be recruited');
+   assert.equal(await page.locator('[data-deal-actions] a[href*="cmd=unpick_card"]').count(),1,'Squad copy can be returned');
+   await page.locator('[data-deal-actions] a[href*="cmd=unpick_card"]').click();
+   assert.equal(commands.at(-1).cmd,'unpick_card');
+   assert.equal(commands.at(-1).query.ukid,'host-squad');
+   assert.equal(commands.at(-1).query.deal_selected,'1');
+   await page.locator('[data-deal-selected]').click();
+   assert.equal((await visibleViewIds()).size,30,'Repeat selected click restores the whole list without an All control');
+   await page.locator('[data-view-filter="element:plains"]').click();
+   await page.locator('[data-view-filter="crystal:gold"]').click();
+   assert.equal((await visibleViewIds()).size,1,'Deal element and crystal filters combine');
+   assert.equal(await page.locator('[data-view-filter="crystal:gold"]').getAttribute('aria-label'),'Золото: 30/30','Filtering does not overwrite resource balances');
+   await page.getByRole('button',{name:'Стоимость летающих: 2/15',exact:true}).hover();
+   assert.ok(await page.locator('.pregame-stat-tooltip').isVisible(),'Flying budget hint');
+   await page.keyboard.press('Escape');
+   await page.locator('[data-deal-selected]').click();
+   assert.equal(await page.locator('[data-view-filter][aria-pressed="true"]').count(),0,'Selected control clears card filters');
+   await page.goto('https://pregame.test/deal-empty-squad');
+   await page.locator('[data-deal-selected]').click();
+   assert.ok(await page.locator('[data-view-empty]').isVisible());
+   await page.locator('[data-deal-selected]').click();
+   assert.ok((await visibleViewIds()).size>0,'Empty squad can return to full list');
+   await page.goto('https://pregame.test/deal-host');
+   const reshuffle=page.locator('.pregame-reshuffle');
+   await reshuffle.hover();
+   assert.match(await page.locator('.pregame-stat-tooltip').textContent(),/Пересдать колоду.*штраф: 1 золото, осталось: 3/);
+   assert.ok((await page.locator('.pregame-stat-tooltip').boundingBox()).y+(await page.locator('.pregame-stat-tooltip').boundingBox()).height<=(await reshuffle.boundingBox()).y,'Reshuffle hint does not cover the action');
+   const beforeReshuffle=commands.length;
+   let cancelSeen=false;
+   page.once('dialog',async dialog=>{cancelSeen=true;await dialog.dismiss();});
+   await reshuffle.click();
+   assert.ok(cancelSeen,'Reshuffle still asks for confirmation');
+   assert.equal(commands.length,beforeReshuffle,'Cancel does not send reshuffle');
+   page.once('dialog',dialog=>dialog.accept());
+   await reshuffle.click();
+   assert.equal(commands.at(-1).cmd,'reshuffle','Confirm sends the existing reshuffle command');
+   page.once('dialog',dialog=>dialog.accept());
+   await page.locator('.pregame-panel-footer a[href*="cmd=confirm_deal"]').click();
+   assert.equal(commands.at(-1).cmd,'confirm_deal');
+   await page.goto('https://pregame.test/deal-pending');
+   assert.equal(await page.locator('.pregame-panel-content .card-choice-form').count(),1,'Special recruit dialog stays available in InfoPanel');
+   await page.locator('.card-choice-form input[name=x][value="4"]').check();
+   await page.locator('.card-choice-form button[type=submit]').click();
+   assert.equal(commands.at(-1).cmd,'choose_deal_variable_recruit');
+   assert.equal(commands.at(-1).query.x,'4');
+   await page.setViewportSize({width,height:450});
+   await page.goto('https://pregame.test/deal-mixed');
+   for (let i=0;i<await page.locator('[data-view-pagination] button').count();i++) {
+    await page.locator('[data-view-pagination] button').nth(i).click();
+    assert.ok(await page.locator('.pregame-main').evaluate(el=>el.scrollHeight<=el.clientHeight+1),'Deal pages fit short desktop');
+   }
+   await page.locator('[data-deal-selected]').click();
+   assert.equal(await page.locator('.pregame-view-pages .prepare-card-link:visible').count(),1);
+   await page.setViewportSize({width,height:900});
+
    await page.goto('https://pregame.test/turn-host');
    assert.ok(await page.locator('[data-view-pagination] button').count()>1);
    await page.locator('[data-view-pagination] button').nth(1).click();

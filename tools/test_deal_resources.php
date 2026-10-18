@@ -485,11 +485,11 @@ $screen = (new DealScreen($tpl))->prepare($state, GameState::PLAYER_HOST, 'host'
 
 assertTrue(str_contains($screen['data']['preview_html'], 'В отряд'), 'Recruit action should be rendered in card preview');
 assertTrue(!str_contains($screen['data']['preview_html'], 'prepare-card-preview__actions'), 'Preview action should render inside card info');
-assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Выбрано:'), 'Bottom panel should render selected count');
-assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Золото:'), 'Bottom panel should render gold resources');
-assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Серебро:'), 'Bottom panel should render silver resources');
-assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Степи') === false, 'Hand-only element should not appear in squad badges');
-assertTrue(!str_contains($screen['data']['bottom_panel_html'], 'В отряд'), 'Recruit action should not be rendered in bottom panel');
+assertTrue(str_contains($screen['data']['panel_actions_html'], 'Выбрано:'), 'Bottom panel should render selected count');
+assertTrue(str_contains($screen['data']['panel_summary_html'], 'Золото:'), 'Bottom panel should render gold resources');
+assertTrue(str_contains($screen['data']['panel_summary_html'], 'Серебро:'), 'Bottom panel should render silver resources');
+assertTrue(str_contains($screen['data']['panel_summary_html'], 'aria-label="Степи: 0"'), 'Hand-only element should not appear in squad badges');
+assertTrue(!str_contains($screen['data']['panel_summary_html'], 'В отряд'), 'Recruit action should not be rendered in bottom panel');
 unset($_GET['card']);
 
 $_GET['card'] = 'squad:s1_171';
@@ -533,11 +533,11 @@ $screen = (new DealScreen($tpl))->prepare($state, GameState::PLAYER_HOST, 'host'
         'strike' => ['weak' => 1, 'medium' => 1, 'strong' => 1],
     ],
 ], $elementLabels);
-assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Степи'), 'Deal squad badges should render human-readable plains label');
-assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Леса'), 'Deal squad badges should render human-readable forest label');
-assertTrue(!str_contains($screen['data']['bottom_panel_html'], 'plains'), 'Deal squad badges should not expose internal plains code');
-assertTrue(!str_contains($screen['data']['bottom_panel_html'], 'forests'), 'Deal squad badges should not expose internal forest code');
-assertTrue(str_contains($screen['data']['bottom_panel_html'], 'penalty active'), 'Element penalty should use existing active penalty style');
+assertTrue(str_contains($screen['data']['panel_summary_html'], 'Степи'), 'Deal squad badges should render human-readable plains label');
+assertTrue(str_contains($screen['data']['panel_summary_html'], 'Леса'), 'Deal squad badges should render human-readable forest label');
+assertTrue(str_contains($screen['data']['panel_summary_html'], '/assets/images/element/plains.png'), 'Deal squad badges should not expose internal plains code');
+assertTrue(str_contains($screen['data']['panel_summary_html'], '/assets/images/element/forests.png'), 'Deal squad badges should not expose internal forest code');
+assertTrue(str_contains($screen['data']['panel_summary_html'], 'penalty active'), 'Element penalty should use existing active penalty style');
 
 $state = dealState();
 addSquadPrices($state, [3, 4, 5, 6, 7, 8]);
@@ -573,9 +573,9 @@ $screen = (new DealScreen($tpl))->prepare($state, GameState::PLAYER_HOST, 'host'
         'strike' => ['weak' => 0, 'medium' => 1, 'strong' => 2],
     ],
 ], $elementLabels);
-assertTrue(str_contains($screen['data']['bottom_panel_html'], 'Вольный воитель'), 'Free Warrior pending panel should replace default Deal bottom panel');
-assertTrue(str_contains($screen['data']['bottom_panel_html'], 'choose_deal_variable_recruit'), 'Free Warrior pending panel should submit the Deal choice command');
-assertTrue(str_contains($screen['data']['bottom_panel_html'], 'X = 4'), 'Free Warrior pending panel should render X radio choices');
-assertTrue(str_contains($screen['data']['bottom_panel_html'], '+4 серебра'), 'Free Warrior pending panel should describe silver extra cost');
+assertTrue(str_contains($screen['data']['panel_html'], 'Вольный воитель'), 'Free Warrior pending panel should replace default Deal bottom panel');
+assertTrue(str_contains($screen['data']['panel_html'], 'choose_deal_variable_recruit'), 'Free Warrior pending panel should submit the Deal choice command');
+assertTrue(str_contains($screen['data']['panel_html'], 'X = 4'), 'Free Warrior pending panel should render X radio choices');
+assertTrue(str_contains($screen['data']['panel_html'], '+4 серебра'), 'Free Warrior pending panel should describe silver extra cost');
 
 echo "Deal UI smoke tests passed.\n";
