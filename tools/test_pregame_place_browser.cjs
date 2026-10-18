@@ -31,7 +31,8 @@ const fixture=path.join(root,'tools/test_pregame_place_fixture.php');
   assert.equal(await page.locator('.pregame-place-list .prepare-card-link').count(),2);
   assert.deepEqual(await page.locator('.pregame-place-row-number').allTextContents(),['I','II','III']);
   assert.deepEqual(await page.locator('.pregame-place-columns').first().locator('span').allTextContents(),['1','2','3','4','5']);
-  assert.ok(await page.locator('.pregame-main').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+  assert.deepEqual(await page.locator('.pregame-place-field .field-cell').first().evaluate(el=>[el.offsetWidth,el.offsetHeight]),[102,102]);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
   const ownId=role==='host'?1:3,foreignId=role==='host'?3:1;
   const open=async id=>{
    await page.locator('.pregame-place-list .prepare-card-link[data-instance-id="'+id+'"]').click();
