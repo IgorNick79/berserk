@@ -31,7 +31,12 @@
         ? window.BerserkTurnTimer.create(root, script.dataset.viewerKey, syncVersion, script.dataset.turnSoundUrl || "")
         : null;
 
+    var matchPause = null;
+
     function updateTurnTimer(data) {
+        if (pendingCommand && data && data.command_id === pendingCommand.id && data.command_status === "conflict"
+            && pendingCommand.type === "pause_ready") pendingCommand.readyConflict = true;
+        if (matchPause && data && data.match_pause) matchPause.update(data.match_pause, data.sync_version);
         if (turnTimer && data && Object.prototype.hasOwnProperty.call(data, "turn_timer")) {
             turnTimer.update(data.turn_timer, data.sync_version);
         }
@@ -68,6 +73,10 @@
         conflict: true,
         failed: true
     };
+
+    matchPause = window.BerserkMatchPause
+        ? window.BerserkMatchPause.create(root, syncVersion, submitCommand, commandInFlight, function () { requestSnapshot(true); })
+        : null;
 
     function commandInFlight() {
         return commandState !== "idle";
@@ -176,7 +185,7 @@
     function showMessage(text, tone) {
         if (!messageNode) return;
 
-        messageNode.textContent = text || "";
+        messageNode.textContent = (window.BerserkMatchPause ? window.BerserkMatchPause.message(text) : text) || "";
         messageNode.hidden = !text;
         messageNode.classList.toggle("battle-ajax-message--error", tone === "error");
         messageNode.classList.toggle("battle-ajax-message--info", tone !== "error");
@@ -251,6 +260,7 @@
         if (!Number.isFinite(incomingVersion)) return false;
         if (incomingVersion < syncVersion) return false;
 
+        updateTurnTimer(data); // Apply the server pause barrier even when local selection changed.
         if (requestUiRevision !== uiRevision) {
             syncVersion = Math.max(syncVersion, incomingVersion);
             pendingForce = true;
@@ -285,6 +295,7 @@
     }
 
     function navigateToCurrentPage() {
+        if (matchPause) matchPause.destroy();
         if (turnTimer) turnTimer.destroy();
         stopped = true;
         clearPollTimer();
@@ -379,6 +390,9 @@
 
     function completeCommand() {
         var finalError = pendingCommand && pendingCommand.finalError;
+        var readyRetry = pendingCommand && pendingCommand.readyConflict && pendingCommand.readyRetryCount < 1
+            ? pendingCommand.pauseRequestId : null;
+        if (readyRetry) finalError = null;
         commandState = "idle";
         pendingCommand = null;
         statusInFlight = false;
@@ -393,6 +407,7 @@
             clearMessage();
         }
         scheduleNext();
+        if (readyRetry && matchPause) window.setTimeout(function () { matchPause.retryReady(readyRetry); }, 0);
     }
 
     function scheduleForcedSyncRetry() {
@@ -679,7 +694,7 @@
         }
     }
 
-    function submitCommand(params) {
+    function submitCommand(params, readyRetryCount) {
         if (stopped || commandInFlight()) return;
 
         var commandId = generateCommandId();
@@ -692,6 +707,7 @@
         commandState = "sending";
         pendingCommand = {
             id: commandId,
+            type: params.get("cmd"), pauseRequestId: params.get("request_id"), readyRetryCount: readyRetryCount || 0,
             uiRevision: commandUiRevision,
             recoveryDelay: 2000
         };
@@ -871,6 +887,7 @@
     });
 
     window.addEventListener("beforeunload", function () {
+        if (matchPause) matchPause.destroy();
         if (turnTimer) turnTimer.destroy();
         stopped = true;
         clearPollTimer();

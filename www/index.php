@@ -173,6 +173,67 @@ function isValidAjaxCommandId(string $commandId): bool
 
 function sendAjaxJson(array $payload, int $statusCode = 200): never
 {
+    // No-JS surrender uses the SAME journalled endpoint; only its presentation differs.
+    $htmlResign = (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+            && ($_GET['ajax'] ?? null) === 'battle_command' && ($_POST['cmd'] ?? null) === 'resign'
+            && ($_POST['html_resign'] ?? null) === '1')
+        || (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'
+            && ($_GET['ajax'] ?? null) === 'battle_command_status' && ($_GET['html_resign'] ?? null) === '1');
+    global $state, $playerKey;
+    if ($htmlResign && isset($state, $playerKey) && $state instanceof GameState) {
+        $url = '?' . ($playerKey === 'host' ? 'first' : 'second') . '&game=' . (int) $state->gameId;
+        header('Cache-Control: no-store');
+        // The HTML flag selects presentation, never the command's identity or result.
+        $resignRecord = null;
+        $resignResultState = null;
+        $resignLookupFailed = false;
+        try {
+            global $db;
+            $id = $payload['command_id'] ?? null;
+            if (is_string($id) && strlen($id) <= 64 && isValidAjaxCommandId($id)) {
+                $resignRecord = (new CommandJournalRepository($db))->find($state->gameId, $playerKey, $id);
+                if ($resignRecord !== null && $resignRecord['command_type'] === 'resign'
+                    && $resignRecord['status'] === CommandJournalRepository::STATUS_COMMITTED) {
+                    $resignResultState = (new GameRepository($db))->findById($state->gameId);
+                }
+            }
+        } catch (Throwable) {
+            $resignLookupFailed = true; // Read failure cannot confirm an uncertain result.
+        }
+        $wrongCommand = $resignRecord !== null && $resignRecord['command_type'] !== 'resign';
+        $confirmedResign = !$resignLookupFailed && $resignRecord !== null && !$wrongCommand
+            && (int) $resignRecord['game_id'] === $state->gameId && $resignRecord['player_key'] === $playerKey
+            && $resignRecord['status'] === CommandJournalRepository::STATUS_COMMITTED
+            && $resignRecord['before_version'] !== null && $resignRecord['after_version'] !== null
+            && (int) $resignRecord['before_version'] === (int) $resignRecord['expected_version']
+            && (int) $resignRecord['after_version'] === (int) $resignRecord['before_version'] + 1
+            && $resignRecord['error_code'] === null && $resignRecord['error_message'] === null
+            && !empty($resignRecord['finished_at'])
+            // Journal has no Result blob. Its exact saved version must prove terminal surrender.
+            && $resignResultState !== null && $resignResultState->gameId === $state->gameId
+            && $resignResultState->persistenceVersion === (int) $resignRecord['after_version']
+            && $resignResultState->status === 'game_over'
+            && $resignResultState->winner === $resignResultState->getOpponentKey($playerKey);
+        if ($confirmedResign && ($payload['ok'] ?? false) === true
+            && ($payload['command_status'] ?? null) === 'committed' && ($payload['terminal'] ?? false) === true) {
+            header('Location: ' . $url, true, 303);
+            exit;
+        }
+        http_response_code($wrongCommand ? 409 : $statusCode);
+        header('Content-Type: text/html; charset=utf-8');
+        $terminal = $wrongCommand || (!$resignLookupFailed && (
+            ($resignRecord !== null && in_array($resignRecord['status'], ['rejected', 'conflict', 'failed'], true))
+            || ($payload['request_status'] ?? null) === 'rejected_before_registration'));
+        echo '<!doctype html><html lang="ru"><meta charset="utf-8"><title>Сдача матча</title><body><p>'
+            . ($terminal ? 'Сдача не выполнена. Обновите матч перед новой попыткой.'
+                : 'Результат сдачи не подтверждён. Не отправляйте команду повторно.') . '</p>';
+        if (!$terminal && isset($payload['command_id']) && is_string($payload['command_id'])) {
+            $statusUrl = $url . '&ajax=battle_command_status&html_resign=1&command_id=' . rawurlencode($payload['command_id']);
+            echo '<p><a href="' . htmlspecialchars($statusUrl, ENT_QUOTES) . '">Проверить результат</a></p>';
+        }
+        echo '<p><a href="' . htmlspecialchars($url, ENT_QUOTES) . '">Вернуться к матчу</a></p></body></html>';
+        exit;
+    }
     http_response_code($statusCode);
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -1233,6 +1294,7 @@ switch ($state->status) {
             }
         }
         $scriptsHtml = '<script src="/assets/js/battle-turn-timer.js?v={{rkey}}"></script>'
+            . '<script src="/assets/js/battle-match-pause.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-sync.js?v={{rkey}}"'
             . ' data-viewer-key="' . htmlspecialchars($playerKey, ENT_QUOTES) . '"'
             . ' data-turn-sound-url="' . htmlspecialchars($turnSoundUrl, ENT_QUOTES) . '"'

@@ -7,6 +7,7 @@ namespace Berserk\View\Screen\Battle;
 
 use Berserk\Core\GameState;
 use Berserk\Core\TurnTimer;
+use Berserk\Core\MatchPause;
 use Berserk\Core\CardInstance;
 use Berserk\Core\CardStats;
 use Berserk\Core\BattleHelper;
@@ -50,6 +51,13 @@ final class InfoPanel
         $this->cardsInfo = $cardsInfo;
         $this->baseUrl   = $baseUrl;
 
+        if (MatchPause::blocking($state)) {
+            $pausePhase = $state->battle['match_pause']['mode'] === 'active' ? 'Пауза' : 'Запрос паузы';
+            return '<header class="info-panel-header"><div class="info-heading"><h1 class="info-status">Матч приостановлен</h1>'
+                . '<span class="info-phase">' . $pausePhase . '</span></div>' . $this->renderTimer() . '</header>'
+                . '<div class="info-panel-content"><div class="battle-selected-card" data-battle-fragment="panel_html" hidden></div>'
+                . $this->renderPauseBody() . '</div><footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
+        }
         $inCombat = !empty($state->battle['strike']);
         $combatKey = '';
         if ($inCombat) {
@@ -73,7 +81,7 @@ final class InfoPanel
     {
         $state = $this->state;
         $inBattle = $state->status === 'battle' && $state->winner === null;
-        $canEnd = $inBattle && ($state->battle['active'] ?? null) === $this->playerKey
+        $canEnd = $inBattle && !MatchPause::blocking($state) && ($state->battle['active'] ?? null) === $this->playerKey
             && ChoiceRegistry::current($state) === null && empty($state->battle['strike'])
             && empty($state->battle['pending_prophecy']) && empty($state->battle['pending_dive']);
         if ($canEnd) {
@@ -88,18 +96,56 @@ final class InfoPanel
         $end = $canEnd
             ? '<a class="button wide green-btn" href="' . $this->baseUrl . '&cmd=end_turn"><span>Завершить ход</span></a>'
             : '<button class="button wide green-btn" type="button" disabled><span>Завершить ход</span></button>';
+        $pause = MatchPause::snapshot($state, $this->playerKey, time());
+        if ($pause['mode'] === 'active') {
+            $end = '<button class="button wide green-btn" type="button" data-pause-command="pause_ready"'
+                . ($pause['ready_self'] ? ' disabled' : '') . '><span>'
+                . ($pause['ready_self'] ? 'Вы готовы' : 'Вернулся / Готов') . '</span></button>';
+        } elseif ($pause['mode'] === 'requested') {
+            $end = '<button class="button wide green-btn" type="button" disabled><span>Ожидаем ответа</span></button>';
+        }
+        $pauseIcon = '<button class="battle-icon-control" type="button" data-open-pause aria-label="Запросить паузу" title="Запросить паузу"'
+            . (in_array('request_pause', $pause['allowed_commands'], true) ? '' : ' disabled')
+            . '><span class="pause-control-symbol" aria-hidden="true">Ⅱ</span></button>';
         $resignIcon = $this->tpl->parse('includes/battle/control_icon.tpl', [
             'file' => 'surrender_160.png', 'label' => 'Сдаться',
         ]);
         $resign = $inBattle
             ? '<a class="battle-icon-control resign" aria-label="Сдаться" href="' . $this->baseUrl . '&cmd=resign" onclick="return confirm(\'Сдаться?\')">' . $resignIcon . '</a>'
             : '<button class="battle-icon-control resign" aria-label="Сдаться" type="button" disabled>' . $resignIcon . '</button>';
-        $log = '<button class="battle-icon-control" type="button" data-action="battle-log" aria-label="Лог игры" aria-disabled="true">'
+        $log = '<button class="battle-icon-control" type="button" data-action="battle-log" aria-label="Лог игры" aria-disabled="true" disabled>'
             . $this->tpl->parse('includes/battle/control_icon.tpl', [
                 'file' => 'game_log_160.png', 'label' => 'Лог игры',
             ]) . '</button>';
-        return '<div class="info-actions">' . $end . '<div class="battle-icon-actions">' . $log . $resign . '</div></div>';
+        $httpResign = $inBattle
+            ? '<form method="post" action="' . $this->baseUrl . '&amp;ajax=battle_command">'
+                . '<input type="hidden" name="cmd" value="resign">'
+                . '<input type="hidden" name="expected_version" value="' . (int) ($state->persistenceVersion ?? 0) . '">'
+                . '<input type="hidden" name="command_id" value="' . bin2hex(random_bytes(16)) . '">'
+                . '<input type="hidden" name="html_resign" value="1">'
+                . '<button type="submit" class="button" data-http-resign>Сдаться</button></form>' : '';
+        return '<noscript><style>[data-battle-sync-root] [data-open-pause], [data-battle-sync-root] [data-pause-command], [data-battle-sync-root] a.resign { display: none !important; }</style>'
+            . '<p class="pause-noscript-notice">Управление паузой требует JavaScript. Сдаться можно без JavaScript.</p>' . $httpResign . '</noscript>'
+            . '<div class="info-actions">' . $end . '<div class="battle-icon-actions">' . $pauseIcon . $log . $resign . '</div></div>';
     }
+    private function renderPauseBody(): string
+    {
+        $p = MatchPause::snapshot($this->state, $this->playerKey, time());
+        $deadline = $p['mode'] === 'requested' ? $p['request_deadline_at'] : $p['pause_deadline_at'];
+        $seconds = max(0, $deadline - $p['server_now']);
+        $heading = $p['mode'] === 'active' ? 'Пауза' : 'Запрос паузы';
+        $message = $p['mode'] === 'active'
+            ? ($p['ready_self'] ? 'Вы готовы, ожидаем соперника' : 'Когда вернётесь, нажмите «Вернулся / Готов».')
+            : ($p['initiator'] === $this->playerKey ? 'Ожидаем ответа соперника.' : 'Соперник просит паузу на ' . intdiv($p['duration_seconds'], 60) . ' мин.');
+        $html = '<section class="match-pause-content" data-match-pause-content><h2>' . $heading . '</h2>'
+            . '<div class="match-pause-countdown" data-pause-countdown role="timer">' . sprintf('%02d:%02d', intdiv($seconds, 60), $seconds % 60) . '</div>'
+            . '<p data-pause-description>' . $message . '</p><div class="match-pause-decisions">';
+        foreach (['accept_pause'=>'Принять', 'reject_pause'=>'Отклонить', 'cancel_pause_request'=>'Отменить запрос'] as $cmd=>$label) {
+            if (in_array($cmd, $p['allowed_commands'], true)) $html .= '<button class="button" type="button" data-pause-command="' . $cmd . '">' . $label . '</button>';
+        }
+        return $html . '</div></section>';
+    }
+
     private function renderStatusHeader(): string
     {
         $state     = $this->state;

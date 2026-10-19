@@ -21,6 +21,11 @@ if(!in_array($mode,['crash-after-register','hold-executor'],true)) {
     $needle="        \$this->transactionActive = false;\n    }\n\n    public function ".$next;
     $source=str_replace($needle,"        \$this->transactionActive = false;\n        if (empty(\$GLOBALS['mpLostAck'])) { \$GLOBALS['mpLostAck']=true; throw new ".$fault."('Injected lost acknowledgement'); }\n    }\n\n    public function ".$next,$source,$count);
     if($count!==1)throw new RuntimeException('Db transaction boundary changed');
+    if($mode==='html-resign-commit-unknown') {
+        $source=str_replace('$result = $this->connection->query($sql);',
+            'if (!empty($GLOBALS["mpLostAck"]) && empty($GLOBALS["mpLostRecoveryRead"])) { $GLOBALS["mpLostRecoveryRead"]=true; throw new DbQueryException("Injected recovery read failure"); } $result = $this->connection->query($sql);',$source,$count);
+        if($count!==1)throw new RuntimeException('Db recovery boundary changed');
+    }
     eval(substr($source,5));
 }
 $db=new Db($config);$meta=$db->fetchOne('SELECT @@datadir AS dir,DATABASE() AS db');
@@ -44,5 +49,12 @@ if($mode==='hold-executor') {
 }
 $_GET=['first'=>'','game'=>$game,'ajax'=>'battle_sync','force_snapshot'=>'1'];
 if(str_starts_with($mode,'status-'))$_GET=['first'=>'','game'=>$game,'ajax'=>'battle_command_status','command_id'=>'fault-accept'];
-$_POST=[];$_REQUEST=$_GET;$_SERVER['REQUEST_METHOD']='GET';$_SERVER['REQUEST_URI']='/index.php?'.http_build_query($_GET);
+$_POST=[];$_SERVER['REQUEST_METHOD']='GET';
+if($mode==='html-resign-commit-unknown') {
+    $_GET=['first'=>'','game'=>$game,'ajax'=>'battle_command'];
+    $_POST=['cmd'=>'resign','command_id'=>$argv[3],'expected_version'=>(string)$s->persistenceVersion,'html_resign'=>'1'];
+    $_SERVER['REQUEST_METHOD']='POST';
+    register_shutdown_function(static function():void {echo "\n__RESIGN_STATUS__".(http_response_code()?:200);});
+}
+$_REQUEST=array_merge($_GET,$_POST);$_SERVER['REQUEST_URI']='/index.php?'.http_build_query($_GET);
 require __DIR__.'/../www/index.php';

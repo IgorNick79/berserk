@@ -113,7 +113,7 @@ final class BattleScreen
         $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml);
 
         $debugHtml = '';
-        if (isset($_SESSION['debug']) && $_SESSION['debug'] == '1') {
+        if (!\Berserk\Core\MatchPause::blocking($state) && isset($_SESSION['debug']) && $_SESSION['debug'] == '1') {
             $debugHtml = $this->buildDebug($state, $playerKey, $strike);
         }
 
@@ -134,6 +134,9 @@ final class BattleScreen
                     'pile' => $ui['pile'],
                     'mode_explicit' => $ui['mode_explicit'],
                 ],
+                'pause_root_attr' => \Berserk\Core\MatchPause::blocking($state) ? 'data-match-paused="1"' : '',
+                'pause_field_attr' => \Berserk\Core\MatchPause::blocking($state) ? 'inert aria-hidden="true"' : '',
+                'pause_mask_hidden' => \Berserk\Core\MatchPause::blocking($state) ? '' : 'hidden',
                 'debug_disabled' => $debugHtml === '' ? 'disabled' : '',
                 'field_html'       => $fieldHtml,
                 'panel_html'       => $panelHtml,
