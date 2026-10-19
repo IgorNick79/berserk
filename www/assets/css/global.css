@@ -2124,8 +2124,8 @@ body.battle-page {
 .panel-stat-hint .battle-icon-tooltip { left: 8px; right: 8px; bottom: calc(100% + 8px); transform: translateY(4px); white-space: normal; text-align: center; }
 .panel-stat-hint:hover .battle-icon-tooltip, .panel-stat-hint:focus-visible .battle-icon-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
 
-.panel-stat-hint.panel-stat-value { flex: 0 0 auto; gap: 5px; white-space: nowrap; }
-.panel-stat-value-icon { display: block; flex: 0 0 24px; width: 24px; height: 24px; object-fit: contain; }
+.panel-stat-hint.panel-stat-value { flex: 0 0 auto; gap: 4px; white-space: nowrap; }
+.panel-stat-value-icon { display: block; flex: 0 0 28px; width: 28px; height: 28px; object-fit: contain; }
 .panel-stat-number { font-size: 13px; font-variant-numeric: tabular-nums; }
 .battle-page .panel-card-stats .battle-icon-tooltip { white-space: normal; overflow-wrap: anywhere; }
 
@@ -2144,7 +2144,7 @@ body.battle-page {
 .battle-page .panel-card-media .panel-card-preview { height: 100%; }
 .battle-page .panel-card-media .panel-card-preview img { height: 100%; object-fit: contain; }
 .panel-card-heading-icons { display: flex; flex: 0 1 auto; max-width: 55%; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
-.panel-ability { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; }
+.panel-ability { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
 .panel-ability[hidden] { display: none; }
 .panel-ability-icon { display: block; width: 20px; height: 20px; object-fit: contain; }
 .battle-page .panel-card-stats { flex-wrap: nowrap; align-items: flex-start; gap: 8px; }
@@ -2226,3 +2226,6 @@ body.battle-page {
 .battle-menu-panel [data-sound-check] { color: #36513a; font-weight: bold; }
 .battle-menu-panel [data-sound-check][hidden], .battle-menu-saving[hidden] { display: none; }
 .battle-menu-saving { display: block; padding: 6px 12px; color: #777; font-size: 12px; }
+
+.battle-page .panel-card-stats .panel-stat-icon,
+.battle-page .panel-card-stats .panel-info-icon { width: 28px; height: 28px; flex-basis: 28px; }

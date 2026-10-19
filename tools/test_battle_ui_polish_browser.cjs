@@ -47,7 +47,7 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  assert(await page.locator('.panel-card-heading-icons .panel-stat-icon').count()===2,'Rarity and element icons present');
  await page.waitForFunction(()=>[...document.querySelectorAll('.panel-stat-value-icon')].every(i=>i.complete&&i.naturalWidth>0));
  assert(await page.locator('.panel-stat-value').count()===4,'HP movement strike and coins');
- assert(await page.locator('.panel-card-heading-icons').evaluate(e=>e.children[0].querySelector('img').src.includes('/element/')&&e.children[1].querySelector('img').src.includes('/rarity/')),'Element and rarity beside title');
+ assert(await page.locator('.panel-card-heading-icons').evaluate(e=>e.children[e.children.length-2].querySelector('img').src.includes('/element/')&&e.lastElementChild.querySelector('img').src.includes('/rarity/')),'Element and rarity beside title');
  assert(await page.locator('.panel-stats-extra img').getAttribute('src')==='/assets/images/card/class.png','Class icon in right group');
 
 

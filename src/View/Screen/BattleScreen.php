@@ -1077,6 +1077,8 @@ final class BattleScreen
             ]);
         }
 
+        $metadataIcons = $statIcons;
+        $statIcons = '';
         $abilityIcon = fn(string $key, string $label, string $value = ''): string =>
             $this->tpl->parse('includes/battle/ability_icon.tpl', [
                 'ability' => $key,
@@ -1112,6 +1114,8 @@ final class BattleScreen
         ] as [$key, $value, $label]) {
             if ($value !== 0) $statIcons .= $abilityIcon($key, $label . ': ' . $value, (string) $value);
         }
+
+        $statIcons .= $metadataIcons;
 
         $descriptionHtml = \Berserk\View\Ui\CardDescription::render((string) ($info['descr'] ?? ''));
         $infoIcon = '';
