@@ -50,8 +50,8 @@ berserk_turn_timer_t2_test and InnoDB checks, loopback URL and random HTTP sourc
 probe are required before browser commands. The fixture helper supports controlled
 server-clock deadline completion only inside that verified disposable environment.
 
-Existing PNG icon regression checks remain scoped to PNG controls; the new pause
-control uses a native symbol. No browser tests are run against the working DB.
+PNG icon regression checks cover the footer controls, including pause_160.png.
+The pause control uses the shared icon template and the «Пауза игры» tooltip. No browser tests are run against the working DB.
 
 Final verification: 14 server UI checks and 66 browser checks passed. Existing
 battle UI polish passed at 1600/800/375px. Server regression suites passed with

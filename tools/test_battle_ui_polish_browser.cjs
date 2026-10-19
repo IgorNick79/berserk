@@ -149,7 +149,7 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  // Both pagination groups must be centered on their own flying zone.
  assert(await page.evaluate(()=>[...document.querySelectorAll('.fly-zone')].every(z=>{const c=z.querySelector('.fly-pagination');if(!c)return true;const a=z.getBoundingClientRect(),b=c.getBoundingClientRect();return Math.abs(a.x+a.width/2-b.x-b.width/2)<.1;})),'Centered bullets');
  await page.waitForFunction(()=>[...document.querySelectorAll('.battle-icon-control img')].every(img=>img.complete&&img.naturalWidth===160));
- const icons=page.locator('.battle-icon-control:has(img)'); // Existing PNG controls; pause has a native symbol.
+ const icons=page.locator('.battle-icon-control:has(img)'); // PNG controls, including the pause icon.
  const baseline=await page.locator('.info-actions').boundingBox();
  for(const icon of await icons.all()) {
  const old=await icon.boundingBox();

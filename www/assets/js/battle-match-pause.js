@@ -57,7 +57,7 @@
                 root.querySelectorAll("[data-open-pause]").forEach(function (node) {
                     node.disabled = busy() || model.allowed_commands.indexOf("request_pause") < 0;
                     node.title = model.used >= 2 ? "Лимит двух пауз исчерпан" : model.cooldown_until > model.server_now
-                        ? "Повторный запрос доступен после ожидания" : "Запросить паузу";
+                        ? "Повторный запрос доступен после ожидания" : "Пауза игры";
                 });
                 if (!blocked) return; // Normal controls are restored by the authoritative HTML snapshot.
                 var content = root.querySelector(".info-panel-content");

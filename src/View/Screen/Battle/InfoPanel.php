@@ -104,9 +104,11 @@ final class InfoPanel
         } elseif ($pause['mode'] === 'requested') {
             $end = '<button class="button wide green-btn" type="button" disabled><span>Ожидаем ответа</span></button>';
         }
-        $pauseIcon = '<button class="battle-icon-control" type="button" data-open-pause aria-label="Запросить паузу" title="Запросить паузу"'
-            . (in_array('request_pause', $pause['allowed_commands'], true) ? '' : ' disabled')
-            . '><span class="pause-control-symbol" aria-hidden="true">Ⅱ</span></button>';
+        $pauseIcon = '<button class="battle-icon-control" type="button" data-open-pause aria-label="Пауза игры" title="Пауза игры"'
+            . (in_array('request_pause', $pause['allowed_commands'], true) ? '' : ' disabled') . '>'
+            . $this->tpl->parse('includes/battle/control_icon.tpl', [
+                'file' => 'pause_160.png', 'label' => 'Пауза игры',
+            ]) . '</button>';
         $resignIcon = $this->tpl->parse('includes/battle/control_icon.tpl', [
             'file' => 'surrender_160.png', 'label' => 'Сдаться',
         ]);
