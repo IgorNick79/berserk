@@ -165,3 +165,39 @@ acknowledgement and subsequent status recovery; existing command endpoint tests,
 Conservative limitation: an out-of-band later version change prevents HTML
 confirmation of the historical result rather than attributing a newer snapshot
 to this command. Normal terminal surrender persists at its exact after_version.
+
+
+## Follow-up: reuse the turn notification on active-pause resume
+
+The existing turn-timer controller remains the only audio owner. Battle sync uses
+its existing notify function (same server-provided sound URL, volume, gesture
+unlock, autoplay handling and two-tone fallback) for both players after resume.
+No new audio file, audio manager, request or server state was added.
+
+The pause controller consumes server last_resume.resume_event_id values in a
+per-controller Set. Initial boot/first snapshot establishes the baseline silently.
+A new both_ready/deadline event is reported only after observing the matching
+active request, when the authoritative mode becomes idle. Request/reject/cancel,
+request timeout, local countdown zero and terminal surrender do not report resume.
+Duplicate, stale, recovery and no_change responses cannot repeat a consumed event.
+A refreshed page does not replay historical events; an active boot can observe a
+later real resume. A fully missed active phase is not inferred from old history.
+
+The existing sync update feeds the resume signal into the timer before playing
+one shared notification. If the same sample starts an own new timer period, that
+period is marked notified, including a pending start-resolution period. This
+prevents a second turn-start sound for that same period while preserving alerts
+for future ordinary turns. Failed/blocked playback consumes the event without
+queueing a later replay or interfering with synchronization.
+
+Tests: test_match_pause_sound.cjs reuses the existing turn-timer VM harness and
+loads all three real client modules. Its 84 checks cover both viewers and reasons,
+snapshot/no_change/recovery duplicates, refresh/first snapshot, local zero, hidden
+polling/wake, reconnect, terminal surrender, coincident timer changes and audio
+promise rejection/synchronous exceptions/autoplay denial. Existing client timer
+and 44 countdown checks passed. Browser pause tests count the existing audio API
+calls with test doubles rather than relying on headless sound hardware.
+
+Final resume-sound verification: 109 browser checks passed at 1600/800/375px;
+119 pause unit assertions, 18 server UI, 45 HTTP/InnoDB and 42 Stage 1.1 recovery
+checks passed. JS syntax and git diff --check passed. No server files changed.

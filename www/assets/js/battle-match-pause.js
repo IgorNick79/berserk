@@ -14,6 +14,7 @@
         create: function (root, initialVersion, send, busy, onDue) {
             var model = null, version = -1, countdownKey = null, expiresAt = 0, dueKey = null;
             var interval = null, destroyed = false;
+            var observedActiveRequest = null, seenResumes = new Set();
             var picker = document.createElement("dialog");
             picker.className = "battle-pause-picker";
             picker.setAttribute("aria-labelledby", "pause-picker-title");
@@ -123,9 +124,22 @@
                 }
                 if (nextKey !== countdownKey) dueKey = null;
                 countdownKey = nextKey;
+                var resumeEvent = null, lastResume = next.last_resume;
+                if (lastResume && typeof lastResume.resume_event_id === "string" && lastResume.resume_event_id !== ""
+                    && !seenResumes.has(lastResume.resume_event_id)) {
+                    seenResumes.add(lastResume.resume_event_id); // Consume even if audio is blocked by the browser.
+                    if (model && next.mode === "idle" && observedActiveRequest !== null
+                        && lastResume.request_id === observedActiveRequest && Number.isFinite(lastResume.resumed_at)
+                        && ["both_ready", "deadline"].indexOf(lastResume.reason) >= 0
+                        && (!next.last_result || next.last_result.outcome !== "battle_finished")) {
+                        resumeEvent = lastResume.resume_event_id;
+                    }
+                }
+                observedActiveRequest = next.mode === "active" ? next.request_id : null;
                 var wasBlocked = model && model.mode !== "idle";
                 model = next; version = nextVersion; render();
                 if (wasBlocked && next.mode === "idle" && !root.querySelector("a[href*='cmd=end_turn']")) window.setTimeout(onDue, 0);
+                return resumeEvent;
             }
             function click(event) {
                 var node = event.target.closest && event.target.closest("[data-open-pause], [data-pause-command]");

@@ -4,6 +4,19 @@ const base=process.env.TURN_TIMER_TEST_URL;if(!base||!/^http:\/\/127\.0\.0\.1:\d
 const php=process.env.PHP_BINARY||'php';
 const fixture=(...args)=>JSON.parse(execFileSync(php,[path.join(__dirname,'test_match_pause_ui_fixture.php'),...args.map(String)],{encoding:'utf8'}));
 let checks=0;function ok(x,m){checks++;if(!x)throw Error(m);}
+// Count use of the existing audio APIs without relying on headless audio hardware.
+async function soundProbe(context){await context.addInitScript(()=>{
+ window.turnFilePlays=0;window.turnToneStarts=0;
+ window.Audio=class {play(){window.turnFilePlays++;return Promise.resolve();}pause(){}};
+ window.AudioContext=class {
+  constructor(){this.state='running';this.currentTime=0;this.destination={};}
+  resume(){return Promise.resolve();}close(){return Promise.resolve();}
+  createOscillator(){return {frequency:{value:0},connect(){},disconnect(){},start(){window.turnToneStarts++;},stop(){}};}
+  createGain(){return {gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}
+ };
+});}
+const soundCount=page=>page.evaluate(()=>window.turnFilePlays+window.turnToneStarts/2);
+
 (async()=>{
  fixture('verify'); // Exact disposable database and InnoDB guards run before HTTP writes.
  if(fs.existsSync(path.join(__dirname,'..','.git')))throw Error('Disposable source tree required');
@@ -43,6 +56,7 @@ let checks=0;function ok(x,m){checks++;if(!x)throw Error(m);}
  for(const width of [1600,800,375]){
   const game=fixture('create').game_id;
   const a=await browser.newContext({viewport:{width,height:800}}),b=await browser.newContext({viewport:{width,height:800}});
+  await Promise.all([soundProbe(a),soundProbe(b)]);
   const host=await a.newPage(),guest=await b.newPage();
   const errors=[];[host,guest].forEach(p=>p.on('pageerror',e=>errors.push(e.message)));
   await Promise.all([host.goto(base+'?first&game='+game),guest.goto(base+'?second&game='+game)]);
@@ -114,18 +128,21 @@ let checks=0;function ok(x,m){checks++;if(!x)throw Error(m);}
   });
   await guest.waitForTimeout(2400);ok(stale&&await guest.locator('[data-match-paused="1"]').count()===1,'Stale sync cannot unlock board');
   if(process.env.PAUSE_SCREENSHOT_DIR)await host.screenshot({path:path.join(process.env.PAUSE_SCREENSHOT_DIR,'pause-active-'+width+'.png')});
+  ok(await soundCount(host)===0&&await soundCount(guest)===0,'Request/reject/accept/refresh have no resume sound');
   await host.locator('[data-pause-command=pause_ready]').click();
   await host.waitForFunction(()=>document.querySelector('[data-pause-command=pause_ready]')?.disabled&&document.body.textContent.includes('Вы готовы, ожидаем соперника'));
   ok(await host.locator('[data-match-paused="1"]').count()===1,'One ready cannot resume');
   await guest.locator('[data-pause-command=pause_ready]').click();
   await Promise.all([host.waitForSelector('[data-battle-sync-root]:not([data-match-paused])'),guest.waitForSelector('[data-battle-sync-root]:not([data-match-paused])')]);
   ok(fixture('read',game).state.battle.match_pause.last_resume.reason==='both_ready','Both ready resume');
+  for(const p of [host,guest])ok(await soundCount(p)===1,'Both-ready resume plays exactly one existing sound per player');
   ok(errors.length===0,'No browser errors: '+errors.join('; '));
   await a.close();await b.close();console.log('PASS pause two-player UI '+width+'px');
  }
  // Request cancellation, lazy request timeout, active deadline and terminal surrender.
  for(const outcome of ['cancel','request_timeout','deadline','resign']){
   const game=fixture('create').game_id,context=await browser.newContext({viewport:{width:375,height:800}});
+  await soundProbe(context);
   const p=await context.newPage();await p.goto(base+'?first&game='+game);
   await p.locator('[data-open-pause]').click();await p.locator('[data-picker-send]').click();
   await p.locator('[data-pause-command=cancel_pause_request]').waitFor({state:'visible'});
@@ -140,6 +157,7 @@ let checks=0;function ok(x,m){checks++;if(!x)throw Error(m);}
   if(outcome!=='resign')await p.waitForSelector('[data-battle-sync-root]:not([data-match-paused])');
   const s=fixture('read',game).state;
   ok(s.battle.match_pause.mode==='idle','Exit '+outcome);
+  ok(await soundCount(p)===(outcome==='deadline'?1:0),'Only active deadline exit alerts; no cancel/timeout/surrender alert: '+outcome);
   if(outcome==='resign')ok(s.status==='game_over'&&s.battle.match_pause.last_resume===null,'Terminal surrender no resume');
   await context.close();
  }

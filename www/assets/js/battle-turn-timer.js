@@ -78,6 +78,7 @@
             }
 
             function notify() {
+                if (destroyed) return;
                 try {
                     if (audioFile) {
                         audioFile.currentTime = 0;
@@ -86,7 +87,7 @@
                 } catch (e) { /* Sound is best effort and cannot block a command. */ }
             }
 
-            function update(next, nextVersion) {
+            function update(next, nextVersion, resumeNotification) {
                 if (destroyed || !Number.isInteger(nextVersion) || nextVersion < version) return;
                 if (next === null) {
                     // A legacy battle has no clock. Never invent a period on the client.
@@ -118,6 +119,11 @@
                 model = Object.assign({}, next);
                 version = nextVersion;
                 receivedAt = performance.now();
+                // A resume alert also covers an own new period in this same server sample,
+                // including a period whose start resolution has not finished yet.
+                if (resumeNotification && model.period_id > baselinePeriod && model.owner === viewerKey) {
+                    notifiedPeriod = model.period_id;
+                }
                 if (model.period_id > baselinePeriod && model.owner === viewerKey && model.status === "running"
                     && model.remaining_seconds > 0 && notifiedPeriod !== model.period_id) {
                     notifiedPeriod = model.period_id;
@@ -137,7 +143,7 @@
                 if (interval === null && !document.hidden) interval = window.setInterval(render, 250);
             }
 
-            var controller = {update: update, render: render, suspend: suspend, resume: resume,
+            var controller = {update: update, render: render, suspend: suspend, resume: resume, notify: notify,
                 destroy: function () {
                     if (destroyed) return;
                     destroyed = true;

@@ -4,8 +4,9 @@ const assert = require('node:assert/strict');
 const sample = (patch={}) => ({period_id:1,owner:'host',status:'running',remaining_seconds:180,
     anchor_at:1000,pause_reason:null,server_now:1000,limit_seconds:180,...patch});
 const keys=['field_html','fly_zones_html','panel_html','piles_html','pile_reveal_html','info_panel_html'];
-function setup(boot=sample(),viewer='player') {
-    let now=0,seq=0,sounds=0,current=boot,version=1,offline=false;
+function setup(boot=sample(),viewer='player',pauseBoot,audioMode='beep') {
+    let now=0,seq=0,sounds=0,plays=0,current=boot,currentPause=pauseBoot,version=1,offline=false;
+    const audioUrls=[],attributes=new Map();
     const events={},windowEvents={},timeouts=new Map(),intervals=new Map(),queue=[],requests=[],held=new Map();
     const value={textContent:''},label={textContent:''};
     let timerNode;
@@ -13,15 +14,29 @@ function setup(boot=sample(),viewer='player') {
     replaceTimer();
     const fragment={innerHTML:''};
     const info={set innerHTML(v){replaceTimer();},get innerHTML(){return '';}};
+    const left={setAttribute(){},removeAttribute(){}},mask={};
+    const decisions={dataset:{},replaceChildren(){},querySelectorAll(){return [];}};
+    const section={querySelector:s=>s==='.match-pause-decisions'?decisions:{textContent:''}};
+    const picker={setAttribute(){},querySelector:()=>({addEventListener(){},value:'1'}),remove(){}};
     const root={contains:()=>true,addEventListener(k,fn){(events[k]??=[]).push(fn);},
-        querySelector(s){if(s==='[data-turn-timer]')return timerNode;if(s==='[data-battle-message]')return null;return s.includes('info_panel_html')?info:fragment;}};
-    const document={hidden:false,currentScript:{dataset:{syncUrl:'http://localhost/index.php?first&game=1&ajax=battle_sync',version:'1',viewerKey:viewer}},
-        querySelector:()=>root,addEventListener(k,fn){(events[k]??=[]).push(fn);},
         removeEventListener(k,fn){events[k]=(events[k]||[]).filter(f=>f!==fn);},
-        createElement:()=>({innerHTML:'',content:{querySelector:()=>fragment}})};
+        querySelectorAll:()=>[],toggleAttribute(k,on){if(on)attributes.set(k,'');else attributes.delete(k);},setAttribute(k,v){attributes.set(k,v);},
+        querySelector(s){
+            if(pauseBoot!==undefined){
+                if(s==='.battle-left')return left;
+                if(s==='[data-match-pause-mask]')return mask;
+                if(s==='[data-match-pause-content]')return section;
+                if(['.info-panel-content','.info-phase','.info-actions > .button','#battle-debug','.battle-menu',"a[href*='cmd=end_turn']"].includes(s))return null;
+            }
+            if(s==='[data-turn-timer]')return timerNode;if(s==='[data-battle-message]')return null;return s.includes('info_panel_html')?info:fragment;}};
+    const document={hidden:false,currentScript:{dataset:{syncUrl:'http://localhost/index.php?first&game=1&ajax=battle_sync',version:'1',viewerKey:viewer,turnSoundUrl:audioMode==='beep'?'':'/assets/sound/turn.mp3'}},
+        querySelector:s=>s==='#match-pause-state'?(pauseBoot===undefined?null:{textContent:JSON.stringify(pauseBoot)}):root,
+        body:{appendChild(){},classList:{toggle(){}}},querySelectorAll:()=>[],addEventListener(k,fn){(events[k]??=[]).push(fn);},
+        removeEventListener(k,fn){events[k]=(events[k]||[]).filter(f=>f!==fn);},
+        createElement:s=>s==='dialog'?picker:({innerHTML:'',content:{querySelector:()=>fragment}})};
     class Context {
-        constructor(){this.state='running';this.currentTime=0;this.destination={};}
-        resume(){return Promise.resolve();}close(){return Promise.resolve();}
+        constructor(){this.state=audioMode==='blocked'?'suspended':'running';this.currentTime=0;this.destination={};}
+        resume(){return audioMode==='blocked'?Promise.reject(Error('Autoplay blocked')):Promise.resolve();}close(){return Promise.resolve();}
         createOscillator(){return {frequency:{value:0},connect(){},disconnect(){},start(){sounds++;},stop(){}};}
         createGain(){return {gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}
     }
@@ -29,35 +44,43 @@ function setup(boot=sample(),viewer='player') {
         addEventListener(k,fn){windowEvents[k]=fn;},history:{pushState(){}},
         setInterval(fn,delay){intervals.set(++seq,fn);return seq;},clearInterval:id=>intervals.delete(id),
         setTimeout(fn,delay){timeouts.set(++seq,{fn,delay});return seq;},clearTimeout:id=>timeouts.delete(id)};
+    window.Audio=class {
+        constructor(url){audioUrls.push(url);}
+        play(){plays++;if(audioMode==='throw')throw Error('Audio.play failed');return ['reject','blocked'].includes(audioMode)?Promise.reject(Error('Autoplay blocked')):Promise.resolve();}
+        pause(){}
+    };
     const fetch=async(input,options={})=>{
         const url=new URL(input),route=url.searchParams.get('ajax');requests.push({route,options});
         if(offline)throw new Error('offline');
         if(held.has(route))return new Promise(resolve=>{held.get(route).resolve=(data,status=200)=>resolve({ok:status<400,status,json:async()=>data});});
-        let data=queue.length?queue.shift():{ok:true,type:'no_change',sync_version:version,turn_timer:current};
+        let data=queue.length?queue.shift():{ok:true,type:'no_change',sync_version:version,turn_timer:current,...(currentPause===undefined?{}:{match_pause:currentPause})};
         if(route==='battle_command')data=null;
-        if(route==='battle_command_status')data={command_id:'timer-command',command_status:'unknown',terminal:false,sync_version:version,turn_timer:current};
+        if(route==='battle_command_status')data={command_id:'timer-command',command_status:'unknown',terminal:false,sync_version:version,turn_timer:current,...(currentPause===undefined?{}:{match_pause:currentPause})};
         return {ok:true,status:200,json:async()=>data};
     };
     const context=vm.createContext({window,document,fetch,URL,URLSearchParams,AbortController,
         performance:{now:()=>now},Date:{now(){throw new Error('Wall clock must not drive countdown');}}});
     vm.runInContext(fs.readFileSync('www/assets/js/battle-turn-timer.js','utf8'),context);
+    if(pauseBoot!==undefined)vm.runInContext(fs.readFileSync('www/assets/js/battle-match-pause.js','utf8'),context);
     vm.runInContext(fs.readFileSync('www/assets/js/battle-sync.js','utf8'),context);
     const flush=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
     const fire=k=>(events[k]||[]).slice().forEach(fn=>fn());
     async function poll(){await flush();const timer=[...timeouts].find(([,t])=>t.delay<20000);if(timer){timeouts.delete(timer[0]);timer[1].fn();}await flush();}
     return {window,root,document,value,label,requests,intervals,timeouts,flush,fire,poll,
-        get node(){return timerNode;},get sounds(){return sounds;},
+        get node(){return timerNode;},get sounds(){return sounds;},get plays(){return plays;},audioUrls,
+        get blocked(){return attributes.get('data-match-paused')==='1'&&left.inert&&!mask.hidden;},
+        enqueue(data){queue.push(data);},
         tick(ms){now+=ms;for(const fn of intervals.values())fn();},
         offline(on){offline=on;},
         hold(route){held.set(route,{});},
         response(route){return held.get(route).resolve;},
         release(route,data,status=200){const pending=held.get(route);held.delete(route);pending.resolve(data,status);},
-        state(next,v){current=next;version=v;},
-        async accept(next,v=version,full=false){current=next;version=v;
-            queue.push(full?{ok:true,type:'snapshot',sync_version:v,turn_timer:next,ui:{},fragments:Object.fromEntries(keys.map(k=>[k,'']))}
-                :{ok:true,type:'no_change',sync_version:v,turn_timer:next});await poll();},
+        state(next,v,pause=currentPause){current=next;version=v;currentPause=pause;},
+        async accept(next,v=version,full=false,pause=currentPause){current=next;version=v;currentPause=pause;
+            queue.push(full?{ok:true,type:'snapshot',sync_version:v,turn_timer:next,...(currentPause===undefined?{}:{match_pause:currentPause}),ui:{},fragments:Object.fromEntries(keys.map(k=>[k,'']))}
+                :{ok:true,type:'no_change',sync_version:v,turn_timer:next,...(currentPause===undefined?{}:{match_pause:currentPause})});await poll();},
         command(query='cmd=end_turn'){const link={href:'http://localhost/index.php?first&game=1&'+query,target:''};
-            for(const fn of events.click||[])fn({button:0,defaultPrevented:false,target:{closest:()=>link},preventDefault(){}});},
+            for(const fn of events.click||[])fn({button:0,defaultPrevented:false,target:{closest:s=>s==='a[href]'?link:null},preventDefault(){}});},
         unload(){windowEvents.beforeunload();}};
 }
 async function main(){
@@ -204,4 +227,5 @@ async function edgeCases(){
         c.unload();
     }
 }
-main().catch(e=>{console.error(e);process.exitCode=1;});
+module.exports={setup,sample,keys};
+if(require.main===module)main().catch(e=>{console.error(e);process.exitCode=1;});

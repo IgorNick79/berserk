@@ -36,10 +36,12 @@
     function updateTurnTimer(data) {
         if (pendingCommand && data && data.command_id === pendingCommand.id && data.command_status === "conflict"
             && pendingCommand.type === "pause_ready") pendingCommand.readyConflict = true;
-        if (matchPause && data && data.match_pause) matchPause.update(data.match_pause, data.sync_version);
+        var resumeEvent = matchPause && data && data.match_pause
+            ? matchPause.update(data.match_pause, data.sync_version) : null;
         if (turnTimer && data && Object.prototype.hasOwnProperty.call(data, "turn_timer")) {
-            turnTimer.update(data.turn_timer, data.sync_version);
+            turnTimer.update(data.turn_timer, data.sync_version, !!resumeEvent);
         }
+        if (resumeEvent && turnTimer) turnTimer.notify();
     }
 
     var uiState = {
