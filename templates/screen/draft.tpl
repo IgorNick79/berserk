@@ -4,7 +4,7 @@
     {{draft_info_html}}
 
     <div class="pregame-draft-grid">
-        <div class="draft-grid">
+        <div class="draft-grid" {{grid_attributes}}>
             {{grid_html}}
         </div>
     </div>

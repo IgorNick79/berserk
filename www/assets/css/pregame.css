@@ -131,9 +131,9 @@ body.pregame-page {
 .pregame-pool-icons { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; }
 .pregame-pool-currencies, .pregame-pool-elements { display: flex; align-items: center; gap: 10px; }
 
-/* Solomon cards sit on the same playmat asset used by origin/main. */
-.pregame-main:has(.screen-draft--solomon) { display: flex; background: transparent; }
-.pregame-main .screen-draft--solomon {
+/* Draft cards sit on the same playmat asset used by origin/main. */
+.pregame-main:has(.screen-draft--solomon, .screen-draft--grid) { display: flex; background: transparent; }
+.pregame-main :is(.screen-draft--solomon, .screen-draft--grid) {
     flex: 0 0 auto;
     width: 100%;
     max-width: 720px;
@@ -144,7 +144,7 @@ body.pregame-page {
     border-radius: 12px;
     box-shadow: 0 10px 36px #0009;
 }
-.screen-draft--solomon .flash:empty { display: none; }
+:is(.screen-draft--solomon, .screen-draft--grid) .flash:empty { display: none; }
 
 .screen-draft--solomon .solomon-stack { grid-auto-rows: 1fr; }
 .screen-draft--solomon .solomon-stack__card { display: grid; grid-template-rows: 40px minmax(128px, 1fr); gap: 8px; }
@@ -260,3 +260,16 @@ body.pregame-page {
 .pregame-panel-content .pregame-place-close { background: #b84444; }
 .pregame-layout:has([data-place-screen]) .pregame-panel-footer .wait { margin: 0; }
 .pregame-place-error { padding: 10px; background: #fff0e8; color: #902b18; border-radius: 4px; }
+
+/* Grid choices stay local until the InfoPanel confirmation is submitted. */
+.screen-draft--grid .draft-grid { margin: 0; }
+.screen-draft--grid .pregame-grid-card { display: flex; min-width: 0; }
+.screen-draft--grid .pregame-grid-card > .prepare-card-link { display: flex; width: 100%; }
+.screen-draft--grid .prepare-card { min-height: 128px; margin: 0; }
+.pregame-grid-controls { display: grid; align-content: start; gap: 8px; min-height: 136px; margin-top: 16px; }
+.pregame-grid-control-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pregame-grid-controls .button { min-width: 0; padding: 10px 6px; border: 1px solid #368736; font: inherit; font-size: 13px; cursor: pointer; }
+.pregame-grid-controls .button[aria-pressed="true"] { background: #276c32; outline: 2px solid #bce9bc; outline-offset: 1px; }
+.pregame-grid-controls .button:disabled, [data-grid-confirm]:disabled { opacity: .45; cursor: default; }
+.pregame-grid-extra-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pregame-grid-extra-actions:empty { display: none; }

@@ -51,6 +51,7 @@ namespace {
         if ($stage==='draft') {
             $solomon=str_contains($variant,'solomon');
             $state->settings->draft['type']=$solomon?'solomon':'grid';
+            if (str_contains($variant,'discrete')) $state->settings->draft['grid_mode']='discrete';
             $state->settings->draft['timer_mode']=str_contains($variant,'unlimited')?'unlimited':'default';
             $state->draft=['turn'=>str_contains($variant,'player-active')?'player':'host','grid'=>['grid-visible-0','grid-visible-1','grid-visible-2','grid-visible-3','grid-visible-4','grid-visible-5','grid-visible-6','grid-visible-7'], 'pool'=>['future-hidden'], 'picked'=>['host'=>['host-picked'],'player'=>['player-picked']], 'history'=>[['player'=>'host','cards'=>['host-picked']],['player'=>'player','cards'=>['player-picked']]], 'recycle'=>[], 'decision_id'=>1];
             if (!$solomon) $state->draft['grid'][]='grid-visible-8';
@@ -59,6 +60,8 @@ namespace {
             DraftTimer::initialize($state,$state->settings,time());
             // initialize starts a new history; these allocations model an already running draft.
             $state->draft['history'] = str_contains($variant, 'empty-history') ? [] : [['player'=>'host','cards'=>['host-picked']],['player'=>'player','cards'=>['player-picked']]];
+            if (str_contains($variant,'partial')) $state->draft['grid']=array_merge(array_fill(0,6,null),array_slice($state->draft['grid'],6));
+            if (str_contains($variant,'finish')) $state->draft['picked']=['host'=>array_fill(0,30,'host-picked'),'player'=>array_fill(0,30,'player-picked')];
             $_GET=['card'=>'0','card_ukid'=>'grid-visible-0','card_version'=>str_contains($variant,'stale')?'6':'7'];
             if (str_contains($variant,'wrong-identity')) $_GET['card_ukid']='future-hidden';
             if ($request !== null) $_GET = $request;
@@ -162,7 +165,7 @@ namespace {
         integrationAssert($xp->query('//aside[contains(@class,"pregame-info-panel")]')->length===1,'One panel '.$stage);
         integrationAssert($xp->query('//main//h1')->length===0,'No duplicate stage heading '.$stage);
         $solomonPanel = $stage === 'draft' && $state->settings->isSolomonDraft();
-        integrationAssert($xp->query('//aside//form')->length === (($solomonPanel && $state->draft['turn'] === $role) || ($stage === 'side' && $state->firstPlayer === $role) || ($stage === 'deal' && $variant === 'pending') ? 1 : 0), 'Solomon decisions in footer only');
+        integrationAssert($xp->query('//aside//form')->length === (($stage === 'draft' && $state->draft['turn'] === $role) || ($stage === 'side' && $state->firstPlayer === $role) || ($stage === 'deal' && $variant === 'pending') ? 1 : 0), 'Draft decisions in footer only');
         integrationAssert($xp->query('//aside//*[contains(@class,"pregame-panel-content")]//a[contains(@href,"cmd=")][not(ancestor::*[@data-deal-actions])][not(ancestor::*[contains(@class,"pregame-place-actions")])][not(ancestor::*[contains(@class,"card-choice")])]')->length===0,'No command links in information');
         if ($stage === 'place') {
             integrationAssert($xp->query('//main//*[contains(@class,"place-squad")]|//main//*[contains(@class,"prepare-bottom-bar")]')->length === 0, 'Placement list and footer leave Main');
@@ -211,6 +214,19 @@ namespace {
             integrationAssert($xp->query('//footer//*[@data-solomon-panel-action]')->length === 0, 'Small actions are not in footer');
             integrationAssert($xp->query('//footer//*[@data-solomon-selected]')->length === ($state->draft['turn'] === $role ? 1 : 0), 'Footer selection count only for active player');
         }
+        if ($stage === 'draft' && !$solomonPanel) {
+            $active = $state->draft['turn'] === $role;
+            integrationAssert($xp->query('//main//*[@data-grid-position]')->length === 9, 'Grid keeps nine cells');
+            integrationAssert($xp->query('//main//a[contains(@href,"cmd=")]')->length === 0, 'Grid controls do not submit commands');
+            integrationAssert($xp->query('//main//*[@data-grid-pick and @data-axis]')->length === ($active ? 6 : 0), 'Only active player selects rows/columns');
+            integrationAssert($xp->query('//footer//button[@data-grid-confirm and @disabled]')->length === ($active ? 1 : 0), 'Grid confirmation starts disabled');
+            integrationAssert($xp->query('//footer//*[@data-grid-history]')->length === 1, 'Grid history icon in footer');
+            integrationAssert($xp->query('//aside//button[contains(@class,"pregame-pool-stat")]')->length === 8, 'Grid statistics use currency and element hints');
+            integrationAssert($xp->query('//main//*[@class="draft-info"]|//main//*[@class="prepare-bottom-bar"]')->length === 0, 'Grid summary moved to panel');
+            integrationAssert(str_contains($result['data']['panel_phase'], 'Grid Draft · Пул:'), 'Grid subtitle in panel');
+            integrationAssert(!str_contains($result['data']['history_html'], '<details'), 'Grid history is panel content');
+            integrationAssert(str_contains($result['data']['draft_script_html'],'draft_timer.js'), 'Grid polling works even without a timer limit');
+        }
         integrationAssert(!str_contains($shell,'opponent-hidden') && !str_contains($shell,'future-hidden'),'No hidden cards in HTML '.$stage);
         integrationAssert(!str_contains($shell,'battle-sync.js'),'No battle JS');
         if($stage==='draft') {
@@ -253,6 +269,9 @@ namespace {
     $fixtures['place-placed']=integrationFixture('place','host','placed');
     foreach(['list','many','complete'] as $variant) foreach(['host','player'] as $role) $fixtures['place-'.$variant.'-'.$role]=integrationFixture('place',$role,$variant);
     foreach(['solomon','solomon-unlimited','solomon-empty-history','stale','wrong-identity'] as $variant) foreach(['host','player'] as $role) $fixtures['draft-'.$variant.'-'.$role]=integrationFixture('draft',$role,$variant);
+    foreach (['grid-unlimited','grid-discrete','grid-partial','grid-finish','grid-empty-history'] as $variant) $fixtures['draft-'.$variant.'-host']=integrationFixture('draft','host',$variant);
+    $fixtures['draft-grid-unlimited-player']=integrationFixture('draft','player','grid-unlimited');
+    foreach (['host','player'] as $role) $fixtures['draft-grid-player-active-'.$role]=integrationFixture('draft',$role,'grid-player-active');
     $fixtures['draft-solomon-player-active']=integrationFixture('draft','player','solomon-player-active');
     $fixtures['draft-solomon-host-waiting']=integrationFixture('draft','host','solomon-player-active');
     foreach (['turn','side'] as $stage) $fixtures[$stage.'-system']=integrationFixture($stage,'host','system');
