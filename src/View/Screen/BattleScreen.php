@@ -1036,20 +1036,16 @@ final class BattleScreen
                 'label' => htmlspecialchars($label, ENT_QUOTES),
             ]);
         $hpMax = $this->displayHpMax($c, $info);
-        $statValues = $statValue('hp', 'heart', $c->hp . '/' . $hpMax,
+        $statValues = $statValue('hp', 'heart@2x', $c->hp . '/' . $hpMax,
             'Здоровье: ' . $c->hp . '/' . $hpMax);
         if (!CardStats::isFlyingCreature($c)) {
-            $statValues .= $statValue('move', 'move', $c->move . '/' . $c->moveMax,
+            $statValues .= $statValue('move', 'move@2x', $c->move . '/' . $c->moveMax,
                 'Ходов: ' . $c->move . '/' . $c->moveMax);
         }
-        $statValues .= $statValue('strike', 'sword', $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
+        $statValues .= $statValue('strike', 'sword@2x', $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
             'Простой удар: ' . $c->strikeWeak . '/' . $c->strikeMedium . '/' . $c->strikeStrong);
-        foreach ([
-            ['ova', 'ova', CardStats::getOva($state, $c), 'Опыт в атаке'],
-            ['ovz', 'ovz', CardStats::getOvz($state, $c), 'Опыт в защите'],
-            ['regen', 'regen', CardStats::getStat($c, 'regeneration'), 'Регенерация'],
-        ] as [$stat, $icon, $value, $label]) {
-            if ($value !== 0) $statValues .= $statValue($stat, $icon, (string) $value, $label . ': ' . $value);
+        if ($c->armorMax > 0 || $c->armor > 0) {
+            $statValues .= $statValue('armor', 'armor@2x', (string) $c->armor, 'Броня: ' . $c->armor);
         }
 
         if ($hasCoins) {
@@ -1079,6 +1075,42 @@ final class BattleScreen
                 'url' => '/assets/images/rarity/s' . $set[1] . '_' . $rarity . '.png',
                 'label' => 'Редкость: ' . $rarityLabels[$rarity],
             ]);
+        }
+
+        $abilityIcon = fn(string $key, string $label, string $value = ''): string =>
+            $this->tpl->parse('includes/battle/ability_icon.tpl', [
+                'ability' => $key,
+                'label' => htmlspecialchars($label, ENT_QUOTES),
+                'value' => htmlspecialchars($value, ENT_QUOTES),
+            ]);
+        $activeBadges = CardStats::getActivePropBadges($state, $c);
+        if (!empty($activeBadges['direct'])) {
+            $statIcons .= $abilityIcon('direct', 'Направленный удар');
+        }
+        foreach ([
+            'zom' => 'Защита от магии', 'zoz' => 'Защита от заклинаний',
+            'zor' => 'Защита от разрядов', 'zot' => 'Защита от метаний',
+            'zov' => 'Защита от выстрелов', 'zoal' => 'Защита от атак летающих существ',
+            'zoo' => 'Защита от отравления',
+        ] as $key => $label) {
+            $defense = $c->prop[$key] ?? null;
+            $active = !empty($defense) && (!is_array($defense) || empty($defense['line']) || CardStats::isInLine($state, $c));
+            if (!$active) {
+                foreach (CardStats::getInheritedLineBonusValues($state, $c, $key) as $bonus) {
+                    if (!empty($bonus)) $active = true;
+                }
+                foreach ($c->modifiers as $modifier) {
+                    if (($modifier['stat'] ?? '') === $key && !empty($modifier['value'])) $active = true;
+                }
+            }
+            if ($active) $statIcons .= $abilityIcon($key, $label);
+        }
+        foreach ([
+            ['regen', CardStats::getStat($c, 'regeneration'), 'Регенерация'],
+            ['ova', CardStats::getOva($state, $c), 'Опыт в атаке'],
+            ['ovz', CardStats::getOvz($state, $c), 'Опыт в защите'],
+        ] as [$key, $value, $label]) {
+            if ($value !== 0) $statIcons .= $abilityIcon($key, $label . ': ' . $value, (string) $value);
         }
 
         $descriptionHtml = \Berserk\View\Ui\CardDescription::render((string) ($info['descr'] ?? ''));

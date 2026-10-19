@@ -46,11 +46,12 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  await update(4);
  assert(await page.locator('.panel-card-heading-icons .panel-stat-icon').count()===2,'Rarity and element icons present');
  await page.waitForFunction(()=>[...document.querySelectorAll('.panel-stat-value-icon')].every(i=>i.complete&&i.naturalWidth>0));
- assert(await page.locator('.panel-stat-value').count()===7,'HP movement strike active abilities and coins');
+ assert(await page.locator('.panel-stat-value').count()===4,'HP movement strike and coins');
  assert(await page.locator('.panel-card-heading-icons').evaluate(e=>e.children[0].querySelector('img').src.includes('/element/')&&e.children[1].querySelector('img').src.includes('/rarity/')),'Element and rarity beside title');
  assert(await page.locator('.panel-stats-extra img').getAttribute('src')==='/assets/images/card/class.png','Class icon in right group');
 
 
+ assert(await page.locator('.panel-card-title').evaluate(e=>getComputedStyle(e).whiteSpace==='nowrap'&&getComputedStyle(e).textOverflow==='ellipsis'),'Title truncates without wrapping');
  assert(await page.locator('.panel-card-cost img').getAttribute('src')==='/assets/images/card/elite-unique.png','Elite unique cost icon');
  await page.waitForFunction(()=>document.querySelector('.panel-card-cost img').naturalWidth>0);
  assert(await page.locator('.panel-card-cost').innerText()==='7','Price before card name');
@@ -60,6 +61,7 @@ function assert(ok,msg){if(!ok)throw Error(msg);}
  assert(await page.locator('.panel-card-heading-icons .panel-stat-icon').last().getAttribute('src')==='/assets/images/rarity/s1_rare.png','Rarity path follows set and value');
  assert(await page.locator('.panel-card-heading-icons .panel-stat-icon').first().getAttribute('src')==='/assets/images/element/mountains.png','New element directory');
 
+ assert(await page.locator('.panel-card-title').evaluate(e=>getComputedStyle(e).whiteSpace==='nowrap'&&getComputedStyle(e).textOverflow==='ellipsis'),'Title truncates without wrapping');
  assert(await page.locator('.panel-card-cost img').evaluate(e=>e.getBoundingClientRect().width===24),'Current crystal size');
  assert(await page.locator('.panel-card-cost').evaluate(e=>getComputedStyle(e).fontSize==='14px'),'Smaller price');
  for(const hint of await page.locator('.panel-stat-hint').all()) {

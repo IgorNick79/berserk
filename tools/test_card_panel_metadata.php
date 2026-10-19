@@ -35,12 +35,26 @@ try {
         foreach (['Здоровье: 3/3','Ходов: 1/1','Простой удар: 1/2/3','Опыт в атаке: 2','Опыт в защите: 2','Регенерация: 4'] as $label) {
             battleSnapshotAssert(str_contains($html, 'aria-label="'.$label.'"'), 'Stat hint uses existing values: '.$label);
         }
-        battleSnapshotAssert(!str_contains($html, '@2x'), 'Normal-resolution assets used');
+        foreach (['heart','move','sword'] as $icon) battleSnapshotAssert(str_contains($html, '/'.$icon.'@2x.png'), 'High-resolution stat asset');
+        $card->armorMax=4; $card->armor=2;
+        battleSnapshotAssert(str_contains($render(), 'aria-label="Броня: 2"'), 'Current armor displayed');
+        $card->armor=0;
+        battleSnapshotAssert(str_contains($render(), 'data-stat="armor"'), 'Exhausted armor remains visible');
+        $card->armorMax=0;
+        battleSnapshotAssert(!str_contains($render(), 'data-stat="armor"'), 'No armor omitted');
+        foreach (['direct','zom','zoz','zor','zot','zov','zoal','zoo'] as $key) {
+            $card->prop[$key]=true;
+            battleSnapshotAssert(str_contains($render(), 'data-ability="'.$key.'"'), 'Ability icon: '.$key);
+            unset($card->prop[$key]);
+        }
+        foreach (['ova','ovz','regen'] as $key) {
+            battleSnapshotAssert(str_contains($html, 'data-ability="'.$key.'"') && !str_contains($html, 'data-stat="'.$key.'"'), 'Ability moved to heading');
+        }
         battleSnapshotAssert(!str_contains($render(), '/assets/images/card/fly.png'), 'Ground card has no flying icon');
         $card->type='fly';
         battleSnapshotAssert(!str_contains($render(), 'data-stat="move"'), 'Intrinsic flying card hides movement');
         $flying = $render();
-        battleSnapshotAssert(strpos($flying, '/assets/images/card/fly.png') > strpos($flying, 'data-stat="regen"'), 'Flying icon follows ability values');
+        battleSnapshotAssert(strpos($flying, '/assets/images/card/fly.png') > strpos($flying, 'data-stat="coins"'), 'Flying icon follows ability values');
         battleSnapshotAssert(str_contains($flying, '/assets/images/card/fly.png'), 'Normal flying asset');
 
         $card->type='creature'; $card->zone='flying';
@@ -48,7 +62,7 @@ try {
         battleSnapshotAssert(str_contains($render(), 'aria-label="Летающее существо"'), 'Acquired flight also shows hint');
         $card->zone='field';
         $prop=$card->prop; $mods=$card->modifiers; $card->prop=[]; $card->modifiers=[];
-        foreach (['ova','ovz','regen'] as $stat) battleSnapshotAssert(!str_contains($render(),'data-stat="'.$stat.'"'), 'Absent ability omitted');
+        foreach (['ova','ovz','regen'] as $stat) battleSnapshotAssert(!str_contains($render(),'data-ability="'.$stat.'"'), 'Absent ability omitted');
         $card->prop=$prop; $card->modifiers=$mods;
 
         foreach ([[false,false,'ordinary'],[false,true,'ordinary-unique'],[true,false,'elite'],[true,true,'elite-unique']] as [$elite,$single,$icon]) {

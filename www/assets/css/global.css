@@ -2115,7 +2115,7 @@ body.battle-page {
 .battle-page .panel-card-class { flex: 0 1 auto; min-width: 0; max-width: 40%; font: 400 12px/1.35 system-ui, sans-serif; color: #666; text-align: right; overflow-wrap: anywhere; }
 
 .battle-page .panel-card-heading { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: #f1eee8; border-top: 1px solid #d8d0c3; }
-.battle-page .panel-card-heading .panel-card-title { flex: 1 1 auto; min-width: 0; padding: 0; }
+.battle-page .panel-card-heading .panel-card-title { flex: 1 1 0; min-width: 0; padding: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .panel-card-cost { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .panel-card-cost img { display: block; width: 24px; height: 24px; object-fit: contain; }
 .panel-stat-hint { display: inline-flex; flex: 0 0 24px; align-items: center; justify-content: center; }
@@ -2143,7 +2143,10 @@ body.battle-page {
 .battle-page .panel-card-media { width: 100%; aspect-ratio: 8 / 5; background: #f1eee8; }
 .battle-page .panel-card-media .panel-card-preview { height: 100%; }
 .battle-page .panel-card-media .panel-card-preview img { height: 100%; object-fit: contain; }
-.panel-card-heading-icons { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; }
+.panel-card-heading-icons { display: flex; flex: 0 1 auto; max-width: 55%; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
+.panel-ability { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; }
+.panel-ability[hidden] { display: none; }
+.panel-ability-icon { display: block; width: 20px; height: 20px; object-fit: contain; }
 .battle-page .panel-card-stats { flex-wrap: nowrap; align-items: flex-start; gap: 8px; }
 .panel-stats-main { display: flex; flex: 1 1 auto; min-width: 0; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .panel-stats-extra { display: flex; flex: 0 0 auto; margin-left: auto; align-items: center; gap: 6px; }
