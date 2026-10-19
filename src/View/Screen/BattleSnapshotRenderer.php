@@ -22,6 +22,7 @@ final class BattleSnapshotRenderer
     /**
      * @return array{
      *     turn_timer: ?array,
+     *     match_pause: array,
      *     ui: array{sel:int,mode:string,pile:string,mode_explicit:bool},
      *     fragments: array{
      *         field_html:string,
@@ -54,6 +55,7 @@ final class BattleSnapshotRenderer
         $data = $result['data'];
 
         return [
+            'match_pause' => \Berserk\Core\MatchPause::snapshot($state, $playerKey, $serverNow ?? time()),
             'turn_timer' => TurnTimer::snapshot($state, $serverNow ?? time()),
             'ui' => $data['ui'],
             'fragments' => [

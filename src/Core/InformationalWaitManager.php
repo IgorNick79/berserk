@@ -59,6 +59,7 @@ final class InformationalWaitManager
     /** Run only after a successful command and all its existing continuations. */
     public static function reconcile(GameState $state, int $now): void
     {
+        if (MatchPause::blocking($state)) return;
         if (self::timer($state) === null || empty($state->battle['strike'])) {
             unset($state->battle['informational_wait'], $state->battle['informational_wait_pending']);
             return;
@@ -119,6 +120,7 @@ final class InformationalWaitManager
 
     public static function due(GameState $state, int $now): ?array
     {
+        if (MatchPause::blocking($state)) return null;
         $record = self::record($state);
         if ($record === null || $now < $record['deadline_at']) return null;
         return in_array($record['required_player'], self::projection($state)['required_players'], true) ? $record : null;

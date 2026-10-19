@@ -75,6 +75,7 @@ final class TurnTimer
     /** Reconcile only the pause owned by P1; unknown waits preserve the current mode. */
     public static function reconcileWaiting(GameState $state, int $now): void
     {
+        if (MatchPause::blocking($state)) return;
         $timer = $state->battle['turn_timer'] ?? null;
         if ($timer === null || $state->status !== 'battle' || $state->winner !== null
             || $timer['status'] === 'expired'

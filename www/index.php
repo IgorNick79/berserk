@@ -12,6 +12,8 @@ use Berserk\Core\CardInstance;
 use Berserk\Core\GameState;
 use Berserk\Core\TurnTimer;
 use Berserk\Core\AutomaticBattleProgress;
+use Berserk\Core\MatchPause;
+use Berserk\Core\AutomaticMatchPause;
 use Berserk\Core\View;
 use Berserk\Core\DeckView;
 use Berserk\Core\ResourceCalculator;
@@ -156,7 +158,8 @@ function requestCommandId(array $source): array
 
     $commandId = requestParamString($source, 'command_id', 64);
     if ($commandId === null || $commandId === '' || !isValidAjaxCommandId($commandId)
-        || str_starts_with(strtolower($commandId), 'p2a:') || str_starts_with(strtolower($commandId), 't3e:')) {
+        || str_starts_with(strtolower($commandId), 'p2a:') || str_starts_with(strtolower($commandId), 't3e:')
+        || str_starts_with(strtolower($commandId), 'mpx:')) {
         return ['present' => true, 'command_id' => null, 'error' => 'invalid_command_id'];
     }
 
@@ -202,6 +205,7 @@ function sendBattleAjaxState(
             'sync_version' => $syncVersion,
             'status' => $state->status,
             'turn_timer' => TurnTimer::snapshot($state, time()),
+            'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
         ];
         if ($error !== null) {
             $payload['error'] = $error;
@@ -228,6 +232,7 @@ function sendBattleAjaxState(
         'ui' => $snapshot['ui'],
         'fragments' => $snapshot['fragments'],
         'turn_timer' => $snapshot['turn_timer'],
+        'match_pause' => $snapshot['match_pause'],
     ];
     if ($error !== null) {
         $payload['error'] = $error;
@@ -256,12 +261,13 @@ function sendCommandStatus(
     ?string $error = null,
     int $statusCode = 200
 ): never {
-    if ($record !== null && ($record['status'] ?? 'processing') !== CommandJournalRepository::STATUS_PROCESSING) {
-        global $db;
-        $state = applyAutomaticBattleProgress($db, $state, (string) $record['player_key']);
-    }
+    global $db, $playerKey;
+    $viewer = (string) ($record['player_key'] ?? $playerKey);
+    $allowCombat = $record !== null && ($record['status'] ?? 'processing') !== CommandJournalRepository::STATUS_PROCESSING;
+    $state = applyAutomaticBattleProgress($db, $state, $viewer, $allowCombat);
     sendCommandStatusPayload($commandId, $record, $ok, $error, $statusCode, $state->persistenceVersion ?? 0,
-        ['turn_timer' => TurnTimer::snapshot($state, time())]);
+        ['turn_timer' => TurnTimer::snapshot($state, time()),
+         'match_pause' => MatchPause::snapshot($state, $viewer, time())]);
 }
 
 function sendCommandStatusPayload(
@@ -372,18 +378,16 @@ function reloadPersistedBattleAjaxState(GameRepository $repo, int $gameId): Game
 }
 
 /** Optional due processing never changes the outcome/identity of a user's command. */
-function applyAutomaticBattleProgress(Db $db, GameState $state, string $requester): GameState
+function applyAutomaticBattleProgress(Db $db, GameState $state, string $requester, bool $allowCombat = true): GameState
 {
-    // battle_sync may subsequently call sendBattleAjaxState. Never start a second
-    // ordered pass in the same request, especially after an unknown P2 outcome.
-    static $attempted = false;
-    if ($attempted) return $state;
-    $attempted = true;
+    // One guard instance per HTTP request, shared by snapshots and command recovery.
+    static $progress = null;
     try {
-        return (new AutomaticBattleProgress($db, new GameRepository($db), new Engine($db)))->check($state, $requester)->state;
+        $progress ??= new \Berserk\Core\HttpBattleProgress($db, new GameRepository($db), new Engine($db));
+        return $progress->check($state, $requester, $allowCombat)->state;
     } catch (Throwable) {
+        // HttpBattleProgress latches the stop before propagating any exception.
         error_log('Automatic battle progress unavailable for game ' . $state->gameId);
-        // Unknown P2/T3 outcomes stop this ordered pass; never launch another auto operation.
         try { return (new GameRepository($db))->findById($state->gameId) ?? $state; }
         catch (Throwable) { return $state; }
     }
@@ -603,6 +607,7 @@ if ($isBattleSync) {
                 'sync_version' => $syncVersion,
                 'status' => $state->status,
                 'turn_timer' => TurnTimer::snapshot($state, time()),
+                'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
             ]);
         }
 
@@ -612,6 +617,7 @@ if ($isBattleSync) {
                 'type' => 'no_change',
                 'sync_version' => $syncVersion,
                 'turn_timer' => TurnTimer::snapshot($state, time()),
+                'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
             ]);
         }
 
@@ -816,32 +822,11 @@ if ($isBattleCommand) {
             );
         }
 
-        $result = $engine->apply($state, $playerKey, new Command($commandType, $payload));
-        if (!$result->success) {
-            $journalRecord = $journal->markRejected(
-                $journalId,
-                $currentVersion,
-                'command_rejected',
-                $result->error !== '' ? $result->error : 'Command cannot be performed'
-            );
-            $fresh = reloadPersistedBattleAjaxState($repo, $state->gameId);
-            sendBattleAjaxState(
-                $db,
-                $tpl,
-                $fresh,
-                $playerKey,
-                $role,
-                $uiState,
-                false,
-                'snapshot',
-                $result->error !== '' ? $result->error : 'Command cannot be performed',
-                200,
-                commandJournalMeta($journalRecord)
-            );
-        }
-
         try {
-            $repo->saveCommittedCommand($state, $journal, $journalId);
+            $repo->executeLockedCommand($state, $journal, $journalId,
+                function (GameState $locked) use ($engine, $playerKey, $commandType, $payload): \Berserk\Core\Result {
+                    return $engine->apply($locked, $playerKey, new Command($commandType, $payload));
+                }, 'command_rejected');
         } catch (StaleStateException) {
             $fresh = reloadPersistedBattleAjaxState($repo, $state->gameId);
             $journalRecord = $journal->markConflict(
@@ -977,7 +962,9 @@ if ($isBattleCommand) {
         try {
             $committed = reloadPersistedBattleAjaxState($repo, $state->gameId);
             $journalRecord = $journal->findById($journalId) ?? $journalRecord;
-            sendBattleAjaxState($db, $tpl, $committed, $playerKey, $role, $uiState, true, 'snapshot', null, 200, commandJournalMeta($journalRecord));
+            sendBattleAjaxState($db, $tpl, $committed, $playerKey, $role, $uiState,
+                $journalRecord['status'] === CommandJournalRepository::STATUS_COMMITTED, 'snapshot',
+                $journalRecord['error_message'], 200, commandJournalMeta($journalRecord));
         } catch (Throwable) {
             sendUnknownCommandOutcome($commandId);
         }
@@ -1284,6 +1271,12 @@ switch ($state->status) {
 }
 
 // ─── Рендерим ────────────────────────────────────────────────
+// Data only: Stage 1 supplies the same contract on full pages, including game_over.
+if ($state->status === 'battle' || isset($state->battle['match_pause'])) {
+    $scriptsHtml = '<script type="application/json" id="match-pause-state">'
+        . json_encode(MatchPause::snapshot($state, $playerKey, time()), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)
+        . '</script>' . $scriptsHtml;
+}
 $isPreGame = \Berserk\View\Ui\PreGameLayout::supports($screenName);
 $screenHtml = $isPreGame
     ? (new \Berserk\View\Ui\PreGameLayout($tpl))->renderScreen($screenName, $screenData)

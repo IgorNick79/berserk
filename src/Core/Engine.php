@@ -23,7 +23,16 @@ final class Engine
 
     public function apply(GameState $state, string $playerKey, Command $cmd): Result
     {
-        $error = ExpiredCommandGuard::error($state, $playerKey, $cmd, $this->serverNow());
+        $now = $this->serverNow();
+        if (MatchPause::isCommand($cmd->type)) return MatchPause::apply($state, $playerKey, $cmd, $now);
+        if (MatchPause::blocking($state)) {
+            if ($cmd->type !== 'resign') return Result::error('match_paused');
+            $result = $this->resign($state, $playerKey, $cmd);
+            if ($result->success) MatchPause::terminate($state, $now);
+            GameLog::append($state, $playerKey, $cmd, $result);
+            return $result; // Never advance combat continuations on pause or terminal commands.
+        }
+        $error = ExpiredCommandGuard::error($state, $playerKey, $cmd, $now);
         if ($error !== null) return Result::error($error);
         if ($cmd->type === 'confirm_strike') {
             $error = InformationalWaitManager::validateAck($state, $playerKey, $cmd->get('wait_id'));

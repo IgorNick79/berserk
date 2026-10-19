@@ -91,12 +91,12 @@ final class GameRepository
     }
 
     /** Same journal/CAS transaction, with validation and Engine execution under the game lock. */
-    public function executeLockedCommand(GameState $state, CommandJournalRepository $journal, int $journalId, \Closure $apply): void
+    public function executeLockedCommand(GameState $state, CommandJournalRepository $journal, int $journalId, \Closure $apply, string $rejectionCode = 'automatic_command_rejected'): void
     {
-        $this->commitJournalCommand($state, $journal, $journalId, $apply);
+        $this->commitJournalCommand($state, $journal, $journalId, $apply, $rejectionCode);
     }
 
-    private function commitJournalCommand(GameState $state, CommandJournalRepository $journal, int $journalId, ?\Closure $apply): void
+    private function commitJournalCommand(GameState $state, CommandJournalRepository $journal, int $journalId, ?\Closure $apply, string $rejectionCode = 'automatic_command_rejected'): void
     {
         if (!$journal->usesDb($this->db)) {
             throw new \RuntimeException('GameRepository and CommandJournalRepository must use the same DB connection');
@@ -119,7 +119,7 @@ final class GameRepository
                 $result = $apply($working);
                 if (!$result instanceof Result) throw new \LogicException('Locked command must return Result');
                 if (!$result->success) {
-                    $journal->markRejected($journalId, $beforeVersion, 'automatic_command_rejected', $result->error);
+                    $journal->markRejected($journalId, $beforeVersion, $rejectionCode, $result->error);
                     $this->db->commit();
                     return;
                 }

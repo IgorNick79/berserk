@@ -9,6 +9,9 @@ final class AutomaticBattleProgress
 
     public function check(GameState $state, string $requester): AutomaticCommandResult
     {
+        $pause=(new AutomaticMatchPause($this->db,$this->repo,$this->engine))->check($state,$requester);
+        if (!$pause->certain || MatchPause::blocking($pause->state)) return $pause;
+        $state=$pause->state;
         $ack=(new InformationalAutoAck($this->db,$this->repo,$this->engine))->checkOutcome($state,$requester);
         if(!$ack->certain) return $ack;
         // P2 returns a fresh state whenever it attempted a command. Normal not-due

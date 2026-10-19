@@ -29,6 +29,7 @@ final class TurnTimeoutEligibility
         $clock=self::clock($state,$now);
         $result=['allowed'=>false,'reason'=>'','period_id'=>$clock['period_id']??null,'owner'=>$clock['owner']??null];
         if($state->status!=='battle' || $state->winner!==null) $reason='battle_not_active';
+        elseif(MatchPause::blocking($state)) $reason='match_paused';
         elseif($clock===null) $reason='invalid_or_missing_timer';
         elseif(($periodId!==null && $periodId!==$clock['period_id']) || ($owner!==null && $owner!==$clock['owner'])) $reason='period_changed';
         elseif(!$clock['expired']) $reason='not_expired';
