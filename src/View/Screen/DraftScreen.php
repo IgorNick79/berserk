@@ -93,14 +93,17 @@ final class DraftScreen
                 ]) . '<template data-grid-preview>' . $ui->information(['ukid' => $ukid], $cardsInfo) . '</template></div>';
         }
 
-        $gridHtml = '';
+        $columnsHtml = '<div class="pregame-grid-columns" aria-label="Столбцы"><span>1</span><span>2</span><span>3</span></div>';
+        $gridHtml = $isSolomon ? '' : $columnsHtml;
         for ($r = 0; !$isSolomon && $r < 3; $r++) {
-            $gridHtml .= '<div class="draft-row">';
+            $gridHtml .= '<div class="draft-row"><span class="pregame-grid-row-number">' . ['I', 'II', 'III'][$r] . '</span>';
             for ($c = 0; $c < 3; $c++) {
                 $gridHtml .= $cells[$r * 3 + $c];
             }
             $gridHtml .= '</div>';
         }
+
+        if (!$isSolomon) $gridHtml .= $columnsHtml;
 
         if ($isSolomon) {
             $gridHtml = '<div class="solomon-stack" data-solomon-stack data-selection-key="'
@@ -135,6 +138,7 @@ final class DraftScreen
         $playerPickedCount = count($draft['picked']['player'] ?? []);
         $isDiscrete = ($draft['grid_mode'] ?? $state->settings->draftGridMode()) === GameSettings::DRAFT_GRID_MODE_DISCRETE;
 
+        $finishHtml = '';
         $gridControls = $isSolomon ? '' : '<div class="pregame-grid-controls" aria-hidden="true"></div>';
         $actionsHtml = '';
         if ($isMyTurn && !$isSolomon) {
@@ -146,14 +150,14 @@ final class DraftScreen
                     $hasCards = count(array_filter($positions, fn($pos) => ($draft['grid'][$pos] ?? null) !== null)) > 0;
                     $gridControls .= '<button type="button" class="button" data-grid-pick data-command="draft_' . $axis
                         . '" data-axis="' . $axis . '" data-index="' . $number . '" aria-pressed="false"'
-                        . ($hasCards ? '' : ' disabled') . '>' . $label . ' ' . $roman . '</button>';
+                        . ($hasCards ? '' : ' disabled') . '>' . $label . ' ' . ($axis === 'row' ? $roman : $number) . '</button>';
                 }
                 $gridControls .= '</div>';
             }
             $gridControls .= '<div class="pregame-grid-extra-actions">';
             if (!$isDiscrete) $gridControls .= '<button type="button" class="button skip" data-grid-pick data-command="draft_pass" aria-pressed="false">Пас</button>';
             if ($hostPickedCount >= GameSettings::MIN_DECK_SIZE && $playerPickedCount >= GameSettings::MIN_DECK_SIZE) {
-                $gridControls .= '<button type="button" class="button" data-grid-pick data-command="finish_draft" aria-pressed="false">Закончить драфт</button>';
+                $finishHtml = '<div class="pregame-grid-finish"><button type="button" class="button" data-grid-pick data-command="finish_draft" aria-pressed="false">Закончить драфт</button></div>';
             }
             $gridControls .= '</div></div>';
             $actionsHtml = '<form method="get" id="grid-decision" class="prepare-actions">'
@@ -178,7 +182,7 @@ final class DraftScreen
         $historyHtml = $this->historyHtml($state, $playerKey, $cardsInfo, $ui);
         $scriptHtml = $this->scriptHtml($state, $syncUrl, $now);
         $scriptHtml .= $isSolomon ? '<script src="/assets/js/solomon_selection.js?v=5" defer></script>'
-            : '<script src="/assets/js/grid_selection.js?v=1" defer></script>';
+            : '<script src="/assets/js/grid_selection.js?v=2" defer></script>';
 
         // ─── Статистика набранного пула ──────────────────
         $myPicked = $draft['picked'][$playerKey] ?? [];
@@ -232,7 +236,7 @@ final class DraftScreen
         $panelFooter = '';
         $draftInfo = '';
         $draftBottom = '';
-        $panelSummary = '<section class="pregame-pool-stats" aria-label="Статистика выбранного пула">'
+        $panelSummary = $finishHtml . '<section class="pregame-pool-stats" aria-label="Статистика выбранного пула">'
             . '<div class="pregame-pool-totals">Выбрано: <b>' . $totalCount . '</b> · Средняя цена: <b>' . $avgPrice . '</b></div>'
             . '<div class="pregame-pool-icons"><div class="pregame-pool-currencies">'
             . $this->statisticIcon('/assets/images/card/elite.png', 'Золотые карты', $goldCount)

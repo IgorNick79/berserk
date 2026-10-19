@@ -273,3 +273,13 @@ body.pregame-page {
 .pregame-grid-controls .button:disabled, [data-grid-confirm]:disabled { opacity: .45; cursor: default; }
 .pregame-grid-extra-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .pregame-grid-extra-actions:empty { display: none; }
+
+.screen-draft--grid .pregame-draft-grid, .screen-draft--grid .pregame-grid-controls { padding-left: 32px; }
+.screen-draft--grid .draft-row { position: relative; }
+.pregame-grid-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; color: #fff4d6; text-shadow: 0 1px 3px #000; text-align: center; font-size: 13px; line-height: 20px; }
+.pregame-grid-row-number { position: absolute; left: -32px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #d3ffd0; color: #233b23; font-size: 14px; font-weight: 600; }
+.pregame-panel-content .pregame-grid-close { background: #b84444; }
+
+.pregame-grid-finish { padding: 12px; border-bottom: 1px solid #ddd; }
+.pregame-grid-finish .button { display: block; width: 100%; padding: 12px; border: 1px solid #368736; font: inherit; cursor: pointer; }
+.pregame-grid-finish .button[aria-pressed="true"] { background: #276c32; outline: 2px solid #bce9bc; outline-offset: 1px; }

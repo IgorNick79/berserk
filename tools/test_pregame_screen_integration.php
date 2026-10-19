@@ -216,6 +216,10 @@ namespace {
         }
         if ($stage === 'draft' && !$solomonPanel) {
             $active = $state->draft['turn'] === $role;
+            integrationAssert($xp->query('//main//*[@class="pregame-grid-row-number"]')->length === 3, 'Grid row coordinates');
+            integrationAssert($xp->query('//main//*[@class="pregame-grid-columns"]/span')->length === 6, 'Grid column coordinates above and below');
+            integrationAssert($xp->query('//main//*[@data-command="finish_draft"]')->length === 0, 'Finish is outside the mat');
+            integrationAssert($xp->query('//aside//*[@class="pregame-grid-finish"]')->length === ($active && str_contains($variant,'finish') ? 1 : 0), 'Wide finish appears only when allowed');
             integrationAssert($xp->query('//main//*[@data-grid-position]')->length === 9, 'Grid keeps nine cells');
             integrationAssert($xp->query('//main//a[contains(@href,"cmd=")]')->length === 0, 'Grid controls do not submit commands');
             integrationAssert($xp->query('//main//*[@data-grid-pick and @data-axis]')->length === ($active ? 6 : 0), 'Only active player selects rows/columns');
