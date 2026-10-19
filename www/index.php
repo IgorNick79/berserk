@@ -530,6 +530,7 @@ function buildRenderCardInfo(Db $db, GameState $state): array
 }
 
 $ajax = ajaxParamString('ajax', 32);
+$isChat = in_array($ajax, ['chat_messages', 'chat_send', 'chat_read'], true);
 $isBattleSync = $ajax === 'battle_sync';
 $isBattleCommand = $ajax === 'battle_command';
 $isBattleCommandStatus = $ajax === 'battle_command_status';
@@ -564,7 +565,7 @@ if (is_string($_GET['debug_roll'] ?? null)) {
 try {
     $db = new Db($config);
 } catch (Throwable $e) {
-    if ($isBattleSync || $isBattleCommand || $isBattleCommandStatus) {
+    if ($isChat || $isBattleSync || $isBattleCommand || $isBattleCommandStatus) {
         sendAjaxJson([
             'ok' => false,
             'error' => 'server_error',
@@ -572,6 +573,36 @@ try {
     }
 
     throw $e;
+}
+// Chat exits before game construction, role-session writes and automatic battle progress.
+if ($isChat) {
+    try {
+        $game = ajaxParamInt('game') ?? 0;
+        if ($game <= 0 || isset($_GET['first']) === isset($_GET['second'])) throw new InvalidArgumentException('invalid_game_or_role');
+        // Explicit prototype identity agreed with Project Lead; URL roles are not real authentication.
+        $sender = isset($_GET['first']) ? 1 : 2;
+        $chat = new \Berserk\Core\GameChat($db);
+        if ($ajax === 'chat_messages') {
+            if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') sendAjaxJson(['ok'=>false,'error'=>'method_not_allowed'],405);
+            session_write_close();
+            sendAjaxJson(['ok'=>true] + $chat->history($game,$sender,
+                isset($_GET['after_id']) ? \Berserk\Core\GameChat::cursor($_GET['after_id']) : null,
+                isset($_GET['before_id']) ? \Berserk\Core\GameChat::cursor($_GET['before_id']) : null));
+        }
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') sendAjaxJson(['ok'=>false,'error'=>'method_not_allowed'],405);
+        $token = ajaxPostParamString('csrf', 64);
+        if (!$token || !isset($_SESSION['chat_csrf']) || !hash_equals($_SESSION['chat_csrf'],$token)) sendAjaxJson(['ok'=>false,'error'=>'csrf'],403);
+        session_write_close();
+        if ($ajax === 'chat_send') {
+            $message = $chat->send($game,$sender,$_POST['message'] ?? null,$_POST['request_id'] ?? null);
+            sendAjaxJson(['ok'=>true,'message'=>$message]);
+        }
+        $chat->read($game,$sender,$_POST['last_read_id'] ?? null);
+        sendAjaxJson(['ok'=>true]);
+    } catch (InvalidArgumentException $e) { sendAjaxJson(['ok'=>false,'error'=>$e->getMessage()],400);
+    } catch (DomainException $e) { sendAjaxJson(['ok'=>false,'error'=>$e->getMessage()],403);
+    } catch (OverflowException $e) { sendAjaxJson(['ok'=>false,'error'=>'rate_limited'],429);
+    } catch (Throwable $e) { sendAjaxJson(['ok'=>false,'error'=>'chat_unavailable'],503); }
 }
 $repo    = new GameRepository($db);
 $engine   = new Engine($db);
@@ -594,7 +625,7 @@ if (isset($_GET['first'])) {
 }
 
 if ($role === null) {
-    if ($isBattleSync || $isBattleCommand || $isBattleCommandStatus) {
+    if ($isChat || $isBattleSync || $isBattleCommand || $isBattleCommandStatus) {
         sendAjaxJson([
             'ok' => false,
             'error' => 'missing_player_role',
@@ -1358,6 +1389,16 @@ $screenHtml = $isPreGame
     ? (new \Berserk\View\Ui\PreGameLayout($tpl))->renderScreen($screenName, $screenData)
     : $tpl->parse("screen/{$screenName}.tpl", $screenData);
 
+if (in_array($screenName, ['battle','game_over'], true)) {
+    $_SESSION['chat_csrf'] ??= bin2hex(random_bytes(32));
+    $screenHtml .= $tpl->parse('includes/game_chat.tpl', [
+        'chat_game_id'=>$state->gameId,
+        'chat_sender_id'=>$userId,
+        'chat_role'=>$role === 'host' ? 'first' : 'second',
+        'chat_csrf'=>htmlspecialchars($_SESSION['chat_csrf'],ENT_QUOTES),
+    ]);
+    $scriptsHtml .= '<script src="/assets/js/battle-chat.js?v=3" defer></script>';
+}
 // Resolve the URL before passing the HTML slot to the single-pass template parser.
 $preGameResourceKey = $isPreGame
     ? hash('sha256', hash_file('sha256', __DIR__ . '/assets/css/global.css')
@@ -1370,7 +1411,7 @@ $page = $tpl->parse('page.tpl', [
     'screen'  => $screenHtml,
     'scripts' => $scriptsHtml,
     'page_class' => $screenName === 'battle' ? 'battle-page' : ($isPreGame ? 'pregame-page' : ''),
-    'page_styles' => $isPreGame ? '<link rel="stylesheet" href="/assets/css/pregame.css?v=' . $preGameResourceKey . '">' : '',
+    'page_styles' => in_array($screenName, ['battle','game_over'], true) ? '<link rel="stylesheet" href="/assets/css/battle-chat.css?v=3">' : ($isPreGame ? '<link rel="stylesheet" href="/assets/css/pregame.css?v=' . $preGameResourceKey . '">' : ''),
     // PreGame opts into a stable CSS version; battle keeps its existing rkey policy.
     'rkey' => $preGameResourceKey,
 ]);
