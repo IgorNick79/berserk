@@ -2,7 +2,7 @@
     "use strict";
     var root = document.querySelector('[data-game-chat]');
     if (!root) return;
-    var q = function (name) { return root.querySelector('[data-chat-' + name + ']'); };
+    var q = function (name) { return root.querySelector('[data-chat-' + name + ']') || (toggle && toggle.querySelector('[data-chat-' + name + ']')); };
     var toggle=q('toggle'), panel=document.getElementById('game-chat-panel'), history=q('history');
     var input=q('input'), send=q('send'), status=q('status'), older=q('older');
     var cursor=null, oldest=null, baseline=null, lastRead='0', latest='0', unread=false;
@@ -16,10 +16,11 @@
     function badge(value) {
         unread=value;
         root.classList.toggle('has-unread',value);
+        toggle.classList.toggle('has-unread',value);
         q('indicator').hidden=!q('indicator').dataset.loaded;
         q('indicator').setAttribute('aria-hidden',String(!value));
         q('unread-text').hidden=!value || !!q('indicator').dataset.loaded;
-        toggle.setAttribute('aria-label',value?'Чат боя: новые сообщения':'Чат боя');
+        toggle.setAttribute('aria-label',value?'Сообщения: новые сообщения':'Сообщения');
     }
     function imageReady(node, fallback) {
         function loaded() { node.dataset.loaded='1'; if (fallback) {node.hidden=false; fallback.hidden=true;} else badge(unread); }
@@ -28,6 +29,14 @@
         if(node.complete && node.naturalWidth) loaded();
     }
     imageReady(q('icon'),q('label')); imageReady(q('indicator'),null);
+    // Keep the live toggle and its listeners when battle snapshots replace the footer.
+    function mountToggle() {
+        var anchor=document.querySelector('[data-chat-anchor]');
+        if(anchor && toggle.parentNode!==anchor) anchor.appendChild(toggle);
+    }
+    mountToggle();
+    var footerObserver=null, infoPanel=document.querySelector('[data-battle-fragment="info_panel_html"]');
+    if(infoPanel) { footerObserver=new MutationObserver(mountToggle); footerObserver.observe(infoPanel,{childList:true}); }
     function api(action, params, post) {
         var url=new URL(window.location.href);
         url.search=''; url.searchParams.set(root.dataset.role,'');
@@ -137,6 +146,6 @@
             else status.textContent='Отправка не подтверждена. Нажмите «Отправить» для безопасного повтора.';
         }).finally(function(){sending=false;send.disabled=!writable;input.readOnly=false;input.disabled=!writable;});
     });
-    window.addEventListener('beforeunload',function(){stopped=true;clearTimeout(timer);});
+    window.addEventListener('beforeunload',function(){stopped=true;clearTimeout(timer);if(footerObserver) footerObserver.disconnect();});
     send.disabled=true; poll();
 })();

@@ -128,7 +128,7 @@ final class InfoPanel
                 . '<button type="submit" class="button" data-http-resign>Сдаться</button></form>' : '';
         return '<noscript><style>[data-battle-sync-root] [data-open-pause], [data-battle-sync-root] [data-pause-command], [data-battle-sync-root] a.resign { display: none !important; }</style>'
             . '<p class="pause-noscript-notice">Управление паузой требует JavaScript. Сдаться можно без JavaScript.</p>' . $httpResign . '</noscript>'
-            . '<div class="info-actions">' . $end . '<div class="battle-icon-actions">' . $pauseIcon . $log . $resign . '</div></div>';
+            . '<div class="info-actions">' . $end . '<div class="battle-icon-actions">' . $pauseIcon . '<span class="battle-chat-anchor" data-chat-anchor></span>' . $log . $resign . '</div></div>';
     }
     private function renderPauseBody(): string
     {

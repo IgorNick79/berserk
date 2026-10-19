@@ -96,6 +96,10 @@ const freshId=()=>require('crypto').randomBytes(16).toString('hex');
   equal(await a.evaluate(()=>window.__chatSounds),0,'Older pages never sound');
   for(const width of [1600,800,375]){
    await a.setViewportSize({width,height:900});const box=await a.locator('#game-chat-panel').boundingBox();ok(box.x>=0 && box.x+box.width<=width,'Panel fits '+width);
+   equal(box.x,0,'Panel starts at viewport edge '+width);equal(box.width,width,'Panel full viewport width '+width);equal(box.y+box.height,900,'Panel sits at bottom '+width);ok(box.height<=320,'Compact panel height '+width);
+   equal(await a.locator('[data-chat-toggle]').getAttribute('title'),'Сообщения','Standard tooltip '+width);
+   const iconBox=await a.locator('[data-chat-icon]').boundingBox(),pauseBox=await a.locator('[data-open-pause] img').boundingBox();equal(iconBox.width,pauseBox.width,'Same icon width as pause '+width);equal(iconBox.height,pauseBox.height,'Same icon height as pause '+width);
+   ok(await a.locator('[data-chat-anchor]').evaluate(el=>el.previousElementSibling.hasAttribute('data-open-pause') && el.nextElementSibling.dataset.action==='battle-log'),'Chat between pause and log '+width);
    if(process.env.CHAT_SCREENSHOT_DIR) await a.screenshot({path:path.join(process.env.CHAT_SCREENSHOT_DIR,'chat-'+width+'.png')});
   }
   // Lost response after a real COMMIT: UI keeps text and reuses its request identity.
@@ -137,6 +141,15 @@ const freshId=()=>require('crypto').randomBytes(16).toString('hex');
   await normal.goto(base+'?first&game='+normalGame);await ordinarySync;
   await normal.waitForFunction(()=>!document.querySelector('[data-chat-send]').disabled);
   await normal.locator('[data-chat-toggle]').click();await normal.locator('[data-chat-input]').fill('С обычной синхронизацией');
+  await normal.evaluate(()=>{window.__oldChatAnchor=document.querySelector('[data-chat-anchor]');});
+  fixture('turn',normalGame);
+  await normal.waitForFunction(()=>document.querySelector('[data-chat-anchor]')!==window.__oldChatAnchor && document.querySelector('[data-chat-anchor] [data-chat-toggle]'));
+  equal(await normal.locator('[data-chat-toggle]').count(),1,'One live icon after server snapshot replacement');
+  equal(await normal.locator('[data-chat-input]').inputValue(),'С обычной синхронизацией','Draft survives footer replacement');
+  ok(await normal.locator('#game-chat-panel').isVisible(),'Open popup survives footer replacement');
+  equal(await normal.locator('[data-chat-input]').getAttribute('placeholder'),'Сообщение','Input uses placeholder');
+  equal(await normal.locator('[data-chat-send]').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(68, 170, 68)','Send reuses existing green button');
+  equal(await normal.locator('[data-chat-cancel]').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(136, 136, 136)','Cancel reuses existing grey button');
   await normal.locator('[data-chat-send]').click();await normal.waitForFunction(()=>document.querySelector('[data-chat-input]').value==='');
   await normal.waitForFunction(()=>document.querySelectorAll('.game-chat-message').length===1);
   equal(fixture('inspect',normalGame).messages[0].message,'С обычной синхронизацией','Chat coexists with live ordinary battle polling');
