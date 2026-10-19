@@ -282,3 +282,8 @@ body.pregame-page {
 
 .pregame-grid-finish { padding: 12px; border-bottom: 1px solid #ddd; }
 .pregame-grid-finish .button { display: block; width: 100%; padding: 12px; text-align: center; border: 1px solid #368736; font: inherit; cursor: pointer; }
+
+/* Keep deck multiplicity visible without competing with the card's stats. */
+.screen-prepare-view .prepare-card:has(.prepare-card__count) { position: relative; }
+.screen-prepare-view .prepare-card__count { position: absolute; right: 8px; bottom: 8px; display: flex; align-items: center; justify-content: center; min-width: 38px; min-height: 30px; margin: 0; padding: 4px 8px; border: 1px solid #547865; border-radius: 8px; background: #284d3b; color: #fff; box-shadow: 0 2px 5px #0002; font-size: 18px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.screen-prepare-view .prepare-card:has(.prepare-card__count) .prepare-card__price { padding-right: 58px; min-height: 24px; }
