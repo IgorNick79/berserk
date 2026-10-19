@@ -138,6 +138,11 @@ final class BattleScreen
                 'pause_field_attr' => \Berserk\Core\MatchPause::blocking($state) ? 'inert aria-hidden="true"' : '',
                 'pause_mask_hidden' => \Berserk\Core\MatchPause::blocking($state) ? '' : 'hidden',
                 'debug_disabled' => $debugHtml === '' ? 'disabled' : '',
+                'debug_menu_url' => htmlspecialchars($baseUrl . '&debug=1#battle-debug', ENT_QUOTES),
+                'sound_checked' => $state->getPlayer($playerKey)->soundEnabled ? 'true' : 'false',
+                'debug_menu_attr' => \Berserk\Core\MatchPause::blocking($state)
+                    ? 'aria-disabled="true" tabindex="-1"'
+                    : 'href="' . $baseUrl . '&amp;debug=1#battle-debug"',
                 'field_html'       => $fieldHtml,
                 'panel_html'       => $panelHtml,
                 'fly_zones_html'    => $flyZonesHtml,

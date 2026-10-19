@@ -2210,3 +2210,16 @@ body.battle-page {
 .match-pause-decisions [data-pause-command="cancel_pause_request"]:hover { background: #666; }
 
 .battle-page .info-panel-footer .battle-icon-actions { flex: 0 1 auto; max-width: 100%; flex-wrap: wrap; }
+
+/* Permanent match menu, outside replaceable battle fragments. */
+.battle-page .battle-menu { z-index: 115; }
+.battle-menu-panel { position: absolute; top: 48px; left: 8px; z-index: 116; width: min(264px, calc(100vw - 24px)); max-height: calc(100dvh - 64px); overflow: auto; box-sizing: border-box; padding: 6px; border: 1px solid #9b8c76; border-radius: 8px; background: #f8f5ee; color: #332c23; box-shadow: 0 8px 28px #0005; }
+.battle-menu-panel[hidden] { display: none !important; }
+.battle-menu-panel [role^="menuitem"] { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; box-sizing: border-box; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 4px; font: inherit; font-size: 14px; text-decoration: none; text-align: left; background: transparent; color: inherit; cursor: pointer; }
+.battle-menu-panel [role^="menuitem"]:hover:not(:disabled):not([aria-disabled="true"]) { background: #e7dfd0; }
+.battle-menu-panel [role^="menuitem"]:focus-visible { outline: 2px solid #886332; outline-offset: -2px; }
+.battle-menu-panel [role^="menuitem"]:disabled, .battle-menu-panel [aria-disabled="true"] { color: #888; cursor: default; background: #eeece7; }
+.battle-menu-panel small { color: #888; font-size: 11px; }
+.battle-menu-panel [data-sound-check] { color: #36513a; font-weight: bold; }
+.battle-menu-panel [data-sound-check][hidden], .battle-menu-saving[hidden] { display: none; }
+.battle-menu-saving { display: block; padding: 6px 12px; color: #777; font-size: 12px; }

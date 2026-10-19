@@ -31,9 +31,10 @@
         ? window.BerserkTurnTimer.create(root, script.dataset.viewerKey, syncVersion, script.dataset.turnSoundUrl || "")
         : null;
 
-    var matchPause = null;
+    var matchPause = null, battleMenu = null;
 
     function updateTurnTimer(data) {
+        if (turnTimer && data && data.player_settings) turnTimer.updateSettings(data.player_settings, data.sync_version);
         if (pendingCommand && data && data.command_id === pendingCommand.id && data.command_status === "conflict"
             && pendingCommand.type === "pause_ready") pendingCommand.readyConflict = true;
         var resumeEvent = matchPause && data && data.match_pause
@@ -42,6 +43,7 @@
             turnTimer.update(data.turn_timer, data.sync_version, !!resumeEvent);
         }
         if (resumeEvent && turnTimer) turnTimer.notify();
+        if (battleMenu) battleMenu.render();
     }
 
     var uiState = {
@@ -78,6 +80,10 @@
 
     matchPause = window.BerserkMatchPause
         ? window.BerserkMatchPause.create(root, syncVersion, submitCommand, commandInFlight, function () { requestSnapshot(true); })
+        : null;
+
+    battleMenu = window.BerserkBattleMenu
+        ? window.BerserkBattleMenu.create(root, submitCommand, commandInFlight, function () { return !turnTimer || turnTimer.isSoundEnabled(); })
         : null;
 
     function commandInFlight() {
@@ -137,6 +143,7 @@
     function buildUrl(forceSnapshot) {
         var url = new URL(syncUrl, window.location.href);
         url.searchParams.set("since_version", String(Math.max(0, syncVersion)));
+        url.searchParams.delete("settings_sync_id");
         url.searchParams.set("sel", String(uiState.sel || 0));
         if (uiState.modeExplicit) {
             url.searchParams.set("mode", uiState.mode || "strike");
@@ -185,6 +192,7 @@
     }
 
     function showMessage(text, tone) {
+        if (battleMenu) battleMenu.render();
         if (!messageNode) return;
 
         messageNode.textContent = (window.BerserkMatchPause ? window.BerserkMatchPause.message(text) : text) || "";
@@ -297,6 +305,7 @@
     }
 
     function navigateToCurrentPage() {
+        if (battleMenu) battleMenu.destroy();
         if (matchPause) matchPause.destroy();
         if (turnTimer) turnTimer.destroy();
         stopped = true;
@@ -889,6 +898,7 @@
     });
 
     window.addEventListener("beforeunload", function () {
+        if (battleMenu) battleMenu.destroy();
         if (matchPause) matchPause.destroy();
         if (turnTimer) turnTimer.destroy();
         stopped = true;

@@ -50,9 +50,8 @@
                 if (blocked) {
                     if (picker.open) picker.close();
                     document.querySelectorAll("dialog.card-image-popup[open]").forEach(function (node) { node.close(); });
-                    var debug = root.querySelector("#battle-debug"), menu = root.querySelector(".battle-menu");
+                    var debug = root.querySelector("#battle-debug");
                     if (debug) debug.hidden = true;
-                    if (menu) { menu.disabled = true; menu.setAttribute("aria-expanded", "false"); }
                 }
                 root.querySelectorAll("[data-open-pause]").forEach(function (node) {
                     node.disabled = busy() || model.allowed_commands.indexOf("request_pause") < 0;

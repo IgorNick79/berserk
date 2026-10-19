@@ -14,6 +14,8 @@
             var destroyed = false;
             var audioContext = null;
             var audioFile = null;
+            var soundEnabled = true, settingsVersion = -1;
+            var soundGeneration = 0, audioAttempt = 0;
 
             function remaining() {
                 if (!model) return null;
@@ -57,7 +59,8 @@
                 } catch (e) { /* Browser audio restrictions must not affect the battle. */ }
             }
 
-            function beep() {
+            function beep(generation, attempt) {
+                if (destroyed || !soundEnabled || generation !== soundGeneration || attempt !== audioAttempt) return;
                 if (!audioContext || audioContext.state !== "running") return;
                 var start = audioContext.currentTime;
                 [660, 880].forEach(function (frequency, i) {
@@ -78,13 +81,25 @@
             }
 
             function notify() {
-                if (destroyed) return;
+                if (destroyed || !soundEnabled) return;
+                var generation = soundGeneration, attempt = ++audioAttempt;
                 try {
                     if (audioFile) {
                         audioFile.currentTime = 0;
-                        audioFile.play().catch(beep);
-                    } else beep();
+                        audioFile.play().catch(function () { beep(generation, attempt); });
+                    } else beep(generation, attempt);
                 } catch (e) { /* Sound is best effort and cannot block a command. */ }
+            }
+
+            function updateSettings(next, nextVersion) {
+                if (destroyed || !next || typeof next.sound_enabled !== "boolean"
+                    || !Number.isInteger(nextVersion) || nextVersion < settingsVersion) return;
+                settingsVersion = nextVersion;
+                if (soundEnabled !== next.sound_enabled) soundGeneration++;
+                soundEnabled = next.sound_enabled;
+                if (!soundEnabled && audioFile) {
+                    try { audioFile.pause(); } catch (e) { /* Muting cannot interrupt synchronization. */ }
+                }
             }
 
             function update(next, nextVersion, resumeNotification) {
@@ -143,7 +158,7 @@
                 if (interval === null && !document.hidden) interval = window.setInterval(render, 250);
             }
 
-            var controller = {update: update, render: render, suspend: suspend, resume: resume, notify: notify,
+            var controller = {update: update, updateSettings: updateSettings, isSoundEnabled: function () { return soundEnabled; }, render: render, suspend: suspend, resume: resume, notify: notify,
                 destroy: function () {
                     if (destroyed) return;
                     destroyed = true;
@@ -157,6 +172,8 @@
             root.berserkTurnTimer = controller;
             document.addEventListener("pointerdown", armAudio);
             document.addEventListener("keydown", armAudio);
+            var settingsBoot = document.querySelector("#battle-player-settings");
+            if (settingsBoot) { try { updateSettings(JSON.parse(settingsBoot.textContent), initialVersion); } catch (e) {} }
             var boot = root.querySelector("[data-turn-timer]");
             if (boot && boot.dataset.turnTimerState) {
                 try { update(JSON.parse(boot.dataset.turnTimerState), initialVersion); } catch (e) {}

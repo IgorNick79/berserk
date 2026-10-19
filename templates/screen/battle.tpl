@@ -1,8 +1,15 @@
 <div class="battle-sync-root battle-shell" data-battle-sync-root {{pause_root_attr}}>
     <div class="battle-ajax-message" data-battle-message hidden></div>
-    <button class="battle-menu" type="button" {{debug_disabled}} aria-expanded="false" aria-controls="battle-debug" aria-label="Отладка боя" title="Отладка боя">
+    <button class="battle-menu" type="button" disabled aria-expanded="false" aria-haspopup="menu" aria-controls="battle-menu-panel" aria-label="Меню матча" title="Меню матча">
         <span aria-hidden="true">☰</span>
     </button>
+    <div id="battle-menu-panel" class="battle-menu-panel" role="menu" aria-label="Меню матча" tabindex="-1" hidden>
+        <button type="button" role="menuitemcheckbox" data-menu-sound aria-checked="{{sound_checked}}"><span>Звук</span><span data-sound-check aria-hidden="true">✓</span></button>
+        <button type="button" role="menuitem" disabled aria-disabled="true"><span>Выбор коврика</span><small>Скоро</small></button>
+        <button type="button" role="menuitem" disabled aria-disabled="true"><span>Отложить игру</span><small>Скоро</small></button>
+        <a role="menuitem" data-menu-debug data-debug-url="{{debug_menu_url}}" {{debug_menu_attr}}>Debug</a>
+        <span class="battle-menu-saving" data-menu-saving role="status" hidden>Сохраняем…</span>
+    </div>
     <div class="battle-main">
         <div class="battle-left" {{pause_field_attr}} tabindex="0" aria-label="Игровое поле и игровые зоны">
             <div class="battle-layout">
@@ -17,5 +24,5 @@
     <aside class="info-panel" data-battle-fragment="info_panel_html" aria-label="Информация о бое и действия">{{info_panel_html}}</aside>
 </div>
 <script src="/assets/js/cell-marker-picker.js?v=1" defer></script>
-<script src="/assets/js/battle-ui.js?v=8" defer></script>
+<script src="/assets/js/battle-ui.js?v=9" defer></script>
 <script src="/assets/js/card-image-popup.js?v=1" defer></script>

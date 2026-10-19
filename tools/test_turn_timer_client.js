@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const sample = (patch={}) => ({period_id:1,owner:'host',status:'running',remaining_seconds:180,
     anchor_at:1000,pause_reason:null,server_now:1000,limit_seconds:180,...patch});
 const keys=['field_html','fly_zones_html','panel_html','piles_html','pile_reveal_html','info_panel_html'];
-function setup(boot=sample(),viewer='player',pauseBoot,audioMode='beep') {
+function setup(boot=sample(),viewer='player',pauseBoot,audioMode='beep',settingsBoot) {
     let now=0,seq=0,sounds=0,plays=0,current=boot,currentPause=pauseBoot,version=1,offline=false;
     const audioUrls=[],attributes=new Map();
     const events={},windowEvents={},timeouts=new Map(),intervals=new Map(),queue=[],requests=[],held=new Map();
@@ -30,7 +30,7 @@ function setup(boot=sample(),viewer='player',pauseBoot,audioMode='beep') {
             }
             if(s==='[data-turn-timer]')return timerNode;if(s==='[data-battle-message]')return null;return s.includes('info_panel_html')?info:fragment;}};
     const document={hidden:false,currentScript:{dataset:{syncUrl:'http://localhost/index.php?first&game=1&ajax=battle_sync',version:'1',viewerKey:viewer,turnSoundUrl:audioMode==='beep'?'':'/assets/sound/turn.mp3'}},
-        querySelector:s=>s==='#match-pause-state'?(pauseBoot===undefined?null:{textContent:JSON.stringify(pauseBoot)}):root,
+        querySelector:s=>s==='#battle-player-settings'?(settingsBoot===undefined?null:{textContent:JSON.stringify(settingsBoot)}):s==='#match-pause-state'?(pauseBoot===undefined?null:{textContent:JSON.stringify(pauseBoot)}):root,
         body:{appendChild(){},classList:{toggle(){}}},querySelectorAll:()=>[],addEventListener(k,fn){(events[k]??=[]).push(fn);},
         removeEventListener(k,fn){events[k]=(events[k]||[]).filter(f=>f!==fn);},
         createElement:s=>s==='dialog'?picker:({innerHTML:'',content:{querySelector:()=>fragment}})};
@@ -50,7 +50,7 @@ function setup(boot=sample(),viewer='player',pauseBoot,audioMode='beep') {
         pause(){}
     };
     const fetch=async(input,options={})=>{
-        const url=new URL(input),route=url.searchParams.get('ajax');requests.push({route,options});
+        const url=new URL(input),route=url.searchParams.get('ajax');requests.push({route,options,url:url.toString()});
         if(offline)throw new Error('offline');
         if(held.has(route))return new Promise(resolve=>{held.get(route).resolve=(data,status=200)=>resolve({ok:status<400,status,json:async()=>data});});
         let data=queue.length?queue.shift():{ok:true,type:'no_change',sync_version:version,turn_timer:current,...(currentPause===undefined?{}:{match_pause:currentPause})};

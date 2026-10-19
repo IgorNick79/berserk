@@ -13,6 +13,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\TurnTimer;
 use Berserk\Core\AutomaticBattleProgress;
 use Berserk\Core\MatchPause;
+use Berserk\Core\MatchPlayerSettings;
 use Berserk\Core\AutomaticMatchPause;
 use Berserk\Core\View;
 use Berserk\Core\DeckView;
@@ -266,6 +267,7 @@ function sendBattleAjaxState(
             'sync_version' => $syncVersion,
             'status' => $state->status,
             'turn_timer' => TurnTimer::snapshot($state, time()),
+            'player_settings' => MatchPlayerSettings::snapshot($state, $playerKey),
             'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
         ];
         if ($error !== null) {
@@ -293,6 +295,7 @@ function sendBattleAjaxState(
         'ui' => $snapshot['ui'],
         'fragments' => $snapshot['fragments'],
         'turn_timer' => $snapshot['turn_timer'],
+        'player_settings' => $snapshot['player_settings'],
         'match_pause' => $snapshot['match_pause'],
     ];
     if ($error !== null) {
@@ -322,12 +325,14 @@ function sendCommandStatus(
     ?string $error = null,
     int $statusCode = 200
 ): never {
-    global $db, $playerKey;
+    global $db, $playerKey, $settingsOnlyRequest;
+    if (($record['command_type'] ?? null) === MatchPlayerSettings::COMMAND) $settingsOnlyRequest = true;
     $viewer = (string) ($record['player_key'] ?? $playerKey);
     $allowCombat = $record !== null && ($record['status'] ?? 'processing') !== CommandJournalRepository::STATUS_PROCESSING;
     $state = applyAutomaticBattleProgress($db, $state, $viewer, $allowCombat);
     sendCommandStatusPayload($commandId, $record, $ok, $error, $statusCode, $state->persistenceVersion ?? 0,
         ['turn_timer' => TurnTimer::snapshot($state, time()),
+         'player_settings' => MatchPlayerSettings::snapshot($state, $viewer),
          'match_pause' => MatchPause::snapshot($state, $viewer, time())]);
 }
 
@@ -441,6 +446,9 @@ function reloadPersistedBattleAjaxState(GameRepository $repo, int $gameId): Game
 /** Optional due processing never changes the outcome/identity of a user's command. */
 function applyAutomaticBattleProgress(Db $db, GameState $state, string $requester, bool $allowCombat = true): GameState
 {
+    global $settingsOnlyRequest;
+    if ($settingsOnlyRequest ?? false) return $state; // A preference response is projection-only, including deadlines.
+
     // One guard instance per HTTP request, shared by snapshots and command recovery.
     static $progress = null;
     try {
@@ -525,6 +533,7 @@ $ajax = ajaxParamString('ajax', 32);
 $isBattleSync = $ajax === 'battle_sync';
 $isBattleCommand = $ajax === 'battle_command';
 $isBattleCommandStatus = $ajax === 'battle_command_status';
+$settingsOnlyRequest = $isBattleCommand && ajaxPostParamString('cmd', 64) === MatchPlayerSettings::COMMAND;
 
 $config = require __DIR__ . '/../config/db.php';
 
@@ -668,6 +677,7 @@ if ($isBattleSync) {
                 'sync_version' => $syncVersion,
                 'status' => $state->status,
                 'turn_timer' => TurnTimer::snapshot($state, time()),
+                'player_settings' => MatchPlayerSettings::snapshot($state, $playerKey),
                 'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
             ]);
         }
@@ -678,6 +688,7 @@ if ($isBattleSync) {
                 'type' => 'no_change',
                 'sync_version' => $syncVersion,
                 'turn_timer' => TurnTimer::snapshot($state, time()),
+                'player_settings' => MatchPlayerSettings::snapshot($state, $playerKey),
                 'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
             ]);
         }
@@ -1294,6 +1305,7 @@ switch ($state->status) {
             }
         }
         $scriptsHtml = '<script src="/assets/js/battle-turn-timer.js?v={{rkey}}"></script>'
+            . '<script src="/assets/js/battle-menu.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-match-pause.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-sync.js?v={{rkey}}"'
             . ' data-viewer-key="' . htmlspecialchars($playerKey, ENT_QUOTES) . '"'
@@ -1335,7 +1347,9 @@ switch ($state->status) {
 // ─── Рендерим ────────────────────────────────────────────────
 // Data only: Stage 1 supplies the same contract on full pages, including game_over.
 if ($state->status === 'battle' || isset($state->battle['match_pause'])) {
-    $scriptsHtml = '<script type="application/json" id="match-pause-state">'
+    $scriptsHtml = '<script type="application/json" id="battle-player-settings">'
+        . json_encode(MatchPlayerSettings::snapshot($state, $playerKey), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)
+        . '</script>' . '<script type="application/json" id="match-pause-state">'
         . json_encode(MatchPause::snapshot($state, $playerKey, time()), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)
         . '</script>' . $scriptsHtml;
 }
