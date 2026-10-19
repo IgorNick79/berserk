@@ -116,6 +116,8 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
 
     }
     if (fixture.stage === 'view') {
+     assert.equal(await page.locator('.pregame-main a[href*="cmd=view_to_"]').count(),0,key+' View moves are in InfoPanel');
+     if(!['empty','waiting','denied','system'].includes(fixture.variant))assert.equal(await page.locator('.pregame-panel-content [data-view-card-actions] a').count(),1,key+' action belongs to selected card');
      const dimensions = await page.locator('.pregame-main').evaluate(el=>({height:el.clientHeight, scroll:el.scrollHeight}));
      assert.ok(dimensions.scroll <= dimensions.height + 1, key+' View has no central overflow');
      assert.equal(await page.locator('.pregame-main .prepare-bottom-bar, .pregame-main a[href*="cmd=confirm_view"]').count(),0);
@@ -212,7 +214,15 @@ const fixtures = JSON.parse(execFileSync(php, [testFile, '--fixtures'], {encodin
    await viewLink.click();
    assert.equal(await page.locator('.pregame-card-title').textContent(),viewName);
    await page.goto('https://pregame.test/view-sideboard');
-   assert.equal(await page.locator('.pregame-main a[href*="cmd=view_to_deck"]').count(),1);
+   assert.equal(await page.locator('.pregame-main a[href*="cmd=view_to_deck"]').count(),0);
+   const toDeck=page.locator('.pregame-panel-content [data-view-card-actions] a[href*="cmd=view_to_deck"]');
+   assert.equal(await toDeck.count(),1);
+   assert.equal(await toDeck.textContent(),'В колоду');
+   const beforeMove=commands.length;
+   await toDeck.click();
+   assert.equal(commands.length,beforeMove+1);
+   assert.equal(commands.at(-1).cmd,'view_to_deck');
+   assert.ok(Number(commands.at(-1).query.card_id)>0);
    // All View pages remain reachable without scrolling, including on a short desktop.
    for (const height of [900,450]) {
     await page.setViewportSize({width,height});

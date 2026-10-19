@@ -170,7 +170,6 @@ final class ViewScreen
             }
         }
 
-        $previewHtml = $ui->actions($actions);
         // Legacy system decks may not yet have instances or entries in the render catalog.
         $panelCatalog = $cardsInfo;
         if (!$usesRuntimeDeck && $me->deckId) {
@@ -179,6 +178,9 @@ final class ViewScreen
             }
         }
         $panelHtml = $ui->information($selectedCard, $panelCatalog);
+        if ($panelHtml !== '' && $actions !== []) {
+            $panelHtml .= '<div class="pregame-card-actions" data-view-card-actions>' . $ui->actions($actions) . '</div>';
+        }
         $panelSummary = '<section class="pregame-pool-stats" aria-label="Статистика колоды">'
             . '<div class="pregame-pool-totals"><button type="button" class="pregame-view-zone" data-view-zone="deck" aria-pressed="true">Колода: <b>' . $deckCount . '</b></button> · '
             . '<button type="button" class="pregame-view-zone" data-view-zone="sideboard" aria-pressed="false">Сайдборд: <b>' . $sideboardCount . '</b></button>'
@@ -202,7 +204,7 @@ final class ViewScreen
                 'bottom_panel_html' => '',
                 'panel_summary_html' => $panelSummary,
                 'panel_actions_html' => '<div class="pregame-view-confirm">' . $confirmHtml . '</div>',
-                'preview_html'  => $previewHtml,
+                'preview_html'  => '',
                 'panel_html'    => $panelHtml,
                 'confirm_html'  => $confirmHtml,
                 'message'       => $message ?? '',

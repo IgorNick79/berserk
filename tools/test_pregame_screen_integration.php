@@ -166,7 +166,7 @@ namespace {
         integrationAssert($xp->query('//main//h1')->length===0,'No duplicate stage heading '.$stage);
         $solomonPanel = $stage === 'draft' && $state->settings->isSolomonDraft();
         integrationAssert($xp->query('//aside//form')->length === (($stage === 'draft' && $state->draft['turn'] === $role) || ($stage === 'side' && $state->firstPlayer === $role) || ($stage === 'deal' && $variant === 'pending') ? 1 : 0), 'Draft decisions in footer only');
-        integrationAssert($xp->query('//aside//*[contains(@class,"pregame-panel-content")]//a[contains(@href,"cmd=")][not(ancestor::*[@data-deal-actions])][not(ancestor::*[contains(@class,"pregame-place-actions")])][not(ancestor::*[contains(@class,"card-choice")])]')->length===0,'No command links in information');
+        integrationAssert($xp->query('//aside//*[contains(@class,"pregame-panel-content")]//a[contains(@href,"cmd=")][not(ancestor::*[@data-deal-actions])][not(ancestor::*[@data-view-card-actions])][not(ancestor::*[contains(@class,"pregame-place-actions")])][not(ancestor::*[contains(@class,"card-choice")])]')->length===0,'No command links in information');
         if ($stage === 'place') {
             integrationAssert($xp->query('//main//*[contains(@class,"place-squad")]|//main//*[contains(@class,"prepare-bottom-bar")]')->length === 0, 'Placement list and footer leave Main');
             integrationAssert($xp->query('//main//*[contains(@class,"pregame-place-row-number")]')->length === 3, 'Three viewer-relative row labels');
@@ -202,6 +202,8 @@ namespace {
             integrationAssert($xp->query('//main//*[contains(@class,"prepare-bottom-bar")]')->length === 0, 'View has no Main bottom bar');
             integrationAssert($xp->query('//main//*[@data-view-pagination]')->length === 1, 'View page navigation');
             integrationAssert($xp->query('//main//a[contains(@href,"cmd=confirm_view")]')->length === 0, 'View confirm is not in Main');
+            integrationAssert($xp->query('//main//a[contains(@href,"cmd=view_to_")]')->length === 0, 'View card actions are not in Main');
+            integrationAssert($xp->query('//aside//*[@data-view-card-actions]//a')->length === (in_array($variant,['empty','waiting','denied','system'],true) ? 0 : 1), 'View moves belong to card actions');
             if ($variant !== 'empty') {
                 integrationAssert($xp->query('//aside//button[contains(@class,"pregame-pool-stat")]')->length === 8, 'View currency and element hints');
                 integrationAssert($xp->query('//footer//a[contains(@href,"cmd=confirm_view")]')->length === ($variant === 'waiting' ? 0 : 1), 'View confirmation in footer');
@@ -219,6 +221,7 @@ namespace {
             integrationAssert($xp->query('//main//*[@class="pregame-grid-row-number"]')->length === 3, 'Grid row coordinates');
             integrationAssert($xp->query('//main//*[@class="pregame-grid-columns"]/span')->length === 6, 'Grid column coordinates above and below');
             integrationAssert($xp->query('//main//*[@data-command="finish_draft"]')->length === 0, 'Finish is outside the mat');
+            integrationAssert($xp->query('//aside//a[@data-grid-finish and contains(@onclick,"window.confirm")]')->length === ($active && str_contains($variant,'finish') ? 1 : 0), 'Finish uses native confirmation directly');
             integrationAssert($xp->query('//aside//*[@class="pregame-grid-finish"]')->length === ($active && str_contains($variant,'finish') ? 1 : 0), 'Wide finish appears only when allowed');
             integrationAssert($xp->query('//main//*[@data-grid-position]')->length === 9, 'Grid keeps nine cells');
             integrationAssert($xp->query('//main//a[contains(@href,"cmd=")]')->length === 0, 'Grid controls do not submit commands');
