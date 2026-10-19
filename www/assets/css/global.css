@@ -2144,7 +2144,7 @@ body.battle-page {
 .battle-page .panel-card-media .panel-card-preview { height: 100%; }
 .battle-page .panel-card-media .panel-card-preview img { height: 100%; object-fit: contain; }
 .panel-card-heading-icons { display: flex; flex: 0 1 auto; max-width: 55%; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
-.panel-ability { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 12px; }
+.panel-ability { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
 .panel-ability[hidden] { display: none; }
 .panel-ability-icon { display: block; width: 20px; height: 20px; object-fit: contain; }
 .battle-page .panel-card-stats { flex-wrap: nowrap; align-items: flex-start; gap: 8px; }
