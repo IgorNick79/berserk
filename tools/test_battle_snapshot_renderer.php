@@ -140,7 +140,7 @@ $snapshot = $renderer->render(
 );
 
 battleSnapshotAssert(
-    $snapshot['ui'] === ['sel' => 1, 'mode' => 'action:aimed_shot', 'pile' => 'own_grave', 'mode_explicit' => true],
+    $snapshot['ui'] === ['sel' => 0, 'mode' => 'strike', 'pile' => 'own_grave', 'mode_explicit' => false],
     'Explicit UI state should override $_GET and be returned as normalized UI state.'
 );
 
@@ -152,12 +152,12 @@ foreach (['field_html', 'fly_zones_html', 'panel_html', 'piles_html', 'pile_reve
 }
 
 battleSnapshotAssert(
-    str_contains($snapshot['fragments']['panel_html'], 'Свой'),
-    'Selected own card should render in the panel.'
+    $snapshot['fragments']['panel_html'] === '',
+    'Opening a pile closes the previously selected field card.'
 );
 battleSnapshotAssert(
-    str_contains($snapshot['fragments']['pile_reveal_html'], 'Погибший'),
-    'Valid pile UI state should render pile reveal content.'
+    $snapshot['fragments']['pile_reveal_html'] === '' && str_contains($snapshot['fragments']['info_panel_html'], 'Погибший'),
+    'Pile content belongs to InfoPanel, not below the field.'
 );
 
 $inactive = battleSnapshotState();

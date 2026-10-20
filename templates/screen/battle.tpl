@@ -25,5 +25,5 @@
     <aside class="info-panel" data-battle-fragment="info_panel_html" aria-label="Информация о бое и действия">{{info_panel_html}}</aside>
 </div>
 <script src="/assets/js/cell-marker-picker.js?v=1" defer></script>
-<script src="/assets/js/battle-ui.js?v=9" defer></script>
+<script src="/assets/js/battle-ui.js?v=10" defer></script>
 <script src="/assets/js/card-image-popup.js?v=1" defer></script>

@@ -182,5 +182,49 @@
         new MutationObserver(syncCombatPanel).observe(combatHost, {childList: true, subtree: true});
         syncCombatPanel();
     }
+    // Pile pages are local presentation state; snapshots must not reset the page.
+    var pilePanel = null, pileResize = null, pilePages = {}, paintPile = function () {};
+    function mountPilePager() {
+        var next = combatHost && combatHost.querySelector('[data-pile-list]');
+        if (next === pilePanel) return;
+        if (pileResize) pileResize.disconnect();
+        pilePanel = next;
+        if (!next || next.hidden) { paintPile = function () {}; return; }
+        var grid = next.querySelector('[data-pile-grid]'), nav = next.querySelector('[data-pile-pagination]');
+        var entries = Array.from(grid.children), key = next.dataset.pileList;
+        paintPile = function () {
+            if (!next.isConnected || !grid.clientWidth || !grid.clientHeight) return;
+            var restoreFocus = nav.contains(document.activeElement);
+            entries.forEach(function (entry) { entry.hidden = false; });
+            var columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+            var gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
+            var height = entries.reduce(function (value, entry) { return Math.max(value, entry.getBoundingClientRect().height); }, 1);
+            var capacity = Math.max(1, Math.floor((grid.clientHeight + gap) / (height + gap))) * columns;
+            var pages = Math.max(1, Math.ceil(entries.length / capacity));
+            var page = Math.min(pilePages[key] || 0, pages - 1); pilePages[key] = page;
+            entries.forEach(function (entry, index) { entry.hidden = Math.floor(index / capacity) !== page; });
+            nav.replaceChildren();
+            if (pages > 1) {
+                for (var i = 0; i < pages; i++) {
+                    if (pages > 7 && i !== 0 && i !== pages - 1 && Math.abs(i - page) > 1) continue;
+                    var chip = document.createElement('button'); chip.type = 'button'; chip.dataset.pilePage = String(i);
+                    chip.setAttribute('aria-label', 'Страница ' + (i + 1) + ' из ' + pages);
+                    chip.setAttribute('aria-current', i === page ? 'page' : 'false'); chip.innerHTML = '<span></span>';
+                    nav.appendChild(chip);
+                }
+            }
+            if (restoreFocus) {
+                var active = nav.querySelector('[aria-current="page"]'); if (active) active.focus({preventScroll:true});
+            }
+        };
+        nav.addEventListener('click', function (event) {
+            var chip = event.target.closest('[data-pile-page]'); if (!chip) return;
+            pilePages[key] = Number(chip.dataset.pilePage); paintPile();
+        });
+        if (window.ResizeObserver) { pileResize = new ResizeObserver(paintPile); pileResize.observe(grid); }
+        requestAnimationFrame(paintPile);
+    }
+    if (combatHost) { new MutationObserver(mountPilePager).observe(combatHost, {childList:true}); mountPilePager(); }
+    window.addEventListener('resize', function () { paintPile(); });
     root.dataset.battleUiReady = "true";
 }());

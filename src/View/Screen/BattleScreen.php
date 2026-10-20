@@ -36,6 +36,7 @@ final class BattleScreen
         $isHost    = ($playerKey === 'host');
         $isActive  = ($state->battle['active'] === $playerKey);
         $strike    = $state->battle['strike'] ?? null;
+        $instantContext = !empty($state->battle['turn_instant_stack']) || !empty($state->battle['turn_instant_result']);
 
         $pendingAnyDeath = $state->battle['pending_any_death'][0] ?? null;
         $ui = $this->normalizeUiState($state, $playerKey, $uiState);
@@ -54,9 +55,9 @@ final class BattleScreen
         // Возможные ходы/прыжки
         $moveCells = [];
         $jumpCells = [];
-        if ($selectedCardId > 0 && $isActive && !$strike) {
+        if ($selectedCardId > 0 && $isActive && !$strike && !$instantContext) {
             $c = $state->getCard($selectedCardId);
-            if ($c && $c->owner === $playerKey) {
+            if ($c && $c->owner === $playerKey && in_array($c->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) {
                 $moveCells = BattleHelper::getMoveCells($state, $c);
                 $jumpCells = BattleHelper::getJumpCells($state, $c);
             }
@@ -67,9 +68,9 @@ final class BattleScreen
         $mode = $ui['mode'];
 
         $attackTargets = [];
-        if ($selectedCardId > 0 && $isActive && !$strike) {
+        if ($selectedCardId > 0 && $isActive && !$strike && !$instantContext) {
             $c = $state->getCard($selectedCardId);
-            if ($c && $c->owner === $playerKey) {
+            if ($c && $c->owner === $playerKey && in_array($c->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) {
                 $attackTargets = BattleHelper::getAttackTargets($state, $c, $mode, $playerKey, $explicitAttackMode);
             }
         }
@@ -110,7 +111,18 @@ final class BattleScreen
             $baseUrl, $mode, $isActive, $strike, $attackTargets, $explicitAttackMode
         );
         
-        $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml);
+        $pilePanelHtml = '';
+        $pileRevealHtml = '';
+        $instantPanel = $instantContext;
+        if ($ui['pile'] !== '' && !\Berserk\Core\MatchPause::blocking($state)) {
+            if ($strike) {
+                // Keep the existing combat/pile interaction until its UX is decided.
+                $pileRevealHtml = $this->buildLegacyPileReveal($state, $playerKey, $oppKey, $cardsInfo, $ui['pile']);
+            } elseif (!$instantPanel) {
+                $pilePanelHtml = $this->buildPilePanel($state, $playerKey, $oppKey, $cardsInfo, $ui['pile'], $baseUrl, $selectedCardId);
+            }
+        }
+        $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml, $pilePanelHtml);
 
         $debugHtml = '';
         if (!\Berserk\Core\MatchPause::blocking($state) && isset($_SESSION['debug']) && $_SESSION['debug'] == '1') {
@@ -121,10 +133,6 @@ final class BattleScreen
         $infoPanelHtml .= '<aside id="battle-debug" class="battle-debug-overlay" aria-label="Отладка боя" hidden>'
             . '<div class="battle-debug-toolbar"><button type="button" class="battle-window-close" data-menu-debug-close aria-label="Закрыть окно отладки">×</button></div>'
             . $debugHtml . '</aside>';
-        $pileRevealHtml = '';
-        if ($ui['pile'] !== '') {
-            $pileRevealHtml = $this->buildPileReveal($state, $playerKey, $oppKey, $cardsInfo, $ui['pile']);
-        }
 
         return [
             'screen' => 'battle',
@@ -166,10 +174,11 @@ final class BattleScreen
     ): array {
         $source = $uiState ?? $_GET;
 
+        $pile = $this->normalizePile((string) ($source['pile'] ?? ''));
         $selectedCardId = (int) ($source['sel'] ?? 0);
         if ($selectedCardId > 0) {
             $card = $state->getCard($selectedCardId);
-            if (!$card || !$this->isSelectableBattleCard($card, $playerKey)) {
+            if (!$card || (!$this->isSelectableBattleCard($card, $playerKey) && !$this->isPileCard($card, $playerKey, $pile))) {
                 $selectedCardId = 0;
             }
         }
@@ -182,7 +191,12 @@ final class BattleScreen
             $modeExplicit = false;
         }
 
-        $pile = $this->normalizePile((string) ($source['pile'] ?? ''));
+        if ($pile !== '' && empty($state->battle['strike']) && $selectedCardId > 0
+            && !$this->isPileCard($state->getCard($selectedCardId), $playerKey, $pile)) {
+            $selectedCardId = 0;
+            $mode = 'strike';
+            $modeExplicit = false;
+        }
 
         return [
             'sel' => $selectedCardId,
@@ -190,6 +204,14 @@ final class BattleScreen
             'pile' => $pile,
             'mode_explicit' => $modeExplicit,
         ];
+    }
+
+    private function isPileCard(CardInstance $card, string $viewer, string $pile): bool
+    {
+        if ($pile === '') return false;
+        [$who, $source] = explode('_', $pile, 2);
+        return $card->owner === ($who === 'own' ? $viewer : ($viewer === 'host' ? 'player' : 'host'))
+            && $card->zone === ($source === 'grave' ? CardInstance::ZONE_GRAVEYARD : CardInstance::ZONE_EXILE);
     }
 
     private function isSelectableBattleCard(CardInstance $card, string $playerKey): bool
@@ -802,7 +824,7 @@ final class BattleScreen
         // Кнопки режимов
         $modeButtons = '';
         $closedButtonShown = false;
-        if ($isActive && !$strike && $c->owner === $playerKey) {
+        if ($isActive && !$strike && $c->owner === $playerKey && in_array($c->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) {
             if (CardStats::isDisabled($c)) {
                 $reason = CardStats::disabledReason($c);
                 $closedButtonShown = $c->closed;
@@ -1029,7 +1051,7 @@ final class BattleScreen
             }
         } elseif (isset($c->markers['spider_web'])) {
             $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта находится в сети']);
-        } elseif ($isActive && !$strike && $c->owner === $playerKey) {
+        } elseif ($isActive && !$strike && $c->owner === $playerKey && in_array($c->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) {
             if (empty($attackTargets)) {
                 $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Нет целей']);
             } else {
@@ -1149,8 +1171,15 @@ final class BattleScreen
         }
 
         // While combat is pending this card is informational only.
-        if ($strike) {
+        if ($strike || !empty($state->battle['turn_instant_stack']) || !empty($state->battle['turn_instant_result'])) {
             $modeButtons = '<button type="button" class="button small cancel" data-combat-back>Закрыть</button>';
+            $statusHtml = '';
+        }
+
+        if (in_array($c->zone, [CardInstance::ZONE_GRAVEYARD, CardInstance::ZONE_EXILE], true)) {
+            $who = $c->owner === $playerKey ? 'own' : 'opp';
+            $source = $c->zone === CardInstance::ZONE_GRAVEYARD ? 'grave' : 'exile';
+            $modeButtons = '<a class="button small cancel" href="' . htmlspecialchars($baseUrl . '&pile=' . $who . '_' . $source, ENT_QUOTES) . '">К списку</a>';
             $statusHtml = '';
         }
 
@@ -1366,7 +1395,40 @@ final class BattleScreen
         return '<p class="wait">Ход оппонента</p>';
     }
 
-    private function buildPileReveal(
+    private function buildPilePanel(GameState $state, string $viewer, string $opponent, array $catalog,
+        string $pile, string $baseUrl, int $selected): string
+    {
+        [$who, $source] = explode('_', $pile, 2);
+        $owner = $who === 'own' ? $viewer : $opponent;
+        $zone = $source === 'grave' ? CardInstance::ZONE_GRAVEYARD : CardInstance::ZONE_EXILE;
+        $cards = array_filter($state->cards, static fn(CardInstance $card): bool => $card->owner === $owner && $card->zone === $zone);
+        $title = ($source === 'grave' ? 'Кладбище' : 'Изгнание') . ($who === 'own' ? ' · Ваше' : ' · Соперника') . ' (' . count($cards) . ')';
+        $cardSelected = isset($cards[$selected]);
+        $html = '<section class="battle-pile-panel" data-pile-list="' . $pile . '"' . ($cardSelected ? ' hidden' : '') . '>'
+            . '<div class="battle-pile-heading"><h3>' . $title . '</h3><a class="battle-window-close" href="' . htmlspecialchars($baseUrl, ENT_QUOTES) . '" aria-label="Закрыть список">×</a></div>';
+        $html .= '<div class="battle-pile-grid" data-pile-grid>';
+        $ui = new \Berserk\View\Ui\PrepareUi($this->tpl);
+        foreach ($cards as $card) {
+            $info = $catalog[$card->ukid] ?? ['name' => $card->ukid];
+            $url = $baseUrl . '&pile=' . $pile . '&sel=' . $card->instanceId;
+            $html .= '<div class="battle-pile-entry">' . $ui->card(['ukid'=>$card->ukid, 'instance_id'=>$card->instanceId,
+                'info'=>$info, 'link'=>$url, 'class'=>'card-link battle-pile-card']);
+            $labels = [];
+            if (!empty($card->flags['incarnation_ready'])) $labels[] = 'Инкарнация: готов';
+            elseif (isset($card->markers['incarnation'])) {
+                $marker = $card->markers['incarnation'];
+                $labels[] = 'Инкарнация: ' . ($marker['value'] ?? 0) . '/' . ($marker['threshold'] ?? '?');
+            }
+            if (!empty($card->flags['valhalla_active']) || isset($card->markers['valhalla'])) $labels[] = 'Вальхалла';
+            foreach ($labels as $label) $html .= '<span class="pile-marker">' . htmlspecialchars($label, ENT_QUOTES) . '</span>';
+            $html .= '</div>';
+        }
+        $html .= '</div>';
+        if ($cards === []) $html .= '<p class="wait">Пусто</p>';
+        return $html . '<nav class="battle-pile-pagination" data-pile-pagination aria-label="Страницы списка"></nav></section>';
+    }
+
+    private function buildLegacyPileReveal(
         GameState $state,
         string $playerKey,
         string $oppKey,
