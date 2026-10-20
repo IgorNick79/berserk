@@ -2285,10 +2285,10 @@ body.battle-page {
 .battle-pile-panel[hidden], .battle-pile-entry[hidden] { display: none !important; }
 .info-panel-content:has(> .battle-pile-panel:not([hidden])) { display: flex; flex-direction: column; overflow: hidden; }
 .battle-pile-panel { display: flex; flex: 1 1 0; flex-direction: column; min-height: 0; padding: 10px; gap: 8px; }
-.battle-pile-heading { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex: 0 0 auto; }
+.battle-pile-heading { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex: 0 0 auto; margin: -10px -10px 0; padding: 8px 10px; background: #f1eee8; border-bottom: 1px solid #d8d0c3; }
 .battle-pile-heading h3 { margin: 0; font-size: 16px; line-height: 1.3; }
 .battle-pile-heading a { text-decoration: none; }
-.battle-pile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr)); gap: 8px; align-content: start; grid-auto-rows: max-content; flex: 1 1 0; min-height: 0; overflow: hidden; }
+.battle-pile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-content: start; grid-auto-rows: max-content; flex: 1 1 0; min-height: 0; overflow: hidden; }
 .battle-pile-entry { display: flex; flex-direction: column; min-width: 0; gap: 4px; }
 .battle-pile-card { display: flex; width: 100%; cursor: pointer; }
 .battle-pile-card .prepare-card { display: flex; flex-direction: column; width: 100%; min-width: 0; margin: 0; padding: 8px; overflow-wrap: anywhere; }
@@ -2299,3 +2299,14 @@ body.battle-page {
 .battle-pile-pagination button span { width: 14px; height: 14px; border-radius: 50%; background: #d8d0c3; border: 1px solid #766848; }
 .battle-pile-pagination button[aria-current="page"] span { background: #917137; box-shadow: 0 0 0 2px #fff4d6; }
 .info-panel-content:has(> .battle-pile-panel:not([hidden])) > .info-panel-context { flex: 0 1 auto; max-height: 45%; overflow: auto; }
+
+.battle-icon-control.battle-pile-close { flex-basis: 32px; width: 32px; height: 32px; }
+.battle-icon-control.battle-pile-close img { width: 32px; height: 32px; }
+.battle-pile-close .battle-icon-tooltip { top: calc(100% + 6px); bottom: auto; left: auto; right: 0; transform: translateY(-4px); }
+.battle-pile-close:hover .battle-icon-tooltip, .battle-pile-close:focus-visible .battle-icon-tooltip { transform: translateY(0); }
+@media (max-width: 600px) {
+    .battle-pile-grid { gap: 5px; }
+    .battle-pile-card .prepare-card { padding: 5px; }
+    .battle-pile-card .prepare-card__name { font-size: 11px; line-height: 1.2; }
+    .battle-pile-card .prepare-card__element, .battle-pile-card .prepare-card__stats, .battle-pile-card .prepare-card__price { font-size: 10px; }
+}

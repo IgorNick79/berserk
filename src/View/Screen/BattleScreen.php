@@ -1405,7 +1405,7 @@ final class BattleScreen
         $title = ($source === 'grave' ? 'Кладбище' : 'Изгнание') . ($who === 'own' ? ' · Ваше' : ' · Соперника') . ' (' . count($cards) . ')';
         $cardSelected = isset($cards[$selected]);
         $html = '<section class="battle-pile-panel" data-pile-list="' . $pile . '"' . ($cardSelected ? ' hidden' : '') . '>'
-            . '<div class="battle-pile-heading"><h3>' . $title . '</h3><a class="battle-window-close" href="' . htmlspecialchars($baseUrl, ENT_QUOTES) . '" aria-label="Закрыть список">×</a></div>';
+            . '<div class="battle-pile-heading"><h3>' . $title . '</h3><a class="battle-icon-control battle-pile-close" href="' . htmlspecialchars($baseUrl . '&pile=', ENT_QUOTES) . '" aria-label="Закрыть" title="Закрыть"><img src="/assets/images/battle/close.png" alt="" width="32" height="32"><span class="battle-icon-tooltip" aria-hidden="true">Закрыть</span></a></div>';
         $html .= '<div class="battle-pile-grid" data-pile-grid>';
         $ui = new \Berserk\View\Ui\PrepareUi($this->tpl);
         foreach ($cards as $card) {

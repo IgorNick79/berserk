@@ -11,8 +11,8 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
  await page.setContent('<style>'+read('www/assets/css/global.css')+'</style>'+html);
  await page.evaluate(()=>{document.documentElement.classList.add('battle-page');document.body.classList.add('battle-page');window.uiRequests=[];window.fetch=(url,options)=>{uiRequests.push({url:String(url),body:options?.body||''});return new Promise(()=>{});};});
  await page.addScriptTag({content:read('www/assets/js/battle-ui.js')});
- let sync=read('www/assets/js/battle-sync.js'),last=sync.lastIndexOf('    requestSnapshot(false);');sync=sync.slice(0,last)+'    window.testSnapshot = data => applySnapshot(data, uiRevision);'+sync.slice(last+'    requestSnapshot(false);'.length);
- await page.addScriptTag({content:sync.replace('var syncUrl = script.dataset.syncUrl || "";','var syncUrl = "https://piles.test/";')});
+ let sync=read('www/assets/js/battle-sync.js'),last=sync.lastIndexOf('    requestSnapshot(false);');sync=sync.slice(0,last)+'    window.testSnapshot = data => applySnapshot(data, uiRevision); window.testUiUrl = () => buildUrl(true).toString();'+sync.slice(last+'    requestSnapshot(false);'.length);
+ await page.addScriptTag({content:sync.replace('var syncUrl = script.dataset.syncUrl || "";','var syncUrl = "https://piles.test/?ajax=battle_sync";')});
  let version=0;
  async function update(stage,selection=0,pile='own_grave') {const data=fixture(stage,viewer,selection,pile);await page.evaluate(({d,v})=>{const fragments={};for(const key of ['field_html','fly_zones_html','panel_html','piles_html','pile_reveal_html','info_panel_html'])fragments[key]=d[key]||'';if(!testSnapshot({sync_version:v,fragments,ui:d.ui}))throw Error('Snapshot rejected');},{d:data,v:++version});await page.waitForTimeout(80);}
  for(const pile of ['own_grave','own_exile','opp_grave','opp_exile']){
@@ -21,6 +21,10 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
   ok(await page.locator('[data-battle-fragment="pile_reveal_html"]').innerHTML()==='','No pile below board');
   ok(await page.locator('.battle-selected-card').innerHTML()==='','Old card closed');
   const metrics=await page.locator('[data-pile-grid]').evaluate(grid=>({height:grid.clientHeight,scroll:grid.scrollHeight,rect:grid.getBoundingClientRect().toJSON(),items:Array.from(grid.children).filter(x=>!x.hidden).map(x=>x.getBoundingClientRect().toJSON())}));
+  ok(await page.locator('[data-pile-grid]').evaluate(grid=>getComputedStyle(grid).gridTemplateColumns.split(' ').length===2),'Exactly two card columns '+width);
+  ok(await page.locator('.battle-pile-heading').evaluate(el=>getComputedStyle(el).backgroundColor==='rgb(241, 238, 232)'),'Heading background');
+  ok(await page.locator('.battle-pile-close img').getAttribute('src')==='/assets/images/battle/close.png','Provided close image');
+  ok(await page.locator('.battle-pile-close').getAttribute('title')==='Закрыть','Close hint');
   ok(metrics.items.length>0&&metrics.items.every(x=>x.bottom<=metrics.rect.bottom+1),'Cards fit without clipped rows '+width+JSON.stringify(metrics));
   ok(await page.locator('[data-pile-pagination] button').count()>1,'Long list has chips');
   const beforeIds=await page.locator('.battle-pile-entry:not([hidden]) .prepare-card-link').evaluateAll(nodes=>nodes.map(x=>x.dataset.instanceId));
@@ -31,6 +35,14 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
   ok(await page.locator('.battle-selected-card').isVisible()&&await page.locator('[data-pile-list]').isHidden(),'Tile opens selected card');
   await page.locator('.battle-selected-card a:has-text("К списку")').click();await update('pile',0,pile);
   ok(await page.locator('[data-pile-list]').isVisible(),'Back restores list');
+  await page.evaluate(()=>{window.__pileNoReload=true;});
+  await page.locator('.battle-pile-close').hover();
+  await page.locator('.battle-pile-close .battle-icon-tooltip').waitFor({state:'visible'});
+  ok(await page.locator('.battle-pile-close .battle-icon-tooltip').isVisible(),'Close tooltip visible');
+  await page.locator('.battle-pile-close').click();await page.waitForTimeout(40);
+  ok(await page.evaluate(()=>window.__pileNoReload===true),'Closing does not reload the document');
+  ok(await page.evaluate(()=>{const url=new URL(testUiUrl());return url.searchParams.get('ajax')==='battle_sync'&&url.searchParams.get('pile')==='';}),'Close requests empty pile through AJAX');
+  await update('normal',0,'');ok(await page.locator('[data-pile-list]').count()===0,'Close removes list');
  }
  await update('tasks',0,'own_grave');ok(await page.locator('.info-panel-context a[href*="incarnation-task"]').isVisible(),'Incarnation available beside list');ok(await page.locator('.info-panel-context a[href*="valhalla-task"]').isVisible(),'Valhalla available beside list');
  await update('normal',1,'');ok(await page.locator('.battle-selected-card').isVisible(),'Card before stack visible');
