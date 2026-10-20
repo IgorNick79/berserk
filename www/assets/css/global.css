@@ -851,6 +851,22 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 .death-choice-buttons .button {
     margin: 3px;
 }
+.defender-radio-list .coords {
+    white-space: nowrap;
+}
+.defender-choice-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.death-choice-buttons.defender-choice-actions .button {
+    margin: 0;
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    padding: 8px;
+    font-size: 13px;
+    white-space: nowrap;
+}
 
 .field-cell.dying .battle-card {
     opacity: 0.4;

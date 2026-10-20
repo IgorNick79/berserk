@@ -509,6 +509,7 @@ final class InfoPanel
                         $options[] = [
                             'value' => 'mage:' . (int) $option['card_id'] . ':' . (int) $targetId,
                             'label' => $sourceName . ': ' . ($option['label'] ?? 'Перенаправить') . ' → ' . $targetName,
+                            'card_id' => (int) $targetId,
                             'class' => 'redirect-target',
                         ];
                     }
@@ -519,16 +520,12 @@ final class InfoPanel
                     $di = $cardsInfo[$dc->ukid] ?? [];
                     $options[] = [
                         'value' => 'defender:' . (int) $defId,
-                        'label' => $this->battleCardLabel($dc, $di, $playerKey),
+                        'label' => (string) ($di['name'] ?? $dc->ukid),
+                        'card_id' => (int) $defId,
                     ];
                 }
-                $options[] = [
-                    'value' => 'defender:0',
-                    'label' => 'Без защитника',
-                    'class' => 'skip',
-                ];
                 $contentHtml = $this->tpl->parse('includes/battle/strike_defender.tpl', [
-                    'buttons_html' => $this->renderDefenderRadioForm($options),
+                    'buttons_html' => $this->renderDefenderRadioForm($options, true),
                 ]);
             } else {
                 $contentHtml = '<p class="wait">Ожидание выбора защитника...</p>';
@@ -2198,35 +2195,33 @@ final class InfoPanel
     }
 
     /**
-     * @param array<int, array{value:string,label:string,class?:string}> $options
+     * @param array<int, array{value:string,label:string,class?:string,card_id?:int}> $options
      */
-    private function renderDefenderRadioForm(array $options): string
+    private function renderDefenderRadioForm(array $options, bool $skipDefender = false): string
     {
-        if (empty($options)) {
+        if (empty($options) && !$skipDefender) {
             return '';
         }
 
-        $items = [];
-        foreach ($options as $index => $option) {
-            $items[] = [
-                'value' => $option['value'],
-                'label' => $option['label'],
-                'checked' => $index === 0,
-                'class' => $option['class'] ?? '',
-            ];
-        }
-
         $body = '<div class="defender-radio-list">';
-        foreach ($items as $item) {
-            $body .= Form::radio('choice', $item['value'], $item['label'], [
-                'checked' => !empty($item['checked']),
-                'class' => (string) ($item['class'] ?? ''),
-            ]);
+        foreach ($options as $index => $option) {
+            $labelHtml = htmlspecialchars($option['label'], ENT_QUOTES);
+            $card = $this->state->getCard((int) ($option['card_id'] ?? 0));
+            if ($card !== null) {
+                $labelHtml .= ' ' . \Berserk\View\Ui\Coords::renderResult($card->row, $card->col, $this->playerKey);
+            }
+            $body .= '<label class="' . htmlspecialchars('choice-radio ' . ($option['class'] ?? ''), ENT_QUOTES) . '">'
+                . '<input type="radio" name="choice" value="' . htmlspecialchars($option['value'], ENT_QUOTES) . '"'
+                . ($index === 0 ? ' checked="checked"' : '') . '>'
+                . '<span>' . $labelHtml . '</span></label>';
         }
         $body .= '</div>'
-            . '<div class="death-choice-buttons">'
-            . Form::submit('Выбрать')
-            . '</div>';
+            . '<div class="death-choice-buttons' . ($skipDefender ? ' defender-choice-actions' : '') . '">';
+        if ($options !== []) $body .= Form::submit('Выбрать');
+        if ($skipDefender) {
+            $body .= Form::button('Пропустить', $this->baseUrl . '&cmd=choose_defender&defender_id=0', ['class' => 'skip']);
+        }
+        $body .= '</div>';
 
         return Form::form(
             Form::battleHidden($this->role, $this->state->gameId, 'choose_defender_option'),

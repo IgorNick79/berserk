@@ -7,7 +7,11 @@ require_once __DIR__ . '/../src/Core/Autoloader.php';
 
 use Berserk\Core\Autoloader;
 use Berserk\Core\CardInstance;
+use Berserk\Core\Command;
+use Berserk\Core\Dice;
+use Berserk\Core\Engine;
 use Berserk\Core\GameState;
+use Berserk\Core\StrikeResolver;
 use Berserk\View\Screen\BattleScreen;
 use Berserk\View\Template;
 
@@ -52,6 +56,7 @@ function defenderUiState(string $attackerOwner, array $defenders): GameState
             'state' => 'waiting_defender',
             'attacker_id' => 1,
             'target_id' => 2,
+            'defender_id' => null,
             'defenders' => array_map(static fn(CardInstance $c): int => $c->instanceId, $defenders),
         ],
     ];
@@ -85,6 +90,16 @@ $cardsInfo = [
     'redirect_ally' => ['name' => 'Новая цель'],
 ];
 
+if (($argv[1] ?? '') === '--fixture') {
+    $viewer = ($argv[2] ?? 'player') === 'host' ? 'host' : 'player';
+    $state = defenderUiState($viewer === 'host' ? 'player' : 'host', [
+        defenderUiCard(3, 'def_a', $viewer, $viewer === 'host' ? 2 : 4, 2),
+        defenderUiCard(4, 'def_b', $viewer, $viewer === 'host' ? 1 : 5, 4),
+    ]);
+    echo json_encode(defenderUiRender($state, $viewer, $viewer, $cardsInfo), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $playerState = defenderUiState(GameState::PLAYER_HOST, [
     defenderUiCard(3, 'def_a', GameState::PLAYER_PLAYER, 3, 2),
     defenderUiCard(4, 'def_b', GameState::PLAYER_PLAYER, 4, 4),
@@ -93,15 +108,15 @@ $playerState = defenderUiState(GameState::PLAYER_HOST, [
 $playerHtml = defenderUiRender($playerState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 
 defenderUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Защитник A Вражеский [1:4]'),
-    'Defender label should use side-relative row and viewer-relative column.'
+    str_contains($playerHtml['info_panel_html'], 'Защитник A <span class="coords coords--enemy"># [I:4]</span>'),
+    'Defender label should use colored Roman rows and viewer-relative column.'
 );
 defenderUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Защитник B Свой [1:2]'),
+    str_contains($playerHtml['info_panel_html'], 'Защитник B <span class="coords coords--own"># [I:2]</span>'),
     'Second defender should use player-relative coordinates.'
 );
 defenderUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Защитник C Свой [3:1]'),
+    str_contains($playerHtml['info_panel_html'], 'Защитник C <span class="coords coords--own"># [III:1]</span>'),
     'Third defender should use player-relative coordinates.'
 );
 defenderUiAssert(
@@ -119,7 +134,7 @@ $hostState = defenderUiState(GameState::PLAYER_PLAYER, [
 $hostHtml = defenderUiRender($hostState, GameState::PLAYER_HOST, 'host', $cardsInfo);
 
 defenderUiAssert(
-    str_contains($hostHtml['info_panel_html'], 'Защитник A Свой [2:5]'),
+    str_contains($hostHtml['info_panel_html'], 'Защитник A <span class="coords coords--own"># [II:5]</span>'),
     'Host defender label should use game row and host column.'
 );
 defenderUiAssert(
@@ -134,8 +149,8 @@ $twoDefenderState = defenderUiState(GameState::PLAYER_HOST, [
 $twoDefenderHtml = defenderUiRender($twoDefenderState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 
 defenderUiAssert(
-    substr_count($twoDefenderHtml['info_panel_html'], 'name="choice"') === 3,
-    'Two defender radio options plus skip should be rendered in pending panel.'
+    substr_count($twoDefenderHtml['info_panel_html'], 'name="choice"') === 2,
+    'Only creature options should be radios; skip is a separate button.'
 );
 defenderUiAssert(
     str_contains($twoDefenderHtml['info_panel_html'], 'name="cmd" value="choose_defender_option"'),
@@ -147,9 +162,36 @@ defenderUiAssert(
     'Defender radio options should encode defender ids.'
 );
 defenderUiAssert(
-    str_contains($twoDefenderHtml['info_panel_html'], 'Без защитника'),
-    'Skip defender button should remain available.'
+    str_contains($twoDefenderHtml['info_panel_html'], 'cmd=choose_defender&amp;defender_id=0" class="button skip">Пропустить</a>')
+        && !str_contains($twoDefenderHtml['info_panel_html'], 'value="defender:0"'),
+    'Skip should immediately use the existing server command without a radio selection.'
 );
+
+foreach (['host', 'player'] as $viewer) {
+    $emptyState = defenderUiState($viewer === 'host' ? 'player' : 'host', []);
+    $emptyHtml = defenderUiRender($emptyState, $viewer, $viewer, $cardsInfo)['info_panel_html'];
+    defenderUiAssert(str_contains($emptyHtml, '>Пропустить</a>'), 'Skip is available even with no defenders.');
+    defenderUiAssert(!str_contains($emptyHtml, 'name="choice"') && !str_contains($emptyHtml, '>Выбрать</button>'), 'No empty radio form submission.');
+    $other = $emptyState->getOpponentKey($viewer);
+    $waitHtml = defenderUiRender($emptyState, $other, $other, $cardsInfo)['info_panel_html'];
+    defenderUiAssert(!str_contains($waitHtml, 'cmd=choose_defender'), 'Attacker cannot see a defender skip control.');
+}
+
+$unsafeInfo = $cardsInfo;
+$unsafeInfo['def_a']['name'] = '<script>alert("defender")</script>';
+$unsafeHtml = defenderUiRender($hostState, 'host', 'host', $unsafeInfo)['info_panel_html'];
+defenderUiAssert(str_contains($unsafeHtml, '&lt;script&gt;') && !str_contains($unsafeHtml, '<script>'), 'Card labels remain escaped while coordinates render as HTML.');
+
+foreach (['host', 'player'] as $viewer) {
+    $skipState = defenderUiState($viewer === 'host' ? 'player' : 'host', []);
+    $_SESSION = ['debug_roll' => '4,4'];
+    Dice::init();
+    $resolver = new StrikeResolver($skipState, new Engine());
+    $wrong = $resolver->chooseDefender($skipState->getOpponentKey($viewer), new Command('choose_defender', ['defender_id' => 0]));
+    defenderUiAssert(!$wrong->success && $skipState->battle['strike']['state'] === 'waiting_defender', 'Skip still enforces server ownership.');
+    $skip = $resolver->chooseDefender($viewer, new Command('choose_defender', ['defender_id' => 0]));
+    defenderUiAssert($skip->success && $skipState->battle['strike']['defender_id'] === null && $skipState->battle['strike']['state'] !== 'waiting_defender', 'Skip advances the original strike without assigning a defender.');
+}
 
 $mageState = defenderUiState(GameState::PLAYER_HOST, []);
 $mage = defenderUiCard(6, 'mage', GameState::PLAYER_PLAYER, 6, 4);
