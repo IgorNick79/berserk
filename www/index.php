@@ -1419,7 +1419,7 @@ if (in_array($screenName, ['battle','game_over'], true)) {
         'chat_role'=>$role === 'host' ? 'first' : 'second',
         'chat_csrf'=>htmlspecialchars($_SESSION['chat_csrf'],ENT_QUOTES),
     ]);
-    $scriptsHtml .= '<script src="/assets/js/battle-chat.js?v=3" defer></script>';
+    $scriptsHtml .= '<script src="/assets/js/battle-chat.js?v=4" defer></script>';
 }
 // Resolve the URL before passing the HTML slot to the single-pass template parser.
 $preGameResourceKey = $isPreGame
@@ -1433,7 +1433,7 @@ $page = $tpl->parse('page.tpl', [
     'screen'  => $screenHtml,
     'scripts' => $scriptsHtml,
     'page_class' => $screenName === 'battle' ? 'battle-page' : ($isPreGame ? 'pregame-page' : ''),
-    'page_styles' => in_array($screenName, ['battle','game_over'], true) ? '<link rel="stylesheet" href="/assets/css/battle-chat.css?v=3">' : ($isPreGame ? '<link rel="stylesheet" href="/assets/css/pregame.css?v=' . $preGameResourceKey . '">' : ''),
+    'page_styles' => in_array($screenName, ['battle','game_over'], true) ? '<link rel="stylesheet" href="/assets/css/battle-chat.css?v=4">' : ($isPreGame ? '<link rel="stylesheet" href="/assets/css/pregame.css?v=' . $preGameResourceKey . '">' : ''),
     // PreGame opts into a stable CSS version; battle keeps its existing rkey policy.
     'rkey' => $preGameResourceKey,
 ]);

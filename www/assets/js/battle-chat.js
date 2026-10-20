@@ -116,7 +116,19 @@
         else toggle.focus();
     }
     toggle.addEventListener('click',function(){open(panel.hidden);});
-    q('cancel').addEventListener('click',function(){open(false);});
+    q('close').addEventListener('click',function(){open(false);});
+    input.addEventListener('keydown',function(e){
+        if(e.key!=='Enter' || e.isComposing || e.keyCode===229) return;
+        e.preventDefault();
+        if(e.ctrlKey) {
+            if(!input.disabled && !input.readOnly) {
+                input.setRangeText('\n',input.selectionStart,input.selectionEnd,'end');
+                input.dispatchEvent(new Event('input',{bubbles:true}));
+            }
+        } else if(!e.shiftKey && !e.altKey && !e.metaKey && !e.repeat) {
+            q('form').requestSubmit();
+        }
+    });
     root.addEventListener('keydown',function(e){if(e.key==='Escape' && !panel.hidden){e.preventDefault();open(false);}});
     history.addEventListener('scroll',markRead);
     document.addEventListener('visibilitychange',function(){if(!document.hidden){markRead();schedule(0);}});
@@ -143,7 +155,7 @@
             else if(error.code==='rate_limited') status.textContent='Подождите секунду перед следующим сообщением.';
             else if(error.code==='message_too_long') status.textContent='Не более 1000 символов.';
             else if(error.code==='empty_message' || error.code==='invalid_message') status.textContent='Введите непустое текстовое сообщение.';
-            else status.textContent='Отправка не подтверждена. Нажмите «Отправить» для безопасного повтора.';
+            else status.textContent='Отправка не подтверждена. Нажмите Enter или кнопку со стрелкой для безопасного повтора.';
         }).finally(function(){sending=false;send.disabled=!writable;input.readOnly=false;input.disabled=!writable;});
     });
     window.addEventListener('beforeunload',function(){stopped=true;clearTimeout(timer);if(footerObserver) footerObserver.disconnect();});
