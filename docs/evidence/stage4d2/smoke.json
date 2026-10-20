@@ -1,0 +1,18 @@
+[
+  {
+    "path": "/journal-access.php",
+    "status": 404
+  },
+  {
+    "path": "/battle-journal.php?game=7",
+    "status": 404
+  },
+  {
+    "path": "/replay.php?game=7",
+    "status": 401
+  },
+  {
+    "test": "CLI issuance while OFF",
+    "result": "denied, no invitation file"
+  }
+]

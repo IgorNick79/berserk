@@ -1,0 +1,19 @@
+<?php
+// Reference only. Copy MANUALLY to config/battle_history.local.php after review.
+// Never commit the active local file. All switches OFF on upload.
+// Set to ONE real positive integer before placement; null keeps both allowlists empty.
+$testGameId = null;
+return [
+    'recording_enabled' => false,
+    'record_game_ids' => $testGameId === null ? [] : [$testGameId],
+    'journal_enabled' => false,
+    'journal_game_ids' => $testGameId === null ? [] : [$testGameId],
+    'journal_access_enabled' => false,
+    'journal_access_directory' => '', // existing absolute PRIVATE path outside checkout and every webroot
+    'journal_access_local_http' => false, // MUST remain false on production
+    'journal_test_bindings' => [], // no legacy static bindings
+    'preview_enabled' => false,
+    'preview_game_ids' => [],
+    'admin_user_ids' => [],
+    'catalog' => [], // verified frozen definitions keyed by actual card ukid; preserve approved catalog
+];
