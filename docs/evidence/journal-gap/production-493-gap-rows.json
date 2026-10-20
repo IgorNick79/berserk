@@ -1,0 +1,120 @@
+{
+  "source": "User supplied SELECT result; no production connection by agent",
+  "game_id": 493,
+  "rows": [
+    {
+      "event_seq": 1,
+      "command": "place_card",
+      "side": "host",
+      "reason": "uncovered_command:place_card"
+    },
+    {
+      "event_seq": 3,
+      "command": "place_card",
+      "side": "host",
+      "reason": "uncovered_command:place_card"
+    },
+    {
+      "event_seq": 5,
+      "command": "place_card",
+      "side": "host",
+      "reason": "uncovered_command:place_card"
+    },
+    {
+      "event_seq": 7,
+      "command": "place_card",
+      "side": "host",
+      "reason": "uncovered_command:place_card"
+    },
+    {
+      "event_seq": 9,
+      "command": "place_card",
+      "side": "player",
+      "reason": "uncovered_command:place_card"
+    },
+    {
+      "event_seq": 11,
+      "command": "place_card",
+      "side": "player",
+      "reason": "uncovered_command:place_card"
+    },
+    {
+      "event_seq": 13,
+      "command": "place_card",
+      "side": "player",
+      "reason": "uncovered_command:place_card"
+    },
+    {
+      "event_seq": 15,
+      "command": "place_card",
+      "side": "player",
+      "reason": "uncovered_command:place_card"
+    },
+    {
+      "event_seq": 19,
+      "command": "confirm_place",
+      "side": "player",
+      "reason": "uncertified_mechanic_or_display"
+    },
+    {
+      "event_seq": 24,
+      "command": "move",
+      "side": "host",
+      "reason": "uncertified_mechanic_or_display"
+    },
+    {
+      "event_seq": 29,
+      "command": "uchr",
+      "side": "host",
+      "reason": "uncertified_mechanic_or_display"
+    },
+    {
+      "event_seq": 34,
+      "command": "confirm_strike",
+      "side": "host",
+      "reason": "uncovered_command:confirm_strike"
+    },
+    {
+      "event_seq": 36,
+      "command": "confirm_strike",
+      "side": "player",
+      "reason": "uncertified_mechanic_or_display"
+    },
+    {
+      "event_seq": 39,
+      "command": "strike",
+      "side": "host",
+      "reason": "uncertified_mechanic_or_display"
+    },
+    {
+      "event_seq": 41,
+      "command": "choose_defender",
+      "side": "player",
+      "reason": "uncertified_mechanic_or_display"
+    },
+    {
+      "event_seq": 44,
+      "command": "combat_instant_pass",
+      "side": "host",
+      "reason": "uncertified_mechanic_or_display"
+    },
+    {
+      "event_seq": 48,
+      "command": "confirm_strike",
+      "side": "player",
+      "reason": "uncertified_mechanic_or_display"
+    },
+    {
+      "event_seq": 51,
+      "command": "end_turn",
+      "side": "host",
+      "reason": "uncertified_mechanic_or_display"
+    },
+    {
+      "event_seq": 57,
+      "command": "end_turn",
+      "side": "player",
+      "reason": "uncertified_mechanic_or_display"
+    }
+  ]
+}

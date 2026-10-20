@@ -5,7 +5,7 @@
     var url = script.dataset.journalUrl;
     var scroll = panel.querySelector("[data-journal-scroll]"), list = panel.querySelector("[data-journal-entries]");
     var notice = panel.querySelector("[data-journal-notice]"), status = panel.querySelector("[data-journal-state]");
-    var cursor = 0, busy = false, seen = new Set(), stopped = false;
+    var cursor = 0, busy = false, seen = new Set(), stopped = false, hasGaps = false;
 
     function place() {
         if (panel.hidden) return;
@@ -44,14 +44,15 @@
                 });
                 data.entries.forEach(function (entry) {
                     if (seen.has(entry.seq)) return;
+                    if (entry.kind === "gap") { hasGaps = true; seen.add(entry.seq); return; }
                     var item = document.createElement("li");
                     item.textContent = entry.text; item.dataset.eventSeq = String(entry.seq);
-                    if (entry.kind === "gap") item.className = "battle-journal-gap";
                     list.appendChild(item); seen.add(entry.seq);
                 });
                 cursor = data.cursor;
-                notice.textContent = data.recording.has_gaps
-                    ? "История неполная: есть незаписанные участки."
+                hasGaps = hasGaps || data.recording.has_gaps === true;
+                notice.textContent = hasGaps
+                    ? "История боя записана не полностью. Некоторые события могут отсутствовать"
                     : "Экспериментальная неполная история. Записываются только поддержанные события.";
                 status.textContent = !data.recording.available ? "Запись этого боя ещё не начата."
                     : (list.children.length ? "" : "Доступных для вас событий пока нет.");

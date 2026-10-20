@@ -1,0 +1,539 @@
+{
+    "checks": [
+        "PASS actual placement12 + two confirmations: 13 gaps with empty catalog, one visible turn",
+        "PASS actual move: owner projection visible, opponent hidden",
+        "PASS rejected duplicate move creates no events or gap",
+        "PASS actual ordinary strike, dice\/results\/ACK and end_turn",
+        "PASS unknown unrelated prop rejects snapshot but retains known movement event",
+        "PASS actual uchr + both ACK reproduce seq29\/34\/36 reason pattern without supported combat root",
+        "PASS uncovered technical command can coexist with text, observer preserves pending"
+    ],
+    "trace": [
+        {
+            "command": "place_card",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncovered_command:place_card",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncovered_command:place_card",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "place_card",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncovered_command:place_card",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncovered_command:place_card",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "place_card",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncovered_command:place_card",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncovered_command:place_card",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "place_card",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncovered_command:place_card",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncovered_command:place_card",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "place_card",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncovered_command:place_card",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncovered_command:place_card",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "place_card",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncovered_command:place_card",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncovered_command:place_card",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "place_card",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncovered_command:place_card",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncovered_command:place_card",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "place_card",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncovered_command:place_card",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncovered_command:place_card",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "place_card",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncovered_command:place_card",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncovered_command:place_card",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "place_card",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncovered_command:place_card",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncovered_command:place_card",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "place_card",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncovered_command:place_card",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncovered_command:place_card",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "place_card",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncovered_command:place_card",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncovered_command:place_card",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "confirm_place",
+            "events": [],
+            "captures": 0
+        },
+        {
+            "command": "confirm_place",
+            "events": [
+                {
+                    "type": "initial.started",
+                    "reason": null,
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "initial.settled",
+                    "reason": null,
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "journal_effect.started",
+                    "reason": null,
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "turn.started",
+                    "reason": null,
+                    "host": "Ход 1. Игрок 1.",
+                    "player": "Ход 1. Игрок 1."
+                },
+                {
+                    "type": "journal_effect.settled",
+                    "reason": null,
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 1
+        },
+        {
+            "command": "move",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "journal_effect.started",
+                    "reason": null,
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "move.started",
+                    "reason": null,
+                    "host": "Card 3 перемещается: 2:2 → 2:3.",
+                    "player": null
+                },
+                {
+                    "type": "journal_effect.settled",
+                    "reason": null,
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "strike",
+            "events": [
+                {
+                    "type": "combat.started",
+                    "reason": null,
+                    "host": "Card 1 атакует Card 2.",
+                    "player": "Card 1 атакует Card 2."
+                },
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "combat.dice",
+                    "reason": null,
+                    "host": "Бросок: атакующий 2, защитник без броска.",
+                    "player": "Бросок: атакующий 2, защитник без броска."
+                },
+                {
+                    "type": "combat.result",
+                    "reason": null,
+                    "host": "Итог атаки: слабый удар; ответ: промах.",
+                    "player": "Итог атаки: слабый удар; ответ: промах."
+                },
+                {
+                    "type": "combat.wounds",
+                    "reason": null,
+                    "host": "Card 2 получает 2 ран.",
+                    "player": "Card 2 получает 2 ран."
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "confirm_strike",
+            "events": [],
+            "captures": 0
+        },
+        {
+            "command": "confirm_strike",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "combat.settled",
+                    "reason": null,
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "end_turn",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "journal_effect.started",
+                    "reason": null,
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "turn.ended",
+                    "reason": null,
+                    "host": "Игрок 1 завершает ход 1.",
+                    "player": "Игрок 1 завершает ход 1."
+                },
+                {
+                    "type": "turn.started",
+                    "reason": null,
+                    "host": "Ход 1. Игрок 2.",
+                    "player": "Ход 1. Игрок 2."
+                },
+                {
+                    "type": "journal_effect.settled",
+                    "reason": null,
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "move",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "journal_effect.started",
+                    "reason": null,
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "move.started",
+                    "reason": null,
+                    "host": "Card 3 перемещается: 2:2 → 2:3.",
+                    "player": "Card 3 перемещается: 2:2 → 2:3."
+                },
+                {
+                    "type": "journal_effect.settled",
+                    "reason": null,
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "uchr",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "journal_effect.started",
+                    "reason": null,
+                    "host": null,
+                    "player": null
+                },
+                {
+                    "type": "combat.wounds",
+                    "reason": null,
+                    "host": "Card 2 получает 2 ран.",
+                    "player": "Card 2 получает 2 ран."
+                },
+                {
+                    "type": "journal_effect.settled",
+                    "reason": null,
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "confirm_strike",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncovered_command:confirm_strike",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncovered_command:confirm_strike",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        },
+        {
+            "command": "confirm_strike",
+            "events": [
+                {
+                    "type": "recording_gap.started",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": "Часть игровых событий не записана. История неполная.",
+                    "player": "Часть игровых событий не записана. История неполная."
+                },
+                {
+                    "type": "recording_gap.settled",
+                    "reason": "uncertified_mechanic_or_display",
+                    "host": null,
+                    "player": null
+                }
+            ],
+            "captures": 0
+        }
+    ]
+}

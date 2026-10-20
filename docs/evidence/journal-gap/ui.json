@@ -1,0 +1,26 @@
+{
+  "checks": [
+    {
+      "side": "host",
+      "status": "PASS",
+      "stored_gaps": 14,
+      "warning_elements": 1,
+      "visible_events": 5,
+      "cursor": 19,
+      "requests": 10,
+      "reconnect": "PASS",
+      "duplicates": 0
+    },
+    {
+      "side": "player",
+      "status": "PASS",
+      "stored_gaps": 14,
+      "warning_elements": 1,
+      "visible_events": 4,
+      "cursor": 19,
+      "requests": 10,
+      "reconnect": "PASS",
+      "duplicates": 0
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "status": "PASS",
+  "engine_checks": [
+    "PASS actual placement12 + two confirmations: 13 gaps with empty catalog, one visible turn",
+    "PASS actual move: owner projection visible, opponent hidden",
+    "PASS rejected duplicate move creates no events or gap",
+    "PASS actual ordinary strike, dice/results/ACK and end_turn",
+    "PASS unknown unrelated prop rejects snapshot but retains known movement event",
+    "PASS actual uchr + both ACK reproduce seq29/34/36 reason pattern without supported combat root",
+    "PASS uncovered technical command can coexist with text, observer preserves pending"
+  ],
+  "ui": [
+    {
+      "side": "host",
+      "status": "PASS",
+      "stored_gaps": 14,
+      "warning_elements": 1,
+      "visible_events": 5,
+      "cursor": 19,
+      "requests": 10,
+      "reconnect": "PASS",
+      "duplicates": 0
+    },
+    {
+      "side": "player",
+      "status": "PASS",
+      "stored_gaps": 14,
+      "warning_elements": 1,
+      "visible_events": 4,
+      "cursor": 19,
+      "requests": 10,
+      "reconnect": "PASS",
+      "duplicates": 0
+    }
+  ],
+  "all_src_php_unchanged": true,
+  "runtime_changed_files": [
+    "www/assets/js/battle-journal.js"
+  ],
+  "ui_sha256": "a229ed47dd6b0524b03532caac28ee31dcda7b7bf559c328fd2ff7ff6ccb8bb6",
+  "production_actions": [],
+  "sql_changes": [],
+  "recorder_changes": []
+}
