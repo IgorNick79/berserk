@@ -1,0 +1,20 @@
+# Stage 4D.1 — evidence
+
+`summary.json` содержит результаты и SHA-256 восьми проверенных PHP-файлов (включая неизменённый journal endpoint). `stage4d1-evidence.zip` содержит HTTP/UI harness, summaries, SQL snapshots, before/after чтения, регрессии и скриншоты. Секретов приглашений, capabilities, PHP sessions, identities.json, local config, datadir и production storage в архиве нет.
+
+Основа: Stage 4D commit f05163e93d346ab114474cc3ccc6b4e23c664ff7. Локальная ветка Stage 4D.1 пока представлена рабочими изменениями для review; push/merge/deploy не выполнялись.
+
+## Воспроизведение только на отдельном стенде
+
+1. Source-only copy текущих src/www/templates/tools/config и docs/cards в `stage4d1-verification/app`, без .git, настоящего db.php, storage и sessions. Требуются PHP 8.1+, MariaDB 10.8, Python, Node, Playwright и Edge. Все абсолютные пути в harness относятся к проверенному лабораторному компьютеру, их нужно согласованно заменить для своего disposable окружения.
+2. Отдельный MariaDB --no-defaults, loopback33389, новый datadir; guards setup.php ожидают путь `Berserk/stage4a-verification/data`. Сначала SELECT @@port,@@datadir. Никогда не убирать эти guards ради рабочей БД. Создать пустую `berserk_stage4d1_run1` и отдельные fixture credentials: writer без TRIGGER и reader только SELECT. Лабораторный app/config/db.php указывает только туда.
+3. Из архива `fixtures/regression-fixtures.sql` скопировать в соседний `stage4b-verification/regression-fixtures.sql` (ожидается setup.php). Выполнить setup.php один раз на пустой схеме; затем setup-extra.php один раз. Подготовить PHP session path вне app и отдельный php.ini с mysqli/mbstring. PHPRC должен наследоваться subprocess. Не использовать рабочий PHP session path.
+4. Создать `stage4d1-verification/private-access` вне app, настроить приватные права. Выполнить enable.php (только стенд); он убирает старые bindings, включает тестовые invitations и loopback-only HTTP exception. Fixture `disabled` удалён из journal allowlist, чтобы действительно проверять ordinary default OFF.
+5. Только для детерминированных сценариев создать в lab app/www/lab-dice.php: session_start(); $_SESSION['debug_roll']='6*'; echo 'lab dice';. Этот endpoint не входит в поставку и не должен быть на публичном сервере. Поднять `php -S 127.0.0.1:33494 -t .../app/www`.
+6. Из каталога стенда последовательно: test-http.py, test-access.py, test-access-extra.py, test-ledger-race.py, prepare-extra.py, test-status.py, test-turn-label.py, test-ui.cjs, test-browser-restart.cjs, test-extra.py, test-final-read.py. Некоторые scripts импортируют auth.py; не запускать из каталога production. Скрипты используют настоящую форму приглашения; секреты проходят только через приватный файл CLI и память клиента, не выводятся. Прогон изменяет исключительно disposable schema.
+7. tools/test_journal_invitations.php требует BERSERK_STAGE4D1_ISOLATED=1, BERSERK_STAGE4D1_ACCESS с приватным lab directory и source-only copy. Регрессии требуют BERSERK_STAGE31_ISOLATED=1; regressions.py задаёт его сам. PHPUnit не нужен. Run export.php для итоговых SQL snapshots. Старые названия stage4d в synthetic command IDs/fixture flags не влияют на новую schema.
+8. После прогона остановить именно эти loopback-процессы. Не удалять предыдущие evidence/datadirs.
+
+Первоначальные четыре ошибки регрессий из-за отсутствующих docs/cards JSON и их логи сохранены рядом с успешными повторными проверками. При первой дополнительной SQL сверке hidden был mismatch; исходные before/after тогда не сохранялись, причина не установлена. Сохранённый повтор по пяти матчам прошёл. Основной HTTP read-only сценарий дополнительно исполнялся под SELECT-only DB user и с trap на загрузку gameplay — PASS. Этот единичный mismatch не скрыт и не используется как доказательство успеха.
+
+SQL snapshots — синтетические тестовые игры, не production данные. Global cursor и incomplete/gaps остаются архитектурными ограничениями Stage 4D. Реальный TLS/ACL/production schema проверяет оператор по rollout до включения.

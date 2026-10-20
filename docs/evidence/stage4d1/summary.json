@@ -1,0 +1,1002 @@
+{
+  "stage4d_commit": "f05163e93d346ab114474cc3ccc6b4e23c664ff7",
+  "branch": "codex/battle-replay-stage4d1",
+  "status": "PASS",
+  "php_lint": 8,
+  "unit_contracts": "PASS",
+  "summaries": {
+    "http": [
+      {
+        "name": "real HTTP movement strike dice wounds turn terminal for two bound sessions",
+        "status": "PASS",
+        "detail": [
+          "initial.started",
+          "initial.settled",
+          "battle_ready.started",
+          "turn.started",
+          "battle_ready.settled",
+          "move.started",
+          "move.settled",
+          "combat.started",
+          "combat.dice",
+          "combat.result",
+          "combat.wounds",
+          "combat.settled",
+          "turn_end.started",
+          "turn.ended",
+          "turn.started",
+          "turn_end.settled",
+          "recording_gap.started",
+          "recording_gap.settled",
+          "match_terminal.started",
+          "match_terminal.settled"
+        ]
+      },
+      {
+        "name": "hidden card owner-only projection and immutable old event after reveal",
+        "status": "PASS",
+        "detail": {
+          "host": [
+            {
+              "seq": 4,
+              "kind": "event",
+              "text": "Ход 1. Игрок 1."
+            },
+            {
+              "seq": 6,
+              "kind": "event",
+              "text": "Карта 3 перемещается: 2:2 → 2:3."
+            }
+          ],
+          "player": [
+            {
+              "seq": 4,
+              "kind": "event",
+              "text": "Ход 1. Игрок 1."
+            }
+          ],
+          "old_event": {
+            "game_id": "40000002",
+            "event_seq": "6",
+            "journal_id": "11",
+            "command_order": "1",
+            "action_id": "af5a9f05b0cc40ce2c9fae6f5bc44f5316f7df942c53414a5",
+            "event_type": "move.started",
+            "schema_version": "1",
+            "cause_event_seq": null,
+            "payload_json": "{\"card_id\":3,\"from\":[2,2],\"to\":[2,3],\"move\":0,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"3\":{\"name\":\"Карта 3\",\"owner\":\"host\"}}}}",
+            "public_json": null,
+            "host_json": "{\"card_id\":3,\"from\":[2,2],\"to\":[2,3],\"move\":0,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"3\":{\"name\":\"Карта 3\",\"owner\":\"host\"}}}}",
+            "player_json": null,
+            "occurred_at": "2026-10-20 19:13:25.237346"
+          }
+        }
+      },
+      {
+        "name": "actual HTTP instant changes final result; no dice/wounds duplicates; root preserved",
+        "status": "PASS",
+        "detail": {
+          "events": [
+            {
+              "game_id": "40000003",
+              "event_seq": "1",
+              "journal_id": "14",
+              "command_order": "1",
+              "action_id": "a6aa4cadaedd1bb2ec839e439708f6e4017832abf27b84ca8",
+              "event_type": "initial.started",
+              "schema_version": "1",
+              "cause_event_seq": null,
+              "payload_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:27.326851"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "2",
+              "journal_id": "14",
+              "command_order": "2",
+              "action_id": "a6aa4cadaedd1bb2ec839e439708f6e4017832abf27b84ca8",
+              "event_type": "initial.settled",
+              "schema_version": "1",
+              "cause_event_seq": "1",
+              "payload_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:27.326862"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "3",
+              "journal_id": "14",
+              "command_order": "3",
+              "action_id": "a21c953026f7d7eb8022824a8d4696b3b1dd7841c2d3445db",
+              "event_type": "recording_gap.started",
+              "schema_version": "1",
+              "cause_event_seq": null,
+              "payload_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:27.327807"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "4",
+              "journal_id": "14",
+              "command_order": "4",
+              "action_id": "a21c953026f7d7eb8022824a8d4696b3b1dd7841c2d3445db",
+              "event_type": "recording_gap.settled",
+              "schema_version": "1",
+              "cause_event_seq": "3",
+              "payload_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:27.327815"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "5",
+              "journal_id": "14",
+              "command_order": "5",
+              "action_id": "a13a508cc7615597f952e8139f58b260924c33369e3a6f487",
+              "event_type": "journal_effect.started",
+              "schema_version": "1",
+              "cause_event_seq": null,
+              "payload_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:27.334545"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "6",
+              "journal_id": "14",
+              "command_order": "6",
+              "action_id": "a13a508cc7615597f952e8139f58b260924c33369e3a6f487",
+              "event_type": "turn.started",
+              "schema_version": "1",
+              "cause_event_seq": "5",
+              "payload_json": "{\"active\":\"host\",\"turn\":1,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"active\":\"host\",\"turn\":1,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"active\":\"host\",\"turn\":1,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"active\":\"host\",\"turn\":1,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:27.334602"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "7",
+              "journal_id": "14",
+              "command_order": "7",
+              "action_id": "a13a508cc7615597f952e8139f58b260924c33369e3a6f487",
+              "event_type": "journal_effect.settled",
+              "schema_version": "1",
+              "cause_event_seq": "6",
+              "payload_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:27.336660"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "8",
+              "journal_id": "15",
+              "command_order": "1",
+              "action_id": "acd36d7a0b6455ef95da900fc694b9d52fcd0637643da5079",
+              "event_type": "combat.started",
+              "schema_version": "1",
+              "cause_event_seq": null,
+              "payload_json": "{\"attacker_id\":1,\"target_id\":2,\"attack_type\":\"strike\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "public_json": "{\"attacker_id\":1,\"target_id\":2,\"attack_type\":\"strike\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "host_json": "{\"attacker_id\":1,\"target_id\":2,\"attack_type\":\"strike\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "player_json": "{\"attacker_id\":1,\"target_id\":2,\"attack_type\":\"strike\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "occurred_at": "2026-10-20 19:13:27.832677"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "9",
+              "journal_id": "15",
+              "command_order": "2",
+              "action_id": "ab54ff86b99da5bdfa7c68ebb645a197d32cfc572423d8cc3",
+              "event_type": "recording_gap.started",
+              "schema_version": "1",
+              "cause_event_seq": null,
+              "payload_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:27.832703"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "10",
+              "journal_id": "15",
+              "command_order": "3",
+              "action_id": "ab54ff86b99da5bdfa7c68ebb645a197d32cfc572423d8cc3",
+              "event_type": "recording_gap.settled",
+              "schema_version": "1",
+              "cause_event_seq": "9",
+              "payload_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:27.832709"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "11",
+              "journal_id": "15",
+              "command_order": "4",
+              "action_id": "acd36d7a0b6455ef95da900fc694b9d52fcd0637643da5079",
+              "event_type": "combat.dice",
+              "schema_version": "1",
+              "cause_event_seq": "8",
+              "payload_json": "{\"attack\":6,\"defend\":0,\"attack_mod\":0,\"defend_mod\":0,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "public_json": "{\"attack\":6,\"defend\":0,\"attack_mod\":0,\"defend_mod\":0,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "host_json": "{\"attack\":6,\"defend\":0,\"attack_mod\":0,\"defend_mod\":0,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "player_json": "{\"attack\":6,\"defend\":0,\"attack_mod\":0,\"defend_mod\":0,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "occurred_at": "2026-10-20 19:13:27.835866"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "12",
+              "journal_id": "16",
+              "command_order": "1",
+              "action_id": "a537c9561482b43ff564d4ec21696d0b00d161a1c80d20a37",
+              "event_type": "recording_gap.started",
+              "schema_version": "1",
+              "cause_event_seq": null,
+              "payload_json": "{\"reason\":\"uncovered_command:combat_instant_play\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"reason\":\"uncovered_command:combat_instant_play\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"reason\":\"uncovered_command:combat_instant_play\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"reason\":\"uncovered_command:combat_instant_play\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:28.136934"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "13",
+              "journal_id": "16",
+              "command_order": "2",
+              "action_id": "a537c9561482b43ff564d4ec21696d0b00d161a1c80d20a37",
+              "event_type": "recording_gap.settled",
+              "schema_version": "1",
+              "cause_event_seq": "12",
+              "payload_json": "{\"reason\":\"uncovered_command:combat_instant_play\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"reason\":\"uncovered_command:combat_instant_play\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"reason\":\"uncovered_command:combat_instant_play\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"reason\":\"uncovered_command:combat_instant_play\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:28.136952"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "14",
+              "journal_id": "17",
+              "command_order": "1",
+              "action_id": "afceb217315f8bb46b78c332337f7705f8debe37071577fa3",
+              "event_type": "recording_gap.started",
+              "schema_version": "1",
+              "cause_event_seq": null,
+              "payload_json": "{\"reason\":\"uncovered_command:combat_instant_pass\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"reason\":\"uncovered_command:combat_instant_pass\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"reason\":\"uncovered_command:combat_instant_pass\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"reason\":\"uncovered_command:combat_instant_pass\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:28.473901"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "15",
+              "journal_id": "17",
+              "command_order": "2",
+              "action_id": "afceb217315f8bb46b78c332337f7705f8debe37071577fa3",
+              "event_type": "recording_gap.settled",
+              "schema_version": "1",
+              "cause_event_seq": "14",
+              "payload_json": "{\"reason\":\"uncovered_command:combat_instant_pass\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"reason\":\"uncovered_command:combat_instant_pass\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"reason\":\"uncovered_command:combat_instant_pass\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"reason\":\"uncovered_command:combat_instant_pass\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:28.473921"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "16",
+              "journal_id": "18",
+              "command_order": "1",
+              "action_id": "acd36d7a0b6455ef95da900fc694b9d52fcd0637643da5079",
+              "event_type": "ability.applied",
+              "schema_version": "1",
+              "cause_event_seq": null,
+              "payload_json": "{\"source_id\":3,\"ability\":\"Тайное ослабление\",\"_private_owner\":\"host\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"3\":{\"name\":\"Карта 3\",\"owner\":\"host\"},\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "public_json": null,
+              "host_json": "{\"source_id\":3,\"ability\":\"Тайное ослабление\",\"_private_owner\":\"host\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"3\":{\"name\":\"Карта 3\",\"owner\":\"host\"},\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "player_json": null,
+              "occurred_at": "2026-10-20 19:13:28.760267"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "17",
+              "journal_id": "18",
+              "command_order": "2",
+              "action_id": "a331b8d498595615a4446c1405b9e8c2a0faab06678c28b19",
+              "event_type": "recording_gap.started",
+              "schema_version": "1",
+              "cause_event_seq": null,
+              "payload_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:28.760312"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "18",
+              "journal_id": "18",
+              "command_order": "3",
+              "action_id": "a331b8d498595615a4446c1405b9e8c2a0faab06678c28b19",
+              "event_type": "recording_gap.settled",
+              "schema_version": "1",
+              "cause_event_seq": "17",
+              "payload_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:28.760319"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "19",
+              "journal_id": "18",
+              "command_order": "4",
+              "action_id": "acd36d7a0b6455ef95da900fc694b9d52fcd0637643da5079",
+              "event_type": "combat.result",
+              "schema_version": "1",
+              "cause_event_seq": "16",
+              "payload_json": "{\"attack\":\"medium\",\"defend\":\"\",\"decreased\":false,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "public_json": "{\"attack\":\"medium\",\"defend\":\"\",\"decreased\":false,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "host_json": "{\"attack\":\"medium\",\"defend\":\"\",\"decreased\":false,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "player_json": "{\"attack\":\"medium\",\"defend\":\"\",\"decreased\":false,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"},\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"}}}}",
+              "occurred_at": "2026-10-20 19:13:28.760326"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "20",
+              "journal_id": "18",
+              "command_order": "5",
+              "action_id": "acd36d7a0b6455ef95da900fc694b9d52fcd0637643da5079",
+              "event_type": "combat.wounds",
+              "schema_version": "1",
+              "cause_event_seq": "19",
+              "payload_json": "{\"target_id\":2,\"source_id\":1,\"type\":\"strike\",\"wounds\":3,\"hp_before\":20,\"hp_after\":17,\"armor_before\":0,\"armor_after\":0,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"},\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"}}}}",
+              "public_json": "{\"target_id\":2,\"source_id\":1,\"type\":\"strike\",\"wounds\":3,\"hp_before\":20,\"hp_after\":17,\"armor_before\":0,\"armor_after\":0,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"},\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"}}}}",
+              "host_json": "{\"target_id\":2,\"source_id\":1,\"type\":\"strike\",\"wounds\":3,\"hp_before\":20,\"hp_after\":17,\"armor_before\":0,\"armor_after\":0,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"},\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"}}}}",
+              "player_json": "{\"target_id\":2,\"source_id\":1,\"type\":\"strike\",\"wounds\":3,\"hp_before\":20,\"hp_after\":17,\"armor_before\":0,\"armor_after\":0,\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":{\"2\":{\"name\":\"Карта 2\",\"owner\":\"player\"},\"1\":{\"name\":\"Гидра (test)\",\"owner\":\"host\"}}}}",
+              "occurred_at": "2026-10-20 19:13:28.764040"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "21",
+              "journal_id": "20",
+              "command_order": "1",
+              "action_id": "a751e5c5b52e7c2f8845eef30e86b6ff34817bd5b8b810228",
+              "event_type": "recording_gap.started",
+              "schema_version": "1",
+              "cause_event_seq": null,
+              "payload_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:29.591632"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "22",
+              "journal_id": "20",
+              "command_order": "2",
+              "action_id": "a751e5c5b52e7c2f8845eef30e86b6ff34817bd5b8b810228",
+              "event_type": "recording_gap.settled",
+              "schema_version": "1",
+              "cause_event_seq": "21",
+              "payload_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"reason\":\"uncertified_mechanic_or_display\",\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:29.591643"
+            },
+            {
+              "game_id": "40000003",
+              "event_seq": "23",
+              "journal_id": "20",
+              "command_order": "3",
+              "action_id": "acd36d7a0b6455ef95da900fc694b9d52fcd0637643da5079",
+              "event_type": "combat.settled",
+              "schema_version": "1",
+              "cause_event_seq": null,
+              "payload_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "public_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "host_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "player_json": "{\"_journal\":{\"turn\":1,\"active\":\"host\",\"cards\":[]}}",
+              "occurred_at": "2026-10-20 19:13:29.591650"
+            }
+          ],
+          "host": [
+            {
+              "seq": 3,
+              "kind": "gap",
+              "text": "Часть игровых событий не записана. История неполная."
+            },
+            {
+              "seq": 6,
+              "kind": "event",
+              "text": "Ход 1. Игрок 1."
+            },
+            {
+              "seq": 8,
+              "kind": "event",
+              "text": "Гидра (test) атакует Карта 2."
+            },
+            {
+              "seq": 9,
+              "kind": "gap",
+              "text": "Часть игровых событий не записана. История неполная."
+            },
+            {
+              "seq": 11,
+              "kind": "event",
+              "text": "Бросок: атакующий 6, защитник без броска."
+            },
+            {
+              "seq": 12,
+              "kind": "gap",
+              "text": "Часть игровых событий не записана. История неполная."
+            },
+            {
+              "seq": 14,
+              "kind": "gap",
+              "text": "Часть игровых событий не записана. История неполная."
+            },
+            {
+              "seq": 16,
+              "kind": "event",
+              "text": "Карта 3 применяет способность «Тайное ослабление»."
+            },
+            {
+              "seq": 17,
+              "kind": "gap",
+              "text": "Часть игровых событий не записана. История неполная."
+            },
+            {
+              "seq": 19,
+              "kind": "event",
+              "text": "Итог атаки: средний удар; ответ: промах."
+            },
+            {
+              "seq": 20,
+              "kind": "event",
+              "text": "Карта 2 получает 3 ран."
+            },
+            {
+              "seq": 21,
+              "kind": "gap",
+              "text": "Часть игровых событий не записана. История неполная."
+            }
+          ],
+          "player": [
+            {
+              "seq": 3,
+              "kind": "gap",
+              "text": "Часть игровых событий не записана. История неполная."
+            },
+            {
+              "seq": 6,
+              "kind": "event",
+              "text": "Ход 1. Игрок 1."
+            },
+            {
+              "seq": 8,
+              "kind": "event",
+              "text": "Гидра (test) атакует Карта 2."
+            },
+            {
+              "seq": 9,
+              "kind": "gap",
+              "text": "Часть игровых событий не записана. История неполная."
+            },
+            {
+              "seq": 11,
+              "kind": "event",
+              "text": "Бросок: атакующий 6, защитник без броска."
+            },
+            {
+              "seq": 12,
+              "kind": "gap",
+              "text": "Часть игровых событий не записана. История неполная."
+            },
+            {
+              "seq": 14,
+              "kind": "gap",
+              "text": "Часть игровых событий не записана. История неполная."
+            },
+            {
+              "seq": 17,
+              "kind": "gap",
+              "text": "Часть игровых событий не записана. История неполная."
+            },
+            {
+              "seq": 19,
+              "kind": "event",
+              "text": "Итог атаки: средний удар; ответ: промах."
+            },
+            {
+              "seq": 20,
+              "kind": "event",
+              "text": "Карта 2 получает 3 ран."
+            },
+            {
+              "seq": 21,
+              "kind": "gap",
+              "text": "Часть игровых событий не записана. История неполная."
+            }
+          ]
+        }
+      },
+      {
+        "name": "actual HTTP active heal logs real clamped HP delta",
+        "status": "PASS",
+        "detail": [
+          {
+            "seq": 3,
+            "kind": "gap",
+            "text": "Часть игровых событий не записана. История неполная."
+          },
+          {
+            "seq": 6,
+            "kind": "event",
+            "text": "Ход 1. Игрок 1."
+          },
+          {
+            "seq": 9,
+            "kind": "event",
+            "text": "Гидра (test) применяет способность «Излечение»."
+          },
+          {
+            "seq": 10,
+            "kind": "event",
+            "text": "Карта 3 восстанавливает 2 HP."
+          },
+          {
+            "seq": 12,
+            "kind": "gap",
+            "text": "Часть игровых событий не записана. История неполная."
+          }
+        ]
+      },
+      {
+        "name": "actual HTTP death and terminal",
+        "status": "PASS",
+        "detail": [
+          {
+            "seq": 4,
+            "kind": "event",
+            "text": "Ход 1. Игрок 1."
+          },
+          {
+            "seq": 6,
+            "kind": "event",
+            "text": "Гидра (test) атакует Карта 2."
+          },
+          {
+            "seq": 7,
+            "kind": "event",
+            "text": "Бросок: атакующий 6, защитник без броска."
+          },
+          {
+            "seq": 8,
+            "kind": "event",
+            "text": "Итог атаки: сильный удар; ответ: промах."
+          },
+          {
+            "seq": 9,
+            "kind": "event",
+            "text": "Карта 2 получает 4 ран."
+          },
+          {
+            "seq": 10,
+            "kind": "event",
+            "text": "Карта 2 погибает."
+          },
+          {
+            "seq": 13,
+            "kind": "event",
+            "text": "Бой завершён. Победил Игрок 1."
+          }
+        ]
+      },
+      {
+        "name": "server binding rejects legacy, foreign match and side substitution",
+        "status": "PASS",
+        "detail": "legacy role/session, side spoof, foreign match rejected; replay remains protected"
+      },
+      {
+        "name": "journal is read-only and isolated from gameplay",
+        "status": "PASS",
+        "detail": "SQL games/json/version/timers/pending/journal/history unchanged; SELECT-only and throw-on-load traps passed"
+      },
+      {
+        "name": "committed retry creates no duplicate journal events",
+        "status": "PASS",
+        "detail": "committed command retry returns same history"
+      },
+      {
+        "name": "event SQL failure rolls back game actions events and snapshots",
+        "status": "PASS",
+        "detail": "failed mandatory event insertion rolled game and entire history back"
+      },
+      {
+        "name": "Recorder OFF leaves normal game behavior unchanged",
+        "status": "PASS",
+        "detail": "normal unrecorded game unchanged; empty history distinguished"
+      }
+    ],
+    "access": [
+      {
+        "name": "first invitation",
+        "status": "PASS"
+      },
+      {
+        "name": "second independent invitation",
+        "status": "PASS"
+      },
+      {
+        "name": "invitation reuse rejected",
+        "status": "PASS"
+      },
+      {
+        "name": "side spoof rejects before gameplay",
+        "status": "PASS"
+      },
+      {
+        "name": "foreign match denies",
+        "status": "PASS"
+      },
+      {
+        "name": "finished journal remains readable",
+        "status": "PASS"
+      },
+      {
+        "name": "full replay remains locked",
+        "status": "PASS"
+      },
+      {
+        "name": "fresh browser has no session",
+        "status": "PASS"
+      },
+      {
+        "name": "restarted browser cannot reuse invitation",
+        "status": "PASS"
+      },
+      {
+        "name": "csrf rejects",
+        "status": "PASS"
+      },
+      {
+        "name": "query string forbidden",
+        "status": "PASS"
+      },
+      {
+        "name": "revocation denies journal and gameplay",
+        "status": "PASS"
+      },
+      {
+        "name": "short access first works",
+        "status": "PASS"
+      },
+      {
+        "name": "expiry denies journal and gameplay",
+        "status": "PASS"
+      },
+      {
+        "name": "ledger has no plaintext invite",
+        "status": "PASS"
+      },
+      {
+        "name": "no secret in request log",
+        "status": "PASS"
+      },
+      {
+        "name": "ordinary match journal default OFF",
+        "status": "PASS"
+      }
+    ],
+    "access-extra": [
+      {
+        "name": "concurrent redemption has exactly one winner",
+        "status": "PASS"
+      },
+      {
+        "name": "session fixation rotation",
+        "status": "PASS"
+      },
+      {
+        "name": "cookie session only HttpOnly SameSite",
+        "status": "PASS"
+      },
+      {
+        "name": "non HTTPS denied outside explicit lab exception",
+        "status": "PASS"
+      },
+      {
+        "name": "corrupt ledger fails closed",
+        "status": "PASS"
+      }
+    ],
+    "ledger-race": {
+      "status": "PASS",
+      "separate_php_processes": 2,
+      "successful_consumptions": 1
+    },
+    "browser-restart": {
+      "status": "PASS",
+      "fresh_browser_without_cookie": 403,
+      "spent_invitation": 403
+    },
+    "ui": {
+      "status": "PASS",
+      "independent_sessions": 2,
+      "live_entries": 45,
+      "panel_preserved": true,
+      "scrollTop": 0,
+      "duplicates": 0,
+      "reconnect": "cursor resumed",
+      "reloads": 0,
+      "errors": []
+    },
+    "extra": [
+      {
+        "name": "passive vampire healing is actually recorded",
+        "status": "PASS",
+        "detail": [
+          {
+            "seq": 3,
+            "kind": "gap",
+            "text": "Часть игровых событий не записана. История неполная."
+          },
+          {
+            "seq": 6,
+            "kind": "event",
+            "text": "Ход 1. Игрок 1."
+          },
+          {
+            "seq": 8,
+            "kind": "event",
+            "text": "Гидра (test) атакует Карта 2."
+          },
+          {
+            "seq": 9,
+            "kind": "gap",
+            "text": "Часть игровых событий не записана. История неполная."
+          },
+          {
+            "seq": 11,
+            "kind": "event",
+            "text": "Бросок: атакующий 6, защитник без броска."
+          },
+          {
+            "seq": 12,
+            "kind": "event",
+            "text": "Итог атаки: сильный удар; ответ: промах."
+          },
+          {
+            "seq": 13,
+            "kind": "event",
+            "text": "Карта 2 получает 4 ран."
+          },
+          {
+            "seq": 14,
+            "kind": "event",
+            "text": "Гидра (test) восстанавливает 2 HP."
+          },
+          {
+            "seq": 15,
+            "kind": "gap",
+            "text": "Часть игровых событий не записана. История неполная."
+          }
+        ]
+      },
+      {
+        "name": "cursor limits method and server disable",
+        "status": "PASS",
+        "detail": "invalid/future cursor, limit and POST rejected; disabled gate closes access"
+      },
+      {
+        "name": "journal events do not certify unsupported replay snapshots",
+        "status": "PASS",
+        "detail": "detailed actual events preserve partial/gaps and do not create an uncertified Replay Step"
+      }
+    ],
+    "status": [
+      {
+        "name": "real turn instant status and applied ability are recorded privately",
+        "status": "PASS",
+        "detail": [
+          {
+            "seq": 3,
+            "kind": "gap",
+            "text": "Часть игровых событий не записана. История неполная."
+          },
+          {
+            "seq": 5,
+            "kind": "gap",
+            "text": "Часть игровых событий не записана. История неполная."
+          },
+          {
+            "seq": 7,
+            "kind": "gap",
+            "text": "Часть игровых событий не записана. История неполная."
+          },
+          {
+            "seq": 10,
+            "kind": "event",
+            "text": "Карта 2 закрывается."
+          },
+          {
+            "seq": 11,
+            "kind": "event",
+            "text": "Карта 3 применяет способность «Закрытие»."
+          },
+          {
+            "seq": 13,
+            "kind": "gap",
+            "text": "Часть игровых событий не записана. История неполная."
+          }
+        ]
+      }
+    ],
+    "turn-label": [
+      {
+        "name": "end-turn log uses the completed turn before the engine advances its counter",
+        "status": "PASS",
+        "detail": {
+          "ending": [
+            1,
+            1
+          ],
+          "starting": [
+            1,
+            1,
+            2
+          ]
+        }
+      }
+    ],
+    "final-read": [
+      {
+        "name": "final historical projections and pending/elapsed timer read isolation",
+        "status": "PASS",
+        "detail": "actual final reader projections for five matches/two sides; stored SQL unchanged including pending and elapsed timers"
+      }
+    ]
+  },
+  "regressions": [
+    {
+      "suite": "test_stage31_fixes",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_hydra",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_ragnar",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_combat_instant_phases",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_degasca",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_bon_and_berrow",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_swamp_children",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_movement_effects",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_forced_directional_movement",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_volkhv_wound_transfer",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_resign_pending",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_nested_combat_ownership",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_command_journal_repository",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_battle_command_endpoint",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_turn_timer",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_informational_wait",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_turn_timeout",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_pending_wait_timer",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_turn_instant_stack",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_match_player_settings",
+      "exit": 0,
+      "skip": false
+    },
+    {
+      "suite": "test_match_pause",
+      "exit": 0,
+      "skip": false
+    }
+  ],
+  "tested_delivered_source_sha256": {
+    "config/battle_history.example.php": "8ef1fb4d4d3c8b6b3ffd2a8f54ddcec7e833bae1f9392dcd0160040b4ebf7a27",
+    "tools/journal_access.php": "c3c811ef09e734228f14e4f44139416a796be5d8ebbf8b3b8e31b50dce59b226",
+    "tools/test_journal_invitations.php": "6c60504ee268c3b0da7729b93001d5184ffe10cc7c0a4f2042531ea5bb8d686f",
+    "www/battle-journal.php": "9c82f0c5a50a06667efd752eebdf1cd53b57e1b41462b06c3d92b9dba97ac5af",
+    "www/index.php": "c74d62726b4648343176502f13b121792ec851fe7513dc074ad5962b90f73ac0",
+    "www/journal-access.php": "dd2b3656e204e132fdbea81908263741144d40b6bacfe7ccbed5dda2ba6cef02",
+    "src/Core/BattleHistory/HistoryRuntime.php": "8115599a4ba14d460fb1db7d253064d83d67dc5aa8bb0fb8db0bcc36d3ad3a09",
+    "src/Core/BattleHistory/JournalInvitations.php": "ae79d9aa29a92578316da5e05556da926369d03356d710d08c80c254a5dadf00"
+  },
+  "production_actions": []
+}

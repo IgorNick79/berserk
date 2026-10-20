@@ -693,7 +693,7 @@ if ($userId !== $state->hostId && $userId !== $state->playerId) {
 }
 
 $historyRuntime = \Berserk\Core\BattleHistory\HistoryRuntime::load();
-if ($historyRuntime->records($state->gameId)) {
+if ($historyRuntime->protects($state->gameId)) {
     header('Cache-Control: private, no-store');
     header('Referrer-Policy: same-origin');
     $trustedUser = $historyRuntime->principal($_SESSION);

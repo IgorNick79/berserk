@@ -14,6 +14,9 @@ return [
     'journal_enabled' => false,
     'journal_game_ids' => [],
     // Server-provisioned session binding token (64 random hex) => exact game/side/expiry.
-    // Never provision bindings from HTTP role/user IDs. No public login endpoint.
-    'journal_test_bindings' => [],
+    // Legacy lab provisioning only; production uses the one-time invitation form.
+    'journal_test_bindings' => [], // legacy lab harness only; ignored when invitation access enabled
+    'journal_access_enabled' => false,
+    'journal_access_directory' => '', // existing private directory OUTSIDE application/web roots
+    'journal_access_local_http' => false, // isolated loopback lab ONLY; production requires HTTPS
 ];

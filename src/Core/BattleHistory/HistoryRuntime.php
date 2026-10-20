@@ -35,6 +35,21 @@ final class HistoryRuntime
         return ($this->config['journal_enabled'] ?? false) === true && $this->allowed('journal_game_ids', $gameId);
     }
 
+    public function protects(int $gameId): bool
+    {
+        return $this->allowed('record_game_ids',$gameId) || $this->allowed('journal_game_ids',$gameId);
+    }
+    public function invitations(): ?JournalInvitations
+    {
+        if (($this->config['journal_access_enabled']??false)!==true) return null;
+        $path=$this->config['journal_access_directory']??null;
+        return is_string($path) ? new JournalInvitations($path) : null;
+    }
+    public function localAccessHttp(): bool
+    {
+        return ($this->config['journal_access_local_http']??false)===true;
+    }
+
     /** Never accepts an HTTP side/user ID. Test bindings are provisioned server-side only. */
     public function journalSide(int $gameId, int $hostId, int $playerId, array $session): ?string
     {
@@ -44,6 +59,10 @@ final class HistoryRuntime
         if ($user > 0 && $user === $playerId) return 'player';
         $token = $session['berserk_battle_journal_binding'] ?? null;
         if (!is_string($token) || !preg_match('/^[a-f0-9]{64}$/D', $token)) return null;
+        if (($this->config['journal_access_enabled']??false)===true) {
+            try { return $this->invitations()?->side($token,$gameId); }
+            catch (\Throwable) { return null; } // Missing/corrupt private ledger denies access.
+        }
         $binding = $this->config['journal_test_bindings'][$token] ?? null;
         if (!is_array($binding) || ($binding['game_id'] ?? null) !== $gameId
             || !is_int($binding['expires_at'] ?? null) || $binding['expires_at'] < time()) return null;
