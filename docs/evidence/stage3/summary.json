@@ -1,0 +1,420 @@
+{
+  "baseline": "6be7d6875b7ac99c98b88b29061b0eba4dc6ee03",
+  "branch": "codex/battle-replay-stage3",
+  "previous": "0bc26ccbc66fdf734368685a8617fe60a1b9a508",
+  "existing_suites": 13,
+  "diagnostic_cases": 29,
+  "race_rounds": 3,
+  "final_units": 45,
+  "final_assertion_failures": 0,
+  "source_files_verified": 163,
+  "instrumented_copy_files": [
+    "src/Core/StrikeResolver.php",
+    "src/Core/Engine.php",
+    "src/Core/TurnProcessor.php",
+    "src/Core/ValhallaProcessor.php"
+  ],
+  "environment": {
+    "port": "33387",
+    "datadir": "C:\\Users\\mi\\Documents\\Berserk\\stage3-verification\\data\\",
+    "db": "berserk_stage3"
+  },
+  "existing": [
+    {
+      "test": "test_hydra.php",
+      "exit": 0,
+      "output": "Hydra regression tests passed."
+    },
+    {
+      "test": "test_ragnar.php",
+      "exit": 0,
+      "output": "Ragnar tests passed"
+    },
+    {
+      "test": "test_combat_instant_phases.php",
+      "exit": 0,
+      "output": "Combat instant phase tests passed."
+    },
+    {
+      "test": "test_degasca.php",
+      "exit": 0,
+      "output": "Degasca tests passed."
+    },
+    {
+      "test": "test_bon_and_berrow.php",
+      "exit": 0,
+      "output": "Bon and Berrow: 337 assertions passed."
+    },
+    {
+      "test": "test_swamp_children.php",
+      "exit": 0,
+      "output": "Swamp children: 399 assertions passed."
+    },
+    {
+      "test": "test_movement_effects.php",
+      "exit": 0,
+      "output": "Movement effect regression tests passed."
+    },
+    {
+      "test": "test_forced_directional_movement.php",
+      "exit": 0,
+      "output": "Forced directional movement regression tests passed."
+    },
+    {
+      "test": "test_volkhv_wound_transfer.php",
+      "exit": 0,
+      "output": "Volkhv wound transfer tests passed"
+    },
+    {
+      "test": "test_resign_pending.php",
+      "exit": 0,
+      "output": "Resign during pending tests passed (48 surrender cases, repeats, outsiders, state guards and command restrictions)."
+    },
+    {
+      "test": "test_nested_combat_ownership.php",
+      "exit": 0,
+      "output": "auto attacker=host owner=host passed\npush attacker=host owner=player passed\nclose attacker=host owner=player passed\nally attacker=host owner=host passed\ndeath attacker=host owner=player passed\nauto attacker=player owner=player passed\npush attacker=player owner=host passed\nclose attacker=player owner=host passed\nally attacker=player owner=player passed\ndeath attacker=player owner=host passed\nNested combat ownership verified through Engine (10 deterministic real combat paths)"
+    },
+    {
+      "test": "test_command_journal_repository.php",
+      "exit": 0,
+      "output": "Command journal repository tests passed."
+    },
+    {
+      "test": "test_battle_command_endpoint.php",
+      "exit": 0,
+      "output": "Battle command endpoint tests passed."
+    }
+  ],
+  "custom": [
+    {
+      "id": "A1 ordinary combat saved before/after ACK",
+      "status": "PASS",
+      "detail": {
+        "target_hp": 16,
+        "settled_at": "second ACK after continuations"
+      }
+    },
+    {
+      "id": "B1 Hydra first settled fight then second",
+      "status": "PASS",
+      "detail": {
+        "hp": [
+          16,
+          16
+        ],
+        "first_capture_target3": 20,
+        "natural_end": true
+      }
+    },
+    {
+      "id": "B2 Hydra voluntary cancel keeps first damage",
+      "status": "PASS",
+      "detail": {
+        "damage_retained": 4,
+        "closed": true,
+        "no_technical_series_step": true
+      }
+    },
+    {
+      "id": "B3 Hydra terminal during series",
+      "status": "PASS",
+      "detail": {
+        "status": "game_over",
+        "strike_remaining": true,
+        "dying": true
+      }
+    },
+    {
+      "id": "C1 Valhalla two target applications saved",
+      "status": "PASS",
+      "detail": {
+        "target2_hp": 19,
+        "target91_hp": 19
+      }
+    },
+    {
+      "id": "C2 Valhalla lethal first repeat terminal",
+      "status": "PASS",
+      "detail": {
+        "status": "game_over",
+        "target_zone": "graveyard"
+      }
+    },
+    {
+      "id": "R1a reduce_one overwritten by recalc",
+      "status": "PASS",
+      "detail": {
+        "verdict": "DEFECT_REPRODUCED",
+        "before": {
+          "attack": "medium",
+          "defend": "",
+          "winner": "attack"
+        },
+        "after": {
+          "attack": "strong",
+          "defend": "",
+          "winner": "attack"
+        }
+      }
+    },
+    {
+      "id": "R1b defender set overwritten by recalc",
+      "status": "PASS",
+      "detail": {
+        "verdict": "DEFECT_REPRODUCED",
+        "before": {
+          "attack": "medium",
+          "defend": "strong",
+          "winner": "attack"
+        },
+        "after": {
+          "attack": "medium",
+          "defend": "weak",
+          "winner": "attack"
+        }
+      }
+    },
+    {
+      "id": "R1c attacker set guards result from later recalc",
+      "status": "PASS",
+      "detail": {
+        "verdict": "OBSERVED_GLOBAL_GUARD",
+        "result": {
+          "attack": "strong",
+          "defend": "",
+          "winner": "attack"
+        }
+      }
+    },
+    {
+      "id": "R2 combat wound transfer cancel leaves queue",
+      "status": "PASS",
+      "detail": {
+        "verdict": "DEFECT_REPRODUCED",
+        "pending_removed": true,
+        "queue_items": 1,
+        "strike_state": "waiting_instant"
+      }
+    },
+    {
+      "id": "R3 Valhalla UI cancel rejected",
+      "status": "PASS",
+      "detail": {
+        "verdict": "DEFECT_REPRODUCED",
+        "journal": "rejected",
+        "pending_retained": true
+      }
+    },
+    {
+      "id": "F1 movement settled before forced strike",
+      "status": "PASS",
+      "detail": {
+        "position": [
+          3,
+          3
+        ],
+        "target_hp": 16
+      }
+    },
+    {
+      "id": "G1 armor damage dying and delayed graveyard",
+      "status": "PASS",
+      "detail": {
+        "armor_absorbed": 2,
+        "final_zone": "graveyard"
+      }
+    },
+    {
+      "id": "K1 same command retry lost response",
+      "status": "PASS",
+      "detail": {
+        "version_before": 2,
+        "version_after": 3,
+        "same_journal_id": true
+      }
+    },
+    {
+      "id": "K2 version conflict stale request",
+      "status": "PASS",
+      "detail": {
+        "conflict": true,
+        "committed_col": 3
+      }
+    },
+    {
+      "id": "K3 SQL failure rolls back game and journal commit",
+      "status": "PASS",
+      "detail": {
+        "rollback": true,
+        "journal": "processing",
+        "version": 2
+      }
+    },
+    {
+      "id": "K4 two immutable states one command commit",
+      "status": "PASS",
+      "detail": {
+        "hp_captures": [
+          19,
+          17
+        ],
+        "commits": 1,
+        "scope": "diagnostic callback two real damage effects; not a certified game-action boundary"
+      }
+    },
+    {
+      "id": "B4 Hydra dies during combat",
+      "status": "PASS",
+      "detail": {
+        "source_zone": "graveyard",
+        "pending_series": false
+      }
+    },
+    {
+      "id": "H1 multi-heal batch",
+      "status": "PASS",
+      "detail": {
+        "hp": [
+          17,
+          19
+        ],
+        "boundary": "whole batch"
+      }
+    },
+    {
+      "id": "H2 multi-discharge batch",
+      "status": "PASS",
+      "detail": {
+        "hp": [
+          18,
+          18
+        ],
+        "boundary": "whole batch"
+      }
+    },
+    {
+      "id": "I1 initial before start effects via confirm_place",
+      "status": "PASS",
+      "detail": {
+        "initial_hp": 20,
+        "saved_hp": 23,
+        "status": "battle",
+        "one_command": true
+      }
+    },
+    {
+      "id": "J1 end-turn phase task before ACK",
+      "status": "PASS",
+      "detail": {
+        "active": "player",
+        "turn": 1,
+        "source_hp": 20,
+        "remaining_phase": null
+      }
+    },
+    {
+      "id": "R1d redirect plus attacker override",
+      "status": "PASS",
+      "detail": {
+        "reason": null,
+        "target_id": 3,
+        "before": {
+          "attack": "medium",
+          "defend": "",
+          "winner": "attack"
+        },
+        "after": {
+          "attack": "medium",
+          "defend": "",
+          "winner": "attack"
+        },
+        "override": true
+      }
+    },
+    {
+      "id": "K5 natural automatic execution in same ACK command",
+      "status": "PASS",
+      "detail": {
+        "primary_capture_hp": 6,
+        "persisted_hp": 0,
+        "sql_version_delta": 1,
+        "kind": "execute"
+      }
+    },
+    {
+      "id": "I2 initial startup intrigue pending then completion",
+      "status": "PASS",
+      "detail": {
+        "poison": [
+          1,
+          1
+        ],
+        "pre_battle_completed": true
+      }
+    },
+    {
+      "id": "J2 regeneration task settled before informational ACK",
+      "status": "PASS",
+      "detail": {
+        "before_ack_hp": 19,
+        "after_ack_hp": 19
+      }
+    },
+    {
+      "id": "J3 automatic ACK persisted through journal",
+      "status": "PASS",
+      "detail": {
+        "strike_cleared": true,
+        "certain": true,
+        "version": 6
+      }
+    },
+    {
+      "id": "R2-real paused wounds queue cancellation and retry",
+      "status": "PASS",
+      "detail": {
+        "verdict": "DEFECT_REPRODUCED",
+        "queue_items": 1,
+        "confirmed": [
+          "host",
+          "player"
+        ],
+        "repeat_ack": "rejected"
+      }
+    },
+    {
+      "id": "R1e main phase overwrites reduce effect before damage",
+      "status": "PASS",
+      "detail": {
+        "verdict": "DEFECT_REPRODUCED",
+        "summary": [
+          {
+            "label": "reduce probe",
+            "card_ukid": "stage3_90",
+            "card_id": 90,
+            "player": "host",
+            "phase": "value",
+            "sequence": 0,
+            "instant_key": "",
+            "instant_name": "reduce probe",
+            "effect_type": "strike_level",
+            "applied": true,
+            "reason": "",
+            "result": {
+              "side": "attack",
+              "before": "strong",
+              "after": "medium"
+            }
+          }
+        ],
+        "final": {
+          "attack": "strong",
+          "defend": "",
+          "decreased": false
+        },
+        "target_hp": 16
+      }
+    }
+  ]
+}

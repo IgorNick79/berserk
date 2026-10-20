@@ -1,0 +1,123 @@
+{
+  "baseline": "6be7d6875b7ac99c98b88b29061b0eba4dc6ee03",
+  "branch": "codex/battle-replay-stage3",
+  "before": {
+    "cases": 31,
+    "failures": 20
+  },
+  "after": {
+    "cases": 31,
+    "failures": 0
+  },
+  "database": {
+    "cases": 6,
+    "failures": 0,
+    "environment": {
+      "dir": "C:\\Users\\mi\\Documents\\Berserk\\stage3-1-verification\\data\\",
+      "port": "33388",
+      "db": "berserk_stage31"
+    }
+  },
+  "regressions": [
+    {
+      "test": "test_hydra.php",
+      "exit": 0,
+      "output": "Hydra regression tests passed."
+    },
+    {
+      "test": "test_ragnar.php",
+      "exit": 0,
+      "output": "Ragnar tests passed"
+    },
+    {
+      "test": "test_combat_instant_phases.php",
+      "exit": 0,
+      "output": "Combat instant phase tests passed."
+    },
+    {
+      "test": "test_degasca.php",
+      "exit": 0,
+      "output": "Degasca tests passed."
+    },
+    {
+      "test": "test_bon_and_berrow.php",
+      "exit": 0,
+      "output": "Bon and Berrow: 337 assertions passed."
+    },
+    {
+      "test": "test_swamp_children.php",
+      "exit": 0,
+      "output": "Swamp children: 399 assertions passed."
+    },
+    {
+      "test": "test_movement_effects.php",
+      "exit": 0,
+      "output": "Movement effect regression tests passed."
+    },
+    {
+      "test": "test_forced_directional_movement.php",
+      "exit": 0,
+      "output": "Forced directional movement regression tests passed."
+    },
+    {
+      "test": "test_volkhv_wound_transfer.php",
+      "exit": 0,
+      "output": "Volkhv wound transfer tests passed"
+    },
+    {
+      "test": "test_resign_pending.php",
+      "exit": 0,
+      "output": "Resign during pending tests passed (48 surrender cases, repeats, outsiders, state guards and command restrictions)."
+    },
+    {
+      "test": "test_nested_combat_ownership.php",
+      "exit": 0,
+      "output": "auto attacker=host owner=host passed\npush attacker=host owner=player passed\nclose attacker=host owner=player passed\nally attacker=host owner=host passed\ndeath attacker=host owner=player passed\nauto attacker=player owner=player passed\npush attacker=player owner=host passed\nclose attacker=player owner=host passed\nally attacker=player owner=player passed\ndeath attacker=player owner=host passed\nNested combat ownership verified through Engine (10 deterministic real combat paths)"
+    },
+    {
+      "test": "test_command_journal_repository.php",
+      "exit": 0,
+      "output": "Command journal repository tests passed."
+    },
+    {
+      "test": "test_battle_command_endpoint.php",
+      "exit": 0,
+      "output": "Battle command endpoint tests passed."
+    },
+    {
+      "test": "test_turn_timer.php",
+      "exit": 0,
+      "output": "OK turn timer"
+    },
+    {
+      "test": "test_informational_wait.php",
+      "exit": 0,
+      "output": "Informational wait generation/deadline/ACK/legacy/Engine/UI tests passed"
+    },
+    {
+      "test": "test_turn_timeout.php",
+      "exit": 0,
+      "output": "Informational wait generation/deadline/ACK/legacy/Engine/UI tests passed\nT3 eligibility/expired command guard/forced strike/series/instants/end-phase tests passed"
+    },
+    {
+      "test": "test_pending_wait_timer.php",
+      "exit": 0,
+      "output": "Pending ownership/read-only projection/Engine timer tests passed (all 57 registered handlers covered)"
+    },
+    {
+      "test": "test_turn_instant_stack.php",
+      "exit": 0,
+      "output": "Turn instant stack tests passed."
+    }
+  ],
+  "changed_source_files": [
+    "src/Core/ActionResolver.php",
+    "src/Core/Engine.php",
+    "src/Core/InstantProcessor.php",
+    "src/Core/StrikeResolver.php",
+    "src/Core/ValhallaProcessor.php",
+    "src/Core/WoundTransferProcessor.php",
+    "src/Core/Choice/ValhallaPickChoice.php"
+  ],
+  "verified_source_files": 163
+}
