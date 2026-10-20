@@ -13,7 +13,7 @@ final class GameRepository
 {
     private static bool $schemaChecked = false;
 
-    public function __construct(private Db $db)
+    public function __construct(private Db $db, private ?\Berserk\Core\BattleHistory\ExperimentalHistory $history = null)
     {
         $this->ensurePersistenceVersionColumn();
     }
@@ -48,6 +48,9 @@ final class GameRepository
 
     public function save(GameState $state): void
     {
+        if ($this->history?->includes($state->gameId) && in_array($state->status,['battle','game_over'],true) && $state->historyRecorder === null) {
+            throw new \LogicException('Experimental history matches require locked journal execution');
+        }
         $json = json_encode(
             $state->toArray(),
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
@@ -116,6 +119,20 @@ final class GameRepository
             if ($apply !== null) {
                 $working = $this->findById($state->gameId, true);
                 if ($working === null || $working->persistenceVersion !== $beforeVersion) throw new StaleStateException('State changed before locked execution');
+                if ($this->history?->includes($working->gameId)) {
+                    $historyRepo = new \Berserk\Core\BattleHistory\HistoryRepository($this->db);
+                    $meta = $this->db->fetchOne('SELECT * FROM battle_history_matches WHERE game_id='.$working->gameId.' FOR UPDATE');
+                    if ($meta === null) {
+                        if ($working->status !== 'place') throw new \LogicException('Cannot enable history in an existing battle');
+                        $needsHistoryInitialization = true;
+                    } elseif ($meta['recording_status'] !== 'recording' || (bool)$meta['has_final']) {
+                        throw new \LogicException('Experimental history match is not recording');
+                    } elseif ($working->status !== 'place' && !(bool)$meta['has_initial']) {
+                        throw new \LogicException('Cannot resume experimental history without initial capture');
+                    }
+                    $open = $this->db->fetchAll('SELECT * FROM battle_history_actions WHERE game_id='.$working->gameId." AND lifecycle='open' ORDER BY started_event_seq");
+                    $working->historyRecorder = new \Berserk\Core\BattleHistory\Recorder($working->gameId,$journalId,$this->history->catalog,$open);
+                }
                 $result = $apply($working);
                 if (!$result instanceof Result) throw new \LogicException('Locked command must return Result');
                 if (!$result->success) {
@@ -123,13 +140,19 @@ final class GameRepository
                     $this->db->commit();
                     return;
                 }
+            } elseif ($this->history?->includes($working->gameId)) {
+                throw new \LogicException('Experimental history requires execution under game lock');
             }
+            if (!empty($needsHistoryInitialization)) $historyRepo->initialize($working->gameId,'recording','incomplete');
             $this->save($working);
             $afterVersion = $working->persistenceVersion;
             if ($afterVersion === null) {
                 throw new \RuntimeException('Committed state did not receive persistence version');
             }
 
+            if ($working->historyRecorder !== null) {
+                $historyRepo->append($working->gameId,$journalId,$afterVersion,$working->historyRecorder->batch($working));
+            }
             $journal->markCommitted($journalId, $beforeVersion, $afterVersion);
             $this->db->commit();
         } catch (TransactionCommitUnknownException $e) {
@@ -151,6 +174,8 @@ final class GameRepository
                 throw $rollbackError;
             }
             throw $e;
+        } finally {
+            if (isset($working)) $working->historyRecorder = null;
         }
     }
 

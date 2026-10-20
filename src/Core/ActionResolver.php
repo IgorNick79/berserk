@@ -5332,6 +5332,7 @@ final class ActionResolver
 
         $this->engine->finalizeDying($this->state);
         $this->state->bumpVersion();
+        if ($hydra) $this->state->historyRecorder?->seriesEnded($this->state,$hydra);
         return Result::ok(['attack_series_ended']);
     }
 

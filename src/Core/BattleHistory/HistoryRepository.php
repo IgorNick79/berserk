@@ -37,7 +37,7 @@ final class HistoryRepository
         $game = $this->db->fetchOne("SELECT version,status FROM games WHERE ind=$gameId FOR UPDATE");
         if ($game === null || (int)$game['version'] !== $afterVersion) throw new \LogicException('Game must be CAS-saved in this transaction first');
         $meta = $this->db->fetchOne("SELECT * FROM battle_history_matches WHERE game_id=$gameId FOR UPDATE");
-        if ($meta === null || $meta['recording_status'] !== 'recording' || (int)$meta['event_version'] !== 1
+        if ($meta === null || $meta['recording_status'] !== 'recording' || (bool)$meta['has_final'] || (int)$meta['event_version'] !== 1
             || (int)$meta['snapshot_version'] !== 1) throw new \LogicException('History not enabled or unsupported version');
         $data = $batch->data();
         if ($data['complete_match'] && $game['status'] !== 'game_over') throw new \LogicException('Game not confirmed finished');
@@ -130,8 +130,8 @@ final class HistoryRepository
         }
         if ($data['complete_match'] && !$final) throw new \LogicException('Completion requires final capture');
         if ($data['complete_match'] && $this->db->fetchOne("SELECT action_id FROM battle_history_actions WHERE game_id=$gameId AND lifecycle='open' LIMIT 1") !== null) throw new \LogicException('Open actions require explicit interruption/settlement');
-        $status = $data['complete_match'] ? 'completed' : 'recording';
-        $complete = $meta['completeness'];
+        $status = $data['complete_match'] && !$data['partial'] ? 'completed' : 'recording';
+        $complete = $data['partial'] ? 'incomplete' : $meta['completeness'];
         if ($data['complete_match'] && !$initial) $complete = 'incomplete';
         $this->db->query('UPDATE battle_history_matches SET last_event_seq='.($eventBase+$eventCount).',last_step_seq='.($stepBase+count($captures))
             .',has_initial='.(int)$initial.',has_final='.(int)$final.',recording_status='.$this->sql($status).',completeness='.$this->sql($complete)

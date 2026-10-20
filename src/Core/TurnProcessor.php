@@ -68,6 +68,7 @@ final class TurnProcessor
         TurnTimer::prepare($this->state, $activeKey);
 
         // Стартовые эффекты
+        $this->state->historyRecorder?->initial($this->state);
         $this->applyStartEffects();
 
         // Pre-battle effects: Aristocrat intrigue, Degasca study, etc.
@@ -142,6 +143,7 @@ final class TurnProcessor
         }
 
         // Фаза конца хода
+        $this->state->historyRecorder?->turnEnding($this->state,$playerKey);
         (new TurnPhaseProcessor($this->state, $this->engine))->beginEndPhase($playerKey);
 
         $this->state->bumpVersion();
@@ -472,6 +474,7 @@ final class TurnProcessor
             || Choice\ChoiceRegistry::current($this->state) !== null) return;
 
         TurnTimer::resume($this->state, $timer['period_id'], 'start_resolution', $this->engine->serverNow());
+        $this->state->historyRecorder?->startTurnFinished($this->state);
     }
 
     /**

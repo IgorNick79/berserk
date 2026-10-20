@@ -23,6 +23,16 @@ final class Engine
 
     public function apply(GameState $state, string $playerKey, Command $cmd): Result
     {
+        $observer = $state->historyRecorder;
+        if ($observer === null) return $this->applyCommand($state,$playerKey,$cmd);
+        $observer->commandStarted($state,$playerKey,$cmd);
+        $result = $this->applyCommand($state,$playerKey,$cmd);
+        $observer->commandFinished($state,$result);
+        return $result;
+    }
+
+    private function applyCommand(GameState $state, string $playerKey, Command $cmd): Result
+    {
         if ($cmd->type === MatchPlayerSettings::COMMAND) return MatchPlayerSettings::apply($state, $playerKey, $cmd);
         $now = $this->serverNow();
         if (MatchPause::isCommand($cmd->type)) return MatchPause::apply($state, $playerKey, $cmd, $now);

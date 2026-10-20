@@ -107,6 +107,7 @@ final class MovementResolver
 
         $this->state->bumpVersion();
 
+        $this->state->historyRecorder?->moved($this->state,$card,$oldRow,$oldCol);
         return Result::ok(["card_moved:{$playerKey}:{$cardId}:{$row}_{$col}"]);
     }
 

@@ -14,6 +14,8 @@ namespace Berserk\Core;
  */
 final class GameState
 {
+    /** Transaction-local observer; deliberately absent from toArray()/fromArray(). */
+    public ?\Berserk\Core\BattleHistory\Recorder $historyRecorder = null;
     public const PLAYER_HOST   = 'host';
     public const PLAYER_PLAYER = 'player';
 

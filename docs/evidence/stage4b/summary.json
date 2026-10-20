@@ -1,0 +1,67 @@
+{
+  "branch": "codex/battle-replay-stage4b",
+  "infrastructure_commit": "57a382aed9b5687ca64360a1dcbf6a46361b821d",
+  "head": "57a382aed9b5687ca64360a1dcbf6a46361b821d",
+  "stage4b_committed": false,
+  "environment": {
+    "dir": "C:\\Users\\mi\\Documents\\Berserk\\stage4a-verification\\data\\",
+    "port": "33389",
+    "db": "berserk_stage4b_run6",
+    "version": "10.8.4-MariaDB"
+  },
+  "engine_repository_integration": 20,
+  "stage4a1_persistence": 23,
+  "r1_r3_cases": 33,
+  "existing_suites": 21,
+  "total_units": 97,
+  "failures": 0,
+  "skips_in_final_selected_checks": 0,
+  "lint_files": 14,
+  "real_http_test": true,
+  "production_touched": false,
+  "runtime_default_enabled": false,
+  "all_recordings_partial": true,
+  "production_migrations_added": false,
+  "new_source_sha256": {
+    "src/Core/ActionResolver.php": "888bd35d6b2ed180c5f5395bc3fbe8d2693e4d69d71af537ea0a3bdc471fa7df",
+    "src/Core/BattleHistory/ExperimentalHistory.php": "3570e212cf04f6f0414f06608a1178d03ff69b317f7a8d9ce7d57a7a13a2ef45",
+    "src/Core/BattleHistory/HistoryBatch.php": "6544ff45c2885631220f6ede9230debafe769e8c0f1374beffd04dec233f6e9e",
+    "src/Core/BattleHistory/HistoryRepository.php": "575ac89eaf2d07afca0e340fc37ddd11b6f67f7490e65ee582303a9c650d72c3",
+    "src/Core/BattleHistory/Recorder.php": "d1a9296dfcea83e20c0b15dfd91c916b7808571debf460bb7e9d179cd16ded67",
+    "src/Core/BattleHistory/ReplayStateBuilder.php": "674606588d78738be574e613dc31f389cdc81c643b7ee4696474173f75d014d0",
+    "src/Core/DamageResolver.php": "5a1ba06376935d2cc2b001b85534a178b73aa7091981c33d9e74d61ceb8f6aa9",
+    "src/Core/Engine.php": "c1095a20d76ca0bb04b2c8c4115153effb13e2866e14dbda8be79e8bf9e7bfef",
+    "src/Core/GameRepository.php": "32ee6899bf4aeff6a416bc82009294ff853965c409b8f183d37573fd6e522dc3",
+    "src/Core/GameState.php": "bec8ee6e8b4232fb57a735f800bc8dffa1308b50d7325672714c3788c0ba7bd6",
+    "src/Core/Movement/MovementResolver.php": "568422e7686eeb66dee2e918c6a7fc740fe3c47575ab4f1d08233e30555a7caa",
+    "src/Core/StrikeResolver.php": "76c397f87bf07f7e2d236a736fae7f25143f17089478ce062037421b338203b0",
+    "src/Core/TurnProcessor.php": "c24f0d68033f099da6b618a15ea98403d891dcee8a5df94ce0bcb9ea7757b1a6",
+    "tools/test_battle_recorder.php": "362177c2841d6c587d3015dbafa47fc1f66da404c0493ba1476bf4536ba21a56"
+  },
+  "intentional_baseline_source_changes": [
+    "src/Core/ActionResolver.php",
+    "src/Core/BattleHistory/HistoryBatch.php",
+    "src/Core/BattleHistory/HistoryRepository.php",
+    "src/Core/DamageResolver.php",
+    "src/Core/Engine.php",
+    "src/Core/GameRepository.php",
+    "src/Core/GameState.php",
+    "src/Core/Movement/MovementResolver.php",
+    "src/Core/StrikeResolver.php",
+    "src/Core/TurnProcessor.php"
+  ],
+  "unchanged_baseline_src_count": 156,
+  "preserved_prior_archives": {
+    "docs/evidence/stage3/stage3-evidence.zip": "b541e6c0639c14434f09fcfb6884feaf59fdc62eb63e1f963958a8912982771a",
+    "docs/evidence/stage31/stage31-evidence.zip": "63da4527b463ccc979d4455c2a7d793c5ad0617240f33fc8c73590aa7fe637e3",
+    "docs/evidence/stage32/stage32-evidence.zip": "a66fea68cb99dd4b143ba79fa380f9d777a89236e3c87eef3508d79fa92afce5",
+    "docs/evidence/stage4a/stage4a-evidence.zip": "37dd6463c8c94f338c341eb20cc8dfc8a6823bf82cb18382b50ebabb28577b71",
+    "docs/evidence/stage4a1/stage4a1-evidence.zip": "b12693c7abc5dd1e95786d9f785ddced89c9d4ccd156be39acc6d806e344c198"
+  },
+  "limits": [
+    "certified plain board + Hydra + simple start.get_hp only",
+    "no production bootstrap/preparation/automatic activation",
+    "partial terminal not completed",
+    "physical COMMIT ACK loss not simulated"
+  ]
+}

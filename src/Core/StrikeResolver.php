@@ -326,6 +326,7 @@ final class StrikeResolver
         $this->state->battle['strike'] = $strike;
 
         // Окно инстантов до броска — openWindow сам проверит, есть ли у кого
+        $this->state->historyRecorder?->combatStarted($this->state,$strike);
         $ip = new InstantProcessor($this->state, $this->engine);
         $beforeWindowOpened = $ip->openWindow('before', $playerKey);
 
@@ -771,6 +772,9 @@ final class StrikeResolver
         $table = $this->strikeTable($attackValue, $defendValue);
         $strike['base_result'] = $table;
         $strike['result'] = $table;
+        $this->state->historyRecorder?->combatEvent($this->state,'combat.dice',[
+            'attack'=>$attackDice,'defend'=>$defendDice,'attack_mod'=>$attackMod,'defend_mod'=>$defendMod,
+        ],[$attackerId,$defendCard->instanceId]);
 
         // Окно 2 — сначала dice-инстанты, затем остальные combat-инстанты.
         $attackerKey = $attacker->owner;
@@ -834,6 +838,7 @@ final class StrikeResolver
             'defend'    => $defendStrike,
             'decreased' => $decrease,
         ];
+        $this->state->historyRecorder?->combatEvent($this->state,'combat.result',$strike['final'],[$attacker->instanceId,$defendCard->instanceId]);
 
         // Эффекты от удара (включая промах)
         if (empty($strike['coin_blocked']) && empty($strike['first_strike_blocked'])) $this->engine->applyStrikeEffects($attacker, $defendCard, $attackStrike);
@@ -1561,10 +1566,12 @@ final class StrikeResolver
         }
 
         if ($this->openAttackSeriesChoice($strike)) {
+            $this->state->historyRecorder?->combatFinished($this->state);
             $this->state->bumpVersion();
             return Result::ok(['attack_series_choice']);
         }
 
+        $this->state->historyRecorder?->combatFinished($this->state);
         return null;
     }
 

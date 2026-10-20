@@ -49,6 +49,8 @@ final class DamageResolver
             'damage_on_dice', 'self_wound', 'transfer_wounds',
             'wound_transfer', 'whip', 'blood_tap',
         ];
+        $historyHpBefore = $target->hp;
+        $historyArmorBefore = $target->armor;
         if (!in_array($actionType, $armorIgnores, true)) {
             if ($target->armor > 0) {
                 if ($val <= $target->armor) {
@@ -61,12 +63,22 @@ final class DamageResolver
             }
         }
 
-        if ($val <= 0) return;
+        if ($val <= 0) {
+            $this->state->historyRecorder?->combatEvent($this->state,'combat.wounds',[
+                'target_id'=>$target->instanceId,'source_id'=>$attacker?->instanceId,'type'=>$actionType,
+                'wounds'=>0,'hp_before'=>$historyHpBefore,'hp_after'=>$target->hp,'armor_before'=>$historyArmorBefore,'armor_after'=>$target->armor,
+            ],array_values(array_filter([$target->instanceId,$attacker?->instanceId])));
+            return;
+        }
 
         $hpBefore = $target->hp;
         $target->hp -= $val;
 
         $realDamage = $hpBefore - $target->hp;
+        $this->state->historyRecorder?->combatEvent($this->state,'combat.wounds',[
+            'target_id'=>$target->instanceId,'source_id'=>$attacker?->instanceId,'type'=>$actionType,
+            'wounds'=>$realDamage,'hp_before'=>$hpBefore,'hp_after'=>$target->hp,'armor_before'=>$historyArmorBefore,'armor_after'=>$target->armor,
+        ],array_values(array_filter([$target->instanceId,$attacker?->instanceId])));
         if ($realDamage > 0 && $attacker) {
             RangedNeighborTeleport::record($this->state, $attacker, $target, $actionType, $realDamage);
         }
@@ -157,6 +169,9 @@ final class DamageResolver
 
         $target->hp = 0;
         $target->dying = true;
+        $this->state->historyRecorder?->combatEvent($this->state,'combat.death',[
+            'card_id'=>$target->instanceId,'cause'=>$cause,'source_id'=>$source?->instanceId,
+        ],array_values(array_filter([$target->instanceId,$source?->instanceId])));
         Strangulation::refresh($this->state);
 
         (new ValhallaProcessor($this->state, damage: $this))->markPending($target, $cause);
