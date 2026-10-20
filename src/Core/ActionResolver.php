@@ -2258,6 +2258,10 @@ final class ActionResolver
             return Result::error('Обязательная атака — отмена невозможна');
         }
 
+        if (!empty($state->battle['pending_wound_transfer'])) {
+            return (new WoundTransferProcessor($state, $this->engine))->cancel($playerKey);
+        }
+
         $cancelled = [];
 
         // Простые: unset если owner === playerKey
@@ -2321,25 +2325,6 @@ final class ActionResolver
         if ($this->cancelWithRefund($state, $playerKey, 'pending_dive', 'attacker_id',
                 fn($p) => (int) ($p['action']['coins'] ?? 0))) {
             $cancelled[] = 'dive';
-        }
-
-        // Спец: wound_transfer — возврат монет + reopen источника
-        if (!empty($state->battle['pending_wound_transfer'])) {
-            $p = $state->battle['pending_wound_transfer'];
-            if (($p['owner'] ?? null) === $playerKey) {
-                $cost = (int) ($p['options']['coins_cost'] ?? 0);
-                $src = $state->getCard((int) ($p['source_id'] ?? 0));
-                if ($src) {
-                    if ($cost > 0) {
-                        $src->coins += $cost;
-                        $this->engine->syncCoinBonus($src);
-                    }
-                    $src->closed = false;
-                    unset($src->flags['in_stack']);
-                }
-                unset($state->battle['pending_wound_transfer']);
-                $cancelled[] = 'wound_transfer';
-            }
         }
 
         if (empty($cancelled)) {

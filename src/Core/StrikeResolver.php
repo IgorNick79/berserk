@@ -769,6 +769,7 @@ final class StrikeResolver
             : CardStats::getClumsyPenalty($defendCard);
 
         $table = $this->strikeTable($attackValue, $defendValue);
+        $strike['base_result'] = $table;
         $strike['result'] = $table;
 
         // Окно 2 — сначала dice-инстанты, затем остальные combat-инстанты.
@@ -1918,8 +1919,13 @@ final class StrikeResolver
     {
         $strike = &$this->state->battle['strike'];
 
-        // Если result уже был изменён strike_level — не пересчитываем
-        if (!empty($strike['level_overridden'])) return;
+        // Upgrade the only level override persisted by older combat states.
+        // Keep its attack result without freezing the defender's base table.
+        if (!isset($strike['strike_level_effects']) && !empty($strike['level_overridden'])) {
+            $strike['strike_level_effects'] = [[
+                'side' => 'attack', 'mode' => 'set', 'value' => $strike['result']['attack'] ?? '',
+            ]];
+        }
 
         $attacker = $this->state->getCard($strike['attacker_id']);
         $defenderId = $strike['defender_id'];
@@ -1934,6 +1940,18 @@ final class StrikeResolver
             : (int) ($strike['defend_dice'] ?? 0) + (int) ($strike['defend_mod'] ?? 0);
 
         $table = $this->strikeTable($attackValue, $defendValue);
+        $strike['base_result'] = $table;
+        // Rebuild from dice/defender, then fold already resolved level changes.
+        // This is pure table calculation: no costs, summaries or effects run twice.
+        foreach ($strike['strike_level_effects'] ?? [] as $change) {
+            $side = $change['side'];
+            if ($table[$side] === '') continue; // A level change does not create a hit from a miss.
+            if ($change['mode'] === 'set') {
+                $table[$side] = $change['value'];
+            } elseif ($change['mode'] === 'reduce_one') {
+                $table[$side] = $this->decreaseStrike($table[$side]);
+            }
+        }
         $strike['result'] = $table;
 
         // После пересчёта — сброс final

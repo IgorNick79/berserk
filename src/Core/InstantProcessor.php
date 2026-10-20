@@ -944,7 +944,7 @@ final class InstantProcessor
         return Result::ok(['dice_choice_resolved']);
     }
 
-    public function completePausedCombatItem(bool $applied, string $reason = '', array $effectResult = []): void
+    public function completePausedCombatItem(bool $applied, string $reason = '', array $effectResult = [], bool $closeSource = true): void
     {
         $queue = $this->state->battle['strike']['instant_resolution']['queue'] ?? [];
         if (empty($queue)) return;
@@ -953,7 +953,7 @@ final class InstantProcessor
         $source = $this->state->getCard((int) ($item['card_id'] ?? 0));
         array_shift($this->state->battle['strike']['instant_resolution']['queue']);
         if ($source) {
-            $source->closed = true;
+            if ($closeSource) $source->closed = true;
             unset($source->flags['in_stack']);
         }
         $this->appendInstantSummary($item, $applied, $reason, $source, $effectResult);

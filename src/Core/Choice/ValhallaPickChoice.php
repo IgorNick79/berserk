@@ -21,7 +21,7 @@ final class ValhallaPickChoice implements ChoiceHandlerInterface
 
     public function commandTypes(): array
     {
-        return ['valhalla_pick'];
+        return ['valhalla_pick', 'cancel_pending'];
     }
 
     public function spec(
@@ -85,6 +85,7 @@ final class ValhallaPickChoice implements ChoiceHandlerInterface
         Command $cmd
     ): Result {
         $vp = new \Berserk\Core\ValhallaProcessor($state, $engine);
+        if ($cmd->type === 'cancel_pending') return $vp->cancel($playerKey);
         return $vp->chooseTarget($playerKey, $cmd);
     }
 }

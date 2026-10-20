@@ -281,8 +281,16 @@ final class Engine
                     return $isAttackerSide ? 'промах' : 'защитник промахнулся';
                 }
 
+                if (!isset($strike['strike_level_effects']) && !empty($strike['level_overridden'])) {
+                    $strike['strike_level_effects'] = [[
+                        'side' => 'attack', 'mode' => 'set', 'value' => $strike['result']['attack'],
+                    ]];
+                }
+
                 if ($mode === 'set') {
                     if ($current === $value) return 'уже ' . $value;
+                    $strike['base_result'] ??= $strike['result'];
+                    $strike['strike_level_effects'][] = ['side' => $side, 'mode' => 'set', 'value' => $value];
                     $strike['result'][$side] = $value;
                     if ($isAttackerSide) $strike['level_overridden'] = true;
                     return null;
@@ -292,6 +300,8 @@ final class Engine
                     $levels = ['strong' => 'medium', 'medium' => 'weak', 'weak' => ''];
                     $new = $levels[$current] ?? '';
                     if ($new === $current) return 'уже минимум';
+                    $strike['base_result'] ??= $strike['result'];
+                    $strike['strike_level_effects'][] = ['side' => $side, 'mode' => 'reduce_one'];
                     $strike['result'][$side] = $new;
                     return null;
                 }

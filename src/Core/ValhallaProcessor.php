@@ -132,6 +132,22 @@ final class ValhallaProcessor
         return Result::ok(['valhalla_applied']);
     }
 
+    /** Stop only the unapplied remainder; Ragnar's consumed repeat is not refunded. */
+    public function cancel(string $playerKey): Result
+    {
+        $pending = $this->state->battle['pending_valhalla_pick'] ?? null;
+        if (!$pending) return Result::error('Нет ожидающего выбора');
+        if ($pending['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+
+        unset($this->state->battle['pending_valhalla_pick']);
+        $this->finishPendingSubtask();
+        if ($this->engine !== null && !empty($this->state->battle['turn_phase'])) {
+            (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+        }
+        $this->state->bumpVersion();
+        return Result::ok(['cancelled:valhalla_pick']);
+    }
+
     private function finishPendingSubtask(): void
     {
         if (!empty($this->state->battle['turn_phase']['sub']['pending_id'])) {

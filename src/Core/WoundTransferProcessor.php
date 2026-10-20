@@ -245,6 +245,44 @@ final class WoundTransferProcessor
         return Result::ok(['wt_target_amount_done']);
     }
 
+    public function cancel(string $playerKey): Result
+    {
+        $pending = $this->state->battle['pending_wound_transfer'] ?? null;
+        if (!$pending) return Result::error('Нет ожидающего выбора');
+        if ($pending['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+
+        $combat = ($pending['options']['on_finish'] ?? 'main_phase') === 'combat_resolution';
+        if ($combat) {
+            $item = $this->state->battle['strike']['instant_resolution']['queue'][0] ?? null;
+            if (!$item || (int) ($item['card_id'] ?? 0) !== (int) $pending['source_id']
+                || ($item['effect']['type'] ?? '') !== 'redistribute_wounds') {
+                return Result::error('Нет приостановленного переноса ран');
+            }
+        }
+
+        $source = $this->state->getCard((int) $pending['source_id']);
+        if ($source) {
+            $cost = (int) ($pending['options']['coins_cost'] ?? 0);
+            if ($cost > 0) {
+                $source->coins += $cost;
+                $this->engine->syncCoinBonus($source);
+            }
+            $source->closed = false;
+            unset($source->flags['in_stack']);
+        }
+        unset($this->state->battle['pending_wound_transfer']);
+
+        if ($combat) {
+            (new InstantProcessor($this->state, $this->engine))->completePausedCombatItem(
+                false, 'отменено игроком', ['transferred' => 0], false
+            );
+        } elseif (!empty($this->state->battle['turn_phase'])) {
+            (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+        }
+        $this->state->bumpVersion();
+        return Result::ok(['cancelled:wound_transfer']);
+    }
+
     public function finish(string $playerKey): Result
     {
         $pw = $this->state->battle['pending_wound_transfer'] ?? null;
