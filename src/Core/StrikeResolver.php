@@ -153,7 +153,7 @@ final class StrikeResolver
             return Result::error($reason !== '' ? $reason : 'Атакующий не может действовать');
         }
         if (CardStats::hasCannotAttack($attacker)) {
-            return Result::error('Карта не может атаковать до конца хода');
+            return Result::error(Strangulation::count($attacker) >= 2 ? 'Атаки запрещены маркерами удушения' : 'Карта не может атаковать до конца хода');
         }
         $isSeries = !empty($attacker->prop['attack_series']);
         $seriesActive = !empty($attacker->flags['attack_series_active']);
@@ -1446,6 +1446,15 @@ final class StrikeResolver
 
     public function continueAfterStrikeResultAck(array $strike): ?Result
     {
+        if (($strike['kind'] ?? '') === 'strangle') {
+            if (!empty($strike['pending_choice'])) return Result::error('Сначала завершите эффект гибели');
+            // Ability acknowledgement must not create ordinary strike follow-ups or instant windows.
+            (new CoinAbilities($this->state, $this->engine))->completeCombat($strike);
+            $this->state->battle['strike'] = null;
+            $this->engine->finalizeDying($this->state);
+            $this->state->bumpVersion();
+            return Result::ok(['strangulation_result_confirmed']);
+        }
         // Auto — только если ещё не сработал
         if (empty($strike['auto_effects'])) {
             $attacker = $this->state->getCard($strike['attacker_id']);

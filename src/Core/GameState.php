@@ -208,6 +208,7 @@ final class GameState
     public function removeCard(int $instanceId): void
     {
         unset($this->cards[$instanceId]);
+        Strangulation::refresh($this);
     }
 
     // ─── Версия ──────────────────────────────────────────────

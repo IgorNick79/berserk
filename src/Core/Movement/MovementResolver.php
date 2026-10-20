@@ -51,6 +51,9 @@ final class MovementResolver
             return $err;
         }
 
+        if (\Berserk\Core\Strangulation::count($card) > 0) {
+            return Result::error('Самостоятельное передвижение запрещено маркерами удушения');
+        }
         if (isset($card->markers['rooted'])) {
             return Result::error('Карта обездвижена');
         }
@@ -127,6 +130,9 @@ final class MovementResolver
         }
         if (!empty($card->flags['moved_this_turn'])) {
             return Result::error('Существо уже двигалось в этот ход');
+        }
+        if (\Berserk\Core\Strangulation::count($card) > 0) {
+            return Result::error('Самостоятельное передвижение запрещено маркерами удушения');
         }
         if (isset($card->markers['rooted'])) {
             return Result::error('Карта обездвижена');
@@ -206,6 +212,7 @@ final class MovementResolver
     /** Effect-driven jump: the same destinations and movement effects, without paying an action. */
     public function triggeredJumpCells(CardInstance $card, int $range): array
     {
+        if (\Berserk\Core\Strangulation::count($card) > 0) return [];
         if ($card->zone !== CardInstance::ZONE_FIELD || $card->dying || $card->hp <= 0) return [];
         $cells = \Berserk\Core\BattleHelper::getJumpCells($this->state, $card, $range);
         foreach (array_keys($cells) as $key) {

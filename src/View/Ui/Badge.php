@@ -38,6 +38,7 @@ final class Badge
         'poison'     => 'Яд',
         'fire'       => 'Огонь',
         'tremor'     => 'Дрожь',
+        'strangulation' => 'Удушение',
         'rooted'     => 'Обездвижен',
         'spider_web' => 'Сеть',
         'sand_claws' => 'Когти',
@@ -192,7 +193,7 @@ final class Badge
         }
 
         $text = $name;
-        $alwaysShowValue = ['poison'];
+        $alwaysShowValue = ['poison', 'strangulation'];
         if ($val !== null && ($val > 1 || in_array($type, $alwaysShowValue, true))) {
             $text .= ' ' . $val;
         }

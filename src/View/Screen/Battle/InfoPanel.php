@@ -1163,6 +1163,9 @@ final class InfoPanel
             } elseif ($kind === 'execute') {
                 $name = $strike['action_name'] ?? 'Добивание';
                 $resultText = $name . ': цель уничтожена';
+            } elseif ($kind === 'strangle') {
+                $resultText = 'Удушить: маркеров удушения — ' . (int) ($strike['strangulation_count'] ?? 0)
+                    . (!empty($strike['destruction']) ? '. Существо уничтожено.' : '');
             } elseif ($kind === 'destroy_self_and_target') {
                 $name = $strike['action_name'] ?? 'Последний путь';
                 $destroyed = $strike['destroyed'] ?? [];
@@ -1655,7 +1658,7 @@ final class InfoPanel
                 . $abilityBonusHtml . $coinBonusHtml . $reductionHtml
                 . $spiderWebHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml;
 
-            $noDiceKinds = ['heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'become_fly', 'bomb_shot', 'apply_delayed_marker', 'particle', 'life_gift', 'poison_boost', 'damage_ranged', 'teleport_target', 'blood_storm', 'row_spell'];
+            $noDiceKinds = ['strangle', 'heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'become_fly', 'bomb_shot', 'apply_delayed_marker', 'particle', 'life_gift', 'poison_boost', 'damage_ranged', 'teleport_target', 'blood_storm', 'row_spell'];
             if (!in_array($kind, $noDiceKinds, true)) {
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,

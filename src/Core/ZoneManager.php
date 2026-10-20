@@ -25,6 +25,7 @@ final class ZoneManager
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_HAND;
         $this->normalizeFlyingSlots($flyingOwner);
+        Strangulation::refresh($this->state);
     }
 
     public function toSquad(CardInstance $card): void
@@ -34,6 +35,7 @@ final class ZoneManager
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_SQUAD;
         $this->normalizeFlyingSlots($flyingOwner);
+        Strangulation::refresh($this->state);
     }
 
     public function toDeck(CardInstance $card): void
@@ -43,6 +45,7 @@ final class ZoneManager
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_DECK;
         $this->normalizeFlyingSlots($flyingOwner);
+        Strangulation::refresh($this->state);
     }
 
     public function toSideboard(CardInstance $card): void
@@ -52,6 +55,7 @@ final class ZoneManager
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_SIDEBOARD;
         $this->normalizeFlyingSlots($flyingOwner);
+        Strangulation::refresh($this->state);
     }
 
     public function toField(CardInstance $card, int $row, int $col): void
@@ -62,6 +66,7 @@ final class ZoneManager
         $card->col  = $col;
         $card->slot = 0;
         $this->normalizeFlyingSlots($flyingOwner);
+        Strangulation::refresh($this->state);
 
         // Воскрешение снимает готовность Вальхаллы
         unset($card->flags['valhalla_active']);
@@ -72,6 +77,7 @@ final class ZoneManager
     {
         if ($card->zone === CardInstance::ZONE_FLYING) {
             $this->normalizeFlyingSlots($card->owner);
+        Strangulation::refresh($this->state);
             return;
         }
 
@@ -81,6 +87,7 @@ final class ZoneManager
         $card->slot = $this->nextFlyingSlot($card->owner);
 
         $this->normalizeFlyingSlots($card->owner);
+        Strangulation::refresh($this->state);
     }
 
     /**
@@ -134,6 +141,7 @@ final class ZoneManager
         }
 
         $this->normalizeFlyingSlots($flyingOwner);
+        Strangulation::refresh($this->state);
     }
 
     public function toExile(CardInstance $card): void
@@ -153,6 +161,7 @@ final class ZoneManager
         $card->flags     = [];
         $this->clearPosition($card);
         $this->normalizeFlyingSlots($flyingOwner);
+        Strangulation::refresh($this->state);
     }
 
     public function flushDying(): void

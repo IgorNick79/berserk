@@ -685,6 +685,7 @@ final class CardStats
 
     public static function hasCannotAttack(CardInstance $card): bool
     {
+        if (Strangulation::count($card) >= 2) return true;
         foreach ($card->modifiers as $m) {
             if (($m['stat'] ?? '') === 'cannot_attack') return true;
         }
@@ -1119,6 +1120,7 @@ final class CardStats
 
     public static function getForcedStrikeTarget(GameState $state, CardInstance $card): ?CardInstance
     {
+        if (Strangulation::count($card) >= 2) return null;
         if (empty($card->prop['forced_strike'])) return null;
         if ($card->zone !== CardInstance::ZONE_FIELD) return null;
         if ($card->closed) return null;
