@@ -16,6 +16,7 @@
                 });
             }
             function closeMenu(restore) {
+                if (root.closePlaymats) root.closePlaymats();
                 open = false; menu.hidden = true; button.setAttribute("aria-expanded", "false");
                 if (restore) button.focus({preventScroll: true});
             }
@@ -55,11 +56,14 @@
                 (available.length ? available[last ? available.length - 1 : 0] : menu).focus({preventScroll: true});
             }
             function click(event) {
-                var node = event.target.closest && event.target.closest(".battle-menu, [data-menu-sound], [data-menu-debug]");
+                var node = event.target.closest && event.target.closest(".battle-menu, [data-menu-sound], [data-menu-debug], [data-menu-playmat]");
                 if (!node || !root.contains(node)) return;
                 if (node === button) {
                     event.preventDefault(); event.stopImmediatePropagation();
                     if (open) closeMenu(true); else showMenu(false);
+                } else if (node.hasAttribute("data-menu-playmat")) {
+                    event.preventDefault(); event.stopImmediatePropagation();
+                    if (root.openPlaymats) root.openPlaymats();
                 } else if (node === sound) {
                     event.preventDefault(); event.stopImmediatePropagation();
                     if (busy()) return;
@@ -75,7 +79,7 @@
                 }
             }
             function outside(event) {
-                if (open && !menu.contains(event.target) && !button.contains(event.target)) closeMenu(false);
+                if (open && !menu.contains(event.target) && !event.target.closest("[data-playmat-picker]") && !button.contains(event.target)) closeMenu(false);
             }
             function keydown(event) {
                 if (event.key === "Escape" && (open || debugOpen)) {

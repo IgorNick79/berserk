@@ -25,6 +25,12 @@
         if (!node) return;
     }
 
+    var renderToken = script.dataset.renderToken || "";
+    var playmats = window.BerserkPlaymats ? window.BerserkPlaymats.create(root, syncUrl, function (data) {
+        // Advance CAS only when the acknowledged JSON has the gameplay already on screen.
+        // Otherwise keep the cursor so the next poll retrieves intervening game actions.
+        if (data.render_token === renderToken) syncVersion = Math.max(syncVersion, data.playmats.version);
+    }) : null;
     var syncVersion = parseInt(script.dataset.version || "-1", 10);
     if (!Number.isFinite(syncVersion)) syncVersion = -1;
     var turnTimer = window.BerserkTurnTimer
@@ -34,6 +40,7 @@
     var matchPause = null, battleMenu = null;
 
     function updateTurnTimer(data) {
+        if (playmats && data && data.playmats) playmats.update(data.playmats);
         if (turnTimer && data && data.player_settings) turnTimer.updateSettings(data.player_settings, data.sync_version);
         if (pendingCommand && data && data.command_id === pendingCommand.id && data.command_status === "conflict"
             && pendingCommand.type === "pause_ready") pendingCommand.readyConflict = true;
@@ -142,6 +149,7 @@
 
     function buildUrl(forceSnapshot) {
         var url = new URL(syncUrl, window.location.href);
+        url.searchParams.set("render_token", renderToken);
         url.searchParams.set("since_version", String(Math.max(0, syncVersion)));
         url.searchParams.delete("settings_sync_id");
         url.searchParams.set("sel", String(uiState.sel || 0));
@@ -298,6 +306,7 @@
         }
 
         syncVersion = incomingVersion;
+        if (data.render_token) renderToken = data.render_token;
         uiState = normalizeUi(data.ui);
         updateTurnTimer(data);
         if (turnTimer) turnTimer.render();

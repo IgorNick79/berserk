@@ -21,6 +21,7 @@ final class PlayerState
         public array $resources = ['gold' => 0, 'silver' => 0],
         public int $reshuffles = 0,
         public bool $soundEnabled = true,
+        public ?string $playmatId = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -34,6 +35,7 @@ final class PlayerState
             confirmed:  (array) ($data['confirmed'] ?? []),
             resources:  (array) ($data['resources'] ?? ['gold' => 0, 'silver' => 0]),
             reshuffles: (int) ($data['reshuffles'] ?? 0),
+            playmatId: is_string($data['playmat_id'] ?? null) ? $data['playmat_id'] : null,
             soundEnabled: is_bool($data['sound_enabled'] ?? null) ? $data['sound_enabled'] : true,
         );
     }
@@ -50,6 +52,7 @@ final class PlayerState
             'resources'  => $this->resources,
             'reshuffles' => $this->reshuffles,
             'sound_enabled' => $this->soundEnabled,
+            'playmat_id' => $this->playmatId,
         ];
     }
 

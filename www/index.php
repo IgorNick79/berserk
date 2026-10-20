@@ -265,6 +265,8 @@ function sendBattleAjaxState(
             'ok' => $ok,
             'type' => $type === 'conflict' ? 'conflict' : 'status',
             'sync_version' => $syncVersion,
+            'render_token' => \Berserk\Core\PlaymatCatalog::renderToken($state),
+            'playmats' => \Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey),
             'status' => $state->status,
             'turn_timer' => TurnTimer::snapshot($state, time()),
             'player_settings' => MatchPlayerSettings::snapshot($state, $playerKey),
@@ -291,6 +293,8 @@ function sendBattleAjaxState(
         'ok' => $ok,
         'type' => $type,
         'sync_version' => $syncVersion,
+        'render_token' => \Berserk\Core\PlaymatCatalog::renderToken($state),
+        'playmats' => \Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey),
         'status' => $state->status,
         'ui' => $snapshot['ui'],
         'fragments' => $snapshot['fragments'],
@@ -531,6 +535,7 @@ function buildRenderCardInfo(Db $db, GameState $state): array
 
 $ajax = ajaxParamString('ajax', 32);
 $isChat = in_array($ajax, ['chat_messages', 'chat_send', 'chat_read'], true);
+$isPlaymat = $ajax === 'playmat';
 $isBattleSync = $ajax === 'battle_sync';
 $isBattleCommand = $ajax === 'battle_command';
 $isBattleCommandStatus = $ajax === 'battle_command_status';
@@ -565,7 +570,7 @@ if (is_string($_GET['debug_roll'] ?? null)) {
 try {
     $db = new Db($config);
 } catch (Throwable $e) {
-    if ($isChat || $isBattleSync || $isBattleCommand || $isBattleCommandStatus) {
+    if ($isChat || $isPlaymat || $isBattleSync || $isBattleCommand || $isBattleCommandStatus) {
         sendAjaxJson([
             'ok' => false,
             'error' => 'server_error',
@@ -625,7 +630,7 @@ if (isset($_GET['first'])) {
 }
 
 if ($role === null) {
-    if ($isChat || $isBattleSync || $isBattleCommand || $isBattleCommandStatus) {
+    if ($isChat || $isPlaymat || $isBattleSync || $isBattleCommand || $isBattleCommandStatus) {
         sendAjaxJson([
             'ok' => false,
             'error' => 'missing_player_role',
@@ -641,7 +646,7 @@ if ($role === null) {
 $userId = $role === 'host' ? 1 : 2;
 
 // ─── Находим или создаём партию ──────────────────────────────
-$isBattleAjax = $isBattleSync || $isBattleCommand || $isBattleCommandStatus;
+$isBattleAjax = $isPlaymat || $isBattleSync || $isBattleCommand || $isBattleCommandStatus;
 $gameId = $isBattleAjax
     ? (ajaxParamInt('game') ?? 0)
     : (isset($_GET['game']) && !is_array($_GET['game']) ? (int) $_GET['game'] : 0);
@@ -694,6 +699,18 @@ $_SESSION['role']    = $role;
 $playerKey = $role === 'host' ? 'host' : 'player';
 $oppKey    = $state->getOpponentKey($playerKey);
 
+if ($isPlaymat) {
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') sendAjaxJson(['ok'=>false,'error'=>'method'],405);
+    $token = ajaxPostParamString('csrf',64);
+    if (!$token || !hash_equals($_SESSION['playmat_csrf'] ?? '', $token)) sendAjaxJson(['ok'=>false,'error'=>'csrf'],403);
+    try {
+        $fresh = $repo->setPlaymat($state->gameId, $userId, ajaxPostParamString('playmat_id',64) ?? '');
+        sendAjaxJson(['ok'=>true,'render_token'=>\Berserk\Core\PlaymatCatalog::renderToken($fresh),'playmats'=>\Berserk\Core\PlaymatCatalog::snapshot($fresh,$playerKey)]);
+    } catch (\InvalidArgumentException $error) {
+        sendAjaxJson(['ok'=>false,'error'=>$error->getMessage()],400);
+    } catch (Throwable) { sendAjaxJson(['ok'=>false,'error'=>'save_failed'],500); }
+}
+
 if ($isBattleSync) {
     try {
         $state = applyAutomaticBattleProgress($db, $state, $playerKey);
@@ -713,11 +730,12 @@ if ($isBattleSync) {
             ]);
         }
 
-        if (!$forceSnapshot && $sinceVersion !== null && $sinceVersion === $syncVersion) {
+        if (!$forceSnapshot && $sinceVersion !== null && ($sinceVersion === $syncVersion || hash_equals(\Berserk\Core\PlaymatCatalog::renderToken($state), ajaxParamString('render_token',64) ?? ''))) {
             sendAjaxJson([
                 'ok' => true,
                 'type' => 'no_change',
                 'sync_version' => $syncVersion,
+                'playmats' => \Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey),
                 'turn_timer' => TurnTimer::snapshot($state, time()),
                 'player_settings' => MatchPlayerSettings::snapshot($state, $playerKey),
                 'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
@@ -1335,7 +1353,10 @@ switch ($state->status) {
                 break;
             }
         }
-        $scriptsHtml = '<script src="/assets/js/battle-turn-timer.js?v={{rkey}}"></script>'
+        $_SESSION['playmat_csrf'] ??= bin2hex(random_bytes(32));
+        $scriptsHtml = '<script type="application/json" id="battle-playmats">' . json_encode(['catalog'=>\Berserk\Core\PlaymatCatalog::ITEMS, 'csrf'=>$_SESSION['playmat_csrf'], 'state'=>\Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey)], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . '</script>'
+            . '<script src="/assets/js/battle-playmats.js?v={{rkey}}"></script>'
+            . '<script src="/assets/js/battle-turn-timer.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-menu.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-match-pause.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-sync.js?v={{rkey}}"'
@@ -1344,6 +1365,7 @@ switch ($state->status) {
             . ' data-sync-url="' . htmlspecialchars($syncUrl, ENT_QUOTES) . '"'
             . ' data-game-id="' . (int) $state->gameId . '"'
             . ' data-role="' . htmlspecialchars($role, ENT_QUOTES) . '"'
+            . ' data-render-token="' . \Berserk\Core\PlaymatCatalog::renderToken($state) . '"'
             . ' data-version="' . (int) ($state->persistenceVersion ?? 0) . '"'
             . ' data-sel="' . (int) ($ui['sel'] ?? 0) . '"'
             . ' data-mode="' . htmlspecialchars((string) ($ui['mode'] ?? 'strike'), ENT_QUOTES) . '"'

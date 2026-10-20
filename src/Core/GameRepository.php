@@ -170,11 +170,35 @@ final class GameRepository
         $gameId = $this->db->lastInsertId();
         $state = new GameState($gameId, $hostId, $playerId);
         $state->status = 'mode';
+        foreach ($state->players as $participant) PlaymatCatalog::assign($participant);
         $state->persistenceVersion = 0;
 
         $this->save($state);
 
         return $state;
+    }
+
+    /** Lock the latest JSON, alter only the identified participant, retain CAS protection. */
+    public function setPlaymat(int $gameId, int $userId, string $id): GameState
+    {
+        if (!isset(PlaymatCatalog::ITEMS[$id])) throw new \InvalidArgumentException('invalid_playmat');
+        $this->db->beginTransaction();
+        try {
+            $state = $this->findById($gameId, true);
+            $actor = $state?->getPlayerKeyByUserId($userId);
+            if ($state === null || $actor === null || !in_array($userId, [$state->hostId, $state->playerId], true))
+                throw new \InvalidArgumentException('not_participant');
+            if ($state->status !== 'battle' || $state->winner !== null) throw new \InvalidArgumentException('battle_not_active');
+            if ($state->getPlayer($actor)->playmatId !== $id) {
+                $state->getPlayer($actor)->playmatId = $id;
+                $this->save($state);
+            }
+            $this->db->commit();
+            return $state;
+        } catch (\Throwable $error) {
+            if ($this->db->inTransaction()) $this->db->rollback();
+            throw $error;
+        }
     }
 
     private function ensurePersistenceVersionColumn(): void

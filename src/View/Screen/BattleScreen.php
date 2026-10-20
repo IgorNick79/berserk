@@ -139,6 +139,8 @@ final class BattleScreen
                 'pause_mask_hidden' => \Berserk\Core\MatchPause::blocking($state) ? '' : 'hidden',
                 'debug_disabled' => $debugHtml === '' ? 'disabled' : '',
                 'debug_menu_url' => htmlspecialchars($baseUrl . '&debug=1#battle-debug', ENT_QUOTES),
+                'own_playmat' => \Berserk\Core\PlaymatCatalog::url($state->getPlayer($playerKey)->playmatId),
+                'opponent_playmat' => \Berserk\Core\PlaymatCatalog::url($state->getPlayer($oppKey)->playmatId),
                 'sound_checked' => $state->getPlayer($playerKey)->soundEnabled ? 'true' : 'false',
                 'debug_menu_attr' => \Berserk\Core\MatchPause::blocking($state)
                     ? 'aria-disabled="true" tabindex="-1"'
