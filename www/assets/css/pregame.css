@@ -139,7 +139,7 @@ body.pregame-page {
     max-width: 720px;
     margin: auto;
     padding: 24px;
-    background: url("/assets/images/battle/playmat_default.webp") center / cover no-repeat;
+    background: var(--player-playmat, url("/assets/images/battle/playmat_default.webp")) center / cover no-repeat;
     border: 1px solid #607b69;
     border-radius: 12px;
     box-shadow: 0 10px 36px #0009;
@@ -180,7 +180,7 @@ body.pregame-page {
     min-width: 0;
     margin: auto;
     padding: 24px;
-    background: url("/assets/images/battle/playmat_default.webp") center / cover no-repeat;
+    background: var(--player-playmat, url("/assets/images/battle/playmat_default.webp")) center / cover no-repeat;
     border: 1px solid #607b69;
     border-radius: 12px;
     box-shadow: 0 10px 36px #0009;

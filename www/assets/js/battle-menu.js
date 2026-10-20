@@ -15,13 +15,23 @@
                     return !node.disabled && node.getAttribute("aria-disabled") !== "true";
                 });
             }
+            function syncButton() {
+                var expanded = open || debugOpen;
+                button.classList.toggle("is-open", expanded);
+                button.setAttribute("aria-expanded", String(expanded));
+                button.setAttribute("aria-controls", debugOpen ? "battle-debug" : "battle-menu-panel");
+                button.setAttribute("aria-label", expanded ? "Закрыть меню матча" : "Меню матча");
+                button.title = expanded ? "Закрыть меню матча" : "Меню матча";
+            }
             function closeMenu(restore) {
-                open = false; menu.hidden = true; button.setAttribute("aria-expanded", "false");
+                if (root.closePlaymats) root.closePlaymats();
+                open = false; menu.hidden = true; syncButton();
                 if (restore) button.focus({preventScroll: true});
             }
             function closeDebug(restore) {
                 debugOpen = false; focusInDebug = false;
                 if (overlay) overlay.hidden = true;
+                syncButton();
                 if (restore) button.focus({preventScroll: true});
             }
             function syncDebug() {
@@ -32,6 +42,7 @@
                 if (paused() || !overlay || !overlay.querySelector(".debug-panel")) debugOpen = false;
                 if (overlay) { overlay.hidden = !debugOpen; overlay.tabIndex = 0; }
                 if (!debugOpen) focusInDebug = false;
+                syncButton();
                 if (debugOpen && restore) overlay.focus({preventScroll: true});
             }
             function render() {
@@ -50,20 +61,27 @@
             }
             function showMenu(last) {
                 closeDebug(false); render(); open = true; menu.hidden = false;
-                button.setAttribute("aria-expanded", "true");
+                syncButton();
                 var available = items();
                 (available.length ? available[last ? available.length - 1 : 0] : menu).focus({preventScroll: true});
             }
             function click(event) {
-                var node = event.target.closest && event.target.closest(".battle-menu, [data-menu-sound], [data-menu-debug]");
+                var node = event.target.closest && event.target.closest(".battle-menu, [data-menu-sound], [data-menu-debug], [data-menu-playmat], [data-menu-debug-close]");
                 if (!node || !root.contains(node)) return;
                 if (node === button) {
                     event.preventDefault(); event.stopImmediatePropagation();
-                    if (open) closeMenu(true); else showMenu(false);
+                    if (debugOpen) closeDebug(true); else if (open) closeMenu(true); else showMenu(false);
+                } else if (node.hasAttribute("data-menu-debug-close")) {
+                    event.preventDefault(); event.stopImmediatePropagation();
+                    closeMenu(false); closeDebug(true);
+                } else if (node.hasAttribute("data-menu-playmat")) {
+                    event.preventDefault(); event.stopImmediatePropagation();
+                    if (root.openPlaymats) root.openPlaymats();
                 } else if (node === sound) {
                     event.preventDefault(); event.stopImmediatePropagation();
                     if (busy()) return;
                     send(new URLSearchParams({cmd: "set_sound_enabled", sound_enabled: soundEnabled() ? "0" : "1"}));
+                    closeMenu(true);
                     render(); // Checkbox remains authoritative; no optimistic toggle.
                 } else if (node === debug) {
                     if (paused()) { event.preventDefault(); event.stopImmediatePropagation(); return; }
@@ -75,7 +93,7 @@
                 }
             }
             function outside(event) {
-                if (open && !menu.contains(event.target) && !button.contains(event.target)) closeMenu(false);
+                if (open && !menu.contains(event.target) && !event.target.closest("[data-playmat-picker]") && !button.contains(event.target)) closeMenu(false);
             }
             function keydown(event) {
                 if (event.key === "Escape" && (open || debugOpen)) {
@@ -104,6 +122,7 @@
                     if (overlay === previous && previous.isConnected && !previous.contains(document.activeElement)) focusInDebug = false;
                 });
             }
+            root.closeBattleMenu = function () { closeMenu(true); closeDebug(false); };
             var observer = new MutationObserver(syncDebug);
             observer.observe(host, {childList: true, subtree: true});
             root.addEventListener("click", click, true);
@@ -117,6 +136,7 @@
             }
             return {render: render, destroy: function () {
                 destroyed = true; observer.disconnect(); closeMenu(false); closeDebug(false);
+                delete root.closeBattleMenu;
                 root.removeEventListener("click", click, true);
                 document.removeEventListener("pointerdown", outside);
                 document.removeEventListener("keydown", keydown);

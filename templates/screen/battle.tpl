@@ -1,18 +1,19 @@
 <div class="battle-sync-root battle-shell" data-battle-sync-root {{pause_root_attr}}>
     <div class="battle-ajax-message" data-battle-message hidden></div>
     <button class="battle-menu" type="button" disabled aria-expanded="false" aria-haspopup="menu" aria-controls="battle-menu-panel" aria-label="Меню матча" title="Меню матча">
-        <span aria-hidden="true">☰</span>
+        <span class="battle-menu-icon" aria-hidden="true"><i></i><i></i><i></i></span>
     </button>
     <div id="battle-menu-panel" class="battle-menu-panel" role="menu" aria-label="Меню матча" tabindex="-1" hidden>
         <button type="button" role="menuitemcheckbox" data-menu-sound aria-checked="{{sound_checked}}"><span>Звук</span><span data-sound-check aria-hidden="true">✓</span></button>
-        <button type="button" role="menuitem" disabled aria-disabled="true"><span>Выбор коврика</span><small>Скоро</small></button>
+        <button type="button" role="menuitem" data-menu-playmat><span>Коврик</span></button>
         <button type="button" role="menuitem" disabled aria-disabled="true"><span>Отложить игру</span><small>Скоро</small></button>
         <a role="menuitem" data-menu-debug data-debug-url="{{debug_menu_url}}" {{debug_menu_attr}}>Debug</a>
         <span class="battle-menu-saving" data-menu-saving role="status" hidden>Сохраняем…</span>
     </div>
     <div class="battle-main">
         <div class="battle-left" {{pause_field_attr}} tabindex="0" aria-label="Игровое поле и игровые зоны">
-            <div class="battle-layout">
+            <div class="battle-layout" style="--playmat-own: url('{{own_playmat}}'); --playmat-opponent: url('{{opponent_playmat}}')">
+                <div class="battle-playmat-half opponent" aria-hidden="true"></div><div class="battle-playmat-half own" aria-hidden="true"></div>
                 <div class="fly-zone-side" data-battle-fragment="fly_zones_html">{{fly_zones_html}}</div>
                 <div class="battle-field" data-battle-fragment="field_html">{{field_html}}</div>
                 <div class="grave-zone-side" data-battle-fragment="piles_html">{{piles_html}}</div>

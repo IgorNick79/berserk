@@ -1,4 +1,4 @@
-<div class="screen-draft {{draft_class}}">
+<div style="--player-playmat: url('{{playmat_url}}')" class="screen-draft {{draft_class}}">
     <p class="flash">{{message}}</p>
 
     {{draft_info_html}}

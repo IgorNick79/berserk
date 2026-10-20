@@ -27,6 +27,7 @@ final class DraftScreen
         $draft = $state->draft ?? null;
         if (!$draft) {
             return ['screen' => 'draft', 'data' => [
+                'playmat_url' => \Berserk\Core\PlaymatCatalog::url($state->getPlayer($playerKey)->playmatId),
                 'turn_label'    => '—',
                 'host_picked'   => 0,
                 'player_picked' => 0,
@@ -254,6 +255,7 @@ final class DraftScreen
         $draftBottom = $gridControls;
 
         return ['screen' => 'draft', 'data' => [
+            'playmat_url' => \Berserk\Core\PlaymatCatalog::url($state->getPlayer($playerKey)->playmatId),
             'draft_class'   => $isSolomon ? 'screen-draft--solomon' : 'screen-draft--grid',
             'panel_title'   => $isSolomon ? '#' . (int) ($draft['decision_id'] ?? 1) . ' · ' . ($isMyTurn ? 'Ваш ход' : 'Ход противника') : ($isMyTurn ? 'Ваш ход' : 'Ход противника'),
             'panel_phase'   => ($isSolomon ? 'Соломон драфт' : 'Grid Draft') . ' · Пул: ' . $poolLeft,

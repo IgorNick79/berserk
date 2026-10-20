@@ -1,4 +1,4 @@
-<div class="screen-prepare screen-prepare-view" data-view-pager>
+<div style="--player-playmat: url('{{playmat_url}}')" class="screen-prepare screen-prepare-view" data-view-pager>
     <p class="flash">{{message}}</p>
     <div class="pregame-stage-content">
         <div class="pregame-stage-cards pregame-view-pages">
