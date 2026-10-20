@@ -107,6 +107,7 @@ final class TurnProcessor
             }
         }
 
+        $journalEndingTurn=(int)($this->state->battle['turn']??0);
         $oppKey = $this->state->getOpponentKey($playerKey);
         $timerId = $this->state->battle['turn_timer']['period_id'] ?? null;
         if ($timerId !== null) {
@@ -143,7 +144,7 @@ final class TurnProcessor
         }
 
         // Фаза конца хода
-        $this->state->historyRecorder?->turnEnding($this->state,$playerKey);
+        $this->state->historyRecorder?->turnEnding($this->state,$playerKey,$journalEndingTurn);
         (new TurnPhaseProcessor($this->state, $this->engine))->beginEndPhase($playerKey);
 
         $this->state->bumpVersion();

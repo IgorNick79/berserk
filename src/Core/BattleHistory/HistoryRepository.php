@@ -200,6 +200,29 @@ final class HistoryRepository
         $gaps = array_map(static fn(array $row): array => ['event_seq'=>(int)$row['event_seq'], 'type'=>'recording_gap', 'detail'=>json_decode($row['payload_json'],true,512,JSON_THROW_ON_ERROR)], $gaps);
         return ['metadata'=>$meta, 'steps'=>$steps, 'gaps'=>$gaps];
     }
+    /** SELECT-only committed rows; cursor scans hidden/technical rows as well as visible ones. */
+    public function journalPage(int $gameId,string $side,int $after,int $limit): array
+    {
+        $this->committedRead();
+        if ($gameId<1 || $after<0 || $limit<1 || $limit>200 || !in_array($side,['host','player'],true)) throw new \DomainException('invalid_cursor',400);
+        $column=$this->viewColumn($side);
+        $meta=$this->db->fetchOne("SELECT last_event_seq,recording_status,completeness FROM battle_history_matches WHERE game_id=$gameId");
+        $watermark=(int)($meta['last_event_seq']??0);
+        if ($after>$watermark) throw new \DomainException('invalid_cursor',400);
+        $rows=$this->db->fetchAll("SELECT e.event_seq,e.event_type,e.$column AS projection_json FROM battle_history_events e JOIN battle_command_journal j ON j.id=e.journal_id AND j.game_id=e.game_id AND j.status='committed' WHERE e.game_id=$gameId AND e.event_seq>$after AND e.event_seq<=$watermark ORDER BY e.event_seq LIMIT $limit");
+        $entries=[];$cursor=$after;
+        foreach ($rows as $row) {
+            $cursor=(int)$row['event_seq'];
+            // Gaps expose neither their reason nor hidden source, even if projection is null.
+            if ($row['event_type']==='recording_gap.started') $text='Часть игровых событий не записана. История неполная.';
+            elseif ($row['projection_json']===null) continue;
+            else $text=JournalText::format($row['event_type'],json_decode($row['projection_json'],true,512,JSON_THROW_ON_ERROR));
+            if ($text!==null) $entries[]=['seq'=>$cursor,'kind'=>$row['event_type']==='recording_gap.started'?'gap':'event','text'=>$text];
+        }
+        $gap=$this->db->fetchOne("SELECT e.event_seq FROM battle_history_events e JOIN battle_command_journal j ON j.id=e.journal_id AND j.game_id=e.game_id AND j.status='committed' WHERE e.game_id=$gameId AND e.event_seq<=$watermark AND e.event_type='recording_gap.started' LIMIT 1");
+        return ['entries'=>$entries,'cursor'=>$cursor,'has_more'=>$cursor<$watermark && count($rows)===$limit,
+            'recording'=>['available'=>$meta!==null,'partial'=>true,'has_gaps'=>$gap!==null]];
+    }
     /** Hash exact persisted JSON strings, including every historical projection; never reserialize decoded DTOs. */
     private static function captureHash(array $row): string
     {

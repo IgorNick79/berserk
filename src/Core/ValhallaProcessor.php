@@ -243,6 +243,7 @@ final class ValhallaProcessor
             }
         }
 
+        $journalHpBefore=$target?->hp;
         switch ($type) {
             case 'ragnar_first_strike_unanswer':
                 $source->flags['ragnar_valhalla_resolved_this_turn'] =
@@ -258,6 +259,8 @@ final class ValhallaProcessor
                     'expire' => $eff['expire'] ?? 'end_of_turn',
                     'source' => $ownerKey,
                 ];
+                $this->state->historyRecorder?->liveEvent($this->state,'ability.applied',[
+                    'source_id'=>$source->instanceId,'ability'=>'Вальхалла','_private_owner'=>$source->owner],[$source->instanceId,$target->instanceId]);
                 break;
 
             case 'damage':
@@ -289,6 +292,7 @@ final class ValhallaProcessor
                 if (!$target) return;
                 $target->hp += $value;
                 if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
+                $this->state->historyRecorder?->healed($this->state,$target,$journalHpBefore,$source,'valhalla');
                 break;
         }
     }

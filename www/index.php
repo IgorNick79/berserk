@@ -698,7 +698,7 @@ if ($historyRuntime->records($state->gameId)) {
     header('Referrer-Policy: same-origin');
     $trustedUser = $historyRuntime->principal($_SESSION);
     $expectedUser = $role === 'host' ? $state->hostId : $state->playerId;
-    if ($trustedUser !== $expectedUser) {
+    if ($trustedUser !== $expectedUser && $historyRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION)!==$role) {
         http_response_code(403);
         echo 'Trusted authentication required for experimental test match';
         exit;
@@ -1462,6 +1462,19 @@ $isPreGame = \Berserk\View\Ui\PreGameLayout::supports($screenName);
 $screenHtml = $isPreGame
     ? (new \Berserk\View\Ui\PreGameLayout($tpl))->renderScreen($screenName, $screenData)
     : $tpl->parse("screen/{$screenName}.tpl", $screenData);
+
+if (in_array($screenName,['battle','game_over'],true)
+    && $historyRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION)===$playerKey) {
+    if ($screenName==='game_over') $screenHtml .= '<button type="button" class="button" data-action="battle-log" aria-controls="battle-journal">Журнал боя</button>';
+    $screenHtml .= '<link rel="stylesheet" href="/assets/css/battle-journal.css">'
+        . '<aside id="battle-journal" class="battle-journal" hidden aria-label="Журнал боя">'
+        . '<header><strong>Журнал боя</strong><button type="button" data-journal-close aria-label="Закрыть журнал">×</button></header>'
+        . '<p data-journal-notice>Экспериментальная неполная история.</p>'
+        . '<div class="battle-journal-scroll" data-journal-scroll tabindex="0"><ol data-journal-entries></ol></div>'
+        . '<p data-journal-state role="status"></p></aside>';
+    $scriptsHtml .= '<script src="/assets/js/battle-journal.js" data-journal-url="/battle-journal.php?game='
+        .$state->gameId.'" defer></script>';
+}
 
 if (in_array($screenName, ['battle','game_over'], true)) {
     $_SESSION['chat_csrf'] ??= bin2hex(random_bytes(32));

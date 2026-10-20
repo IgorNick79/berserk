@@ -120,7 +120,9 @@ final class InfoPanel
         $resign = $inBattle
             ? '<a class="battle-icon-control resign" aria-label="Сдаться" href="' . $this->baseUrl . '&cmd=resign" onclick="return confirm(\'Сдаться?\')">' . $resignIcon . '</a>'
             : '<button class="battle-icon-control resign" aria-label="Сдаться" type="button" disabled>' . $resignIcon . '</button>';
-        $log = '<button class="battle-icon-control" type="button" data-action="battle-log" aria-label="Лог игры" aria-disabled="true" disabled>'
+        $journalAllowed=\Berserk\Core\BattleHistory\HistoryRuntime::load()->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION??[])===$this->playerKey;
+        $log = '<button class="battle-icon-control" type="button" data-action="battle-log" aria-label="Лог игры" aria-controls="battle-journal"'
+            . ($journalAllowed ? '' : ' aria-disabled="true" disabled') . '>'
             . $this->tpl->parse('includes/battle/control_icon.tpl', [
                 'file' => 'game_log_160.png', 'label' => 'Лог игры',
             ]) . '</button>';

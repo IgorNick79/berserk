@@ -7,6 +7,7 @@ use Berserk\Core\{GameState,CardInstance};
 final class ReplayStateBuilder
 {
     public function __construct(private array $catalog) {}
+    public function definition(CardInstance $card): ?array { return $this->catalog[$card->ukid] ?? null; }
     public function known(CardInstance $card, string $view): bool
     {
         if ($view==='server') return true;

@@ -12,6 +12,7 @@ final class Recorder
     private array $open=[];
     private array $new=[];
     private int $ordinal=0;
+    private bool $uncertifiedCombat=false;
     private bool $observed=false;
     private bool $terminal=false;
     private bool $covered=false;
@@ -20,13 +21,14 @@ final class Recorder
     private string $command='';
     private ReplayStateBuilder $builder;
 
-    public function __construct(private int $gameId, private int $journalId, array $catalog, array $openActions)
+    public function __construct(private int $gameId, private int $journalId, array $catalog, array $openActions, private bool $liveJournal=false)
     {
         $this->builder=new ReplayStateBuilder($catalog);
         foreach ($openActions as $row) {
             $type=$row['action_type'];
             if (!in_array($type,['combat','turn_end','battle_ready'],true) || isset($this->open[$type])) throw new \LogicException('Unrecognized experimental open scope');
             $this->open[$type]=$row['action_id'];
+            if ($type==='combat' && (!empty($row['contains_gap']) || !empty(json_decode($row['completion_json']??'{}',true)['event_only']))) $this->uncertifiedCombat=true;
         }
     }
     public function commandStarted(GameState $state,string $actor,Command $cmd): void
@@ -40,6 +42,7 @@ final class Recorder
         // Technical continuation is covered only by a known existing root, never by absence of pending.
         if (!$this->covered && !(in_array($this->command,['choose_defender','choose_strike_mode','confirm_strike','turn_ack'],true) && $this->open)
             && $this->command!=='confirm_place') $this->unsupported($state,'uncovered_command:'.$this->command);
+        if (isset($this->open['journal_effect'])) $this->close($state,'journal_effect','settled',false);
         if ($state->status==='game_over' && !$this->terminal) {
             foreach (array_keys($this->open) as $type) $this->close($state,$type,'interrupted',false,['reason'=>'match_terminal']);
             $id=$this->begin($state,'match_terminal',['winner'=>$state->winner]);
@@ -65,11 +68,19 @@ final class Recorder
     }
     private function emit(GameState $state,string $id,string $type,array $payload,array $refs=[]): int
     {
+        if ($this->liveJournal) {
+            $payload['_journal']=['turn'=>(int)($state->battle['turn']??0),'active'=>$state->battle['active']??null,'cards'=>[]];
+            foreach ($refs as $ref) {
+                $card=$state->getCard((int)$ref);
+                if ($card && ($entry=$this->builder->definition($card))!==null) $payload['_journal']['cards'][(string)$ref]=['name'=>$entry['name'],'owner'=>$card->owner];
+            }
+        }
         $e=['action'=>$id,'type'=>$type,'version'=>1,'payload'=>$payload,'at'=>(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))->format('Y-m-d H:i:s.u')];
         foreach (['public','host','player'] as $view) {
             $safe=true;
-            foreach ($refs as $ref) { $c=$state->getCard((int)$ref); if (!$c || !$this->builder->known($c,$view)) $safe=false; }
-            $e[$view]=$safe?$payload:['redacted'=>true];
+            foreach ($refs as $ref) { $c=$state->getCard((int)$ref); if (!$c || !$this->builder->known($c,$view) || ($this->liveJournal && $this->builder->definition($c)===null)) $safe=false; }
+            if (isset($payload['_private_owner']) && $view!==$payload['_private_owner']) $safe=false;
+            $e[$view]=$safe?$payload:($this->liveJournal?null:['redacted'=>true]);
         }
         // Within-command causality is explicit. Cross-command ownership is the persistent root identity.
         for ($i=count($this->events)-1;$i>=0;$i--) if ($this->events[$i]['action']===$id) {$e['cause_order']=$i+1;break;}
@@ -94,7 +105,10 @@ final class Recorder
     public function unsupported(GameState $state,string $reason): void
     {
         if ($this->gap) return;$this->gap=true;
-        foreach (array_keys($this->open) as $type) $this->close($state,$type,'interrupted',false,['reason'=>'unsupported_scope']);
+        foreach (array_keys($this->open) as $type) {
+            if ($this->liveJournal && $type==='combat') { $this->uncertifiedCombat=true; continue; }
+            $this->close($state,$type,'interrupted',false,['reason'=>'unsupported_scope']);
+        }
         $this->begin($state,'recording_gap',['reason'=>$reason]);
         $this->close($state,'recording_gap','settled',false,['reason'=>$reason]);
     }
@@ -102,6 +116,21 @@ final class Recorder
     {
         if ($this->builder->simple($state)) return true;
         $this->unsupported($state,'uncertified_mechanic_or_display');return false;
+    }
+    public function liveEvent(GameState $state,string $type,array $payload=[],array $refs=[]): void
+    {
+        if (!$this->liveJournal) return;
+        $covered=$this->covered;
+        $scope=isset($this->open['combat'])?'combat':(isset($this->open['turn_end'])?'turn_end':(isset($this->open['battle_ready'])?'battle_ready':'journal_effect'));
+        if (!isset($this->open[$scope])) $this->begin($state,$scope);
+        $this->emit($state,$this->open[$scope],$type,$payload,$refs);
+        $this->covered=$covered;
+    }
+    public function healed(GameState $state,CardInstance $target,int $before,?CardInstance $source,string $ability): void
+    {
+        if ($target->hp <= $before) return;
+        $this->liveEvent($state,'card.healed',['target_id'=>$target->instanceId,'source_id'=>$source?->instanceId,
+            'amount'=>$target->hp-$before,'ability'=>$ability],array_values(array_unique(array_filter([$target->instanceId,$source?->instanceId]))));
     }
     public function initial(GameState $state): void
     {
@@ -111,31 +140,53 @@ final class Recorder
     }
     public function startTurnFinished(GameState $state): void
     {
+        $this->liveEvent($state,'turn.started',['active'=>$state->battle['active'],'turn'=>$state->battle['turn']]);
         if (!$this->eligible($state)) return;
         $type=isset($this->open['turn_end'])?'turn_end':'battle_ready';
         $this->close($state,$type,'settled',true,['active'=>$state->battle['active'],'turn'=>$state->battle['turn']]);
     }
-    public function turnEnding(GameState $state,string $actor): void
+    public function turnEnding(GameState $state,string $actor,?int $endingTurn=null): void
     {
         if ($this->eligible($state)) $this->begin($state,'turn_end',['ending'=>$actor]);
+        $this->liveEvent($state,'turn.ended',['ending'=>$actor,'turn'=>$endingTurn??$state->battle['turn']]);
     }
     public function moved(GameState $state,CardInstance $card,int $fromRow,int $fromCol): void
     {
-        if (!$this->eligible($state)) return;
+        if (!$this->eligible($state)) {
+            $this->liveEvent($state,'move.started',['card_id'=>$card->instanceId,'from'=>[$fromRow,$fromCol],'to'=>[$card->row,$card->col]],[$card->instanceId]); return;
+        }
         $id=$this->begin($state,'move',['card_id'=>$card->instanceId,'from'=>[$fromRow,$fromCol],'to'=>[$card->row,$card->col],'move'=>$card->move],[$card->instanceId]);
         $this->close($state,'move','settled',true);
     }
     public function combatStarted(GameState $state,array $strike): void
     {
+        if ($this->liveJournal) {
+            // Unknown nested mechanics must never abort gameplay to enforce an observer scope.
+            $nested=isset($this->open['combat']);
+            if ($nested) $this->close($state,'combat','interrupted',false,['reason'=>'nested_combat_outside_coverage']);
+            $this->uncertifiedCombat=$nested;
+            $id=$this->begin($state,'combat',['attacker_id'=>$strike['attacker_id'],'target_id'=>$strike['target_id'],'attack_type'=>'strike'],[$strike['attacker_id'],$strike['target_id']]);
+            if ($nested) $this->unsupported($state,'nested_combat_outside_coverage');
+            if (!$this->eligible($state) || $this->uncertifiedCombat) $this->actions[$id]['completion']['event_only']=true;
+            return;
+        }
         if ($this->eligible($state)) $this->begin($state,'combat',['attacker_id'=>$strike['attacker_id'],'target_id'=>$strike['target_id'],'attack_type'=>'strike'],[$strike['attacker_id'],$strike['target_id']]);
     }
     public function combatEvent(GameState $state,string $type,array $payload,array $refs=[]): void
     {
+        if ($this->liveJournal) {
+            if (!$this->builder->simple($state)) $this->unsupported($state,'uncertified_mechanic_or_display');
+            $this->liveEvent($state,$type,$payload,$refs); return;
+        }
         if (!$this->eligible($state)) return;
         if (isset($this->open['combat'])) {$this->emit($state,$this->open['combat'],$type,$payload,$refs);$this->covered=true;}
     }
     public function combatFinished(GameState $state): void
     {
+        if ($this->liveJournal) {
+            $eligible=$this->eligible($state);
+            $this->close($state,'combat','settled',$eligible && !$this->uncertifiedCombat); return;
+        }
         if ($this->eligible($state)) $this->close($state,'combat','settled',true);
     }
     public function seriesEnded(GameState $state,CardInstance $card): void

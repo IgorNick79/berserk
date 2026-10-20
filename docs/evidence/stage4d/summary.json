@@ -1,0 +1,85 @@
+{
+  "base_head": "139979d92e6921a187dcaebf783f8c5f6257f389",
+  "branch": "codex/battle-replay-stage4d",
+  "stage4d": "local working tree; not committed/pushed/deployed",
+  "http_checks": 17,
+  "http_status": "PASS",
+  "concurrency": {
+    "status": "PASS",
+    "worker1": {
+      "status": "committed"
+    },
+    "worker2": {
+      "status": "conflict",
+      "class": "Berserk\\Core\\StaleStateException"
+    },
+    "moves": 1,
+    "contiguous_events": true
+  },
+  "observer_contracts": 4,
+  "ui": {
+    "status": "PASS",
+    "independent_sessions": 2,
+    "live_entries": 45,
+    "panel_preserved": true,
+    "scrollTop": 0,
+    "duplicates": 0,
+    "reconnect": "cursor resumed",
+    "reloads": 0,
+    "errors": []
+  },
+  "recorder_regressions": 20,
+  "storage_regressions": 23,
+  "regression_suites": 21,
+  "r1_r3_cases": 33,
+  "php_lint_files": 19,
+  "source_sha256": {
+    "config/battle_history.example.php": "ecc17ddc884700e164294a9bf986ecf9c90e4383f6c0e29d62be0077c5aa9258",
+    "tools/test_live_battle_journal.php": "f5a32e705b05b6bed474be8f91ea3fde9c3c32d281577a258badf91e64001d74",
+    "www/battle-journal.php": "9c82f0c5a50a06667efd752eebdf1cd53b57e1b41462b06c3d92b9dba97ac5af",
+    "www/index.php": "362ca4bc6dfb2799318c2ce88e2a898a315507d44d25651a82a06574cef0005f",
+    "src/Core/ActionResolver.php": "68f3d286e1132b10e3e48cbb66b4cbd51fa7bfdd2c131a343099027e96b8d1aa",
+    "src/Core/DamageResolver.php": "c08be0665945d4035dacac5bb57845d5f6036de3117ead03ac8621b27ca3d2b5",
+    "src/Core/Engine.php": "d2207adef383c26d83d4ae1b2162558e8f195c33733f792e233891b1040c30fe",
+    "src/Core/GameRepository.php": "41d825bda7c93a5144a2762be28e148763dd12c75aded8f5fcc1c32f5837faec",
+    "src/Core/InstantProcessor.php": "c170862ce8cd2a48ddc38665e27e957df83714c11ac6c290b09cf903a51d666b",
+    "src/Core/TurnProcessor.php": "ebe52eb3bfaffb7e4d69c23178e11aa9c957be63f802c777e5fe85b1dfc1c8db",
+    "src/Core/ValhallaProcessor.php": "33abbd32d86d28d183f799e86a3cc8b9bebc7cf946942bbd194b415ab151b26c",
+    "src/Core/BattleHistory/ExperimentalHistory.php": "4d1f138955210b8953e003feec7eab6c606f00f0eb23a96413190ffc9ad611b4",
+    "src/Core/BattleHistory/HistoryRepository.php": "e1e3441881bc5fa180379e5bd68488e147a27abc590ff13e4512c73f06d0dc23",
+    "src/Core/BattleHistory/HistoryRuntime.php": "fa7d25cd2348ca025332b61ceda3c0db8b4f501ced92aa496f3af87c849ebd2d",
+    "src/Core/BattleHistory/JournalText.php": "61b86b3aa395d2810f611b9b6e041629284fed3871d8b7d6e90c0bc7a693220d",
+    "src/Core/BattleHistory/LiveJournal.php": "fc42f4778c46e1686089dae246ba4cd6fe247a43a80428b352b3ca4884e88af2",
+    "src/Core/BattleHistory/Recorder.php": "8695dac3b5414875c8ed3ba2bb0c2fed8fa0f1c707a808424679d63ecd42e8f6",
+    "src/Core/BattleHistory/ReplayStateBuilder.php": "d6d5911dc6e9ac1a9077c2c9c06e09aaac8120fc154be3a2d7cdbe237a0ebe4d",
+    "src/View/Screen/Battle/InfoPanel.php": "93e7e2c34976b31b06d74e6cd5b7ed2521f63356936bc46f383bc931db9ea28b",
+    "www/assets/css/battle-journal.css": "1c245cff4d5f9716f64ba27de373a05a9d23bb0bac797476e1641bb4be3b4738",
+    "www/assets/js/battle-journal.js": "647c829c6f836460b5b54d2f7fe269125e94b137c9d7cc74fe212fc1129a08da",
+    "www/assets/js/battle-sync.js": "1ae8bf0d5d7009f275d2bcfcce3b64985ceae898573e1b1dce5666bce3fc4cc6"
+  },
+  "unchanged_from_stage4c": {
+    "src/Core/StrikeResolver.php": "14e327f36c04557886143bd95fd0cab9e4337346346c7a334c801225183fcca8",
+    "src/Core/Movement/MovementResolver.php": "b47644b2168d92e6ddc3eaaa5aaea89155998d081ab80b95fa620d3bd42a14de",
+    "src/Core/WoundTransferProcessor.php": "d8e63b8b6b96de798f29b1413ff28757a7ab63f967d8a11e4f4e30a11904b46a",
+    "src/Core/Choice/ValhallaPickChoice.php": "776aef97709ba909771d11bceb0748fe015a71608f74c865cc19a6b7637c42d9",
+    "src/Core/Db.php": "c90a89ee6023f35cfa50d3958242316ef2385c92fc093105b65b55984543eef0",
+    "src/Core/AutomaticBattleProgress.php": "b8a5b384d83149cc5c64219571fffc80fc3f22a825a62977984e473f4d4a4260",
+    "src/Core/HttpBattleProgress.php": "5f1dd222d0832845007146ae0d56e9b21d3fee789a60166273b9cc7004e5c115",
+    "src/Core/GameState.php": "5c2656e9be5990e325c141f77a0dac1d833fd3a6e67ba6d18d60627c430c4c34",
+    "src/Core/GameLog.php": "fb13ac3f21b155df253ec53031dbc55cfc9db4e08e7e4e0e0b577151337e3fe3",
+    "src/Core/CommandJournalRepository.php": "bda2c743d1976dd17a873cc25a0cee8c53d8d687ace9ea364a6dd09f5d1e4ef6",
+    "src/Core/BattleHistory/ReplayPreview.php": "ef3b383d0333fa0612cc8224157264acad64abd7b2c1bde402dcd473ec8ceb3d",
+    "www/replay.php": "504124a35a43ee20aa69232decb481fcc1667b9f438b99a54ec4b4718dbb1a39",
+    "src/View/Screen/ReplayScreen.php": "44f5bdb0812d741770a76e8dc242f5701cc84b47057e79c664c5dae57bfb0357",
+    "tools/migrations/20261020_battle_history.sql": "fa8d3d94335271aa129ef20ebaba83e5086c827f8c655d435c1c202d469dfb20"
+  },
+  "db": {
+    "datadir": "C:\\Users\\mi\\Documents\\Berserk\\stage4a-verification\\data\\",
+    "port": "33389",
+    "db": "berserk_stage4d_run3",
+    "version": "10.8.4-MariaDB"
+  },
+  "sql_triggers": [],
+  "production_changes": false,
+  "merge_push_deploy": false
+}

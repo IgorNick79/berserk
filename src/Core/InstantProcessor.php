@@ -1054,6 +1054,13 @@ final class InstantProcessor
         array $effectResult = []
     ): void
     {
+        if ($applied && $source) {
+            $strike=$this->state->battle['strike']??[];
+            $this->state->historyRecorder?->liveEvent($this->state,'ability.applied',[
+                'source_id'=>$source->instanceId,'ability'=>$item['label']??'Инстант',
+                '_private_owner'=>$source->owner],array_values(array_unique(array_filter([
+                    $source->instanceId,$strike['attacker_id']??null,($strike['defender_id']??null)?:($strike['target_id']??null)]))));
+        }
         $this->state->battle['strike']['instant_summary'][] = [
             'label'     => $item['label'] ?? 'Инстант',
             'card_ukid' => $source ? $source->ukid : '',
@@ -1766,6 +1773,11 @@ final class InstantProcessor
                 if (!$applied) {
                     $reason = 'эффект ничего не изменил';
                 }
+            }
+
+            if ($applied && $source && $target) {
+                $this->state->historyRecorder?->liveEvent($this->state,'ability.applied',[
+                    'source_id'=>$source->instanceId,'ability'=>$label,'_private_owner'=>$source->owner],[$source->instanceId,$target->instanceId]);
             }
 
             if ($source && !empty($item['close_source'])) {

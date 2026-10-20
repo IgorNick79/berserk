@@ -11,4 +11,9 @@ return [
     // Frozen definitions keyed by ukid; ReplayState v1 catalog entries, including revision.
     // Missing/unsupported definitions cause recording_gap, not invented outcomes.
     'catalog' => [],
+    'journal_enabled' => false,
+    'journal_game_ids' => [],
+    // Server-provisioned session binding token (64 random hex) => exact game/side/expiry.
+    // Never provision bindings from HTTP role/user IDs. No public login endpoint.
+    'journal_test_bindings' => [],
 ];

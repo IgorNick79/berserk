@@ -370,6 +370,9 @@ final class Engine
                     $strike['attack_dice'] = Dice::roll();
                     $strike['defend_dice'] = Dice::roll();
                     $sr->recalcTable();
+                    $state->historyRecorder?->liveEvent($state,'combat.dice_changed',[
+                        'attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice'],'operation'=>$op],
+                        array_values(array_filter([$strike['attacker_id'],$strike['defender_id']?:$strike['target_id'],$source?->instanceId])));
                     return null;
                 }
 
@@ -377,6 +380,9 @@ final class Engine
                     if ($isAttackDice) $strike['attack_dice']++;
                     else               $strike['defend_dice']++;
                     $sr->recalcTable();
+                    $state->historyRecorder?->liveEvent($state,'combat.dice_changed',[
+                        'attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice'],'operation'=>$op],
+                        array_values(array_filter([$strike['attacker_id'],$strike['defender_id']?:$strike['target_id'],$source?->instanceId])));
                     return null;
                 }
 
@@ -387,6 +393,9 @@ final class Engine
                         $strike['defend_dice'] = max(1, (int) $strike['defend_dice'] - 1);
                     }
                     $sr->recalcTable();
+                    $state->historyRecorder?->liveEvent($state,'combat.dice_changed',[
+                        'attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice'],'operation'=>$op],
+                        array_values(array_filter([$strike['attacker_id'],$strike['defender_id']?:$strike['target_id'],$source?->instanceId])));
                     return null;
                 }
                 return 'неверная операция';
@@ -431,6 +440,8 @@ final class Engine
     public function applyInstantEffect(GameState $state, array $effect, ?CardInstance $source, CardInstance $target, string $ownerKey): void
     {
         $type = $effect['type'] ?? '';
+        $journalHpBefore=$target->hp;
+        $journalClosedBefore=$target->closed;
 
         switch ($type) {
             case 'open':
@@ -480,6 +491,12 @@ final class Engine
                     !empty($effect['close_attacker_after'])
                 );
                 break;
+        }
+        if (in_array($type,['heal','heal_turn_wounds'],true)) $state->historyRecorder?->healed($state,$target,$journalHpBefore,$source,$type);
+        if ($target->closed!==$journalClosedBefore || $type==='marker') {
+            $state->historyRecorder?->liveEvent($state,'card.status',[
+                'target_id'=>$target->instanceId,'closed'=>$target->closed,'effect'=>$type,
+                '_private_owner'=>$source?->owner??$ownerKey],array_values(array_filter([$target->instanceId,$source?->instanceId])));
         }
     }
 

@@ -40,6 +40,7 @@
     var matchPause = null, battleMenu = null;
 
     function updateTurnTimer(data) {
+        document.dispatchEvent(new Event("berserk:battle-updated"));
         if (playmats && data && data.playmats) playmats.update(data.playmats);
         if (turnTimer && data && data.player_settings) turnTimer.updateSettings(data.player_settings, data.sync_version);
         if (pendingCommand && data && data.command_id === pendingCommand.id && data.command_status === "conflict"

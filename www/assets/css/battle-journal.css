@@ -1,0 +1,9 @@
+.battle-journal { position:fixed; z-index:900; right:18px; bottom:20px; width:min(420px,calc(100vw - 36px)); background:#252a30; color:#f3eee4; border:1px solid #a18c62; border-radius:8px; box-shadow:0 8px 28px #0008; font:14px/1.5 sans-serif; }
+.battle-journal[hidden] { display:none; }
+.battle-journal header { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#39352e; }
+.battle-journal header button { cursor:pointer; color:inherit; border:0; background:transparent; font-size:24px; }
+.battle-journal p { margin:8px 14px; font-size:12px; color:#dfcc9e; }
+.battle-journal-scroll { max-height:45vh; overflow:auto; overflow-anchor:none; padding:4px 14px; }
+.battle-journal ol { list-style:none; margin:0; padding:0; }
+.battle-journal li { padding:7px 0; border-bottom:1px solid #ffffff18; }
+.battle-journal-gap { color:#f0bf6b; }

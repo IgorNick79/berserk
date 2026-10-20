@@ -111,7 +111,9 @@ final class DamageResolver
             $heal = min($healAmount, $maxHp - $attacker->hp);
 
             if ($heal > 0) {
+                $journalHpBefore=$attacker->hp;
                 $attacker->hp += $heal;
+                $this->state->historyRecorder?->healed($this->state,$attacker,$journalHpBefore,$attacker,'vampire');
 
                 if (!empty($this->state->battle['strike'])) {
                     $this->state->battle['strike']['vampire_heal'][] = [

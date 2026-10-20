@@ -1027,6 +1027,7 @@ final class ActionResolver
             }
         }
 
+        $journalHpBefore = $target->hp;
         $healValue     = 0;
         $poisonRemoved = false;
 
@@ -1047,6 +1048,9 @@ final class ActionResolver
         }
 
         $attacker->closed = true;
+        $this->state->historyRecorder?->liveEvent($this->state,'ability.applied',[
+            'source_id'=>$cardId,'ability'=>$action['name']??'Лечение','_private_owner'=>$attacker->owner],[$cardId,$targetId]);
+        $this->state->historyRecorder?->healed($this->state,$target,$journalHpBefore,$attacker,'heal');
 
         $strike = [
             'kind'           => 'heal',
