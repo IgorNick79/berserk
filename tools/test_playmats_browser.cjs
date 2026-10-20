@@ -11,16 +11,21 @@ let checks=0;function ok(value,message){assert(value,message);checks++;}
  try{
  for(const width of [1600,800,375]){
   const page=await browser.newPage({viewport:{width,height:900}});
-  await page.goto(base+'?first&game='+fixture.game);await page.waitForFunction(()=>!!document.querySelector('[data-battle-sync-root]').openPlaymats);
+  await page.goto(base+'?first&game='+fixture.game+'&debug=1');await page.waitForFunction(()=>!!document.querySelector('[data-battle-sync-root]').openPlaymats);
   const geometry=()=>page.evaluate(()=>{const rect=n=>{const r=n.getBoundingClientRect();return [r.x,r.y,r.width,r.height]};return ['.battle-layout','.battle-field','.fly-zone-side','.grave-zone-side'].map(s=>rect(document.querySelector(s)));});
   const before=await geometry();
   await page.evaluate(()=>{window.fieldNode=document.querySelector('[data-battle-fragment="field_html"]').firstElementChild;window.timerNode=document.querySelector('[data-turn-timer-value]');});
   await page.locator('.battle-menu').click();await page.locator('[data-menu-playmat]').click();
   ok(await page.locator('[data-playmat-picker]').isVisible(),'picker opens '+width);
+  await page.waitForTimeout(180);
+  ok(await page.locator('.battle-menu').evaluate(n=>n.classList.contains('is-open')&&n.getAttribute('aria-expanded')==='true'),'burger opens as cross '+width);
+  ok(await page.locator('.battle-menu-icon i').count()===3,'three animated bars '+width);
+  ok(await page.locator('.battle-menu-icon i').nth(1).evaluate(n=>getComputedStyle(n).opacity==='0'),'middle bar disappears '+width);
   ok(await page.locator('[data-mat-id]:visible').count()===9,'nine visible '+width);
   for(let n=0;n<8;n++)await page.locator('[data-mat-page="'+n%2+'"]').click();
   ok(await page.locator('[data-mat-id]:visible').count()===9,'rapid paging '+width);
   const box=await page.locator('[data-playmat-picker]').boundingBox();ok(box.x>=0&&box.x+box.width<=width,'picker fits '+width);
+  if(width===1600)ok(box.width===576,'slightly larger picker and previews');
   await page.locator('[data-mat-page="0"]').click();
   await page.locator('[data-mat-id="mat-002"]').click();await page.waitForFunction(()=>document.querySelector('[data-mat-status]').textContent==='Коврик выбран');
   await page.waitForTimeout(1500);
@@ -33,6 +38,20 @@ let checks=0;function ok(value,message){assert(value,message);checks++;}
   await page.screenshot({path:root+'/picker-'+width+'.png'});
   await page.keyboard.press('Escape');ok(!await page.locator('[data-playmat-picker]').isVisible(),'Escape closes '+width);
   await page.locator('.battle-menu').click();await page.locator('[data-menu-playmat]').click();await page.locator('[data-mat-close]').click();ok(!await page.locator('[data-playmat-picker]').isVisible(),'close button '+width);
+  ok(!await page.locator('#battle-menu-panel').isVisible(),'picker cross closes parent menu '+width);
+  ok(await page.locator('.battle-menu').evaluate(n=>n===document.activeElement&&!n.classList.contains('is-open')&&n.getAttribute('aria-expanded')==='false'),'cross restores burger focus and bars '+width);
+  await page.locator('.battle-menu').click();await page.locator('[data-menu-debug]').click();
+  ok(await page.locator('#battle-debug').isVisible(),'debug opens '+width);
+  ok(await page.locator('.battle-menu').getAttribute('aria-expanded')==='true','burger remains cross for debug '+width);
+  await page.locator('[data-menu-debug-close]').click();
+  ok(!await page.locator('#battle-debug').isVisible()&&!await page.locator('#battle-menu-panel').isVisible(),'debug cross closes everything '+width);
+  ok(await page.locator('.battle-menu').evaluate(n=>n===document.activeElement&&!n.classList.contains('is-open')),'debug close restores burger '+width);
+  await page.locator('.battle-menu').click();await page.locator('[data-menu-debug]').click();await page.locator('.battle-menu').click();
+  ok(!await page.locator('#battle-debug').isVisible()&&!await page.locator('#battle-menu-panel').isVisible(),'animated burger closes debug '+width);
+  // The delegated close control must survive replacement of the InfoPanel snapshot.
+  await page.locator('.battle-menu').click();await page.locator('[data-menu-debug]').click();
+  await page.evaluate(()=>{const n=document.querySelector('[data-battle-fragment="info_panel_html"]');n.innerHTML=n.innerHTML;});
+  await page.locator('[data-menu-debug-close]').click();ok(!await page.locator('#battle-debug').isVisible(),'debug cross survives snapshot '+width);
   await page.reload();ok(await page.evaluate(()=>getComputedStyle(document.querySelector('.battle-playmat-half.own')).backgroundImage.includes('002.webp')),'refresh '+width);
   await page.close();
  }
@@ -55,7 +74,13 @@ let checks=0;function ok(value,message){assert(value,message);checks++;}
  ok(await opponent.evaluate(()=>window.retainedField===document.querySelector('[data-battle-fragment="field_html"]').firstElementChild),'live opponent mat does not render field');
  await ackPage.keyboard.press('Escape');await ackPage.locator('.battle-menu').click();
  const commandResponse=ackPage.waitForResponse(r=>r.url().includes('ajax=battle_command')&&r.request().method()==='POST');await ackPage.locator('[data-menu-sound]').click();
+ ok(!await ackPage.locator('#battle-menu-panel').isVisible(),'sound click closes menu immediately');
+ ok(await ackPage.locator('.battle-menu').evaluate(n=>!n.classList.contains('is-open')&&n===document.activeElement),'sound restores burger and focus');
  const command=await (await commandResponse).json();ok(command.command_status==='committed','immediate command uses acknowledged cosmetic CAS version');
+ await ackPage.locator('.battle-menu').click();await ackPage.locator('[data-menu-playmat]').click();await ackPage.keyboard.press('Escape');
+ ok(!await ackPage.locator('#battle-menu-panel').isVisible(),'menu reopens after sound and Escape closes');
+ await ackPage.emulateMedia({reducedMotion:'reduce'});
+ ok(await ackPage.locator('.battle-menu-icon i').first().evaluate(n=>getComputedStyle(n).transitionDuration==='0s'),'respects reduced motion');
  await ackPage.close();await page.close();await opponent.close();
  console.log('Playmat browser: '+checks+' checks passed');
  }finally{await browser.close();}

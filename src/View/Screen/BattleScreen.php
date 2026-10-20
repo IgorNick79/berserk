@@ -119,6 +119,7 @@ final class BattleScreen
 
         // Debug travels in the existing InfoPanel fragment; no extra AJAX field.
         $infoPanelHtml .= '<aside id="battle-debug" class="battle-debug-overlay" aria-label="Отладка боя" hidden>'
+            . '<div class="battle-debug-toolbar"><button type="button" class="battle-window-close" data-menu-debug-close aria-label="Закрыть окно отладки">×</button></div>'
             . $debugHtml . '</aside>';
         $pileRevealHtml = '';
         if ($ui['pile'] !== '') {

@@ -1,7 +1,7 @@
 <div class="battle-sync-root battle-shell" data-battle-sync-root {{pause_root_attr}}>
     <div class="battle-ajax-message" data-battle-message hidden></div>
     <button class="battle-menu" type="button" disabled aria-expanded="false" aria-haspopup="menu" aria-controls="battle-menu-panel" aria-label="Меню матча" title="Меню матча">
-        <span aria-hidden="true">☰</span>
+        <span class="battle-menu-icon" aria-hidden="true"><i></i><i></i><i></i></span>
     </button>
     <div id="battle-menu-panel" class="battle-menu-panel" role="menu" aria-label="Меню матча" tabindex="-1" hidden>
         <button type="button" role="menuitemcheckbox" data-menu-sound aria-checked="{{sound_checked}}"><span>Звук</span><span data-sound-check aria-hidden="true">✓</span></button>

@@ -7,7 +7,7 @@
         var panel = document.createElement('section');
         panel.dataset.playmatPicker = ''; panel.className = 'playmat-picker'; panel.hidden = true;
         panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Выбор коврика');
-        panel.innerHTML = '<button type="button" data-mat-close aria-label="Закрыть">×</button><p data-mat-title></p><div class="playmat-options"></div><nav class="playmat-pagination" aria-label="Страницы ковриков"></nav><p data-mat-status role="status"></p>';
+        panel.innerHTML = '<button type="button" class="battle-window-close" data-mat-close aria-label="Закрыть">×</button><p data-mat-title></p><div class="playmat-options"></div><nav class="playmat-pagination" aria-label="Страницы ковриков"></nav><p data-mat-status role="status"></p>';
         root.appendChild(panel);
         ids.forEach(function (id, index) {
             var button = document.createElement('button'); button.type = 'button'; button.dataset.matId = id;
@@ -41,7 +41,11 @@
         root.closePlaymats = function () { panel.hidden = true; };
         panel.addEventListener('click', async function (event) {
             var target = event.target.closest('button'); if (!target) return;
-            if (target.hasAttribute('data-mat-close')) { panel.hidden = true; root.querySelector('[data-menu-playmat]').focus(); return; }
+            if (target.hasAttribute('data-mat-close')) {
+                if (root.closeBattleMenu) root.closeBattleMenu();
+                else { panel.hidden = true; root.querySelector('.battle-menu').focus(); }
+                return;
+            }
             if (target.hasAttribute('data-mat-page')) { page = Number(target.dataset.matPage); render(); return; }
             if (!target.dataset.matId || saving) return;
             saving = true; render(); var status = panel.querySelector('[data-mat-status]'); status.textContent = 'Сохраняем…';
