@@ -1,0 +1,33 @@
+{
+  "branch": "codex/battle-replay-stage4a",
+  "head": "2755c79a6f20c98725b8d9709188884f2c902ce2",
+  "environment": {
+    "datadir": "C:\\Users\\mi\\Documents\\Berserk\\stage4a-verification\\data\\",
+    "port": "33389",
+    "db": "berserk_stage4a_run7",
+    "version": "10.8.4-MariaDB"
+  },
+  "sql_checks": 23,
+  "r1_r3_cases": 33,
+  "existing_suites": 18,
+  "total_units": 74,
+  "failures": 0,
+  "skips": 0,
+  "lint_pass": 4,
+  "requires_trigger_privilege": false,
+  "triggers_in_final_schema": 0,
+  "five_create_table_statements_unchanged": true,
+  "postchecks_statement_count": 19,
+  "postchecks_read_only": true,
+  "production_sql_executed": false,
+  "recorder_enabled": false,
+  "new_file_sha256": {
+    "src/Core/BattleHistory/HistoryRepository.php": "8a1c70136088c548baa372f040cf94d97a8eadddb35ca387cd4ed52aecaba0f5",
+    "tools/test_battle_history.php": "54a1563d0985232ba22e170bfb7f087ef4607bb3c76eb9a25e92a8c698bfbc04",
+    "tools/migrations/20261020_battle_history.sql": "fa8d3d94335271aa129ef20ebaba83e5086c827f8c655d435c1c202d469dfb20",
+    "tools/migrations/20261020_battle_history_postchecks.sql": "349b9505ccdc67ca37b9ae6f4519f362a14a35b4df558d78812ebe25f5d8d826"
+  },
+  "old_source_files_verified": 163,
+  "preserved_stage4a_evidence_sha256": "37dd6463c8c94f338c341eb20cc8dfc8a6823bf82cb18382b50ebabb28577b71",
+  "integrity_contract": "capture-sha256-v1: exact stored server + public/host/player JSON strings; mismatch rejects without repair; state-only legacy hash is not trusted"
+}

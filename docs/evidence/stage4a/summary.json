@@ -1,0 +1,30 @@
+{
+  "branch": "codex/battle-replay-stage4a",
+  "head": "2755c79a6f20c98725b8d9709188884f2c902ce2",
+  "environment": {
+    "datadir": "C:\\Users\\mi\\Documents\\Berserk\\stage4a-verification\\data\\",
+    "port": "33389",
+    "db": "berserk_stage4a_run4",
+    "version": "10.8.4-MariaDB"
+  },
+  "new_sql_checks": 20,
+  "targeted_r1_r3_cases": 33,
+  "existing_suites": 18,
+  "failures": 0,
+  "skips": 0,
+  "total_units": 71,
+  "php_lint_pass": 4,
+  "cli_migration_exit": 0,
+  "cli_repeat_expected_exit": 1,
+  "production_touched": false,
+  "recorder_integrated": false,
+  "new_file_sha256": {
+    "src/Core/BattleHistory/HistoryBatch.php": "a10b85bff7411487a8e4546e012e9245aea97c244e9752347836c0c6365236a3",
+    "src/Core/BattleHistory/HistoryRepository.php": "ccbe2b3f37c853c1fcbfa9ebadb733ff7ed61e7c82c38d53d304b53b4d20e80d",
+    "src/Core/BattleHistory/ReplayState.php": "207a5573801e5e6673d236260ee1e0a900df8fd655e2824b46c3e29f8962228b",
+    "tools/migrations/20261020_battle_history.sql": "5952b78c4c34e5eefc2de2b1fa29c0e4c185d8916d524d6b194adb8474d91530",
+    "tools/test_battle_history.php": "53c4e4be49003591131701091737de81ca482b2d55b16f562a85d62e8cc6005f"
+  },
+  "existing_src_files_verified": 163,
+  "commit_unknown_test": "discarded success response + fresh connection durable lookup; no physical network fault"
+}

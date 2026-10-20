@@ -24,3 +24,5 @@ backups/
 www/assets/cards/
 # Reviewed application migrations
 !tools/migrations/20261019_game_chat.sql
+!tools/migrations/20261020_battle_history.sql
+!tools/migrations/20261020_battle_history_postchecks.sql
