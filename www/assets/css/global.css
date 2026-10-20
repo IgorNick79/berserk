@@ -864,7 +864,8 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
     flex: 1 1 auto;
     box-sizing: border-box;
     padding: 8px;
-    font-size: 13px;
+    font-size: 14px;
+    text-align: center;
     white-space: nowrap;
 }
 
