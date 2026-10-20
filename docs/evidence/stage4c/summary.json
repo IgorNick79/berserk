@@ -1,0 +1,56 @@
+{
+  "head": "870d3cc38e791ceec29b7eb4db7c1be25ab5fe0c",
+  "branch": "codex/battle-replay-stage4c",
+  "stage4b_commit": "870d3cc38e791ceec29b7eb4db7c1be25ab5fe0c",
+  "stage4c": "working tree; no Stage4C commit requested",
+  "source_sha256": {
+    "config/battle_history.example.php": "53fc6acdecadf0a1dc538dc3dc22e6be9961282cd2c03bc38e67868ea88fb3c6",
+    "www/index.php": "8b1729d0978e796a3b329ea583e8b968e7866d2b0fdd5725e9c2933a9c65b87c",
+    "www/replay.php": "504124a35a43ee20aa69232decb481fcc1667b9f438b99a54ec4b4718dbb1a39",
+    "src/Core/BattleHistory/HistoryRepository.php": "b771c66d985caa858a8cd00dc2fd974105bbbf0333de4a1d90f85e86cb77f281",
+    "src/Core/BattleHistory/HistoryRuntime.php": "c31c845e494498f399eb196e7aaf7f3563fcc2538df2f65e0a6adcc35bcbd995",
+    "src/Core/BattleHistory/ReplayPreview.php": "ef3b383d0333fa0612cc8224157264acad64abd7b2c1bde402dcd473ec8ceb3d",
+    "src/View/Screen/BattleScreen.php": "96d3edccfad57b62951cf06b611ba0800cde8dbad7003ca36b80bc80a1ad0caa",
+    "src/View/Screen/PlaceScreen.php": "630b81dd0c41311759a9ab6440f3ba807bdbf7b2cc8fb81bd22cbbe3cdb98e06",
+    "src/View/Screen/ReplayScreen.php": "44f5bdb0812d741770a76e8dc242f5701cc84b47057e79c664c5dae57bfb0357",
+    "src/View/Ui/BattleCardMarkup.php": "3bc85ad7bed1f782009bb8b6f0c57fb1ef26b00fde2d723e15c34dbdce270ad2",
+    "www/assets/css/replay.css": "6de820038f78751077e03477cddb4c3903c44d4ff7c72a671eff94c8aa375982"
+  },
+  "unchanged_from_stage4b": {
+    "src/Core/Engine.php": "75235a5f86b82b987b3f0b2672d406f1c5e9e31f6685b441bea70ab2c632cbb2",
+    "src/Core/GameRepository.php": "fcd92fb07bb6a135e3bb03d0ba9ad5e6046d8af43ecc165a06249b86c4994ee5",
+    "src/Core/StrikeResolver.php": "14e327f36c04557886143bd95fd0cab9e4337346346c7a334c801225183fcca8",
+    "src/Core/ActionResolver.php": "df5125c89e30cce0fe7ff8be718d24970f55a6363535efd2a9eb10c880bc1fb9",
+    "src/Core/DamageResolver.php": "4bdabd4fa18c10fab83ed420b6d84011ec7232aec5d01efea276f9056eacd024",
+    "src/Core/InstantProcessor.php": "c3d29ce51c1532c9f0a5f951c0abfa85bce4baf4dc50c0288a808f723ed9101c",
+    "src/Core/WoundTransferProcessor.php": "d8e63b8b6b96de798f29b1413ff28757a7ab63f967d8a11e4f4e30a11904b46a",
+    "src/Core/ValhallaProcessor.php": "2fb4708e1d215024f85a04bcea7bf142b97285d3332e0e2f211103259f73a5ba",
+    "src/Core/CommandJournalRepository.php": "bda2c743d1976dd17a873cc25a0cee8c53d8d687ace9ea364a6dd09f5d1e4ef6",
+    "src/Core/GameLog.php": "fb13ac3f21b155df253ec53031dbc55cfc9db4e08e7e4e0e0b577151337e3fe3",
+    "src/Core/Db.php": "c90a89ee6023f35cfa50d3958242316ef2385c92fc093105b65b55984543eef0",
+    "tools/migrations/20261020_battle_history.sql": "fa8d3d94335271aa129ef20ebaba83e5086c827f8c655d435c1c202d469dfb20"
+  },
+  "http_checks": 20,
+  "http_status": "PASS",
+  "browser": {
+    "status": "PASS",
+    "browser": "Edge headless / Playwright",
+    "states": [
+      "false",
+      "true",
+      "true",
+      "false",
+      "true"
+    ],
+    "errors": [],
+    "navigation": "first/prev/next/last clicked; only saved HTML GET pages"
+  },
+  "storage_checks": 23,
+  "regression_suites": 21,
+  "r1_r3_cases": 33,
+  "stage4b_review_checks": 20,
+  "database": "berserk_stage4b_run10",
+  "port": 33389,
+  "no_production_changes": true,
+  "no_merge_push_deploy": true
+}

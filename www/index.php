@@ -195,7 +195,7 @@ function sendAjaxJson(array $payload, int $statusCode = 200): never
                 $resignRecord = (new CommandJournalRepository($db))->find($state->gameId, $playerKey, $id);
                 if ($resignRecord !== null && $resignRecord['command_type'] === 'resign'
                     && $resignRecord['status'] === CommandJournalRepository::STATUS_COMMITTED) {
-                    $resignResultState = (new GameRepository($db))->findById($state->gameId);
+                    $resignResultState = (\Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db))->findById($state->gameId);
                 }
             }
         } catch (Throwable) {
@@ -456,12 +456,12 @@ function applyAutomaticBattleProgress(Db $db, GameState $state, string $requeste
     // One guard instance per HTTP request, shared by snapshots and command recovery.
     static $progress = null;
     try {
-        $progress ??= new \Berserk\Core\HttpBattleProgress($db, new GameRepository($db), new Engine($db));
+        $progress ??= new \Berserk\Core\HttpBattleProgress($db, \Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db), new Engine($db));
         return $progress->check($state, $requester, $allowCombat)->state;
     } catch (Throwable) {
         // HttpBattleProgress latches the stop before propagating any exception.
         error_log('Automatic battle progress unavailable for game ' . $state->gameId);
-        try { return (new GameRepository($db))->findById($state->gameId) ?? $state; }
+        try { return (\Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db))->findById($state->gameId) ?? $state; }
         catch (Throwable) { return $state; }
     }
 }
@@ -609,7 +609,7 @@ if ($isChat) {
     } catch (OverflowException $e) { sendAjaxJson(['ok'=>false,'error'=>'rate_limited'],429);
     } catch (Throwable $e) { sendAjaxJson(['ok'=>false,'error'=>'chat_unavailable'],503); }
 }
-$repo    = new GameRepository($db);
+$repo    = \Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db);
 $engine   = new Engine($db);
 $deckView = new DeckView($db);
 $tpl     = new Template(__DIR__ . '/../templates', '/');
@@ -690,6 +690,20 @@ if ($userId !== $state->hostId && $userId !== $state->playerId) {
     http_response_code(403);
     echo "Вы не участник партии #$gameId";
     exit;
+}
+
+$historyRuntime = \Berserk\Core\BattleHistory\HistoryRuntime::load();
+if ($historyRuntime->records($state->gameId)) {
+    header('Cache-Control: private, no-store');
+    header('Referrer-Policy: same-origin');
+    $trustedUser = $historyRuntime->principal($_SESSION);
+    $expectedUser = $role === 'host' ? $state->hostId : $state->playerId;
+    if ($trustedUser !== $expectedUser) {
+        http_response_code(403);
+        echo 'Trusted authentication required for experimental test match';
+        exit;
+    }
+    $_SESSION['history_prepare_csrf'] ??= bin2hex(random_bytes(32));
 }
 
 $_SESSION['user_id'] = $userId;
@@ -1198,11 +1212,47 @@ if ($commandType !== '') {
     }
 
     $cmd = new Command($commandType, $payload);
-    $result = $engine->apply($state, $playerKey, $cmd);
+    $historyPrepared = false;
+    if ($historyRuntime->records($state->gameId) && $state->status === 'place') {
+        $token = requestParamString($_GET, 'prepare_token', 64);
+        $version = requestParamString($_GET, 'prepare_version', 20);
+        if ($token === null || !hash_equals($_SESSION['history_prepare_csrf'] ?? '', $token)
+            || $version === null || !ctype_digit($version) || (string)(int)$version !== $version) {
+            http_response_code(403); echo 'Invalid preparation token/version'; exit;
+        }
+        $journalPayload = $payload;
+        unset($journalPayload['prepare_token']);
+        ksort($journalPayload);
+        $commandId = 'prep:'.substr(hash('sha256', $playerKey.':'.$version.':'.json_encode($journalPayload,JSON_THROW_ON_ERROR)),0,48);
+        $prepareJournal = new CommandJournalRepository($db);
+        $record = $prepareJournal->registerProcessing($state->gameId,$playerKey,$commandId,$commandType,$journalPayload,(int)$version);
+        if ($record['status'] === 'processing' && $record['is_new']) {
+            if ((int)$version !== $state->persistenceVersion) {
+                $prepareJournal->markConflict((int)$record['id'],$state->persistenceVersion,'stale_state','Refresh preparation');
+            } else {
+                try {
+                    $repo->executeLockedCommand($state,$prepareJournal,(int)$record['id'],
+                        fn(GameState $locked): \Berserk\Core\Result => $engine->apply($locked,$playerKey,$cmd),'prepare_rejected');
+                } catch (StaleStateException) {
+                    $fresh = $repo->findById($state->gameId);
+                    $prepareJournal->markConflict((int)$record['id'],$fresh->persistenceVersion,'stale_state','Refresh preparation');
+                }
+            }
+        }
+        $record = $prepareJournal->findById((int)$record['id']);
+        if ($record['status'] !== 'committed') {
+            http_response_code(409); echo 'Preparation not committed; refresh required'; exit;
+        }
+        $state = $repo->findById($state->gameId);
+        $result = \Berserk\Core\Result::ok();
+        $historyPrepared = true;
+    } else {
+        $result = $engine->apply($state, $playerKey, $cmd);
+    }
 
     if ($result->success) {
         try {
-            $repo->save($state);
+            if (!$historyPrepared) $repo->save($state);
         } catch (StaleStateException) {
             $_SESSION['flash_message'] = 'Ошибка: состояние партии уже изменилось, обновляю страницу';
             $roleParam = ($role === 'host') ? 'first' : 'second';
@@ -1333,7 +1383,9 @@ switch ($state->status) {
 
     case 'place':
         $result = (new PlaceScreen($tpl))
-            ->prepare($state, $playerKey, $role, $message, $cardsInfo);
+            ->prepare($state, $playerKey, $role, $message, $cardsInfo,
+                $historyRuntime->records($state->gameId) ? ['prepare_version'=>$state->persistenceVersion,
+                    'prepare_token'=>$_SESSION['history_prepare_csrf']] : []);
         $screenName = $result['screen'];
         $screenData = $result['data'];
         break;

@@ -25,10 +25,12 @@ final class PlaceScreen
         string $playerKey,
         string $role,
         ?string $message,
-        array $cardsInfo = []
+        array $cardsInfo = [],
+        array $commandContext = []
     ): array {
         $linkParam = $role === 'host' ? 'first' : 'second';
         $baseUrl   = "?{$linkParam}&game={$state->gameId}";
+        if ($commandContext !== []) $baseUrl .= '&'.http_build_query($commandContext);
         $me        = $state->getPlayer($playerKey);
         $ui        = new PrepareUi($this->tpl);
 

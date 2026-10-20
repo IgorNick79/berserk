@@ -181,6 +181,25 @@ final class HistoryRepository
         return ['events'=>$this->db->fetchAll('SELECT * FROM battle_history_events WHERE game_id='.(int)$gameId.' ORDER BY event_seq'),
             'steps'=>$steps];
     }
+    /** Finished partial preview only. Caller authenticates and allowlists before calling.
+     * SELECT only: no repository/schema constructors, Engine, journal mutation or progression.
+     */
+    public function experimentalFinishedPreview(int $gameId): array
+    {
+        $this->committedRead();
+        if ($gameId <= 0) throw new \InvalidArgumentException('Invalid game');
+        $meta = $this->db->fetchOne("SELECT m.* FROM battle_history_matches m JOIN games g ON g.ind=m.game_id AND g.status='game_over' JOIN battle_history_steps s ON s.game_id=m.game_id AND s.is_final=1 AND s.step_seq=m.last_step_seq JOIN battle_command_journal j ON j.id=s.journal_id AND j.game_id=s.game_id AND j.status='committed' WHERE m.game_id=$gameId AND m.has_initial=1 AND m.has_final=1 AND m.snapshot_version=1");
+        if ($meta === null) throw new \DomainException('confirmed_final_snapshot_required', 409);
+        $steps = $this->db->fetchAll("SELECT s.* FROM battle_history_steps s JOIN battle_command_journal j ON j.id=s.journal_id AND j.game_id=s.game_id AND j.status='committed' WHERE s.game_id=$gameId ORDER BY s.step_seq");
+        if (count($steps) !== (int)$meta['last_step_seq']) throw new \UnexpectedValueException('Replay step sequence incomplete');
+        foreach ($steps as $i => $step) {
+            if ((int)$step['step_seq'] !== $i+1) throw new \UnexpectedValueException('Replay step sequence invalid');
+            $this->verifyCapture($step);
+        }
+        $gaps = $this->db->fetchAll("SELECT e.event_seq,e.event_type,e.payload_json FROM battle_history_events e JOIN battle_command_journal j ON j.id=e.journal_id AND j.game_id=e.game_id AND j.status='committed' WHERE e.game_id=$gameId AND e.event_type='recording_gap.started' ORDER BY e.event_seq");
+        $gaps = array_map(static fn(array $row): array => ['event_seq'=>(int)$row['event_seq'], 'type'=>'recording_gap', 'detail'=>json_decode($row['payload_json'],true,512,JSON_THROW_ON_ERROR)], $gaps);
+        return ['metadata'=>$meta, 'steps'=>$steps, 'gaps'=>$gaps];
+    }
     /** Hash exact persisted JSON strings, including every historical projection; never reserialize decoded DTOs. */
     private static function captureHash(array $row): string
     {
