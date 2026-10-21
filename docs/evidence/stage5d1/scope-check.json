@@ -1,0 +1,8 @@
+{
+  "base": "04316e18ab04cb5e0f4494830c55b6ece8910103",
+  "branch": "codex/berserk-stage5d1-grid-timeout",
+  "protected_runtime_paths_changed": [],
+  "storage_games_preserved": true,
+  "configs_absent": true,
+  "original_fixture_sha256": "9086c02fe01cba8152023a48d37f09ff5f0b0df2371e0038211117bf310819b1"
+}

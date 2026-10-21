@@ -1,0 +1,2 @@
+Skipping DB-backed draft finalization checks: config/db.php not found
+Temporary draft rule tests passed.

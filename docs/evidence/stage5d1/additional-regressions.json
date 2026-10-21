@@ -1,0 +1,26 @@
+[
+  {
+    "test": "test_draft_temporary_rules.php",
+    "exit": 0,
+    "skipped": false,
+    "tail": "Temporary draft rule tests passed.\n"
+  },
+  {
+    "test": "test_draft_timer_history.php",
+    "exit": 0,
+    "skipped": false,
+    "tail": "Draft timer/history tests passed.\n"
+  },
+  {
+    "test": "test_booster.php",
+    "exit": 0,
+    "skipped": false,
+    "tail": "] card_47 — Fixture 47\n  [uncommon] card_48 — Fixture 48\n  [uncommon] card_37 — Fixture 37\n  [rare] card_65 — Fixture 65\n  Counts: common=8, uncommon=3, rare=1, ultra=0\n  Duplicates: no\n\n=== Booster #5 ===\n  [common] card_4 — Fixture 4\n  [common] card_24 — Fixture 24\n  [common] card_13 — Fixture 13\n  [common] card_11 — Fixture 11\n  [common] card_9 — Fixture 9\n  [common] card_19 — Fixture 19\n  [common] card_16 — Fixture 16\n  [common] card_15 — Fixture 15\n  [uncommon] card_30 — Fixture 30\n  [uncommon] card_28 — Fixture 28\n  [uncommon] card_49 — Fixture 49\n  [rare] card_53 — Fixture 53\n  Counts: common=8, uncommon=3, rare=1, ultra=0\n  Duplicates: no\n\nDone. Total boosters: 5, expected 60 cards.\n"
+  },
+  {
+    "test": "test_view_sideboard.php",
+    "exit": 0,
+    "skipped": false,
+    "tail": "View sideboard tests passed.\n"
+  }
+]

@@ -1,0 +1,27 @@
+[
+  {
+    "file": "src/Core/Prepare/DraftProcessor.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Core/Prepare/DraftProcessor.php\n"
+  },
+  {
+    "file": "src/Core/Prepare/PrepareProcessor.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Core/Prepare/PrepareProcessor.php\n"
+  },
+  {
+    "file": "tools/test_grid_timeout_fixture.php",
+    "exit": 0,
+    "output": "No syntax errors detected in tools/test_grid_timeout_fixture.php\n"
+  },
+  {
+    "file": "tools/test_grid_timeout_regression.php",
+    "exit": 0,
+    "output": "No syntax errors detected in tools/test_grid_timeout_regression.php\n"
+  },
+  {
+    "file": "tools/test_draft_timer_history.php",
+    "exit": 0,
+    "output": "No syntax errors detected in tools/test_draft_timer_history.php\n"
+  }
+]

@@ -1,0 +1,62 @@
+diff --git a/src/Core/Prepare/DraftProcessor.php b/src/Core/Prepare/DraftProcessor.php
+index 5fca8b8..53b8cc4 100644
+--- a/src/Core/Prepare/DraftProcessor.php
++++ b/src/Core/Prepare/DraftProcessor.php
+@@ -178,0 +179,26 @@ final class DraftProcessor
++    /** Auto choices must preserve a complete copy-safe allocation; manual Grid stays unchanged. */
++    public function automaticSelections(): array
++    {
++        $selections = $this->validSelections();
++        if ($this->state->settings->isSolomonDraft()
++            || ($this->state->draft['grid_mode'] ?? $this->state->settings->draftGridMode()) === GameSettings::DRAFT_GRID_MODE_DISCRETE) return $selections;
++        return array_values(array_filter($selections, fn(array $selection): bool =>
++            $this->canCompleteGrid($selection['positions'])
++        ));
++    }
++
++    /** Predict a continuous Grid pick without mutating/drawing/shuffling any cards. */
++    public function canCompleteGrid(array $positions = []): bool
++    {
++        $draft = $this->state->draft;
++        if ($draft === null) return true;
++        $picked = $draft['picked'];
++        $remaining = array_merge($draft['pool'], $draft['recycle'] ?? []);
++        foreach ($draft['grid'] as $pos => $ukid) {
++            if ($ukid === null) continue;
++            if (in_array($pos, $positions, true)) $picked[$draft['turn']][] = $ukid;
++            else $remaining[] = $ukid;
++        }
++        return $this->canComplete($picked, $remaining);
++    }
++
+diff --git a/src/Core/Prepare/PrepareProcessor.php b/src/Core/Prepare/PrepareProcessor.php
+index 16e206a..982a8a3 100644
+--- a/src/Core/Prepare/PrepareProcessor.php
++++ b/src/Core/Prepare/PrepareProcessor.php
+@@ -1674 +1674 @@ final class PrepareProcessor
+-        if ($this->state->settings->isSolomonDraft()) {
++        if ($this->state->settings->isSolomonDraft() || $this->isContinuousGrid()) {
+@@ -1693,0 +1694,4 @@ final class PrepareProcessor
++        if ($this->isContinuousGrid() && DraftTimer::isExpired($this->state, $now)
++            && !$this->draftProcessor()->canCompleteGrid()) {
++            return Result::error('РќРµС‚ РґРѕРїСѓСЃС‚РёРјРѕРіРѕ РїРѕР»РЅРѕРіРѕ СЂР°СЃРїСЂРµРґРµР»РµРЅРёСЏ Grid: Р»РёРјРёС‚С‹ РєРѕРїРёР№ РёР»Рё РјРёРЅРёРјСѓРј РєРѕР»РѕРґ');
++        }
+@@ -1751 +1755 @@ final class PrepareProcessor
+-            $validSelections = $processor->validSelections();
++            $validSelections = $processor->automaticSelections();
+@@ -1910,0 +1915,4 @@ final class PrepareProcessor
++            if ($this->isContinuousGrid() && !$processor->canCompleteGrid()) {
++                return Result::error('РќРµС‚ РґРѕРїСѓСЃС‚РёРјРѕРіРѕ РїРѕР»РЅРѕРіРѕ СЂР°СЃРїСЂРµРґРµР»РµРЅРёСЏ Grid: Р»РёРјРёС‚С‹ РєРѕРїРёР№ РёР»Рё РјРёРЅРёРјСѓРј РєРѕР»РѕРґ');
++            }
++
+@@ -1912 +1920 @@ final class PrepareProcessor
+-                $processor->validSelections(),
++                $processor->automaticSelections(),
+@@ -1956,0 +1965,7 @@ final class PrepareProcessor
++    private function isContinuousGrid(): bool
++    {
++        return $this->state->status === 'draft' && $this->state->draft !== null
++            && !$this->state->settings->isSolomonDraft()
++            && ($this->state->draft['grid_mode'] ?? $this->state->settings->draftGridMode()) === GameSettings::DRAFT_GRID_MODE_CONTINUOUS;
++    }
++

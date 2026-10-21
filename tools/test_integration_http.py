@@ -301,12 +301,29 @@ def main():
                     if code==303:success=True;break
                 assert success,'No valid manual draft choice'
             check('HTTP '+draft_type+' both actors manual decisions',len(state(g)['draft'].get('history',[]))>=2)
+            if draft_type=='grid':
+                # Stage5D.1: real HTTP error/rollback on a saved impossible prefix, then frozen input.
+                saved=json.loads((ROOT/'docs/evidence/stage5d/grid-timeout-runs.json').read_text(encoding='utf-8-sig'))
+                failed=next(x for x in saved['runs'] if x['scenario']=='failing_seed')
+                current=state(g);current['draft']=failed['intermediate']['draft'];set_fixture(g,current)
+                snapshot=sql(f'USE LAB_DB;SELECT version,json FROM games WHERE ind={g};')
+                replies=[http(client,g,{'cmd':'draft_sync','csrf':client.token('account')}) for client in [a,b]]
+                check('HTTP Grid impossible allocation explicit for both actors',all(code==200 and json.loads(body).get('ok') is False and 'полного распределения' in json.loads(body).get('error','') for code,body,_ in replies))
+                check('HTTP Grid impossible allocation no persisted mutation',snapshot==sql(f'USE LAB_DB;SELECT version,json FROM games WHERE ind={g};'))
+                frozen=json.loads((ROOT/'docs/evidence/stage5c/grid-timeout-fixture.json').read_text())
+                current=state(g);current['draft']=frozen['state']['draft'];set_fixture(g,current)
             current=state(g);clock=current['draft']['timer'];clock['elapsed']={'host':clock['total_limit'],'player':clock['total_limit']};clock['action_started_at']=int(time.time())-1000
             set_fixture(g,current)
             code,body,_=http(a,g,{'cmd':'draft_sync','csrf':a.token('account')})
             if code!=200 or state(g)['status']!='view':
                 current=state(g);print('DRAFT_TIMEOUT_DIAGNOSTIC',draft_type,code,body[:900],{k:len(v) for k,v in (current.get('draft') or {}).get('picked',{}).items()})
             check('HTTP '+draft_type+' timeout existing auto completion',code==200 and state(g)['status']=='view')
+            if draft_type=='grid':
+                from collections import Counter
+                stock=Counter(x for x in current['draft']['pool']+current['draft']['grid']+current['draft'].get('recycle',[]) if x is not None)
+                for picks in current['draft']['picked'].values():stock.update(picks)
+                materialized=Counter(card['ukid'] for card in state(g)['cards'].values())
+                check('HTTP frozen Grid complete inventory conservation',materialized==stock)
             finish_preparation(g);code,res,_=battle(a,g,'resign');check('HTTP '+draft_type+' through battle terminal',res.get('ok') and state(g)['status']=='game_over')
         sealed=match();prep(a,sealed,'choose_mode',mode='sealed');prep(a,sealed,'confirm_settings')
         check('HTTP Sealed existing pool initializes',state(sealed)['status']=='view' and len(state(sealed)['cards'])>0 and http(b,sealed)[0]==200)

@@ -48,9 +48,11 @@ namespace {
             $rows[]=['scenario'=>$scenario,'run'=>$i,'deterministic'=>$GLOBALS['grid_deterministic'],'seed'=>$seed,'now'=>$now,'success'=>$r->success,'error'=>$r->error,'events'=>$r->events,'second_success'=>$r2->success,'second_error'=>$r2->error,'second_events'=>$r2->events,'before'=>$before,'intermediate'=>$middle,'final'=>$after];
         }
     }
+    $fixed=!in_array('--expect-defect',$argv,true);
     $repeated=array_values(array_filter($rows,fn($r)=>$r['scenario']==='failing_seed'));
     if (count($repeated)!==3 || count(array_unique(array_column(array_column($repeated,'final'),'state_sha256')))!==1) throw new RuntimeException('Non-deterministic seed12');
-    foreach ($repeated as $r) if ($r['success'] || $r['second_success'] || $r['final']['status']!=='draft') throw new RuntimeException('Expected seed12 defect not reproduced');
+    foreach ($repeated as $r) if ($fixed ? (!$r['success'] || !$r['second_success'] || $r['final']['status']!=='view') : ($r['success'] || $r['second_success'] || $r['final']['status']!=='draft')) throw new RuntimeException('Unexpected seed12 outcome');
+    if ($fixed) foreach ($rows as $r) if (!$r['success'] || !$r['second_success']) throw new RuntimeException('Fixed timeout scenario failed');
     foreach ($rows as $r) if (!in_array($r['scenario'],['exhausted','failing_seed'],true) && !$r['success']) throw new RuntimeException('Unexpected scenario failure');
     $normalized=GameState::fromArray($f['state'])->toArray();
     if ($normalized!==GameState::fromArray($normalized)->toArray()) throw new RuntimeException('Roundtrip mismatch');

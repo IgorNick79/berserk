@@ -1,0 +1,81 @@
+=== Booster #1 ===
+  [common] card_8 — Fixture 8
+  [common] card_13 — Fixture 13
+  [common] card_7 — Fixture 7
+  [common] card_12 — Fixture 12
+  [common] card_5 — Fixture 5
+  [common] card_10 — Fixture 10
+  [common] card_9 — Fixture 9
+  [common] card_24 — Fixture 24
+  [uncommon] card_34 — Fixture 34
+  [uncommon] card_26 — Fixture 26
+  [uncommon] card_33 — Fixture 33
+  [rare] card_73 — Fixture 73
+  Counts: common=8, uncommon=3, rare=1, ultra=0
+  Duplicates: no
+
+=== Booster #2 ===
+  [common] card_15 — Fixture 15
+  [common] card_2 — Fixture 2
+  [common] card_8 — Fixture 8
+  [common] card_23 — Fixture 23
+  [common] card_9 — Fixture 9
+  [common] card_18 — Fixture 18
+  [common] card_14 — Fixture 14
+  [common] card_24 — Fixture 24
+  [uncommon] card_42 — Fixture 42
+  [uncommon] card_48 — Fixture 48
+  [uncommon] card_36 — Fixture 36
+  [rare] card_69 — Fixture 69
+  Counts: common=8, uncommon=3, rare=1, ultra=0
+  Duplicates: no
+
+=== Booster #3 ===
+  [common] card_17 — Fixture 17
+  [common] card_16 — Fixture 16
+  [common] card_23 — Fixture 23
+  [common] card_2 — Fixture 2
+  [common] card_9 — Fixture 9
+  [common] card_1 — Fixture 1
+  [common] card_4 — Fixture 4
+  [common] card_22 — Fixture 22
+  [uncommon] card_36 — Fixture 36
+  [uncommon] card_29 — Fixture 29
+  [uncommon] card_32 — Fixture 32
+  [rare] card_62 — Fixture 62
+  Counts: common=8, uncommon=3, rare=1, ultra=0
+  Duplicates: no
+
+=== Booster #4 ===
+  [common] card_12 — Fixture 12
+  [common] card_21 — Fixture 21
+  [common] card_14 — Fixture 14
+  [common] card_5 — Fixture 5
+  [common] card_7 — Fixture 7
+  [common] card_8 — Fixture 8
+  [common] card_1 — Fixture 1
+  [common] card_13 — Fixture 13
+  [uncommon] card_47 — Fixture 47
+  [uncommon] card_48 — Fixture 48
+  [uncommon] card_37 — Fixture 37
+  [rare] card_65 — Fixture 65
+  Counts: common=8, uncommon=3, rare=1, ultra=0
+  Duplicates: no
+
+=== Booster #5 ===
+  [common] card_4 — Fixture 4
+  [common] card_24 — Fixture 24
+  [common] card_13 — Fixture 13
+  [common] card_11 — Fixture 11
+  [common] card_9 — Fixture 9
+  [common] card_19 — Fixture 19
+  [common] card_16 — Fixture 16
+  [common] card_15 — Fixture 15
+  [uncommon] card_30 — Fixture 30
+  [uncommon] card_28 — Fixture 28
+  [uncommon] card_49 — Fixture 49
+  [rare] card_53 — Fixture 53
+  Counts: common=8, uncommon=3, rare=1, ultra=0
+  Duplicates: no
+
+Done. Total boosters: 5, expected 60 cards.

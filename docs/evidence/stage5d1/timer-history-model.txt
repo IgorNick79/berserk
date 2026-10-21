@@ -1,0 +1,2 @@
+Skipping DB-backed draft timeout checks: config/db.php not found
+Draft timer/history tests passed.

@@ -68,6 +68,12 @@ function dtPrepareWithAutoPicker(GameState $state, object $autoPicker): PrepareP
     return new PrepareProcessor($state, null, $autoPicker);
 }
 
+// Keep deck-size fixtures legal under the existing three-copy rule.
+function dtLegalPicked(string $prefix, int $count): array
+{
+    return array_map(fn($i) => '__picked_' . $prefix . '_' . $i, range(1, $count));
+}
+
 function dtConstrainedTimeoutState(
     array $hostPicked,
     array $playerPicked,
@@ -248,8 +254,8 @@ dtAssert($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Successful manual 
 dtAssert(count($state->draft['history']) === 1, 'Successful manual pick should write one history entry');
 
 $state = dtState(GameState::PLAYER_HOST);
-$state->draft['picked'][GameState::PLAYER_HOST] = array_fill(0, GameSettings::MIN_DECK_SIZE, 'g1');
-$state->draft['picked'][GameState::PLAYER_PLAYER] = array_fill(0, GameSettings::MIN_DECK_SIZE, 'g2');
+$state->draft['picked'][GameState::PLAYER_HOST] = dtLegalPicked('g1', GameSettings::MIN_DECK_SIZE);
+$state->draft['picked'][GameState::PLAYER_PLAYER] = dtLegalPicked('g2', GameSettings::MIN_DECK_SIZE);
 DraftTimer::initialize($state, GameSettings::defaults(), 1000);
 $state->draft['timer']['action_started_at'] = time() - GameSettings::DRAFT_TIMER_DEFAULT_ACTION_SECONDS - DraftTimer::TRANSPORT_GRACE_SECONDS;
 $processor = dtPrepareWithAutoPicker($state, $autoPicker);
@@ -272,8 +278,8 @@ $nullAutoPicker = new class {
 };
 
 $state = dtConstrainedTimeoutState(
-    array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'),
-    array_fill(0, GameSettings::MIN_DECK_SIZE - 1, 'p'),
+    dtLegalPicked('h', GameSettings::MIN_DECK_SIZE),
+    dtLegalPicked('p', GameSettings::MIN_DECK_SIZE - 1),
     ['g1'],
 );
 $processor = dtPrepareWithAutoPicker($state, $autoPicker);
@@ -282,11 +288,11 @@ dtAssert($result->success, 'Timeout continuous with zero viable selections shoul
 dtAssert($result->events === ['passed'], 'Timeout pass should use canonical pass event');
 dtAssert($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Timeout pass should switch turn');
 dtAssert($state->draft['consecutive_passes'] === 1, 'Timeout pass should increment consecutive pass counter');
-dtAssert($state->draft['picked'][GameState::PLAYER_HOST] === array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'), 'Timeout pass should not pick blocked cards');
+dtAssert($state->draft['picked'][GameState::PLAYER_HOST] === dtLegalPicked('h', GameSettings::MIN_DECK_SIZE), 'Timeout pass should not pick blocked cards');
 
 $state = dtConstrainedTimeoutState(
-    array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'),
-    array_fill(0, GameSettings::MIN_DECK_SIZE, 'p'),
+    dtLegalPicked('h', GameSettings::MIN_DECK_SIZE),
+    dtLegalPicked('p', GameSettings::MIN_DECK_SIZE),
     ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9'],
 );
 $state->draft['pool'] = ['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9'];
@@ -299,8 +305,8 @@ dtAssert($state->draft['grid'] === ['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n
 dtAssert(count($state->draft['recycle']) === 9, 'Second timeout pass should recycle the old grid');
 
 $state = dtConstrainedTimeoutState(
-    array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'),
-    array_fill(0, GameSettings::MIN_DECK_SIZE - 3, 'p'),
+    dtLegalPicked('h', GameSettings::MIN_DECK_SIZE),
+    dtLegalPicked('p', GameSettings::MIN_DECK_SIZE - 3),
     ['g1', 'g2'],
 );
 $state->draft['pool'] = ['p_final'];
@@ -312,8 +318,8 @@ dtAssert(array_slice($state->draft['picked'][GameState::PLAYER_PLAYER], -2) === 
 dtAssert($state->draft['consecutive_passes'] === 0, 'Viable timeout pick should reset pass counter');
 
 $state = dtConstrainedTimeoutState(
-    array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'),
-    array_fill(0, GameSettings::MIN_DECK_SIZE - 3, 'p'),
+    dtLegalPicked('h', GameSettings::MIN_DECK_SIZE),
+    dtLegalPicked('p', GameSettings::MIN_DECK_SIZE - 3),
     ['g1', 'g2', 'g3'],
     GameState::PLAYER_HOST,
     GameSettings::DRAFT_GRID_MODE_DISCRETE,
@@ -326,8 +332,8 @@ dtAssert($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Discrete forced sk
 dtAssert($state->draft['grid'] === array_pad(['g1', 'g2', 'g3'], 9, null), 'Discrete forced skip should preserve needed cards for opponent');
 
 $state = dtConstrainedTimeoutState(
-    array_fill(0, GameSettings::MIN_DECK_SIZE - 1, 'h'),
-    array_fill(0, GameSettings::MIN_DECK_SIZE, 'p'),
+    dtLegalPicked('h', GameSettings::MIN_DECK_SIZE - 1),
+    dtLegalPicked('p', GameSettings::MIN_DECK_SIZE),
     ['g1'],
     GameState::PLAYER_PLAYER,
     GameSettings::DRAFT_GRID_MODE_DISCRETE,
@@ -343,8 +349,8 @@ dtAssert(count($state->draft['recycle']) === 0, 'Second discrete forced skip sho
 dtAssert($state->draft['round_picks'] === 1, 'Processing should leave the viable player in the first phase of the new round');
 
 $state = dtConstrainedTimeoutState(
-    array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'),
-    array_fill(0, GameSettings::MIN_DECK_SIZE - 3, 'p'),
+    dtLegalPicked('h', GameSettings::MIN_DECK_SIZE),
+    dtLegalPicked('p', GameSettings::MIN_DECK_SIZE - 3),
     ['g1', 'g2', 'g3'],
     GameState::PLAYER_HOST,
     GameSettings::DRAFT_GRID_MODE_DISCRETE,
@@ -361,8 +367,8 @@ dtAssert($result->events === ['forced_skip'], 'Unlimited forced skip should use 
 dtAssert($state->draft['turn'] === GameState::PLAYER_PLAYER, 'Unlimited forced skip should advance to opponent');
 
 $state = dtConstrainedTimeoutState(
-    array_fill(0, GameSettings::MIN_DECK_SIZE, 'h'),
-    array_fill(0, GameSettings::MIN_DECK_SIZE - 3, 'p'),
+    dtLegalPicked('h', GameSettings::MIN_DECK_SIZE),
+    dtLegalPicked('p', GameSettings::MIN_DECK_SIZE - 3),
     ['g1', 'g2', 'g3'],
     GameState::PLAYER_HOST,
     GameSettings::DRAFT_GRID_MODE_DISCRETE,

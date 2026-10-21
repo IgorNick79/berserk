@@ -1,0 +1,59 @@
+{
+  "exhausted": {
+    "runs": 150,
+    "success": 137,
+    "error": 13,
+    "statuses": {
+      "view": 137,
+      "draft": 13
+    }
+  },
+  "failing_seed": {
+    "runs": 3,
+    "success": 0,
+    "error": 3,
+    "statuses": {
+      "draft": 3
+    }
+  },
+  "before_deadline": {
+    "runs": 3,
+    "success": 3,
+    "error": 0,
+    "statuses": {
+      "draft": 3
+    }
+  },
+  "action_expired": {
+    "runs": 3,
+    "success": 3,
+    "error": 0,
+    "statuses": {
+      "draft": 3
+    }
+  },
+  "one_total_expired": {
+    "runs": 3,
+    "success": 3,
+    "error": 0,
+    "statuses": {
+      "view": 3
+    }
+  },
+  "missing_timer": {
+    "runs": 3,
+    "success": 3,
+    "error": 0,
+    "statuses": {
+      "draft": 3
+    }
+  },
+  "terminal": {
+    "runs": 3,
+    "success": 3,
+    "error": 0,
+    "statuses": {
+      "view": 3
+    }
+  }
+}

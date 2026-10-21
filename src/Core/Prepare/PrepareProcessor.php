@@ -1671,7 +1671,7 @@ final class PrepareProcessor
 
     public function resolveDraftTimeouts(?int $now = null): Result
     {
-        if ($this->state->settings->isSolomonDraft()) {
+        if ($this->state->settings->isSolomonDraft() || $this->isContinuousGrid()) {
             return $this->atomicSolomon(fn() => $this->resolveDraftTimeoutsInternal($now));
         }
         return $this->resolveDraftTimeoutsInternal($now);
@@ -1691,6 +1691,10 @@ final class PrepareProcessor
             || ($this->state->settings->draftTimerMode() !== GameSettings::DRAFT_TIMER_UNLIMITED
                 && !isset($this->state->draft['timer']));
         DraftTimer::ensureRuntime($this->state, $now);
+        if ($this->isContinuousGrid() && DraftTimer::isExpired($this->state, $now)
+            && !$this->draftProcessor()->canCompleteGrid()) {
+            return Result::error('Нет допустимого полного распределения Grid: лимиты копий или минимум колод');
+        }
         $events = [];
         if ($needsRuntimeSave) {
             $events[] = 'draft_runtime_initialized';
@@ -1748,7 +1752,7 @@ final class PrepareProcessor
                 continue;
             }
 
-            $validSelections = $processor->validSelections();
+            $validSelections = $processor->automaticSelections();
             $selection = $autoPicker->pick(
                 $validSelections,
                 $this->state->draft['picked'][$turn] ?? []
@@ -1908,8 +1912,12 @@ final class PrepareProcessor
             $turn = (string) ($this->state->draft['turn'] ?? '');
             if (!$this->isDraftAutoControlled($turn)) break;
 
+            if ($this->isContinuousGrid() && !$processor->canCompleteGrid()) {
+                return Result::error('Нет допустимого полного распределения Grid: лимиты копий или минимум колод');
+            }
+
             $selection = $autoPicker->pick(
-                $processor->validSelections(),
+                $processor->automaticSelections(),
                 $this->state->draft['picked'][$turn] ?? []
             );
             if ($selection === null) {
@@ -1952,6 +1960,13 @@ final class PrepareProcessor
         }
 
         return Result::ok($events);
+    }
+
+    private function isContinuousGrid(): bool
+    {
+        return $this->state->status === 'draft' && $this->state->draft !== null
+            && !$this->state->settings->isSolomonDraft()
+            && ($this->state->draft['grid_mode'] ?? $this->state->settings->draftGridMode()) === GameSettings::DRAFT_GRID_MODE_CONTINUOUS;
     }
 
     private function draftAutoPicker(): mixed

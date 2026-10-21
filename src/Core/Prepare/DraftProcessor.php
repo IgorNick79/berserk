@@ -176,6 +176,32 @@ final class DraftProcessor
         return $selections;
     }
 
+    /** Auto choices must preserve a complete copy-safe allocation; manual Grid stays unchanged. */
+    public function automaticSelections(): array
+    {
+        $selections = $this->validSelections();
+        if ($this->state->settings->isSolomonDraft()
+            || ($this->state->draft['grid_mode'] ?? $this->state->settings->draftGridMode()) === GameSettings::DRAFT_GRID_MODE_DISCRETE) return $selections;
+        return array_values(array_filter($selections, fn(array $selection): bool =>
+            $this->canCompleteGrid($selection['positions'])
+        ));
+    }
+
+    /** Predict a continuous Grid pick without mutating/drawing/shuffling any cards. */
+    public function canCompleteGrid(array $positions = []): bool
+    {
+        $draft = $this->state->draft;
+        if ($draft === null) return true;
+        $picked = $draft['picked'];
+        $remaining = array_merge($draft['pool'], $draft['recycle'] ?? []);
+        foreach ($draft['grid'] as $pos => $ukid) {
+            if ($ukid === null) continue;
+            if (in_array($pos, $positions, true)) $picked[$draft['turn']][] = $ukid;
+            else $remaining[] = $ukid;
+        }
+        return $this->canComplete($picked, $remaining);
+    }
+
     private function pickPositions(string $playerKey, array $positions, string $eventPrefix = 'picked'): Result
     {
         $draft = $this->state->draft ?? null;
