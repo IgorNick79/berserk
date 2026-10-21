@@ -10,7 +10,7 @@ header("Content-Security-Policy: default-src 'none'; form-action 'self'; frame-a
 try {
     $runtime=HistoryRuntime::load();$invites=$runtime->invitations();
     if (!$invites) { http_response_code(404);exit; }
-    $https=($_SERVER['HTTPS']??'')==='on';
+    $https=($_SERVER['HTTPS']??'')==='on' || ($_SERVER['HTTPS']??'')==='1';
     $local=$runtime->localAccessHttp() && in_array($_SERVER['REMOTE_ADDR']??'',['127.0.0.1','::1'],true)
         && in_array(strtolower(explode(':',$_SERVER['HTTP_HOST']??'')[0]),['127.0.0.1','localhost'],true);
     if (!$https && !$local) { http_response_code(403);exit('HTTPS required'); }
