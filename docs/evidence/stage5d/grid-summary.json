@@ -1,0 +1,62 @@
+{
+  "fixture_sha256": "9086c02fe01cba8152023a48d37f09ff5f0b0df2371e0038211117bf310819b1",
+  "scenarios": {
+    "exhausted": {
+      "runs": 150,
+      "success": 135,
+      "failures": 15,
+      "final_statuses": {
+        "view": 135,
+        "draft": 15
+      }
+    },
+    "failing_seed": {
+      "runs": 3,
+      "success": 0,
+      "failures": 3,
+      "final_statuses": {
+        "draft": 3
+      }
+    },
+    "before_deadline": {
+      "runs": 3,
+      "success": 3,
+      "failures": 0,
+      "final_statuses": {
+        "draft": 3
+      }
+    },
+    "action_expired": {
+      "runs": 3,
+      "success": 3,
+      "failures": 0,
+      "final_statuses": {
+        "draft": 3
+      }
+    },
+    "one_total_expired": {
+      "runs": 3,
+      "success": 3,
+      "failures": 0,
+      "final_statuses": {
+        "view": 3
+      }
+    },
+    "missing_timer": {
+      "runs": 3,
+      "success": 3,
+      "failures": 0,
+      "final_statuses": {
+        "draft": 3
+      }
+    },
+    "terminal": {
+      "runs": 3,
+      "success": 3,
+      "failures": 0,
+      "final_statuses": {
+        "view": 3
+      }
+    }
+  }
+}

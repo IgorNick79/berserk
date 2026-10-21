@@ -1,0 +1,25 @@
+accounts	CREATE TABLE `accounts` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `login` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `login_key` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `password_hash` varchar(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` datetime(6) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_accounts_login_key` (`login_key`),
+  CONSTRAINT `chk_accounts_login` CHECK (`login` regexp '^[A-Za-z0-9_-]{3,32}$'),
+  CONSTRAINT `chk_accounts_key` CHECK (cast(`login_key` as char charset binary) = cast(lcase(`login`) as char charset binary))
+) ENGINE=InnoDB DEFAULT CHARSET=latin1
+auth_login_attempts	CREATE TABLE `auth_login_attempts` (
+  `bucket_key` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `window_start` datetime(6) NOT NULL,
+  `attempts` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`bucket_key`),
+  KEY `idx_auth_window` (`window_start`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1
+accounts	0	PRIMARY	1	id	A	0	NULL	NULL		BTREE			NO
+accounts	0	uq_accounts_login_key	1	login_key	A	0	NULL	NULL		BTREE			NO
+auth_login_attempts	0	PRIMARY	1	bucket_key	A	0	NULL	NULL		BTREE			NO
+auth_login_attempts	1	idx_auth_window	1	window_start	A	0	NULL	NULL		BTREE			NO
+accounts	InnoDB
+auth_login_attempts	InnoDB
+0

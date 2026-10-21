@@ -1,0 +1,289 @@
+lobby_482523627800	root@localhost	10.8.4-MariaDB	STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION	InnoDB
+CSV	YES	Stores tables as CSV files	NO	NO	NO
+MRG_MyISAM	YES	Collection of identical MyISAM tables	NO	NO	NO
+MEMORY	YES	Hash based, stored in memory, useful for temporary tables	NO	NO	NO
+Aria	YES	Crash-safe tables with MyISAM heritage. Used for internal temporary tables and privilege tables	NO	NO	NO
+MyISAM	YES	Non-transactional engine with good performance and small data footprint	NO	NO	NO
+SEQUENCE	YES	Generated tables filled with sequential values	YES	NO	YES
+InnoDB	DEFAULT	Supports transactions, row-level locking, foreign keys and encryption for tables	YES	YES	YES
+PERFORMANCE_SCHEMA	YES	Performance Schema	NO	NO	NO
+GRANT ALL PRIVILEGES ON *.* TO `root`@`localhost` WITH GRANT OPTION
+GRANT PROXY ON ''@'%' TO 'root'@'localhost' WITH GRANT OPTION
+accounts	InnoDB	latin1_swedish_ci
+auth_login_attempts	InnoDB	latin1_swedish_ci
+battle_command_journal	InnoDB	utf8mb4_general_ci
+battle_history_actions	InnoDB	utf8mb4_unicode_ci
+battle_history_batches	InnoDB	utf8mb4_unicode_ci
+battle_history_events	InnoDB	utf8mb4_unicode_ci
+battle_history_matches	InnoDB	utf8mb4_unicode_ci
+battle_history_steps	InnoDB	utf8mb4_unicode_ci
+games	InnoDB	latin1_swedish_ci
+game_chat_messages	InnoDB	utf8mb4_unicode_ci
+game_chat_reads	InnoDB	utf8mb4_unicode_ci
+lobby_rooms	InnoDB	latin1_swedish_ci
+accounts	id	int(11)	NO	NULL	auto_increment	NULL
+accounts	login	varchar(32)	NO	NULL		ascii_bin
+accounts	login_key	varchar(32)	NO	NULL		ascii_bin
+accounts	password_hash	varchar(255)	NO	NULL		ascii_bin
+accounts	created_at	datetime(6)	NO	NULL		NULL
+auth_login_attempts	bucket_key	char(64)	NO	NULL		ascii_bin
+auth_login_attempts	window_start	datetime(6)	NO	NULL		NULL
+auth_login_attempts	attempts	int(10) unsigned	NO	NULL		NULL
+battle_command_journal	id	bigint(20) unsigned	NO	NULL	auto_increment	NULL
+battle_command_journal	game_id	int(11)	NO	NULL		NULL
+battle_command_journal	player_key	varchar(16)	NO	NULL		utf8mb4_general_ci
+battle_command_journal	command_id	varchar(64)	NO	NULL		utf8mb4_general_ci
+battle_command_journal	command_type	varchar(64)	NO	NULL		utf8mb4_general_ci
+battle_command_journal	payload_hash	char(64)	NO	NULL		utf8mb4_general_ci
+battle_command_journal	expected_version	int(11)	NO	NULL		NULL
+battle_command_journal	before_version	int(11)	YES	NULL		NULL
+battle_command_journal	after_version	int(11)	YES	NULL		NULL
+battle_command_journal	status	varchar(16)	NO	NULL		utf8mb4_general_ci
+battle_command_journal	error_code	varchar(64)	YES	NULL		utf8mb4_general_ci
+battle_command_journal	error_message	text	YES	NULL		utf8mb4_general_ci
+battle_command_journal	created_at	datetime(6)	NO	NULL		NULL
+battle_command_journal	updated_at	datetime(6)	NO	NULL		NULL
+battle_command_journal	finished_at	datetime(6)	YES	NULL		NULL
+battle_history_actions	game_id	bigint(20)	NO	NULL		NULL
+battle_history_actions	action_id	varchar(64)	NO	NULL		ascii_bin
+battle_history_actions	root_id	varchar(64)	NO	NULL		ascii_bin
+battle_history_actions	parent_id	varchar(64)	YES	NULL		ascii_bin
+battle_history_actions	action_type	varchar(64)	NO	NULL		ascii_bin
+battle_history_actions	initiator	varchar(16)	NO	NULL		utf8mb4_unicode_ci
+battle_history_actions	lifecycle	varchar(16)	NO	NULL		utf8mb4_unicode_ci
+battle_history_actions	started_event_seq	bigint(20) unsigned	NO	NULL		NULL
+battle_history_actions	ended_event_seq	bigint(20) unsigned	YES	NULL		NULL
+battle_history_actions	completion_json	longtext	YES	NULL		utf8mb4_unicode_ci
+battle_history_batches	game_id	bigint(20)	NO	NULL		NULL
+battle_history_batches	journal_id	bigint(20) unsigned	NO	NULL		NULL
+battle_history_batches	player_key	varchar(16)	NO	NULL		ascii_bin
+battle_history_batches	command_id	varchar(64)	NO	NULL		ascii_bin
+battle_history_batches	persistence_version	int(11)	NO	NULL		NULL
+battle_history_batches	batch_hash	char(64)	NO	NULL		ascii_bin
+battle_history_batches	first_event_seq	bigint(20) unsigned	YES	NULL		NULL
+battle_history_batches	last_event_seq	bigint(20) unsigned	YES	NULL		NULL
+battle_history_batches	first_step_seq	bigint(20) unsigned	YES	NULL		NULL
+battle_history_batches	last_step_seq	bigint(20) unsigned	YES	NULL		NULL
+battle_history_batches	created_at	datetime(6)	NO	NULL		NULL
+battle_history_events	game_id	bigint(20)	NO	NULL		NULL
+battle_history_events	event_seq	bigint(20) unsigned	NO	NULL		NULL
+battle_history_events	journal_id	bigint(20) unsigned	NO	NULL		NULL
+battle_history_events	command_order	int(10) unsigned	NO	NULL		NULL
+battle_history_events	action_id	varchar(64)	NO	NULL		ascii_bin
+battle_history_events	event_type	varchar(64)	NO	NULL		ascii_bin
+battle_history_events	schema_version	smallint(5) unsigned	NO	NULL		NULL
+battle_history_events	cause_event_seq	bigint(20) unsigned	YES	NULL		NULL
+battle_history_events	payload_json	longtext	NO	NULL		utf8mb4_unicode_ci
+battle_history_events	public_json	longtext	YES	NULL		utf8mb4_unicode_ci
+battle_history_events	host_json	longtext	YES	NULL		utf8mb4_unicode_ci
+battle_history_events	player_json	longtext	YES	NULL		utf8mb4_unicode_ci
+battle_history_events	occurred_at	datetime(6)	NO	NULL		NULL
+battle_history_matches	game_id	bigint(20)	NO	NULL		NULL
+battle_history_matches	recording_status	varchar(16)	NO	NULL		utf8mb4_unicode_ci
+battle_history_matches	completeness	varchar(16)	NO	NULL		utf8mb4_unicode_ci
+battle_history_matches	event_version	smallint(5) unsigned	NO	NULL		NULL
+battle_history_matches	snapshot_version	smallint(5) unsigned	NO	NULL		NULL
+battle_history_matches	has_initial	tinyint(3) unsigned	NO	0		NULL
+battle_history_matches	has_final	tinyint(3) unsigned	NO	0		NULL
+battle_history_matches	last_event_seq	bigint(20) unsigned	NO	0		NULL
+battle_history_matches	last_step_seq	bigint(20) unsigned	NO	0		NULL
+battle_history_matches	created_at	datetime(6)	NO	NULL		NULL
+battle_history_matches	updated_at	datetime(6)	NO	NULL		NULL
+battle_history_steps	game_id	bigint(20)	NO	NULL		NULL
+battle_history_steps	step_seq	bigint(20) unsigned	NO	NULL		NULL
+battle_history_steps	journal_id	bigint(20) unsigned	NO	NULL		NULL
+battle_history_steps	capture_order	int(10) unsigned	NO	NULL		NULL
+battle_history_steps	boundary_key	varchar(128)	NO	NULL		ascii_bin
+battle_history_steps	step_type	varchar(64)	NO	NULL		ascii_bin
+battle_history_steps	action_id	varchar(64)	NO	NULL		ascii_bin
+battle_history_steps	last_event_seq	bigint(20) unsigned	NO	NULL		NULL
+battle_history_steps	persistence_version	int(11)	NO	NULL		NULL
+battle_history_steps	schema_version	smallint(5) unsigned	NO	NULL		NULL
+battle_history_steps	state_json	longtext	NO	NULL		utf8mb4_unicode_ci
+battle_history_steps	public_json	longtext	NO	NULL		utf8mb4_unicode_ci
+battle_history_steps	host_json	longtext	NO	NULL		utf8mb4_unicode_ci
+battle_history_steps	player_json	longtext	NO	NULL		utf8mb4_unicode_ci
+battle_history_steps	state_hash	char(64)	NO	NULL		ascii_bin
+battle_history_steps	is_initial	tinyint(3) unsigned	NO	NULL		NULL
+battle_history_steps	is_final	tinyint(3) unsigned	NO	NULL		NULL
+battle_history_steps	initial_guard	tinyint(4)	YES	NULL	STORED GENERATED	NULL
+battle_history_steps	final_guard	tinyint(4)	YES	NULL	STORED GENERATED	NULL
+battle_history_steps	created_at	datetime(6)	NO	NULL		NULL
+games	ind	int(11)	NO	NULL	auto_increment	NULL
+games	host_id	int(11)	NO	NULL		NULL
+games	player_id	int(11)	NO	NULL		NULL
+games	status	varchar(32)	NO	NULL		latin1_swedish_ci
+games	json	longtext	NO	NULL		latin1_swedish_ci
+games	version	int(11)	NO	0		NULL
+games	date	datetime	NO	NULL		NULL
+games	active	int(11)	NO	NULL		NULL
+game_chat_messages	id	bigint(20) unsigned	NO	NULL	auto_increment	NULL
+game_chat_messages	game_id	int(11)	NO	NULL		NULL
+game_chat_messages	sender_id	int(11)	NO	NULL		NULL
+game_chat_messages	turn_number	int(10) unsigned	NO	NULL		NULL
+game_chat_messages	message	varchar(1000)	NO	NULL		utf8mb4_unicode_ci
+game_chat_messages	request_id	varchar(64)	NO	NULL		ascii_bin
+game_chat_messages	created_at	datetime(6)	NO	NULL		NULL
+game_chat_reads	game_id	int(11)	NO	NULL		NULL
+game_chat_reads	player_id	int(11)	NO	NULL		NULL
+game_chat_reads	last_read_id	bigint(20) unsigned	NO	0		NULL
+lobby_rooms	id	int(11)	NO	NULL	auto_increment	NULL
+lobby_rooms	creator_account_id	int(11)	NO	NULL		NULL
+lobby_rooms	candidate_account_id	int(11)	YES	NULL		NULL
+lobby_rooms	accepted_account_id	int(11)	YES	NULL		NULL
+lobby_rooms	candidate_request_id	char(64)	YES	NULL		ascii_bin
+lobby_rooms	game_id	int(11)	YES	NULL		NULL
+lobby_rooms	state	varchar(32)	NO	'open'		ascii_bin
+lobby_rooms	version	int(10) unsigned	NO	1		NULL
+lobby_rooms	created_at	datetime(6)	NO	NULL		NULL
+lobby_rooms	updated_at	datetime(6)	NO	NULL		NULL
+accounts	PRIMARY	0	1	id
+accounts	uq_accounts_login_key	0	1	login_key
+auth_login_attempts	idx_auth_window	1	1	window_start
+auth_login_attempts	PRIMARY	0	1	bucket_key
+battle_command_journal	idx_battle_command_status	1	1	game_id
+battle_command_journal	idx_battle_command_status	1	2	status
+battle_command_journal	idx_battle_command_status	1	3	updated_at
+battle_command_journal	PRIMARY	0	1	id
+battle_command_journal	uq_battle_command	0	1	game_id
+battle_command_journal	uq_battle_command	0	2	player_key
+battle_command_journal	uq_battle_command	0	3	command_id
+battle_history_actions	idx_history_root	1	1	game_id
+battle_history_actions	idx_history_root	1	2	root_id
+battle_history_actions	PRIMARY	0	1	game_id
+battle_history_actions	PRIMARY	0	2	action_id
+battle_history_batches	idx_history_command_id	1	1	game_id
+battle_history_batches	idx_history_command_id	1	2	command_id
+battle_history_batches	PRIMARY	0	1	game_id
+battle_history_batches	PRIMARY	0	2	journal_id
+battle_history_batches	uq_history_command	0	1	game_id
+battle_history_batches	uq_history_command	0	2	player_key
+battle_history_batches	uq_history_command	0	3	command_id
+battle_history_batches	uq_history_journal	0	1	journal_id
+battle_history_events	idx_history_event_action	1	1	game_id
+battle_history_events	idx_history_event_action	1	2	action_id
+battle_history_events	idx_history_event_action	1	3	event_seq
+battle_history_events	PRIMARY	0	1	game_id
+battle_history_events	PRIMARY	0	2	event_seq
+battle_history_events	uq_history_event_order	0	1	game_id
+battle_history_events	uq_history_event_order	0	2	journal_id
+battle_history_events	uq_history_event_order	0	3	command_order
+battle_history_matches	PRIMARY	0	1	game_id
+battle_history_steps	game_id	1	1	game_id
+battle_history_steps	game_id	1	2	action_id
+battle_history_steps	PRIMARY	0	1	game_id
+battle_history_steps	PRIMARY	0	2	step_seq
+battle_history_steps	uq_history_boundary	0	1	game_id
+battle_history_steps	uq_history_boundary	0	2	boundary_key
+battle_history_steps	uq_history_capture	0	1	game_id
+battle_history_steps	uq_history_capture	0	2	journal_id
+battle_history_steps	uq_history_capture	0	3	capture_order
+battle_history_steps	uq_history_final	0	1	game_id
+battle_history_steps	uq_history_final	0	2	final_guard
+battle_history_steps	uq_history_initial	0	1	game_id
+battle_history_steps	uq_history_initial	0	2	initial_guard
+games	PRIMARY	0	1	ind
+game_chat_messages	idx_chat_game_id	1	1	game_id
+game_chat_messages	idx_chat_game_id	1	2	id
+game_chat_messages	idx_chat_sender_time	1	1	game_id
+game_chat_messages	idx_chat_sender_time	1	2	sender_id
+game_chat_messages	idx_chat_sender_time	1	3	created_at
+game_chat_messages	PRIMARY	0	1	id
+game_chat_messages	uq_chat_request	0	1	game_id
+game_chat_messages	uq_chat_request	0	2	sender_id
+game_chat_messages	uq_chat_request	0	3	request_id
+game_chat_reads	PRIMARY	0	1	game_id
+game_chat_reads	PRIMARY	0	2	player_id
+lobby_rooms	idx_room_accepted	1	1	accepted_account_id
+lobby_rooms	idx_room_candidate	1	1	candidate_account_id
+lobby_rooms	idx_room_creator	1	1	creator_account_id
+lobby_rooms	idx_room_state_updated	1	1	state
+lobby_rooms	idx_room_state_updated	1	2	updated_at
+lobby_rooms	PRIMARY	0	1	id
+lobby_rooms	uq_room_game	0	1	game_id
+accounts	chk_accounts_key	CHECK
+accounts	chk_accounts_login	CHECK
+accounts	PRIMARY	PRIMARY KEY
+accounts	uq_accounts_login_key	UNIQUE
+auth_login_attempts	PRIMARY	PRIMARY KEY
+battle_command_journal	PRIMARY	PRIMARY KEY
+battle_command_journal	uq_battle_command	UNIQUE
+battle_history_actions	battle_history_actions_ibfk_1	FOREIGN KEY
+battle_history_actions	CONSTRAINT_1	CHECK
+battle_history_actions	CONSTRAINT_2	CHECK
+battle_history_actions	PRIMARY	PRIMARY KEY
+battle_history_batches	battle_history_batches_ibfk_1	FOREIGN KEY
+battle_history_batches	PRIMARY	PRIMARY KEY
+battle_history_batches	uq_history_command	UNIQUE
+battle_history_batches	uq_history_journal	UNIQUE
+battle_history_events	battle_history_events_ibfk_1	FOREIGN KEY
+battle_history_events	battle_history_events_ibfk_2	FOREIGN KEY
+battle_history_events	CONSTRAINT_1	CHECK
+battle_history_events	CONSTRAINT_2	CHECK
+battle_history_events	CONSTRAINT_3	CHECK
+battle_history_events	CONSTRAINT_4	CHECK
+battle_history_events	CONSTRAINT_5	CHECK
+battle_history_events	PRIMARY	PRIMARY KEY
+battle_history_events	uq_history_event_order	UNIQUE
+battle_history_matches	CONSTRAINT_1	CHECK
+battle_history_matches	CONSTRAINT_2	CHECK
+battle_history_matches	CONSTRAINT_3	CHECK
+battle_history_matches	CONSTRAINT_4	CHECK
+battle_history_matches	PRIMARY	PRIMARY KEY
+battle_history_steps	battle_history_steps_ibfk_1	FOREIGN KEY
+battle_history_steps	battle_history_steps_ibfk_2	FOREIGN KEY
+battle_history_steps	CONSTRAINT_1	CHECK
+battle_history_steps	CONSTRAINT_2	CHECK
+battle_history_steps	CONSTRAINT_3	CHECK
+battle_history_steps	PRIMARY	PRIMARY KEY
+battle_history_steps	uq_history_boundary	UNIQUE
+battle_history_steps	uq_history_capture	UNIQUE
+battle_history_steps	uq_history_final	UNIQUE
+battle_history_steps	uq_history_initial	UNIQUE
+cards	PRIMARY	PRIMARY KEY
+decks	PRIMARY	PRIMARY KEY
+elements	PRIMARY	PRIMARY KEY
+games	PRIMARY	PRIMARY KEY
+game_chat_messages	PRIMARY	PRIMARY KEY
+game_chat_messages	uq_chat_request	UNIQUE
+game_chat_reads	PRIMARY	PRIMARY KEY
+lobby_rooms	chk_room_state	CHECK
+lobby_rooms	chk_room_version	CHECK
+lobby_rooms	fk_room_accepted	FOREIGN KEY
+lobby_rooms	fk_room_candidate	FOREIGN KEY
+lobby_rooms	fk_room_creator	FOREIGN KEY
+lobby_rooms	fk_room_game	FOREIGN KEY
+lobby_rooms	PRIMARY	PRIMARY KEY
+lobby_rooms	uq_room_game	UNIQUE
+battle_history_actions	game_id	battle_history_actions_ibfk_1	battle_history_matches	game_id
+battle_history_batches	game_id	battle_history_batches_ibfk_1	battle_history_matches	game_id
+battle_history_events	game_id	battle_history_events_ibfk_1	battle_history_batches	game_id
+battle_history_events	journal_id	battle_history_events_ibfk_1	battle_history_batches	journal_id
+battle_history_events	game_id	battle_history_events_ibfk_2	battle_history_actions	game_id
+battle_history_events	action_id	battle_history_events_ibfk_2	battle_history_actions	action_id
+battle_history_steps	game_id	battle_history_steps_ibfk_1	battle_history_batches	game_id
+battle_history_steps	journal_id	battle_history_steps_ibfk_1	battle_history_batches	journal_id
+battle_history_steps	game_id	battle_history_steps_ibfk_2	battle_history_actions	game_id
+battle_history_steps	action_id	battle_history_steps_ibfk_2	battle_history_actions	action_id
+lobby_rooms	accepted_account_id	fk_room_accepted	accounts	id
+lobby_rooms	candidate_account_id	fk_room_candidate	accounts	id
+lobby_rooms	creator_account_id	fk_room_creator	accounts	id
+lobby_rooms	game_id	fk_room_game	games	ind
+chk_accounts_login	`login` regexp '^[A-Za-z0-9_-]{3,32}$'
+chk_accounts_key	cast(`login_key` as char charset binary) = cast(lcase(`login`) as char charset binary)
+CONSTRAINT_1	`lifecycle` in ('open','settled','cancelled','interrupted')
+CONSTRAINT_2	`completion_json` is null or json_valid(`completion_json`)
+CONSTRAINT_1	`schema_version` > 0
+CONSTRAINT_2	json_valid(`payload_json`)
+CONSTRAINT_3	`public_json` is null or json_valid(`public_json`)
+CONSTRAINT_4	`host_json` is null or json_valid(`host_json`)
+CONSTRAINT_5	`player_json` is null or json_valid(`player_json`)
+CONSTRAINT_1	`recording_status` in ('disabled','recording','completed')
+CONSTRAINT_2	`completeness` in ('none','complete','incomplete')
+CONSTRAINT_3	`has_initial` in (0,1) and `has_final` in (0,1)
+CONSTRAINT_4	`event_version` > 0 and `snapshot_version` > 0
+CONSTRAINT_1	`is_initial` in (0,1) and `is_final` in (0,1)
+CONSTRAINT_2	`schema_version` > 0
+CONSTRAINT_3	json_valid(`state_json`) and json_valid(`public_json`) and json_valid(`host_json`) and json_valid(`player_json`)
+chk_room_state	`state` = 'open' and `candidate_account_id` is null and `candidate_request_id` is null and `accepted_account_id` is null and `game_id` is null or `state` = 'awaiting_confirmation' and `candidate_account_id` is not null and `candidate_account_id` <> `creator_account_id` and `candidate_request_id` is not null and `accepted_account_id` is null and `game_id` is null or `state` = 'started' and `candidate_account_id` is null and `candidate_request_id` is null and `accepted_account_id` is not null and `accepted_account_id` <> `creator_account_id` and `game_id` is not null
+chk_room_version	`version` > 0

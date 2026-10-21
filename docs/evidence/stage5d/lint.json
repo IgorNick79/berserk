@@ -1,0 +1,92 @@
+[
+  {
+    "file": "config/auth.example.php",
+    "exit": 0,
+    "output": "No syntax errors detected in config/auth.example.php\n"
+  },
+  {
+    "file": "src/Auth/Account.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Auth/Account.php\n"
+  },
+  {
+    "file": "src/Auth/AuthService.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Auth/AuthService.php\n"
+  },
+  {
+    "file": "src/Auth/AuthSession.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Auth/AuthSession.php\n"
+  },
+  {
+    "file": "src/Auth/AuthStore.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Auth/AuthStore.php\n"
+  },
+  {
+    "file": "src/Core/CommandJournalRepository.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Core/CommandJournalRepository.php\n"
+  },
+  {
+    "file": "src/Core/GameRepository.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Core/GameRepository.php\n"
+  },
+  {
+    "file": "src/Lobby/LobbyStore.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Lobby/LobbyStore.php\n"
+  },
+  {
+    "file": "src/Lobby/MatchCreator.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Lobby/MatchCreator.php\n"
+  },
+  {
+    "file": "www/auth.php",
+    "exit": 0,
+    "output": "No syntax errors detected in www/auth.php\n"
+  },
+  {
+    "file": "www/battle-journal.php",
+    "exit": 0,
+    "output": "No syntax errors detected in www/battle-journal.php\n"
+  },
+  {
+    "file": "www/index.php",
+    "exit": 0,
+    "output": "No syntax errors detected in www/index.php\n"
+  },
+  {
+    "file": "www/journal-access.php",
+    "exit": 0,
+    "output": "No syntax errors detected in www/journal-access.php\n"
+  },
+  {
+    "file": "www/lobby.php",
+    "exit": 0,
+    "output": "No syntax errors detected in www/lobby.php\n"
+  },
+  {
+    "file": "www/replay.php",
+    "exit": 0,
+    "output": "No syntax errors detected in www/replay.php\n"
+  },
+  {
+    "file": "src/Auth/AuthContext.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Auth/AuthContext.php\n"
+  },
+  {
+    "file": "src/Auth/GameAccess.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Auth/GameAccess.php\n"
+  },
+  {
+    "file": "src/Auth/GameTransport.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Auth/GameTransport.php\n"
+  }
+]

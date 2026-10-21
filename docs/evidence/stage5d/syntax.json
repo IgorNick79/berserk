@@ -1,0 +1,37 @@
+[
+  {
+    "file": "www/assets/js/battle-chat.js",
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "file": "www/assets/js/battle-sync.js",
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "file": "www/assets/js/draft_timer.js",
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "file": "www/assets/js/lobby.js",
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "file": "www/assets/js/game-transport.js",
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "file": "tools/test_integration_browser.cjs",
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "file": "tools/test_grid_timeout_fixture.php",
+    "exit": 0,
+    "output": "No syntax errors detected in tools/test_grid_timeout_fixture.php\n"
+  }
+]

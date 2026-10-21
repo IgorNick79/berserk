@@ -1,0 +1,24 @@
+PASS untrusted zero identity and expired/revoked bindings fail closed
+PASS unknown definition is hidden and old unversioned projection is not enriched
+PASS nested uncertified combat never throws or creates a fake snapshot
+PASS actual dice modification emits once and table recalculation emits no additional dice
+{
+    "checks": [
+        {
+            "name": "untrusted zero identity and expired\/revoked bindings fail closed",
+            "status": "PASS"
+        },
+        {
+            "name": "unknown definition is hidden and old unversioned projection is not enriched",
+            "status": "PASS"
+        },
+        {
+            "name": "nested uncertified combat never throws or creates a fake snapshot",
+            "status": "PASS"
+        },
+        {
+            "name": "actual dice modification emits once and table recalculation emits no additional dice",
+            "status": "PASS"
+        }
+    ]
+}

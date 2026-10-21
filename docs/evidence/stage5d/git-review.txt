@@ -1,0 +1,106 @@
+1b83c62a6197fe7dfaadebc48f645a72eef0a8a6 feat(integration): connect authenticated lobby participants to existing gameplay
+46e9380941d8e1662cff3809fec07cdb998ac4b5 feat(lobby): add transactional candidate confirmation for Stage 5B
+822dacc89a32b7121fef4541f959f3d91ac2ee3f feat(auth): add isolated accounts and secure sessions for Stage 5A
+1e0163748c32c452443763252661072f11c66576 fix(battle): consolidate journal gap warnings in UI
+
+ .gitignore                                         |   55 +-
+ config/auth.example.php                            |   10 +
+ docs/evidence/stage5a/file-list.txt                |   27 +
+ docs/evidence/stage5a/gameplay-unchanged.txt       |    2 +
+ docs/evidence/stage5a/lint.json                    |   32 +
+ docs/evidence/stage5a/postchecks.txt               |   25 +
+ docs/evidence/stage5a/regressions.json             |   32 +
+ docs/evidence/stage5a/results.json                 |  194 ++
+ .../stage5a/test_journal_invitations.php.txt       |    1 +
+ .../stage5a/test_pending_wait_timer.php.txt        |    1 +
+ docs/evidence/stage5a/test_sealed_flow.php.txt     |    1 +
+ docs/evidence/stage5a/test_settings_flow.php.txt   |    2 +
+ docs/evidence/stage5a/test_solomon_draft.php.txt   |    1 +
+ docs/evidence/stage5a/test_turn_timer.php.txt      |    1 +
+ docs/evidence/stage5b/auth-security-results.json   |  194 ++
+ docs/evidence/stage5b/browser-output.txt           |   57 +
+ docs/evidence/stage5b/browser-results.json         |   54 +
+ docs/evidence/stage5b/concurrency.json             |   39 +
+ docs/evidence/stage5b/file-list.txt                |   30 +
+ docs/evidence/stage5b/lint.json                    |   27 +
+ docs/evidence/stage5b/lobby-mobile.png             |  Bin 0 -> 19666 bytes
+ docs/evidence/stage5b/postchecks.txt               |   33 +
+ docs/evidence/stage5b/protected-paths.txt          |    2 +
+ docs/evidence/stage5b/repository-regression.txt    |    1 +
+ docs/evidence/stage5b/results.json                 |  182 ++
+ docs/evidence/stage5b/room-request.png             |  Bin 0 -> 14910 bytes
+ docs/evidence/stage5b/room-started.png             |  Bin 0 -> 15183 bytes
+ docs/evidence/stage5b/syntax-checks.txt            |    2 +
+ docs/evidence/stage5c/auth-security-results.json   |  194 ++
+ docs/evidence/stage5c/battle-two-accounts.png      |  Bin 0 -> 502791 bytes
+ docs/evidence/stage5c/browser-output.txt           |   33 +
+ docs/evidence/stage5c/browser-results.json         |   30 +
+ .../evidence/stage5c/draft-timeout-diagnostic.json |    8 +
+ docs/evidence/stage5c/engine-unchanged.txt         |    2 +
+ docs/evidence/stage5c/file-list.txt                |   49 +
+ docs/evidence/stage5c/grid-timeout-fixture.json    | 1987 ++++++++++++++++++++
+ docs/evidence/stage5c/lint.json                    |   47 +
+ docs/evidence/stage5c/regressions.json             |   57 +
+ docs/evidence/stage5c/results.json                 |  274 +++
+ docs/evidence/stage5c/source-sha256.json           |   22 +
+ docs/evidence/stage5c/syntax-checks.txt            |    3 +
+ .../test_command_journal_repository.php.txt        |    1 +
+ .../stage5c/test_informational_wait.php.txt        |    1 +
+ .../stage5c/test_live_battle_journal.php.txt       |   24 +
+ docs/evidence/stage5c/test_match_pause.php.txt     |    1 +
+ .../stage5c/test_pending_wait_timer.php.txt        |    1 +
+ .../test_repository_optimistic_locking.php.txt     |    1 +
+ docs/evidence/stage5c/test_sealed_flow.php.txt     |    1 +
+ docs/evidence/stage5c/test_settings_flow.php.txt   |    1 +
+ docs/evidence/stage5c/test_solomon_draft.php.txt   |    1 +
+ docs/evidence/stage5c/test_turn_timeout.php.txt    |    2 +
+ docs/evidence/stage5c/test_turn_timer.php.txt      |    1 +
+ docs/stage5a-auth-api.md                           |   36 +
+ docs/stage5a-auth-report.md                        |   65 +
+ docs/stage5a-auth-sql.md                           |   27 +
+ docs/stage5b-lobby-api.md                          |   54 +
+ docs/stage5b-lobby-report.md                       |   99 +
+ docs/stage5b-lobby-sql.md                          |   29 +
+ docs/stage5c-auth-context.md                       |   49 +
+ docs/stage5c-deployment-checklist.md               |   33 +
+ docs/stage5c-endpoint-audit.md                     |   30 +
+ docs/stage5c-integration-report.md                 |  102 +
+ src/Auth/Account.php                               |   27 +
+ src/Auth/AuthContext.php                           |   29 +
+ src/Auth/AuthService.php                           |   32 +
+ src/Auth/AuthSession.php                           |   58 +
+ src/Auth/AuthStore.php                             |  114 ++
+ src/Auth/GameAccess.php                            |   29 +
+ src/Auth/GameTransport.php                         |   42 +
+ src/Core/CommandJournalRepository.php              |   23 -
+ src/Core/GameRepository.php                        |    9 +-
+ src/Lobby/LobbyStore.php                           |  127 ++
+ src/Lobby/MatchCreator.php                         |   25 +
+ templates/includes/game_chat.tpl                   |    2 +-
+ tools/migrations/20261021_auth.sql                 |   19 +
+ tools/migrations/20261021_auth_postchecks.sql      |    9 +
+ tools/migrations/20261021_auth_preflight.sql       |    7 +
+ tools/migrations/20261021_command_journal.sql      |   21 +
+ tools/migrations/20261021_lobby.sql                |   29 +
+ tools/migrations/20261021_lobby_postchecks.sql     |   11 +
+ tools/migrations/20261021_lobby_preflight.sql      |    8 +
+ tools/migrations/20261021_transport_preflight.sql  |   14 +
+ tools/test_auth_http.py                            |  209 ++
+ tools/test_integration_browser.cjs                 |   60 +
+ tools/test_integration_http.py                     |  362 ++++
+ tools/test_lobby_browser.cjs                       |   55 +
+ tools/test_lobby_http.py                           |  200 ++
+ www/assets/css/auth.css                            |    7 +
+ www/assets/css/lobby.css                           |   14 +
+ www/assets/js/battle-chat.js                       |    2 +-
+ www/assets/js/battle-sync.js                       |    1 +
+ www/assets/js/draft_timer.js                       |    4 +-
+ www/assets/js/game-transport.js                    |   51 +
+ www/assets/js/lobby.js                             |   90 +
+ www/auth.php                                       |   85 +
+ www/battle-journal.php                             |   18 +-
+ www/index.php                                      |  270 +--
+ www/journal-access.php                             |    4 +-
+ www/lobby.php                                      |   71 +
+ www/replay.php                                     |    9 +-
+ 100 files changed, 6169 insertions(+), 248 deletions(-)
