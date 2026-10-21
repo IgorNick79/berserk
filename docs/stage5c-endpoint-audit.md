@@ -1,0 +1,30 @@
+# Stage 5C: read-only аудит транспорта до реализации
+
+21 октября 2026. База: Stage 5A 822dacc, Stage 5B 46e9380. Матрица составлена после чтения исходников **до изменений игрового транспорта**. Единственные исполняемые PHP entrypoints www: index.php, auth.php, lobby.php, battle-journal.php, replay.php, journal-access.php. .htaccess направляет несуществующие пути в index.php; отдельного API/router нет. Static assets не задают principal. tools/*.php — CLI/test, не маршруты document root; production docroot должен быть только www.
+
+| Вход | Метод до 5C; возможная запись | Доступ до 5C | Целевой guard/actor |
+|---|---|---|---|
+| index без game, first/second, /reset | GET: create(1,2), session destroy | URL-role/legacy session | Ни create, ни reset; root → lobby, роль URL запрещена |
+| index?game=N HTML | GET: automatic pause/ack/timeout; draft timeout | URL 1/2, allowlisted history exception | AuthSession account + started room + SQL/JSON identity; server host/player до progress |
+| ajax=battle_sync | GET: automatic progress/CAS/journal | URL-role | Тот же guard; actor из состава; server automatic context сохраняется |
+| ajax=battle_command | POST: journal register/locked Engine/save/history; preferences/resign/pending | expected_version/command_id/CAS; URL-role; нет общего CSRF | Guard + auth CSRF до journal/progress; Engine разрешает ход/команду |
+| ajax=battle_command_status | GET: journal read/recovery snapshot может progress | game/playerKey/command_id из прототипной роли | Guard, scoped actor; чужие command IDs не выбирают actor |
+| cmd подготовки (mode/settings/deck/view/turn/side/deal/place/draft) | GET: Engine prepare/save; history place через locked journal | URL-role; history-specific token/version только allowlist | POST + auth CSRF + persisted version; существующий Engine/PRG; GET cmd не исполняется |
+| cmd=draft_sync | GET: resolveDraftTimeouts/save | URL-role | POST + auth CSRF; тот же PrepareProcessor, CAS; никакого нового draft |
+| ajax=prepare_sync (5C adapter) | Новый GET только status/version | До 5C отсутствовал notification для mode/deck/view/turn/side/deal | Общий guard, затем metadata SELECT до repository/Engine/progress; UI reload только при смене persisted version/stage |
+| ajax=playmat | POST: cosmetic CAS | playmat_csrf + URL 1/2 | Общий guard до setPlaymat, реальный account; сохранить own-participant check |
+| ajax=chat_messages | GET SELECT; ранний exit **до** общей проверки игры | first/second → sender 1/2, GameChat SQL membership | Guard должен стоять **до ветки чата**; sender=account; без progress/Engine |
+| ajax=chat_send/chat_read | POST INSERT/read cursor, без games save | chat_csrf + sender из URL | Общий guard + auth CSRF; existing GameChat rate/idempotency/terminal rules |
+| battle-journal.php | GET SELECT, read-and-close | principal либо invitation, allowlist, historical side | Account cookie: полный room/SQL/JSON guard; legacy cookie: только scoped invitation AND отсутствие room; без выбора side клиентом |
+| replay.php metadata/steps/step/HTML | GET SELECT | trusted key в PHPSESSID, allowlist, member или configured admin, terminal/completeness/SHA | Account cookie + полный guard; только confirmed member, без нового admin fallback; existing replay validation |
+| journal-access.php | GET token; POST consume/rotate private ledger | separate PHPSESSID, CSRF, TLS, scoped one-time token | Оставить isolated legacy journal-only; consume исключает account-owned game; не пишет account principal |
+| auth.php register/login/logout/account | GET forms/read, POST accounts/limiter/session | Stage 5A trusted key, own BERSERKAUTH5A, CSRF/TLS | Использовать без второй identity системы; login → lobby |
+| lobby.php list/room/create/open/accept/reject | GET read, POST rooms + accept games | Stage 5A account, CSRF, row locks/version/request | Сохранить; started UI → существующий index?game, не повторять create |
+
+Проверены GameRepository/GameState, Engine/PrepareProcessor dispatch, CommandJournalRepository, HttpBattleProgress/AutomaticBattleProgress/AutomaticTurnEnd, TurnTimer/DraftTimer, pending, GameChat, HistoryRuntime/LiveJournal/ReplayPreview, AuthSession, LobbyStore/MatchCreator. Engine и внутренние автоматические services принимают host/player и GameState, не требуют браузерного аккаунта: добавлять auth внутрь этих классов нельзя и не требуется. Числовая PlayerState.side 1/2 и firstPlayer — игровые параметры, отдельно от account IDs.
+
+HTML ссылки/формы генерируются множеством View/Screen и Ui classes; battle-sync.js уже переводит battle links/forms в существующий POST API. Подготовка использует GET формы и command links; draft_timer.js делает GET sync; pregame-place.js перехватывает command links для GET fetch. Минимальная адаптация: один HTML transport decorator в существующем HTTP boundary и отдельный capture listener для POST подготовки, общий auth CSRF в existing battle submit, POST draft sync. Рендеринг/игровые правила не переписываются.
+
+Обнаруженные runtime DDL: GameRepository constructor ALTER games.version при отсутствии и CommandJournalRepository constructor CREATE IF NOT EXISTS. Подключение нового guarded transport не должно исполнять DDL. Минимально заменить эти schema-bootstrap участки read-only валидацией, старую таблицу journal при необходимости устанавливает только ручная migration. Это изменение persistence adapter/precondition, не Engine. Отсутствующая схема должна давать 503, не автоматическое создание. Структура GameState/journal/history и порядок обработки команд сохраняются.
+
+Неустранимых в пределах минимального транспорта противоречий не обнаружено. Решение: AuthContext начинает только BERSERKAUTH5A; GameAccess одним SELECT связывает room.started, SQL IDs и JSON IDs/PlayerState IDs до repository/Engine/automatic. Прототипный PHPSESSID не импортируется. Legacy игру на публичном index не сохранять; отдельные приглашения остаются только чтением legacy журнала. Replay не принимает legacy account/admin ID совпадения. Recorder и полнота событий игры №493 не входят в изменения.

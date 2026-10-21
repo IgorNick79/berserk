@@ -1,0 +1,8 @@
+[
+  {
+    "fixture_schema": "lobby_792939153000",
+    "game": 4,
+    "exit": 0,
+    "out": "{\"before\":{\"host\":3,\"player\":3},\"success\":true,\"error\":null,\"after_status\":\"view\",\"event_count\":23}"
+  }
+]

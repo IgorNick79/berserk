@@ -1,4 +1,4 @@
-<div class="game-chat" data-game-chat data-game-id="{{chat_game_id}}" data-sender-id="{{chat_sender_id}}" data-role="{{chat_role}}" data-csrf="{{chat_csrf}}">
+<div class="game-chat" data-game-chat data-game-id="{{chat_game_id}}" data-sender-id="{{chat_sender_id}}" data-csrf="{{chat_csrf}}">
     <button type="button" class="battle-icon-control game-chat-toggle" data-chat-toggle title="Сообщения" aria-label="Сообщения" aria-expanded="false" aria-controls="game-chat-panel">
         <img data-chat-icon hidden alt="" src="/assets/images/battle/chat_160.png"><span data-chat-label>Сообщения</span><span class="battle-icon-tooltip" aria-hidden="true">Сообщения</span>
         <img class="game-chat-unread" data-chat-indicator hidden alt="Новые сообщения" src="/assets/images/battle/chat_unread.png">

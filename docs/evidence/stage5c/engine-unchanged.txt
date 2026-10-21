@@ -1,0 +1,2 @@
+Protected Engine/prepare/pending/timer/automatic/Recorder/history/GameState/GameChat paths: git diff --exit-code 46e9380 exit=0
+Only Core changes: removal of constructor runtime DDL in GameRepository and CommandJournalRepository.

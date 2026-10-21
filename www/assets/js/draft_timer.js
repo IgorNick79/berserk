@@ -40,7 +40,9 @@
     function sync() {
         if (!syncUrl) return;
 
-        fetch(syncUrl, {
+        var endpoint = new URL(syncUrl, location.href); endpoint.searchParams.delete("cmd");
+        fetch(endpoint, {
+            method: "POST", body: new URLSearchParams({cmd:"draft_sync",csrf:window.berserkGameCsrf || ""}),
             headers: {"Accept": "application/json"},
             cache: "no-store"
         })

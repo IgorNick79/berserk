@@ -234,14 +234,7 @@ final class GameRepository
 
         $column = $this->db->fetchOne("SHOW COLUMNS FROM games LIKE 'version'");
         if ($column === null) {
-            try {
-                $this->db->query("ALTER TABLE games ADD COLUMN version INT NOT NULL DEFAULT 0 AFTER json");
-            } catch (\RuntimeException $e) {
-                $column = $this->db->fetchOne("SHOW COLUMNS FROM games LIKE 'version'");
-                if ($column === null) {
-                    throw $e;
-                }
-            }
+            throw new \RuntimeException('Missing games.version; manual migration required');
         }
 
         self::$schemaChecked = true;

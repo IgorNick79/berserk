@@ -1,0 +1,3 @@
+PHP lint 9/9 PASS
+JavaScript syntax 6/6 PASS
+Python AST parsing PASS

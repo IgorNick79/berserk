@@ -737,6 +737,7 @@
         cancelStatusRequest();
         addUiAndVersion(params);
         params.set("command_id", commandId);
+        params.set("csrf", window.berserkGameCsrf || "");
         showMessage("Отправляю действие.", "info");
 
         var commandController = new AbortController();

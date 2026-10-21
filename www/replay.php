@@ -20,11 +20,14 @@ try {
     };
     $game = $int('game');
     // Read and close: viewing never changes even the session principal or legacy role.
-    session_start(['read_and_close'=>true]);
-    $runtime = HistoryRuntime::load(); $principal = $runtime->principal($_SESSION);
+    $account = \Berserk\Auth\AuthContext::start();
+    $principal = $account->id;
+    $runtime = HistoryRuntime::load();
     if ($principal === 0) throw new DomainException('authentication_required',401);
     if (!$runtime->previews($game)) throw new DomainException('replay_not_available',404);
-    $db = new Db(require __DIR__.'/../config/db.php');
+    $db = \Berserk\Auth\AuthContext::gameDb();
+    \Berserk\Auth\GameAccess::resolve($db,$game,$principal);
+    session_write_close();
     $preview = (new ReplayPreview($db,$runtime))->read($game,$principal);
     if ($api) {
         $kind = $_GET['api'];

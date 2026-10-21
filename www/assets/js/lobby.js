@@ -11,6 +11,7 @@
     const node = (tag, text) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; return el; };
     const url = () => 'lobby.php?api=1' + (roomId ? '&room=' + encodeURIComponent(roomId) : '');
     function adopt(next) {
+        if (next.room && next.room.state === 'started') { location.assign('index.php?game=' + next.room.game_id); return; }
         const rows = next.room ? [next.room] : next.rooms;
         if (rows.some(r => r.version < (versions.get(r.id) || 0))) return;
         rows.forEach(r => versions.set(r.id, r.version));

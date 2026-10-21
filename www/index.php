@@ -42,6 +42,8 @@ use Berserk\View\Screen\BattleSnapshotRenderer;
 use Berserk\View\Screen\DraftScreen;
 use Berserk\View\Screen\SettingsScreen;
 
+use Berserk\Auth\{AuthContext,AuthSession,GameAccess,GameTransport};
+
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
 
@@ -109,7 +111,7 @@ function ajaxCommandPayload(): ?array
         'choose_anubisar_chain', 'choose_incarnation_wound', 'choose_intrigue_start',
     ];
     $excluded = [
-        'cmd' => true,
+        'cmd' => true, 'csrf'=>true, 'prepare_version'=>true,
         'expected_version' => true,
         'command_id' => true,
         'sel' => true,
@@ -182,7 +184,7 @@ function sendAjaxJson(array $payload, int $statusCode = 200): never
             && ($_GET['ajax'] ?? null) === 'battle_command_status' && ($_GET['html_resign'] ?? null) === '1');
     global $state, $playerKey;
     if ($htmlResign && isset($state, $playerKey) && $state instanceof GameState) {
-        $url = '?' . ($playerKey === 'host' ? 'first' : 'second') . '&game=' . (int) $state->gameId;
+        $url = '?game=' . (int) $state->gameId;
         header('Cache-Control: no-store');
         // The HTML flag selects presentation, never the command's identity or result.
         $resignRecord = null;
@@ -240,6 +242,7 @@ function sendAjaxJson(array $payload, int $statusCode = 200): never
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('Pragma: no-cache');
     header('Expires: 0');
+    $payload = GameTransport::payload($payload);
     echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
@@ -407,7 +410,7 @@ function sendPreRegistrationRejection(Db $db, GameState $state, string $playerKe
 function redirectToGamePage(string $role, GameState $state, array $source = []): never
 {
     $roleParam = $role === 'host' ? 'first' : 'second';
-    $redirectUrl = '?' . $roleParam . '&game=' . $state->gameId;
+    $redirectUrl = '?game=' . $state->gameId;
 
     $mode = requestParamString($source, 'mode', 64);
     if ($mode !== null && $mode !== '') {
@@ -541,51 +544,55 @@ $isBattleCommand = $ajax === 'battle_command';
 $isBattleCommandStatus = $ajax === 'battle_command_status';
 $settingsOnlyRequest = $isBattleCommand && ajaxPostParamString('cmd', 64) === MatchPlayerSettings::COMMAND;
 
-$config = require __DIR__ . '/../config/db.php';
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// в начале index.php, после session_start()
-if (isset($_GET['debug']) && $_GET['debug'] === '1') {
-    $_SESSION['debug'] = 1;
-}
-if (isset($_GET['debug']) && $_GET['debug'] === '0') {
-    unset($_SESSION['debug']);
-}
-
-// Debug roll: ?debug_roll=6,1,4 или ?debug_roll=6* или ?debug_roll=off
-if (is_string($_GET['debug_roll'] ?? null)) {
-    $v = (string) $_GET['debug_roll'];
-    unset($_SESSION['debug_roll_state']);
-    if ($v === '' || $v === 'off') {
-        unset($_SESSION['debug_roll']);
-    } else {
-        $_SESSION['debug_roll'] = $v;
-    }
-}
-\Berserk\Core\Dice::init();
-
+// Authenticate and resolve membership BEFORE repositories, chat, Dice or progress.
 try {
-    $db = new Db($config);
-} catch (Throwable $e) {
-    if ($isChat || $isPlaymat || $isBattleSync || $isBattleCommand || $isBattleCommandStatus) {
-        sendAjaxJson([
-            'ok' => false,
-            'error' => 'server_error',
-        ], 500);
+    $account = AuthContext::start();
+    if ($ajax !== null && !in_array($ajax,['prepare_sync','battle_sync','battle_command','battle_command_status','playmat','chat_messages','chat_send','chat_read'],true)) throw new DomainException('unknown_endpoint',400);
+    $gameId = ajaxParamInt('game') ?? 0;
+    if ($gameId <= 0) {
+        if ($ajax !== null || isset($_GET['cmd']) || isset($_GET['first']) || isset($_GET['second'])) throw new DomainException('invalid_game',400);
+        header('Location: lobby.php',true,303); exit;
     }
-
-    throw $e;
+    if (isset($_GET['first']) || isset($_GET['second']) || isset($_GET['debug']) || isset($_GET['debug_roll'])) throw new DomainException('prototype_parameter_disabled',400);
+    $db = \Berserk\Auth\AuthContext::gameDb();
+    $role = GameAccess::resolve($db,$gameId,$account->id);
+    $userId = $account->id;
+    $playerKey = $role;
+    $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    if (!in_array($requestMethod,['GET','POST'],true)) throw new DomainException('method_not_allowed',405);
+    if ($requestMethod === 'POST') {
+        if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0)>65536 || count($_POST)>128) throw new DomainException('request_too_large',413);
+        AuthSession::requireCsrf($_POST['csrf'] ?? null);
+    }
+    if (isset($_GET['cmd'])) throw new DomainException('commands_require_post',405);
+    if ($ajax !== null && $ajax !== 'battle_command' && !$isChat && !$isPlaymat && $requestMethod !== 'GET') throw new DomainException('method_not_allowed',405);
+    GameTransport::$game = $gameId;
+    GameTransport::$csrf = AuthSession::csrf();
+    unset($_SESSION['debug'],$_SESSION['debug_roll'],$_SESSION['debug_roll_state'],$_SESSION['user_id'],$_SESSION['role']);
+    \Berserk\Core\Dice::init();
+} catch (Throwable $error) {
+    $code = $error instanceof DomainException ? $error->getCode() : 503;
+    http_response_code($code>=400 && $code<=599 ? $code : 503);
+    header('Cache-Control: private, no-store');
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['ok'=>false,'error'=>$error instanceof DomainException?$error->getMessage():'game_unavailable']);exit;
+}
+header('Cache-Control: private, no-store');
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: same-origin');
+if ($ajax === 'prepare_sync') {
+    $metadata = $db->fetchOne('SELECT status,version FROM games WHERE ind='.$gameId);
+    session_write_close();
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['status'=>$metadata['status'],'version'=>(int)$metadata['version']]); exit;
 }
 // Chat exits before game construction, role-session writes and automatic battle progress.
 if ($isChat) {
     try {
         $game = ajaxParamInt('game') ?? 0;
-        if ($game <= 0 || isset($_GET['first']) === isset($_GET['second'])) throw new InvalidArgumentException('invalid_game_or_role');
-        // Explicit prototype identity agreed with Project Lead; URL roles are not real authentication.
-        $sender = isset($_GET['first']) ? 1 : 2;
+        if ($game !== $gameId) throw new DomainException('forbidden');
+        // Sender is the confirmed authenticated account, resolved before this early branch.
+        $sender = $userId;
         $chat = new \Berserk\Core\GameChat($db);
         if ($ajax === 'chat_messages') {
             if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') sendAjaxJson(['ok'=>false,'error'=>'method_not_allowed'],405);
@@ -596,7 +603,7 @@ if ($isChat) {
         }
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') sendAjaxJson(['ok'=>false,'error'=>'method_not_allowed'],405);
         $token = ajaxPostParamString('csrf', 64);
-        if (!$token || !isset($_SESSION['chat_csrf']) || !hash_equals($_SESSION['chat_csrf'],$token)) sendAjaxJson(['ok'=>false,'error'=>'csrf'],403);
+        if (!$token || !hash_equals(GameTransport::$csrf,$token)) sendAjaxJson(['ok'=>false,'error'=>'csrf'],403);
         session_write_close();
         if ($ajax === 'chat_send') {
             $message = $chat->send($game,$sender,$_POST['message'] ?? null,$_POST['request_id'] ?? null);
@@ -609,114 +616,26 @@ if ($isChat) {
     } catch (OverflowException $e) { sendAjaxJson(['ok'=>false,'error'=>'rate_limited'],429);
     } catch (Throwable $e) { sendAjaxJson(['ok'=>false,'error'=>'chat_unavailable'],503); }
 }
-$repo    = \Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db);
+try { $repo = \Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db); } catch (Throwable) { http_response_code(503); exit('game_schema_unavailable'); }
 $engine   = new Engine($db);
 $deckView = new DeckView($db);
 $tpl     = new Template(__DIR__ . '/../templates', '/');
 
-// ─── Сброс сессии ─────────────────────────────────────────────
-if (($_SERVER['REQUEST_URI'] ?? '') === '/reset') {
-    session_destroy();
-    header('Location: /');
-    exit;
-}
-
-// ─── Определяем роль ──────────────────────────────────────────
-$role = null;
-if (isset($_GET['first'])) {
-    $role = 'host';
-} elseif (isset($_GET['second'])) {
-    $role = 'player';
-}
-
-if ($role === null) {
-    if ($isChat || $isPlaymat || $isBattleSync || $isBattleCommand || $isBattleCommandStatus) {
-        sendAjaxJson([
-            'ok' => false,
-            'error' => 'missing_player_role',
-        ], 400);
-    }
-
-    echo '<h1>Berserk</h1>';
-    echo '<p><a href="?first">Создать партию (я первый)</a></p>';
-    echo '<p><a href="?second">Присоединиться (я второй)</a></p>';
-    exit;
-}
-
-$userId = $role === 'host' ? 1 : 2;
-
-// ─── Находим или создаём партию ──────────────────────────────
-$isBattleAjax = $isPlaymat || $isBattleSync || $isBattleCommand || $isBattleCommandStatus;
-$gameId = $isBattleAjax
-    ? (ajaxParamInt('game') ?? 0)
-    : (isset($_GET['game']) && !is_array($_GET['game']) ? (int) $_GET['game'] : 0);
-
-if ($isBattleAjax && $gameId <= 0) {
-    sendAjaxJson([
-        'ok' => false,
-        'error' => 'invalid_game',
-    ], 400);
-}
-
-if ($gameId > 0) {
-    $state = $repo->findById($gameId);
-    if (!$state) {
-        if ($isBattleAjax) {
-            sendAjaxJson([
-                'ok' => false,
-                'error' => 'game_not_found',
-            ], 404);
-        }
-
-        http_response_code(404);
-        echo "Партия #$gameId не найдена";
-        exit;
-    }
-} else {
-    $state = $repo->create(1, 2);
-    $url = $role === 'host' ? '?first' : '?second';
-    header("Location: $url&game={$state->gameId}");
-    exit;
-}
-
-if ($userId !== $state->hostId && $userId !== $state->playerId) {
-    if ($isBattleAjax) {
-        sendAjaxJson([
-            'ok' => false,
-            'error' => 'forbidden',
-        ], 403);
-    }
-
-    http_response_code(403);
-    echo "Вы не участник партии #$gameId";
-    exit;
-}
-
+$state = $repo->findById($gameId);
+if ($state === null) { http_response_code(404); exit('game_not_found'); }
 $historyRuntime = \Berserk\Core\BattleHistory\HistoryRuntime::load();
-if ($historyRuntime->protects($state->gameId)) {
-    header('Cache-Control: private, no-store');
-    header('Referrer-Policy: same-origin');
-    $trustedUser = $historyRuntime->principal($_SESSION);
-    $expectedUser = $role === 'host' ? $state->hostId : $state->playerId;
-    if ($trustedUser !== $expectedUser && $historyRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION)!==$role) {
-        http_response_code(403);
-        echo 'Trusted authentication required for experimental test match';
-        exit;
-    }
-    $_SESSION['history_prepare_csrf'] ??= bin2hex(random_bytes(32));
+$_SESSION['history_prepare_csrf'] = GameTransport::$csrf;
+GameTransport::$version = $state->persistenceVersion ?? 0;
+GameTransport::$stage = $state->status;
+if (in_array($state->status,['battle','game_over'],true) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && !$isBattleCommand && !$isPlaymat) {
+    http_response_code(405); exit('battle_commands_require_journal_endpoint');
 }
-
-$_SESSION['user_id'] = $userId;
-$_SESSION['game_id'] = $state->gameId;
-$_SESSION['role']    = $role;
-
-$playerKey = $role === 'host' ? 'host' : 'player';
 $oppKey    = $state->getOpponentKey($playerKey);
 
 if ($isPlaymat) {
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') sendAjaxJson(['ok'=>false,'error'=>'method'],405);
     $token = ajaxPostParamString('csrf',64);
-    if (!$token || !hash_equals($_SESSION['playmat_csrf'] ?? '', $token)) sendAjaxJson(['ok'=>false,'error'=>'csrf'],403);
+    if (!$token || !hash_equals(GameTransport::$csrf, $token)) sendAjaxJson(['ok'=>false,'error'=>'csrf'],403);
     try {
         $fresh = $repo->setPlaymat($state->gameId, $userId, ajaxPostParamString('playmat_id',64) ?? '');
         sendAjaxJson(['ok'=>true,'render_token'=>\Berserk\Core\PlaymatCatalog::renderToken($fresh),'playmats'=>\Berserk\Core\PlaymatCatalog::snapshot($fresh,$playerKey)]);
@@ -1114,14 +1033,7 @@ if ($isBattleCommand) {
 // ─── Обработка команды ────────────────────────────────────────
 $state = applyAutomaticBattleProgress($db, $state, $playerKey);
 $message = null;
-$commandType = is_string($_GET['cmd'] ?? null) ? $_GET['cmd'] : '';
-$hasLegacyCommand = array_key_exists('cmd', $_GET)
-    && (is_array($_GET['cmd']) || (string) $_GET['cmd'] !== '');
-
-if ($hasLegacyCommand && $state->status === 'battle') {
-    redirectToGamePage($role, $state, $_GET);
-}
-
+$commandType = is_string($_POST['cmd'] ?? null) ? $_POST['cmd'] : '';
 if ($commandType === 'draft_sync') {
     $changed = false;
     $events = [];
@@ -1152,7 +1064,9 @@ if ($commandType === 'draft_sync') {
 }
 
 if ($commandType !== '') {
-    $payload = $_GET;
+    if (ajaxPostParamInt('prepare_version') !== $state->persistenceVersion) { http_response_code(409); exit('stale_preparation'); }
+    $payload = $_POST;
+    unset($payload['csrf'],$payload['prepare_version']);
 
     // Для select_deck — резолвим список дек и составы выбранных колод
     $canResolveDeckSelection = $commandType === 'select_deck'
@@ -1164,10 +1078,10 @@ if ($commandType !== '') {
         $starters = $deckView->listStarters();
         $deckIds  = array_map('intval', array_column($starters, 'ind'));
 
-        $deckMode = (string) ($_GET['deck_mode'] ?? 'manual');
-        $otherMode = (string) ($_GET['other_deck_mode'] ?? 'manual');
-        $selected = (int) ($_GET['deck_id'] ?? 0);
-        $other = (int) ($_GET['other_deck_id'] ?? 0);
+        $deckMode = (string) ($_POST['deck_mode'] ?? 'manual');
+        $otherMode = (string) ($_POST['other_deck_mode'] ?? 'manual');
+        $selected = (int) ($_POST['deck_id'] ?? 0);
+        $other = (int) ($_POST['other_deck_id'] ?? 0);
 
         if ($deckMode === 'random' && $deckIds !== []) {
             $selected = $deckIds[random_int(0, count($deckIds) - 1)];
@@ -1214,14 +1128,14 @@ if ($commandType !== '') {
     $cmd = new Command($commandType, $payload);
     $historyPrepared = false;
     if ($historyRuntime->records($state->gameId) && $state->status === 'place') {
-        $token = requestParamString($_GET, 'prepare_token', 64);
-        $version = requestParamString($_GET, 'prepare_version', 20);
+        $token = requestParamString($_POST, 'csrf', 64);
+        $version = requestParamString($_POST, 'prepare_version', 20);
         if ($token === null || !hash_equals($_SESSION['history_prepare_csrf'] ?? '', $token)
             || $version === null || !ctype_digit($version) || (string)(int)$version !== $version) {
             http_response_code(403); echo 'Invalid preparation token/version'; exit;
         }
         $journalPayload = $payload;
-        unset($journalPayload['prepare_token']);
+        unset($journalPayload['prepare_token'],$journalPayload['csrf']);
         ksort($journalPayload);
         $commandId = 'prep:'.substr(hash('sha256', $playerKey.':'.$version.':'.json_encode($journalPayload,JSON_THROW_ON_ERROR)),0,48);
         $prepareJournal = new CommandJournalRepository($db);
@@ -1256,48 +1170,37 @@ if ($commandType !== '') {
         } catch (StaleStateException) {
             $_SESSION['flash_message'] = 'Ошибка: состояние партии уже изменилось, обновляю страницу';
             $roleParam = ($role === 'host') ? 'first' : 'second';
-            header('Location: ?' . $roleParam . '&game=' . $state->gameId);
+            header('Location: ?game=' . $state->gameId,true,303);
             exit;
         }
 
         // PRG: редирект без cmd, чтобы F5 не выполнил команду повторно
         $roleParam = ($role === 'host') ? 'first' : 'second';
-        $redirectUrl = '?' . $roleParam . '&game=' . $state->gameId;
+        $redirectUrl = '?game=' . $state->gameId;
 
         // Если был выбран режим — сохраним его
-        if (isset($_GET['mode']) && $_GET['mode'] !== '') {
-            $redirectUrl .= '&mode=' . urlencode((string) $_GET['mode']);
+        if (isset($_POST['mode']) && $_POST['mode'] !== '') {
+            $redirectUrl .= '&mode=' . urlencode((string) $_POST['mode']);
         }
-        if (isset($_GET['sel']) && $_GET['sel'] !== '') {
-            $redirectUrl .= '&sel=' . (int) $_GET['sel'];
+        if (isset($_POST['sel']) && $_POST['sel'] !== '') {
+            $redirectUrl .= '&sel=' . (int) $_POST['sel'];
         }
-        if (isset($_GET['card']) && $_GET['card'] !== '') {
-            $redirectUrl .= '&card=' . ($commandType === 'place_card' ? '0' : urlencode((string) $_GET['card']));
+        if (isset($_POST['card']) && $_POST['card'] !== '') {
+            $redirectUrl .= '&card=' . ($commandType === 'place_card' ? '0' : urlencode((string) $_POST['card']));
         }
 
-        if (isset($_GET['pile']) && $_GET['pile'] !== '') {
-            $redirectUrl .= '&pile=' . urlencode((string) $_GET['pile']);
+        if (isset($_POST['pile']) && $_POST['pile'] !== '') {
+            $redirectUrl .= '&pile=' . urlencode((string) $_POST['pile']);
         }
 
         // Successful commands redirect silently; keep service events out of the UI.
         unset($_SESSION['flash_message']);
 
-        header("Location: $redirectUrl");
+        header("Location: $redirectUrl",true,303);
         exit;
     }
 
     $message = 'Ошибка: ' . $result->error;
-}
-
-if ($commandType === '' && $state->status === 'draft') {
-    $timeoutResult = (new PrepareProcessor($state, $db))->resolveDraftTimeouts();
-    if ($timeoutResult->success && !empty($timeoutResult->events)) {
-        try {
-            $repo->save($state);
-        } catch (StaleStateException) {
-            $state = $repo->findById($state->gameId) ?? $state;
-        }
-    }
 }
 
 // Читаем flash-сообщение
@@ -1396,7 +1299,7 @@ switch ($state->status) {
         $screenName = $result['screen'];
         $screenData = $result['data'];
         $roleParam = $role === 'host' ? 'first' : 'second';
-        $syncUrl = '?' . $roleParam . '&game=' . $state->gameId . '&ajax=battle_sync';
+        $syncUrl = '?game=' . $state->gameId . '&ajax=battle_sync';
         $ui = $screenData['ui'] ?? ['sel' => 0, 'mode' => 'strike', 'pile' => ''];
         $turnSoundUrl = '';
         foreach (['mp3', 'ogg'] as $extension) {
@@ -1405,7 +1308,7 @@ switch ($state->status) {
                 break;
             }
         }
-        $_SESSION['playmat_csrf'] ??= bin2hex(random_bytes(32));
+        $_SESSION['playmat_csrf'] = GameTransport::$csrf;
         $scriptsHtml = '<script type="application/json" id="battle-playmats">' . json_encode(['catalog'=>\Berserk\Core\PlaymatCatalog::ITEMS, 'csrf'=>$_SESSION['playmat_csrf'], 'state'=>\Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey)], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . '</script>'
             . '<script src="/assets/js/battle-playmats.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-turn-timer.js?v={{rkey}}"></script>'
@@ -1477,11 +1380,10 @@ if (in_array($screenName,['battle','game_over'],true)
 }
 
 if (in_array($screenName, ['battle','game_over'], true)) {
-    $_SESSION['chat_csrf'] ??= bin2hex(random_bytes(32));
+    $_SESSION['chat_csrf'] = GameTransport::$csrf;
     $screenHtml .= $tpl->parse('includes/game_chat.tpl', [
         'chat_game_id'=>$state->gameId,
         'chat_sender_id'=>$userId,
-        'chat_role'=>$role === 'host' ? 'first' : 'second',
         'chat_csrf'=>htmlspecialchars($_SESSION['chat_csrf'],ENT_QUOTES),
     ]);
     $scriptsHtml .= '<script src="/assets/js/battle-chat.js?v=4" defer></script>';
@@ -1503,4 +1405,8 @@ $page = $tpl->parse('page.tpl', [
     'rkey' => $preGameResourceKey,
 ]);
 
-echo $page;
+\Berserk\Auth\GameTransport::$version = $state->persistenceVersion ?? 0;
+\Berserk\Auth\GameTransport::$stage = $state->status;
+$page = str_replace('<div class="screen">','<div class="screen"><nav><a href="/lobby.php">В лобби</a></nav>',$page);
+$transportScript = '<script src="/assets/js/game-transport.js" data-game="'.$state->gameId.'" data-stage="'.htmlspecialchars($state->status,ENT_QUOTES).'" data-version="'.\Berserk\Auth\GameTransport::$version.'" data-csrf="'.htmlspecialchars(\Berserk\Auth\GameTransport::$csrf,ENT_QUOTES).'"></script>';
+echo \Berserk\Auth\GameTransport::html(str_replace('</head>',$transportScript.'</head>',$page));

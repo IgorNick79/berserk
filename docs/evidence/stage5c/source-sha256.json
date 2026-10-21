@@ -1,0 +1,22 @@
+{
+  "src/Auth/AuthContext.php": "7534ed5480769c370910c7f26ca8ba06ba4ac7c3cd483cc9cf64f099d3910d32",
+  "src/Auth/GameAccess.php": "5eef0c79b5473842e4f6e76a76b2ed16efa89873f28a87a825ddf7066ed0b6da",
+  "src/Auth/GameTransport.php": "41d047beb0242ccff352ce327d6f55f11d5f8161eae8f50d931e6117b0e84647",
+  "src/Core/CommandJournalRepository.php": "67a6dea2e3a130e3a213f2b14e42de79f60cc8b2fb6a7139fe8b66f42686f40d",
+  "src/Core/GameRepository.php": "1d11f1a9d7756ba0dffe9af247eb849cffa2ed844ab6d6154a4dd26fe9289314",
+  "templates/includes/game_chat.tpl": "50954b3ed0a0252134e1a19ce50a7c4969861a22c19cb12243148a0983fbf235",
+  "tools/migrations/20261021_command_journal.sql": "c49dd3e1b691b2a80aafa486ac25e8cdae2f3d578289ede375990d26b46305c0",
+  "tools/migrations/20261021_transport_preflight.sql": "1826806c8380324245d94dce468b22477b4fb20d67d41f7a6b5658fc3c7bf6aa",
+  "tools/test_auth_http.py": "7125b51505db14ef24e32974bfac8ddb8fc0b4343aad880a7a164cb1161e051b",
+  "tools/test_integration_browser.cjs": "8a59046c6988ec3efa3eb11f74ee6cbfe834062a94102cae27e72cec50c536c1",
+  "tools/test_integration_http.py": "046234667c7e8f5c94a35dfa2e1e5b12152f50067f74612f03953589776a7b74",
+  "www/assets/js/battle-chat.js": "bd2531edeca2f5f32ef3a42a97a113821270b7614a894e513c06190ffcfe7fb5",
+  "www/assets/js/battle-sync.js": "fd3476a4a5d26090d5785494e2b7af34fb610db39e177b664dee63af24659ea2",
+  "www/assets/js/draft_timer.js": "36b28ff67e93d7adebe6a9947175c951103cf09cacb3aaf2340e6d8a851b399e",
+  "www/assets/js/game-transport.js": "3311525f272c09d770c3335e07d0c973e489780cf9c69a12ecbc4e9bf0763803",
+  "www/assets/js/lobby.js": "7d0987b36f4f933e0c8cac0850f8e1c5d7ca258dbcd8d146e5d7be291d559e32",
+  "www/battle-journal.php": "4b3906b40958ec7738443a99c0eb3d25f140514a0f5664379d193716f9db506c",
+  "www/index.php": "250e0ba1a6e27e09bdebbe23499f97b61a69005185d2fe712b43984aa9f71fa5",
+  "www/journal-access.php": "6a9a2630ef8544bc18d73da543035da8bfa54de8164fcecc4b808a032940e418",
+  "www/replay.php": "bda43e79024b6f59176d4db23f7b41efa1ae03cd8ef2cec2f94145799cdef3b2"
+}

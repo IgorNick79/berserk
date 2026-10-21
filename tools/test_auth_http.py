@@ -193,7 +193,7 @@ def main():
         assert probe.post('login','Player','CorrectPass123')[0]==303
         probe.base='http://127.0.0.1:33558/replay.php'
         code,body,_=probe.request(suffix='&game=1')
-        check('actual unchanged replay rejects account 1 auth cookie',code==401 and 'authentication_required' in body)
+        check('account cookie cannot authorize legacy replay without ownership',code in [403,404] and ('replay_not_available' in body or 'forbidden' in body))
         check('password absent from HTTP logs',all('CorrectPass123' not in p.read_text(errors='replace') for p in LAB.glob('http-*.log')))
         server.shutdown();server.server_close()
         print(json.dumps({'passed':len(RESULTS),'results':RESULTS},ensure_ascii=False,indent=2))

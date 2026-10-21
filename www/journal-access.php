@@ -23,11 +23,11 @@ try {
         if (count($_POST)!==2 || !is_string($_POST['csrf']??null) || !hash_equals($_SESSION['journal_access_csrf'],$_POST['csrf'])
             || !is_string($_POST['invitation']??null) || isset($_SESSION['berserk_battle_journal_binding'])) throw new DomainException('Access denied');
         if (!session_regenerate_id(true)) throw new RuntimeException('Session unavailable');
-        $grant=$invites->consume($_POST['invitation'],fn(int $id)=>$runtime->journals($id)&&$runtime->records($id));
+        $grant=$invites->consume($_POST['invitation'],fn(int $id)=>$runtime->journals($id)&&$runtime->records($id)&&\Berserk\Auth\GameAccess::legacyJournal(\Berserk\Auth\AuthContext::gameDb(),$id));
         // This deliberately creates no authenticated_user_id and grants no replay principal.
         $_SESSION=['berserk_battle_journal_binding'=>$grant['binding']];
         if (!session_write_close()) throw new RuntimeException('Session unavailable');
-        header('Location: /index.php?'.($grant['side']==='host'?'first':'second').'&game='.$grant['game_id'],true,303);exit;
+        header('Location: /battle-journal.php?game='.$grant['game_id'],true,303);exit;
     }
     $csrf=htmlspecialchars($_SESSION['journal_access_csrf'],ENT_QUOTES,'UTF-8');
     session_write_close();

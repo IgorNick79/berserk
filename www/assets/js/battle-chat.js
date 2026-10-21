@@ -39,7 +39,7 @@
     if(infoPanel) { footerObserver=new MutationObserver(mountToggle); footerObserver.observe(infoPanel,{childList:true}); }
     function api(action, params, post) {
         var url=new URL(window.location.href);
-        url.search=''; url.searchParams.set(root.dataset.role,'');
+        url.search='';
         url.searchParams.set('game',root.dataset.gameId); url.searchParams.set('ajax',action);
         var options={headers:{Accept:'application/json'},cache:'no-store',credentials:'same-origin'};
         if(post) { options.method='POST'; options.body=new URLSearchParams(Object.assign({csrf:root.dataset.csrf},params)); }

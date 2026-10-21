@@ -32,3 +32,6 @@ www/assets/cards/
 !tools/migrations/20261021_lobby.sql
 !tools/migrations/20261021_lobby_preflight.sql
 !tools/migrations/20261021_lobby_postchecks.sql
+
+!tools/migrations/20261021_command_journal.sql
+!tools/migrations/20261021_transport_preflight.sql

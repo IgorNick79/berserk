@@ -1,0 +1,47 @@
+[
+  {
+    "file": "src/Auth/AuthContext.php",
+    "exit": 0,
+    "result": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\src\\Auth\\AuthContext.php"
+  },
+  {
+    "file": "src/Auth/GameAccess.php",
+    "exit": 0,
+    "result": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\src\\Auth\\GameAccess.php"
+  },
+  {
+    "file": "src/Auth/GameTransport.php",
+    "exit": 0,
+    "result": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\src\\Auth\\GameTransport.php"
+  },
+  {
+    "file": "src/Core/CommandJournalRepository.php",
+    "exit": 0,
+    "result": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\src\\Core\\CommandJournalRepository.php"
+  },
+  {
+    "file": "src/Core/GameRepository.php",
+    "exit": 0,
+    "result": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\src\\Core\\GameRepository.php"
+  },
+  {
+    "file": "www/battle-journal.php",
+    "exit": 0,
+    "result": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\www\\battle-journal.php"
+  },
+  {
+    "file": "www/index.php",
+    "exit": 0,
+    "result": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\www\\index.php"
+  },
+  {
+    "file": "www/journal-access.php",
+    "exit": 0,
+    "result": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\www\\journal-access.php"
+  },
+  {
+    "file": "www/replay.php",
+    "exit": 0,
+    "result": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\www\\replay.php"
+  }
+]
