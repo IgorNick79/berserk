@@ -1,0 +1,2 @@
+Informational wait generation/deadline/ACK/legacy/Engine/UI tests passed
+T3 eligibility/expired command guard/forced strike/series/instants/end-phase tests passed

@@ -1,0 +1,11 @@
+{
+  "runtime_head": "d59fc66970132f39c9c9d899984c191e8e1af6f7",
+  "runtime_diff": [],
+  "storage_games_preserved": true,
+  "private_root_configs_absent": true,
+  "hosting": "not_verified; SSH connection blocked before authentication",
+  "go_no_go": "NO-GO installation: hosting/HTTPS/schema pending and Auth PHP8.4 dummy/default cost mismatch requires review",
+  "php_runtime_lint": 191,
+  "configuration_php_templates_lint": 3,
+  "bash_syntax": "pass"
+}

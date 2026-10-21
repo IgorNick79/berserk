@@ -1,0 +1,14 @@
+; Operator-only FPM/.user.ini reference. CLI settings do not configure the real web pool.
+; Keep the current verified session handler/storage. Do not invent a new save_path.
+; session.save_handler = files
+; session.save_path = "<existing private writable path shared by application workers>"
+session.use_strict_mode = 1
+session.use_only_cookies = 1
+session.use_trans_sid = 0
+session.cookie_secure = 1
+session.cookie_httponly = 1
+session.cookie_samesite = Lax
+display_errors = Off
+log_errors = On
+; AuthSession sets its own cookie name/attributes. Legacy invitation keeps separate PHPSESSID.
+; HTTPS=on must come from trusted webserver/FPM TLS configuration, not this ini or client headers.

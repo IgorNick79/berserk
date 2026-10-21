@@ -1,0 +1,57 @@
+[
+  {
+    "test": "test_repository_optimistic_locking.php",
+    "exit": 0,
+    "tail": "Repository optimistic locking tests passed.\n"
+  },
+  {
+    "test": "test_command_journal_repository.php",
+    "exit": 0,
+    "tail": "Command journal repository tests passed.\n"
+  },
+  {
+    "test": "test_turn_timer.php",
+    "exit": 0,
+    "tail": "OK turn timer\n"
+  },
+  {
+    "test": "test_pending_wait_timer.php",
+    "exit": 0,
+    "tail": "Pending ownership/read-only projection/Engine timer tests passed (all 57 registered handlers covered)\n"
+  },
+  {
+    "test": "test_informational_wait.php",
+    "exit": 0,
+    "tail": "Informational wait generation/deadline/ACK/legacy/Engine/UI tests passed\n"
+  },
+  {
+    "test": "test_turn_timeout.php",
+    "exit": 0,
+    "tail": "Informational wait generation/deadline/ACK/legacy/Engine/UI tests passed\nT3 eligibility/expired command guard/forced strike/series/instants/end-phase tests passed\n"
+  },
+  {
+    "test": "test_match_pause.php",
+    "exit": 0,
+    "tail": "Match pause unit tests passed (119 assertions)\n"
+  },
+  {
+    "test": "test_settings_flow.php",
+    "exit": 0,
+    "tail": "Settings flow tests passed.\n"
+  },
+  {
+    "test": "test_sealed_flow.php",
+    "exit": 0,
+    "tail": "Sealed flow tests passed.\n"
+  },
+  {
+    "test": "test_solomon_draft.php",
+    "exit": 0,
+    "tail": "Solomon Draft: 1770 checks passed (in-memory DB adapter; no live database).\n"
+  },
+  {
+    "test": "test_live_battle_journal.php",
+    "exit": 0,
+    "tail": "osed\",\n            \"status\": \"PASS\"\n        },\n        {\n            \"name\": \"unknown definition is hidden and old unversioned projection is not enriched\",\n            \"status\": \"PASS\"\n        },\n        {\n            \"name\": \"nested uncertified combat never throws or creates a fake snapshot\",\n            \"status\": \"PASS\"\n        },\n        {\n            \"name\": \"actual dice modification emits once and table recalculation emits no additional dice\",\n            \"status\": \"PASS\"\n        }\n    ]\n}\n"
+  }
+]

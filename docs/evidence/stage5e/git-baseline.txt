@@ -1,0 +1,9 @@
+d59fc66970132f39c9c9d899984c191e8e1af6f7 fix(draft): preserve feasible Grid allocations during automatic timeout
+04316e18ab04cb5e0f4494830c55b6ece8910103 docs(release): review Stage 5D and block rollout on reproduced Grid timeout
+1b83c62a6197fe7dfaadebc48f645a72eef0a8a6 feat(integration): connect authenticated lobby participants to existing gameplay
+46e9380941d8e1662cff3809fec07cdb998ac4b5 feat(lobby): add transactional candidate confirmation for Stage 5B
+822dacc89a32b7121fef4541f959f3d91ac2ee3f feat(auth): add isolated accounts and secure sessions for Stage 5A
+1e0163748c32c452443763252661072f11c66576 fix(battle): consolidate journal gap warnings in UI
+
+initial_worktree_clean=true
+ssh_readonly_attempt=connect port22 Permission denied; no remote command executed

@@ -1,0 +1,3036 @@
+{
+  "release_head": "d59fc66970132f39c9c9d899984c191e8e1af6f7",
+  "branch": "codex/berserk-stage5d1-grid-timeout",
+  "comparison_base": "1e0163748c32c452443763252661072f11c66576",
+  "actual_production_revision": "unknown; do not equate production to comparison base",
+  "runtime": [
+    {
+      "path": "src/Auth/Account.php",
+      "sha256": "ce4f26c312db23ee71d54166cf8309ffb91d4c2ce9d19cc67d2b86218d0996cf",
+      "size": 1017,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Auth/AuthContext.php",
+      "sha256": "7534ed5480769c370910c7f26ca8ba06ba4ac7c3cd483cc9cf64f099d3910d32",
+      "size": 1174,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Auth/AuthService.php",
+      "sha256": "c198a81cb74c20c6cdc1e5ea4381856fc8f32eef5979ff48a6a490f21460a475",
+      "size": 1758,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Auth/AuthSession.php",
+      "sha256": "f7e5db04fd1dcfe144ccf49aa626b2a8aa1ffdea0b23183b9d909872f1405212",
+      "size": 2528,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Auth/AuthStore.php",
+      "sha256": "3707bfd9f56c3a8d1e8ab885685bac81e45ea229e8c64bc47933e29fc3fba8ef",
+      "size": 6784,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Auth/GameAccess.php",
+      "sha256": "5eef0c79b5473842e4f6e76a76b2ed16efa89873f28a87a825ddf7066ed0b6da",
+      "size": 1592,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Auth/GameTransport.php",
+      "sha256": "41d047beb0242ccff352ce327d6f55f11d5f8161eae8f50d931e6117b0e84647",
+      "size": 2214,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/ActionResolver.php",
+      "sha256": "68f3d286e1132b10e3e48cbb66b4cbd51fa7bfdd2c131a343099027e96b8d1aa",
+      "size": 232128,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Autoloader.php",
+      "sha256": "72a6360ec3187d630caa21d7c12178b25ce00e956b76e9c0a2ecfe57be232a38",
+      "size": 912,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/AutomaticBattleProgress.php",
+      "sha256": "172dd36896593805dd8a8d51654ba31b69544df1858f369de64989c1e67d2853",
+      "size": 1048,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/AutomaticCommandResult.php",
+      "sha256": "a610dc7acb10ea0297b40d827576d42613363a1e0089a9ba3f739ab9f6441c74",
+      "size": 293,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/AutomaticMatchPause.php",
+      "sha256": "d7e5868625b7625a2c3d82cd235057cb501c544432b3bc1bb68d6ac6af14ffcb",
+      "size": 3652,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/AutomaticTurnEnd.php",
+      "sha256": "40697755466c0d90e37158a4dd369f2ed3fc1bc5d6d253c0efc3b56a37ef4403",
+      "size": 4486,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BattleHelper.php",
+      "sha256": "b46dd1a6557f4c7014c26bfebdc750c70257485b26aa5746f701c47fcb138245",
+      "size": 26830,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BattleHistory/ExperimentalHistory.php",
+      "sha256": "4d1f138955210b8953e003feec7eab6c606f00f0eb23a96413190ffc9ad611b4",
+      "size": 606,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BattleHistory/HistoryBatch.php",
+      "sha256": "3dd0bab19af8a06ee69b0bea7fa3bf188be251ad0f6a7b08c482937b82cc7a7f",
+      "size": 1240,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BattleHistory/HistoryRepository.php",
+      "sha256": "e1e3441881bc5fa180379e5bd68488e147a27abc590ff13e4512c73f06d0dc23",
+      "size": 22875,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BattleHistory/HistoryRuntime.php",
+      "sha256": "8115599a4ba14d460fb1db7d253064d83d67dc5aa8bb0fb8db0bcc36d3ad3a09",
+      "size": 3810,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BattleHistory/JournalInvitations.php",
+      "sha256": "ae79d9aa29a92578316da5e05556da926369d03356d710d08c80c254a5dadf00",
+      "size": 4520,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BattleHistory/JournalText.php",
+      "sha256": "61b86b3aa395d2810f611b9b6e041629284fed3871d8b7d6e90c0bc7a693220d",
+      "size": 3552,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BattleHistory/LiveJournal.php",
+      "sha256": "ee109679808b242afb21efdfc38abcca844c7ea9d5ffee446baa5057606d3fbd",
+      "size": 971,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BattleHistory/Recorder.php",
+      "sha256": "8695dac3b5414875c8ed3ba2bb0c2fed8fa0f1c707a808424679d63ecd42e8f6",
+      "size": 12085,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BattleHistory/ReplayPreview.php",
+      "sha256": "74ffb0edf153a33cac4f27916418b2201204272e0e50ce059232a8ce1b523657",
+      "size": 2103,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BattleHistory/ReplayState.php",
+      "sha256": "c57a8ce51e94d7f978bf9d2157939efcfd321de097dc6edab3d2b11e140db8e6",
+      "size": 5109,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BattleHistory/ReplayStateBuilder.php",
+      "sha256": "d6d5911dc6e9ac1a9077c2c9c06e09aaac8120fc154be3a2d7cdbe237a0ebe4d",
+      "size": 3581,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BattleWaitResolver.php",
+      "sha256": "7c1b36467a34434b8bcedcf31aa92e974cc0d7736a875ebd3550c15882b0d775",
+      "size": 13900,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/BoosterSettings.php",
+      "sha256": "96fff9f2ebfef8ecc4b151769705acca4e532378402e19a7ba232495c262eac3",
+      "size": 3701,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/CardInstance.php",
+      "sha256": "4ca14ad3a04ff2331eef02d711dd3b9ffc6f8d28023568c90b78fa0b12cc7aab",
+      "size": 6862,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/CardStats.php",
+      "sha256": "f440ac8ca0343cd60787fe3d0648d64c5e78f03f14a7545e23408e0ad102d625",
+      "size": 61835,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/AfterStrikeExecuteChoice.php",
+      "sha256": "ae14eba521949283f354c5ea5edffc0d1ebdd1d72019da929ccebc712a6e4475",
+      "size": 2363,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/AnubisarChainChoice.php",
+      "sha256": "8d886a3448cc470698e482dc58cb02a303df799310aa75823274cb3ad6e49cdd",
+      "size": 2730,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/AnyDeathChoice.php",
+      "sha256": "aa072bacc4b7f5395a7e7c76f3b3dc234d8f5ded233f7a1490bc860d1f93c7bf",
+      "size": 4057,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/AttackSeriesContinueChoice.php",
+      "sha256": "1783b93363a52fe7b62834476bd6a13d3b2a39514ab8fe3b8f033bed71119894",
+      "size": 2698,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/BloodStormChoice.php",
+      "sha256": "ccdd51148b74ecd1077552f5282d071c152473a838f801f6c71dc1c9fdb6ac8f",
+      "size": 3798,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/BloodTapChoice.php",
+      "sha256": "4b47edab67d0c165f8dd8f998dd9c8f23a107547d196cd8d3149b3c170d9ad9d",
+      "size": 2450,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/CardChoice.php",
+      "sha256": "e95f5d6c1bf53192ced1bc0d0501ef1836763211b6b98df8928d1294d8e8e049",
+      "size": 2439,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/CellMarkerChoice.php",
+      "sha256": "eb4bb8463fa1c48aa597d6399cf4cf619b04b6c461909df1ad259cb1d0accca2",
+      "size": 2188,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/ChoiceHandlerInterface.php",
+      "sha256": "beafe088eb5fe703eb339cb987908f3f5e39a17ee1edd13b9ed8e9de94849b77",
+      "size": 1064,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/ChoiceRegistry.php",
+      "sha256": "b63eeefc63d183c213744d4e2371aef637de391b219cf24c664ff74e0c7afcc1",
+      "size": 4849,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/CoinAbilityChoice.php",
+      "sha256": "aaf13e00e268def85a464a5f5b99f23a08b174e94d86d079059bc990464973bb",
+      "size": 2789,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/CoinSpendChoice.php",
+      "sha256": "ce0b9a729997b96808509c29ca81ffb920aac50984d3d77d5788a21ba0b9d558",
+      "size": 3425,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/CombatPickChoice.php",
+      "sha256": "f18caf17d004be535cabe7097b2823d2976cf34673e6814cd2c0710b51592213",
+      "size": 3346,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/DealLinkedRecruitChoice.php",
+      "sha256": "ab79b7147e6f1a5a3071d9e593e0afaaf861c78c29d0e1df1f680b69cbe8bf2a",
+      "size": 3344,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/DealScoutRecruitChoice.php",
+      "sha256": "532a40b4c59fe168a8f9964e3dcb884f82b92f294d3e1800eaf51c34e634039b",
+      "size": 4862,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/DealVariableRecruitChoice.php",
+      "sha256": "1dbab15f5e22ddd55ea70bca1ad9b15b6d4dd00f440b4806c361dd21fc5cb52e",
+      "size": 3128,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/DegascaSequenceChoice.php",
+      "sha256": "bb804d030ec8634d8a7c462a881e3ea29d4d4b8a6568f8ac575f15ccfcedfb95",
+      "size": 2835,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/DestroySelfAndTargetChoice.php",
+      "sha256": "59855fd77697653755e52be066ad4fe999c847a94ca4af0914cbcdc7ba837c1d",
+      "size": 4728,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/DiceChoiceChoice.php",
+      "sha256": "bc904d2b92ed4cee2ea4234974a20643db73c2ec159b260fb565c60e2c435baa",
+      "size": 2238,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/DvergGiftChoice.php",
+      "sha256": "5316008ebb64b3256ae3bf432084f39400c4ff4b4ecf76f71429b83ef30eafc1",
+      "size": 2531,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/FirstStrikeJumpChoice.php",
+      "sha256": "0b5730dec43c8690773627adb9cdb4d95e21ed19bbe7e20490a0cb76de125236",
+      "size": 2535,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/ForcedDirectionalMoveChoice.php",
+      "sha256": "9459d02f2df3d9a5c152f2f79c3519db247d444208dd8ba44a1aea17978c362f",
+      "size": 4040,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/ForcedStrikeAdjacentChoice.php",
+      "sha256": "a43920c0a62f02cb6ae2ccf5c23cc1e53a55e1b8306a5832b8527901ac4415c3",
+      "size": 2662,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/ForcedStrikeChoice.php",
+      "sha256": "2a5aa592cb429ae925c1a20d43733c8dfbe36cbdca76df3f0378e969be8b6486",
+      "size": 1964,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/GatePickChoice.php",
+      "sha256": "f55527f672dfc6f07ff6f3114f35d864f448885e81594f83f72ee8e4aa1b0834",
+      "size": 2724,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/GreedTeleportChoice.php",
+      "sha256": "16aad38496603b84f1f80c04a7e5336948184e79179f0829cf06aa7582b8469f",
+      "size": 2083,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/GrezyChoice.php",
+      "sha256": "8692689918181d7827063e635e8fce4974519bf65ba51c37e913428fcb21e82b",
+      "size": 3507,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/HealInsteadWoundChoice.php",
+      "sha256": "7555746e1b09f64239e3890c41d8491ee00005f7e5c8233c342b1730a1bad57f",
+      "size": 4217,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/HolvertOpenChoice.php",
+      "sha256": "0a94d7d34cbe585a2dc20b201d94153c4b40d7885e0acb552a9c1bad1b9128f6",
+      "size": 2632,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/IncarnationAckChoice.php",
+      "sha256": "b96fa99c00f0f441eb5900e030f85fe70a3c894de7c5ee634b42c39996dc2ff3",
+      "size": 2264,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/IncarnationChoice.php",
+      "sha256": "b9904f8657ae2941f2ae1e9cc571de3f238f08b04a6933efa163a64c68883198",
+      "size": 2627,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/IncarnationWoundChoice.php",
+      "sha256": "c03a274bb1a36c66814febc081f18fd54304e887e87b0f566e66376adae43d85",
+      "size": 3833,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/InstantPickChoice.php",
+      "sha256": "218482885a458e99d5d05501c19b5116685e6502ae26df62b4858e76877f924a",
+      "size": 3531,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/IntrigueStartChoice.php",
+      "sha256": "977859b1a987de36a5fa4387462a9bf286b3aff0d93dcfb828de581318359223",
+      "size": 4114,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/KoboldHealChoice.php",
+      "sha256": "6cd21b7969d5612f587623761f603306d3684eebf6967406deaee2c6333d00bd",
+      "size": 2257,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/LifeGiftChoice.php",
+      "sha256": "35008a0bd4f6804cd2e6fe252502888ca1dfc46fac4b1e2ee9a6bdf43d7fe3bb",
+      "size": 3770,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/MultiDischargeChoice.php",
+      "sha256": "e9e23aa704f7f41edee705f3e73be36559e7ec68f913d8a1919c547a0b42a9d2",
+      "size": 2924,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/MultiHealChoice.php",
+      "sha256": "3cf5c5d0801b08de7812ac08b7730c70289efe82ed8b92a9eccdbcf163748809",
+      "size": 2577,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/NokamiWoundChoice.php",
+      "sha256": "0be52579c5b027486af4159731016c5e45c9919d5229f2647268fdbb22b5627f",
+      "size": 4355,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/OpponentRowMarkerChoice.php",
+      "sha256": "8ce4c330ad9419e7dba4e3f734b53d083acf05eb2f4b80e3b42096f6aaace83f",
+      "size": 2304,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/ParticlePickChoice.php",
+      "sha256": "27155d1464e7aee9a4b92636eda050e3245c14e9027f2c0d9dbd462f1739e7c0",
+      "size": 3951,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/RangedAttackRedirectChoice.php",
+      "sha256": "97b77fdf7ae359c2a8df61144c90426c6f53fe2f517b2bf4ce713d044e5c5a23",
+      "size": 3039,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/RangedNeighborTeleportChoice.php",
+      "sha256": "b0c400dd0a3f2cbeca178217e0654871c07cfd7100c4e0753dafb64edbea7827",
+      "size": 1920,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/ReviveChoice.php",
+      "sha256": "6d1d5c752f3f0e5b74e17720d9f2ef9492f5afb56b89644680452407adb4a66e",
+      "size": 4665,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/RowPickChoice.php",
+      "sha256": "e4d94407855156f750024b8592954ce335df049bf9febcd8a4ff9d332695ef86",
+      "size": 2119,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/RowSpellPickChoice.php",
+      "sha256": "2656fb490ec2dd5cae671130f39f9aee5cb2371b0911edd1992fb2716a3b7fec",
+      "size": 3263,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/SeggerShieldChoice.php",
+      "sha256": "a19941fcd95404942c2ee2b4c8c9faaf0666dbd12061a05566b20be34f5942ab",
+      "size": 2720,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/SelfWoundChoice.php",
+      "sha256": "421d67dfad0f05c91a3634801617a22bbd36396168830acbebf49be52bd03b5c",
+      "size": 2570,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/ShaksiRollChoice.php",
+      "sha256": "fe838f02237453c017e6ba1e4be956c076aecb9156e7096979f7ac5b29415c8c",
+      "size": 4395,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/StrangulationChoice.php",
+      "sha256": "7d5860f3e87f34742901a40a38636ead17da5a02dd768aba257d303fe26497ca",
+      "size": 2026,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/TalionIncarnationChoice.php",
+      "sha256": "ec54968e3e45e192c1547962b7c64ad45ee3682478b2afc90120fe5c266dfa7c",
+      "size": 3660,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/TeleportTargetChoice.php",
+      "sha256": "abfd9ede97e8b2589c44cc186368c4f13c36d8a923ab98d92d00d341905532e0",
+      "size": 4057,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/TurnAckChoice.php",
+      "sha256": "60343eb5f80a67d8f0429fd3b300f25a930818ab091765b1425c7b059c496f47",
+      "size": 3755,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/TurnInstantResultChoice.php",
+      "sha256": "b03c90ad62371ab8d6fe45bba4956d4445b1e1b058da5aa074ee4d54af884ae7",
+      "size": 4330,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/TurnInstantStackChoice.php",
+      "sha256": "0778027b62d8756bccb753159adf6a98a1fe38084285dd1661db088dca1ef970",
+      "size": 5168,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/TurnPhaseChoice.php",
+      "sha256": "7097ba2399065ea41cbee5037364fa05f63f08f7c3853fa530cc49b219b0fa89",
+      "size": 2648,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/TurnSubChoice.php",
+      "sha256": "ae456ddd616c16f06d16a3b3d19eba8936c725b125c5520a69780cbb4e1ae534",
+      "size": 3594,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/ValhallaPickChoice.php",
+      "sha256": "42749b8fdb5cf2e9361a9ab607ca48b8c019488fb58472a13f51cf6af45443f0",
+      "size": 2755,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/WhipChoice.php",
+      "sha256": "6bc118869e077ff95afe30c8f3b9d636843b3a1760f8da5ed6f44c2f9554723a",
+      "size": 2418,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/WildHealerMoveChoice.php",
+      "sha256": "21d5f50c07365a916292309bca174de1f3580c044439075faebec47a3f020d48",
+      "size": 3628,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Choice/WoundTransferChoice.php",
+      "sha256": "59e872a4b326f004c9e79fa260ae0729ce0cc8d560914da87d8aa2a357f831b2",
+      "size": 8167,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/CoinAbilities.php",
+      "sha256": "4d69181e6358ba1922c883c7bb902ae9a4a1cf95d53a7775d53326f74abb22f7",
+      "size": 13612,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Command.php",
+      "sha256": "e3cf3d7b3441753cb5b55d3408c91e71dc72aadbd62c8294d0dfba2fa5dfcf88",
+      "size": 739,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/CommandJournalException.php",
+      "sha256": "3b6f44df3a686defea95b3c28f2f2c7c996ffbb933aab796b719e616904a3c3f",
+      "size": 168,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/CommandJournalRepository.php",
+      "sha256": "67a6dea2e3a130e3a213f2b14e42de79f60cc8b2fb6a7139fe8b66f42686f40d",
+      "size": 15278,
+      "versus_verified_base": "replace",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/DamageResolver.php",
+      "sha256": "c08be0665945d4035dacac5bb57845d5f6036de3117ead03ac8621b27ca3d2b5",
+      "size": 40949,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Db.php",
+      "sha256": "c209c15b2973f02eab596aaf0ed38f5b6cd1132b256abec8893d88b02d7627c4",
+      "size": 4950,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/DbQueryException.php",
+      "sha256": "f294343710cb76904afd6ed2ec98707c44233b70b966eda1f48d506f3437078b",
+      "size": 160,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/DeckView.php",
+      "sha256": "10382a43cf02b69577f80935e3f6499c2469f740d3e18e318ffeeae1e8c8c37a",
+      "size": 5224,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/DegascaProcessor.php",
+      "sha256": "9cd00269afb777e3f02602cf4afff2576823ca6f8dac812359622d4c16da127b",
+      "size": 22991,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Dice.php",
+      "sha256": "e898aa54261cb89f22db69a59e1382a79cfe447b2fe18b21c049ccb546590460",
+      "size": 3515,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Engine.php",
+      "sha256": "d2207adef383c26d83d4ae1b2162558e8f195c33733f792e233891b1040c30fe",
+      "size": 47544,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/ExpiredCommandGuard.php",
+      "sha256": "12d109a0a4e6114149067af4ddf03c89e1eaf21e2b763a8584882b70cc960429",
+      "size": 4579,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Filter/TargetFilter.php",
+      "sha256": "470d7313353918d3ec1d9d1dad640fd50d4e83554a96a8bf8cb5eb0872fe631b",
+      "size": 3563,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/FirstStrikeJump.php",
+      "sha256": "07ac107b3a74304732f23d0c311235e6297d19be1aed0e5afea211970252ecc7",
+      "size": 8779,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/GameChat.php",
+      "sha256": "c746e04357d442f7b65dfbe57c03771809f21443faad182f6904629ab106e3ad",
+      "size": 6406,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/GameLog.php",
+      "sha256": "ec11e64b95ece0997332a5f3eaa2b82cd02e0a8f3eba43d64af0a9da34617626",
+      "size": 2744,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/GameRepository.php",
+      "sha256": "1d11f1a9d7756ba0dffe9af247eb849cffa2ed844ab6d6154a4dd26fe9289314",
+      "size": 10789,
+      "versus_verified_base": "replace",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/GameSettings.php",
+      "sha256": "7b4a79a6fb9c3f1d280f9296cc4280d155188ede4dc8ec21562288c9b6e81bd1",
+      "size": 11224,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/GameState.php",
+      "sha256": "bec8ee6e8b4232fb57a735f800bc8dffa1308b50d7325672714c3788c0ba7bd6",
+      "size": 7228,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/HttpBattleProgress.php",
+      "sha256": "6124a74d1f8c64ba462db80af570a25499d429c4a21958d5b86217d42f6680db",
+      "size": 1334,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/IncarnationTokenProcessor.php",
+      "sha256": "8283296dd6382a05a06feaf8724ef28374bf7ed590edc663bbcc7e05b953b9f0",
+      "size": 3307,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/InformationalAutoAck.php",
+      "sha256": "de92bc0210d214a44975c00b8ced55867d43b997296971329e4f4daad74e8d87",
+      "size": 3374,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/InformationalWaitManager.php",
+      "sha256": "cc65c7f536d4eb4a9d2f7fe170c573d685dc579064a2fcc890daa8f0bc4be28f",
+      "size": 6462,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/InstantProcessor.php",
+      "sha256": "c170862ce8cd2a48ddc38665e27e957df83714c11ac6c290b09cf903a51d666b",
+      "size": 82553,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/MatchPause.php",
+      "sha256": "71c4e77219cc078954100c4d5e12833a89e29deedd2b7c6f28bd794aaa2a934b",
+      "size": 10645,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/MatchPlayerSettings.php",
+      "sha256": "094c59bbb501a827c5e0334abd56728e108bb28c0cf74a79e3e3cbc86c61d3d9",
+      "size": 1353,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Movement/ForcedMovementResolver.php",
+      "sha256": "ab70b1ce8c2f7658a59845e2b42aacba34486fc63150c28d2f9fc7da028a5d42",
+      "size": 5331,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Movement/MovementContext.php",
+      "sha256": "09859e8aa2c844449bf7d8622d8e6b9475baa19fdc80f30fda5e65507363bb73",
+      "size": 973,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Movement/MovementEffectResolver.php",
+      "sha256": "eea86525f335e40a633464be0143e99ed5b38dda299fb9dc70bc11a64f7e5b89",
+      "size": 14135,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Movement/MovementResolver.php",
+      "sha256": "568422e7686eeb66dee2e918c6a7fc740fe3c47575ab4f1d08233e30555a7caa",
+      "size": 14020,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/PlayerState.php",
+      "sha256": "5cdbf45d9e1bae1c85fa63858533be3e22c73ed2b0180631d76679d3633bec74",
+      "size": 2462,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/PlaymatCatalog.php",
+      "sha256": "a346fb0d4ed848089ad82e0d189f2a6312fc1daaa434d4c09dedf13e741313fe",
+      "size": 2516,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Prepare/BoosterGenerator.php",
+      "sha256": "1cb8d1b3b014082aba755b1d58fdf55445883f24840f9901c2a24d7c2c9e4211",
+      "size": 4272,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Prepare/DraftAutoPicker.php",
+      "sha256": "0369174ad866be67747d1501608b2f893c9c849c42ded3f311f9995da92970c8",
+      "size": 1406,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Prepare/DraftCopyRules.php",
+      "sha256": "cb7315218f1f18c07a4524185dcc17a716f88ebb61f110e17e6ee8d74724ec34",
+      "size": 5394,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Prepare/DraftDeckBuilder.php",
+      "sha256": "138217efb04e8f69f6ae85d5c6f658241ee2633ff5327bcdd8162044530f759c",
+      "size": 2189,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Prepare/DraftProcessor.php",
+      "sha256": "cf351e3b5d4f8d610efd6c924da136e9df579a22d06d69076462e1b279a2c449",
+      "size": 30462,
+      "versus_verified_base": "replace",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Prepare/DraftSelectionDataProvider.php",
+      "sha256": "3aa19092175d0bbcd2dc32a33cddbe281231b851c792fe93ff6cb41247e71605",
+      "size": 3380,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Prepare/DraftSelectionEvaluator.php",
+      "sha256": "a094b36c4a5131c72a57567c4b72b5018dd48b345a7d876661a859a92e83b6e3",
+      "size": 11249,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Prepare/DraftTimer.php",
+      "sha256": "56069d9f2110b4182ab1246a474022575eef77dbebddb2e4a326e1457f630aee",
+      "size": 6917,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Prepare/PrepareProcessor.php",
+      "sha256": "7b3abe04346d485df6cd18e8466f007884466d66ecc3ad204635d781a4f4c105",
+      "size": 91706,
+      "versus_verified_base": "replace",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Prepare/RandomDraftProcessor.php",
+      "sha256": "ef4e98a93bf636f86df31dd6286dc86779ca7d2ee140d3464d8f93ce7c57728a",
+      "size": 4726,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Prepare/SquadRules.php",
+      "sha256": "dfc470397cb5ebc086b355e3054778c610d763416393a3a934e7ca4af68446ab",
+      "size": 2366,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/ProphecyProcessor.php",
+      "sha256": "1ce6338fbb705c644bb315124dbf2ed446c52af75b5a00020d2d66a993898d03",
+      "size": 24285,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/RangedNeighborTeleport.php",
+      "sha256": "dd59b8970f64f1602319637151ebc2c10817856a00c89c83f805417d6eabde7c",
+      "size": 6611,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/ResourceCalculator.php",
+      "sha256": "647155a8912d4babbe420cd4d7093862b039fa3b75e94c6e83daaa4c282220a2",
+      "size": 8834,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Result.php",
+      "sha256": "a3c1717235fe4bb109b1d41b20bf710e23817e11b00a1543204e27e66252bd5f",
+      "size": 717,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/StaleStateException.php",
+      "sha256": "5e2577a479513026f5d55b181011a97b59a4acdf0921651e2444aae136db10e6",
+      "size": 166,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/Strangulation.php",
+      "sha256": "58987c7105d4405adf5289834e14c7b4849354c7e743a5e0f8df21e84f6c677a",
+      "size": 7063,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/StrikeResolver.php",
+      "sha256": "76c397f87bf07f7e2d236a736fae7f25143f17089478ce062037421b338203b0",
+      "size": 94960,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/TransactionCommitUnknownException.php",
+      "sha256": "aec56716453a05cc29d30295422443c8197d8977c9af29b5bb8fa87c6e791d0e",
+      "size": 194,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/TransactionRollbackUnknownException.php",
+      "sha256": "cd8dd256a66130070befd8823a4d5283052c34336fd4aa23cacc01fa8a2255c6",
+      "size": 198,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/TurnPhaseProcessor.php",
+      "sha256": "5b86f3955289060f82cc7e98ac7f9bf364a99d8e1a959e53a00d113ab47cd2f4",
+      "size": 52318,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/TurnProcessor.php",
+      "sha256": "ebe52eb3bfaffb7e4d69c23178e11aa9c957be63f802c777e5fe85b1dfc1c8db",
+      "size": 46617,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/TurnTimeoutEligibility.php",
+      "sha256": "7a9da4cddfc7b85a69909e10424d513d64adabcce06de816000bf78953712e3d",
+      "size": 2850,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/TurnTimer.php",
+      "sha256": "658b1805c80047fba9404a838debcc9dd8091f6fd35a105b553eef4b27dff3a1",
+      "size": 5887,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/ValhallaProcessor.php",
+      "sha256": "33abbd32d86d28d183f799e86a3cc8b9bebc7cf946942bbd194b415ab151b26c",
+      "size": 12675,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/View.php",
+      "sha256": "538d3186d59ea72b631ffffaccc1451bd109bc87c6683e94c3eda596c546dffe",
+      "size": 5435,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/WoundTransferProcessor.php",
+      "sha256": "c639059b0091914e016244d447e9ed79dd49adadfe37fe6fa8c45585e301a943",
+      "size": 15763,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Core/ZoneManager.php",
+      "sha256": "62c4211d4bb6ade6363263fc9de814a47c677149d7902a1443ae41d04841eac9",
+      "size": 16405,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Lobby/LobbyStore.php",
+      "sha256": "7f637881c5076387e406a9f9f18f3e9ae50907539828021c56d6174c550d8f79",
+      "size": 7676,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/Lobby/MatchCreator.php",
+      "sha256": "3d02ad28731a996b8c8e0bfefbc48d3a672264c90daf1bda7478d2f4f6bb455a",
+      "size": 1411,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/Battle/Choice/ButtonChoice.php",
+      "sha256": "f20ae7e6f7abb411fc3443db4aa527a3454bfc409e19542f58cb108a5d085d3e",
+      "size": 1090,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/Battle/Choice/CheckboxChoice.php",
+      "sha256": "4082ae4861f5a0c221780dc2ce8438a37259f821ea56b686e4b805ca45fed481",
+      "size": 1047,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/Battle/Choice/MultiRadioChoice.php",
+      "sha256": "911d6ee635a8b719cd5a9d1ca7497436d2cf101a23f333acf7b01b0c9ab1f8eb",
+      "size": 1691,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/Battle/Choice/RadioChoice.php",
+      "sha256": "dec2c9b28b0b243855bd5ef9c720778e33034134c4aa74ef517af9f400d8a2de",
+      "size": 1092,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/Battle/InfoPanel.php",
+      "sha256": "93e7e2c34976b31b06d74e6cd5b7ed2521f63356936bc46f383bc931db9ea28b",
+      "size": 121232,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/BattleScreen.php",
+      "sha256": "96d3edccfad57b62951cf06b611ba0800cde8dbad7003ca36b80bc80a1ad0caa",
+      "size": 80714,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/BattleSnapshotRenderer.php",
+      "sha256": "7487c63c621c22fc5a414af3109aefb04a244f89487b0ff69beceb0cb7e29c18",
+      "size": 2393,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/DealScreen.php",
+      "sha256": "7f6c761736088198319a4668c75f0326893e45b4b98640c858d1496a782372a1",
+      "size": 18323,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/DeckScreen.php",
+      "sha256": "f3c0ec816c532b9b741d0cae0187225b7f9c8a646ddb3e93d14ea15978fb334b",
+      "size": 2740,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/DraftScreen.php",
+      "sha256": "0c274af1d5129ba5e3013aaab1e873c6c4c0992d8170f38947a22717c5d24a75",
+      "size": 21347,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/ModeScreen.php",
+      "sha256": "f99b7a00452c2dfd5bd18b2f9d15a4cfa65a18f35400f3b4b449e4fe79c1d8ea",
+      "size": 1892,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/PlaceScreen.php",
+      "sha256": "630b81dd0c41311759a9ab6440f3ba807bdbf7b2cc8fb81bd22cbbe3cdb98e06",
+      "size": 10365,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/ReplayScreen.php",
+      "sha256": "185f05201af3213c7d82adb17b9a5ed2da84e8d5c890a13615e428a426a434de",
+      "size": 6720,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/SettingsScreen.php",
+      "sha256": "01e10b6606591b98f09e79e7a5d50c8cdfe0a886feebd6126d45cb5b911a207e",
+      "size": 17488,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/SideScreen.php",
+      "sha256": "d62741b629c939a875e25d33b7666b9549bc1e0089eb15f2c3a78801ee231d36",
+      "size": 2004,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/TurnScreen.php",
+      "sha256": "3ae6b21c98cc6512548ec64644934a8eaed7cba1b95eafb7766bf1a296010da8",
+      "size": 2233,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Screen/ViewScreen.php",
+      "sha256": "b3695ad9ad9a04ef83a2f6f1fd9f1838de76d790f6f087d8c119b704f4ec9c77",
+      "size": 17260,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Template.php",
+      "sha256": "688d67fd6cd7d13601d2eaf480991e0ae9491ca6d1ff810c98049dfc66f70abc",
+      "size": 1766,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/Badge.php",
+      "sha256": "6ff3e8362bf51e42c7cd65b36748764c1c6bc5b6f01a8d2d11172e7e64a54520",
+      "size": 9723,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/BattleCardMarkup.php",
+      "sha256": "3bc85ad7bed1f782009bb8b6f0c57fb1ef26b00fde2d723e15c34dbdce270ad2",
+      "size": 1241,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/BattlefieldPosition.php",
+      "sha256": "3a0accb86fbcac36ce22e4dad92175df75defdced4fb34020114db0304cbbbb4",
+      "size": 1160,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/CardButton.php",
+      "sha256": "5f8c74e04c0e418b0b6f8742c70c0f744adb46b51662da603c002f940d7628c2",
+      "size": 1486,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/CardDescription.php",
+      "sha256": "9cea0aadb76b1e9baebec0c1c1cef2a3ede912975b39010b88a9f13f5a762c46",
+      "size": 2565,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/CellMarkerPicker.php",
+      "sha256": "5b946657c078e8175da4d27f48c90774a24f480094ac233d1fa5aee32e43924a",
+      "size": 7294,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/Coords.php",
+      "sha256": "dda1bb8ce837b00213d73cec95b623593c9082a0f24b07daeefebf127a69616c",
+      "size": 1251,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/ElementLabels.php",
+      "sha256": "d26c8b380fd85857c244047469300ea1064c826e9df144e048e4c38262832cb9",
+      "size": 329,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/Form.php",
+      "sha256": "64a75a2b5e5599c4c9feeb11ab1e7595729146c9c7d82f8b00de207d35b0633a",
+      "size": 7682,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/Panel.php",
+      "sha256": "524b3836cee59ad4df7c4c8c5066bb82fa9fb2cc7f9abade6b6f7d7339c1585f",
+      "size": 5041,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/PanelSpec.php",
+      "sha256": "7dbbb20075781e6769322cd1354598adf1abfeb47080ef2bf06665aabb86e18e",
+      "size": 1181,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/PreGameCard.php",
+      "sha256": "8373b74e76f976df1ff43499250f22c8b2939a800152bd227123a28b01bd59bb",
+      "size": 5793,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/PreGameLayout.php",
+      "sha256": "2827e60d21c372e1609c334069090171e81eecc16c576e86c47a34e1a5012014",
+      "size": 2923,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/PrepareUi.php",
+      "sha256": "eaf1544383b06f8602f4905b6661993a11aac8e0f16b32ca3d356f8fd3e33f1d",
+      "size": 6071,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "src/View/Ui/TaskCard.php",
+      "sha256": "4f90a63b64d498efe116adf366f96f6eab927c9734638bd4e079e2ddbcdc5e0d",
+      "size": 2047,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/ability_icon.tpl",
+      "sha256": "d9ac0f410f35b2a4b8c1a731fc8b6d6a75b57d9754069d1ce6279a6c9e78241d",
+      "size": 392,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/card_preview.tpl",
+      "sha256": "6ca047424124d0abe020b332ad1fafff78f9446b13e480cf36590078b5943f7e",
+      "size": 228,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/control_icon.tpl",
+      "sha256": "0e7c2bd3a3748586c7c5381269dfb4f9aabefd056bd5336ca091b9ccaeb31185",
+      "size": 163,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/defender_button.tpl",
+      "sha256": "b41d52990cf1a2a835802ba1fef594a962672d24d55b7967a445d1fcaeb7f5a5",
+      "size": 56,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/dice_column.tpl",
+      "sha256": "a5f4904a2e7efd09aff378cbc944d0233e7a25e0857ac4f2e367e0356984b46d",
+      "size": 112,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/fly_pagination.tpl",
+      "sha256": "6a6cee9794ab6c1f81463cb0ccaeb0cfa18509569b3c4fb359b97928dd215be1",
+      "size": 348,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/info_icon.tpl",
+      "sha256": "d44252c860fb5975fb5c35da36452b6578e78ec6f2232a2feb1d9ae2d8e07440",
+      "size": 310,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/mode_button.tpl",
+      "sha256": "83c85c86ad4a47ec6cf40c6042f7152a076673ec8b879f2b5a37dbb231d8b257",
+      "size": 63,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/panel.tpl",
+      "sha256": "197ee10ef721fa6c1fe1f1170caedf50a3288c4272178e3e760cc2e77cf4207c",
+      "size": 810,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/panel_status.tpl",
+      "sha256": "251ad0cce92c8383d19d2bce59c3b97ebcc94a0a83a7ac953bd13a90bd64a926",
+      "size": 28,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/side_zones.tpl",
+      "sha256": "8fc995d59c21fabb705380e51d7eb4a97800b6657bb1f986e8c1b0271efea02e",
+      "size": 662,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/stat_icon.tpl",
+      "sha256": "3260a6247ce7b9f256f2b69f1eaa07e03b8e10b41975530d7cf7161c6298d1c8",
+      "size": 286,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/stat_value.tpl",
+      "sha256": "c26fd7b68762c55c74ff5ec6899daebc1e0f606964eee4ccfc5483a50fdd60cc",
+      "size": 368,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/strike.tpl",
+      "sha256": "df6273096536e15623e8dacfd5e5cb0b583bf8a0326e82589fa2511b35aa179d",
+      "size": 135,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/strike_choice.tpl",
+      "sha256": "54048e6b3a4808464c9cd12b96d0e784b868ff049fd48b4b5dc0b06af554acfd",
+      "size": 749,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/strike_defender.tpl",
+      "sha256": "95fc49f73121fd72815d55c8bbea3d48d25f7f63fcfc3fca74cb3117aa385668",
+      "size": 114,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle/strike_dice.tpl",
+      "sha256": "b8179cf782dc9c7bac6665d0f8112dae241e3c6ec670a66d84dc2f6c319f2033",
+      "size": 245,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/battle_cell.tpl",
+      "sha256": "71b7a58127bf3d0d8d96b32b7065380e1dfe7a00007bafb21c673b1664d2b92e",
+      "size": 48,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/deck_element.tpl",
+      "sha256": "4faddf883ce3ebcd859203f0ca41c32099511b0f02c9964b892909e608fb4e24",
+      "size": 65,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/deck_item.tpl",
+      "sha256": "19d3dd6a6e9bc5c6d9e30205f1e69cc2b9a9d11bf333571545f955d3b5fc76fb",
+      "size": 97,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/game_chat.tpl",
+      "sha256": "50954b3ed0a0252134e1a19ce50a7c4969861a22c19cb12243148a0983fbf235",
+      "size": 2150,
+      "versus_verified_base": "replace",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/place_cell.tpl",
+      "sha256": "61258b5100ebe3b17685bb2307219359f7ad1a48611b1d3ec358b2ad494d477b",
+      "size": 130,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/pregame/card.tpl",
+      "sha256": "c1b56fa9119ed4b2e0931337081999457a4ff936add856ed155141ada51b966b",
+      "size": 686,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/pregame/layout.tpl",
+      "sha256": "e48f52cad952d00edfcda96fa2d91803413cec0f35feccf5a23dd31605e6ecd9",
+      "size": 1072,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/prepare_card.tpl",
+      "sha256": "b4b0bbdef9c8f96b11d75eb85072fd55cad004ea708ff6b2367245a87d14b828",
+      "size": 542,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/prepare_preview.tpl",
+      "sha256": "dffab66d46385b23469f40faf4622df9d7b314bde8a1fb3910375a53e887809a",
+      "size": 550,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/prophecy_card.tpl",
+      "sha256": "44ef582acc74b59146a4c1728d7d6e7335a45915876b3db159e01e5be778d4aa",
+      "size": 269,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/ui/button.tpl",
+      "sha256": "254686e862afa44bf8c9234ecbcf4930c94b045cd9443dbf9181a57592a3f97e",
+      "size": 66,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/includes/ui/wait.tpl",
+      "sha256": "251ad0cce92c8383d19d2bce59c3b97ebcc94a0a83a7ac953bd13a90bd64a926",
+      "size": 28,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/page.tpl",
+      "sha256": "893d1651f8c811a7be4cb06feb97a38ec0965fd3adb7cf4fcd81876d3873f65a",
+      "size": 435,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/battle.tpl",
+      "sha256": "6c006a76bdeecea72c3a85d174f770934927b9ef0f6843a959d5e86ba30bc30d",
+      "size": 2782,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/deal.tpl",
+      "sha256": "3888ae5726b6782c9ee241c82e3392c2bee2680ef6bd7870c7356a4fa66d52f7",
+      "size": 765,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/debug.tpl",
+      "sha256": "7c67e149340fdcc60a03ad6ccf827fc50d05409793a2cd549d18418132f19f39",
+      "size": 240,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/deck.tpl",
+      "sha256": "f052fa129aabe8839be9029f9edc2d03d0a80c40ad2b51dd25c2660b0b9e9197",
+      "size": 206,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/deck_host.tpl",
+      "sha256": "eb006d6f79c431e355ae42ef24b8c62900865c34fea31d30266a061062fba5d8",
+      "size": 3314,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/deck_wait.tpl",
+      "sha256": "0721ce2459461ffd960b3b0c690b0a46d87a2b95fe3341052e5c9ff30b8c6da8",
+      "size": 57,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/draft.tpl",
+      "sha256": "b2fa09ae943fe275dac4c5e501d87f69a91c7772ec7ba24cb32f00f0e971c06b",
+      "size": 393,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/game_over.tpl",
+      "sha256": "d645c204fef6fd9f207d56bc77c8532b9d105cbdc859367a65c70594d82656d5",
+      "size": 88,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/mode.tpl",
+      "sha256": "f443e7c0671c945e824de9c6adadd686b24f0a365ade1d6ba9a3184086ac4181",
+      "size": 93,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/place.tpl",
+      "sha256": "8e85db66b01b464dd31bad077a5a57ae71f8e1a21a99e2d5564a431118ea331b",
+      "size": 417,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/settings.tpl",
+      "sha256": "cc23bb3f7081fd589d7cbd960942fcb311f19ec714bec9d41c46810b08bf63d3",
+      "size": 173,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/side.tpl",
+      "sha256": "2d4437d8bfbb2e4353d5cd4443f10a2010f2d3ac0ef2d207566dc008a900b66e",
+      "size": 15,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/turn.tpl",
+      "sha256": "2d4437d8bfbb2e4353d5cd4443f10a2010f2d3ac0ef2d207566dc008a900b66e",
+      "size": 15,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/view.tpl",
+      "sha256": "54101125074e6b0546b2483a92e012d606075511b906134a5f522a44a37f2bca",
+      "size": 834,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "templates/screen/wait.tpl",
+      "sha256": "9bda6aa3d08e4d636781c8b971d0869b93184e1f68a2790434c6d794279af37e",
+      "size": 179,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/.htaccess",
+      "sha256": "756017703ae70c29e2403025670549bc298f2b3aa8e22904e0b015a201de3d97",
+      "size": 123,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "operator_reference_only_preserve_hosting_config"
+    },
+    {
+      "path": "www/assets/css/auth.css",
+      "sha256": "4cca8c86e3fe81a074a4a68372815f2ba8e1fa2420d2d5d4a61e23503be48d47",
+      "size": 501,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/css/battle-chat.css",
+      "sha256": "07045045e2f49d6fe41f9f52be0d1d004e55468149f65061e9d13017c4a6e33a",
+      "size": 2948,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/css/battle-journal.css",
+      "sha256": "c94c8ba0b5205fd27997ff62488d56abf9feb774d72cb8819ba87778377c98c5",
+      "size": 885,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/css/global.css",
+      "sha256": "9ddf253f2a7d30d7b126300d7c223e566d01ab14583c541ca77964ea0aeefec2",
+      "size": 74148,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/css/lobby.css",
+      "sha256": "a1b383ce8886ba917b711a23d0e4700d04d6fabf6649766812ebdf0429452d15",
+      "size": 999,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/css/pregame.css",
+      "sha256": "8b70a992c631d0ca5e3c011692618c86bc97b3b10edcc1ad81a086f79e814043",
+      "size": 22840,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/css/replay.css",
+      "sha256": "6de820038f78751077e03477cddb4c3903c44d4ff7c72a671eff94c8aa375982",
+      "size": 1541,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/berserk_background.webp",
+      "sha256": "7c43b4dddc1387fc3a3e836699bfed6130ac86fda03d3b5fc980116c09c135ef",
+      "size": 300926,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/chat_160.png",
+      "sha256": "53234a60b3bb1f5cc047da4a3d8bbd326bd6027281f3f21ec98c801a63b3a48f",
+      "size": 13648,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/chat_unread.png",
+      "sha256": "3778582b374aa61e1c55dd115e28b6476cac5ae9738f31a9a837501daccb6846",
+      "size": 2320,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/close.png",
+      "sha256": "4886ec7d738946795616f7e928dd565412852dac4ed0b11039cdeec6d8f41c04",
+      "size": 1003,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/end_turn.png",
+      "sha256": "17b027a55e1c409c79091c4c25551d7088339af289f507a66a806a4d3cab1fc8",
+      "size": 115880,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/end_turn_disabled.png",
+      "sha256": "dfbacd4a6f85eb8274f195e16626fb6603b69eb66c5a455bbd690c4c10697529",
+      "size": 224792,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/end_turn_hover.png",
+      "sha256": "dc0d41df15fa6b180c8a28c45e3aeb514898f3287c7c802c6ff5a47de7537b39",
+      "size": 220254,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/end_turn_normal.png",
+      "sha256": "63d97e3a4e296132fca526bc62d344f8b58921a4e5a614c9b348dba2bd739bfe",
+      "size": 186310,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/flying_empty.png",
+      "sha256": "8b8ec49944dcfc27cc1d5caebb7bc7d634ff04e40ba9f6d42277dbd6138b9568",
+      "size": 1538,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/game_log_160.png",
+      "sha256": "4733c611f5acf26ee159f327c67fcd0cade064b5a07a5fa89006d7c648b7d871",
+      "size": 46758,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/page_active.png",
+      "sha256": "03235d16a7874ac52cd9a71298ebe0b0d8d4a787d19e476327b09d1e3dc97d1d",
+      "size": 3899,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/page_inactive.png",
+      "sha256": "324f9e444ff28c4fe118f9c9e2f2c5045a0fdf6d492d3a53a4dab208ce8c0318",
+      "size": 3637,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/pause_160.png",
+      "sha256": "8a461db102d390b9c1752c2c61024a6a2036b83aee4e85288e73a5a13148969d",
+      "size": 13793,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/playmat_default.webp",
+      "sha256": "9a1569217f3a2033b490637d43489690f445a66c2ec4f3a93f0de15937091ed6",
+      "size": 274044,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/reshuffle_160.png",
+      "sha256": "6ae65e5f68c9c769727a05dd0bc0fc86db9d9cb24c5072adfb13347d6b6d3a95",
+      "size": 14651,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/surrender_160.png",
+      "sha256": "26f0cd8b000ad070a281d8a9909635707ee173e095ba0d44719512b16ad798d8",
+      "size": 46861,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/battle/terrain_empty.webp",
+      "sha256": "17d03547a5370eba5348d7a0d77c0684188a60cf7521789d822e7c8763af7888",
+      "size": 4762,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/bomb.png",
+      "sha256": "5f0a837afddd7e45edf34a16dc947c0c2f72773d7f64e3d7b8275741f4d5cc5e",
+      "size": 22824,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/armor@2x.png",
+      "sha256": "2f4d0b392a0d580b7b2a777cadc1cee75d34b72082797a2241e7b215b6e06810",
+      "size": 5914,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/class.png",
+      "sha256": "06e5396691e48bdebc016f2a62a06d04d5db0cc7de9e20f4f9e97363c20e5a22",
+      "size": 6000,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/counter.png",
+      "sha256": "af87499d483cb4ca93a9879d51aec38b0d76d41b02f54c655becead785c398ba",
+      "size": 5033,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/counter@2x.png",
+      "sha256": "6b4774f05a8e67987cdc84ccdefb3aac364aaad775af8d9d69f2db8f1b1e82cd",
+      "size": 16678,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/elite-unique.png",
+      "sha256": "e1e5e995edefeaea3e96408c75b01537802fc4fd7c3f65f35cbd38247953c0ba",
+      "size": 6466,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/elite.png",
+      "sha256": "bb4c238de445c68ae476e683e72fff6841d39723e48b0f268c7c7e5257f839f4",
+      "size": 2044,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/fly.png",
+      "sha256": "94308390d8b50e24b13db0fa988f18e4f1f4b46174f95d63c0e458a21fcecd5e",
+      "size": 5376,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/fly@2x.png",
+      "sha256": "f21aec1b43b5169eaf46e04a86e6699b609786c4542a1c260e11768c09237c32",
+      "size": 18635,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/heart.png",
+      "sha256": "88bb14949c23f4068728781bb085b8aa33e42d42dd72393dd0e283cd1767457a",
+      "size": 5624,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/heart@2x.png",
+      "sha256": "b11a93f5fecb518fe4ee0f797b5c2f4553b7f82827b473366255f2d542d00d4f",
+      "size": 19749,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/info@2x.png",
+      "sha256": "bda60af08f1e857aeb2d803e4339fce2fcea70aa1303bfe2b815b766a00e30f0",
+      "size": 17897,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/move.png",
+      "sha256": "00285cc8879f40654e9ab7c8590cbb702f8a3007205058de2e2e50aa4a5d9bb8",
+      "size": 5459,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/move@2x.png",
+      "sha256": "db1525518222a5fc6a30773d71f396a6147ce93896e08403de28450cc65e6600",
+      "size": 18924,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/ordinary-unique.png",
+      "sha256": "f4667ce3e9c4f2a81b690c28220dcc6914f35d8dd7a087fb28590ea29fa16e5b",
+      "size": 6926,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/ordinary.png",
+      "sha256": "04690f470486dbc03f8fea15bf91e3b48053910a093e96a9dbf44752b7b84ce4",
+      "size": 2203,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/ova.png",
+      "sha256": "90eed1525aafa2842e5fadc2948a98c63c1c6c9a7ee594fa4a0dcc1c05285010",
+      "size": 3255,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/ovz.png",
+      "sha256": "e420c6523c40ef0faea5950031e8023c8473203e8f8bba1932fb209a3b7fcdc9",
+      "size": 2993,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/regen.png",
+      "sha256": "9f814b410b25698287a5e16e2d7bb9d2076dcc4baa8689aa782b0eca80dda81a",
+      "size": 4399,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/sword.png",
+      "sha256": "8b4fcfb73e1bb47dcdc7c4c5236420e9c9ce5719f7837bd095d33a72de1024f6",
+      "size": 5455,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/card/sword@2x.png",
+      "sha256": "50fcff8b4d64f695c551a86ba8d4d870dc5357e25793451d96f0022130a73cb2",
+      "size": 19359,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/element-dark.png",
+      "sha256": "ff2935fd722f7f0de26ae75975893f2dfc63959d1d249caf6bdb5ba318d4eb37",
+      "size": 1434,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/element-forests.png",
+      "sha256": "867b6534b1568b5b32e2adacefea143d2572ca5bd201144fe15b5b53e32d9826",
+      "size": 1410,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/element-mountains.png",
+      "sha256": "eea41feb2199fad9c2438448aab1ae9786691224f4f5bfa5b09123a38a904542",
+      "size": 1445,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/element-neutral.png",
+      "sha256": "fdc21407faec48baabd0f06d69d2b2332c61257ed2271259467e34a0e370fc62",
+      "size": 1333,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/element-plains.png",
+      "sha256": "4dc0efa1617f7e68c63c8c0b3eb20302858a77934a17d38ef8e08fae5d1c37f2",
+      "size": 1421,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/element-swamps.png",
+      "sha256": "cb7836a9e1968a670f490ae06203bf423be21131db9ce4d170f650f94438a38f",
+      "size": 1448,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/element/dark.png",
+      "sha256": "1218ce857f88f76b717c555cff28a923a4a1e4d11350240ba3288ea47603ec63",
+      "size": 3105,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/element/forests.png",
+      "sha256": "8b600a8978fd7025877af1b9dd86f6f0efd1985145de06f2195bf60975657660",
+      "size": 2999,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/element/mountains.png",
+      "sha256": "3d01d8c2644e535559114edf64ac63f0264f6dc28854494873a1eaf32c7357ff",
+      "size": 3080,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/element/neutral.png",
+      "sha256": "fda5fe3069c336fd28276f8d0d30c1238c49fcd683fcb3f3a6d132a485d3b11e",
+      "size": 3014,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/element/plains.png",
+      "sha256": "2c76e9a05ae64512bd5f080dc9d0d9631909f2e169a81f6e08ea3a04e4b33433",
+      "size": 3041,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/element/swamps.png",
+      "sha256": "273a265cfc840cade1c649e13c17705ed0c8e7876156dae15f32e3950122f33e",
+      "size": 2988,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/flower.png",
+      "sha256": "24c595a8d764163a4f0108a1abc661b543386c0d058e44ba002ff1ebc3d7c921",
+      "size": 7466,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-armor.png",
+      "sha256": "cfcc288b71ab90f080bbd4616506796429a6a28514135a8f0d2ebcb2ecfa48f3",
+      "size": 796,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-counter.png",
+      "sha256": "0dafb2b87313ee3bb360d72dd71243887c0a1c9f66c7db23d80933109700db0c",
+      "size": 942,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-direct.png",
+      "sha256": "0fd00d8b3fcab19e8884fa70be6a24743e9b505543f5f23752f9399b7f3e2518",
+      "size": 951,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-elite.png",
+      "sha256": "5bbbdc263054d2bb58458a7b7f777c5f6f86a6063ae91e47721f1a431f9f63a1",
+      "size": 1606,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-first.png",
+      "sha256": "41df16c36ac4776c2f3fc54c4bde249b58b0d1f54a22d566908ee6b37b3cf3a8",
+      "size": 561,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-health.png",
+      "sha256": "9cc614a950dc10c86dca0a2a1f2ddc0c04b7af66cff30945197a16c6f812a915",
+      "size": 666,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-instant.png",
+      "sha256": "febb3aa2540a725808a73c0d184ef9484857085d5fb6021c752741a40379ae33",
+      "size": 656,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-move.png",
+      "sha256": "436df4089d85ad3171b451ae97536b7758527350f73d5efd1ee39329cfcdb59f",
+      "size": 769,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-ordinary.png",
+      "sha256": "2cee7e8b40b5faf998b77a29df982a7dc9b0c9487d504ddb261ff3cd10b5d5a0",
+      "size": 1640,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-ova.png",
+      "sha256": "5af3063b3d10a75bce54d285477475913c82978b3c57d1389c8ea7e133bf9c99",
+      "size": 750,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-ovz.png",
+      "sha256": "ded6dff35e65c95de8963329cefe80fc66a3c16d708f56852ac807be78e11144",
+      "size": 648,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-regen.png",
+      "sha256": "33547446de03542ce86e6fdd26201781edd4c7ec084ed33eb102db30b5941c9b",
+      "size": 1031,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-second.png",
+      "sha256": "9d2932df9fb307fe3d712cf3a41ae682b58efd6464ac923cfc9d5d0364377df8",
+      "size": 617,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-strike.png",
+      "sha256": "827f6d85f0197c89a74fa702ca5e803fb7276a8825b4d1d05133c244f562eb51",
+      "size": 602,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-tap.png",
+      "sha256": "cb994eacc9bf1fa4a9982b4328213dabd8b56cf058a0f01e5e731c883109f56a",
+      "size": 939,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-uchr.png",
+      "sha256": "34b18cc15020b4a2f6cbb5db7c5c45e9bbc526ff22226ad4731d69a59c8ebb9a",
+      "size": 892,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-zoal.png",
+      "sha256": "6cded20b9efa34a78b7bfab31caa999c6a2d3d150514e3f611f4b6833d56865d",
+      "size": 711,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-zom.png",
+      "sha256": "6c755921d2fdb68d5f9896a4dc13755752dfcc9532f6e181b1ec4e265de512cb",
+      "size": 932,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-zoo.png",
+      "sha256": "81447146dd6356137c5e55aaa3b3bfce4c84526e4937c4e0c4d718a395d1c060",
+      "size": 675,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-zor.png",
+      "sha256": "6953f3569f52ba0923dfffa490546a8f979c92a9bc9d173e7def675cdbbd4aef",
+      "size": 677,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-zot.png",
+      "sha256": "9aab656306b384c3d2562f8dddd7e7dd64b9abc1e9e8818efa279b8ac2c21bd2",
+      "size": 762,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-zov.png",
+      "sha256": "8fccbca2b85116365dc1e1d165e91f4b0b36a33453c59fcbf5f0ad0270d735ef",
+      "size": 764,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/icons/icon-zoz.png",
+      "sha256": "302014b436e1c8a99545fc79561e94293337137c68f7d64c67f7c05090a611e7",
+      "size": 644,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/001.webp",
+      "sha256": "32fd03ed2088e8a2a96caf44bbc8e9661dfe49d9d5684e1b7da3871f61c1916d",
+      "size": 318690,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/002.webp",
+      "sha256": "7f43d5e86063d8585ea6df740f822b43692d967a1aa41d79f003e0144bc4beb5",
+      "size": 230278,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/003.webp",
+      "sha256": "8380e11641944e787a2024e7f0f01c35f5a90b3d12148f5ba5306d3873c384ac",
+      "size": 228870,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/004.webp",
+      "sha256": "111184c94f6506f8a493dbd68ccd4083709920bda10c08f8929d7d98a1f82470",
+      "size": 289770,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/005.webp",
+      "sha256": "cef5b1c8ab02a563232a2cabce60991b92ece612fba0e6cba4cb99455570dadd",
+      "size": 242668,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/006.webp",
+      "sha256": "43d49b038ba0b1800f86338aa5f24ffed83358e955ab412c53d692658d0246c4",
+      "size": 200452,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/007.webp",
+      "sha256": "9cb5b803eefeb0531873dc9581ab6474941cfb774fe7bc8f0c657ff6fec65365",
+      "size": 268062,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/008.webp",
+      "sha256": "9fa2a61cc034067495ee59724b380a481bdd13d0e6e54dfc271f935f4d7aa8bc",
+      "size": 207792,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/009.webp",
+      "sha256": "ee56a6bcc712f879a36cacc2406ea3864038edf4af24cada9f136affcea5438a",
+      "size": 300210,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/010.webp",
+      "sha256": "6209873abd393056d1cca1f26b373e9e646f757b151b7fafdbf5523ab095833a",
+      "size": 200658,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/011.webp",
+      "sha256": "0e6818346ce10da3cb311758c7bce9c85ba03e461564344e67bf786749dd58ca",
+      "size": 268958,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/012.webp",
+      "sha256": "860772e1de1c0b6f125cd21f40ecf486d8e7361a340421d8627e62bf6654dc76",
+      "size": 329888,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/013.webp",
+      "sha256": "95afc9516b72c1ae822db1c3dd36ba37487e1fc98b1810f9e384ab582a3706f0",
+      "size": 265118,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/014.webp",
+      "sha256": "48fe47a03f960cef570edbb39634887ccc8c589b374f851006f556303246c7e9",
+      "size": 234504,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/015.webp",
+      "sha256": "95f1828442a0d06e1b4a163db84f60788af6f55845250b66d1f39d9a6e08d3e4",
+      "size": 262026,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/016.webp",
+      "sha256": "9ad795e06363ab52ab696e5f2500f69a4885278cf1011260594c62d22c59e4ca",
+      "size": 271786,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/017.webp",
+      "sha256": "e5651cdedb9796351a72437e560279cecd10b6d9e4ac6c13dfb0d67f7d768db7",
+      "size": 317740,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/playmat/018.webp",
+      "sha256": "5acdc2ece54aa80a81e7da588513d6de723dc3351a460b5b11fce9df7be8e094",
+      "size": 202606,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/rarity/s1_common.png",
+      "sha256": "626bc67fa8cbba1b54bef99c5341bc487502a5619144a80ef3ae6073e7e99a7b",
+      "size": 2458,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/rarity/s1_rare.png",
+      "sha256": "ae80e84b9d1dff5115dc3e978f7ff698b742bd8835aedefc551a6fe18534c520",
+      "size": 2620,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/rarity/s1_ultrarare.png",
+      "sha256": "e238efa7319129bc3908f013dde86a046d32496ee1c045609e1c50262c85a8a2",
+      "size": 2468,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/images/rarity/s1_uncommon.png",
+      "sha256": "c6c121a18e0df4dc880e2499f7576a7b52aba719f7e7fef9877f5b2478e14c45",
+      "size": 2517,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/battle-chat.js",
+      "sha256": "bd2531edeca2f5f32ef3a42a97a113821270b7614a894e513c06190ffcfe7fb5",
+      "size": 11739,
+      "versus_verified_base": "replace",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/battle-journal.js",
+      "sha256": "a229ed47dd6b0524b03532caac28ee31dcda7b7bf559c328fd2ff7ff6ccb8bb6",
+      "size": 5153,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/battle-match-pause.js",
+      "sha256": "30512c6d81bfbc44eadc95b9e8151bd3916f997ae755ba5fa651ec27f7992ad9",
+      "size": 14672,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/battle-menu.js",
+      "sha256": "ffc10898804dfc872702df13fc1eec0882f4f71dc7dc3f8c309b888951353ba3",
+      "size": 9444,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/battle-playmats.js",
+      "sha256": "647d0e5fb6f03ba07d219c3feb69f874c60691eb35473714e566d2b38106e2a7",
+      "size": 4727,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/battle-sync.js",
+      "sha256": "fd3476a4a5d26090d5785494e2b7af34fb610db39e177b664dee63af24659ea2",
+      "size": 34352,
+      "versus_verified_base": "replace",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/battle-turn-timer.js",
+      "sha256": "06da46b6d3fa74463976ccc8189d8df7db769d72d92065fa8fa5160373fbf85c",
+      "size": 10285,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/battle-ui.js",
+      "sha256": "eaf120e5c4ae976a6226e17ab6b405882ee317c87075ab7aa4ccd7a420a0809c",
+      "size": 13088,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/card-image-popup.js",
+      "sha256": "3599f8f3c496de8c554f55193caeb14520e8bc98be01e1afee4121301ef2b4ed",
+      "size": 2078,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/cell-marker-picker.js",
+      "sha256": "e1c3c440742d4bacb573dc08b672c3788e1ab26829b40253176f47ae9da3ac50",
+      "size": 11103,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/draft_timer.js",
+      "sha256": "36b28ff67e93d7adebe6a9947175c951103cf09cacb3aaf2340e6d8a851b399e",
+      "size": 3151,
+      "versus_verified_base": "replace",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/game-transport.js",
+      "sha256": "3311525f272c09d770c3335e07d0c973e489780cf9c69a12ecbc4e9bf0763803",
+      "size": 2917,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/grid_selection.js",
+      "sha256": "94d720bf8fe3c858696a9fcb856f1cb5109c6654763a12302f705331059728f5",
+      "size": 7721,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/lobby.js",
+      "sha256": "7d0987b36f4f933e0c8cac0850f8e1c5d7ca258dbcd8d146e5d7be291d559e32",
+      "size": 6536,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/pregame-place.js",
+      "sha256": "48cb61888efaba83e8897f6d65320c3da71499feca90aa7c840eb1f37fc89dce",
+      "size": 5309,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/pregame-ui.js",
+      "sha256": "e2a507305a60a09a1e87baedb29beb8e36542a4939da69485d689da2238d503c",
+      "size": 6054,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/pregame-view.js",
+      "sha256": "d609aafc164de3f6670e3239fd65497fb667577e8d36ba1549df96807ad813a8",
+      "size": 10612,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/settings.js",
+      "sha256": "c75a7cbc9154e5f52387b3d08f4c5db7f28fa4170e46e5a3e134d69ff354488f",
+      "size": 5454,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/js/solomon_selection.js",
+      "sha256": "2d142483b08e6456034d5a54d83484ece9e6df0929c58b90921abc623b17b9dd",
+      "size": 5693,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/assets/sound/dice.mp3",
+      "sha256": "e89c4996e1a57d553388879fd8ee6f21a69a35f7df02fd7d92e8a391ca007e26",
+      "size": 18561,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/auth.php",
+      "sha256": "d77307e8d10247522d6c7db8e98076a860cee87f0104e7d91cdb4a62e4c4f1b8",
+      "size": 6178,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/battle-journal.php",
+      "sha256": "4b3906b40958ec7738443a99c0eb3d25f140514a0f5664379d193716f9db506c",
+      "size": 2422,
+      "versus_verified_base": "replace",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/favicon.ico",
+      "sha256": "4606f1c9b3b8007a71bbf6a07913bbedc16ee4641a710166ef77fc05eeae2ce4",
+      "size": 15086,
+      "versus_verified_base": "unchanged",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/index.php",
+      "sha256": "250e0ba1a6e27e09bdebbe23499f97b61a69005185d2fe712b43984aa9f71fa5",
+      "size": 60777,
+      "versus_verified_base": "replace",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/journal-access.php",
+      "sha256": "6a9a2630ef8544bc18d73da543035da8bfa54de8164fcecc4b808a032940e418",
+      "size": 3376,
+      "versus_verified_base": "replace",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/lobby.php",
+      "sha256": "e1fc6ecefea20ed30c58a6087fbfdf1c6d24fb64956c15edbf6fe6ecdadc4060",
+      "size": 5304,
+      "versus_verified_base": "add",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    },
+    {
+      "path": "www/replay.php",
+      "sha256": "bda43e79024b6f59176d4db23f7b41efa1ae03cd8ef2cec2f94145799cdef3b2",
+      "size": 3206,
+      "versus_verified_base": "replace",
+      "actual_production": "unverified_requires_inventory",
+      "deployment_policy": "verified_runtime_snapshot"
+    }
+  ],
+  "read_only_sql": [
+    {
+      "source": "tools/migrations/20261021_release_preflight.sql",
+      "sha256": "a83eaedeefdf0240453a1ef387f8bdf24644da84c3bc9e8b58d296808e23e871",
+      "package_policy": "read-only operator reference"
+    },
+    {
+      "source": "tools/migrations/20261021_auth_preflight.sql",
+      "sha256": "2e7e59945359104f0a70c46bce8ecb4c1c38cf1ac1d7149028e73c7952903765",
+      "package_policy": "read-only operator reference"
+    },
+    {
+      "source": "tools/migrations/20261021_auth_postchecks.sql",
+      "sha256": "1d7c90c61f844b9d4c1eac2679f114fe7763eeece085b596d709c9a023364fa5",
+      "package_policy": "read-only operator reference"
+    },
+    {
+      "source": "tools/migrations/20261021_lobby_preflight.sql",
+      "sha256": "3c9b327e10eddce9e3dca71f1b2bce7810ec7efd9f528c00c67bf8cac239634b",
+      "package_policy": "read-only operator reference"
+    },
+    {
+      "source": "tools/migrations/20261021_lobby_postchecks.sql",
+      "sha256": "cf665cee62ab1106bb74cbe3aaa5820d3e5a380843d62c2beb0901019c8bfa78",
+      "package_policy": "read-only operator reference"
+    },
+    {
+      "source": "tools/migrations/20261021_transport_preflight.sql",
+      "sha256": "1826806c8380324245d94dce468b22477b4fb20d67d41f7a6b5658fc3c7bf6aa",
+      "package_policy": "read-only operator reference"
+    },
+    {
+      "source": "tools/migrations/20261020_battle_history_postchecks.sql",
+      "sha256": "300f88a665fed927a839f310dc76409a95ce07bfab0bb7b26de5d131659820f0",
+      "package_policy": "read-only operator reference"
+    }
+  ],
+  "conditional_ddl_not_bundled": [
+    {
+      "source": "tools/migrations/20261021_auth.sql",
+      "sha256": "8dfa687e53a35efeb885d8fea6658dc7a72785e082cd04bd34e8c19d0b8d4e39",
+      "execution": "Lead only, separate approval, selected only for proven absent tables; never rerun over existing/partial schema"
+    },
+    {
+      "source": "tools/migrations/20261021_lobby.sql",
+      "sha256": "2b546f315952ff0f11b3475d4500a4905bb5bd5a76bac0a82f6e480d7cb10083",
+      "execution": "Lead only, separate approval, selected only for proven absent tables; never rerun over existing/partial schema"
+    },
+    {
+      "source": "tools/migrations/20261021_command_journal.sql",
+      "sha256": "c49dd3e1b691b2a80aafa486ac25e8cdae2f3d578289ede375990d26b46305c0",
+      "execution": "Lead only, separate approval, selected only for proven absent tables; never rerun over existing/partial schema"
+    },
+    {
+      "source": "tools/migrations/20261019_game_chat.sql",
+      "sha256": "5574fe67d6b5e2e65b8b139b371b2c6160b67d411ea709c96e69a6cbc1967705",
+      "execution": "Lead only, separate approval, selected only for proven absent tables; never rerun over existing/partial schema"
+    },
+    {
+      "source": "tools/migrations/20261020_battle_history.sql",
+      "sha256": "fed01be34420002ecab001678161639d1188aabc9c399381b45a6d9902cb747f",
+      "execution": "Lead only, separate approval, selected only for proven absent tables; never rerun over existing/partial schema"
+    }
+  ],
+  "preserve_do_not_overwrite": [
+    "config/db.php",
+    "config/*.local.php",
+    "storage/**",
+    "www/assets/cards/**",
+    "sessions/**",
+    "existing DB and all matches/journals/history",
+    "www/.htaccess (hosting PHP handler/HTTPS directives require manual merge)"
+  ],
+  "runtime_dependencies": [
+    "PHP>=8.1 syntax; production php8.4 and FPM require actual check",
+    "mysqli/mysqlnd (get_result), json, session, hash, password_hash/password_verify",
+    "InnoDB and compatible existing catalogs cards/decks/elements; card_synergy read if available",
+    "custom src/Core/Autoloader.php, all tracked src/templates/www assets",
+    "untracked production card artwork remains external dependency; no Node/Composer runtime install"
+  ],
+  "commits": {
+    "5A": "822dacc89a32b7121fef4541f959f3d91ac2ee3f",
+    "5B": "46e9380941d8e1662cff3809fec07cdb998ac4b5",
+    "5C": "1b83c62a6197fe7dfaadebc48f645a72eef0a8a6",
+    "5D": "04316e18ab04cb5e0f4494830c55b6ece8910103",
+    "5D.1": "d59fc66970132f39c9c9d899984c191e8e1af6f7"
+  },
+  "database_tables": {
+    "accounts": "production inventory pending; preserve if present; never blindly recreate",
+    "auth_login_attempts": "production inventory pending; preserve if present; never blindly recreate",
+    "lobby_rooms": "production inventory pending; preserve if present; never blindly recreate",
+    "games": "production inventory pending; preserve if present; never blindly recreate",
+    "battle_command_journal": "production inventory pending; preserve if present; never blindly recreate",
+    "game_chat_messages": "production inventory pending; preserve if present; never blindly recreate",
+    "game_chat_reads": "production inventory pending; preserve if present; never blindly recreate",
+    "battle_history_matches": "production inventory pending; preserve if present; never blindly recreate",
+    "battle_history_batches": "production inventory pending; preserve if present; never blindly recreate",
+    "battle_history_actions": "production inventory pending; preserve if present; never blindly recreate",
+    "battle_history_events": "production inventory pending; preserve if present; never blindly recreate",
+    "battle_history_steps": "production inventory pending; preserve if present; never blindly recreate",
+    "cards": "production inventory pending; preserve if present; never blindly recreate",
+    "decks": "production inventory pending; preserve if present; never blindly recreate",
+    "elements": "production inventory pending; preserve if present; never blindly recreate"
+  },
+  "configuration_parameters": {
+    "auth": [
+      "db.host/port/name/user/pass",
+      "lobby_db.host/port/name/user/pass",
+      "limiter_secret",
+      "allow_loopback_http=false"
+    ],
+    "game_db": [
+      "host (host:port supported), name,user,pass; preserve existing config/db.php"
+    ],
+    "history": [
+      "preserve all existing flags/allowlists/catalog/invitation settings; default off only if absent"
+    ],
+    "hosting": [
+      "trusted FPM HTTPS=on",
+      "existing shared private session storage/locking",
+      "www document root",
+      "preserve/review production .htaccess PHP handler"
+    ]
+  },
+  "archive_policy": {
+    "runtime_entries": 360,
+    "operator_reference_entries": [
+      "www/.htaccess",
+      "configuration templates",
+      "read-only SQL and checklists"
+    ],
+    "no_create_sql_installer": true,
+    "never_extract_directly_to_production": true
+  },
+  "deployment_status": "NO-GO / REVIEW ONLY",
+  "hold_reasons": [
+    "Production SSH/FPM/HTTPS/session/schema/grants/actual inventory not verified",
+    "Lead-reported temporary HTTPS bypass must be removed only after trusted FPM HTTPS=on is established",
+    "Auth PHP8.4 default bcrypt cost12 vs fixed dummy cost10: separate compatibility review/fix and target tests required"
+  ]
+}

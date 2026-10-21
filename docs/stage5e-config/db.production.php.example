@@ -1,0 +1,4 @@
+<?php
+// Existing Core Db accepts host:port in host; it does NOT consume a separate port field.
+// Preserve verified existing config/db.php; this is a shape reference only.
+return ['host'=>'127.0.0.1:3306','name'=>'<same application schema>','user'=>'<game runtime user>','pass'=>'<private password>'];

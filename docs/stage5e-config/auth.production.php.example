@@ -1,0 +1,8 @@
+<?php
+// Operator template only. Never deploy placeholders or replace an existing private file blindly.
+return [
+ 'db'=>['host'=>'127.0.0.1','port'=>3306,'name'=>'<same application schema>','user'=>'<auth runtime user>','pass'=>'<private password>'],
+ 'lobby_db'=>['host'=>'127.0.0.1','port'=>3306,'name'=>'<same application schema>','user'=>'<lobby runtime user>','pass'=>'<private password>'],
+ 'limiter_secret'=>'<generate privately with random_bytes(32), stable across workers/releases>',
+ 'allow_loopback_http'=>false,
+];
