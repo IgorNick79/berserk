@@ -1,0 +1,7 @@
+.auth { max-width: 480px; margin: 5vh auto; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 4px #0002; }
+.auth label { display: block; margin: 16px 0; }
+.auth input { display: block; box-sizing: border-box; width: 100%; padding: 10px; margin-top: 6px; font: inherit; }
+.auth input[type=hidden] { display: none; }
+.auth button { border: 0; font: inherit; cursor: pointer; }
+.auth [role=alert] { color: #9c2020; }
+@media (max-width: 560px) { .auth { padding: 16px; margin: 0; } }

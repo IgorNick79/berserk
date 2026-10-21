@@ -1,0 +1,32 @@
+[
+  {
+    "file": "src\\Auth\\Account.php",
+    "exit": 0,
+    "message": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\src\\Auth\\Account.php"
+  },
+  {
+    "file": "src\\Auth\\AuthService.php",
+    "exit": 0,
+    "message": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\src\\Auth\\AuthService.php"
+  },
+  {
+    "file": "src\\Auth\\AuthSession.php",
+    "exit": 0,
+    "message": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\src\\Auth\\AuthSession.php"
+  },
+  {
+    "file": "src\\Auth\\AuthStore.php",
+    "exit": 0,
+    "message": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\src\\Auth\\AuthStore.php"
+  },
+  {
+    "file": "www\\auth.php",
+    "exit": 0,
+    "message": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\www\\auth.php"
+  },
+  {
+    "file": "config\\auth.example.php",
+    "exit": 0,
+    "message": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\config\\auth.example.php"
+  }
+]

@@ -1,0 +1,2 @@
+Skipping DB-backed draft initialization check: config/db.php not found
+Settings flow tests passed.

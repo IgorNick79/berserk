@@ -1,0 +1,32 @@
+[
+  {
+    "test": "test_turn_timer.php",
+    "exit": 0,
+    "tail": "OK turn timer\n"
+  },
+  {
+    "test": "test_pending_wait_timer.php",
+    "exit": 0,
+    "tail": "Pending ownership/read-only projection/Engine timer tests passed (all 57 registered handlers covered)\n"
+  },
+  {
+    "test": "test_settings_flow.php",
+    "exit": 0,
+    "tail": "Skipping DB-backed draft initialization check: config/db.php not found\nSettings flow tests passed.\n"
+  },
+  {
+    "test": "test_sealed_flow.php",
+    "exit": 0,
+    "tail": "Sealed flow tests passed.\n"
+  },
+  {
+    "test": "test_solomon_draft.php",
+    "exit": 0,
+    "tail": "Solomon Draft: 1764 checks passed (in-memory DB adapter; no live database).\n"
+  },
+  {
+    "test": "test_journal_invitations.php",
+    "exit": 0,
+    "tail": "PASS one-time consumption, exact scope, revocation, disabled scope, hashed credentials, default OFF, no replay principal\n"
+  }
+]
