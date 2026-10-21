@@ -1,0 +1,13 @@
+{
+    "regeneration": 1,
+    "zoal": true,
+    "opponent_turn_start": [
+        {
+            "type": "cell_effect",
+            "effect": "lantern_light",
+            "label": "Свет фонаря",
+            "range": 3,
+            "value": 1
+        }
+    ]
+}

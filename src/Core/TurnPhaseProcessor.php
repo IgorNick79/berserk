@@ -202,6 +202,7 @@ final class TurnPhaseProcessor
 
     public function resume(): void
     {
+        if (!empty($this->state->battle['pending_cell_effect_direction'])) return;
         $tp = $this->state->battle['turn_phase'] ?? null;
         if (!$tp) return;
 
@@ -312,7 +313,7 @@ final class TurnPhaseProcessor
             if ($card->owner !== $passiveKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || CardStats::isDisabled($card)) continue;
+            if ($card->dying) continue;
             if (empty($card->prop['opponent_turn_start'])) continue;
             $otsCards[] = $card;
         }
@@ -493,6 +494,13 @@ final class TurnPhaseProcessor
 
             foreach ($effects as $eff) {
                 if (($eff['type'] ?? '') === 'get_coins') continue;
+
+                if ($propKey === 'opponent_turn_start' && CardStats::isDisabled($card)) {
+                    $passiveLight = ($eff['type'] ?? '') === 'cell_effect'
+                        && ($eff['effect'] ?? '') === 'lantern_light'
+                        && Choice\CellEffectDirectionChoice::canCreateLight($card);
+                    if (!$passiveLight) continue;
+                }
 
                 $stacked = !empty($eff['stacked']);
                 $label   = (string) ($eff['label'] ?? $card->ukid);
@@ -711,6 +719,18 @@ final class TurnPhaseProcessor
         $items = [];
 
         switch ($type) {
+            case 'cell_effect':
+                if (($eff['effect'] ?? '') !== 'lantern_light' || !Choice\CellEffectDirectionChoice::canCreateLight($card)) break;
+                $range = (int) ($eff['range'] ?? 3);
+                $options = Choice\CellEffectDirectionChoice::options($card, $range);
+                if ($options) {
+                    $this->state->battle['pending_cell_effect_direction'] = [
+                        'owner' => $ownerKey, 'source_id' => $card->instanceId,
+                        'range' => $range, 'value' => (int) ($eff['value'] ?? 1), 'options' => $options,
+                    ];
+                }
+                return ['label' => 'Свет фонаря', 'items' => []];
+
             case 'whip':
                 $targets = [$card->instanceId];
                 foreach ($this->state->cards as $other) {
@@ -954,6 +974,7 @@ final class TurnPhaseProcessor
             && (!empty($battle['pending_incarnation'])
                 || !empty($battle['pending_incarnation_wound']))) return true;
         if ($base === 'turn_start' || $base === 'opponent_turn_start') {
+            if (!empty($battle['pending_cell_effect_direction'])) return true;
             if (!empty($battle['pending_whip'])) return true;
             if (!empty($battle['pending_gate_pick'])) return true;
             if (!empty($battle['pending_greed_teleport'])) return true;

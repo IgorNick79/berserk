@@ -1,0 +1,67 @@
+[
+  {
+    "file": "src/Core/ActionResolver.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Core/ActionResolver.php\n"
+  },
+  {
+    "file": "src/Core/BattleWaitResolver.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Core/BattleWaitResolver.php\n"
+  },
+  {
+    "file": "src/Core/CardStats.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Core/CardStats.php\n"
+  },
+  {
+    "file": "src/Core/Choice/ChoiceRegistry.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Core/Choice/ChoiceRegistry.php\n"
+  },
+  {
+    "file": "src/Core/Choice/ShaksiRollChoice.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Core/Choice/ShaksiRollChoice.php\n"
+  },
+  {
+    "file": "src/Core/DamageResolver.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Core/DamageResolver.php\n"
+  },
+  {
+    "file": "src/Core/TurnPhaseProcessor.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Core/TurnPhaseProcessor.php\n"
+  },
+  {
+    "file": "src/View/Screen/BattleScreen.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/View/Screen/BattleScreen.php\n"
+  },
+  {
+    "file": "src/View/Ui/Panel.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/View/Ui/Panel.php\n"
+  },
+  {
+    "file": "tools/test_pending_wait_timer.php",
+    "exit": 0,
+    "output": "No syntax errors detected in tools/test_pending_wait_timer.php\n"
+  },
+  {
+    "file": "src/Core/Choice/CellEffectDirectionChoice.php",
+    "exit": 0,
+    "output": "No syntax errors detected in src/Core/Choice/CellEffectDirectionChoice.php\n"
+  },
+  {
+    "file": "tools/test_bulbagur.php",
+    "exit": 0,
+    "output": "No syntax errors detected in tools/test_bulbagur.php\n"
+  },
+  {
+    "file": "tools/test_card_ability_ui.php",
+    "exit": 0,
+    "output": "No syntax errors detected in tools/test_card_ability_ui.php\n"
+  }
+]

@@ -98,7 +98,8 @@ final class Panel
         $html = '';
         foreach ($items as $it) {
             $value    = htmlspecialchars((string) ($it['value'] ?? ''), ENT_QUOTES);
-            $label    = htmlspecialchars((string) ($it['label'] ?? ''), ENT_QUOTES);
+            // label_html is trusted server-rendered markup; plain labels remain escaped.
+            $label = $it['label_html'] ?? htmlspecialchars((string) ($it['label'] ?? ''), ENT_QUOTES);
             $checked  = !empty($it['checked']) ? ' checked' : '';
             $disabled = !empty($it['disabled']) ? ' disabled' : '';
 

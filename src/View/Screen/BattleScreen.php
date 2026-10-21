@@ -66,6 +66,17 @@ final class BattleScreen
         // Режим и цели
         $explicitAttackMode = $ui['mode_explicit'];
         $mode = $ui['mode'];
+        // Jump selection owns its cells; an overlapping click must never become a normal move.
+        $jumpMode=false;
+        if ($selectedCardId>0 && str_starts_with($mode,'action:')) {
+            $selected=$state->getCard($selectedCardId);
+            foreach ($selected?->prop['actions']??[] as $action) {
+                if (($action['key']??$action['type']??'')===substr($mode,7) && ($action['type']??'')==='jump') $jumpMode=true;
+            }
+        }
+        if ($jumpMode) $moveCells=[];
+        else $jumpCells=[];
+
 
         $attackTargets = [];
         if ($selectedCardId > 0 && $isActive && !$strike && !$instantContext) {
@@ -1069,6 +1080,15 @@ final class BattleScreen
         $strangulationHint = \Berserk\Core\Strangulation::hint($c);
         if ($strangulationHint !== '') $statusHtml .= '<p>' . htmlspecialchars($strangulationHint, ENT_QUOTES) . '</p>';
         $statusHtml .= $this->linkedRecruitBattleHint($state, $c, $cardsInfo);
+        foreach ($c->prop['opponent_turn_start'] ?? [] as $effect) {
+            if (($effect['type'] ?? '') !== 'cell_effect' || ($effect['effect'] ?? '') !== 'lantern_light') continue;
+            $regen = (new \Berserk\Core\Engine())->getRegenerationAmount($c);
+            if ($regen > 0) $statusHtml .= '<p>Регенерация ' . $regen . '.</p>';
+            if (!empty($c->prop['zoal'])) $statusHtml .= '<p>ЗОАЛ — защита от атак летающих.</p>';
+            $statusHtml .= '<p>' . htmlspecialchars(\Berserk\Core\Choice\CellEffectDirectionChoice::DESCRIPTION, ENT_QUOTES) . '</p>';
+            break;
+        }
+
         if (!empty($c->prop['first_strike_jump'])) {
             $statusHtml .= '<p>Защита первого удара: '
                 . (\Berserk\Core\FirstStrikeJump::used($state, $c) ? 'использована в этом ходу' : 'доступна') . '.</p>';
@@ -1651,7 +1671,8 @@ final class BattleScreen
         $html = '<div class="cell-markers">';
         foreach ($markers as $m) {
             $type = htmlspecialchars((string) ($m['type'] ?? ''), ENT_QUOTES);
-            $html .= '<div class="cell-marker cell-marker-' . $type . '"></div>';
+            $title = $type === 'lantern_light' ? 'Свет фонаря: +1 рана от дальних атак, отравления и удара источника света.' : '';
+            $html .= '<div class="cell-marker cell-marker-' . $type . '" title="' . htmlspecialchars($title, ENT_QUOTES) . '"></div>';
         }
         $html .= '</div>';
 

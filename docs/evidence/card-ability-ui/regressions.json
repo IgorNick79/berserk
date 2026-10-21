@@ -1,0 +1,88 @@
+[
+  {
+    "test": "test_bulbagur.php",
+    "exit": 0,
+    "output": "OK bulbagur: 976 checks\n"
+  },
+  {
+    "test": "test_card_ability_ui.php",
+    "exit": 0,
+    "output": "Card ability UI: 96 checks passed\n"
+  },
+  {
+    "test": "test_shaksi.php",
+    "exit": 0,
+    "output": "Shaksi tests passed.\n"
+  },
+  {
+    "test": "test_row_spell_pending_dice.php",
+    "exit": 0,
+    "output": "Row spell pending dice tests passed.\n"
+  },
+  {
+    "test": "test_battle_helper_movement.php",
+    "exit": 0,
+    "output": "BattleHelper movement regression tests passed.\n"
+  },
+  {
+    "test": "test_movement_effects.php",
+    "exit": 0,
+    "output": "Movement effect regression tests passed.\n"
+  },
+  {
+    "test": "test_forced_directional_movement.php",
+    "exit": 0,
+    "output": "Forced directional movement regression tests passed.\n"
+  },
+  {
+    "test": "test_battle_coordinates_ui.php",
+    "exit": 0,
+    "output": "Battle coordinates UI tests passed.\n"
+  },
+  {
+    "test": "test_battle_result_coordinates_ui.php",
+    "exit": 0,
+    "output": "Battle result coordinate UI tests passed.\n"
+  },
+  {
+    "test": "test_damage_lifecycle.php",
+    "exit": 0,
+    "output": "Damage lifecycle regression tests passed.\n"
+  },
+  {
+    "test": "test_pending_wait_timer.php",
+    "exit": 0,
+    "output": "Pending ownership/read-only projection/Engine timer tests passed (all registered handlers covered)\n"
+  },
+  {
+    "test": "test_informational_wait.php",
+    "exit": 0,
+    "output": "Informational wait generation/deadline/ACK/legacy/Engine/UI tests passed\n"
+  },
+  {
+    "test": "test_turn_timeout.php",
+    "exit": 0,
+    "output": "Informational wait generation/deadline/ACK/legacy/Engine/UI tests passed\nT3 eligibility/expired command guard/forced strike/series/instants/end-phase tests passed\n"
+  },
+  {
+    "test": "test_match_pause.php",
+    "exit": 0,
+    "output": "Match pause unit tests passed (119 assertions)\n"
+  },
+  {
+    "test": "test_cell_marker_cancel.php",
+    "exit": 0,
+    "output": "Cell marker Engine cancellation tests passed.\n"
+  },
+  {
+    "test": "test_resign_pending.php",
+    "exit": 0,
+    "output": "Resign during pending tests passed (48 surrender cases, repeats, outsiders, state guards and command restrictions).\n"
+  },
+  {
+    "test": "test_live_battle_journal.php",
+    "exit": 0,
+    "output": "PASS untrusted zero identity and expired/revoked bindings fail closed\nPASS unknown definition is hidden and old unversioned projection is not enriched\nPASS nested uncertified combat never throws or creates a fake snapshot\nPASS actual dice modification emits once and table recalculation emits no additional dice\n{\n    \"checks\": [\n        {\n            \"name\": \"untrusted zero identity and expired\\/revoked bindings fail closed\",\n            \"status\": \"PASS\"\n        },\n        {\n            \"name\": \"unknown definition is hidden and old unversioned projection is not enriched\",\n            \"status\": \"PASS\"\n        },\n        {\n            \"name\": \"nested uncertified combat never throws or creates a fake snapshot\",\n            \"status\": \"PASS\"\n        },\n        {\n            \"name\": \"actual dice modification emits once and table recalculation emits no additional dice\",\n            \"status\": \"PASS\"\n        }\n    ]\n}\n",
+    "harness": "disposable source copy"
+  }
+]

@@ -36,7 +36,7 @@ function pwWait(GameState $s, ?string $kind, array $players = [], ?string $sourc
 // disagree with a misleading owner/active field to catch fallback heuristics.
 $owned = [
     'pending_deal_linked_recruit','pending_deal_scout_recruit','pending_deal_variable_recruit',
-    'pending_coin_ability','pending_first_strike_jump','pending_dice_choice','pending_after_strike_execute','pending_cell_marker_pick',
+    'pending_coin_ability','pending_first_strike_jump','pending_dice_choice','pending_after_strike_execute','pending_cell_marker_pick','pending_cell_effect_direction',
     'pending_instant_pick','pending_combat_pick','pending_forced_strike_adjacent','pending_ranged_attack_redirect',
     'pending_incarnation','pending_valhalla_pick','pending_whip','pending_kobold_heal','pending_talion_incarnation',
     'pending_holvert_open','pending_anubisar_chain','pending_wound_transfer','pending_segger_shield',
@@ -280,4 +280,4 @@ pwApply($engine,$s,'host','action',['card_id'=>1,'action_key'=>'bonfire']);
 pwApply($engine,$s,'host','choose_cell_marker',['row'=>3,'col'=>2]);
 pwAssert(!isset($s->battle['turn_timer']),'Engine commands must not allocate a legacy clock');
 
-echo "Pending ownership/read-only projection/Engine timer tests passed (all 57 registered handlers covered)\n";
+echo "Pending ownership/read-only projection/Engine timer tests passed (all registered handlers covered)\n";

@@ -949,7 +949,8 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
     background: #dde;
 }
 
-.field-cell.jump-target { background: rgba(100,100,255,0.25); cursor: pointer; }
+.field-cell.jump-target { background: rgba(93,55,230,0.6); box-shadow: inset 0 0 0 3px #b7a2ff; cursor: pointer; }
+.field-cell.jump-target:hover, .field-cell.jump-target:focus-within { background: rgba(93,55,230,0.8); box-shadow: inset 0 0 0 3px #eee8ff; }
 .field-cell.jump-target .cell-link { display: block; width: 100%; height: 100%; }
 
 .impact {
@@ -2321,3 +2322,5 @@ body.battle-page {
 .game-menu-panel form, .battle-menu-panel form { margin: 0; }
 .game-menu-panel [role^="menuitem"]:focus-visible, .game-menu > summary:focus-visible { outline: 2px solid #886332; }
 .game-menu-panel [role="status"] { margin: 0; padding: 0 10px; color: #8b2929; }
+
+.cell-marker-lantern_light { background-image: url("/assets/images/lantern.png"); background-size: cover; border: 1px solid #916314; box-sizing: border-box; }

@@ -31,11 +31,13 @@ final class ShaksiRollChoice implements ChoiceHandlerInterface
 
         if (($p['owner'] ?? null) !== $playerKey) {
             return new PanelSpec(
-                title: $srcName . ' — прыжок, кубик ' . (int) $p['dice'],
+                title: $srcName . ' — прыжок: выбор цели',
                 isMine: false,
             );
         }
 
+        $dice=(int)($p['dice']??0);
+        $diceHtml=$dice>=1 && $dice<=6 ? '<div class="dice-block"><div class="dice-column"><div class="label">Кубик</div><div class="dice">'.$dice.'</div></div></div>' : '<p>Результат кубика не сохранён.</p>';
         $effect     = (array) $p['effect'];
         $effectType = (string) ($effect['type'] ?? '');
         $value      = (int) ($effect['value'] ?? 0);
@@ -60,14 +62,14 @@ final class ShaksiRollChoice implements ChoiceHandlerInterface
             }
 
             $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-            $coords = $tc->row !== null
-                ? ' (' . $tc->row . ';' . $tc->col . ')'
-                : '';
-            $label = $tn . $coords . ' — ' . $tc->hp . '/' . $tc->hpMax;
-            if ($isSelf) $label .= ' — Шакси';
-            elseif ($isOwn) $label .= ' — моё';
+            $coords = \Berserk\View\Ui\Coords::renderResult($tc->row,$tc->col,$playerKey);
+            $suffix = ' — ' . $tc->hp . '/' . $tc->hpMax;
+            if ($isSelf) $suffix .= ' — Шакси';
+            elseif ($isOwn) $suffix .= ' — моё';
+            $label = htmlspecialchars((string)$tn,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8')
+                .($coords!==''?' '.$coords:'').htmlspecialchars($suffix,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
 
-            $items[] = ['value' => (int) $tid, 'label' => $label];
+            $items[] = ['value' => (int) $tid, 'label_html' => $label];
         }
 
         $roleParam = $role === 'host' ? 'first' : 'second';
@@ -78,7 +80,7 @@ final class ShaksiRollChoice implements ChoiceHandlerInterface
             'get_coin' => 'дать монету (' . $value . ')',
         ];
         $effectLabel = $titles[$effectType] ?? 'применить';
-        $title = $srcName . ': кубик ' . (int) $p['dice'] . ' — ' . $effectLabel;
+        $title = $srcName . ' — ' . $effectLabel;
 
         $sideOrder = ['own', 'enemy', 'all'];
         $nextSide = $sideOrder[(array_search($side, $sideOrder, true) + 1) % 3];
@@ -92,12 +94,14 @@ final class ShaksiRollChoice implements ChoiceHandlerInterface
         if (empty($items)) {
             return new PanelSpec(
                 title: $title . ' — нет целей на этой стороне',
+                text: [$diceHtml],
                 buttons: $buttons,
             );
         }
 
         return new PanelSpec(
             title: $title,
+            text: [$diceHtml],
             buttons: $buttons,
             form: [
                 'type'   => 'radio',

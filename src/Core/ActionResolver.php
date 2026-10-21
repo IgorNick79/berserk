@@ -1502,7 +1502,7 @@ final class ActionResolver
         $this->engine->flushDeadeatQueue($this->state);
 
         // Итоговый урон после всех бонусов (для отображения)
-        $this->state->battle['strike']['damage_total'] = $val;
+        $this->state->battle['strike']['damage_total'] = $woundsDealt;
 
 
         if (empty($action['no_close'])) {
