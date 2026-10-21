@@ -1,0 +1,27 @@
+[
+  {
+    "file": "src/Lobby/LobbyStore.php",
+    "exit": 0,
+    "output": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\src\\Lobby\\LobbyStore.php"
+  },
+  {
+    "file": "src/Lobby/MatchCreator.php",
+    "exit": 0,
+    "output": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\src\\Lobby\\MatchCreator.php"
+  },
+  {
+    "file": "www/lobby.php",
+    "exit": 0,
+    "output": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\www\\lobby.php"
+  },
+  {
+    "file": "www/auth.php",
+    "exit": 0,
+    "output": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\www\\auth.php"
+  },
+  {
+    "file": "config/auth.example.php",
+    "exit": 0,
+    "output": "No syntax errors detected in C:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\config\\auth.example.php"
+  }
+]

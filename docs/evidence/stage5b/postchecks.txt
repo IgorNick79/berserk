@@ -1,0 +1,33 @@
+lobby_rooms	CREATE TABLE `lobby_rooms` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `creator_account_id` int(11) NOT NULL,
+  `candidate_account_id` int(11) DEFAULT NULL,
+  `accepted_account_id` int(11) DEFAULT NULL,
+  `candidate_request_id` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `game_id` int(11) DEFAULT NULL,
+  `state` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'open',
+  `version` int(10) unsigned NOT NULL DEFAULT 1,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_room_game` (`game_id`),
+  KEY `idx_room_creator` (`creator_account_id`),
+  KEY `idx_room_candidate` (`candidate_account_id`),
+  KEY `idx_room_accepted` (`accepted_account_id`),
+  KEY `idx_room_state_updated` (`state`,`updated_at`),
+  CONSTRAINT `fk_room_accepted` FOREIGN KEY (`accepted_account_id`) REFERENCES `accounts` (`id`),
+  CONSTRAINT `fk_room_candidate` FOREIGN KEY (`candidate_account_id`) REFERENCES `accounts` (`id`),
+  CONSTRAINT `fk_room_creator` FOREIGN KEY (`creator_account_id`) REFERENCES `accounts` (`id`),
+  CONSTRAINT `fk_room_game` FOREIGN KEY (`game_id`) REFERENCES `games` (`ind`),
+  CONSTRAINT `chk_room_state` CHECK (`state` = 'open' and `candidate_account_id` is null and `candidate_request_id` is null and `accepted_account_id` is null and `game_id` is null or `state` = 'awaiting_confirmation' and `candidate_account_id` is not null and `candidate_account_id` <> `creator_account_id` and `candidate_request_id` is not null and `accepted_account_id` is null and `game_id` is null or `state` = 'started' and `candidate_account_id` is null and `candidate_request_id` is null and `accepted_account_id` is not null and `accepted_account_id` <> `creator_account_id` and `game_id` is not null),
+  CONSTRAINT `chk_room_version` CHECK (`version` > 0)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=latin1
+lobby_rooms	0	PRIMARY	1	id	A	2	NULL	NULL		BTREE			NO
+lobby_rooms	0	uq_room_game	1	game_id	A	2	NULL	NULL	YES	BTREE			NO
+lobby_rooms	1	idx_room_creator	1	creator_account_id	A	2	NULL	NULL		BTREE			NO
+lobby_rooms	1	idx_room_candidate	1	candidate_account_id	A	2	NULL	NULL	YES	BTREE			NO
+lobby_rooms	1	idx_room_accepted	1	accepted_account_id	A	2	NULL	NULL	YES	BTREE			NO
+lobby_rooms	1	idx_room_state_updated	1	state	A	2	NULL	NULL		BTREE			NO
+lobby_rooms	1	idx_room_state_updated	2	updated_at	A	2	NULL	NULL		BTREE			NO
+lobby_rooms	InnoDB
+0

@@ -46,7 +46,7 @@ try {
         }
         $account = $service->login($login,$password,$address);
         AuthSession::login($account);
-        header('Location: auth.php?page=account',true,303); exit;
+        header('Location: lobby.php',true,303); exit;
     }
     $store = new AuthStore($config['db']);
     if ($page === 'account') {
@@ -70,7 +70,7 @@ if (session_status() === PHP_SESSION_ACTIVE) { $csrf = AuthSession::csrf(); sess
 <main class="screen auth"><div class="toolbar">Berserk</div>
 <?php if ($error !== null): ?><p role="alert"><?= $escape($error) ?></p><?php endif; ?>
 <?php if ($account !== null): ?>
-<h1>Вы вошли как <?= $escape($account->login) ?>.</h1><p>Игровое лобби появится на следующем этапе.</p>
+<h1>Вы вошли как <?= $escape($account->login) ?>.</h1><p><a href="lobby.php">Открыть игровое лобби</a></p>
 <form method="post" action="auth.php?page=logout"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><button class="button">Выйти</button></form>
 <?php elseif ($csrf !== '' && in_array($page,['login','register'],true)): ?>
 <h1><?= $page === 'register' ? 'Регистрация' : 'Вход' ?></h1>

@@ -1,0 +1,2 @@
+PHP lint: 5/5 PASS
+JavaScript syntax: 2/2 PASS

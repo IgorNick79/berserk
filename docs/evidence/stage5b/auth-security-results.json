@@ -1,0 +1,194 @@
+[
+  {
+    "test": "isolated database identity",
+    "pass": true
+  },
+  {
+    "test": "runtime grants exclude DDL, TRIGGER and games",
+    "pass": true
+  },
+  {
+    "test": "GET form read only and gameplay trap intact",
+    "pass": true
+  },
+  {
+    "test": "security headers",
+    "pass": true
+  },
+  {
+    "test": "HttpOnly SameSite separate cookie",
+    "pass": true
+  },
+  {
+    "test": "CSRF rejected",
+    "pass": true
+  },
+  {
+    "test": "register",
+    "pass": true
+  },
+  {
+    "test": "case insensitive unique conflict",
+    "pass": true
+  },
+  {
+    "test": "72 byte password boundary",
+    "pass": true
+  },
+  {
+    "test": "invalid login 'ab'",
+    "pass": true
+  },
+  {
+    "test": "invalid login 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'",
+    "pass": true
+  },
+  {
+    "test": "invalid login 'with space'",
+    "pass": true
+  },
+  {
+    "test": "invalid login '<script>'",
+    "pass": true
+  },
+  {
+    "test": "invalid login 'Игрок'",
+    "pass": true
+  },
+  {
+    "test": "password bounds 5",
+    "pass": true
+  },
+  {
+    "test": "password bounds 73",
+    "pass": true
+  },
+  {
+    "test": "password bounds 1025",
+    "pass": true
+  },
+  {
+    "test": "password bounds 11",
+    "pass": true
+  },
+  {
+    "test": "hash at rest",
+    "pass": true
+  },
+  {
+    "test": "unknown and wrong externally identical",
+    "pass": true
+  },
+  {
+    "test": "login",
+    "pass": true
+  },
+  {
+    "test": "session rotation",
+    "pass": true
+  },
+  {
+    "test": "rotation deletes old session",
+    "pass": true
+  },
+  {
+    "test": "protected placeholder",
+    "pass": true
+  },
+  {
+    "test": "client account id ignored",
+    "pass": true
+  },
+  {
+    "test": "no password in sessions",
+    "pass": true
+  },
+  {
+    "test": "legacy identity cleared and single principal",
+    "pass": true
+  },
+  {
+    "test": "seeded legacy role and binding removed",
+    "pass": true
+  },
+  {
+    "test": "no plaintext HTTP",
+    "pass": true
+  },
+  {
+    "test": "logout GET forbidden",
+    "pass": true
+  },
+  {
+    "test": "logout CSRF",
+    "pass": true
+  },
+  {
+    "test": "logout",
+    "pass": true
+  },
+  {
+    "test": "strict fixation rejection",
+    "pass": true
+  },
+  {
+    "test": "concurrent registration one winner",
+    "pass": true
+  },
+  {
+    "test": "parallel cross-session login limit",
+    "pass": true
+  },
+  {
+    "test": "correct password cannot bypass exhausted limit",
+    "pass": true
+  },
+  {
+    "test": "IP limit across distinct logins",
+    "pass": true
+  },
+  {
+    "test": "limiter expires",
+    "pass": true
+  },
+  {
+    "test": "account id 1 allowed without reserving legacy ids",
+    "pass": true
+  },
+  {
+    "test": "legacy game data unchanged",
+    "pass": true
+  },
+  {
+    "test": "separate cookie cannot authenticate legacy session",
+    "pass": true
+  },
+  {
+    "test": "schema mismatch generic 503",
+    "pass": true
+  },
+  {
+    "test": "missing schema no runtime creation",
+    "pass": true
+  },
+  {
+    "test": "production plain HTTP denied",
+    "pass": true
+  },
+  {
+    "test": "real TLS Secure cookie",
+    "pass": true
+  },
+  {
+    "test": "TLS login and protected page",
+    "pass": true
+  },
+  {
+    "test": "actual unchanged replay rejects account 1 auth cookie",
+    "pass": true
+  },
+  {
+    "test": "password absent from HTTP logs",
+    "pass": true
+  }
+]

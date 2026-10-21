@@ -1,0 +1,14 @@
+.lobby { max-width: 1000px; margin: 3vh auto; background: white; padding: 24px; border-radius: 8px; }
+.lobby .toolbar { align-items: center; flex-wrap: wrap; }
+.lobby .toolbar form { margin-left: auto; }
+.lobby table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+.lobby th,.lobby td { padding: 14px 10px; border-bottom: 1px solid #ddd; text-align: left; }
+.lobby td { overflow-wrap: anywhere; max-width: 24ch; }
+.lobby tr[tabindex] { cursor: pointer; }
+.lobby tr[tabindex]:hover,.lobby tr[tabindex]:focus { background: #edf5e9; outline: 2px solid #477a36; }
+.lobby tr[aria-disabled=true] { color: #777; }
+.lobby button { font: inherit; padding: 8px 16px; cursor: pointer; }
+.lobby button:disabled { cursor: wait; }
+.lobby .decisions { display: flex; gap: 12px; margin-top: 24px; }
+.lobby #notice { min-height: 1.5em; color: #8b2929; }
+@media(max-width:600px) { body { padding: 8px; } .lobby { padding: 12px; margin: 0; } .lobby td,.lobby th { padding: 10px 4px; font-size: 13px; } }

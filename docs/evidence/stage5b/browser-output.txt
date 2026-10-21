@@ -1,0 +1,57 @@
+{
+  "passed": 13,
+  "results": [
+    {
+      "test": "no separate join button",
+      "pass": true
+    },
+    {
+      "test": "lobby table updates without reload",
+      "pass": true
+    },
+    {
+      "test": "creator sees request by polling",
+      "pass": true
+    },
+    {
+      "test": "candidate no confirmation buttons",
+      "pass": true
+    },
+    {
+      "test": "rejected candidate automatically returns to lobby",
+      "pass": true
+    },
+    {
+      "test": "old room URL rejected",
+      "pass": true
+    },
+    {
+      "test": "both see safe started placeholder",
+      "pass": true
+    },
+    {
+      "test": "lost committed HTTP reply recovers without repeating POST",
+      "pass": true
+    },
+    {
+      "test": "stale poll version cannot restore candidate",
+      "pass": true
+    },
+    {
+      "test": "no legacy game links",
+      "pass": true
+    },
+    {
+      "test": "outsider started row disabled",
+      "pass": true
+    },
+    {
+      "test": "mobile table fits viewport",
+      "pass": true
+    },
+    {
+      "test": "no browser script errors",
+      "pass": true
+    }
+  ]
+}
