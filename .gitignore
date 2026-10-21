@@ -36,3 +36,4 @@ www/assets/cards/
 !tools/migrations/20261021_command_journal.sql
 !tools/migrations/20261021_transport_preflight.sql
 !tools/migrations/20261021_release_preflight.sql
+!tools/migrations/20261021_mysql57_postchecks.sql

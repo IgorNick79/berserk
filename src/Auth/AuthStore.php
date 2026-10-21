@@ -70,7 +70,7 @@ final class AuthStore
     {
         $key = Account::loginKey($login);
         Account::validatePassword($password);
-        $hash = password_hash($password, PASSWORD_DEFAULT);
+        $hash = PasswordPolicy::hash($password);
         try {
             $this->query('INSERT INTO accounts(login,login_key,password_hash,created_at) VALUES(?,?,?,UTC_TIMESTAMP(6))', [$login,$key,$hash]);
         } catch (\mysqli_sql_exception $e) {

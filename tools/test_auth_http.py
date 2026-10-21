@@ -102,6 +102,7 @@ def main():
             check('password bounds '+str(len(pw)),b.post('register','Bounds',pw)[0] in [400,422])
         stored=sql('USE stage5a_auth_test; SELECT password_hash FROM accounts;')
         check('hash at rest',stored.startswith('$2y$') and 'CorrectPass123' not in stored)
+        check('registration hash policy cost12',all(line.startswith('$2y$12$') for line in stored.splitlines()))
         reset_limits();wrong=b.post('login','Player','WrongPass123');unknown=b.post('login','Unknown','WrongPass123')
         alert=lambda response:re.search(r'<p role="alert">(.*?)</p>',response[1]).group(1)
         check('unknown and wrong externally identical',wrong[0]==unknown[0]==422 and alert(wrong)==alert(unknown))
