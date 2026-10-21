@@ -36,6 +36,19 @@ final class LobbyStore
     {
         $row = $this->query('SELECT * FROM lobby_rooms WHERE id=?'.($lock ? ' FOR UPDATE' : ''),[$id])->fetch_assoc();
         if (!$row) throw new \DomainException('Комната не найдена.',404);
+        // MySQL 5.7 ignores CHECK: validate persisted invariants before any transition.
+        $emptyCandidate = $row['candidate_account_id'] === null && $row['candidate_request_id'] === null;
+        $valid = (int)$row['creator_account_id'] > 0 && (int)$row['version'] > 0 && match ($row['state']) {
+            'open' => $emptyCandidate && $row['accepted_account_id'] === null && $row['game_id'] === null,
+            'awaiting_confirmation' => (int)$row['candidate_account_id'] > 0
+                && (int)$row['candidate_account_id'] !== (int)$row['creator_account_id']
+                && is_string($row['candidate_request_id']) && preg_match('/\A[0-9a-f]{64}\z/D', $row['candidate_request_id'])
+                && $row['accepted_account_id'] === null && $row['game_id'] === null,
+            'started' => $emptyCandidate && (int)$row['accepted_account_id'] > 0
+                && (int)$row['accepted_account_id'] !== (int)$row['creator_account_id'] && (int)$row['game_id'] > 0,
+            default => false,
+        };
+        if (!$valid) throw new \LogicException('Invalid room state');
         return $row;
     }
 
@@ -84,19 +97,17 @@ final class LobbyStore
 
     public function create(int $actor): int
     {
-        $this->db->begin_transaction();
-        try {
+        RoomTransaction::run($this->db, function (RoomTransaction $transaction) use ($actor, &$id): void {
             $this->query("INSERT INTO lobby_rooms(creator_account_id,state,version,created_at,updated_at) VALUES(?,'open',1,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))",[$actor]);
             $id = (int)$this->db->insert_id;
             $this->row($id,true);
-            $this->db->commit(); return $id;
-        } catch (\Throwable $e) { $this->rollback(); throw $e; }
+        });
+        return $id;
     }
 
     public function act(int $id, int $actor, int $version, ?string $request, string $action): void
     {
-        $this->db->begin_transaction();
-        try {
+        RoomTransaction::run($this->db, function (RoomTransaction $transaction) use ($id, $actor, $version, $request, $action): void {
             $room = $this->row($id,true);
             // Check permission under lock before revealing version/request state.
             if ($action !== 'open' && $actor !== (int)$room['creator_account_id']) throw new \DomainException('Только создатель принимает решение.',403);
@@ -111,17 +122,11 @@ final class LobbyStore
                 if ($action === 'reject') {
                     $this->query("UPDATE lobby_rooms SET candidate_account_id=NULL,candidate_request_id=NULL,state='open',version=version+1,updated_at=UTC_TIMESTAMP(6) WHERE id=?",[$id]);
                 } elseif ($action === 'accept') {
-                    $game = MatchCreator::create($this->db,(int)$room['creator_account_id'],(int)$room['candidate_account_id']);
+                    $game = MatchCreator::create($transaction,$id,(int)$room['creator_account_id'],(int)$room['candidate_account_id']);
                     $this->query("UPDATE lobby_rooms SET accepted_account_id=candidate_account_id,candidate_account_id=NULL,candidate_request_id=NULL,game_id=?,state='started',version=version+1,updated_at=UTC_TIMESTAMP(6) WHERE id=?",[$game,$id]);
                 } else { throw new \DomainException('Неизвестное действие.',400); }
             }
-            $this->db->commit();
-        } catch (\Throwable $e) { $this->rollback(); throw $e; }
+        });
     }
 
-    private function rollback(): void
-    {
-        // A lost COMMIT acknowledgement is never a reason to blindly create again.
-        try { $this->db->rollback(); } catch (\Throwable) {}
-    }
 }

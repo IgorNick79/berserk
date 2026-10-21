@@ -7,10 +7,10 @@ use Berserk\Core\{GameState,PlaymatCatalog};
 /** Minimal initial-state adapter. Caller owns the SINGLE room/game transaction. */
 final class MatchCreator
 {
-    public static function create(\mysqli $db, int $creator, int $accepted): int
+    public static function create(RoomTransaction $transaction, int $roomId, int $creator, int $accepted): int
     {
         if ($creator <= 0 || $accepted <= 0 || $creator === $accepted) throw new \LogicException('Invalid participants');
-        if ((int)$db->query('SELECT @@in_transaction AS active')->fetch_assoc()['active'] !== 1) throw new \LogicException('Active transaction required');
+        $db = $transaction->claimMatch($roomId, $creator, $accepted);
         $stmt = $db->prepare("INSERT INTO games(host_id,player_id,status,json,version,date,active) VALUES(?,?,'mode','{}',1,UTC_TIMESTAMP(),1)");
         try { $stmt->bind_param('ii',$creator,$accepted); $stmt->execute(); } finally { $stmt->close(); }
         $id = (int)$db->insert_id;
@@ -20,6 +20,7 @@ final class MatchCreator
         $json = json_encode($state->toArray(),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
         $stmt = $db->prepare('UPDATE games SET json=? WHERE ind=?');
         try { $stmt->bind_param('si',$json,$id); $stmt->execute(); } finally { $stmt->close(); }
+        $transaction->recordMatch($id);
         return $id;
     }
 }
