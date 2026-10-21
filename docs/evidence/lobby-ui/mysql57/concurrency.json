@@ -1,0 +1,39 @@
+{
+  "candidate_race": {
+    "http_codes": [
+      200,
+      403
+    ],
+    "room_id": 1,
+    "games_before_accept": 1
+  },
+  "double_accept": {
+    "http_codes": [
+      200,
+      409
+    ],
+    "room_id": 1,
+    "linked_games": 1
+  },
+  "accept_reject": {
+    "http_codes": [
+      409,
+      200
+    ],
+    "room_id": 3,
+    "final_state": "open",
+    "final_version": 3
+  },
+  "rollback_after_games_insert": {
+    "http_code": 503,
+    "games_before": 3,
+    "games_after": 3,
+    "room_version": 2
+  },
+  "rollback_room_link": {
+    "http_code": 503,
+    "games_before": 3,
+    "games_after": 3,
+    "room_state": "awaiting_confirmation"
+  }
+}

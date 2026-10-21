@@ -3,7 +3,7 @@
     window.BerserkPlaymats = {create: function (root, syncUrl, onSaved) {
         var config = JSON.parse(document.getElementById('battle-playmats').textContent);
         var version = -1, current = null, page = 0, saving = false;
-        var ids = Object.keys(config.catalog), layout = root.querySelector('.battle-layout');
+        var ids = Object.keys(config.catalog), layout = root.querySelector('.battle-layout') || root;
         var panel = document.createElement('section');
         panel.dataset.playmatPicker = ''; panel.className = 'playmat-picker'; panel.hidden = true;
         panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Выбор коврика');
@@ -43,7 +43,7 @@
             var target = event.target.closest('button'); if (!target) return;
             if (target.hasAttribute('data-mat-close')) {
                 if (root.closeBattleMenu) root.closeBattleMenu();
-                else { panel.hidden = true; root.querySelector('.battle-menu').focus(); }
+                else { panel.hidden = true; root.querySelector('.battle-menu, .game-menu summary')?.focus(); }
                 return;
             }
             if (target.hasAttribute('data-mat-page')) { page = Number(target.dataset.matPage); render(); return; }

@@ -2,8 +2,11 @@
     'use strict';
     const root = document.getElementById('lobby');
     if (!root) return;
+    const profile=document.querySelector('.profile-menu');
+    document.addEventListener('click',event=>{if(profile && !profile.contains(event.target)) profile.open=false;});
+    document.addEventListener('keydown',event=>{if(profile?.open && event.key==='Escape'){profile.open=false;profile.querySelector('summary').focus();}});
     let state = JSON.parse(root.dataset.state || 'null');
-    if (!state) return;
+    if (!state || root.dataset.wizard === '1') return;
     const content = document.getElementById('content'), notice = document.getElementById('notice');
     const roomId = new URL(location.href).searchParams.get('room');
     let busy = false, polling = false, epoch = 0, delay = 1500, timer;
@@ -21,24 +24,24 @@
     function render() {
         content.replaceChildren();
         if (state.rooms) {
-            content.append(node('h1', 'Игры'), button('Создать игру', () => mutate('create')));
+            content.append(node('h1', 'Игры'), button('Создать игру', () => location.assign(root.dataset.authenticated === '1' ? 'lobby.php?new=1' : 'auth.php?page=login')));
             const table = node('table'), head = node('thead'), header = node('tr');
-            ['Игра', 'Создатель', 'Второй игрок', 'Статус', 'Действие'].forEach(t => header.append(node('th', t)));
+            ['Игра', 'Вид игры', 'Создана', 'Создатель', 'Второй игрок', 'Статус'].forEach(t => header.append(node('th', t)));
             head.append(header); table.append(head); const body = node('tbody');
             state.rooms.forEach(r => {
                 const row = node('tr'); row.dataset.roomId = r.id;
-                ['#' + r.id, r.creator, r.second || '—', r.status, r.can_open ? 'Открыть' : 'Недоступно'].forEach(t => row.append(node('td', t)));
+                ['#' + r.id, r.kind, new Date(r.created_at).toLocaleString('ru-RU'), r.creator, r.second || '—', r.status].forEach(t => row.append(node('td', t)));
                 if (r.can_open) {
                     row.tabIndex = 0; row.setAttribute('aria-label', 'Открыть комнату ' + r.id);
-                    row.addEventListener('click', () => mutate('open', r));
-                    row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); mutate('open', r); } });
+                    row.addEventListener('click', () => open(r));
+                    row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(r); } });
                 } else row.setAttribute('aria-disabled', 'true');
                 body.append(row);
             });
             table.append(body); content.append(table);
             if (!state.rooms.length) content.append(node('p', 'Открытых и активных игр пока нет.'));
         } else {
-            const r = state.room; content.append(node('h1', 'Комната #' + r.id));
+            const r = state.room; content.append(node('h1', 'Комната #' + r.id), node('p', r.kind + ' · ' + new Date(r.created_at).toLocaleString('ru-RU')));
             if (r.state === 'started') {
                 content.append(node('p', 'Игра создана. Игровой процесс будет подключён на следующем этапе.'), node('p', 'Номер игры: ' + r.game_id));
             } else if (r.role === 'candidate') content.append(node('p', 'Ожидание подтверждения создателя'));
@@ -51,6 +54,7 @@
             const back = node('a', 'В лобби'); back.href = 'lobby.php'; content.append(back);
         }
     }
+    function open(room) { if (root.dataset.authenticated !== '1') location.assign('auth.php?page=login'); else mutate('open', room); }
     async function mutate(action, room) {
         if (busy) return;
         busy = true; ++epoch; clearTimeout(timer); render(); notice.textContent = '';

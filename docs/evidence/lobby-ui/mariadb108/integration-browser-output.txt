@@ -1,0 +1,101 @@
+{
+  "passed": 24,
+  "results": [
+    {
+      "test": "root opens public lobby",
+      "pass": true
+    },
+    {
+      "test": "guest profile contains login register disabled reset",
+      "pass": true
+    },
+    {
+      "test": "lobby shares game background",
+      "pass": true
+    },
+    {
+      "test": "mobile lobby fits viewport with scrollable table",
+      "pass": true
+    },
+    {
+      "test": "creation publishes only after settings",
+      "pass": true
+    },
+    {
+      "test": "both automatically enter same existing game",
+      "pass": true
+    },
+    {
+      "test": "preparation burger lobby first and full menu",
+      "pass": true
+    },
+    {
+      "test": "preparation sound preference survives reload",
+      "pass": true
+    },
+    {
+      "test": "preparation playmat picker works",
+      "pass": true
+    },
+    {
+      "test": "configured room enters deck without repeated mode settings",
+      "pass": true
+    },
+    {
+      "test": "empty squad confirm disabled host",
+      "pass": true
+    },
+    {
+      "test": "cancel squad confirm keeps editable squad host",
+      "pass": true
+    },
+    {
+      "test": "squad acceptance asks native confirm host",
+      "pass": true
+    },
+    {
+      "test": "empty squad confirm disabled player",
+      "pass": true
+    },
+    {
+      "test": "cancel squad confirm keeps editable squad player",
+      "pass": true
+    },
+    {
+      "test": "squad acceptance asks native confirm player",
+      "pass": true
+    },
+    {
+      "test": "both browser sessions reach battle",
+      "pass": true
+    },
+    {
+      "test": "battle burger lobby first",
+      "pass": true
+    },
+    {
+      "test": "field transparent and move target opacity half",
+      "pass": true
+    },
+    {
+      "test": "no role-authority links or fields",
+      "pass": true
+    },
+    {
+      "test": "reload preserves game",
+      "pass": true
+    },
+    {
+      "test": "both browsers reach terminal via existing resign",
+      "pass": true
+    },
+    {
+      "test": "terminal screen keeps burger menu",
+      "pass": true
+    },
+    {
+      "test": "no browser script exceptions",
+      "pass": true
+    }
+  ]
+}

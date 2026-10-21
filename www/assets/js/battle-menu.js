@@ -52,8 +52,8 @@
                 sound.querySelector("[data-sound-check]").hidden = !enabled;
                 sound.disabled = waiting;
                 menu.querySelector("[data-menu-saving]").hidden = !waiting;
-                debug.setAttribute("aria-disabled", String(paused()));
-                if (paused()) { debug.removeAttribute("href"); debug.tabIndex = -1; }
+                debug.setAttribute("aria-disabled", String(paused() || debug.disabled === true));
+                if (paused() || debug.disabled === true) { debug.removeAttribute("href"); debug.tabIndex = -1; }
                 else { if (debugUrl) debug.setAttribute("href", debugUrl); debug.removeAttribute("tabindex"); }
                 syncDebug();
                 if (lastBusy && !waiting && open && document.activeElement === document.body) sound.focus({preventScroll: true});
@@ -84,7 +84,7 @@
                     closeMenu(true);
                     render(); // Checkbox remains authoritative; no optimistic toggle.
                 } else if (node === debug) {
-                    if (paused()) { event.preventDefault(); event.stopImmediatePropagation(); return; }
+                    if (paused() || debug.disabled === true) { event.preventDefault(); event.stopImmediatePropagation(); return; }
                     closeMenu(false);
                     if (overlay && overlay.querySelector(".debug-panel")) {
                         event.preventDefault(); event.stopImmediatePropagation();

@@ -3,11 +3,12 @@ declare(strict_types=1);
 require_once __DIR__.'/../src/Core/Autoloader.php';
 use Berserk\Core\Autoloader;
 use Berserk\Auth\{AuthSession,AuthStore};
-use Berserk\Lobby\LobbyStore;
+use Berserk\Lobby\{LobbyStore,RoomSetup};
 Autoloader::register(); Autoloader::addNamespace('Berserk\\',__DIR__.'/../src/');
 header('Cache-Control: private, no-store'); header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: no-referrer');
-header("Content-Security-Policy: default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+header("Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+$wizard = ''; $wizardMode = null;
 $api = isset($_GET['api']); $error = null; $account = null; $data = null; $csrf = '';
 $escape = static fn(string $s): string=>htmlspecialchars($s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
 $integer = static function(mixed $value): int {
@@ -23,23 +24,27 @@ try {
     if (!is_array($config)) throw new RuntimeException('Configuration unavailable');
     AuthSession::start(($config['allow_loopback_http'] ?? false) === true);
     $actor = AuthSession::id();
-    if ($actor === null) {
+    if ($actor === null && ($method === 'POST' || isset($_GET['room']) || isset($_GET['new']))) {
         if ($api || $method === 'POST') throw new DomainException('Требуется вход.',401);
         header('Location: auth.php?page=login',true,303); exit;
     }
-    $account = (new AuthStore($config['db']))->account($actor);
-    if ($account === null) throw new DomainException('Требуется вход.',401);
+    if ($actor !== null) {
+        $account = (new AuthStore($config['db']))->account($actor);
+        if ($account === null) throw new DomainException('Требуется вход.',401);
+    }
     $csrf = AuthSession::csrf();
     if ($method === 'POST') AuthSession::requireCsrf($_POST['csrf'] ?? null);
     session_write_close(); // DB locks, not session serialization, protect room transitions.
-    $store = new LobbyStore($config['lobby_db'] ?? $config['db']);
+    $store = new LobbyStore($config['lobby_db'] ?? $config['db'],static fn()=>\Berserk\Auth\AuthContext::gameDb());
     $id = isset($_GET['room']) ? $integer($_GET['room']) : null;
     if ($method === 'POST') {
-        if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0)>2048 || count($_POST)>5) throw new DomainException('Слишком большой запрос.',413);
+        if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0)>8192 || count($_POST)>32) throw new DomainException('Слишком большой запрос.',413);
         $action = $_POST['action'] ?? null;
         if ($action === 'create') {
             if ($id !== null) throw new DomainException('Некорректный запрос.',400);
-            $id = $store->create($actor);
+            $setupMode=$_POST['setup_mode']??null;
+            if (!is_string($setupMode)) throw new DomainException('Некорректный режим.',400);
+            $id = $store->create($actor,RoomSetup::parse($setupMode,$_POST));
         } else {
             if ($id === null || !is_string($action) || !in_array($action,['open','accept','reject'],true)) throw new DomainException('Некорректный запрос.',400);
             $version = $integer($_POST['version'] ?? null);
@@ -50,7 +55,31 @@ try {
         $data = ['room'=>$store->read($id,$actor),'url'=>'lobby.php?room='.$id];
         if (!$api) { header('Location: '.$data['url'],true,303); exit; }
     } else {
-        $data = $id === null ? ['rooms'=>$store->listing($actor)] : ['room'=>$store->read($id,$actor)];
+        $data = $id === null ? ['rooms'=>$store->listing($actor ?? 0)] : ['room'=>$store->read($id,$actor)];
+    }
+    if (!$api && isset($_GET['new'])) {
+        $wizardMode=$_GET['mode']??null;
+        if ($wizardMode===null) {
+            $wizard='<h1>Создать игру</h1><form method="get" class="mode-actions"><input type="hidden" name="new" value="1"><fieldset><legend>Вид игры</legend>';
+            foreach (['draft','solomon','sealed','system'] as $mode) $wizard.='<label class="settings-option"><input type="radio" name="mode" value="'.$mode.'"'.($mode==='draft'?' checked':'').'><span>'.RoomSetup::label($mode).'</span></label>';
+            $wizard.='</fieldset><button class="button" type="submit">Далее: настройки</button></form>';
+        } else {
+            if (!is_string($wizardMode)) throw new DomainException('Некорректный режим.',400);
+            $setup=RoomSetup::parse($wizardMode,[]);
+            $model=new \Berserk\Core\GameState(0,$actor,0);
+            $model->mode=$wizardMode==='solomon'?'draft':$wizardMode;
+            $model->settings=\Berserk\Core\GameSettings::fromArray($setup['settings']);
+            $view=(new \Berserk\View\Screen\SettingsScreen())->prepare($model,'host','host',null)['data'];
+            $form=$view['actions_html'];
+            if ($wizardMode==='system') $form='<form class="settings-form" method="post"><button type="submit" class="button">Опубликовать игру</button></form>';
+            $form=str_replace('method="get"','method="post" action="lobby.php"',$form);
+            $form=preg_replace('/<input[^>]*name="(?:first|second|game|cmd|draft_type)"[^>]*>/','',$form);
+            $form=preg_replace('/<script\b[^>]*>.*?<\/script>/s','',$form);
+            $fields='<input type="hidden" name="action" value="create"><input type="hidden" name="csrf" value="'.$escape($csrf).'"><input type="hidden" name="setup_mode" value="'.$escape($wizardMode).'">';
+            $form=preg_replace('/(<form\b[^>]*>)/','$1'.$fields,$form,1);
+            $form=str_replace(['Начать драфт','Начать Sealed'],'Опубликовать игру',$form);
+            $wizard='<h1>'.RoomSetup::label($wizardMode).' — настройки</h1><p>Игра появится в лобби после публикации. Игровой процесс начнётся после подтверждения кандидата.</p>'.$view['content_html'].$form.'<a href="lobby.php?new=1">Назад: вид игры</a>';
+        }
     }
 } catch (DomainException $e) {
     $code = $e->getCode(); http_response_code($code>=400 && $code<=599 ? $code : 400); $error = $e->getMessage();
@@ -62,10 +91,12 @@ if ($api) {
 }
 header('Content-Type: text/html; charset=utf-8');
 ?>
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css"><script src="assets/js/lobby.js" defer></script></head><body>
-<main id="lobby" class="screen lobby" data-state="<?= $escape(json_encode($data,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)) ?>" data-csrf="<?= $escape($csrf) ?>">
-<div class="toolbar"><a href="lobby.php">Berserk — лобби</a><?php if ($account): ?><span><?= $escape($account->login) ?></span><form method="post" action="auth.php?page=logout"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><button>Выйти</button></form><?php endif; ?></div>
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css?v=2"><link rel="stylesheet" href="assets/css/pregame.css"><script src="assets/js/settings.js" defer></script><script src="assets/js/lobby.js?v=2" defer></script></head><body class="lobby-page">
+<main id="lobby" class="screen lobby" data-state="<?= $escape(json_encode($data,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)) ?>" data-csrf="<?= $escape($csrf) ?>" data-authenticated="<?= $account ? '1' : '0' ?>" data-wizard="<?= $wizard !== '' ? '1' : '0' ?>">
+<header class="lobby-header"><a href="lobby.php" class="lobby-brand">Berserk</a><details class="profile-menu"><summary aria-label="Профиль" title="Профиль"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg></summary><nav aria-label="Профиль">
+<?php if ($account): ?><span><?= $escape($account->login) ?></span><a href="auth.php?page=account">Профиль</a><form method="post" action="auth.php?page=logout"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><button type="submit">Выйти</button></form>
+<?php else: ?><a href="auth.php?page=login">Авторизация</a><a href="auth.php?page=register">Регистрация</a><button type="button" disabled>Забыли пароль</button><?php endif; ?></nav></details></header>
 <p id="notice" role="status"><?= $escape($error ?? '') ?></p>
 <?php if ($data !== null): ?>
-<section id="content"></section><noscript>Для автоматического обновления лобби включите JavaScript.</noscript>
-<?php endif; ?></main></body></html>
+<?php if ($wizard !== ''): ?><section class="lobby-wizard"><?= $wizard ?></section><?php else: ?><section id="content"></section><?php endif; ?><noscript>Для автоматического обновления лобби включите JavaScript.</noscript>
+<?php else: ?><p><a href="lobby.php">Вернуться в лобби</a></p><?php endif; ?></main></body></html>

@@ -223,7 +223,6 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 .field-row { display: flex; gap: 4px; margin-bottom: 4px; }
 .field-cell {
     width: 100px; height: 100px;
-    background: #fff;
     border: 1px solid #ddd;
     border-radius: 4px;
     display: flex; align-items: center; justify-content: center;
@@ -266,7 +265,7 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 }
 .field-cell.enemy .battle-card { background: #fdd; }
 .field-cell.closed .battle-card { opacity: 0.35; }
-.field-cell.move-target { background: rgba(0,200,0,0.25); cursor: pointer; }
+.field-cell.move-target { background: rgba(0,200,0,0.5); cursor: pointer; }
 .field-cell.move-target .cell-link { display: block; width: 100%; height: 100%; }
 
 .battle-card__main {
@@ -2310,3 +2309,15 @@ body.battle-page {
     .battle-pile-card .prepare-card__name { font-size: 11px; line-height: 1.2; }
     .battle-pile-card .prepare-card__element, .battle-pile-card .prepare-card__stats, .battle-pile-card .prepare-card__price { font-size: 10px; }
 }
+
+/* Shared match navigation on preparation and completed-game screens. */
+.game-menu { position: absolute; left: 4px; top: 8px; z-index: 120; }
+.game-menu > summary { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid #aaa; border-radius: 6px; background: #f8f5ee; cursor: pointer; list-style: none; }
+.game-menu > summary::-webkit-details-marker { display: none; }
+.game-menu-panel { position: absolute; top: 42px; left: 0; width: 250px; padding: 6px; border: 1px solid #9b8c76; border-radius: 8px; background: #f8f5ee; box-shadow: 0 8px 28px #0005; }
+.game-menu-panel [role^="menuitem"] { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; box-sizing: border-box; padding: 10px 12px; border: 0; background: transparent; color: #332c23; text-decoration: none; text-align: left; font: inherit; cursor: pointer; }
+.game-menu-panel [role^="menuitem"]:hover:not(:disabled) { background: #e7dfd0; }
+.game-menu-panel button:disabled { color: #888; cursor: default; }
+.game-menu-panel form, .battle-menu-panel form { margin: 0; }
+.game-menu-panel [role^="menuitem"]:focus-visible, .game-menu > summary:focus-visible { outline: 2px solid #886332; }
+.game-menu-panel [role="status"] { margin: 0; padding: 0 10px; color: #8b2929; }

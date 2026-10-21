@@ -26,7 +26,7 @@ class Client(Browser):
         except urllib.error.HTTPError as e:r=e
         text=r.read().decode('utf-8');return r.code,json.loads(text) if api else text
     def create(self):
-        code,data=self.lobby(data={'action':'create','csrf':self.token('account')});assert code==200,(code,data);return data['room']
+        code,data=self.lobby(data={'action':'create','csrf':self.token('account'),'setup_mode':'system'});assert code==200,(code,data);return data['room']
     def act(self,room,action='open',version=None,request=None,csrf=None):
         data={'action':action,'csrf':csrf or self.token('account'),'version':version or room['version']}
         if request is not None:data['candidate_request_id']=request
@@ -68,7 +68,7 @@ def main():
         port,directory=sql('SELECT @@port,@@datadir;').split('\t')
         check('exact isolated database identity',port=='33571' and directory.replace('\\','/').rstrip('/').lower()==str((LAB/'data').resolve()).replace('\\','/').lower())
         sql("CREATE DATABASE LAB_DB;USE LAB_DB;CREATE TABLE games(ind INT NOT NULL AUTO_INCREMENT PRIMARY KEY,host_id INT NOT NULL,player_id INT NOT NULL,status VARCHAR(32) NOT NULL,json LONGTEXT NOT NULL,version INT NOT NULL DEFAULT 0,date DATETIME NOT NULL,active INT NOT NULL) ENGINE=InnoDB;INSERT INTO games VALUES(1,1,2,'battle','{}',0,UTC_TIMESTAMP(),1);")
-        for name in ['20261021_auth.sql','20261021_lobby_preflight.sql','20261021_lobby.sql','20261021_command_journal.sql','20261019_game_chat.sql','20261020_battle_history.sql']:
+        for name in ['20261021_auth.sql','20261021_lobby_preflight.sql','20261021_lobby.sql','20261021_lobby_setup.sql','20261021_command_journal.sql','20261019_game_chat.sql','20261020_battle_history.sql']:
             sql('USE LAB_DB;'+(ROOT/'tools/migrations'/name).read_text())
         (LAB/'postchecks.txt').write_text(sql('USE LAB_DB;'+(ROOT/'tools/migrations/20261021_lobby_postchecks.sql').read_text()),encoding='utf-8')
         sql("CREATE USER 'AUTH_USER'@'127.0.0.1' IDENTIFIED BY '';GRANT SELECT,INSERT ON LAB_DB.accounts TO 'AUTH_USER'@'127.0.0.1';GRANT SELECT,INSERT,UPDATE ON LAB_DB.auth_login_attempts TO 'AUTH_USER'@'127.0.0.1';CREATE USER 'LOBBY_USER'@'127.0.0.1' IDENTIFIED BY '';GRANT SELECT ON LAB_DB.accounts TO 'LOBBY_USER'@'127.0.0.1';GRANT SELECT,INSERT,UPDATE ON LAB_DB.lobby_rooms TO 'LOBBY_USER'@'127.0.0.1';GRANT SELECT,INSERT,UPDATE ON LAB_DB.games TO 'LOBBY_USER'@'127.0.0.1';")
@@ -114,7 +114,9 @@ def main():
             code,body,_=http(client,game,data)
             assert code==303,(cmd,code,re.findall(r'class="[^"]*flash[^"]*"[^>]*>(.*?)<',body,re.S)[:3]);return state(game)
         def match():
-            room=a.create();assert b.act(room)[0]==200;w=a.lobby(room['id'])[1]['room'];assert a.act(w,'accept')[0]==200
+            # Pre-existing legacy room fixture: verify the old lifecycle is preserved after upgrade.
+            sql("USE LAB_DB;INSERT INTO lobby_rooms(creator_account_id,state,version,created_at,updated_at)VALUES(1,'open',1,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6));")
+            rid=int(sql('USE LAB_DB;SELECT MAX(id) FROM lobby_rooms;'));room=a.lobby(rid)[1]['room'];assert b.act(room)[0]==200;w=a.lobby(room['id'])[1]['room'];assert a.act(w,'accept')[0]==200
             return a.lobby(room['id'])[1]['room']['game_id']
         game=match()
         catalog={'card_'+str(i):{'revision':'integration-v1','name':'Fixture '+str(i),'image':'','description':'Synthetic test','type':'creature','element':'neutral','classes':[],'price':1} for i in range(1,101)}
@@ -138,7 +140,7 @@ def main():
         check('valid legacy invitation cannot read account journal',service(legacy,'battle-journal.php',game)[0]==403)
         check('legacy PHPSESSID cannot supply account principal',http(legacy,game)[0]==401)
         arbitrary=c.create();assert d.act(arbitrary)[0]==200;pending=c.lobby(arbitrary['id'])[1]['room'];assert c.act(pending,'accept')[0]==200
-        arbitrary_game=c.lobby(arbitrary['id'])[1]['room']['game_id'];prep(c,arbitrary_game,'choose_mode',mode='system')
+        arbitrary_game=c.lobby(arbitrary['id'])[1]['room']['game_id']
         check('arbitrary account IDs 3 and 4 mapped to host player',state(arbitrary_game)['host_id']==3 and state(arbitrary_game)['player_id']==4 and http(d,arbitrary_game)[0]==200 and http(a,arbitrary_game)[0]==403)
         check('game HTML both account actors'  ,http(a,game)[0]==http(b,game)[0]==200)
         check('guest forbidden before any progress',http(Client(),game)[0]==401)
@@ -354,18 +356,54 @@ def main():
         shutil.copyfile(ROOT/'config/db.php',regression/'config/db.php')
         env=dict(os.environ,BERSERK_STAGE31_ISOLATED='1',BERSERK_STAGE4D_ISOLATED='1')
         suites=['test_repository_optimistic_locking.php','test_command_journal_repository.php','test_turn_timer.php','test_pending_wait_timer.php','test_informational_wait.php','test_turn_timeout.php','test_match_pause.php','test_settings_flow.php','test_sealed_flow.php','test_solomon_draft.php','test_live_battle_journal.php']
+        # New room setup: configuration is persisted before visibility; gameplay starts only on accept.
+        before_rooms=sql('USE LAB_DB;SELECT COUNT(*) FROM lobby_rooms;')
+        check('new room requires explicit type',a.lobby(data={'action':'create','csrf':a.token('account')})[0]==400)
+        code,_=a.lobby(data={'action':'create','csrf':a.token('account'),'setup_mode':'solomon','stack_size':'7'})
+        check('invalid room settings rejected before publication',code==400 and sql('USE LAB_DB;SELECT COUNT(*) FROM lobby_rooms;')==before_rooms)
+        for kind,stage in [('system','deck'),('draft','draft'),('solomon','draft'),('sealed','view')]:
+            count=sql('USE LAB_DB;SELECT COUNT(*) FROM games;')
+            code,data=a.lobby(data={'action':'create','csrf':a.token('account'),'setup_mode':kind})
+            assert code==200,(kind,code,data)
+            room=data['room'];rid=room['id']
+            check('configured '+kind+' publication without GameState',room['state']=='open' and room['game_type']==kind and room['created_at'].endswith('Z') and sql('USE LAB_DB;SELECT COUNT(*) FROM games;')==count)
+            assert b.act(room)[0]==200
+            waiting=a.lobby(rid)[1]['room']
+            check('configured '+kind+' pending no gameplay',sql('USE LAB_DB;SELECT COUNT(*) FROM games;')==count)
+            if kind=='draft':
+                sql("REVOKE SELECT ON LAB_DB.cards FROM 'LOBBY_USER'@'127.0.0.1';")
+                failed,_=a.act(waiting,'accept')
+                sql("GRANT SELECT ON LAB_DB.cards TO 'LOBBY_USER'@'127.0.0.1';")
+                check('configured generation failure rolls back game and room',failed in [400,503] and sql('USE LAB_DB;SELECT COUNT(*) FROM games;')==count and a.lobby(rid)[1]['room']['state']=='awaiting_confirmation')
+            code,data=a.act(waiting,'accept');assert code==200,(kind,code,data)
+            current=a.lobby(rid)[1]['room'];g=current['game_id'];saved=state(g)
+            check('configured '+kind+' accept uses existing lifecycle',current['state']=='started' and saved['status']==stage and saved['mode']==('draft' if kind=='solomon' else kind) and int(sql(f'USE LAB_DB;SELECT COUNT(*) FROM games WHERE ind={g};'))==1)
+            check('configured '+kind+' SQL JSON participants match',saved['host_id']==1 and saved['player_id']==2 and saved['players']['host']['user_id']==1 and saved['players']['player']['user_id']==2 and sql(f'USE LAB_DB;SELECT status FROM games WHERE ind={g};')==stage)
+            check('configured '+kind+' repeated accept denied',a.act(waiting,'accept')[0]==409)
+            before=state(g)
+            pref,_,_=http(a,g,{'csrf':a.token('account'),'sound_enabled':'0'},'&ajax=preparation_preference')
+            after=state(g);expected=json.loads(json.dumps(before));expected['players']['host']['sound_enabled']=False
+            check('configured '+kind+' sound is cosmetic only',pref==200 and after==expected)
+            check('configured '+kind+' preference outsider denied',http(c,g,{'csrf':c.token('account'),'sound_enabled':'1'},'&ajax=preparation_preference')[0]==403)
+            check('configured '+kind+' preference CSRF denied',http(a,g,{'csrf':'bad','sound_enabled':'1'},'&ajax=preparation_preference')[0]==403)
+            before=state(g);mat,_,_=http(a,g,{'csrf':a.token('account'),'playmat_id':'mat-003'},'&ajax=playmat');after=state(g);before['players']['host']['playmat_id']='mat-003'
+            check('configured '+kind+' playmat is cosmetic only',mat==200 and before==after)
+            if kind in ['draft','solomon']:check('configured '+kind+' correct draft subtype',saved['settings']['draft']['type']==('solomon' if kind=='solomon' else 'grid'))
+        check('public guest list exposes types and dates',Client().lobby()[0]==200 and any(r['game_type']=='sealed' and r['created_at'] for r in Client().lobby()[1]['rooms']))
+        check('guest still cannot create',Client().lobby(data={'action':'create','setup_mode':'system','csrf':'invalid'})[0]==401)
         regressions=[]
         for test in suites:
             result=subprocess.run(php+[str(regression/'tools'/test)],cwd=regression,env=env,capture_output=True,text=True,encoding='utf-8',errors='replace')
             (LAB/(test+'.txt')).write_text(result.stdout+result.stderr,encoding='utf-8')
             regressions.append({'test':test,'exit':result.returncode,'tail':(result.stdout+result.stderr)[-500:]})
         (LAB/'regressions.json').write_text(json.dumps(regressions,ensure_ascii=False,indent=2),encoding='utf-8')
-        check('existing gameplay and storage regressions',all(x['exit']==0 for x in regressions))
+        regression_success=all(x['exit']==0 for x in regressions)
         # Real browser E2E validates decorated preparation forms and automatic room redirects.
         sql('USE LAB_DB;DELETE FROM auth_login_attempts;')
         env=dict(os.environ,INTEGRATION_URL='http://127.0.0.1:33572',PLAYWRIGHT_MODULE=args.playwright,BROWSER_EXECUTABLE=args.browser,INTEGRATION_EVIDENCE=str(LAB))
         ui=subprocess.run([args.node,str(ROOT/'tools/test_integration_browser.cjs')],env=env,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=180)
         (LAB/'browser-output.txt').write_text(ui.stdout+ui.stderr,encoding='utf-8');check('two account browser E2E',ui.returncode==0)
+        check('existing gameplay and storage regressions',regression_success)
         print(json.dumps({'passed':len(RESULTS),'results':RESULTS},ensure_ascii=False,indent=2))
     finally:
         (LAB/'results.json').write_text(json.dumps(RESULTS,ensure_ascii=False,indent=2),encoding='utf-8')

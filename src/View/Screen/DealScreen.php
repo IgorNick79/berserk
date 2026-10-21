@@ -142,7 +142,7 @@ final class DealScreen
         $footerHtml = '<div class="pregame-deal-footer">';
         if ($pendingHtml === '') {
             $footerHtml .= !$me->isConfirmed('deal')
-                ? '<a class="button" href="' . $baseUrl . '&cmd=confirm_deal" onclick="return confirm(\'Подтвердить отряд?\')">Подтвердить</a>'
+                ? ($selectedCount > 0 ? '<a class="button" href="' . $baseUrl . '&cmd=confirm_deal" data-confirm="Подтвердить отряд?">Подтвердить</a>' : '<button class="button" type="button" disabled>Подтвердить</button>')
                 : '<span class="wait">Ожидание оппонента...</span>';
         }
         $footerHtml .= '<button type="button" class="pregame-deal-selected" data-deal-selected aria-pressed="false">Выбрано: <b>' . $selectedCount . '</b></button>';

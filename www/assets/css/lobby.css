@@ -12,3 +12,23 @@
 .lobby .decisions { display: flex; gap: 12px; margin-top: 24px; }
 .lobby #notice { min-height: 1.5em; color: #8b2929; }
 @media(max-width:600px) { body { padding: 8px; } .lobby { padding: 12px; margin: 0; } .lobby td,.lobby th { padding: 10px 4px; font-size: 13px; } }
+body.lobby-page { padding: 20px; min-height: 100vh; box-sizing: border-box; background: #252b26 url('/assets/images/battle/berserk_background.webp') center / cover no-repeat fixed; }
+.lobby { background: #fffffff2; }
+.lobby-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #ddd; padding-bottom: 12px; }
+.lobby-brand { font-size: 28px; font-weight: bold; color: #382e22; text-decoration: none; }
+.profile-menu { position: relative; }
+.profile-menu summary { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid #b5a58e; border-radius: 50%; cursor: pointer; list-style: none; }
+.profile-menu summary::-webkit-details-marker { display: none; }
+.profile-menu svg { fill: none; stroke: currentColor; stroke-width: 1.6; }
+.profile-menu nav { position: absolute; right: 0; top: 50px; z-index: 10; min-width: 220px; padding: 8px; border: 1px solid #b5a58e; border-radius: 8px; background: #f8f5ee; box-shadow: 0 8px 28px #0004; }
+.profile-menu nav > *, .profile-menu nav button { display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 10px 12px; color: #332c23; text-decoration: none; text-align: left; }
+.profile-menu nav form { padding: 0; }
+.profile-menu nav button { border: 0; background: transparent; }
+.profile-menu nav button:disabled { color: #888; cursor: default; }
+.lobby #content { overflow-x: auto; }
+.lobby table { min-width: 670px; }
+.lobby-wizard { max-width: 760px; margin: auto; }
+.lobby-wizard .settings-form { max-width: none; }
+.lobby button:disabled, .pregame-page .button:disabled { opacity: .5; cursor: default; }
+
+@media(max-width:600px) { body.lobby-page { padding: 8px; } }

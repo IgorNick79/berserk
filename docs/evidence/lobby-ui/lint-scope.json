@@ -1,0 +1,89 @@
+{
+  "syntax": [
+    {
+      "file": "src/Core/GameRepository.php",
+      "syntax": true
+    },
+    {
+      "file": "src/Lobby/LobbyStore.php",
+      "syntax": true
+    },
+    {
+      "file": "src/Lobby/MatchCreator.php",
+      "syntax": true
+    },
+    {
+      "file": "src/Lobby/RoomTransaction.php",
+      "syntax": true
+    },
+    {
+      "file": "src/View/Screen/DealScreen.php",
+      "syntax": true
+    },
+    {
+      "file": "tools/test_integration_browser.cjs",
+      "syntax": true
+    },
+    {
+      "file": "tools/test_integration_http.py",
+      "syntax": true
+    },
+    {
+      "file": "tools/test_lobby_http.py",
+      "syntax": true
+    },
+    {
+      "file": "www/assets/js/battle-menu.js",
+      "syntax": true
+    },
+    {
+      "file": "www/assets/js/battle-playmats.js",
+      "syntax": true
+    },
+    {
+      "file": "www/assets/js/game-transport.js",
+      "syntax": true
+    },
+    {
+      "file": "www/assets/js/lobby.js",
+      "syntax": true
+    },
+    {
+      "file": "www/index.php",
+      "syntax": true
+    },
+    {
+      "file": "www/lobby.php",
+      "syntax": true
+    },
+    {
+      "file": "src/Lobby/RoomSetup.php",
+      "syntax": true
+    },
+    {
+      "file": "src/View/Ui/GameMenu.php",
+      "syntax": true
+    },
+    {
+      "file": "tools/test_lobby_ui_baseline.py",
+      "syntax": true
+    },
+    {
+      "file": "tools/test_lobby_ui_integration.py",
+      "syntax": true
+    },
+    {
+      "file": "tools/test_lobby_ui_lobby.py",
+      "syntax": true
+    },
+    {
+      "file": "tools/test_prepare_confirmation.cjs",
+      "syntax": true
+    },
+    {
+      "file": "www/assets/js/game-menu.js",
+      "syntax": true
+    }
+  ],
+  "engine_draft_recorder_original_migrations_release_artifacts_unchanged": true
+}

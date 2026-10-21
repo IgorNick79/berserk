@@ -9,6 +9,7 @@ final class RoomTransaction
     private bool $active = true;
     private ?int $roomId = null;
     private ?int $gameId = null;
+    private ?array $setup = null;
 
     private function __construct(private \mysqli $db) {}
     private function __clone() {}
@@ -46,6 +47,8 @@ final class RoomTransaction
         }
     }
 
+    public function setup(): ?array { $this->assertActive(); return $this->setup; }
+
     public function recordMatch(int $id): void
     {
         $this->assertActive();
@@ -76,6 +79,8 @@ final class RoomTransaction
             || !is_string($room['candidate_request_id']) || !preg_match('/\A[0-9a-f]{64}\z/D', $room['candidate_request_id'])) {
             throw new \LogicException('Invalid pending room');
         }
+        $this->setup=isset($room['setup_json']) ? RoomSetup::validate(json_decode($room['setup_json'],true,512,JSON_THROW_ON_ERROR)) : null;
+        if (($this->setup===null && ($room['game_type']??null)!==null) || ($this->setup!==null && ($room['game_type']??null)!==$this->setup['mode'])) throw new \LogicException('Room type mismatch');
         $this->roomId = $roomId;
         return $this->db;
     }

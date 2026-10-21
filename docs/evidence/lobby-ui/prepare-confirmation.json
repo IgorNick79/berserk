@@ -1,0 +1,45 @@
+{
+  "checks": 10,
+  "results": [
+    {
+      "test": "link confirm_deal cancel",
+      "pass": true
+    },
+    {
+      "test": "link confirm_deal accept",
+      "pass": true
+    },
+    {
+      "test": "link reshuffle cancel",
+      "pass": true
+    },
+    {
+      "test": "link reshuffle accept",
+      "pass": true
+    },
+    {
+      "test": "link finish_draft cancel",
+      "pass": true
+    },
+    {
+      "test": "link finish_draft accept",
+      "pass": true
+    },
+    {
+      "test": "form confirm_deal cancel",
+      "pass": true
+    },
+    {
+      "test": "form confirm_deal accept",
+      "pass": true
+    },
+    {
+      "test": "form submitter confirm_deal cancel",
+      "pass": true
+    },
+    {
+      "test": "form submitter confirm_deal accept",
+      "pass": true
+    }
+  ]
+}

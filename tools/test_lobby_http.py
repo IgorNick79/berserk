@@ -25,7 +25,7 @@ class Client(Browser):
         except urllib.error.HTTPError as e:r=e
         text=r.read().decode('utf-8');return r.code,json.loads(text) if api else text
     def create(self):
-        code,data=self.lobby(data={'action':'create','csrf':self.token('account')});assert code==200,(code,data);return data['room']
+        code,data=self.lobby(data={'action':'create','csrf':self.token('account'),'setup_mode':'system'});assert code==200,(code,data);return data['room']
     def act(self,room,action='open',version=None,request=None,csrf=None):
         data={'action':action,'csrf':csrf or self.token('account'),'version':version or room['version']}
         if request is not None:data['candidate_request_id']=request
@@ -67,7 +67,7 @@ def main():
         port,directory=sql('SELECT @@port,@@datadir;').split('\t')
         check('exact isolated database identity',port=='33561' and directory.replace('\\','/').rstrip('/').lower()==str((LAB/'data').resolve()).replace('\\','/').lower())
         sql("CREATE DATABASE LAB_DB;USE LAB_DB;CREATE TABLE games(ind INT NOT NULL AUTO_INCREMENT PRIMARY KEY,host_id INT NOT NULL,player_id INT NOT NULL,status VARCHAR(32) NOT NULL,json LONGTEXT NOT NULL,version INT NOT NULL DEFAULT 0,date DATETIME NOT NULL,active INT NOT NULL) ENGINE=InnoDB;INSERT INTO games VALUES(1,1,2,'battle','{}',0,UTC_TIMESTAMP(),1);")
-        for name in ['20261021_auth.sql','20261021_lobby_preflight.sql','20261021_lobby.sql']:
+        for name in ['20261021_auth.sql','20261021_lobby_preflight.sql','20261021_lobby.sql','20261021_lobby_setup.sql']:
             sql('USE LAB_DB;'+(ROOT/'tools/migrations'/name).read_text())
         (LAB/'postchecks.txt').write_text(sql('USE LAB_DB;'+(ROOT/'tools/migrations/20261021_lobby_postchecks.sql').read_text()),encoding='utf-8')
         sql("CREATE USER 'AUTH_USER'@'127.0.0.1' IDENTIFIED BY '';GRANT SELECT,INSERT ON LAB_DB.accounts TO 'AUTH_USER'@'127.0.0.1';GRANT SELECT,INSERT,UPDATE ON LAB_DB.auth_login_attempts TO 'AUTH_USER'@'127.0.0.1';CREATE USER 'LOBBY_USER'@'127.0.0.1' IDENTIFIED BY '';GRANT SELECT ON LAB_DB.accounts TO 'LOBBY_USER'@'127.0.0.1';GRANT SELECT,INSERT,UPDATE ON LAB_DB.lobby_rooms TO 'LOBBY_USER'@'127.0.0.1';GRANT SELECT,INSERT,UPDATE ON LAB_DB.games TO 'LOBBY_USER'@'127.0.0.1';")
@@ -76,7 +76,7 @@ def main():
         config="<?php return ['db'=>"+db(authuser)+",'lobby_db'=>"+db(user)+",'limiter_secret'=>'"+os.urandom(32).hex()+"','allow_loopback_http'=>true];"
         (ROOT/'config/auth.local.php').write_text(config)
         router=LAB/'router.php'
-        router.write_text("<?php spl_autoload_register(static function($c){$safe=['Berserk\\\\Core\\\\GameState','Berserk\\\\Core\\\\PlayerState','Berserk\\\\Core\\\\GameSettings','Berserk\\\\Core\\\\BoosterSettings','Berserk\\\\Core\\\\PlaymatCatalog'];if(str_starts_with($c,'Berserk\\\\Core\\\\')&&!in_array($c,$safe,true))throw new RuntimeException('GAMEPLAY_TRAP');});$p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if(in_array($p,['/auth.php','/lobby.php'],true)){require '"+str(ROOT/'www').replace('\\','/')+"'.$p;return true;}if(str_starts_with($p,'/assets/'))return false;http_response_code(404);")
+        router.write_text("<?php spl_autoload_register(static function($c){$safe=['Berserk\\\\Core\\\\GameState','Berserk\\\\Core\\\\PlayerState','Berserk\\\\Core\\\\GameSettings','Berserk\\\\Core\\\\BoosterSettings','Berserk\\\\Core\\\\PlaymatCatalog'];if(str_starts_with($c,'Berserk\\\\Core\\\\')&&!in_array($c,$safe,true)&&!str_ends_with($c,'PrepareProcessor')&&!str_ends_with($c,'Command')&&!str_ends_with($c,'Result'))throw new RuntimeException('GAMEPLAY_TRAP');});$p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if(in_array($p,['/auth.php','/lobby.php'],true)){require '"+str(ROOT/'www').replace('\\','/')+"'.$p;return true;}if(str_starts_with($p,'/assets/'))return false;http_response_code(404);")
         php=[args.php,'-n','-d',f'extension_dir={pathlib.Path(args.php).parent / "ext"}','-d','extension=mysqli','-d',f'session.save_path={LAB / "sessions"}','-d','display_errors=0','-d','log_errors=1']
         for port in range(33562,33566):spawn(php+['-S',f'127.0.0.1:{port}','-t',str(ROOT/'www'),str(router)],'http-'+str(port));ready(port)
         password='LobbyFixture123'
@@ -88,8 +88,8 @@ def main():
         a,b,c,d=clients
         check('login redirects to lobby',a.post('login','Creator',password)[2]['Location']=='lobby.php')
         before=sql('USE LAB_DB;SELECT * FROM games WHERE ind=1;')
-        check('guest API denied',Client().lobby()[0]==401)
-        check('guest page redirects',Client().lobby(api=False)[0]==303)
+        check('guest API public list',Client().lobby()[0]==200)
+        check('guest page shows lobby',Client().lobby(api=False)[0]==200)
         room=a.create();rid=room['id']
         check('create only room, no game',room['state']=='open' and room['game_id'] is None and sql('USE LAB_DB;SELECT COUNT(*) FROM games;')=='1')
         check('creator opens room without becoming candidate',a.act(room)[1]['room']['role']=='creator' and a.lobby(rid)[1]['room']['state']=='open')
@@ -127,7 +127,7 @@ def main():
         check('started shared by both',started['state']=='started' and chosen.lobby(rid)[1]['room']['game_id']==game)
         row=sql(f'USE LAB_DB;SELECT host_id,player_id,status,json,version FROM games WHERE ind={game};').split('\t');state=json.loads(row[3])
         check('consistent SQL JSON account identities',int(row[0])==state['host_id']==1 and int(row[1])==state['player_id'] and int(row[0])!=int(row[1]) and state['players']['host']['user_id']==int(row[0]) and state['players']['player']['user_id']==int(row[1]))
-        check('initial mode no Draft Sealed or side',row[2]=='mode' and state['mode'] is None and state['draft'] is None and state['players']['host']['side'] is None and state['players']['player']['side'] is None and not state['battle'] and row[4]=='1')
+        check('configured system deck no Draft Sealed or side',row[2]=='deck' and state['mode']=='system' and state['draft'] is None and state['players']['host']['side'] is None and state['players']['player']['side'] is None and not state['battle'] and row[4]=='1')
         check('outsider started room forbidden',outsider.lobby(rid)[0]==403)
         count=sql('USE LAB_DB;SELECT COUNT(*) FROM games;')
         check('retry after lost accepted response read recovers and no duplicate',a.act(fresh,'accept')[0]==409 and a.lobby(rid)[1]['room']['game_id']==game and sql('USE LAB_DB;SELECT COUNT(*) FROM games;')==count)
@@ -177,7 +177,7 @@ def main():
         result=subprocess.run(php+[str(regression/'tools/test_repository_optimistic_locking.php')],capture_output=True,text=True)
         (LAB/'repository-regression.txt').write_text(result.stdout+result.stderr,encoding='utf-8')
         check('existing GameRepository optimistic locking real DB',result.returncode==0 and 'passed' in result.stdout)
-        statecheck=regression/'check.php';statecheck.write_text("<?php require __DIR__.'/src/Core/Autoloader.php';Berserk\\Core\\Autoloader::register();Berserk\\Core\\Autoloader::addNamespace('Berserk\\\\',__DIR__.'/src/');$r=new Berserk\\Core\\GameRepository(new Berserk\\Core\\Db(require __DIR__.'/config/db.php'));$s=$r->findById("+str(game)+");if($s->hostId!==1||$s->status!=='mode'||$s->getPlayerKeyByUserId($s->playerId)!=='player')exit(1);echo 'PASS persisted account GameState loads';")
+        statecheck=regression/'check.php';statecheck.write_text("<?php require __DIR__.'/src/Core/Autoloader.php';Berserk\\Core\\Autoloader::register();Berserk\\Core\\Autoloader::addNamespace('Berserk\\\\',__DIR__.'/src/');$r=new Berserk\\Core\\GameRepository(new Berserk\\Core\\Db(require __DIR__.'/config/db.php'));$s=$r->findById("+str(game)+");if($s->hostId!==1||$s->status!=='deck'||$s->getPlayerKeyByUserId($s->playerId)!=='player')exit(1);echo 'PASS persisted account GameState loads';")
         result=subprocess.run(php+[str(statecheck)],capture_output=True,text=True)
         check('GameRepository loads accepted GameState',result.returncode==0 and 'PASS' in result.stdout)
         # Real browser tests with separate storage contexts and actual 1.5s polling.

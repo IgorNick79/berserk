@@ -7,6 +7,8 @@
     window.berserkGameCsrf = csrf;
     if (script.dataset.stage === 'battle' || script.dataset.stage === 'game_over') return;
     let sending = false;
+    const confirmations={confirm_deal:'Подтвердить отряд?',reshuffle:'Пересдать карты?',finish_draft:'Закончить драфт?'};
+    function confirmed(params, message) { const text=message || confirmations[params.get('cmd')]; return !text || window.confirm(text); }
     // Existing non-draft waiting screens had no cross-browser stage notification.
     // This endpoint is metadata-only: no Engine, timers or automatic progression.
     if (script.dataset.stage !== 'draft') {
@@ -40,12 +42,16 @@
         const a=event.target.closest('a[href]');if(!a)return;
         const url=new URL(a.href,location.href);
         if(url.origin!==location.origin||url.pathname!==location.pathname||!url.searchParams.has('cmd'))return;
-        event.preventDefault();event.stopImmediatePropagation();submit(url.searchParams);
+        event.preventDefault();event.stopImmediatePropagation();
+        if (!confirmed(url.searchParams,a.dataset.confirm)) return;
+        submit(url.searchParams);
     },true);
     document.addEventListener('submit',event=>{
         const form=event.target;if(!form.querySelector('[name="cmd"]'))return;
         event.preventDefault();event.stopImmediatePropagation();
-        const data=new FormData(form);if(event.submitter?.name)data.set(event.submitter.name,event.submitter.value);
+        const data=new FormData(form);
+        if(event.submitter?.name)data.set(event.submitter.name,event.submitter.value);
+        if (!confirmed(data,form.dataset.confirm)) return;
         submit(new URLSearchParams(data));
     },true);
 })();

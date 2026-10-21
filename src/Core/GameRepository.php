@@ -213,7 +213,7 @@ final class GameRepository
             $actor = $state?->getPlayerKeyByUserId($userId);
             if ($state === null || $actor === null || !in_array($userId, [$state->hostId, $state->playerId], true))
                 throw new \InvalidArgumentException('not_participant');
-            if ($state->status !== 'battle' || $state->winner !== null) throw new \InvalidArgumentException('battle_not_active');
+            if (!in_array($state->status,['mode','settings','draft','deck','view','turn','side','deal','place','battle'],true) || $state->winner !== null) throw new \InvalidArgumentException('match_finished');
             if ($state->getPlayer($actor)->playmatId !== $id) {
                 $state->getPlayer($actor)->playmatId = $id;
                 $this->save($state);
@@ -223,6 +223,27 @@ final class GameRepository
         } catch (\Throwable $error) {
             if ($this->db->inTransaction()) $this->db->rollback();
             throw $error;
+        }
+    }
+
+    /** Cosmetic preparation preference: no Engine, clocks, Draft or battle command bypass. */
+    public function setPreparationSound(int $gameId, int $userId, bool $enabled): GameState
+    {
+        $this->db->beginTransaction();
+        try {
+            $state=$this->findById($gameId,true);
+            $actor=$state?->getPlayerKeyByUserId($userId);
+            if (!$state || !$actor || !in_array($userId,[$state->hostId,$state->playerId],true)) throw new \InvalidArgumentException('not_participant');
+            if (!in_array($state->status,['mode','settings','draft','deck','view','turn','side','deal','place'],true) || $state->winner!==null) throw new \InvalidArgumentException('not_preparation');
+            if ($state->getPlayer($actor)->soundEnabled!==$enabled) {
+                $state->getPlayer($actor)->soundEnabled=$enabled;
+                $this->save($state);
+            }
+            $this->db->commit();
+            return $state;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) $this->db->rollback();
+            throw $e;
         }
     }
 

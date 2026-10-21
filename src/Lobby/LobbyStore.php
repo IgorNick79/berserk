@@ -6,7 +6,7 @@ final class LobbyStore
 {
     private \mysqli $db;
 
-    public function __construct(array $config)
+    public function __construct(array $config, private ?\Closure $catalogFactory = null)
     {
         mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT);
         $this->db = new \mysqli($config['host'],$config['user'],$config['pass'],$config['name'],(int)($config['port'] ?? 3306));
@@ -63,6 +63,9 @@ final class LobbyStore
     {
         $member = $this->member($row,$actor);
         $room = [
+            'game_type'=>$row['game_type']??null,
+            'kind'=>RoomSetup::label($row['game_type']??null),
+            'created_at'=>str_replace(' ','T',$row['created_at']).'Z',
             'id'=>(int)$row['id'],'version'=>(int)$row['version'],'state'=>$row['state'],
             'creator'=>$row['creator_login'],'second'=>$row['second_login'],
             'status'=>$row['game_status'] === 'game_over' ? 'Завершена' : match($row['state']) {
@@ -95,11 +98,15 @@ final class LobbyStore
         return $this->projection($row,$actor,true);
     }
 
-    public function create(int $actor): int
+    public function create(int $actor, ?array $setup = null): int
     {
-        RoomTransaction::run($this->db, function (RoomTransaction $transaction) use ($actor, &$id): void {
+        RoomTransaction::run($this->db, function (RoomTransaction $transaction) use ($actor, $setup, &$id): void {
             $this->query("INSERT INTO lobby_rooms(creator_account_id,state,version,created_at,updated_at) VALUES(?,'open',1,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))",[$actor]);
             $id = (int)$this->db->insert_id;
+            if ($setup !== null) {
+                $json=json_encode(RoomSetup::validate($setup),JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+                $this->query('UPDATE lobby_rooms SET game_type=?,setup_json=? WHERE id=?',[$setup['mode'],$json,$id]);
+            }
             $this->row($id,true);
         });
         return $id;
@@ -122,7 +129,7 @@ final class LobbyStore
                 if ($action === 'reject') {
                     $this->query("UPDATE lobby_rooms SET candidate_account_id=NULL,candidate_request_id=NULL,state='open',version=version+1,updated_at=UTC_TIMESTAMP(6) WHERE id=?",[$id]);
                 } elseif ($action === 'accept') {
-                    $game = MatchCreator::create($transaction,$id,(int)$room['creator_account_id'],(int)$room['candidate_account_id']);
+                    $game = MatchCreator::create($transaction,$id,(int)$room['creator_account_id'],(int)$room['candidate_account_id'],$this->catalogFactory);
                     $this->query("UPDATE lobby_rooms SET accepted_account_id=candidate_account_id,candidate_account_id=NULL,candidate_request_id=NULL,game_id=?,state='started',version=version+1,updated_at=UTC_TIMESTAMP(6) WHERE id=?",[$game,$id]);
                 } else { throw new \DomainException('Неизвестное действие.',400); }
             }

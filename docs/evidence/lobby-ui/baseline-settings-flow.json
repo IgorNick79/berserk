@@ -1,0 +1,22 @@
+{
+  "baseline": "7c882199a34871ce038264f9af51956473c52ad2",
+  "runtime": "PHP8.1.9/MariaDB10.8.4",
+  "scope": "isolated synthetic integration catalog; pristine baseline src and test; fixed three diagnostic runs, not retry-until-green",
+  "runs": [
+    {
+      "attempt": 1,
+      "exit": 0,
+      "output": "Settings flow tests passed.\n"
+    },
+    {
+      "attempt": 2,
+      "exit": 0,
+      "output": "Settings flow tests passed.\n"
+    },
+    {
+      "attempt": 3,
+      "exit": 0,
+      "output": "Settings flow tests passed.\n"
+    }
+  ]
+}

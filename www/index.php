@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
 
+if (!isset($_GET['game']) && !isset($_GET['ajax']) && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && !isset($_GET['cmd']) && !isset($_GET['first']) && !isset($_GET['second'])) {
+    header('Location: /lobby.php',true,303); exit;
+}
+
 require_once __DIR__ . '/../src/Core/Autoloader.php';
 
 use Berserk\Core\Autoloader;
@@ -539,6 +543,7 @@ function buildRenderCardInfo(Db $db, GameState $state): array
 $ajax = ajaxParamString('ajax', 32);
 $isChat = in_array($ajax, ['chat_messages', 'chat_send', 'chat_read'], true);
 $isPlaymat = $ajax === 'playmat';
+$isPreparationPreference = $ajax === 'preparation_preference';
 $isBattleSync = $ajax === 'battle_sync';
 $isBattleCommand = $ajax === 'battle_command';
 $isBattleCommandStatus = $ajax === 'battle_command_status';
@@ -547,7 +552,7 @@ $settingsOnlyRequest = $isBattleCommand && ajaxPostParamString('cmd', 64) === Ma
 // Authenticate and resolve membership BEFORE repositories, chat, Dice or progress.
 try {
     $account = AuthContext::start();
-    if ($ajax !== null && !in_array($ajax,['prepare_sync','battle_sync','battle_command','battle_command_status','playmat','chat_messages','chat_send','chat_read'],true)) throw new DomainException('unknown_endpoint',400);
+    if ($ajax !== null && !in_array($ajax,['prepare_sync','battle_sync','battle_command','battle_command_status','playmat','preparation_preference','chat_messages','chat_send','chat_read'],true)) throw new DomainException('unknown_endpoint',400);
     $gameId = ajaxParamInt('game') ?? 0;
     if ($gameId <= 0) {
         if ($ajax !== null || isset($_GET['cmd']) || isset($_GET['first']) || isset($_GET['second'])) throw new DomainException('invalid_game',400);
@@ -565,7 +570,7 @@ try {
         AuthSession::requireCsrf($_POST['csrf'] ?? null);
     }
     if (isset($_GET['cmd'])) throw new DomainException('commands_require_post',405);
-    if ($ajax !== null && $ajax !== 'battle_command' && !$isChat && !$isPlaymat && $requestMethod !== 'GET') throw new DomainException('method_not_allowed',405);
+    if ($ajax !== null && $ajax !== 'battle_command' && !$isChat && !$isPlaymat && !$isPreparationPreference && $requestMethod !== 'GET') throw new DomainException('method_not_allowed',405);
     GameTransport::$game = $gameId;
     GameTransport::$csrf = AuthSession::csrf();
     unset($_SESSION['debug'],$_SESSION['debug_roll'],$_SESSION['debug_roll_state'],$_SESSION['user_id'],$_SESSION['role']);
@@ -631,6 +636,17 @@ if (in_array($state->status,['battle','game_over'],true) && ($_SERVER['REQUEST_M
     http_response_code(405); exit('battle_commands_require_journal_endpoint');
 }
 $oppKey    = $state->getOpponentKey($playerKey);
+
+if ($isPreparationPreference) {
+    if (($_SERVER['REQUEST_METHOD'] ?? '')!=='POST') sendAjaxJson(['ok'=>false,'error'=>'method'],405);
+    $enabled=ajaxPostParamString('sound_enabled',1);
+    if (!in_array($enabled,['0','1'],true)) sendAjaxJson(['ok'=>false,'error'=>'invalid_preference'],400);
+    try {
+        $fresh=$repo->setPreparationSound($state->gameId,$userId,$enabled==='1');
+        sendAjaxJson(['ok'=>true,'sound_enabled'=>$fresh->getPlayer($playerKey)->soundEnabled]);
+    } catch (\InvalidArgumentException) { sendAjaxJson(['ok'=>false,'error'=>'not_preparation'],409); }
+    catch (Throwable) { sendAjaxJson(['ok'=>false,'error'=>'save_failed'],503); }
+}
 
 if ($isPlaymat) {
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') sendAjaxJson(['ok'=>false,'error'=>'method'],405);
@@ -1366,6 +1382,21 @@ $screenHtml = $isPreGame
     ? (new \Berserk\View\Ui\PreGameLayout($tpl))->renderScreen($screenName, $screenData)
     : $tpl->parse("screen/{$screenName}.tpl", $screenData);
 
+$menuAccount=\Berserk\View\Ui\GameMenu::account(GameTransport::$csrf);
+if ($screenName==='battle') {
+    $screenHtml=preg_replace('/(<div id="battle-menu-panel"[^>]*>)/','$1<a role="menuitem" href="/lobby.php">В лобби</a>',$screenHtml,1);
+    $screenHtml=str_replace('<span class="battle-menu-saving"',$menuAccount.'<span class="battle-menu-saving"',$screenHtml);
+    // Prototype debug URLs remain forbidden for authenticated games.
+    $screenHtml=preg_replace('/<a role="menuitem" data-menu-debug[^>]*>Debug<\/a>/','<button type="button" role="menuitem" data-menu-debug disabled aria-disabled="true">Debug</button>',$screenHtml);
+} else {
+    $menu=\Berserk\View\Ui\GameMenu::preparation(GameTransport::$csrf,$state->getPlayer($playerKey)->soundEnabled,$screenName==='game_over');
+    if ($isPreGame) $screenHtml=preg_replace('/<button class="pregame-menu".*?<\/button>/s',$menu,$screenHtml,1);
+    else $screenHtml=$menu.$screenHtml;
+    $scriptsHtml.='<script type="application/json" id="preparation-menu-config">'.json_encode(['game'=>$state->gameId,'csrf'=>GameTransport::$csrf],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>'
+        .'<script type="application/json" id="battle-playmats">'.json_encode(['catalog'=>\Berserk\Core\PlaymatCatalog::ITEMS,'csrf'=>GameTransport::$csrf,'state'=>\Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey)],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>'
+        .'<script src="/assets/js/battle-playmats.js?v=2"></script><script src="/assets/js/game-menu.js?v=1"></script>';
+}
+
 if (in_array($screenName,['battle','game_over'],true)
     && $historyRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION)===$playerKey) {
     if ($screenName==='game_over') $screenHtml .= '<button type="button" class="button" data-action="battle-log" aria-controls="battle-journal">Журнал боя</button>';
@@ -1407,6 +1438,6 @@ $page = $tpl->parse('page.tpl', [
 
 \Berserk\Auth\GameTransport::$version = $state->persistenceVersion ?? 0;
 \Berserk\Auth\GameTransport::$stage = $state->status;
-$page = str_replace('<div class="screen">','<div class="screen"><nav><a href="/lobby.php">В лобби</a></nav>',$page);
-$transportScript = '<script src="/assets/js/game-transport.js" data-game="'.$state->gameId.'" data-stage="'.htmlspecialchars($state->status,ENT_QUOTES).'" data-version="'.\Berserk\Auth\GameTransport::$version.'" data-csrf="'.htmlspecialchars(\Berserk\Auth\GameTransport::$csrf,ENT_QUOTES).'"></script>';
+
+$transportScript = '<script src="/assets/js/game-transport.js?v=2" data-game="'.$state->gameId.'" data-stage="'.htmlspecialchars($state->status,ENT_QUOTES).'" data-version="'.\Berserk\Auth\GameTransport::$version.'" data-csrf="'.htmlspecialchars(\Berserk\Auth\GameTransport::$csrf,ENT_QUOTES).'"></script>';
 echo \Berserk\Auth\GameTransport::html(str_replace('</head>',$transportScript.'</head>',$page));
