@@ -795,8 +795,9 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 .fly-slot {
     width: 100px;
     height: 100px;
-    background: #fff;
-    border: 1px dashed #999;
+    border: 1px solid #d8caa3;
+    border-radius: 4px;
+    background: rgba(15, 25, 22, .8);
     border-radius: 4px;
     display: flex;
     align-items: center;
@@ -1904,6 +1905,7 @@ body.battle-page > .screen {
     height: calc(3 * var(--battle-cell-size) + 2 * var(--battle-cell-gap));
     flex-wrap: nowrap;
     flex-shrink: 0;
+    background: none;
 }
 .battle-layout .fly-slot {
     width: var(--battle-cell-size);
@@ -2059,6 +2061,7 @@ body.battle-page {
     inset: 0;
     background: url("/assets/images/battle/flying_empty.png") center / 32px auto no-repeat;
     pointer-events: none;
+    filter: invert(1);
 }
 .battle-layout .grave-zone-side { justify-content: flex-start; gap: var(--battle-cell-gap); padding-top: 6px; }
 .battle-layout .grave-zone-side::before { content: "\00a0"; font-size: 12px; margin-bottom: 2px; flex: 0 0 auto; }
