@@ -696,6 +696,10 @@ final class Engine
 
     public function applyMarker(CardInstance $target, array $marker, string $sourceKey): void
     {
+        if (($marker['if'] ?? '') === 'target_closed' && !$target->closed) {
+            return;
+        }
+
         $type   = $marker['type'];
         $timing = $marker['timing'] ?? 'source_turn';
 
@@ -821,6 +825,11 @@ final class Engine
 
             if (!empty($effect['marker']['type'])) {
                 $this->applyMarker($target, $effect['marker'], $attacker->owner);
+                // Взгляд Медузы закрывает цель сразу, затем запрещает следующее открытие.
+                if ($effect['marker']['type'] === 'stun'
+                    && isset($target->markers['stun'])) {
+                    $target->closed = true;
+                }
             }
 
             if (!empty($effect['rooted'])) {
