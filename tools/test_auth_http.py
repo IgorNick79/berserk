@@ -195,7 +195,16 @@ def main():
         probe.base='http://127.0.0.1:33558/replay.php'
         code,body,_=probe.request(suffix='&game=1')
         check('account cookie cannot authorize legacy replay without ownership',code in [403,404] and ('replay_not_available' in body or 'forbidden' in body))
-        check('password absent from HTTP logs',all('CorrectPass123' not in p.read_text(errors='replace') for p in LAB.glob('http-*.log')))
+        # Existing cost10 credentials remain usable without UPDATE accounts privileges/rehash.
+        legacy_hash=subprocess.run([args.php,'-n','-r',"echo password_hash('LegacyPassword123',PASSWORD_BCRYPT,['cost'=>10]);"],capture_output=True,text=True,check=True).stdout.strip()
+        sql("USE stage5a_auth_test;INSERT INTO accounts(login,login_key,password_hash,created_at)VALUES('LegacyCost10','legacycost10','"+legacy_hash+"',UTC_TIMESTAMP(6));")
+        old=Browser();reset_limits()
+        check('legacy cost10 HTTP login',old.post('login','LegacyCost10','LegacyPassword123')[0]==303 and 'LegacyCost10' in old.request('account')[1])
+        check('legacy hash unchanged without UPDATE accounts',sql("USE stage5a_auth_test;SELECT password_hash FROM accounts WHERE login_key='legacycost10';")==legacy_hash)
+        wrong=Browser();reset_limits();wc,wb,_=wrong.post('login','LegacyCost10','WrongPassword123')
+        unknown=Browser();reset_limits();uc,ub,_=unknown.post('login','MissingCostUser','WrongPassword123')
+        check('legacy wrong password and unknown same error',wc==uc==422 and 'Неверный логин или пароль.' in wb and 'Неверный логин или пароль.' in ub)
+        check('password absent from HTTP logs',all('CorrectPass123' not in p.read_text(errors='replace') and 'LegacyPassword123' not in p.read_text(errors='replace') for p in LAB.glob('http-*.log')))
         server.shutdown();server.server_close()
         print(json.dumps({'passed':len(RESULTS),'results':RESULTS},ensure_ascii=False,indent=2))
     finally:

@@ -1,0 +1,27 @@
+{
+  "identity": {
+    "exit": 0,
+    "out": "5.7.39\t33591\tC:\\Users\\mi\\Documents\\Berserk\\stage5a-auth\\tmp\\mysql57-audit\\data\\\n",
+    "error": ""
+  },
+  "named_auth_check": {
+    "exit": 0,
+    "out": "",
+    "error": ""
+  },
+  "unnamed_check_ignored": {
+    "exit": 0,
+    "out": "-1\n",
+    "error": ""
+  },
+  "check_metadata": {
+    "exit": 1,
+    "out": "",
+    "error": "ERROR 1109 (42S02) at line 1: Unknown table 'check_constraints' in information_schema\n"
+  },
+  "in_transaction_variable": {
+    "exit": 1,
+    "out": "",
+    "error": "ERROR 1193 (HY000) at line 1: Unknown system variable 'in_transaction'\n"
+  }
+}

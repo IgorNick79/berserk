@@ -1,0 +1,9 @@
+{
+  "runtime_head": "cfbc809c36849ab84dfa99f9beb587c56d788b81",
+  "branch": "codex/berserk-stage5e1-compatibility",
+  "protected_runtime_changes": [],
+  "storage_games_preserved": true,
+  "private_root_configs_absent": true,
+  "production_sql_or_deploy": false,
+  "decision": "NO-GO: MySQL5.7 MatchCreator @@in_transaction blocker1193"
+}

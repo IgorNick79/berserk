@@ -1,0 +1,26 @@
+[
+  {
+    "file": "src/Auth/AuthStore.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Auth/AuthService.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Auth/PasswordPolicy.php",
+    "exit": 0
+  },
+  {
+    "file": "www/journal-access.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/test_password_policy.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/test_stage5e_auth_cost.php",
+    "exit": 0
+  }
+]

@@ -1,0 +1,107 @@
+{
+  "checks": 22,
+  "results": [
+    {
+      "test": "isolated port/datadir",
+      "pass": true
+    },
+    {
+      "test": "original additive DDL parses 20261021_auth.sql",
+      "pass": true
+    },
+    {
+      "test": "original additive DDL parses 20261021_lobby.sql",
+      "pass": true
+    },
+    {
+      "test": "original additive DDL parses 20261021_command_journal.sql",
+      "pass": true
+    },
+    {
+      "test": "original additive DDL parses 20261019_game_chat.sql",
+      "pass": true
+    },
+    {
+      "test": "original additive DDL parses 20261020_battle_history.sql",
+      "pass": true
+    },
+    {
+      "test": "read-only pre/postcheck 20261021_release_preflight.sql",
+      "pass": true
+    },
+    {
+      "test": "read-only pre/postcheck 20261021_auth_postchecks.sql",
+      "pass": true
+    },
+    {
+      "test": "read-only pre/postcheck 20261021_lobby_postchecks.sql",
+      "pass": true
+    },
+    {
+      "test": "read-only pre/postcheck 20261021_transport_preflight.sql",
+      "pass": true
+    },
+    {
+      "test": "read-only pre/postcheck 20261020_battle_history_postchecks.sql",
+      "pass": true
+    },
+    {
+      "test": "read-only pre/postcheck 20261021_mysql57_postchecks.sql",
+      "pass": true
+    },
+    {
+      "test": "UNIQUE login key enforced",
+      "pass": true
+    },
+    {
+      "test": "FK missing account enforced",
+      "pass": true
+    },
+    {
+      "test": "CHECK ignored on 5.7 (not protection)",
+      "pass": true
+    },
+    {
+      "test": "invalid data detected by read-only postcheck",
+      "pass": true
+    },
+    {
+      "test": "single InnoDB rollback removes game and room",
+      "pass": true
+    },
+    {
+      "test": "single InnoDB commit persists linked pair",
+      "pass": true
+    },
+    {
+      "test": "confirmed runtime blocker @@in_transaction",
+      "pass": true
+    },
+    {
+      "test": "real Lobby accept fails closed and rolls back on 5.7",
+      "pass": true
+    },
+    {
+      "test": "real Auth register/login cost12 on least-privilege MySQL5.7",
+      "pass": true
+    },
+    {
+      "test": "history generated initial UNIQUE enforced",
+      "pass": true
+    }
+  ],
+  "details": {
+    "server": "5.7.39",
+    "sql_mode": "ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION",
+    "runtime_blocker": "ERROR 1193 (HY000) at line 1: Unknown system variable 'in_transaction'",
+    "actual_lobby_accept": {
+      "accepted": false,
+      "error_code": 1193,
+      "state": "awaiting_confirmation"
+    },
+    "native_auth": {
+      "same_account": true,
+      "cost": 12
+    }
+  }
+}

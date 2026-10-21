@@ -1,0 +1,178 @@
+[
+  {
+    "test": "exact isolated database identity",
+    "pass": true
+  },
+  {
+    "test": "runtime no TRIGGER or DDL privileges",
+    "pass": true
+  },
+  {
+    "test": "login redirects to lobby",
+    "pass": true
+  },
+  {
+    "test": "guest API denied",
+    "pass": true
+  },
+  {
+    "test": "guest page redirects",
+    "pass": true
+  },
+  {
+    "test": "create only room, no game",
+    "pass": true
+  },
+  {
+    "test": "creator opens room without becoming candidate",
+    "pass": true
+  },
+  {
+    "test": "GET cannot claim candidate",
+    "pass": true
+  },
+  {
+    "test": "CSRF rejected",
+    "pass": true
+  },
+  {
+    "test": "two concurrent candidates one slot",
+    "pass": true
+  },
+  {
+    "test": "current candidate repeated open is read only",
+    "pass": true
+  },
+  {
+    "test": "candidate not participant and no game",
+    "pass": true
+  },
+  {
+    "test": "candidate cannot self-accept",
+    "pass": true
+  },
+  {
+    "test": "occupied room outsider denied",
+    "pass": true
+  },
+  {
+    "test": "stale accept rejected",
+    "pass": true
+  },
+  {
+    "test": "wrong request id rejected",
+    "pass": true
+  },
+  {
+    "test": "reject",
+    "pass": true
+  },
+  {
+    "test": "rejected candidate old GET forbidden",
+    "pass": true
+  },
+  {
+    "test": "old open POST cannot reclaim",
+    "pass": true
+  },
+  {
+    "test": "repeat candidate new request id",
+    "pass": true
+  },
+  {
+    "test": "stale request same account cannot be accepted",
+    "pass": true
+  },
+  {
+    "test": "stale reject rejected",
+    "pass": true
+  },
+  {
+    "test": "two concurrent accept exactly one commit",
+    "pass": true
+  },
+  {
+    "test": "started shared by both",
+    "pass": true
+  },
+  {
+    "test": "consistent SQL JSON account identities",
+    "pass": true
+  },
+  {
+    "test": "initial mode no Draft Sealed or side",
+    "pass": true
+  },
+  {
+    "test": "outsider started room forbidden",
+    "pass": true
+  },
+  {
+    "test": "retry after lost accepted response read recovers and no duplicate",
+    "pass": true
+  },
+  {
+    "test": "discarded HTTP reply recovered",
+    "pass": true
+  },
+  {
+    "test": "accept reject race one transition",
+    "pass": true
+  },
+  {
+    "test": "error creating GameState generic and rolls back game",
+    "pass": true
+  },
+  {
+    "test": "failure room link full rollback no orphan",
+    "pass": true
+  },
+  {
+    "test": "accept after rollback succeeds",
+    "pass": true
+  },
+  {
+    "test": "rejected account cannot access future match via room",
+    "pass": true
+  },
+  {
+    "test": "unique game mapping",
+    "pass": true
+  },
+  {
+    "test": "GET polls no SQL mutation",
+    "pass": true
+  },
+  {
+    "test": "active table metadata no secrets",
+    "pass": true
+  },
+  {
+    "test": "legacy game not in lobby",
+    "pass": true
+  },
+  {
+    "test": "finished excluded active table",
+    "pass": true
+  },
+  {
+    "test": "logout login restores own room",
+    "pass": true
+  },
+  {
+    "test": "invitation and legacy user_id cannot authorize lobby",
+    "pass": true
+  },
+  {
+    "test": "legacy game unchanged",
+    "pass": true
+  },
+  {
+    "test": "existing GameRepository optimistic locking real DB",
+    "pass": true
+  },
+  {
+    "test": "GameRepository loads accepted GameState",
+    "pass": true
+  }
+]

@@ -1,0 +1,158 @@
+{
+  "passed": 38,
+  "results": [
+    {
+      "test": "server HTTPS='on' ignores client scheme headers",
+      "pass": true
+    },
+    {
+      "test": "secure invitation cookie on",
+      "pass": true
+    },
+    {
+      "test": "CSRF denied without burning invitation on",
+      "pass": true
+    },
+    {
+      "test": "consume redirects to legacy journal on",
+      "pass": true
+    },
+    {
+      "test": "session rotates and grants binding only on",
+      "pass": true
+    },
+    {
+      "test": "one-time replay denied on",
+      "pass": true
+    },
+    {
+      "test": "revoked invitation denied on",
+      "pass": true
+    },
+    {
+      "test": "expired invitation denied on",
+      "pass": true
+    },
+    {
+      "test": "account-owned or disabled game denied on/8",
+      "pass": true
+    },
+    {
+      "test": "account-owned or disabled game denied on/9",
+      "pass": true
+    },
+    {
+      "test": "query invitation not accepted on",
+      "pass": true
+    },
+    {
+      "test": "server HTTPS='1' ignores client scheme headers",
+      "pass": true
+    },
+    {
+      "test": "secure invitation cookie 1",
+      "pass": true
+    },
+    {
+      "test": "CSRF denied without burning invitation 1",
+      "pass": true
+    },
+    {
+      "test": "consume redirects to legacy journal 1",
+      "pass": true
+    },
+    {
+      "test": "session rotates and grants binding only 1",
+      "pass": true
+    },
+    {
+      "test": "one-time replay denied 1",
+      "pass": true
+    },
+    {
+      "test": "revoked invitation denied 1",
+      "pass": true
+    },
+    {
+      "test": "expired invitation denied 1",
+      "pass": true
+    },
+    {
+      "test": "account-owned or disabled game denied 1/8",
+      "pass": true
+    },
+    {
+      "test": "account-owned or disabled game denied 1/9",
+      "pass": true
+    },
+    {
+      "test": "query invitation not accepted 1",
+      "pass": true
+    },
+    {
+      "test": "server HTTPS='' ignores client scheme headers",
+      "pass": true
+    },
+    {
+      "test": "insecure denial creates no session ''",
+      "pass": true
+    },
+    {
+      "test": "insecure POST cannot consume invitation ''",
+      "pass": true
+    },
+    {
+      "test": "server HTTPS='off' ignores client scheme headers",
+      "pass": true
+    },
+    {
+      "test": "insecure denial creates no session 'off'",
+      "pass": true
+    },
+    {
+      "test": "insecure POST cannot consume invitation 'off'",
+      "pass": true
+    },
+    {
+      "test": "server HTTPS='0' ignores client scheme headers",
+      "pass": true
+    },
+    {
+      "test": "insecure denial creates no session '0'",
+      "pass": true
+    },
+    {
+      "test": "insecure POST cannot consume invitation '0'",
+      "pass": true
+    },
+    {
+      "test": "server HTTPS='true' ignores client scheme headers",
+      "pass": true
+    },
+    {
+      "test": "insecure denial creates no session 'true'",
+      "pass": true
+    },
+    {
+      "test": "insecure POST cannot consume invitation 'true'",
+      "pass": true
+    },
+    {
+      "test": "server HTTPS='ON' ignores client scheme headers",
+      "pass": true
+    },
+    {
+      "test": "insecure denial creates no session 'ON'",
+      "pass": true
+    },
+    {
+      "test": "insecure POST cannot consume invitation 'ON'",
+      "pass": true
+    },
+    {
+      "test": "original one-time invitation regression suite",
+      "pass": true
+    }
+  ],
+  "limits": "Real loopback HTTP endpoint/session/ledger; trusted server HTTPS simulated by router, DB ownership read uses isolated fake Db; no actual TLS or production FPM check."
+}

@@ -1,0 +1,11 @@
+{
+    "php_version": "8.1.9",
+    "registration_policy_cost": 12,
+    "dummy_cost": 12,
+    "local_default_cost": 10,
+    "explicit_cost12_simulation": 12,
+    "target_php84_default_cost": 12,
+    "target_dummy_cost_mismatch": false,
+    "source": "https:\/\/www.php.net\/manual\/en\/function.password-hash.php",
+    "production_timing_test_performed": false
+}
