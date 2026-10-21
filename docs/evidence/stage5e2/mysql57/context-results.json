@@ -1,0 +1,78 @@
+[
+    {
+        "test": "bare mysqli cannot authorize MatchCreator",
+        "pass": true
+    },
+    {
+        "test": "managed nesting denied",
+        "pass": true
+    },
+    {
+        "test": "context serialization denied",
+        "pass": true
+    },
+    {
+        "test": "unpending room denied",
+        "pass": true
+    },
+    {
+        "test": "committed context cannot be reused",
+        "pass": true
+    },
+    {
+        "test": "rolled back context cannot be reused",
+        "pass": true
+    },
+    {
+        "test": "second match in same context denied",
+        "pass": true
+    },
+    {
+        "test": "unlinked match cannot commit",
+        "pass": true
+    },
+    {
+        "test": "unlinked match fully rolled back",
+        "pass": true
+    },
+    {
+        "test": "failed linkage invalidates context",
+        "pass": true
+    },
+    {
+        "test": "wrong pending participants denied",
+        "pass": true
+    },
+    {
+        "test": "ignored CHECK corrupt pending accept fails closed",
+        "pass": true
+    },
+    {
+        "test": "ignored CHECK corrupt pending reject fails closed",
+        "pass": true
+    },
+    {
+        "test": "ignored CHECK malformed request fails closed",
+        "pass": true
+    },
+    {
+        "test": "unknown commit committed read resolves outcome",
+        "pass": true
+    },
+    {
+        "test": "unknown committed retry never duplicates",
+        "pass": true
+    },
+    {
+        "test": "unknown commit not committed read resolves outcome",
+        "pass": true
+    },
+    {
+        "test": "unknown uncommitted explicit retry once",
+        "pass": true
+    },
+    {
+        "test": "no orphan games after faults",
+        "pass": true
+    }
+]

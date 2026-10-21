@@ -1,0 +1,30 @@
+[
+  {
+    "file": "tools/test_stage5e2_lobby.py",
+    "syntax": true
+  },
+  {
+    "file": "tools/test_stage5e2_integration.py",
+    "syntax": true
+  },
+  {
+    "file": "tools/test_stage5e2_auth.py",
+    "syntax": true
+  },
+  {
+    "file": "src/Lobby/LobbyStore.php",
+    "syntax": true
+  },
+  {
+    "file": "src/Lobby/MatchCreator.php",
+    "syntax": true
+  },
+  {
+    "file": "src/Lobby/RoomTransaction.php",
+    "syntax": true
+  },
+  {
+    "file": "tools/test_room_transaction.php",
+    "syntax": true
+  }
+]

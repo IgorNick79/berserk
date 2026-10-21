@@ -1,0 +1,30 @@
+[
+  {
+    "test": "both automatically enter same existing game",
+    "pass": true
+  },
+  {
+    "test": "decorated mode form POST works",
+    "pass": true
+  },
+  {
+    "test": "both browser sessions reach battle",
+    "pass": true
+  },
+  {
+    "test": "no role-authority links or fields",
+    "pass": true
+  },
+  {
+    "test": "reload preserves game",
+    "pass": true
+  },
+  {
+    "test": "both browsers reach terminal via existing resign",
+    "pass": true
+  },
+  {
+    "test": "no browser script exceptions",
+    "pass": true
+  }
+]

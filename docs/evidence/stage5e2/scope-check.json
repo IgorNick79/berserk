@@ -1,0 +1,12 @@
+{
+  "runtime_head": "1c723134d692b52772c1ceffe31290f361d1e81b",
+  "base": "1667e8f",
+  "runtime_changed": [
+    "src/Lobby/LobbyStore.php",
+    "src/Lobby/MatchCreator.php",
+    "src/Lobby/RoomTransaction.php"
+  ],
+  "engine_grid_recorder_sql_audit_unchanged": true,
+  "runtime_forbidden_variable_absent": true,
+  "diff_review": "Reviewed all three runtime files: caller authorization/CAS/request under row lock, scoped lifetime, one match, exact game link before commit, rollback/no retry."
+}
