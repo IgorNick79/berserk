@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace Berserk\Core\Choice;
 use Berserk\Core\{Command,Engine,GameState,Result,MatriarchOrderProcessor};
-use Berserk\View\Ui\{PanelSpec,BattlefieldPosition};
+use Berserk\View\Ui\{PanelSpec,Coords,Form};
 
 final class MatriarchOrderChoice implements ChoiceHandlerInterface
 {
@@ -12,14 +12,26 @@ final class MatriarchOrderChoice implements ChoiceHandlerInterface
     {
         $p=$state->battle[$this->pendingKey()]??null;if(!$p)return null;
         if($p['owner']!==$playerKey)return new PanelSpec(title:'Приказ матриарха',isMine:false);
+        $items=[];
         $buttons=[];
         foreach($p['ids'] as $id){
             $card=$state->getCard($id);if(!MatriarchOrderProcessor::live($card))continue;
-            $buttons[]=['label'=>($cardsInfo[$card->ukid]['name']??$card->ukid).' '.BattlefieldPosition::label($card->row,$card->col,$playerKey),
+            $name=(string)($cardsInfo[$card->ukid]['name']??$card->ukid);
+            $labelHtml=htmlspecialchars($name,ENT_QUOTES | ENT_SUBSTITUTE,'UTF-8')
+                .' '.Coords::renderResult($card->row,$card->col,$playerKey);
+            $items[]=['value'=>$id,'label'=>$name,'label_html'=>$labelHtml];
+            $buttons[]=['label'=>$name,'label_html'=>$labelHtml,
                 'url'=>$baseUrl.'&cmd=choose_matriarch_order&target_id='.$id.'&choice_id='.rawurlencode($p['id'])];
         }
-        if($p['kind']==='target')$buttons[]=['label'=>'Отмена','url'=>$baseUrl.'&cmd=cancel_pending&choice_id='.rawurlencode($p['id']),'class'=>'skip'];
-        return new PanelSpec(title:$p['kind']==='target'?'Приказ матриарха — выберите противника':'Приказ матриарха — следующий участник ('.count($p['ids']).')',buttons:$buttons);
+        if($p['kind']==='target') {
+            return new PanelSpec(title:'Приказ матриарха — выберите противника',form:[
+                'type'=>'radio','name'=>'target_id','items'=>$items,
+                'hidden'=>Form::battleHidden($role,$state->gameId,'choose_matriarch_order',['choice_id'=>$p['id']]),
+                'submit'=>'Применить приказ',
+                'cancel'=>$baseUrl.'&cmd=cancel_pending&choice_id='.rawurlencode($p['id']),
+            ]);
+        }
+        return new PanelSpec(title:'Приказ матриарха — следующий участник ('.count($buttons).')',buttons:$buttons);
     }
     public function apply(GameState $state,Engine $engine,string $playerKey,Command $cmd):Result
     {return (new MatriarchOrderProcessor($state,$engine))->choose($playerKey,$cmd);}
