@@ -12,7 +12,7 @@ final class PanelSpec
      * @param string[] $cards        HTML-строки карточек (уже отрендеренные)
      * @param string[] $text         текстовые блоки (с HTML внутри)
      * @param ?array   $form         ['type'=>'radio'|'checkbox', 'name'=>..., 'items'=>[...], 'hidden'=>[...], 'submit'=>..., 'cancel'=>...]
-     * @param array    $buttons      [['label'=>..., 'url'=>..., 'class'=>...], ...]
+     * @param array    $buttons      [['label'=>..., 'url'=>..., 'class'=>..., 'label_html'=>trusted server markup], ...]
      * @param bool     $isMine
      * @param ?array   $cellPicker   View-only snapshot identity and coordinate targets for progressive enhancement.
      * @param string   $waitText

@@ -1,0 +1,14 @@
+{
+  "zom": true,
+  "start": {"side": 2, "type": "get_coins", "coins": 1},
+  "actions": [
+    {
+      "key": "matriarch_order",
+      "name": "Приказ матриарха",
+      "type": "impact",
+      "effect": "matriarch_order",
+      "coins": 1,
+      "self": true
+    }
+  ]
+}
