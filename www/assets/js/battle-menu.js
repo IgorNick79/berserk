@@ -6,13 +6,13 @@
             var host = root.querySelector("[data-battle-fragment='info_panel_html']");
             if (!button || !menu || !host) return null;
             var sound = menu.querySelector("[data-menu-sound]"), debug = menu.querySelector("[data-menu-debug]");
-            var debugUrl = debug.dataset.debugUrl || debug.getAttribute("href"), open = false, debugOpen = false, overlay = null;
+            var debugUrl = debug ? (debug.dataset.debugUrl || debug.getAttribute("href")) : null, open = false, debugOpen = false, overlay = null;
             var focusInDebug = false, lastBusy = false, destroyed = false;
             button.disabled = false;
             function paused() { return root.getAttribute("data-match-paused") === "1"; }
             function items() {
                 return Array.from(menu.querySelectorAll("[role^='menuitem']")).filter(function (node) {
-                    return !node.disabled && node.getAttribute("aria-disabled") !== "true";
+                    return !node.hidden && !node.disabled && node.getAttribute("aria-disabled") !== "true";
                 });
             }
             function syncButton() {
@@ -39,6 +39,7 @@
                 var restore = debugOpen && focusInDebug && previous && !previous.isConnected
                     && (active === document.body || active === document.documentElement || previous.contains(active));
                 overlay = host.querySelector("#battle-debug");
+                if (debug) debug.hidden = !overlay || !overlay.querySelector(".debug-panel");
                 if (paused() || !overlay || !overlay.querySelector(".debug-panel")) debugOpen = false;
                 if (overlay) { overlay.hidden = !debugOpen; overlay.tabIndex = 0; }
                 if (!debugOpen) focusInDebug = false;
@@ -52,9 +53,10 @@
                 sound.querySelector("[data-sound-check]").hidden = !enabled;
                 sound.disabled = waiting;
                 menu.querySelector("[data-menu-saving]").hidden = !waiting;
-                debug.setAttribute("aria-disabled", String(paused() || debug.disabled === true));
+                if (debug) { debug.setAttribute("aria-disabled", String(paused() || debug.disabled === true));
                 if (paused() || debug.disabled === true) { debug.removeAttribute("href"); debug.tabIndex = -1; }
                 else { if (debugUrl) debug.setAttribute("href", debugUrl); debug.removeAttribute("tabindex"); }
+                }
                 syncDebug();
                 if (lastBusy && !waiting && open && document.activeElement === document.body) sound.focus({preventScroll: true});
                 lastBusy = waiting;
@@ -89,7 +91,7 @@
                     if (overlay && overlay.querySelector(".debug-panel")) {
                         event.preventDefault(); event.stopImmediatePropagation();
                         debugOpen = true; syncDebug(); overlay.focus({preventScroll: true});
-                    } // Otherwise follow the existing debug=1 URL and open its existing overlay on load.
+                    } // Only an authorized server projection can provide the diagnostic overlay.
                 }
             }
             function outside(event) {

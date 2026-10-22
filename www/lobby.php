@@ -31,6 +31,7 @@ try {
     if ($actor !== null) {
         $account = (new AuthStore($config['db']))->account($actor);
         if ($account === null) throw new DomainException('Требуется вход.',401);
+        \Berserk\Auth\DebugAccess::bind($account);
     }
     $csrf = AuthSession::csrf();
     if ($method === 'POST') AuthSession::requireCsrf($_POST['csrf'] ?? null);
@@ -44,7 +45,7 @@ try {
             if ($id !== null) throw new DomainException('Некорректный запрос.',400);
             $setupMode=$_POST['setup_mode']??null;
             if (!is_string($setupMode)) throw new DomainException('Некорректный режим.',400);
-            $id = $store->create($actor,RoomSetup::parse($setupMode,$_POST));
+            $id = $store->create($actor,RoomSetup::parse($setupMode,$_POST,$actor));
         } else {
             if ($id === null || !is_string($action) || !in_array($action,['open','accept','reject'],true)) throw new DomainException('Некорректный запрос.',400);
             $version = $integer($_POST['version'] ?? null);
@@ -61,7 +62,7 @@ try {
         $wizardMode=$_GET['mode']??null;
         if ($wizardMode===null) {
             $wizard='<h1>Создать игру</h1><form method="get" class="mode-actions"><input type="hidden" name="new" value="1"><fieldset><legend>Вид игры</legend>';
-            foreach (['draft','solomon','sealed','system'] as $mode) $wizard.='<label class="settings-option"><input type="radio" name="mode" value="'.$mode.'"'.($mode==='draft'?' checked':'').'><span>'.RoomSetup::label($mode).'</span></label>';
+            foreach (['draft','solomon','sealed','lucktest','system'] as $mode) $wizard.='<label class="settings-option"><input type="radio" name="mode" value="'.$mode.'"'.($mode==='draft'?' checked':'').'><span>'.RoomSetup::label($mode).'</span></label>';
             $wizard.='</fieldset><button class="button" type="submit">Далее: настройки</button></form>';
         } else {
             if (!is_string($wizardMode)) throw new DomainException('Некорректный режим.',400);
@@ -77,7 +78,7 @@ try {
             $form=preg_replace('/<script\b[^>]*>.*?<\/script>/s','',$form);
             $fields='<input type="hidden" name="action" value="create"><input type="hidden" name="csrf" value="'.$escape($csrf).'"><input type="hidden" name="setup_mode" value="'.$escape($wizardMode).'">';
             $form=preg_replace('/(<form\b[^>]*>)/','$1'.$fields,$form,1);
-            $form=str_replace(['Начать драфт','Начать Sealed'],'Опубликовать игру',$form);
+            $form=str_replace(['Начать драфт','Начать Sealed','Сформировать отряды'],'Опубликовать игру',$form);
             $wizard='<h1>'.RoomSetup::label($wizardMode).' — настройки</h1><p>Игра появится в лобби после публикации. Игровой процесс начнётся после подтверждения кандидата.</p>'.$view['content_html'].$form.'<a href="lobby.php?new=1">Назад: вид игры</a>';
         }
     }
@@ -99,4 +100,4 @@ header('Content-Type: text/html; charset=utf-8');
 <p id="notice" role="status"><?= $escape($error ?? '') ?></p>
 <?php if ($data !== null): ?>
 <?php if ($wizard !== ''): ?><section class="lobby-wizard"><?= $wizard ?></section><?php else: ?><section id="content"></section><?php endif; ?><noscript>Для автоматического обновления лобби включите JavaScript.</noscript>
-<?php else: ?><p><a href="lobby.php">Вернуться в лобби</a></p><?php endif; ?></main></body></html>
+<?php else: ?><p><a href="lobby.php">Вернуться в лобби</a></p><?php endif; ?></main><script src="/assets/js/lucktest-debug.js?v=1" defer></script></body></html>

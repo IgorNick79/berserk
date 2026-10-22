@@ -7,7 +7,7 @@
         <button type="button" role="menuitemcheckbox" data-menu-sound aria-checked="{{sound_checked}}"><span>Звук</span><span data-sound-check aria-hidden="true">✓</span></button>
         <button type="button" role="menuitem" data-menu-playmat><span>Коврик</span></button>
         <button type="button" role="menuitem" disabled aria-disabled="true"><span>Отложить игру</span><small>Скоро</small></button>
-        <a role="menuitem" data-menu-debug data-debug-url="{{debug_menu_url}}" {{debug_menu_attr}}>Debug</a>
+        {{debug_menu_html}}
         <span class="battle-menu-saving" data-menu-saving role="status" hidden>Сохраняем…</span>
     </div>
     <div class="battle-main">

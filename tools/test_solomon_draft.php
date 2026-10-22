@@ -429,7 +429,7 @@ namespace {
     $tpl = new Template(__DIR__ . '/../templates');
     $state = new GameState(900, 1, 2);
     $html = (new ModeScreen($tpl))->prepare($state, 'host', 'host', null)['data']['content_html'];
-    check(substr_count($html, 'type="radio"') === 4 && str_contains($html, 'value="draft" checked'), 'Mode radio defaults');
+    check(substr_count($html, 'type="radio"') === 5 && str_contains($html, 'value="draft" checked'), 'Mode radio defaults');
     $state = fresh($db, 8);
     $settings = (new SettingsScreen())->prepare($state, 'host', 'host', null)['data']['actions_html'];
     check(str_contains($settings, 'name="stack_size"') && !str_contains($settings, 'name="draft_grid_mode"'), 'Solomon settings isolated');

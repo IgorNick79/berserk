@@ -7,4 +7,6 @@ return [
     // Generate privately: bin2hex(random_bytes(32)); never commit the real value.
     'limiter_secret' => '',
     'allow_loopback_http' => false,
+    // Exactly two distinct positive registered IDs, set privately by the operator. Empty disables debug.
+    'debug_account_ids' => [],
 ];

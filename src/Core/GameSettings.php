@@ -15,6 +15,7 @@ final class GameSettings
     public const MODE_SYSTEM = 'system';
     public const MODE_DRAFT  = 'draft';
     public const MODE_SEALED = 'sealed';
+    public const MODE_LUCKTEST = 'lucktest';
 
     public const SYSTEM_DECK_SELECTION_MANUAL = 'manual';
 
@@ -70,6 +71,12 @@ final class GameSettings
             'rare_slots' => BoosterSettings::DEFAULT_RARE_SLOTS,
             'ultra_rare_chance' => BoosterSettings::DEFAULT_ULTRA_RARE_CHANCE,
         ],
+        public array $lucktest = [
+            'card_count' => 5,
+            'average_cost' => 5.0,
+            'balanced' => true,
+            'quick_game' => true,
+        ],
     ) {}
 
     public static function defaults(): self
@@ -86,6 +93,7 @@ final class GameSettings
             draft: array_merge($defaults->draft, (array) ($data['draft'] ?? [])),
             sealed: array_merge($defaults->sealed, (array) ($data['sealed'] ?? [])),
             booster: array_merge($defaults->booster, (array) ($data['booster'] ?? [])),
+            lucktest: array_merge($defaults->lucktest, (array) ($data['lucktest'] ?? [])),
         );
     }
 
@@ -96,7 +104,42 @@ final class GameSettings
             'draft'  => $this->draft,
             'sealed' => $this->sealed,
             'booster' => $this->booster,
+            'lucktest' => $this->lucktest,
         ];
+    }
+
+    /** Shared transport parsing for in-game settings and room setup. Invalid values stay invalid. */
+    public static function luckTestInput(array $current, array $input): array
+    {
+        foreach (['card_count', 'average_cost', 'balanced', 'quick_game'] as $key) {
+            $field = 'lucktest_' . $key;
+            if (!array_key_exists($field, $input)) continue;
+            $value = $input[$field];
+            if (in_array($key, ['balanced', 'quick_game'], true)) {
+                if (in_array($value, [0, '0'], true)) $value = false;
+                elseif (in_array($value, [1, '1'], true)) $value = true;
+            } elseif (is_string($value) && strlen($value) <= 16) {
+                if ($key === 'card_count' && preg_match('/^[0-9]+$/D', $value)) $value = (int) $value;
+                elseif ($key === 'average_cost' && preg_match('/^[0-9]+(?:\.[0-9]+)?$/D', $value)) $value = (float) $value;
+            }
+            $current[$key] = $value;
+        }
+        return $current;
+    }
+
+    public function validateLuckTestSettings(): ?string
+    {
+        $count = $this->lucktest['card_count'] ?? null;
+        if (!is_int($count) || $count < 3 || $count > 10) return 'LuckTest: количество карт должно быть целым числом от 3 до 10';
+        $cost = $this->lucktest['average_cost'] ?? null;
+        if ((!is_int($cost) && !is_float($cost)) || !is_finite((float) $cost)
+            || $cost < 3 || $cost > 7 || floor($cost * 2) !== (float) ($cost * 2)) {
+            return 'LuckTest: средняя стоимость должна быть от 3 до 7 с шагом 0,5';
+        }
+        foreach (['balanced', 'quick_game'] as $key) {
+            if (!is_bool($this->lucktest[$key] ?? null)) return 'LuckTest: неверное значение переключателя';
+        }
+        return null;
     }
 
     public function systemDeckSelection(): string

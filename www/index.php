@@ -632,6 +632,12 @@ $historyRuntime = \Berserk\Core\BattleHistory\HistoryRuntime::load();
 $_SESSION['history_prepare_csrf'] = GameTransport::$csrf;
 GameTransport::$version = $state->persistenceVersion ?? 0;
 GameTransport::$stage = $state->status;
+if (isset($_POST['debug_roll']) || isset($_POST['lucktest_scenario']) || ($_POST['cmd'] ?? null) === 'set_lucktest_debug') {
+    if (!\Berserk\Auth\DebugAccess::forPlayer($state,$playerKey)) { http_response_code(403); exit('debug_forbidden'); }
+    if ($state->status !== 'settings' || $state->cards !== [] || !in_array($_POST['cmd'] ?? '', ['confirm_settings','set_lucktest_debug'],true)) { http_response_code(409); exit('debug_preparation_started'); }
+    if (isset($_POST['lucktest_scenario']) && $playerKey !== 'host') { http_response_code(403); exit('scenario_host_only'); }
+}
+
 if (in_array($state->status,['battle','game_over'],true) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && !$isBattleCommand && !$isPlaymat) {
     http_response_code(405); exit('battle_commands_require_journal_endpoint');
 }
@@ -1143,7 +1149,8 @@ if ($commandType !== '') {
 
     $cmd = new Command($commandType, $payload);
     $historyPrepared = false;
-    if ($historyRuntime->records($state->gameId) && $state->status === 'place') {
+    if ($historyRuntime->records($state->gameId) && ($state->status === 'place'
+        || (new PrepareProcessor($state))->isLuckTestQuickStart($cmd))) {
         $token = requestParamString($_POST, 'csrf', 64);
         $version = requestParamString($_POST, 'prepare_version', 20);
         if ($token === null || !hash_equals($_SESSION['history_prepare_csrf'] ?? '', $token)
@@ -1166,6 +1173,10 @@ if ($commandType !== '') {
                 } catch (StaleStateException) {
                     $fresh = $repo->findById($state->gameId);
                     $prepareJournal->markConflict((int)$record['id'],$fresh->persistenceVersion,'stale_state','Refresh preparation');
+                } catch (Throwable $error) {
+                    if ($state->mode !== \Berserk\Core\GameSettings::MODE_LUCKTEST) throw $error;
+                    error_log('LuckTest preparation commit unavailable: '.get_class($error).' code='.$error->getCode().' game='.$state->gameId.' cause='.($error->getPrevious()?->getMessage() ?? $error->getMessage()));
+                    http_response_code(503); exit('Результат сохранения не подтверждён. Обновите состояние игры.');
                 }
             }
         }
@@ -1188,6 +1199,10 @@ if ($commandType !== '') {
             $roleParam = ($role === 'host') ? 'first' : 'second';
             header('Location: ?game=' . $state->gameId,true,303);
             exit;
+        } catch (Throwable $error) {
+            if ($state->mode !== \Berserk\Core\GameSettings::MODE_LUCKTEST) throw $error;
+            error_log('LuckTest preparation save unavailable: '.get_class($error).' code='.$error->getCode().' game='.$state->gameId.' cause='.($error->getPrevious()?->getMessage() ?? $error->getMessage()));
+            http_response_code(503); exit('Результат сохранения не подтверждён. Обновите состояние игры.');
         }
 
         // PRG: редирект без cmd, чтобы F5 не выполнил команду повторно
@@ -1278,7 +1293,8 @@ switch ($state->status) {
         break;
 
     case 'turn':
-        $deckData = (new ViewScreen($deckView, $tpl))->readOnlyDeck($state, $playerKey, $role, $message, $cardsInfo, $elementLabels);
+        $deckData = $state->mode === \Berserk\Core\GameSettings::MODE_LUCKTEST ? []
+            : (new ViewScreen($deckView, $tpl))->readOnlyDeck($state, $playerKey, $role, $message, $cardsInfo, $elementLabels);
         $result = (new TurnScreen())
             ->prepare($state, $playerKey, $role, $message, $deckData);
         $screenName = $result['screen'];
@@ -1286,7 +1302,8 @@ switch ($state->status) {
         break;
 
     case 'side':
-        $deckData = (new ViewScreen($deckView, $tpl))->readOnlyDeck($state, $playerKey, $role, $message, $cardsInfo, $elementLabels);
+        $deckData = $state->mode === \Berserk\Core\GameSettings::MODE_LUCKTEST ? []
+            : (new ViewScreen($deckView, $tpl))->readOnlyDeck($state, $playerKey, $role, $message, $cardsInfo, $elementLabels);
         $result = (new SideScreen())
             ->prepare($state, $playerKey, $role, $message, $deckData);
         $screenName = $result['screen'];
@@ -1386,10 +1403,8 @@ $menuAccount=\Berserk\View\Ui\GameMenu::account(GameTransport::$csrf);
 if ($screenName==='battle') {
     $screenHtml=preg_replace('/(<div id="battle-menu-panel"[^>]*>)/','$1<a role="menuitem" href="/lobby.php">В лобби</a>',$screenHtml,1);
     $screenHtml=str_replace('<span class="battle-menu-saving"',$menuAccount.'<span class="battle-menu-saving"',$screenHtml);
-    // Prototype debug URLs remain forbidden for authenticated games.
-    $screenHtml=preg_replace('/<a role="menuitem" data-menu-debug[^>]*>Debug<\/a>/','<button type="button" role="menuitem" data-menu-debug disabled aria-disabled="true">Debug</button>',$screenHtml);
 } else {
-    $menu=\Berserk\View\Ui\GameMenu::preparation(GameTransport::$csrf,$state->getPlayer($playerKey)->soundEnabled,$screenName==='game_over');
+    $menu=\Berserk\View\Ui\GameMenu::preparation(GameTransport::$csrf,$state->getPlayer($playerKey)->soundEnabled,$screenName==='game_over',$state,$playerKey);
     if ($isPreGame) $screenHtml=preg_replace('/<button class="pregame-menu".*?<\/button>/s',$menu,$screenHtml,1);
     else $screenHtml=$menu.$screenHtml;
     $scriptsHtml.='<script type="application/json" id="preparation-menu-config">'.json_encode(['game'=>$state->gameId,'csrf'=>GameTransport::$csrf],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>'

@@ -136,12 +136,12 @@ final class BattleScreen
         $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml, $pilePanelHtml);
 
         $debugHtml = '';
-        if (!\Berserk\Core\MatchPause::blocking($state) && isset($_SESSION['debug']) && $_SESSION['debug'] == '1') {
+        if (!\Berserk\Core\MatchPause::blocking($state) && \Berserk\Auth\DebugAccess::forPlayer($state, $playerKey)) {
             $debugHtml = $this->buildDebug($state, $playerKey, $strike);
         }
 
         // Debug travels in the existing InfoPanel fragment; no extra AJAX field.
-        $infoPanelHtml .= '<aside id="battle-debug" class="battle-debug-overlay" aria-label="Отладка боя" hidden>'
+        if ($debugHtml !== '') $infoPanelHtml .= '<aside id="battle-debug" class="battle-debug-overlay" aria-label="Отладка боя" hidden>'
             . '<div class="battle-debug-toolbar"><button type="button" class="battle-window-close" data-menu-debug-close aria-label="Закрыть окно отладки">×</button></div>'
             . $debugHtml . '</aside>';
 
@@ -157,14 +157,16 @@ final class BattleScreen
                 'pause_root_attr' => \Berserk\Core\MatchPause::blocking($state) ? 'data-match-paused="1"' : '',
                 'pause_field_attr' => \Berserk\Core\MatchPause::blocking($state) ? 'inert aria-hidden="true"' : '',
                 'pause_mask_hidden' => \Berserk\Core\MatchPause::blocking($state) ? '' : 'hidden',
+                'debug_menu_html' => \Berserk\Auth\DebugAccess::forPlayer($state, $playerKey)
+                    ? '<button type="button" role="menuitem" data-menu-debug>Debug</button>' : '',
                 'debug_disabled' => $debugHtml === '' ? 'disabled' : '',
-                'debug_menu_url' => htmlspecialchars($baseUrl . '&debug=1#battle-debug', ENT_QUOTES),
+                'debug_menu_url' => htmlspecialchars('#battle-debug', ENT_QUOTES),
                 'own_playmat' => \Berserk\Core\PlaymatCatalog::url($state->getPlayer($playerKey)->playmatId),
                 'opponent_playmat' => \Berserk\Core\PlaymatCatalog::url($state->getPlayer($oppKey)->playmatId),
                 'sound_checked' => $state->getPlayer($playerKey)->soundEnabled ? 'true' : 'false',
                 'debug_menu_attr' => \Berserk\Core\MatchPause::blocking($state)
                     ? 'aria-disabled="true" tabindex="-1"'
-                    : 'href="' . $baseUrl . '&amp;debug=1#battle-debug"',
+                    : 'href="#battle-debug"',
                 'field_html'       => $fieldHtml,
                 'panel_html'       => $panelHtml,
                 'fly_zones_html'    => $flyZonesHtml,

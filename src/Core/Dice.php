@@ -77,7 +77,7 @@ final class Dice
         return self::$queue;
     }
 
-    private static function isInfiniteMode(): bool
+    public static function isInfiniteMode(): bool
     {
         return self::$infinite;
     }
