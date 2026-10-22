@@ -8,7 +8,7 @@ use Berserk\Core\Prepare\PrepareProcessor;
 /** Room configuration only: pool generation is deferred until candidate acceptance. */
 final class RoomSetup
 {
-    public static function parse(string $mode, array $input): array
+    public static function parse(string $mode, array $input, ?int $debugAccount = null): array
     {
         if (!in_array($mode,['system','draft','solomon','sealed','lucktest'],true)) throw new \DomainException('Выберите вид игры.',400);
         $settings=GameSettings::defaults()->toArray();
@@ -34,7 +34,16 @@ final class RoomSetup
             $settings['booster']['ultra_rare_chance']=BoosterSettings::rareChanceToUltraChance($input['booster_rare_chance']) ?? -1;
         }
         if ($mode === GameSettings::MODE_LUCKTEST) $settings['lucktest'] = GameSettings::luckTestInput($settings['lucktest'], $input);
-        return self::validate(['mode'=>$mode,'settings'=>$settings]);
+        $setup = ['mode'=>$mode,'settings'=>$settings];
+        if (array_key_exists('lucktest_scenario',$input) || array_key_exists('debug_roll',$input)) {
+            if ($mode !== 'lucktest' || $debugAccount === null || !\Berserk\Auth\DebugAccess::allowsId($debugAccount)) throw new \DomainException('Debug недоступен для этого аккаунта или режима',403);
+            $private = ['account_id'=>$debugAccount];
+            if (array_key_exists('lucktest_scenario',$input)) $private['scenario'] = \Berserk\Core\Prepare\LuckTestScenario::parse($input['lucktest_scenario'], is_int($settings['lucktest']['card_count']) ? $settings['lucktest']['card_count'] : 0);
+            if (($private['scenario'] ?? []) !== [] && $settings['lucktest']['quick_game'] !== true) throw new \DomainException('Сценарий LuckTest доступен только в быстрой игре',400);
+            if (array_key_exists('debug_roll',$input)) $private['roll'] = \Berserk\Core\LuckTestDebug::rollInput($input['debug_roll']);
+            if (($private['scenario'] ?? []) !== [] || ($private['roll'] ?? 'off') !== 'off') $setup['debug'] = $private;
+        }
+        return self::validate($setup);
     }
 
     public static function validate(array $setup): array
@@ -51,7 +60,31 @@ final class RoomSetup
             default => $s->validateDraftSettings(),
         };
         if ($error!==null) throw new \DomainException($error,400);
-        return ['mode'=>$mode,'settings'=>$s->toArray()];
+        $result = ['mode'=>$mode,'settings'=>$s->toArray()];
+        if (isset($setup['debug'])) {
+            $debug = $setup['debug'];
+            if ($mode !== 'lucktest' || !is_array($debug) || array_diff(array_keys($debug),['account_id','scenario','roll'])
+                || !is_int($debug['account_id'] ?? null) || !\Berserk\Auth\DebugAccess::allowsId($debug['account_id'])) throw new \DomainException('Разрешение Debug отсутствует или отозвано',403);
+            $entries = $debug['scenario'] ?? [];
+            if (!is_array($entries)) throw new \DomainException('Некорректный сценарий LuckTest',400);
+            if ($entries !== []) {
+                $debug['scenario'] = \Berserk\Core\Prepare\LuckTestScenario::parse(json_encode(['cards'=>$entries],JSON_THROW_ON_ERROR),$s->lucktest['card_count']);
+                if ($s->lucktest['quick_game'] !== true) throw new \DomainException('Сценарий LuckTest доступен только в быстрой игре',400);
+            }
+            if (isset($debug['roll'])) $debug['roll'] = \Berserk\Core\LuckTestDebug::rollInput($debug['roll']);
+            $result['debug'] = $debug;
+        }
+        return $result;
+    }
+
+    public static function attachDebug(GameState $state, array $setup): void
+    {
+        if (!isset($setup['debug'])) return;
+        if (($setup['debug']['account_id'] ?? null) !== $state->hostId || !\Berserk\Auth\DebugAccess::allowsId($state->hostId)) throw new \DomainException('Разрешение Debug хоста отсутствует или отозвано',403);
+        $payload = [];
+        if (($setup['debug']['scenario'] ?? []) !== []) $payload['lucktest_scenario'] = json_encode(['cards'=>$setup['debug']['scenario']],JSON_THROW_ON_ERROR);
+        if (isset($setup['debug']['roll'])) $payload['debug_roll'] = $setup['debug']['roll'];
+        \Berserk\Core\LuckTestDebug::configure($state,'host',new Command('confirm_settings',$payload));
     }
 
     public static function apply(GameState $state, array $setup, ?Db $catalog): void
@@ -61,6 +94,7 @@ final class RoomSetup
         $result=$processor->chooseMode('host',new Command('choose_mode',['mode'=>$setup['mode']]));
         if (!$result->success) throw new \DomainException($result->error??'Не удалось выбрать режим.',400);
         $state->settings=GameSettings::fromArray($setup['settings']);
+        self::attachDebug($state,$setup);
         if ($setup['mode']!=='system') {
             if ($catalog===null) throw new \RuntimeException('Catalog connection required');
             $result = $setup['mode'] === GameSettings::MODE_LUCKTEST

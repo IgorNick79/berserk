@@ -23,6 +23,7 @@ final class MatchCreator
             $result = (new \Berserk\Core\Prepare\PrepareProcessor($state))->chooseMode('host', new \Berserk\Core\Command('choose_mode', ['mode'=>'lucktest']));
             if (!$result->success) throw new \LogicException('Cannot initialize LuckTest');
             $state->settings = \Berserk\Core\GameSettings::fromArray($setup['settings']);
+            RoomSetup::attachDebug($state,$setup);
             $seed = json_encode($state->toArray(), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
             $stmt = $db->prepare("UPDATE games SET status='settings',json=? WHERE ind=?");
             try { $stmt->bind_param('si', $seed, $id); $stmt->execute(); } finally { $stmt->close(); }

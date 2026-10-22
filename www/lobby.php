@@ -31,6 +31,7 @@ try {
     if ($actor !== null) {
         $account = (new AuthStore($config['db']))->account($actor);
         if ($account === null) throw new DomainException('Требуется вход.',401);
+        \Berserk\Auth\DebugAccess::bind($account);
     }
     $csrf = AuthSession::csrf();
     if ($method === 'POST') AuthSession::requireCsrf($_POST['csrf'] ?? null);
@@ -44,7 +45,7 @@ try {
             if ($id !== null) throw new DomainException('Некорректный запрос.',400);
             $setupMode=$_POST['setup_mode']??null;
             if (!is_string($setupMode)) throw new DomainException('Некорректный режим.',400);
-            $id = $store->create($actor,RoomSetup::parse($setupMode,$_POST));
+            $id = $store->create($actor,RoomSetup::parse($setupMode,$_POST,$actor));
         } else {
             if ($id === null || !is_string($action) || !in_array($action,['open','accept','reject'],true)) throw new DomainException('Некорректный запрос.',400);
             $version = $integer($_POST['version'] ?? null);
@@ -99,4 +100,4 @@ header('Content-Type: text/html; charset=utf-8');
 <p id="notice" role="status"><?= $escape($error ?? '') ?></p>
 <?php if ($data !== null): ?>
 <?php if ($wizard !== ''): ?><section class="lobby-wizard"><?= $wizard ?></section><?php else: ?><section id="content"></section><?php endif; ?><noscript>Для автоматического обновления лобби включите JavaScript.</noscript>
-<?php else: ?><p><a href="lobby.php">Вернуться в лобби</a></p><?php endif; ?></main></body></html>
+<?php else: ?><p><a href="lobby.php">Вернуться в лобби</a></p><?php endif; ?></main><script src="/assets/js/lucktest-debug.js?v=1" defer></script></body></html>

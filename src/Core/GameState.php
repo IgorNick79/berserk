@@ -41,6 +41,8 @@ final class GameState
     /** @var array<string, array> */
     public array $cell_markers = [];
 
+    /** Server-only debug configuration and Dice cursors. Never a client projection. */
+    public array $lucktestDebug = [];
     public array $battle = [];
     public array $log = [];
 
@@ -72,6 +74,7 @@ final class GameState
         $state->settings       = GameSettings::fromArray((array) ($data['settings'] ?? []));
         $state->firstPlayer    = $data['first_player'] ?? null;
         $state->nextInstanceId = (int) ($data['next_instance_id'] ?? 1);
+        $state->lucktestDebug = (array) ($data['lucktest_debug'] ?? []);
         $state->battle         = (array) ($data['battle'] ?? []);
         $state->log            = (array) ($data['log'] ?? []);
         $state->cell_markers   = (array) ($data['cell_markers'] ?? []);
@@ -116,6 +119,7 @@ final class GameState
             'players'          => $players,
             'cards'            => $cards,
             'cell_markers'     => $this->cell_markers,
+            'lucktest_debug'    => $this->lucktestDebug,
             'battle'           => $this->battle,
             'log'              => $this->log,
             'winner'           => $this->winner,

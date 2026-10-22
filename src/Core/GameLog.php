@@ -21,6 +21,9 @@ final class GameLog
             $file = self::file($state->gameId);
 
             $params = $cmd->payload;
+            foreach (['lucktest_scenario','debug_roll'] as $private) {
+                if (array_key_exists($private, $params)) { $params[$private.'_hash'] = hash('sha256',json_encode($params[$private],JSON_INVALID_UTF8_SUBSTITUTE)); unset($params[$private]); }
+            }
             unset($params['first'], $params['second'], $params['game'], $params['cmd'], $params['sel']);
 
             $entry = [

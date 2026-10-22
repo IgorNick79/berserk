@@ -24,6 +24,7 @@ final class AuthContext
         if ($id === null) throw new \DomainException('authentication_required',401);
         $account = (new AuthStore($config['db']))->account($id);
         if ($account === null) throw new \DomainException('authentication_required',401);
+        DebugAccess::bind($account);
         return $account;
     }
 }

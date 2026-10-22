@@ -1549,7 +1549,9 @@ final class PrepareProcessor
             $catalog = (new DraftDeckBuilder($this->db))->buildDeckCards($ids);
             if (count($catalog) !== count($ids)) throw new \RuntimeException('Неполный каталог LuckTest');
             $generator = new LuckTestGenerator();
-            $squads = $legacy ? [] : $generator->generate($catalog, $settings);
+            $entries = \Berserk\Core\LuckTestDebug::scenario($this->state, $settings);
+            $fixed = LuckTestScenario::fixed($entries, $catalog);
+            $squads = $legacy ? [] : $generator->generate($catalog, $settings, $fixed);
             $working = GameState::fromArray($this->state->toArray());
             $working->settings = $settings;
             $working->draft = null;
@@ -1581,9 +1583,11 @@ final class PrepareProcessor
                 $error = $worker->validateLuckTestCards($owner, false);
                 if ($error !== null) throw new \RuntimeException($error);
             }
+            LuckTestScenario::bind($working);
             $turn = $worker->enterTurn();
             if (!$turn->success) return $turn;
             // Publish both complete squads, both reserves and dice together; caller owns persistence/CAS.
+            $this->state->lucktestDebug = $working->lucktestDebug;
             $this->state->players = $working->players;
             $this->state->cards = $working->cards;
             $this->state->nextInstanceId = $working->nextInstanceId;
@@ -1594,6 +1598,8 @@ final class PrepareProcessor
             $this->state->status = $working->status;
             $this->state->bumpVersion();
             return Result::ok(array_merge(['settings_confirmed:lucktest', 'lucktest_squads_generated'], $turn->events));
+        } catch (\DomainException $e) {
+            return Result::error($e->getMessage());
         } catch (\Throwable $e) {
             error_log((string) json_encode([
                 'event' => 'lucktest_generation_failed',

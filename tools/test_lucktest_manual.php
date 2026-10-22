@@ -26,7 +26,9 @@ function manualCopy(GameState $state): GameState
 function manualApply(GameState $state, string $owner, string $type, array $payload = [], bool $ok = true): \Berserk\Core\Result
 {
     $before = $state->toArray();
-    $result = (new Engine())->apply($state, $owner, new Command($type, $payload));
+    // Freeze elapsed battle time: this helper tests preparation rejection, not wall-clock settlement.
+    $now = $state->battle['turn_timer']['anchor_at'] ?? time();
+    $result = (new Engine(null, fn() => $now))->apply($state, $owner, new Command($type, $payload));
     check($result->success === $ok, $type . ': ' . ($result->error ?? 'unexpected success'));
     if (!$ok) check($state->toArray() === $before, 'rejected command leaves preparation unchanged: ' . $type);
     return $result;

@@ -14,7 +14,7 @@ final class LuckTestGenerator
     public function __construct(private ?\Closure $randomInt = null) {}
 
     /** @return array{host:array,player:array} Grouped deckCards snapshots, ready for materialization. */
-    public function generate(array $catalog, GameSettings $settings): array
+    public function generate(array $catalog, GameSettings $settings, array $fixed = []): array
     {
         $error = $settings->validateLuckTestSettings();
         if ($error !== null) throw new \InvalidArgumentException($error);
@@ -29,11 +29,21 @@ final class LuckTestGenerator
             if ($ordinary !== []) $categories[] = false;
             if ($special !== []) $categories[] = true;
         }
+        foreach (['host','player'] as $owner) {
+            $fixed[$owner] ??= [];
+            if (count($fixed[$owner]) > $count) throw new \DomainException('Сценарий LuckTest: обязательных карт больше K');
+        }
         $best = null;
         $bestScore = INF;
         foreach ($categories as $category) {
-            $host = $this->search($catalog, $ordinary, $special, $count, $target, $category);
-            $player = $this->search($catalog, $ordinary, $special, $count, $target, $category);
+            $possible = true;
+            foreach (['host','player'] as $owner) {
+                $has = self::hasSpecial($fixed[$owner]);
+                if (($category === false && $has) || ($category === true && !$has && count($fixed[$owner]) === $count)) $possible = false;
+            }
+            if (!$possible) continue;
+            $host = $this->search($catalog, $ordinary, $special, $count, $target, $category, $fixed['host']);
+            $player = $this->search($catalog, $ordinary, $special, $count, $target, $category, $fixed['player']);
             if ($settings->lucktest['balanced'] && !self::isBalanced($host, $player)) {
                 throw new \RuntimeException('Не удалось сбалансировать LuckTest');
             }
@@ -43,7 +53,7 @@ final class LuckTestGenerator
                 $bestScore = $score;
             }
         }
-        if ($best === null) throw new \RuntimeException('Нет допустимых отрядов LuckTest');
+        if ($best === null) throw new \DomainException('Сценарий LuckTest: балансировка обязательных карт невозможна');
         return $best;
     }
 
@@ -103,18 +113,18 @@ final class LuckTestGenerator
         return false;
     }
 
-    private function search(array $catalog, array $ordinary, array $special, int $count, float $target, ?bool $category): array
+    private function search(array $catalog, array $ordinary, array $special, int $count, float $target, ?bool $category, array $fixed = []): array
     {
         $pool = $category === false ? $ordinary : $catalog;
         $best = [];
         $bestError = INF;
         for ($attempt = 0; $attempt < self::ATTEMPTS; $attempt++) {
-            $cards = [];
-            for ($i = 0; $i < $count; $i++) $cards[] = $this->pick($pool);
-            if ($category === true) $cards[$this->random(0, $count - 1)] = $this->pick($special);
+            $cards = $fixed;
+            for ($i = count($fixed); $i < $count; $i++) $cards[] = $this->pick($pool);
+            if ($category === true && !self::hasSpecial($cards)) $cards[$this->random(count($fixed), $count - 1)] = $this->pick($special);
             $total = $this->cost($cards);
             // Random one-card improvements retain repeats and never require exact budget equality.
-            for ($i = 0; $i < $count; $i++) {
+            for ($i = count($fixed); $i < $count; $i++) {
                 for ($j = 0; $j < self::REPLACEMENTS_PER_CARD; $j++) {
                     $replacement = $this->pick($pool);
                     $previous = $cards[$i];

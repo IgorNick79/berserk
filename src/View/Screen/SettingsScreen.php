@@ -234,7 +234,16 @@ final class SettingsScreen
                 . '<label class="settings-option"><input type="checkbox" name="' . $name . '" value="1"'
                 . ($settings[$key] === true ? ' checked' : '') . '><span>' . $label . '</span></label>';
         }
-        $form .= '</section><div class="settings-submit-row"><button class="button wide settings-submit" type="submit">Сформировать отряды</button></div></form>';
+        if (\Berserk\Auth\DebugAccess::forPlayer($state,'host')) {
+            $id = $state->hostId;
+            $raw = $state->lucktestDebug['rolls'][(string)$id]['raw'] ?? 'off';
+            $scenario = isset($state->lucktestDebug['scenario']) ? json_encode(['cards'=>$state->lucktestDebug['scenario']],JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT) : '';
+            $form .= '<fieldset><legend>Debug</legend><label>Броски Dice <input name="debug_roll" maxlength="1024" value="'.$this->esc($raw).'" placeholder="6,1,4 или off"></label>'
+                .'<div data-lucktest-scenario'.($settings['quick_game'] ? '' : ' hidden').'><label>Обязательные карты (JSON)<textarea name="lucktest_scenario" maxlength="4096" rows="6"'
+                .($settings['quick_game'] ? '' : ' disabled').'>'.$this->esc($scenario).'</textarea></label></div></fieldset>';
+        }
+        $form .= '</section><div class="settings-submit-row"><button class="button wide settings-submit" type="submit">Сформировать отряды</button></div></form>'
+            .'<script src="/assets/js/lucktest-debug.js?v=1" defer></script>';
         return ['screen' => 'settings', 'data' => ['title' => 'LuckTest',
             'content_html' => '<p class="settings-mode-title">Все карты входят в отряд. Стоимость приблизительная.</p>',
             'actions_html' => $form, 'message' => $message ?? '']];

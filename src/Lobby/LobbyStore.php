@@ -100,6 +100,7 @@ final class LobbyStore
 
     public function create(int $actor, ?array $setup = null): int
     {
+        if (isset($setup['debug']) && (($setup['debug']['account_id'] ?? null) !== $actor || !\Berserk\Auth\DebugAccess::allowsId($actor))) throw new \DomainException('Debug недоступен для создателя',403);
         RoomTransaction::run($this->db, function (RoomTransaction $transaction) use ($actor, $setup, &$id): void {
             $this->query("INSERT INTO lobby_rooms(creator_account_id,state,version,created_at,updated_at) VALUES(?,'open',1,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))",[$actor]);
             $id = (int)$this->db->insert_id;
