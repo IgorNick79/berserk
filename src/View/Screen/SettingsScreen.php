@@ -238,7 +238,7 @@ final class SettingsScreen
             $id = $state->hostId;
             $raw = $state->lucktestDebug['rolls'][(string)$id]['raw'] ?? 'off';
             $scenario = isset($state->lucktestDebug['scenario']) ? json_encode(['cards'=>$state->lucktestDebug['scenario']],JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT) : '';
-            $form .= '<fieldset><legend>Debug</legend><label><input aria-label="Броски Dice" name="debug_roll" maxlength="1024" value="'.$this->esc($raw).'" placeholder="Броски Dice: 6,1,4 или off"></label>'
+            $form .= '<fieldset class="debug-fieldtest"><legend>Debug</legend><label><input aria-label="Броски Dice" name="debug_roll" maxlength="1024" value="'.$this->esc($raw).'" placeholder="Броски Dice: 6,1,4 или off"></label>'
                 .'<div data-lucktest-scenario'.($settings['quick_game'] ? '' : ' hidden').'><textarea aria-label="Обязательные карты (JSON)" placeholder="Обязательные карты (JSON)" style="display:block;width:100%;box-sizing:border-box" name="lucktest_scenario" maxlength="4096" rows="6"'
                 .($settings['quick_game'] ? '' : ' disabled').'>'.$this->esc($scenario).'</textarea></div></fieldset>';
         }
