@@ -18,7 +18,7 @@ final class GameMenu
         return '<details><summary>Debug</summary><form method="post"><input type="hidden" name="game" value="'.$state->gameId.'">'
             .'<input type="hidden" name="cmd" value="set_lucktest_debug"><input type="hidden" name="csrf" value="'.htmlspecialchars($csrf,ENT_QUOTES).'">'
             .'<input type="hidden" name="prepare_version" value="'.(int)$state->persistenceVersion.'">'
-            .'<label>Броски Dice <input name="debug_roll" maxlength="1024" value="'.htmlspecialchars($raw,ENT_QUOTES).'"></label><button type="submit">Сохранить Debug</button></form></details>';
+            .'<label><input aria-label="Броски Dice" placeholder="Броски Dice: 6,1,4 или off" name="debug_roll" maxlength="1024" value="'.htmlspecialchars($raw,ENT_QUOTES).'"></label><button type="submit">Сохранить Debug</button></form></details>';
     }
 
     public static function preparation(string $csrf, bool $sound, bool $finished, ?\Berserk\Core\GameState $state = null, string $playerKey = ''): string

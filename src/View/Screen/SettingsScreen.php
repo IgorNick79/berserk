@@ -238,9 +238,9 @@ final class SettingsScreen
             $id = $state->hostId;
             $raw = $state->lucktestDebug['rolls'][(string)$id]['raw'] ?? 'off';
             $scenario = isset($state->lucktestDebug['scenario']) ? json_encode(['cards'=>$state->lucktestDebug['scenario']],JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT) : '';
-            $form .= '<fieldset><legend>Debug</legend><label>Броски Dice <input name="debug_roll" maxlength="1024" value="'.$this->esc($raw).'" placeholder="6,1,4 или off"></label>'
-                .'<div data-lucktest-scenario'.($settings['quick_game'] ? '' : ' hidden').'><label>Обязательные карты (JSON)<textarea name="lucktest_scenario" maxlength="4096" rows="6"'
-                .($settings['quick_game'] ? '' : ' disabled').'>'.$this->esc($scenario).'</textarea></label></div></fieldset>';
+            $form .= '<fieldset><legend>Debug</legend><label><input aria-label="Броски Dice" name="debug_roll" maxlength="1024" value="'.$this->esc($raw).'" placeholder="Броски Dice: 6,1,4 или off"></label>'
+                .'<div data-lucktest-scenario'.($settings['quick_game'] ? '' : ' hidden').'><textarea aria-label="Обязательные карты (JSON)" placeholder="Обязательные карты (JSON)" style="display:block;width:100%;box-sizing:border-box" name="lucktest_scenario" maxlength="4096" rows="6"'
+                .($settings['quick_game'] ? '' : ' disabled').'>'.$this->esc($scenario).'</textarea></div></fieldset>';
         }
         $form .= '</section><div class="settings-submit-row"><button class="button wide settings-submit" type="submit">Сформировать отряды</button></div></form>'
             .'<script src="/assets/js/lucktest-debug.js?v=1" defer></script>';
