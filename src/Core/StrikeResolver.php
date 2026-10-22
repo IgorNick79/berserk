@@ -124,7 +124,7 @@ final class StrikeResolver
         return $result;
     }
 
-    public function declare(string $playerKey, Command $cmd): Result
+    public function declare(string $playerKey, Command $cmd, array $returnTo = []): Result
     {
         if ($this->state->status !== 'battle') {
             return Result::error('Сейчас не бой');
@@ -324,6 +324,7 @@ final class StrikeResolver
         }
         InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = $strike;
+        CombatContinuation::begin($this->state, $returnTo);
 
         // Окно инстантов до броска — openWindow сам проверит, есть ли у кого
         $this->state->historyRecorder?->combatStarted($this->state,$strike);
@@ -344,7 +345,8 @@ final class StrikeResolver
     public function declareForcedAdjacent(
         CardInstance $attacker,
         CardInstance $target,
-        bool $closeAttackerAfter = false
+        bool $closeAttackerAfter = false,
+        array $order = []
     ): Result {
         if ($this->state->status !== 'battle') {
             return Result::error('Сейчас не бой');
@@ -360,10 +362,10 @@ final class StrikeResolver
             || $target->hp <= 0) {
             return Result::error('Цель не на поле');
         }
-        if ($attacker->closed) {
+        if ($attacker->closed && !$order) {
             return Result::error('Атакующий закрыт');
         }
-        if (!CardStats::hasAnyStrike($attacker)) {
+        if (!$order && !CardStats::hasAnyStrike($attacker)) {
             return Result::error('Карта не может атаковать');
         }
 
@@ -376,14 +378,19 @@ final class StrikeResolver
         $playerKey = $attacker->owner;
         $friendlyFire = $target->owner === $playerKey;
 
-        if (CardStats::hasDefense($this->state, $target, 'strike', $attacker)) {
+        if (!$order && CardStats::hasDefense($this->state, $target, 'strike', $attacker)) {
             return Result::error('Цель защищена от этой атаки');
         }
 
         $this->engine->revealCard($this->state, $target);
 
+        $candidate = ['matriarch_order' => (bool) $order, 'attacker_id' => $attacker->instanceId, 'target_id' => $target->instanceId];
+        $direct = $order && CardStats::isDirectStrike($this->state, $attacker, $target, $candidate);
+        $ragnar = $order && !$direct ? $this->consumeRagnarUnanswerStrike($attacker, $target, $friendlyFire, $candidate) : null;
+
         if ($this->engine->tryProphecyBlock($this->state, $attacker, $target, 'strike')) {
-            $attacker->closed = true;
+            if (!$order) $attacker->closed = true;
+            else CombatContinuation::blocked($this->state, $order);
             return Result::ok(["forced_strike_blocked:{$attacker->instanceId}->{$target->instanceId}"]);
         }
 
@@ -392,7 +399,7 @@ final class StrikeResolver
         }
 
         $oppKey = $this->state->getOpponentKey($playerKey);
-        $defenders = $friendlyFire
+        $defenders = ($friendlyFire || $order)
             ? []
             : $this->findDefenders($attacker, $target, $oppKey);
 
@@ -411,9 +418,14 @@ final class StrikeResolver
             'redirect_candidates' => [],
             'friendly_fire' => $friendlyFire,
             'forced_strike_adjacent' => true,
-            'forced_close_attacker_after' => $closeAttackerAfter,
+            'forced_close_attacker_after' => $order ? false : $closeAttackerAfter,
         ];
-
+        if ($order) {
+            $this->state->battle['strike']['matriarch_order'] = true;
+            if ($ragnar !== null) $this->state->battle['strike']['ragnar_unanswer'] = $ragnar;
+            $this->state->historyRecorder?->combatStarted($this->state, $this->state->battle['strike']);
+        }
+        CombatContinuation::begin($this->state, $order);
         $ip = new InstantProcessor($this->state, $this->engine);
         $beforeWindowOpened = $ip->openWindow('before', $playerKey);
 
@@ -449,6 +461,7 @@ final class StrikeResolver
 
         $defenderId = (int) $cmd->get('defender_id', 0);
 
+        if ($defenderId > 0 && !empty($this->state->battle['strike']['matriarch_order'])) return Result::error('Замена защитника запрещена');
         if ($defenderId > 0) {
             $allowed = $this->state->battle['strike']['defenders'] ?? [];
             if (!in_array($defenderId, $allowed, true)) {
@@ -558,6 +571,7 @@ final class StrikeResolver
      */
     public function getMageRedirectOptions(string $playerKey): array
     {
+        if (!empty($this->state->battle['strike']['matriarch_order'])) return [];
         $strike = $this->state->battle['strike'] ?? null;
         if (!$strike || !empty($strike['redirect_used'])) {
             return [];
@@ -740,7 +754,7 @@ final class StrikeResolver
         $attackDice = Dice::roll();
 
         $defendWhileClosed = !empty($defendCard->prop['defend_while_closed']);
-        $isClosed = $defendCard->closed && !$defendWhileClosed;
+        $isClosed = CardStats::combatClosed($this->state, $defendCard) && !$defendWhileClosed;
 
         $hasUnanswer = CardStats::hasUnanswer($this->state, $attacker, $defendCard);
         $noDefendDice = !empty($strike['friendly_fire'])
@@ -1015,19 +1029,7 @@ final class StrikeResolver
             $this->engine->moveToFlyingZone($this->state, $defendCard);
         }
 
-        if (empty($attacker->flags['attack_series_active'])) {
-            $attacker->flags['attacks_used_this_turn'] =
-                ((int) ($attacker->flags['attacks_used_this_turn'] ?? 0)) + 1;
-
-            if (!empty($attacker->prop['strike_targets_unique'])
-                && empty($attacker->flags['first_attack_target_id'])) {
-                $attacker->flags['first_attack_target_id'] = (int) ($strike['target_id'] ?? 0);
-            }
-
-            $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
-            $noClose     = !empty($attacker->prop['no_close_after_attack'])
-                || !empty($attacker->flags['no_close_this_turn']);
-
+        if (empty($attacker->flags['attack_series_active']) || !empty($strike['matriarch_order'])) {
             // Келе и подобные: авто-heal при попадании, условное не-закрытие
             $selfHeal = $attacker->prop['on_strike_self_heal'] ?? null;
             if (is_array($selfHeal)
@@ -1043,13 +1045,28 @@ final class StrikeResolver
                     $noClose = true;
                 }
             }
+
+        }
+        if (empty($strike['matriarch_order']) && empty($attacker->flags['attack_series_active'])) {
+            $attacker->flags['attacks_used_this_turn'] =
+                ((int) ($attacker->flags['attacks_used_this_turn'] ?? 0)) + 1;
+
+            if (!empty($attacker->prop['strike_targets_unique'])
+                && empty($attacker->flags['first_attack_target_id'])) {
+                $attacker->flags['first_attack_target_id'] = (int) ($strike['target_id'] ?? 0);
+            }
+
+            $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
+            $noClose     = !empty($noClose) || !empty($attacker->prop['no_close_after_attack'])
+                || !empty($attacker->flags['no_close_this_turn']);
+
             
             if ($attacker->flags['attacks_used_this_turn'] >= $attackLimit && !$noClose) {
                 $attacker->closed = true;
             }
         }
 
-        if (!empty($attacker->flags['attack_series_active'])) {
+        if (empty($strike['matriarch_order']) && !empty($attacker->flags['attack_series_active'])) {
             $hitIds = (array) ($attacker->flags['attack_series_hit_ids'] ?? []);
             $thisTarget = (int) ($strike['target_id'] ?? 0);
             if ($thisTarget > 0 && !in_array($thisTarget, $hitIds, true)) {
@@ -1405,7 +1422,13 @@ final class StrikeResolver
 
             if (count($confirmed) >= 2) {
                 InformationalWaitManager::publish($this->state);
+                if (!empty($this->state->battle['strike']['continuation_frame'])) {
+                    $result = $this->continueAfterStrikeResultAck($this->state->battle['strike']);
+                    $this->state->bumpVersion();
+                    return $result ?? Result::ok(['push_ack_confirmed']);
+                }
                 (new CoinAbilities($this->state, $this->engine))->completeCombat($this->state->battle['strike']);
+                CombatContinuation::localDone($this->state, $this->state->battle['strike'] ?? []);
                 $this->state->battle['strike'] = null;
                 $this->engine->finalizeDying($this->state);
             }
@@ -1456,13 +1479,14 @@ final class StrikeResolver
             if (!empty($strike['pending_choice'])) return Result::error('Сначала завершите эффект гибели');
             // Ability acknowledgement must not create ordinary strike follow-ups or instant windows.
             (new CoinAbilities($this->state, $this->engine))->completeCombat($strike);
+            CombatContinuation::localDone($this->state, $this->state->battle['strike'] ?? []);
             $this->state->battle['strike'] = null;
             $this->engine->finalizeDying($this->state);
             $this->state->bumpVersion();
             return Result::ok(['strangulation_result_confirmed']);
         }
         // Auto — только если ещё не сработал
-        if (empty($strike['auto_effects'])) {
+        if (empty($strike['auto_effects']) && empty($strike['continuation_auto_done'])) {
             $attacker = $this->state->getCard($strike['attacker_id']);
             if ($attacker && $this->engine->openAutoChoice($this->state, $attacker)) {
                 $this->state->bumpVersion();
@@ -1509,11 +1533,16 @@ final class StrikeResolver
 
         if (!$alreadyAfter && $attackerKey) {
             $ip = new InstantProcessor($this->state, $this->engine);
-            $ip->openWindow('after', $attackerKey);
+            $opened = $ip->openWindow('after', $attackerKey);
+            if ($opened && !empty($strike['continuation_frame'])) {
+                $this->state->bumpVersion();
+                return Result::ok(['instant_after_opened']);
+            }
 
             if (!empty($this->state->battle['turn_instant_stack']) && !empty($strike['coin_post_combat_effects'])) {
                 // The existing turn-stack continuation owns this resolved context while after-instants run.
                 $this->state->battle['turn_instant_stack']['continuation']['coin_origin_strike'] = $strike;
+                CombatContinuation::localDone($this->state, $this->state->battle['strike'] ?? []);
                 $this->state->battle['strike'] = null;
                 $this->engine->finalizeDying($this->state);
                 $this->state->bumpVersion();
@@ -1557,6 +1586,7 @@ final class StrikeResolver
         // Release only after result ACK, wounds, after-instant window and local continuations.
         (new CoinAbilities($this->state, $this->engine))->completeCombat($strike);
         // Закрываем сражение перед возможным обязательным добиванием после удара.
+        CombatContinuation::localDone($this->state, $this->state->battle['strike'] ?? []);
         $this->state->battle['strike'] = null;
         $this->engine->finalizeDying($this->state);
 
@@ -1566,19 +1596,19 @@ final class StrikeResolver
         }
 
         if ($this->openAttackSeriesChoice($strike)) {
-            $this->state->historyRecorder?->combatFinished($this->state);
+            if (empty($strike['continuation_frame'])) $this->state->historyRecorder?->combatFinished($this->state);
             $this->state->bumpVersion();
             return Result::ok(['attack_series_choice']);
         }
 
-        $this->state->historyRecorder?->combatFinished($this->state);
+        if (empty($strike['continuation_frame'])) $this->state->historyRecorder?->combatFinished($this->state);
         return null;
     }
 
     private function openAttackSeriesChoice(array $strike): bool
     {
         $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
-        if (!$attacker) return false;
+        if (!$attacker || !empty($strike['matriarch_order'])) return false;
         if (empty($attacker->flags['attack_series_active'])) return false;
 
         // Гидра погибла — завершаем серию
@@ -1896,12 +1926,12 @@ final class StrikeResolver
         $pp->commit($attacker->owner, $attacker, $peeked, 'strike', $title, $actions);
     }
 
-    private function consumeRagnarUnanswerStrike(CardInstance $attacker, CardInstance $target, bool $friendlyFire): ?array
+    private function consumeRagnarUnanswerStrike(CardInstance $attacker, CardInstance $target, bool $friendlyFire, ?array $context = null): ?array
     {
         if ($friendlyFire) return null;
 
         $defendWhileClosed = !empty($target->prop['defend_while_closed']);
-        if ($target->closed && !$defendWhileClosed) return null;
+        if (CardStats::combatClosed($this->state, $target, $context) && !$defendWhileClosed) return null;
         if (CardStats::hasUnanswer($this->state, $attacker, $target)) return null;
 
         foreach ($this->state->cards as $card) {
@@ -1942,7 +1972,7 @@ final class StrikeResolver
 
         $attackValue = (int) ($strike['attack_dice'] ?? 0) + (int) ($strike['attack_mod'] ?? 0);
         $defendWhileClosed = !empty($defendCard->prop['defend_while_closed']);
-        $defendValue = ($defendCard->closed && !$defendWhileClosed)
+        $defendValue = (CardStats::combatClosed($this->state, $defendCard) && !$defendWhileClosed)
             ? 0
             : (int) ($strike['defend_dice'] ?? 0) + (int) ($strike['defend_mod'] ?? 0);
 
@@ -2009,7 +2039,7 @@ final class StrikeResolver
         $cond   = $config['condition'] ?? null;
 
         // target_open — срабатывает только если цель открыта
-        if ($cond === 'target_open' && $defendCard->closed) return false;
+        if ($cond === 'target_open' && CardStats::combatClosed($this->state, $defendCard)) return false;
 
         $damage = (int) ($config['damage'] ?? 2);
 

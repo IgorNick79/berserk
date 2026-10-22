@@ -123,7 +123,8 @@ final class InstantProcessor
      */
     public function getInstants(string $ownerKey, string $phase = 'before', string $type = 'turn'): array
     {
-        $strike = $this->state->battle['strike'] ?? null;
+        $strike = $this->state->battle['strike']
+            ?? ($this->state->battle['turn_instant_stack']['continuation']['combat_origin_strike'] ?? null);
 
         $activeKey = null;
         if ($strike && !empty($strike['attacker_id'])) {
@@ -141,7 +142,7 @@ final class InstantProcessor
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying) continue;
-            if ($type !== 'turn' && $card->closed) continue;
+            if ($type !== 'turn' && CardStats::combatClosed($this->state, $card)) continue;
             if (!empty($card->flags['in_stack'])) continue;
             if (empty($card->prop['instants'])) continue;
 
@@ -158,6 +159,8 @@ final class InstantProcessor
 
             foreach ($card->prop['instants'] as $inst) {
                 if (($inst['trigger'] ?? '') !== $type) continue;
+                if (!empty($strike['matriarch_order']) && ($inst['effect']['type'] ?? '') === 'redirect_strike') continue;
+                if ($type === 'combat' && !empty($strike['matriarch_order']) && $this->instantRequiresTap($inst) && $card->closed) continue;
                 if ($type === 'turn' && $this->instantRequiresTap($inst) && $card->closed) continue;
                 $key = (string) ($inst['key'] ?? ($inst['name'] ?? 'instant'));
                 $limit = (int) ($inst['uses_per_turn'] ?? 1);
@@ -312,9 +315,15 @@ final class InstantProcessor
         $participants = $this->instantParticipants($strike, $attackerKey, $allowedPlayers);
 
         if ($phase !== 'combat') {
-            return $this->openTurnStackWindow($priorityKey, [
+            $opened = $this->openTurnStackWindow($priorityKey, [
                 'type' => $phase === 'after' ? 'strike_after' : 'strike_before',
             ], $phase, $participants);
+            if ($opened && !empty($strike['continuation_frame'])) {
+                $this->state->battle['turn_instant_stack']['continuation']['combat_origin_strike'] = $strike;
+                CombatContinuation::suspend($this->state, $strike);
+                $this->state->battle['strike'] = null;
+            }
+            return $opened;
         }
 
         $combatWindow = in_array($combatWindow, [self::COMBAT_WINDOW_DICE, self::COMBAT_WINDOW_MAIN], true)
@@ -394,7 +403,8 @@ final class InstantProcessor
         if (!$card || $card->owner !== $playerKey) {
             return Result::error('Карта не ваша');
         }
-        if ($card->closed) return Result::error('Карта закрыта');
+        if (!empty($strike['matriarch_order']) && $card->instanceId === (int) $strike['attacker_id']) return Result::error('Атакующий занят сражением');
+        if (CardStats::combatClosed($this->state, $card)) return Result::error('Карта закрыта');
         if (!empty($card->flags['in_stack'])) {
             return Result::error('Карта уже в стеке');
         }
@@ -405,6 +415,12 @@ final class InstantProcessor
             if (($i['key'] ?? '') === $key) { $inst = $i; break; }
         }
         if (!$inst) return Result::error('Инстант не найден');
+        if (!empty($strike['matriarch_order']) && ($inst['effect']['type'] ?? '') === 'redirect_strike') return Result::error('Перенаправление запрещено');
+        if (!empty($strike['matriarch_order']) && $this->instantRequiresTap($inst) && $card->closed) return Result::error('Карта не может оплатить закрытие');
+        if (!empty($strike['matriarch_order'])) {
+            $limit = (int) ($inst['uses_per_turn'] ?? 1);
+            if ($limit > 0 && (int) ($card->flags['instant_uses_this_turn'][$key] ?? 0) >= $limit) return Result::error('Инстант уже использован');
+        }
 
         $target = $inst['target'] ?? 'self';
         $effect = $inst['effect'] ?? [];
@@ -500,6 +516,7 @@ final class InstantProcessor
         if ($choice !== null) {
             $item['choice'] = $choice;
         }
+        if (!empty($strike['matriarch_order'])) $this->markInstantUsed($card, $instantKey);
         return $item;
     }
 
@@ -661,7 +678,7 @@ final class InstantProcessor
             }
 
             if ($source) {
-                $source->closed = true;
+                if (empty($strike['matriarch_order']) || $this->combatItemRequiresTap($item)) $source->closed = true;
                 unset($source->flags['in_stack']);
             }
         }
@@ -684,6 +701,7 @@ final class InstantProcessor
                 return;
             }
             (new CoinAbilities($this->state, $this->engine))->completeCombat($strike);
+            CombatContinuation::localDone($this->state, $this->state->battle['strike'] ?? []);
             $this->state->battle['strike'] = null;
             $this->engine->finalizeDying($this->state);
             return;
@@ -715,11 +733,12 @@ final class InstantProcessor
             $cancelled = false;
             if (!$attacker) $cancelled = true;
             elseif ($attacker->dying || $attacker->hp <= 0) $cancelled = true;
-            elseif ($attacker->closed) $cancelled = true;
+            elseif (CardStats::combatClosed($this->state, $attacker)) $cancelled = true;
             elseif ($attacker->zone !== CardInstance::ZONE_FIELD
                 && $attacker->zone !== CardInstance::ZONE_FLYING) $cancelled = true;
 
             if ($cancelled) {
+                CombatContinuation::localDone($this->state, $this->state->battle['strike'] ?? []);
                 $this->state->battle['strike'] = null;
                 $this->engine->finalizeDying($this->state);
                 return;
@@ -782,7 +801,7 @@ final class InstantProcessor
 
             array_shift($this->state->battle['strike']['instant_resolution']['queue']);
             if ($result['source']) {
-                $result['source']->closed = true;
+                if (empty($strike['matriarch_order']) || $this->combatItemRequiresTap($item)) $result['source']->closed = true;
                 unset($result['source']->flags['in_stack']);
             }
             $this->appendInstantSummary(
@@ -928,7 +947,7 @@ final class InstantProcessor
 
         unset($this->state->battle['pending_dice_choice']);
         array_shift($this->state->battle['strike']['instant_resolution']['queue']);
-        $source->closed = true;
+        if (empty($strike['matriarch_order']) || $this->combatItemRequiresTap($item)) $source->closed = true;
         unset($source->flags['in_stack']);
         $item['choice'] = $choice;
         $after = $this->captureCombatSnapshot();
@@ -953,7 +972,7 @@ final class InstantProcessor
         $source = $this->state->getCard((int) ($item['card_id'] ?? 0));
         array_shift($this->state->battle['strike']['instant_resolution']['queue']);
         if ($source) {
-            if ($closeSource) $source->closed = true;
+            if ($closeSource && (empty($this->state->battle['strike']['matriarch_order']) || $this->combatItemRequiresTap($item))) $source->closed = true;
             unset($source->flags['in_stack']);
         }
         $this->appendInstantSummary($item, $applied, $reason, $source, $effectResult);
@@ -1306,6 +1325,7 @@ final class InstantProcessor
         $strike = &$this->state->battle['strike'];
 
         if (!$this->strikeCanContinueAfterBeforeWindow($strike)) {
+            CombatContinuation::localDone($this->state, $this->state->battle['strike'] ?? []);
             $this->state->battle['strike'] = null;
             $this->engine->finalizeDying($this->state);
             return;
@@ -1339,7 +1359,7 @@ final class InstantProcessor
         if (!$this->isLiveCombatant($attacker) || !$this->isLiveCombatant($target)) {
             return false;
         }
-        return !$attacker->closed;
+        return !CardStats::combatClosed($this->state, $attacker);
     }
 
     private function isLiveCombatant(?CardInstance $card): bool
@@ -1730,16 +1750,25 @@ final class InstantProcessor
         return Result::ok(['turn_instant_stacked']);
     }
 
+    public function resumeContinuationStack(): void
+    {
+        $this->resolveTurnStack();
+    }
+
     private function resolveTurnStack(): void
     {
-        $stackState = &$this->state->battle['turn_instant_stack'];
+        $tagged = CombatContinuation::active($this->state);
+        $stackState = $this->state->battle['turn_instant_stack'];
         $stackState['state'] = 'resolving';
-        $summary = [];
-        $items = array_reverse((array) ($stackState['stack'] ?? []));
+        if ($tagged) unset($this->state->battle['turn_instant_stack']);
+        else $this->state->battle['turn_instant_stack']['state'] = 'resolving';
+        $summary = (array) ($stackState['resolved_summary'] ?? []);
+        $items = $stackState['remaining'] ?? array_reverse((array) ($stackState['stack'] ?? []));
         $continuation = (array) ($stackState['continuation'] ?? ['type' => 'manual']);
         $phase = (string) ($stackState['phase'] ?? 'turn');
 
-        foreach ($items as $item) {
+        foreach ($items as $index => $item) {
+            $watermark = (int) ($this->state->battle['combat_continuation']['next_id'] ?? 0);
             $source = $this->state->getCard((int) ($item['card_id'] ?? 0));
             $target = $this->state->getCard((int) ($item['target_id'] ?? 0));
             $label = (string) ($item['label'] ?? 'Инстант');
@@ -1799,11 +1828,18 @@ final class InstantProcessor
                 'action_type' => (string) ($item['action_type'] ?? ''),
                 'result' => $effectResult,
             ];
+            if ($tagged && CombatContinuation::busy($this->state)) {
+                $stackState['remaining'] = array_slice($items, $index + 1);
+                $stackState['resolved_summary'] = $summary;
+                $stackState['frame_watermark'] = $watermark;
+                $this->state->battle['combat_continuation']['stacks'][] = $stackState;
+                return;
+            }
         }
 
         $this->engine->finalizeDying($this->state);
         unset($this->state->battle['turn_instant_stack']);
-        if (empty($items)) {
+        if (empty($summary)) {
             $this->continueAfterTurnStack($continuation);
             return;
         }
@@ -1834,6 +1870,9 @@ final class InstantProcessor
         }
 
         $continuation = (array) ($pending['continuation'] ?? ['type' => 'manual']);
+        if (!empty($continuation['combat_origin_strike'])) {
+            $continuation['combat_origin_strike']['after_instant_summary'] = $pending['summary'] ?? [];
+        }
         if (!empty($continuation['coin_origin_strike'])) {
             $continuation['coin_origin_strike']['after_instant_summary'] = $pending['summary'] ?? [];
         }
@@ -1847,6 +1886,18 @@ final class InstantProcessor
     private function continueAfterTurnStack(array $continuation): void
     {
         $type = (string) ($continuation['type'] ?? 'manual');
+        if (!empty($continuation['combat_origin_strike'])) {
+            $origin = $continuation['combat_origin_strike'];
+            CombatContinuation::resume($this->state, $origin);
+            if ($type === 'strike_before') {
+                $this->continueAfterStrikeBeforeWindow();
+            } else {
+                $origin['instant_phase'] = 'after';
+                $this->state->battle['strike']['instant_phase'] = 'after';
+                (new StrikeResolver($this->state, $this->engine))->continueAfterStrikeResultAck($origin);
+            }
+            return;
+        }
         if ($type === 'turn_phase') {
             $this->completeTurnPhaseInstantSubtask();
             if (!empty($this->state->battle['turn_phase'])) {
@@ -1865,6 +1916,7 @@ final class InstantProcessor
                 return;
             }
             (new CoinAbilities($this->state, $this->engine))->completeCombat($this->state->battle['strike'] ?? []);
+            CombatContinuation::localDone($this->state, $this->state->battle['strike'] ?? []);
             $this->state->battle['strike'] = null;
             $this->engine->finalizeDying($this->state);
             return;
@@ -1992,6 +2044,15 @@ final class InstantProcessor
         }
         if (!empty($instant['no_close'])) {
             return false;
+        }
+        return true;
+    }
+
+    private function combatItemRequiresTap(array $item): bool
+    {
+        $source = $this->state->getCard((int) ($item['card_id'] ?? 0));
+        foreach ($source?->prop['instants'] ?? [] as $instant) {
+            if (($instant['key'] ?? '') === ($item['instant_key'] ?? '')) return $this->instantRequiresTap($instant);
         }
         return true;
     }

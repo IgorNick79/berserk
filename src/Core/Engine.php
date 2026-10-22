@@ -81,6 +81,8 @@ final class Engine
         TurnTimer::settle($state, $this->serverNow());
         $result = $this->doApply($state, $playerKey, $cmd);
         if ($result->success) (new CoinAbilities($state, $this))->advance();
+        if ($result->success) CombatContinuation::settle($state, $this);
+        if ($result->success) (new MatriarchOrderProcessor($state, $this))->advance();
         if ($result->success && ($state->battle['turn_timer']['pause_reason'] ?? null) === 'start_resolution') {
             (new TurnProcessor($state, $this))->afterStartPhase($state->battle['turn_timer']['owner']);
         }
@@ -100,6 +102,10 @@ final class Engine
             return $this->resign($state, $playerKey, $cmd);
         }
 
+        if (!empty($state->battle['matriarch_order']) && in_array($cmd->type,
+            ['strike','action','uchr','move','jump','end_turn','gain_coin','open_turn_instants'], true)) {
+            return Result::error('Сначала завершите приказ матриарха');
+        }
         unset($state->battle['instant_result']);
         unset($state->battle['any_death_messages']);
         unset($state->battle['degasca_messages']);
@@ -351,6 +357,7 @@ final class Engine
         switch ($type) {
 
             case 'redirect_strike':
+                if (!empty($strike['matriarch_order'])) return 'Перенаправление запрещено';
                 if (!$target) return 'цель не найдена';
                 if ($target->owner !== $ownerKey) return 'цель не союзная';
                 if ($target->zone !== CardInstance::ZONE_FIELD) return 'цель не на поле';
@@ -1072,8 +1079,13 @@ final class Engine
         // Пропуск (если игрок не хочет)
         if ($targetId === 0) {
             unset($state->battle['strike']['pending_auto']);
+            if (!empty($state->battle['strike']['continuation_frame'])) {
+                $this->publishContinuationAutoResult($state);
+                return Result::ok(['auto_skipped']);
+            }
 
             $this->closeForcedStrikeAttackerAfter($state);
+            CombatContinuation::localDone($state, $state->battle['strike'] ?? []);
             $state->battle['strike'] = null;
             $this->finalizeDying($state);
 
@@ -1107,8 +1119,14 @@ final class Engine
 
         unset($state->battle['strike']['pending_auto']);
 
+        if (!empty($state->battle['strike']['continuation_frame'])) {
+            $this->publishContinuationAutoResult($state);
+            return Result::ok(["auto_target:{$targetId}"]);
+        }
+
         // Закрываем сражение
         $this->closeForcedStrikeAttackerAfter($state);
+        CombatContinuation::localDone($state, $state->battle['strike'] ?? []);
         $state->battle['strike'] = null;
         $this->finalizeDying($state);
 
@@ -1131,6 +1149,16 @@ final class Engine
         }
 
         $attacker->closed = true;
+    }
+
+    private function publishContinuationAutoResult(GameState $state): void
+    {
+        // Keep death choices inside the combat, then return through its full after lifecycle.
+        $state->battle['strike']['continuation_auto_done'] = true;
+        $state->battle['strike']['state'] = 'results';
+        $state->battle['strike']['confirmed'] = [];
+        InformationalWaitManager::publish($state);
+        $state->bumpVersion();
     }
 
     public function clearRootedBySource(GameState $state, int $sourceId): void

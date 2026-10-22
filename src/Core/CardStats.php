@@ -13,6 +13,15 @@ final class CardStats
 {
     // ─── Базовое ─────────────────────────────────────────────
 
+    /** Effective state applies only to the two combatants of this particular frame. */
+    public static function combatClosed(GameState $state, CardInstance $card, ?array $context = null): bool
+    {
+        $strike = $context ?? ($state->battle['strike'] ?? []);
+        if (!empty($strike['matriarch_order']) && in_array($card->instanceId,
+            [(int) ($strike['attacker_id'] ?? 0), (int) (($strike['defender_id'] ?? 0) ?: ($strike['target_id'] ?? 0))], true)) return false;
+        return $card->closed;
+    }
+
     public static function hasAnyStrike(CardInstance $card): bool
     {
         if (!empty($card->prop['copy_target_strike'])) return true;
@@ -227,8 +236,6 @@ final class CardStats
         ?CardInstance $attacker = null,
         array $extraIgnore = []
     ): bool {
-        $prop = $target->prop;
-
         // Универсальные по типу атакующего
         $universal = ['zoa'];
         if ($attacker !== null) {
@@ -255,25 +262,35 @@ final class CardStats
                 continue;
             }
 
-            $d = $prop[$def] ?? null;
-            if (!empty($d)) {
-                if (is_array($d) && !empty($d['line']) && !self::isInLine($state, $target)) {
-                    continue;
-                }
-                return true;
-            }
+            if (self::hasDefenseValue($state, $target, $def)) return true;
+        }
+        return false;
+    }
 
-            foreach (self::getInheritedLineBonusValues($state, $target, $def) as $d) {
-                if (!empty($d)) return true;
-            }
+    public static function hasStamina(GameState $state, CardInstance $target): bool
+    {
+        return self::hasDefenseValue($state, $target, 'stamina');
+    }
 
-            foreach ($target->modifiers as $m) {
-                if (($m['stat'] ?? '') === $def && !empty($m['value'])) {
-                    return true;
-                }
+    private static function hasDefenseValue(GameState $state, CardInstance $target, string $def): bool
+    {
+        $d = $target->prop[$def] ?? null;
+        if (!empty($d)) {
+            if (is_array($d) && !empty($d['line']) && !self::isInLine($state, $target)) {
+                return false;
             }
+            return true;
         }
 
+        foreach (self::getInheritedLineBonusValues($state, $target, $def) as $d) {
+            if (!empty($d)) return true;
+        }
+
+        foreach ($target->modifiers as $m) {
+            if (($m['stat'] ?? '') === $def && !empty($m['value'])) {
+                return true;
+            }
+        }
         return false;
     }
 
@@ -459,7 +476,7 @@ final class CardStats
 
             // Специальные фильтры
             if (!empty($ability['line']) && !self::isInLine($state, $attacker)) continue;
-            if (!empty($ability['closed']) && !$target->closed) continue;
+            if (!empty($ability['closed']) && !self::combatClosed($state, $target)) continue;
             if (!empty($ability['target_type']) && $target->type !== $ability['target_type']) continue;
 
             // per_ally — бонус за каждого союзника с фильтром (Зомби)
@@ -1034,7 +1051,7 @@ final class CardStats
         return false;
     }
 
-    public static function isDirectStrike(GameState $state, CardInstance $attacker, CardInstance $target): bool
+    public static function isDirectStrike(GameState $state, CardInstance $attacker, CardInstance $target, ?array $context = null): bool
     {
         // Модификатор direct (Бегущая)
         foreach ($attacker->modifiers as $m) {
@@ -1073,7 +1090,7 @@ final class CardStats
         }
 
         if (is_array($direct) && !empty($direct['check']) && !empty($direct['closed'])) {
-            if ($target->closed) return true;
+            if (self::combatClosed($state, $target, $context)) return true;
         }
 
         if (is_array($direct) && !empty($direct['check']) && !empty($direct['element'])) {

@@ -912,6 +912,12 @@ final class BattleScreen
                 foreach ($c->prop['actions'] ?? [] as $a) {
                     if (!\Berserk\Core\CoinAbilities::actionAvailable($c, $a)) continue;
                     $type = $a['type'] ?? '';
+                    if ($type === 'impact' && ($a['effect'] ?? '') === 'matriarch_order'
+                        && (!\Berserk\Core\MatriarchOrderProcessor::available($state, $c)
+                            || !\Berserk\Core\MatriarchOrderProcessor::targets($state, $c))) {
+                        $modeButtons .= '<span class="button small disabled">Приказ матриарха</span> ';
+                        continue;
+                    }
                     if ($type === 'uchr') continue;
                     if (\Berserk\Core\Strangulation::blocksAttack($c, $type)
                         || ($type === 'jump' && \Berserk\Core\Strangulation::count($c) > 0)) {
