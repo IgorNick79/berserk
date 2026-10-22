@@ -24,6 +24,17 @@ final class SettingsScreen
         $baseUrl   = "?{$roleParam}&game={$state->gameId}";
         $isHost    = ($playerKey === GameState::PLAYER_HOST);
 
+        if ($state->mode === GameSettings::MODE_LUCKTEST
+            && ($state->cards !== [] || $state->getPlayer('host')->deckCards !== [] || $state->getPlayer('player')->deckCards !== [])) {
+            return ['screen' => 'settings', 'data' => ['title' => 'LuckTest',
+                'content_html' => '<p class="wait">Отряды сформированы. Продолжите подготовку.</p>',
+                'actions_html' => $isHost ? '<form method="get" class="settings-form">'
+                    . '<input type="hidden" name="game" value="' . $state->gameId . '">'
+                    . '<input type="hidden" name="cmd" value="confirm_settings">'
+                    . '<button class="button" type="submit">Продолжить подготовку</button></form>' : '',
+                'message' => $message ?? '']];
+        }
+
         if (!$isHost) {
             return [
                 'screen' => 'settings',
@@ -40,6 +51,7 @@ final class SettingsScreen
             GameSettings::MODE_SYSTEM => $this->system($state, $baseUrl, $message),
             GameSettings::MODE_DRAFT  => $this->draft($state, $roleParam, $message),
             GameSettings::MODE_SEALED => $this->sealed($state, $roleParam, $message),
+            GameSettings::MODE_LUCKTEST => $this->luckTest($state, $roleParam, $message),
             default                   => $this->unsupported($state, $message),
         };
     }
@@ -198,6 +210,34 @@ final class SettingsScreen
                 'message'      => $message ?? '',
             ],
         ];
+    }
+
+    private function luckTest(GameState $state, string $roleParam, ?string $message): array
+    {
+        $settings = $state->settings->lucktest;
+        $form = '<form method="get" class="settings-form">'
+            . '<input type="hidden" name="' . $this->esc($roleParam) . '" value="1">'
+            . '<input type="hidden" name="game" value="' . $state->gameId . '">'
+            . '<input type="hidden" name="cmd" value="confirm_settings">'
+            . '<section class="settings-section"><h2>Готовые случайные отряды</h2>'
+            . '<fieldset class="settings-fieldset"><legend>Количество карт</legend><div class="settings-option-grid settings-option-grid--compact">'
+            . $this->boosterCountTiles('lucktest_card_count', 3, 10, (int) $settings['card_count']) . '</div></fieldset>'
+            . '<fieldset class="settings-fieldset"><legend>Средняя стоимость карты</legend><div class="settings-option-grid settings-option-grid--compact">';
+        for ($half = 6; $half <= 14; $half++) {
+            $value = (string) ($half / 2);
+            $form .= $this->radioTile('lucktest_average_cost', $value, str_replace('.', ',', $value), (float) $settings['average_cost'] === (float) ($half / 2));
+        }
+        $form .= '</div></fieldset>';
+        foreach (['balanced' => 'Балансировка специальных карт', 'quick_game' => 'Быстрая игра'] as $key => $label) {
+            $name = 'lucktest_' . $key;
+            $form .= '<input type="hidden" name="' . $name . '" value="0">'
+                . '<label class="settings-option"><input type="checkbox" name="' . $name . '" value="1"'
+                . ($settings[$key] === true ? ' checked' : '') . '><span>' . $label . '</span></label>';
+        }
+        $form .= '</section><div class="settings-submit-row"><button class="button wide settings-submit" type="submit">Сформировать отряды</button></div></form>';
+        return ['screen' => 'settings', 'data' => ['title' => 'LuckTest',
+            'content_html' => '<p class="settings-mode-title">Все карты входят в отряд. Стоимость приблизительная.</p>',
+            'actions_html' => $form, 'message' => $message ?? '']];
     }
 
     private function radioTile(string $name, string $value, string $label, bool $checked, string $hint = ''): string

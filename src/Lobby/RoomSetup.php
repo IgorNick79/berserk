@@ -10,7 +10,7 @@ final class RoomSetup
 {
     public static function parse(string $mode, array $input): array
     {
-        if (!in_array($mode,['system','draft','solomon','sealed'],true)) throw new \DomainException('Выберите вид игры.',400);
+        if (!in_array($mode,['system','draft','solomon','sealed','lucktest'],true)) throw new \DomainException('Выберите вид игры.',400);
         $settings=GameSettings::defaults()->toArray();
         $settings['draft']['type']=$mode==='solomon'?'solomon':'grid';
         $fields=[
@@ -33,17 +33,23 @@ final class RoomSetup
             if (!is_string($input['booster_rare_chance']) || !preg_match('/\A[0-9]{1,3}\z/D',$input['booster_rare_chance'])) throw new \DomainException('Некорректная вероятность.',400);
             $settings['booster']['ultra_rare_chance']=BoosterSettings::rareChanceToUltraChance($input['booster_rare_chance']) ?? -1;
         }
+        if ($mode === GameSettings::MODE_LUCKTEST) $settings['lucktest'] = GameSettings::luckTestInput($settings['lucktest'], $input);
         return self::validate(['mode'=>$mode,'settings'=>$settings]);
     }
 
     public static function validate(array $setup): array
     {
         $mode=$setup['mode']??null;
-        if (!in_array($mode,['system','draft','solomon','sealed'],true) || !is_array($setup['settings']??null)) throw new \DomainException('Некорректные настройки комнаты.',400);
+        if (!in_array($mode,['system','draft','solomon','sealed','lucktest'],true) || !is_array($setup['settings']??null)) throw new \DomainException('Некорректные настройки комнаты.',400);
         $s=GameSettings::fromArray($setup['settings']);
         if ($s->draftType()!==($mode==='solomon'?'solomon':'grid')) throw new \DomainException('Несовместимый вид драфта.',400);
         if (!in_array($s->draft['pick_mode'],['manual','random'],true) || !in_array($s->draft['auto_side'],['both','host','player'],true)) throw new \DomainException('Некорректный автовыбор.',400);
-        $error=$mode==='sealed'?$s->validateSealedSettings():($mode==='system'?null:$s->validateDraftSettings());
+        $error = match ($mode) {
+            GameSettings::MODE_LUCKTEST => $s->validateLuckTestSettings(),
+            'sealed' => $s->validateSealedSettings(),
+            'system' => null,
+            default => $s->validateDraftSettings(),
+        };
         if ($error!==null) throw new \DomainException($error,400);
         return ['mode'=>$mode,'settings'=>$s->toArray()];
     }
@@ -57,13 +63,15 @@ final class RoomSetup
         $state->settings=GameSettings::fromArray($setup['settings']);
         if ($setup['mode']!=='system') {
             if ($catalog===null) throw new \RuntimeException('Catalog connection required');
-            $result=$processor->confirmSettings('host',new Command('confirm_settings'));
+            $result = $setup['mode'] === GameSettings::MODE_LUCKTEST
+                ? (new \Berserk\Core\Engine($catalog))->apply($state, 'host', new Command('confirm_settings'))
+                : $processor->confirmSettings('host',new Command('confirm_settings'));
             if (!$result->success) throw new \DomainException($result->error??'Не удалось начать игру.',400);
         }
     }
 
     public static function label(?string $mode): string
     {
-        return ['system'=>'Системные колоды','draft'=>'Grid Draft','solomon'=>'Solomon Draft','sealed'=>'Sealed'][$mode??'']??'Не выбран';
+        return ['system'=>'Системные колоды','draft'=>'Grid Draft','solomon'=>'Solomon Draft','sealed'=>'Sealed','lucktest'=>'LuckTest'][$mode??'']??'Не выбран';
     }
 }

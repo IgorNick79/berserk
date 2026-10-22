@@ -1143,7 +1143,8 @@ if ($commandType !== '') {
 
     $cmd = new Command($commandType, $payload);
     $historyPrepared = false;
-    if ($historyRuntime->records($state->gameId) && $state->status === 'place') {
+    if ($historyRuntime->records($state->gameId) && ($state->status === 'place'
+        || (new PrepareProcessor($state))->isLuckTestQuickStart($cmd))) {
         $token = requestParamString($_POST, 'csrf', 64);
         $version = requestParamString($_POST, 'prepare_version', 20);
         if ($token === null || !hash_equals($_SESSION['history_prepare_csrf'] ?? '', $token)
@@ -1278,7 +1279,8 @@ switch ($state->status) {
         break;
 
     case 'turn':
-        $deckData = (new ViewScreen($deckView, $tpl))->readOnlyDeck($state, $playerKey, $role, $message, $cardsInfo, $elementLabels);
+        $deckData = $state->mode === \Berserk\Core\GameSettings::MODE_LUCKTEST ? []
+            : (new ViewScreen($deckView, $tpl))->readOnlyDeck($state, $playerKey, $role, $message, $cardsInfo, $elementLabels);
         $result = (new TurnScreen())
             ->prepare($state, $playerKey, $role, $message, $deckData);
         $screenName = $result['screen'];
@@ -1286,7 +1288,8 @@ switch ($state->status) {
         break;
 
     case 'side':
-        $deckData = (new ViewScreen($deckView, $tpl))->readOnlyDeck($state, $playerKey, $role, $message, $cardsInfo, $elementLabels);
+        $deckData = $state->mode === \Berserk\Core\GameSettings::MODE_LUCKTEST ? []
+            : (new ViewScreen($deckView, $tpl))->readOnlyDeck($state, $playerKey, $role, $message, $cardsInfo, $elementLabels);
         $result = (new SideScreen())
             ->prepare($state, $playerKey, $role, $message, $deckData);
         $screenName = $result['screen'];

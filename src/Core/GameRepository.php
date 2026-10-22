@@ -112,22 +112,25 @@ final class GameRepository
         $beforeJson = $state->persistenceJson;
         $beforeVersion = $state->persistenceVersion;
 
-        $this->db->beginTransaction();
+        $borrowed = $this->db->isBorrowedTransaction();
+        if (!$borrowed) $this->db->beginTransaction();
         try {
-            $journal->requireProcessingForCommit($journalId, $state->gameId, $beforeVersion);
+            $journalEntry = $journal->requireProcessingForCommit($journalId, $state->gameId, $beforeVersion);
             $working = $state;
             if ($apply !== null) {
                 $working = $this->findById($state->gameId, true);
                 if ($working === null || $working->persistenceVersion !== $beforeVersion) throw new StaleStateException('State changed before locked execution');
+                $quickBoundary = $working->status === 'settings' && $working->mode === GameSettings::MODE_LUCKTEST
+                    && ($journalEntry['command_type'] ?? null) === 'confirm_settings';
                 if ($this->history?->includes($working->gameId)) {
                     $historyRepo = new \Berserk\Core\BattleHistory\HistoryRepository($this->db);
                     $meta = $this->db->fetchOne('SELECT * FROM battle_history_matches WHERE game_id='.$working->gameId.' FOR UPDATE');
                     if ($meta === null) {
-                        if ($working->status !== 'place') throw new \LogicException('Cannot enable history in an existing battle');
+                        if ($working->status !== 'place' && !$quickBoundary) throw new \LogicException('Cannot enable history in an existing battle');
                         $needsHistoryInitialization = true;
                     } elseif ($meta['recording_status'] !== 'recording' || (bool)$meta['has_final']) {
                         throw new \LogicException('Experimental history match is not recording');
-                    } elseif ($working->status !== 'place' && !(bool)$meta['has_initial']) {
+                    } elseif ($working->status !== 'place' && !$quickBoundary && !(bool)$meta['has_initial']) {
                         throw new \LogicException('Cannot resume experimental history without initial capture');
                     }
                     $open = $this->db->fetchAll("SELECT a.*,EXISTS(SELECT 1 FROM battle_history_events e WHERE e.game_id=a.game_id AND e.event_type='recording_gap.started' AND e.event_seq>=a.started_event_seq) AS contains_gap FROM battle_history_actions a WHERE a.game_id=".$working->gameId." AND a.lifecycle='open' ORDER BY a.started_event_seq");
@@ -137,9 +140,11 @@ final class GameRepository
                 if (!$result instanceof Result) throw new \LogicException('Locked command must return Result');
                 if (!$result->success) {
                     $journal->markRejected($journalId, $beforeVersion, $rejectionCode, $result->error);
-                    $this->db->commit();
+                    if (!$borrowed) $this->db->commit();
                     return;
                 }
+                if ($quickBoundary && ($working->settings->lucktest['quick_game'] !== true
+                    || !in_array($working->status, ['battle', 'game_over'], true))) throw new \LogicException('Quick start did not reach battle');
             } elseif ($this->history?->includes($working->gameId)) {
                 throw new \LogicException('Experimental history requires execution under game lock');
             }
@@ -154,14 +159,14 @@ final class GameRepository
                 $historyRepo->append($working->gameId,$journalId,$afterVersion,$working->historyRecorder->batch($working));
             }
             $journal->markCommitted($journalId, $beforeVersion, $afterVersion);
-            $this->db->commit();
+            if (!$borrowed) $this->db->commit();
         } catch (TransactionCommitUnknownException $e) {
             $state->persistenceJson = $beforeJson;
             $state->persistenceVersion = $beforeVersion;
             throw $e;
         } catch (\Throwable $e) {
             $rollbackError = null;
-            if ($this->db->inTransaction()) {
+            if (!$borrowed && $this->db->inTransaction()) {
                 try {
                     $this->db->rollback();
                 } catch (TransactionRollbackUnknownException $rollbackException) {

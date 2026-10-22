@@ -61,7 +61,7 @@ try {
         $wizardMode=$_GET['mode']??null;
         if ($wizardMode===null) {
             $wizard='<h1>Создать игру</h1><form method="get" class="mode-actions"><input type="hidden" name="new" value="1"><fieldset><legend>Вид игры</legend>';
-            foreach (['draft','solomon','sealed','system'] as $mode) $wizard.='<label class="settings-option"><input type="radio" name="mode" value="'.$mode.'"'.($mode==='draft'?' checked':'').'><span>'.RoomSetup::label($mode).'</span></label>';
+            foreach (['draft','solomon','sealed','lucktest','system'] as $mode) $wizard.='<label class="settings-option"><input type="radio" name="mode" value="'.$mode.'"'.($mode==='draft'?' checked':'').'><span>'.RoomSetup::label($mode).'</span></label>';
             $wizard.='</fieldset><button class="button" type="submit">Далее: настройки</button></form>';
         } else {
             if (!is_string($wizardMode)) throw new DomainException('Некорректный режим.',400);
@@ -77,7 +77,7 @@ try {
             $form=preg_replace('/<script\b[^>]*>.*?<\/script>/s','',$form);
             $fields='<input type="hidden" name="action" value="create"><input type="hidden" name="csrf" value="'.$escape($csrf).'"><input type="hidden" name="setup_mode" value="'.$escape($wizardMode).'">';
             $form=preg_replace('/(<form\b[^>]*>)/','$1'.$fields,$form,1);
-            $form=str_replace(['Начать драфт','Начать Sealed'],'Опубликовать игру',$form);
+            $form=str_replace(['Начать драфт','Начать Sealed','Сформировать отряды'],'Опубликовать игру',$form);
             $wizard='<h1>'.RoomSetup::label($wizardMode).' — настройки</h1><p>Игра появится в лобби после публикации. Игровой процесс начнётся после подтверждения кандидата.</p>'.$view['content_html'].$form.'<a href="lobby.php?new=1">Назад: вид игры</a>';
         }
     }

@@ -17,6 +17,7 @@ final class Db
 {
     private mysqli $connection;
     private bool $transactionActive = false;
+    private bool $borrowedTransaction = false;
 
     public function __construct(array $config)
     {
@@ -36,8 +37,22 @@ final class Db
         $this->connection->set_charset('utf8mb4');
     }
 
+    /** Join a caller-owned transaction for existing repository/journal APIs, without nesting it. */
+    public static function withTransaction(mysqli $connection, \Closure $operation): mixed
+    {
+        $db = (new \ReflectionClass(self::class))->newInstanceWithoutConstructor();
+        $db->connection = $connection;
+        $db->transactionActive = true;
+        $db->borrowedTransaction = true;
+        try { return $operation($db); }
+        finally { $db->transactionActive = false; }
+    }
+
+    public function isBorrowedTransaction(): bool { return $this->borrowedTransaction && $this->transactionActive; }
+
     public function query(string $sql): mysqli_result|bool
     {
+        if ($this->borrowedTransaction && !$this->transactionActive) throw new \LogicException('Expired borrowed transaction');
         try {
             $result = $this->connection->query($sql);
         } catch (mysqli_sql_exception $e) {
@@ -102,6 +117,7 @@ final class Db
 
     public function beginTransaction(): void
     {
+        if ($this->borrowedTransaction) throw new \LogicException('Transaction belongs to RoomTransaction');
         if ($this->transactionActive) {
             throw new \RuntimeException('Nested transactions are not supported');
         }
@@ -121,6 +137,7 @@ final class Db
 
     public function commit(): void
     {
+        if ($this->borrowedTransaction) throw new \LogicException('Transaction belongs to RoomTransaction');
         if (!$this->transactionActive) {
             throw new \RuntimeException('No active transaction to commit');
         }
@@ -142,6 +159,7 @@ final class Db
 
     public function rollback(): void
     {
+        if ($this->borrowedTransaction) throw new \LogicException('Transaction belongs to RoomTransaction');
         if (!$this->transactionActive) {
             throw new \RuntimeException('No active transaction to roll back');
         }

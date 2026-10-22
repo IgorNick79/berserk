@@ -14,7 +14,7 @@ use Berserk\Core\Prepare\PrepareProcessor;
  */
 final class Engine
 {
-    public function __construct(private ?Db $db = null, private ?\Closure $clock = null) {}
+    public function __construct(private ?Db $db = null, private ?\Closure $clock = null, private ?\Closure $preparationRandom = null) {}
 
     public function serverNow(): int
     {
@@ -22,6 +22,30 @@ final class Engine
     }
 
     public function apply(GameState $state, string $playerKey, Command $cmd): Result
+    {
+        if ($state->mode === GameSettings::MODE_LUCKTEST && $state->status === 'settings' && $cmd->type === 'confirm_settings') {
+            try {
+                $working = GameState::fromArray($state->toArray());
+                // Recorder owns mutable captures and open scopes; discard them with a failed candidate.
+                $working->historyRecorder = $state->historyRecorder === null ? null : clone $state->historyRecorder;
+                $result = $this->applyObserved($working, $playerKey, $cmd);
+                if ($result->success) {
+                    foreach (get_object_vars($working) as $key => $value) {
+                        if (!in_array($key, ['persistenceJson', 'persistenceVersion'], true)) $state->$key = $value;
+                    }
+                }
+                return $result;
+            } catch (\Throwable $e) {
+                error_log((string) json_encode(['event'=>'lucktest_quick_preparation_failed', 'game_id'=>$state->gameId,
+                    'exception'=>get_class($e), 'code'=>$e->getCode(), 'message'=>$e->getMessage(),
+                    'file'=>$e->getFile(), 'line'=>$e->getLine()], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE));
+                return Result::error('Не удалось завершить подготовку LuckTest. Обновите страницу и повторите попытку');
+            }
+        }
+        return $this->applyObserved($state, $playerKey, $cmd);
+    }
+
+    private function applyObserved(GameState $state, string $playerKey, Command $cmd): Result
     {
         $observer = $state->historyRecorder;
         if ($observer === null) return $this->applyCommand($state,$playerKey,$cmd);
@@ -101,7 +125,7 @@ final class Engine
 
         return match ($cmd->type) {
             'choose_mode'  => $prepare->chooseMode($playerKey, $cmd),
-            'confirm_settings' => $prepare->confirmSettings($playerKey, $cmd),
+            'confirm_settings' => $this->confirmPrepareSettings($state, $playerKey, $cmd, $prepare),
             'draft_row'    => $prepare->draftRow($playerKey, $cmd),
             'draft_col'    => $prepare->draftCol($playerKey, $cmd),
             'draft_pass'   => $prepare->draftPass($playerKey, $cmd),
@@ -201,6 +225,57 @@ final class Engine
 
             default                   => Result::error("Unknown command: {$cmd->type}"),
         };
+    }
+
+    private function confirmPrepareSettings(GameState $state, string $actor, Command $cmd, PrepareProcessor $prepare): Result
+    {
+        $result = $prepare->confirmSettings($actor, $cmd);
+        if (!$result->success || $state->mode !== GameSettings::MODE_LUCKTEST || !$state->settings->lucktest['quick_game']) return $result;
+        $events = $result->events;
+        foreach (['host', 'player'] as $owner) $events = array_merge($events, $this->preparationEvents($prepare->confirmTurn($owner)));
+        $events = array_merge($events, $this->preparationEvents($prepare->chooseSide($state->firstPlayer,
+            new Command('choose_side', ['side'=>$this->preparationRandomInt(1, 2)]))));
+        foreach (['host', 'player'] as $owner) $events = array_merge($events, $this->randomPlaceSquad($state, $prepare, $owner));
+        // This is the SAME final validation and startBattle boundary used by manual confirm_place.
+        foreach (['host', 'player'] as $owner) $events = array_merge($events,
+            $this->preparationEvents($this->confirmPreparePlace($state, $owner, $prepare)));
+        $events[] = 'lucktest_quick_preparation_completed';
+        return Result::ok($events);
+    }
+
+    private function randomPlaceSquad(GameState $state, PrepareProcessor $prepare, string $owner): array
+    {
+        $cards = $state->getCardsInZone($owner, CardInstance::ZONE_SQUAD);
+        shuffle($cards);
+        $zone = new ZoneManager($state);
+        $events = [];
+        foreach ($cards as $card) {
+            $available = [];
+            foreach (ZoneManager::cellLevels($owner) as $level) {
+                foreach ($level as $cell) {
+                    [$row, $col] = array_map('intval', explode('_', $cell));
+                    if ($zone->isCellAllowed($owner, $row, $col) && !$zone->isFieldOccupied($row, $col)) $available[] = [$row, $col];
+                }
+            }
+            if ($available === []) throw new \RuntimeException('No legal LuckTest placement for ' . $owner);
+            [$row, $col] = $available[$this->preparationRandomInt(0, count($available) - 1)];
+            $events = array_merge($events, $this->preparationEvents($prepare->placeCard($owner,
+                new Command('place_card', ['card_id'=>$card->instanceId, 'row'=>$row, 'col'=>$col]))));
+        }
+        return $events;
+    }
+
+    private function preparationEvents(Result $result): array
+    {
+        if (!$result->success) throw new \RuntimeException('LuckTest preparation rejected: ' . $result->error);
+        return $result->events;
+    }
+
+    private function preparationRandomInt(int $min, int $max): int
+    {
+        $value = $this->preparationRandom !== null ? ($this->preparationRandom)($min, $max) : random_int($min, $max);
+        if (!is_int($value) || $value < $min || $value > $max) throw new \UnexpectedValueException('Invalid preparation random value');
+        return $value;
     }
 
     private function confirmPreparePlace(GameState $state, string $playerKey, PrepareProcessor $prepare): Result

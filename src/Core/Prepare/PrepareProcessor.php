@@ -39,7 +39,7 @@ final class PrepareProcessor
         $mode = (string) $cmd->get('mode', '');
         $solomonChoice = $mode === GameSettings::DRAFT_TYPE_SOLOMON;
         if ($solomonChoice) $mode = GameSettings::MODE_DRAFT;
-        if (!in_array($mode, [GameSettings::MODE_DRAFT, GameSettings::MODE_SYSTEM, GameSettings::MODE_SEALED], true)) {
+        if (!in_array($mode, [GameSettings::MODE_DRAFT, GameSettings::MODE_SYSTEM, GameSettings::MODE_SEALED, GameSettings::MODE_LUCKTEST], true)) {
             return Result::error('Неверный режим');
         }
 
@@ -61,6 +61,14 @@ final class PrepareProcessor
         ]);
     }
 
+    /** Server-side routing hint; uses the actual shared settings parser, never a raw HTTP boolean. */
+    public function isLuckTestQuickStart(Command $cmd): bool
+    {
+        if ($this->state->mode !== GameSettings::MODE_LUCKTEST || $this->state->status !== 'settings' || $cmd->type !== 'confirm_settings') return false;
+        $settings = $this->settingsFromCommand($this->state->settings, $cmd);
+        return $settings->validateLuckTestSettings() === null && $settings->lucktest['quick_game'] === true;
+    }
+
     public function confirmSettings(string $playerKey, Command $cmd): Result
     {
         if ($this->state->status !== 'settings') {
@@ -77,6 +85,10 @@ final class PrepareProcessor
         $timerError = $nextSettings->validateDraftTimer();
         if ($timerError !== null) {
             return Result::error($timerError);
+        }
+
+        if ($this->state->mode === GameSettings::MODE_LUCKTEST) {
+            return $this->startLuckTest($nextSettings);
         }
 
         switch ($this->state->mode) {
@@ -363,24 +375,15 @@ final class PrepareProcessor
             }
         }
 
-        $player->confirm('view');
-        $this->state->bumpVersion();
-
         $events = ["view_confirmed:{$playerKey}"];
-
-        if ($this->bothConfirmed('view')) {
-            $this->state->status = 'turn';
-            $this->state->getPlayer('host')->clearConfirmations();
-            $this->state->getPlayer('player')->clearConfirmations();
-
-            $this->rollDice();
-
-            $host   = $this->state->getPlayer('host');
-            $player = $this->state->getPlayer('player');
-
-            $events[] = 'stage_changed:turn';
-            $events[] = "dice_rolled:host={$host->dice},player={$player->dice}";
+        if ($this->state->getPlayer($this->state->getOpponentKey($playerKey))->isConfirmed('view')) {
+            $turn = $this->enterTurn();
+            if (!$turn->success) return $turn;
+            $events = array_merge($events, $turn->events);
+        } else {
+            $player->confirm('view');
         }
+        $this->state->bumpVersion();
 
         return Result::ok($events);
     }
@@ -474,28 +477,39 @@ final class PrepareProcessor
             return Result::error('Сторону выбирает победитель кубика');
         }
 
-        $side = (int) $cmd->get('side', 0);
+        $rawSide = $cmd->get('side', 0);
+        if ($this->state->mode === GameSettings::MODE_LUCKTEST && !in_array($rawSide, [1, 2, '1', '2'], true)) {
+            return Result::error('Неверная сторона');
+        }
+        $side = (int) $rawSide;
         if (!in_array($side, [1, 2], true)) {
             return Result::error('Неверная сторона');
         }
 
+        if ($this->state->mode === GameSettings::MODE_LUCKTEST) {
+            foreach (['host', 'player'] as $owner) {
+                $error = $this->validateLuckTestCards($owner, false);
+                if ($error !== null) return Result::error($error);
+                if ($this->zoneCount($owner, CardInstance::ZONE_SQUAD) !== $this->state->settings->lucktest['card_count']) {
+                    return Result::error('Некорректный готовый отряд LuckTest');
+                }
+            }
+        }
         $oppKey = $this->state->getOpponentKey($playerKey);
         $otherSide = $side === 1 ? 2 : 1;
 
         $this->state->getPlayer($playerKey)->side = $side;
         $this->state->getPlayer($oppKey)->side    = $otherSide;
 
-        $this->state->status = 'deal';
+        $luckTest = $this->state->mode === GameSettings::MODE_LUCKTEST;
+        $this->state->status = $luckTest ? 'place' : 'deal';
         $this->state->getPlayer('host')->clearConfirmations();
         $this->state->getPlayer('player')->clearConfirmations();
-
-        $this->dealCards();
-
+        if (!$luckTest) $this->dealCards();
         $this->state->bumpVersion();
-
         return Result::ok([
             "side_chosen:{$playerKey}={$side}",
-            'stage_changed:deal',
+            'stage_changed:' . $this->state->status,
         ]);
     }
 
@@ -1401,6 +1415,20 @@ final class PrepareProcessor
             return Result::error('Уже подтверждено');
         }
 
+        if ($this->state->mode === GameSettings::MODE_LUCKTEST) {
+            $error = $this->validateLuckTestCards($playerKey, true);
+            if ($error !== null) return Result::error($error);
+            $opponent = $this->state->getOpponentKey($playerKey);
+            if ($this->state->getPlayer($opponent)->isConfirmed('place')) {
+                $error = $this->validateLuckTestCards($opponent, true);
+                if ($error !== null) return Result::error($error);
+            }
+            if (!in_array($this->state->getPlayer('host')->side, [1, 2], true)
+                || $this->state->getPlayer('player')->side !== 3 - $this->state->getPlayer('host')->side) {
+                return Result::error('Некорректные стороны LuckTest');
+            }
+        }
+
         foreach ($this->state->cards as $card) {
             if ($card->owner === $playerKey && $card->zone === CardInstance::ZONE_SQUAD) {
                 return Result::error('Не все карты расставлены');
@@ -1482,6 +1510,7 @@ final class PrepareProcessor
             $data['booster']['ultra_rare_chance'] = BoosterSettings::rareChanceToUltraChance($rareChance) ?? $rareChance;
         }
 
+        $data['lucktest'] = GameSettings::luckTestInput((array) ($data['lucktest'] ?? []), $cmd->payload);
         $settings = GameSettings::fromArray($data);
         return $settings;
     }
@@ -1504,6 +1533,142 @@ final class PrepareProcessor
         $this->state->battle = $restored->battle;
         $this->state->log = $restored->log;
         $this->state->winner = $restored->winner;
+    }
+
+    private function startLuckTest(GameSettings $settings): Result
+    {
+        $error = $settings->validateLuckTestSettings();
+        if ($error !== null) return Result::error($error);
+        $existing = $this->state->cards !== [] || $this->state->getPlayer('host')->deckCards !== []
+            || $this->state->getPlayer('player')->deckCards !== [];
+        $legacy = $existing && $this->hasLegacyLuckTestSquads($settings);
+        if ($existing && !$legacy) return Result::error('Отряды LuckTest уже сформированы или подготовка требует проверки');
+        if ($this->db === null) return Result::error('Db недоступен для LuckTest');
+        try {
+            $ids = array_column($this->db->fetchAll('SELECT ukid FROM cards ORDER BY ukid'), 'ukid');
+            $catalog = (new DraftDeckBuilder($this->db))->buildDeckCards($ids);
+            if (count($catalog) !== count($ids)) throw new \RuntimeException('Неполный каталог LuckTest');
+            $generator = new LuckTestGenerator();
+            $squads = $legacy ? [] : $generator->generate($catalog, $settings);
+            $working = GameState::fromArray($this->state->toArray());
+            $working->settings = $settings;
+            $working->draft = null;
+            $working->battle = [];
+            $worker = new self($working, $this->db);
+            foreach (['host', 'player'] as $owner) {
+                $player = $working->getPlayer($owner);
+                if (!$legacy) {
+                    $player->deckCards = $squads[$owner];
+                    $worker->createDeckInstances($owner, $squads[$owner]);
+                    foreach ($working->getCardsInZone($owner, CardInstance::ZONE_DECK) as $card) {
+                        (new ZoneManager($working))->toSquad($card);
+                    }
+                }
+                foreach ($working->getCardsInZone($owner, CardInstance::ZONE_SQUAD) as $card) {
+                    $card->flags['lucktest_squad'] = true;
+                }
+                $reserve = $generator->generateReserve($catalog, GameSettings::MIN_DECK_SIZE - $settings->lucktest['card_count']);
+                $worker->createDeckInstances($owner, $reserve);
+                foreach ($working->getCardsInZone($owner, CardInstance::ZONE_DECK) as $card) {
+                    $card->flags['lucktest_reserve'] = true;
+                }
+                // A complete snapshot of all 30 cards; live zones distinguish squad and reserve.
+                $player->deckCards = array_merge($player->deckCards, $reserve);
+                $player->deckId = 0;
+                $player->resources = ['gold' => 0, 'silver' => 0];
+                $player->reshuffles = 0;
+                $player->side = null;
+                $error = $worker->validateLuckTestCards($owner, false);
+                if ($error !== null) throw new \RuntimeException($error);
+            }
+            $turn = $worker->enterTurn();
+            if (!$turn->success) return $turn;
+            // Publish both complete squads, both reserves and dice together; caller owns persistence/CAS.
+            $this->state->players = $working->players;
+            $this->state->cards = $working->cards;
+            $this->state->nextInstanceId = $working->nextInstanceId;
+            $this->state->settings = $settings;
+            $this->state->draft = null;
+            $this->state->firstPlayer = $working->firstPlayer;
+            $this->state->battle = [];
+            $this->state->status = $working->status;
+            $this->state->bumpVersion();
+            return Result::ok(array_merge(['settings_confirmed:lucktest', 'lucktest_squads_generated'], $turn->events));
+        } catch (\Throwable $e) {
+            error_log((string) json_encode([
+                'event' => 'lucktest_generation_failed',
+                'game_id' => $this->state->gameId,
+                'exception' => get_class($e), 'code' => $e->getCode(),
+                'message' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine(),
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE));
+            return Result::error('Не удалось сформировать оба отряда LuckTest: проверьте каталог карт');
+        }
+    }
+
+    /** Only the exact, untouched Stage 1 boundary can be resumed without rerolling its squads. */
+    private function hasLegacyLuckTestSquads(GameSettings $settings): bool
+    {
+        if ($settings->lucktest !== $this->state->settings->lucktest || $this->state->firstPlayer !== null
+            || count($this->state->cards) !== 2 * $settings->lucktest['card_count']) return false;
+        foreach (['host', 'player'] as $owner) {
+            $player = $this->state->getPlayer($owner);
+            if ($player->side !== null || $player->dice !== null
+                || $this->deckCardTotal($player->deckCards) !== $settings->lucktest['card_count']
+                || $this->zoneCount($owner, CardInstance::ZONE_SQUAD) !== $settings->lucktest['card_count']) return false;
+        }
+        return true;
+    }
+
+    /** Validate the known reserve separately; recruitment constraints intentionally do not apply. */
+    private function validateLuckTestCards(string $owner, bool $placed): ?string
+    {
+        if ($this->state->settings->validateLuckTestSettings() !== null) return 'Некорректные настройки LuckTest';
+        $count = $this->state->settings->lucktest['card_count'];
+        $army = [];
+        $reserve = 0;
+        $actual = [];
+        foreach ($this->state->cards as $id => $card) {
+            if ($id !== $card->instanceId || !in_array($card->owner, ['host', 'player'], true)) return 'Некорректные экземпляры LuckTest';
+            if ($card->owner !== $owner) continue;
+            $squad = ($card->flags['lucktest_squad'] ?? false) === true;
+            $deck = ($card->flags['lucktest_reserve'] ?? false) === true;
+            if ($squad === $deck) return 'Некорректный состав LuckTest';
+            if ($deck) {
+                if ($card->zone !== CardInstance::ZONE_DECK || $card->row !== null || $card->col !== null) return 'Некорректный резерв LuckTest';
+                $reserve++;
+            } else {
+                if (!in_array($card->zone, [CardInstance::ZONE_SQUAD, CardInstance::ZONE_FIELD], true)) return 'Некорректная зона отряда LuckTest';
+                if ($placed && $card->zone !== CardInstance::ZONE_FIELD) return 'Не все карты расставлены';
+                $army[] = $card;
+            }
+            $actual[$card->ukid] = ($actual[$card->ukid] ?? 0) + 1;
+        }
+        if (count($army) !== $count || $reserve !== GameSettings::MIN_DECK_SIZE - $count) return 'Неполный или избыточный состав LuckTest';
+        $expected = [];
+        foreach ($this->state->getPlayer($owner)->deckCards as $entry) {
+            $expected[(string) $entry['ukid']] = ($expected[(string) $entry['ukid']] ?? 0) + (int) $entry['count'];
+        }
+        ksort($actual); ksort($expected);
+        if ($actual !== $expected) return 'Состав LuckTest не соответствует сохранённому';
+        if (!$placed) return null;
+
+        // Rebuild only a disposable board, in the levels supplied by ZoneManager. No second placement ruleset.
+        $scratch = GameState::fromArray($this->state->toArray());
+        foreach ($scratch->cards as $card) {
+            if ($card->zone === CardInstance::ZONE_FIELD) {
+                $card->zone = CardInstance::ZONE_SQUAD;
+                $card->row = $card->col = null;
+            }
+        }
+        $order = array_flip(array_merge(...ZoneManager::cellLevels($owner)));
+        usort($army, fn($a, $b) => ($order["{$a->row}_{$a->col}"] ?? PHP_INT_MAX) <=> ($order["{$b->row}_{$b->col}"] ?? PHP_INT_MAX));
+        $zone = new ZoneManager($scratch);
+        foreach ($army as $card) {
+            if ($card->row === null || $card->col === null || !$zone->isCellAllowed($owner, $card->row, $card->col)
+                || $zone->isFieldOccupied($card->row, $card->col)) return 'Некорректная расстановка LuckTest';
+            $zone->toField($scratch->getCard($card->instanceId), $card->row, $card->col);
+        }
+        return null;
     }
 
     private function startSealed(GameSettings $settings): Result
@@ -2035,6 +2200,18 @@ final class PrepareProcessor
             GameSettings::DRAFT_AUTO_SIDE_PLAYER => $playerKey === GameState::PLAYER_PLAYER,
             default => false,
         };
+    }
+
+    /** The shared View/LuckTest boundary; finite debug queues and ordinary tie rerolls are unchanged. */
+    private function enterTurn(): Result
+    {
+        if (Dice::isInfiniteMode()) return Result::error('Отключите бесконечный debug-бросок перед определением первого игрока');
+        $this->rollDice();
+        $this->state->status = 'turn';
+        $this->state->getPlayer('host')->clearConfirmations();
+        $this->state->getPlayer('player')->clearConfirmations();
+        return Result::ok(['stage_changed:turn', 'dice_rolled:host=' . $this->state->getPlayer('host')->dice
+            . ',player=' . $this->state->getPlayer('player')->dice]);
     }
 
     private function rollDice(): void
