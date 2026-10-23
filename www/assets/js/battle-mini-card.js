@@ -1,27 +1,195 @@
-(function(){
-'use strict';
-if(document.documentElement.dataset.miniCardsReady)return;
-document.documentElement.dataset.miniCardsReady='1';
-var tip=null,trigger=null,pinned=false,hoverCard=null,zoom=null,timer=0,hoverReady=false;
-var layoutObserver=new ResizeObserver(function(entries){entries.forEach(function(entry){entry.target.closest('[data-mini-card]').classList.toggle('mini-indicators-wrapped',entry.contentRect.height>20);});});
-var hover=matchMedia('(hover:hover) and (pointer:fine)'),reduced=matchMedia('(prefers-reduced-motion:reduce)');
-function tooltip(){if(!tip){tip=document.createElement('div');tip.className='battle-mini-tooltip';tip.id='battle-mini-tooltip';tip.setAttribute('role','tooltip');tip.hidden=true;document.body.append(tip);tip.addEventListener('pointerleave',function(){if(!pinned)closeHint();});}return tip;}
-function closeHint(){if(trigger){trigger.setAttribute('aria-expanded','false');trigger.removeAttribute('aria-describedby');}trigger=null;pinned=false;if(tip)tip.hidden=true;}
-function showHint(node){if(!node.isConnected)return;var text=node.querySelector('.mini-hint-text');if(!text)return;var t=tooltip();if(trigger&&trigger!==node){trigger.setAttribute('aria-expanded','false');trigger.removeAttribute('aria-describedby');}trigger=node;t.replaceChildren(text.cloneNode(true));t.firstChild.hidden=false;t.hidden=false;node.setAttribute('aria-expanded','true');node.setAttribute('aria-describedby',t.id);var r=node.getBoundingClientRect();t.style.left=Math.max(8,Math.min(r.left,innerWidth-t.offsetWidth-8))+'px';t.style.top=(r.bottom+10+t.offsetHeight>innerHeight?Math.max(8,r.top-t.offsetHeight-10):r.bottom+10)+'px';}
-function stopZoom(immediate){clearTimeout(timer);timer=0;hoverCard=null;if(immediate)document.querySelectorAll(".battle-mini-zoom").forEach(function(node){node.remove();});if(!zoom)return;var old=zoom;zoom=null;old.classList.remove('is-open');if(immediate||reduced.matches)old.remove();else setTimeout(function(){old.remove();},180);}
-function startZoom(card){if(!hover.matches||reduced.matches||card.classList.contains('mini-hidden'))return;if(hoverCard===card)return;stopZoom(true);hoverCard=card;timer=setTimeout(function(){if(!card.isConnected||hoverCard!==card)return;var r=card.getBoundingClientRect();var z=document.createElement('div');z.className='battle-mini-zoom';z.setAttribute('aria-hidden','true');z.inert=true;var clone=card.cloneNode(true);var appearance=getComputedStyle(card);clone.style.outline=appearance.outline;clone.style.outlineOffset=appearance.outlineOffset;clone.style.boxShadow=appearance.boxShadow;clone.querySelectorAll('[tabindex]').forEach(function(e){e.removeAttribute('tabindex');});clone.querySelectorAll('[id]').forEach(function(e){e.removeAttribute('id');});clone.removeAttribute('data-mini-card');z.append(clone);z.style.left=Math.max(8,Math.min(r.left,innerWidth-r.width-8))+'px';z.style.top=Math.max(8,Math.min(r.top,innerHeight-r.height-8))+'px';z.style.width=r.width+'px';z.style.height=r.height+'px';z.style.opacity=getComputedStyle(card).opacity;document.body.append(z);zoom=z;void z.offsetWidth;z.classList.add('is-open');},200);}
-// Capture before the battle-sync link handlers: a hint must never issue a command.
-document.addEventListener('click',function(e){var n=e.target.closest('[data-mini-hint]');if(n&&!n.closest('.battle-mini-zoom')){e.preventDefault();e.stopImmediatePropagation();if(trigger===n&&pinned)closeHint();else{pinned=true;showHint(n);}return;}if(tip&&tip.contains(e.target)){e.preventDefault();e.stopImmediatePropagation();return;}closeHint();},true);
-document.addEventListener('keydown',function(e){var n=e.target.closest('[data-mini-hint]');if(e.key==='Escape'){closeHint();stopZoom(true);}if(n&&(e.key==='Enter'||e.key===' ')){e.preventDefault();e.stopImmediatePropagation();n.click();}},true);
-document.addEventListener('pointerover',function(e){if(e.pointerType==='touch')return;var n=e.target.closest('[data-mini-hint]');if(n&&!pinned&&hoverReady)showHint(n);var card=e.target.closest('[data-mini-card]');if(card&&!card.closest('.battle-mini-zoom'))startZoom(card);});
-document.addEventListener('pointermove',function(e){if(e.pointerType==='touch')return;hoverReady=true;var n=e.target.closest('[data-mini-hint]');if(n&&!pinned&&(trigger!==n||!tip||tip.hidden))showHint(n);});
-document.addEventListener('pointerout',function(e){var n=e.target.closest('[data-mini-hint]');if(n&&!n.contains(e.relatedTarget)&&!(tip&&tip.contains(e.relatedTarget))&&!pinned)closeHint();var card=e.target.closest('[data-mini-card]');if(card&&!card.contains(e.relatedTarget))stopZoom(false);});
-document.addEventListener('focusin',function(e){var n=e.target.closest('[data-mini-hint]');if(n&&!pinned)showHint(n);});
-document.addEventListener('focusout',function(e){if(e.target.closest('[data-mini-hint]')&&!pinned)closeHint();});
-function refresh(){hoverReady=false;closeHint();stopZoom(true);layoutObserver.disconnect();document.querySelectorAll('[data-mini-card]').forEach(function(card){var row=card.querySelector('.mini-indicators');if(row)layoutObserver.observe(row);card.classList.toggle('mini-indicators-wrapped',!!row&&row.getBoundingClientRect().height>20);});}
-document.addEventListener('berserk:battle-updated',refresh);
-window.addEventListener('scroll',function(){closeHint();stopZoom(true);},true);
-window.addEventListener('resize',refresh);hover.addEventListener('change',refresh);reduced.addEventListener('change',refresh);
-new MutationObserver(function(){if((trigger&&!trigger.isConnected)||(hoverCard&&!hoverCard.isConnected)){closeHint();stopZoom(true);}}).observe(document.querySelector('[data-battle-sync-root]')||document.body,{childList:true,subtree:true});
-refresh();
+(function () {
+    'use strict';
+    if (document.documentElement.dataset.miniCardsReady) return;
+    document.documentElement.dataset.miniCardsReady = '1';
+
+    var tip = null, trigger = null, describedNode = null, kind = '', pinned = false;
+    var hoverCard = null, zoom = null, timer = 0, hoverReady = false;
+    var hover = matchMedia('(hover:hover) and (pointer:fine)');
+    var reduced = matchMedia('(prefers-reduced-motion:reduce)');
+
+    function cardAt(node) {
+        if (!node || !node.closest) return null;
+        return node.closest('[data-mini-card]') ||
+            (node.matches('.card-link') ? node.querySelector('[data-mini-card]') : null);
+    }
+    function tooltip() {
+        if (tip) return tip;
+        tip = document.createElement('div');
+        tip.className = 'battle-mini-tooltip';
+        tip.id = 'battle-mini-tooltip';
+        tip.setAttribute('role', 'tooltip');
+        tip.hidden = true;
+        document.body.append(tip);
+        tip.addEventListener('pointerleave', function (event) {
+            if (event.pointerType !== 'touch') closeHint();
+        });
+        return tip;
+    }
+    function clearDescription() {
+        if (trigger && kind === 'indicator') trigger.setAttribute('aria-expanded', 'false');
+        if (describedNode) describedNode.removeAttribute('aria-describedby');
+        describedNode = null;
+    }
+    function closeHint() {
+        clearDescription();
+        trigger = null;
+        kind = '';
+        pinned = false;
+        if (tip) tip.hidden = true;
+    }
+    function placeHint(node, hintKind) {
+        var r = node.getBoundingClientRect();
+        var gap = hintKind === 'name' ? 19 : 10;
+        tip.style.left = Math.max(8, Math.min(r.left, innerWidth - tip.offsetWidth - 8)) + 'px';
+        tip.style.top = (r.bottom + gap + tip.offsetHeight > innerHeight
+            ? Math.max(8, r.top - tip.offsetHeight - gap) : r.bottom + gap) + 'px';
+    }
+    function show(node, hintKind) {
+        if (!node || !node.isConnected) return;
+        var text = hintKind === 'name' ? node.dataset.miniName : node.querySelector('.mini-hint-text');
+        if (!text) { closeHint(); return; }
+        if (trigger === node && kind === hintKind && tip && !tip.hidden) return;
+        clearDescription();
+        var t = tooltip();
+        trigger = node;
+        kind = hintKind;
+        t.dataset.kind = hintKind;
+        if (hintKind === 'name') t.textContent = text;
+        else {
+            t.replaceChildren(text.cloneNode(true));
+            t.firstChild.hidden = false;
+            node.setAttribute('aria-expanded', 'true');
+        }
+        describedNode = hintKind === 'name' ? (node.closest('.card-link') || node) : node;
+        describedNode.setAttribute('aria-describedby', t.id);
+        t.hidden = false;
+        placeHint(node, hintKind);
+    }
+    function contextHint(node) {
+        if (pinned || !hoverReady) return;
+        if (tip && tip.contains(node)) return;
+        var indicator = node.closest ? node.closest('[data-mini-hint]') : null;
+        var card = cardAt(node);
+        if (indicator) show(indicator, 'indicator');
+        else if (card && !card.classList.contains('mini-hidden')) show(card, 'name');
+        else closeHint();
+    }
+    function stopZoom(immediate) {
+        clearTimeout(timer);
+        timer = 0;
+        hoverCard = null;
+        if (immediate) document.querySelectorAll('.battle-mini-zoom').forEach(function (node) { node.remove(); });
+        if (!zoom) return;
+        var old = zoom;
+        zoom = null;
+        old.classList.remove('is-open');
+        if (immediate || reduced.matches) old.remove();
+        else setTimeout(function () { old.remove(); }, 250);
+    }
+    function startZoom(card) {
+        if (!hover.matches || reduced.matches || card.classList.contains('mini-hidden')) return;
+        if (hoverCard === card) return;
+        stopZoom(true);
+        hoverCard = card;
+        timer = setTimeout(function () {
+            if (!card.isConnected || hoverCard !== card) return;
+            var r = card.getBoundingClientRect();
+            var z = document.createElement('div');
+            z.className = 'battle-mini-zoom';
+            z.setAttribute('aria-hidden', 'true');
+            z.inert = true;
+            var clone = card.cloneNode(true);
+            var appearance = getComputedStyle(card);
+            clone.style.outline = appearance.outline;
+            clone.style.outlineOffset = appearance.outlineOffset;
+            clone.style.boxShadow = appearance.boxShadow;
+            clone.querySelectorAll('[tabindex]').forEach(function (e) { e.removeAttribute('tabindex'); });
+            clone.querySelectorAll('[id]').forEach(function (e) { e.removeAttribute('id'); });
+            clone.removeAttribute('data-mini-card');
+            clone.removeAttribute('data-mini-name');
+            z.append(clone);
+            // The visual copy never owns hit testing. Keep its 1.20 scale inside the viewport.
+            z.style.left = Math.max(11, Math.min(r.left, innerWidth - r.width - 11)) + 'px';
+            z.style.top = Math.max(10, Math.min(r.top, innerHeight - r.height - 10)) + 'px';
+            z.style.width = r.width + 'px';
+            z.style.height = r.height + 'px';
+            z.style.opacity = appearance.opacity;
+            document.body.append(z);
+            zoom = z;
+            void z.offsetWidth;
+            z.classList.add('is-open');
+        }, 200);
+    }
+    // Capture before battle-sync: only indicator/tooltip clicks are consumed.
+    document.addEventListener('click', function (e) {
+        var node = e.target.closest('[data-mini-hint]');
+        if (node && !node.closest('.battle-mini-zoom')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            if (trigger === node && pinned) closeHint();
+            else { pinned = true; show(node, 'indicator'); }
+            return;
+        }
+        if (tip && tip.contains(e.target)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return;
+        }
+        closeHint();
+    }, true);
+    document.addEventListener('keydown', function (e) {
+        var node = e.target.closest('[data-mini-hint]');
+        if (e.key === 'Escape') { hoverReady = false; closeHint(); stopZoom(true); }
+        if (node && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            node.click();
+        }
+    }, true);
+    document.addEventListener('pointerover', function (e) {
+        if (e.pointerType === 'touch' || !hover.matches) return;
+        var card = cardAt(e.target);
+        if (card) startZoom(card);
+        contextHint(e.target);
+    });
+    document.addEventListener('pointermove', function (e) {
+        if (e.pointerType === 'touch' || !hover.matches) return;
+        hoverReady = true;
+        contextHint(e.target);
+    });
+    document.addEventListener('pointerout', function (e) {
+        if (e.pointerType === 'touch' || !hover.matches) return;
+        var card = cardAt(e.target);
+        if (card && !card.contains(e.relatedTarget)) {
+            stopZoom(false);
+            if (!(tip && tip.contains(e.relatedTarget))) closeHint();
+        } else if (card && e.relatedTarget && !pinned) contextHint(e.relatedTarget);
+    });
+    document.addEventListener('focusin', function (e) {
+        var indicator = e.target.closest('[data-mini-hint]');
+        var card = cardAt(e.target);
+        if (indicator) show(indicator, 'indicator');
+        else if (card && !card.classList.contains('mini-hidden')) { pinned = false; show(card, 'name'); }
+    });
+    document.addEventListener('focusout', function (e) {
+        if (cardAt(e.target) && !cardAt(e.relatedTarget)) closeHint();
+    });
+    function refresh() {
+        hoverReady = false;
+        closeHint();
+        stopZoom(true);
+    }
+    document.addEventListener('berserk:battle-updated', refresh);
+    window.addEventListener('scroll', function (e) {
+        if (tip && tip.contains(e.target)) return;
+        refresh();
+    }, true);
+    window.addEventListener('resize', refresh);
+    hover.addEventListener('change', refresh);
+    reduced.addEventListener('change', refresh);
+    new MutationObserver(function () {
+        if ((trigger && !trigger.isConnected) || (hoverCard && !hoverCard.isConnected)) refresh();
+    }).observe(document.querySelector('[data-battle-sync-root]') || document.body, {childList:true, subtree:true});
+    refresh();
 })();

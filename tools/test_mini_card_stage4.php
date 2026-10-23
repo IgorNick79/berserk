@@ -33,8 +33,15 @@ battleSnapshotAssert(str_contains(implode(' ',ActiveCardEffects::forCard($c,$sta
 $c->coins=2;$c->armor=1;$c->row=2;$c->col=2;$c->prop['actions']=[['type'=>'jump','key'=>'jump','name'=>'Прыжок','range'=>2]];
 $visible=LiveBattleCard::render($c,$state,'host',false,'&lt;script&gt;','3/3');
 battleSnapshotAssert(!str_contains($visible,'<script>') && !str_contains($visible,'<img src=x') && str_contains($visible,'&lt;img'),'Dynamic effects escaped');
-$hidden=LiveBattleCard::render($c,$state,'player',true,'???','?/?');
+$hidden=LiveBattleCard::render($c,$state,'player',true,'SUPER_SECRET_NAME','?/?');
 battleSnapshotAssert(!str_contains($hidden,'data-mini-hint')&&!str_contains($hidden,'unknown_future_stat')&&!str_contains($hidden,'mini-art'),'Hidden card contains no indicators/art/effects');
+battleSnapshotAssert(!str_contains($hidden,'SUPER_SECRET_NAME')&&!str_contains($hidden,'data-mini-name')&&!str_contains($hidden,'???')&&!str_contains($hidden,'mini-hp')&&str_contains($hidden,'mini-question'),'Hidden question has no name/HP leak');
+$publicHp=LiveBattleCard::render($c,$state,'player',true,'SUPER_SECRET_NAME','7/7');
+battleSnapshotAssert(str_contains($publicHp,'7/7')&&!str_contains($publicHp,'SUPER_SECRET_NAME'),'Renderer retains HP only when supplied as public by caller');
+foreach(['7/7','13/13','100/100'] as $hp) {
+    $html=LiveBattleCard::render($c,$state,'host',false,'Name',$hp);
+    battleSnapshotAssert(str_contains($html,$hp)&&!str_contains($html,'class="mini-name')&&!str_contains($html,'medallion'),'HP text retained without SVG plates');
+}
 $c->closed=true;$c->dying=true;
 battleSnapshotAssert(str_contains(LiveBattleCard::render($c,$state,'host',false,'Name','3/3'),'mini-closed mini-dying'),'Closed/dying preserved');
 $c->closed=false;$c->dying=false;
@@ -54,17 +61,19 @@ try {
  $enemy=$state->getCard(2);$enemy->revealed=true;$enemy->coins=2;$enemy->armor=1;$enemy->markers=['poison'=>['value'=>2],'stun'=>['value'=>1]];$enemy->modifiers=[['stat'=>'ova','value'=>2],['stat'=>'ovz','value'=>-1]];
  $c->modifiers=[['stat'=>'ova','value'=>2]];$c->markers=[];
  $secret=battleSnapshotCard(9,'s1_secret','player',CardInstance::ZONE_FIELD,6,5,false);$secret->coins=8;$secret->prop=['ova'=>9];$secret->markers=['stun'=>['value'=>1],'poison'=>['value'=>5]];$state->addCard($secret);$cardsInfo['s1_secret']=['name'=>'SECRET-NAME'];
+ $missing=battleSnapshotCard(10,'s1_missing_'.bin2hex(random_bytes(5)),'host',CardInstance::ZONE_FIELD,5,4);$missing->hp=13;$missing->hpMax=13;$state->addCard($missing);$cardsInfo[$missing->ukid]=['name'=>'Без иллюстрации'];
  $state->cell_markers['3_3']=[['type'=>'lantern_light']];
  $before=serialize($state->toArray());
  $render=fn($ui)=>(new BattleScreen($tpl))->prepare($state,'host','host',null,$cardsInfo,$ui)['data'];
  $data=$render(['sel'=>1,'mode'=>'strike']);
  battleSnapshotAssert($before===serialize($state->toArray()),'View projection does not mutate game state');
  battleSnapshotAssert(str_contains($data['field_html'],'mini-art')&&str_contains($data['field_html'],'frame_enemy_wide'),'Actual renderer uses new image/frame');
+ $hpCases=[];$savedHp=$c->hp;$savedMax=$c->hpMax;foreach([7,13,100] as $value){$c->hp=$value;$c->hpMax=$value;$hpCases[(string)$value]=$render(['sel'=>1,'mode'=>'strike']);}$c->hp=$savedHp;$c->hpMax=$savedMax;
  $enemy->coins=99;$enemy->armor=99;$enemy->markers['poison']['value']=99;$crowded=$render(['sel'=>1,'mode'=>'strike']);$enemy->coins=2;$enemy->armor=1;$enemy->markers['poison']['value']=2;
  $savedMods=$c->modifiers;$c->modifiers=[['stat'=>'ova','value'=>3]];$buffed=$render(['sel'=>1,'mode'=>'strike']);$c->modifiers=$savedMods;
  $c->closed=true;$closed=$render(['sel'=>1]);$c->closed=false;$c->dying=true;$dying=$render(['sel'=>1]);$c->dying=false;
  putenv('BERSERK_LEGACY_MINICARDS=1');$rollback=$render(['sel'=>1]);putenv('BERSERK_LEGACY_MINICARDS');
  battleSnapshotAssert($rollback['mini_card_design']==='legacy'&&!str_contains($rollback['field_html'],'battle-mini-card'),'Environment rollback');
- if(in_array('--fixture',$argv,true)) echo json_encode(['crowded'=>$crowded,'art_indices'=>$artIndices,'buffed'=>$buffed,'initial'=>$data,'jump'=>$render(['sel'=>1,'mode'=>'action:jump']),'move'=>$render(['sel'=>1,'mode'=>'strike']),'closed'=>$closed,'dying'=>$dying,'rollback'=>$rollback,'replay'=>$replay],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+ if(in_array('--fixture',$argv,true)) echo json_encode(['hp_cases'=>$hpCases,'crowded'=>$crowded,'art_indices'=>$artIndices,'buffed'=>$buffed,'initial'=>$data,'jump'=>$render(['sel'=>1,'mode'=>'action:jump']),'move'=>$render(['sel'=>1,'mode'=>'strike']),'closed'=>$closed,'dying'=>$dying,'rollback'=>$rollback,'replay'=>$replay],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
  else echo "Stage 4 PHP: base/active effects, poison, signs, stun/web, escaping, hidden data, state immutability, live renderer, replay and rollback passed.\n";
 } finally {foreach($paths as $path)unlink($path);foreach($made as $d)rmdir($d);}

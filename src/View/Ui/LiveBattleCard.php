@@ -31,11 +31,14 @@ final class LiveBattleCard
         if ($hidden) $classes .= ' mini-hidden';
         if ($card->closed) $classes .= ' mini-closed';
         if ($card->dying) $classes .= ' mini-dying';
-        return '<div class="' . $classes . '" data-mini-card="' . $card->instanceId . '">'
+        $label = $hidden ? 'Скрытая карта' : $nameHtml;
+        $nameAttr = $hidden ? '' : ' data-mini-name="' . $nameHtml . '"';
+        $hp = ($hidden && $hpText === '?/?') ? '' : '<div class="mini-hp"><svg class="mini-heart" viewBox="0 0 20 18" aria-hidden="true"><path d="M10 17 2 9C-3 3 5-3 10 3 15-3 23 3 18 9Z"/></svg><span>' . self::e($hpText) . '</span></div>';
+        return '<div class="' . $classes . '" data-mini-card="' . $card->instanceId . '" role="group" aria-label="' . $label . '"' . $nameAttr . '>'
             . $art . '<img class="mini-frame" src="/assets/images/battle/mini/frame_' . $side . '_wide.svg" alt="">'
             . ($indicators ? '<div class="mini-indicators">' . $indicators . '</div>' : '')
-            . '<div class="mini-name' . ($indicators ? ' has-indicators' : '') . '"><span>' . $nameHtml . '</span></div>'
-            . '<div class="mini-hp">' . self::e($hpText) . '</div></div>';
+            . ($hidden ? '<span class="mini-question" aria-hidden="true">?</span>' : '')
+            . $hp . '</div>';
     }
     private static function indicator(string $key, int $value, string $label, string $html = ''): string
     {

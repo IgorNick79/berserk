@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=1">
+<link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=2">
 <div class="battle-sync-root battle-shell" data-battle-sync-root data-mini-card-design="{{mini_card_design}}" {{pause_root_attr}}>
     <div class="battle-ajax-message" data-battle-message hidden></div>
     <button class="battle-menu" type="button" disabled aria-expanded="false" aria-haspopup="menu" aria-controls="battle-menu-panel" aria-label="Меню матча" title="Меню матча">
@@ -29,4 +29,4 @@
 <script src="/assets/js/battle-ui.js?v=10" defer></script>
 <script src="/assets/js/card-image-popup.js?v=1" defer></script>
 
-<script src="/assets/js/battle-mini-card.js?v=1" defer></script>
+<script src="/assets/js/battle-mini-card.js?v=2" defer></script>
