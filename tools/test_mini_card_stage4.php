@@ -33,6 +33,7 @@ battleSnapshotAssert(str_contains(implode(' ',ActiveCardEffects::forCard($c,$sta
 $c->coins=2;$c->armor=1;$c->row=2;$c->col=2;$c->prop['actions']=[['type'=>'jump','key'=>'jump','name'=>'Прыжок','range'=>2]];
 $visible=LiveBattleCard::render($c,$state,'host',false,'&lt;script&gt;','3/3');
 battleSnapshotAssert(!str_contains($visible,'<script>') && !str_contains($visible,'<img src=x') && str_contains($visible,'&lt;img'),'Dynamic effects escaped');
+battleSnapshotAssert(substr_count($visible,'data-mini-hint')===1,'Only active effects have a tooltip trigger');
 $hidden=LiveBattleCard::render($c,$state,'player',true,'SUPER_SECRET_NAME','?/?');
 battleSnapshotAssert(!str_contains($hidden,'data-mini-hint')&&!str_contains($hidden,'unknown_future_stat')&&!str_contains($hidden,'mini-art'),'Hidden card contains no indicators/art/effects');
 battleSnapshotAssert(!str_contains($hidden,'SUPER_SECRET_NAME')&&!str_contains($hidden,'data-mini-name')&&!str_contains($hidden,'???')&&!str_contains($hidden,'mini-hp')&&str_contains($hidden,'mini-question'),'Hidden question has no name/HP leak');
@@ -67,7 +68,7 @@ try {
  $render=fn($ui)=>(new BattleScreen($tpl))->prepare($state,'host','host',null,$cardsInfo,$ui)['data'];
  $data=$render(['sel'=>1,'mode'=>'strike']);
  battleSnapshotAssert($before===serialize($state->toArray()),'View projection does not mutate game state');
- battleSnapshotAssert(str_contains($data['field_html'],'mini-art')&&str_contains($data['field_html'],'frame_enemy_wide'),'Actual renderer uses new image/frame');
+ battleSnapshotAssert(str_contains($data['field_html'],'mini-art')&&str_contains($data['field_html'],'frame_enemy_102x92'),'Actual renderer uses new image/frame');
  $hpCases=[];$savedHp=$c->hp;$savedMax=$c->hpMax;foreach([7,13,100] as $value){$c->hp=$value;$c->hpMax=$value;$hpCases[(string)$value]=$render(['sel'=>1,'mode'=>'strike']);}$c->hp=$savedHp;$c->hpMax=$savedMax;
  $enemy->coins=99;$enemy->armor=99;$enemy->markers['poison']['value']=99;$crowded=$render(['sel'=>1,'mode'=>'strike']);$enemy->coins=2;$enemy->armor=1;$enemy->markers['poison']['value']=2;
  $savedMods=$c->modifiers;$c->modifiers=[['stat'=>'ova','value'=>3]];$buffed=$render(['sel'=>1,'mode'=>'strike']);$c->modifiers=$savedMods;

@@ -64,7 +64,18 @@
         trigger = node;
         kind = hintKind;
         t.dataset.kind = hintKind;
-        if (hintKind === 'name') t.textContent = text;
+        if (hintKind === 'name') {
+            var plate = document.createElement('span');
+            plate.className = 'mini-nameplate';
+            ['left', 'text', 'right'].forEach(function (part) {
+                var span = document.createElement('span');
+                span.className = 'mini-nameplate__' + part;
+                if (part === 'text') span.textContent = text;
+                else span.setAttribute('aria-hidden', 'true');
+                plate.append(span);
+            });
+            t.replaceChildren(plate);
+        }
         else {
             t.replaceChildren(text.cloneNode(true));
             t.firstChild.hidden = false;
@@ -146,6 +157,12 @@
             e.stopImmediatePropagation();
             if (trigger === node && pinned) closeHint();
             else { pinned = true; show(node, 'indicator'); }
+            return;
+        }
+        if (e.target.closest('.mini-indicator')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            closeHint();
             return;
         }
         if (tip && tip.contains(e.target)) {

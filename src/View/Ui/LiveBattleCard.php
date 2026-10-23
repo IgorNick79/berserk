@@ -35,13 +35,14 @@ final class LiveBattleCard
         $nameAttr = $hidden ? '' : ' data-mini-name="' . $nameHtml . '"';
         $hp = ($hidden && $hpText === '?/?') ? '' : '<div class="mini-hp"><svg class="mini-heart" viewBox="0 0 20 18" aria-hidden="true"><path d="M10 17 2 9C-3 3 5-3 10 3 15-3 23 3 18 9Z"/></svg><span>' . self::e($hpText) . '</span></div>';
         return '<div class="' . $classes . '" data-mini-card="' . $card->instanceId . '" role="group" aria-label="' . $label . '"' . $nameAttr . '>'
-            . $art . '<img class="mini-frame" src="/assets/images/battle/mini/frame_' . $side . '_wide.svg" alt="">'
+            . $art . '<img class="mini-frame" src="/assets/images/battle/mini/frame_' . $side . '_102x92.svg" alt="">'
             . ($indicators ? '<div class="mini-indicators">' . $indicators . '</div>' : '')
             . ($hidden ? '<span class="mini-question" aria-hidden="true">?</span>' : '')
             . $hp . '</div>';
     }
     private static function indicator(string $key, int $value, string $label, string $html = ''): string
     {
+        if ($key !== 'effects') return '<span class="mini-indicator" role="img" aria-label="' . $label . '"><img src="/assets/images/battle/mini/' . $key . '_compact.svg" alt=""><span>' . $value . '</span></span>';
         return '<span class="mini-indicator" data-mini-hint tabindex="0" role="button" aria-label="' . $label . '" aria-expanded="false">'
             . '<img src="/assets/images/battle/mini/' . $key . '_compact.svg" alt=""><span>' . $value . '</span>'
             . '<span class="mini-hint-text" hidden>' . ($html ?: $label) . '</span></span>';

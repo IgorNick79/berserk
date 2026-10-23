@@ -1,0 +1,5 @@
+.mini-nameplate { --plate-bg: #233a24; display: inline-flex; align-items: stretch; height: 24px; max-width: min(128px, calc(100vw - 16px)); background: var(--plate-bg); color: #fff2d4; filter: drop-shadow(0 2px 3px #0009); }
+.mini-nameplate__left, .mini-nameplate__right { flex: 0 0 12px; width: 12px; height: 24px; }
+.mini-nameplate__text { min-width: 0; padding: 3px 5px; border-block: 2px solid #d9aa5c; font: 600 13px/14px Georgia, serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-nameplate__left { background: url('/assets/images/battle/mini/nameplate_left.svg') center / 12px 24px no-repeat; }
+.mini-nameplate__right { background: url('/assets/images/battle/mini/nameplate_right.svg') center / 12px 24px no-repeat; }
