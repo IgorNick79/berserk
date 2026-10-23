@@ -65,7 +65,7 @@ $state->addCard(vampireHpUiCard([
     'row' => 1,
     'col' => 1,
     'hp' => 9,
-    'hpMax' => 999,
+    'hpMax' => 9,
     'prop' => ['vampire' => true, 'hp_max_override' => 999],
 ]));
 $state->addCard(vampireHpUiCard([
@@ -74,7 +74,7 @@ $state->addCard(vampireHpUiCard([
     'row' => 1,
     'col' => 2,
     'hp' => 10,
-    'hpMax' => 999,
+    'hpMax' => 9,
     'prop' => ['vampire' => true, 'hp_max_override' => 999],
 ]));
 $state->addCard(vampireHpUiCard([
@@ -83,7 +83,7 @@ $state->addCard(vampireHpUiCard([
     'row' => 1,
     'col' => 3,
     'hp' => 7,
-    'hpMax' => 999,
+    'hpMax' => 9,
     'prop' => ['vampire' => true, 'hp_max_override' => 999],
 ]));
 $state->addCard(vampireHpUiCard([
@@ -100,7 +100,7 @@ $state->addCard(vampireHpUiCard([
     'zone' => CardInstance::ZONE_FLYING,
     'slot' => 1,
     'hp' => 11,
-    'hpMax' => 999,
+    'hpMax' => 9,
     'prop' => ['vampire' => true, 'hp_max_override' => 999],
 ]));
 $state->addCard(vampireHpUiCard([
@@ -138,6 +138,6 @@ vampireHpUiAssert(str_contains($html['field_html'], '<span>7/12</span>'), 'Norma
 vampireHpUiAssert(substr_count($html['field_html'], '<span>7/∞</span>') === 2, 'Any technical 999 HP override should render as infinity.');
 vampireHpUiAssert(str_contains($html['field_html'], '<span>7/999</span>'), 'Plain 999 hpMax without the technical override prop should keep existing display rules.');
 vampireHpUiAssert(str_contains($html['fly_zones_html'], '<span>11/∞</span>'), 'Flying Vampire HP should use the same infinity max.');
-vampireHpUiAssert(str_contains($html['panel_html'], 'HP 9/∞'), 'Selected Vampire panel should render infinity max.');
+vampireHpUiAssert(str_contains($html['panel_html'], 'Здоровье: 9/∞'), 'Selected Vampire panel should render infinity max.');
 
 echo "Battle vampire HP UI tests passed.\n";
