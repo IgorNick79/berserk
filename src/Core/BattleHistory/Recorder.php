@@ -21,7 +21,7 @@ final class Recorder
     private string $command='';
     private ReplayStateBuilder $builder;
 
-    public function __construct(private int $gameId, private int $journalId, array $catalog, array $openActions, private bool $liveJournal=false)
+    public function __construct(private int $gameId, private int $journalId, array $catalog, array $openActions, private bool $liveJournal=false, private ?\Closure $journalName=null)
     {
         $this->builder=new ReplayStateBuilder($catalog);
         foreach ($openActions as $row) {
@@ -39,8 +39,10 @@ final class Recorder
     public function commandFinished(GameState $state,Result $result): void
     {
         if (!$result->success) return;
+        // Preparation placement is outside the text journal; keep the replay-only policy unchanged.
+        $outsideText=$this->liveJournal && !in_array($state->status,['battle','game_over'],true);
         // Technical continuation is covered only by a known existing root, never by absence of pending.
-        if (!$this->covered && !(in_array($this->command,['choose_defender','choose_strike_mode','confirm_strike','turn_ack'],true) && $this->open)
+        if (!$outsideText && !$this->covered && !(in_array($this->command,['choose_defender','choose_strike_mode','confirm_strike','turn_ack'],true) && $this->open)
             && $this->command!=='confirm_place') $this->unsupported($state,'uncovered_command:'.$this->command);
         if (isset($this->open['journal_effect'])) $this->close($state,'journal_effect','settled',false);
         if ($state->status==='game_over' && !$this->terminal) {
@@ -72,13 +74,18 @@ final class Recorder
             $payload['_journal']=['turn'=>(int)($state->battle['turn']??0),'active'=>$state->battle['active']??null,'cards'=>[]];
             foreach ($refs as $ref) {
                 $card=$state->getCard((int)$ref);
-                if ($card && ($entry=$this->builder->definition($card))!==null) $payload['_journal']['cards'][(string)$ref]=['name'=>$entry['name'],'owner'=>$card->owner];
+                if ($card) {
+                    $name=$this->journalName!==null ? ($this->journalName)($card) : ($this->builder->definition($card)['name']??null);
+                    // A missing definition must not erase an otherwise visible action. No ukid or raw prop fallback.
+                    if (!is_string($name) || trim($name)==='' || strlen($name)>512 || !preg_match('//u',$name)) $name='Карта';
+                    $payload['_journal']['cards'][(string)$ref]=['name'=>$name,'owner'=>$card->owner];
+                }
             }
         }
         $e=['action'=>$id,'type'=>$type,'version'=>1,'payload'=>$payload,'at'=>(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))->format('Y-m-d H:i:s.u')];
         foreach (['public','host','player'] as $view) {
             $safe=true;
-            foreach ($refs as $ref) { $c=$state->getCard((int)$ref); if (!$c || !$this->builder->known($c,$view) || ($this->liveJournal && $this->builder->definition($c)===null)) $safe=false; }
+            foreach ($refs as $ref) { $c=$state->getCard((int)$ref); if (!$c || !$this->builder->known($c,$view)) $safe=false; }
             if (isset($payload['_private_owner']) && $view!==$payload['_private_owner']) $safe=false;
             $e[$view]=$safe?$payload:($this->liveJournal?null:['redacted'=>true]);
         }

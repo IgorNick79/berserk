@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "base": "094acde5d152bac6d85986e792b1115422378c8c",
+  "http_cases": 74,
+  "regression_suites": 13,
+  "live_browsers": 2,
+  "live_dom_equals_full_api": true,
+  "live_reloads": 0,
+  "duplicates": 0,
+  "lab_ports_closed": true,
+  "private_configs_removed_from_lab": true,
+  "production_access": false,
+  "preview_enabled": false
+}

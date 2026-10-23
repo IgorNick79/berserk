@@ -201,7 +201,7 @@ function sendAjaxJson(array $payload, int $statusCode = 200): never
                 $resignRecord = (new CommandJournalRepository($db))->find($state->gameId, $playerKey, $id);
                 if ($resignRecord !== null && $resignRecord['command_type'] === 'resign'
                     && $resignRecord['status'] === CommandJournalRepository::STATUS_COMMITTED) {
-                    $resignResultState = (\Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db))->findById($state->gameId);
+                    $resignResultState = (\Berserk\Core\BattleHistory\HistoryRuntime::load($db)->repository($db))->findById($state->gameId);
                 }
             }
         } catch (Throwable) {
@@ -463,12 +463,12 @@ function applyAutomaticBattleProgress(Db $db, GameState $state, string $requeste
     // One guard instance per HTTP request, shared by snapshots and command recovery.
     static $progress = null;
     try {
-        $progress ??= new \Berserk\Core\HttpBattleProgress($db, \Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db), new Engine($db));
+        $progress ??= new \Berserk\Core\HttpBattleProgress($db, \Berserk\Core\BattleHistory\HistoryRuntime::load($db)->repository($db), new Engine($db));
         return $progress->check($state, $requester, $allowCombat)->state;
     } catch (Throwable) {
         // HttpBattleProgress latches the stop before propagating any exception.
         error_log('Automatic battle progress unavailable for game ' . $state->gameId);
-        try { return (\Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db))->findById($state->gameId) ?? $state; }
+        try { return (\Berserk\Core\BattleHistory\HistoryRuntime::load($db)->repository($db))->findById($state->gameId) ?? $state; }
         catch (Throwable) { return $state; }
     }
 }
@@ -621,14 +621,14 @@ if ($isChat) {
     } catch (OverflowException $e) { sendAjaxJson(['ok'=>false,'error'=>'rate_limited'],429);
     } catch (Throwable $e) { sendAjaxJson(['ok'=>false,'error'=>'chat_unavailable'],503); }
 }
-try { $repo = \Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db); } catch (Throwable) { http_response_code(503); exit('game_schema_unavailable'); }
+try { $repo = \Berserk\Core\BattleHistory\HistoryRuntime::load($db)->repository($db); } catch (Throwable) { http_response_code(503); exit('game_schema_unavailable'); }
 $engine   = new Engine($db);
 $deckView = new DeckView($db);
 $tpl     = new Template(__DIR__ . '/../templates', '/');
 
 $state = $repo->findById($gameId);
 if ($state === null) { http_response_code(404); exit('game_not_found'); }
-$historyRuntime = \Berserk\Core\BattleHistory\HistoryRuntime::load();
+$historyRuntime = \Berserk\Core\BattleHistory\HistoryRuntime::load($db);
 $_SESSION['history_prepare_csrf'] = GameTransport::$csrf;
 GameTransport::$version = $state->persistenceVersion ?? 0;
 GameTransport::$stage = $state->status;
@@ -1059,16 +1059,33 @@ $commandType = is_string($_POST['cmd'] ?? null) ? $_POST['cmd'] : '';
 if ($commandType === 'draft_sync') {
     $changed = false;
     $events = [];
-    $result = (new PrepareProcessor($state, $db))->resolveDraftTimeouts();
-    if ($result->success && !empty($result->events)) {
-        $changed = true;
-        $events = $result->events;
-        try {
-            $repo->save($state);
-        } catch (StaleStateException) {
-            $state = $repo->findById($state->gameId) ?? $state;
-            $changed = true;
-            $events = ['stale_reloaded'];
+    if ($historyRuntime->records($state->gameId)) {
+        $draftJournal=new CommandJournalRepository($db);
+        $draftEntry=$draftJournal->registerProcessing($state->gameId,$playerKey,'draft:'.$state->persistenceVersion.':'.time(),'draft_sync',[],$state->persistenceVersion);
+        $result=\Berserk\Core\Result::ok();
+        if ($draftEntry['is_new'] && $draftEntry['status']==='processing') {
+            try {
+                $repo->executeLockedCommand($state,$draftJournal,(int)$draftEntry['id'],
+                    function(GameState $locked) use ($db,$playerKey,&$result): \Berserk\Core\Result {
+                        $cmd=new Command('draft_sync');
+                        $locked->historyRecorder?->commandStarted($locked,$playerKey,$cmd);
+                        $result=(new PrepareProcessor($locked,$db))->resolveDraftTimeouts();
+                        $locked->historyRecorder?->commandFinished($locked,$result);
+                        return $result->success && !$result->events ? \Berserk\Core\Result::error('no_progress') : $result;
+                    },'draft_no_progress');
+            } catch (StaleStateException) { $events=['stale_reloaded']; }
+        }
+        $fresh=$repo->findById($state->gameId);
+        $changed=$fresh->persistenceVersion!==$state->persistenceVersion;
+        $state=$fresh;
+        if ($changed && !$events) $events=$result->events;
+    } else {
+        // Legacy games remain unrecorded; do not fabricate prior history.
+        $result = (new PrepareProcessor($state, $db))->resolveDraftTimeouts();
+        if ($result->success && !empty($result->events)) {
+            $changed = true; $events = $result->events;
+            try { $repo->save($state); }
+            catch (StaleStateException) { $state=$repo->findById($state->gameId)??$state; $events=['stale_reloaded']; }
         }
     }
 
@@ -1149,8 +1166,7 @@ if ($commandType !== '') {
 
     $cmd = new Command($commandType, $payload);
     $historyPrepared = false;
-    if ($historyRuntime->records($state->gameId) && ($state->status === 'place'
-        || (new PrepareProcessor($state))->isLuckTestQuickStart($cmd))) {
+    if ($historyRuntime->records($state->gameId)) {
         $token = requestParamString($_POST, 'csrf', 64);
         $version = requestParamString($_POST, 'prepare_version', 20);
         if ($token === null || !hash_equals($_SESSION['history_prepare_csrf'] ?? '', $token)
@@ -1413,7 +1429,7 @@ if ($screenName==='battle') {
 }
 
 if (in_array($screenName,['battle','game_over'],true)
-    && $historyRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION)===$playerKey) {
+    && $historyRuntime->journals($state->gameId) && $historyRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION)===$playerKey) {
     if ($screenName==='game_over') $screenHtml .= '<button type="button" class="button" data-action="battle-log" aria-controls="battle-journal">Журнал боя</button>';
     $screenHtml .= '<link rel="stylesheet" href="/assets/css/battle-journal.css">'
         . '<aside id="battle-journal" class="battle-journal" hidden aria-label="Журнал боя">'

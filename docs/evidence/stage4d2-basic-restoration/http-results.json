@@ -1,0 +1,298 @@
+[
+  {
+    "test": "exact isolated database identity",
+    "pass": true
+  },
+  {
+    "test": "runtime no TRIGGER or DDL privileges",
+    "pass": true
+  },
+  {
+    "test": "control room enrolled before preparation",
+    "pass": true
+  },
+  {
+    "test": "no external replay catalog and preview OFF",
+    "pass": true
+  },
+  {
+    "test": "replay remains OFF",
+    "pass": true
+  },
+  {
+    "test": "legacy replay ID collision denied",
+    "pass": true
+  },
+  {
+    "test": "valid legacy invitation cannot read account journal",
+    "pass": true
+  },
+  {
+    "test": "legacy PHPSESSID cannot supply account principal",
+    "pass": true
+  },
+  {
+    "test": "arbitrary account IDs 3 and 4 mapped to host player",
+    "pass": true
+  },
+  {
+    "test": "late room selection cannot enroll existing game",
+    "pass": true
+  },
+  {
+    "test": "game HTML both account actors",
+    "pass": true
+  },
+  {
+    "test": "guest forbidden before any progress",
+    "pass": true
+  },
+  {
+    "test": "outsider forbidden",
+    "pass": true
+  },
+  {
+    "test": "SQL room JSON mismatch fails closed",
+    "pass": true
+  },
+  {
+    "test": "legacy numeric IDs not ownership",
+    "pass": true
+  },
+  {
+    "test": "prototype flags rejected",
+    "pass": true
+  },
+  {
+    "test": "GET command rejected",
+    "pass": true
+  },
+  {
+    "test": "POST CSRF rejected",
+    "pass": true
+  },
+  {
+    "test": "logout revokes gameplay session",
+    "pass": true
+  },
+  {
+    "test": "switching account cannot inherit cached role",
+    "pass": true
+  },
+  {
+    "test": "relogin continues same persisted game",
+    "pass": true
+  },
+  {
+    "test": "prepare sync read only",
+    "pass": true
+  },
+  {
+    "test": "actor spoof cannot choose host mode",
+    "pass": true
+  },
+  {
+    "test": "transport strips role inputs and uses POST",
+    "pass": true
+  },
+  {
+    "test": "System existing lifecycle deck",
+    "pass": true
+  },
+  {
+    "test": "two accounts view own preparation",
+    "pass": true
+  },
+  {
+    "test": "actual HTTP setup reaches place",
+    "pass": true
+  },
+  {
+    "test": "real HTTP match starts battle",
+    "pass": true
+  },
+  {
+    "test": "placement creates neither text nor coverage gaps",
+    "pass": true
+  },
+  {
+    "test": "raw battle POST cannot bypass command journal",
+    "pass": true
+  },
+  {
+    "test": "reload and sync authorized",
+    "pass": true
+  },
+  {
+    "test": "ordinary move journalled",
+    "pass": true
+  },
+  {
+    "test": "actual card movement text with empty replay catalog",
+    "pass": true
+  },
+  {
+    "test": "hidden movement has distinct historical projections",
+    "pass": true
+  },
+  {
+    "test": "catalog rename does not change historical text",
+    "pass": true
+  },
+  {
+    "test": "command retry does not reapply",
+    "pass": true
+  },
+  {
+    "test": "committed retry creates no extra events",
+    "pass": true
+  },
+  {
+    "test": "history fault not reported as committed",
+    "pass": true
+  },
+  {
+    "test": "rollback leaves state and events unchanged",
+    "pass": true
+  },
+  {
+    "test": "command status scoped to server actor",
+    "pass": true
+  },
+  {
+    "test": "stale CAS rejected",
+    "pass": true
+  },
+  {
+    "test": "membership does not grant foreign turn",
+    "pass": true
+  },
+  {
+    "test": "rejected command has no confirmed events",
+    "pass": true
+  },
+  {
+    "test": "attack accepted",
+    "pass": true
+  },
+  {
+    "test": "stale informational wait token rejected",
+    "pass": true
+  },
+  {
+    "test": "outsider cannot trigger automatic pending ACK",
+    "pass": true
+  },
+  {
+    "test": "existing informational automatic ACK via authorized sync",
+    "pass": true
+  },
+  {
+    "test": "pending combat continuation completes",
+    "pass": true
+  },
+  {
+    "test": "chat sender from account",
+    "pass": true
+  },
+  {
+    "test": "chat visible only participants",
+    "pass": true
+  },
+  {
+    "test": "journal host authorized",
+    "pass": true
+  },
+  {
+    "test": "journal player authorized",
+    "pass": true
+  },
+  {
+    "test": "journal outsider denied",
+    "pass": true
+  },
+  {
+    "test": "client cannot select other historical projection",
+    "pass": true
+  },
+  {
+    "test": "existing turn timer initialized",
+    "pass": true
+  },
+  {
+    "test": "unauthorized sync cannot fire timeout",
+    "pass": true
+  },
+  {
+    "test": "authorized sync executes existing automatic timeout",
+    "pass": true
+  },
+  {
+    "test": "resign completes existing match",
+    "pass": true
+  },
+  {
+    "test": "game over omitted from active lobby",
+    "pass": true
+  },
+  {
+    "test": "basic combat and terminal text host",
+    "pass": true
+  },
+  {
+    "test": "poll at final cursor returns no duplicate host",
+    "pass": true
+  },
+  {
+    "test": "page reload recovers same full history host",
+    "pass": true
+  },
+  {
+    "test": "basic combat and terminal text player",
+    "pass": true
+  },
+  {
+    "test": "poll at final cursor returns no duplicate player",
+    "pass": true
+  },
+  {
+    "test": "page reload recovers same full history player",
+    "pass": true
+  },
+  {
+    "test": "saved projection is not rewritten by later reveal",
+    "pass": true
+  },
+  {
+    "test": "reading does not change state or history metadata",
+    "pass": true
+  },
+  {
+    "test": "new structured projections contain frozen names",
+    "pass": true
+  },
+  {
+    "test": "selected quick game enrolled and initial capture committed",
+    "pass": true
+  },
+  {
+    "test": "two authenticated browsers receive new live events without reload",
+    "pass": true
+  },
+  {
+    "test": "actual wounds death and natural terminal text",
+    "pass": true
+  },
+  {
+    "test": "failed lobby acceptance rolls enrollment back",
+    "pass": true
+  },
+  {
+    "test": "missing database card definition safely returns no name",
+    "pass": true
+  },
+  {
+    "test": "two authenticated browsers actual journal",
+    "pass": true
+  }
+]

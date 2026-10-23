@@ -1,0 +1,13 @@
+{
+  "config/battle_history.example.php": "f216c612f7e57c0f40af4e61e208ffcf3f60352edbfd8ceed86625f02aab00a6",
+  "www/battle-journal.php": "c8eb2378c458d3e150eedd54127a1ba301f9328e6d923ff897150a0e0763ac51",
+  "www/index.php": "ac196c07335272189ea31dc666dadd6b7d80192082df968769469849a5d4490a",
+  "www/journal-access.php": "d00b0180a069eea7128655d70a9b581aea0cb018014cead6b85e5eb998274e6c",
+  "src/Core/GameRepository.php": "bf16ce0ee9305516d7af47dd2027676a3442df28802eb0295c153aae0ad6c4e4",
+  "src/Core/GameState.php": "1d0d4e435a9aa353b3fc499fac2c34b2540dd0793af29f2aeab977ec17a74db2",
+  "src/Lobby/MatchCreator.php": "2c4534182ea825bb7307747bada56bbe114068d7c547a4a4e5eda6662560911f",
+  "src/Core/BattleHistory/HistoryRepository.php": "b782075f69260459a5c7912189ee98e11052cb1ed19a6b8755ffc581805c1cf9",
+  "src/Core/BattleHistory/HistoryRuntime.php": "9533eae6a561ca0a48f0c7962f5634f249bf8bd8ffc32801e4dc8f18226a2df9",
+  "src/Core/BattleHistory/Recorder.php": "7db59ed40b84289f93674d413eb77434c496f5f832ff0b8c0fb67cdeb688b0dd",
+  "src/View/Screen/Battle/InfoPanel.php": "b73c2ac6f90e5fe9a4c7813feb22ee6ea6cdf123c1679e0049a5c66cddd02f11"
+}

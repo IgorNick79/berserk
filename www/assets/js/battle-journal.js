@@ -46,7 +46,19 @@
                     if (seen.has(entry.seq)) return;
                     if (entry.kind === "gap") { hasGaps = true; seen.add(entry.seq); return; }
                     var item = document.createElement("li");
-                    item.textContent = entry.text; item.dataset.eventSeq = String(entry.seq);
+                    // Preserve the plain-text API contract and render only the known dice prefix.
+                    // No event HTML is trusted, and historical projections remain untouched.
+                    var dice = /^Бросок: атакующий \d+, защитник (?:\d+|без броска)\.$/.test(entry.text);
+                    if (dice) {
+                        var icon = document.createElement("span");
+                        icon.className = "dice battle-journal-dice";
+                        icon.setAttribute("role", "img");
+                        icon.setAttribute("aria-label", "Бросок кубиков");
+                        icon.textContent = "⚄\uFE0E";
+                        item.appendChild(icon);
+                        item.appendChild(document.createTextNode(" А" + entry.text.slice("Бросок: а".length)));
+                    } else item.textContent = entry.text;
+                    item.dataset.eventSeq = String(entry.seq);
                     list.appendChild(item); seen.add(entry.seq);
                 });
                 cursor = data.cursor;

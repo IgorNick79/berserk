@@ -1,0 +1,70 @@
+[
+  {
+    "file": "config/battle_history.example.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "tools/journal_access.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "tools/test_battle_recorder.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "tools/test_live_battle_journal.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "tools/test_live_journal_restoration.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "tools/test_lucktest.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "tools/test_lucktest_quick_sql.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "www/battle-journal.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "www/index.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "www/journal-access.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "src/Core/GameRepository.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "src/Core/GameState.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "src/Lobby/MatchCreator.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "src/Core/BattleHistory/HistoryRepository.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "src/Core/BattleHistory/HistoryRuntime.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "src/Core/BattleHistory/Recorder.php",
+    "lint": "PASS"
+  },
+  {
+    "file": "src/View/Screen/Battle/InfoPanel.php",
+    "lint": "PASS"
+  }
+]

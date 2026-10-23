@@ -20,11 +20,11 @@ function gaps(array $d):array{return array_values(array_filter($d['events'],fn($
 $s=new GameState(1,101,202);$s->status='place';$s->getPlayer('host')->side=1;$s->getPlayer('player')->side=2;
 foreach(['host','player']as$side){$cells=ZoneManager::cellLevels($side)[0];for($i=0;$i<6;$i++){$id=$i+1+($side==='player'?6:0);$card=s31card($id,$side,1,1);$card->zone='squad';$card->row=null;$card->col=null;$s->addCard($card);}}
 $count=0;
-foreach(['host','player']as$side){$cells=ZoneManager::cellLevels($side)[0];for($i=0;$i<6;$i++){[$row,$col]=array_map('intval',explode('_',$cells[$i]));$d=runGap($s,[],$side,'place_card',['card_id'=>$i+1+($side==='player'?6:0),'row'=>$row,'col'=>$col]);gc(count(gaps($d))===1,'placement gap');$count+=count(gaps($d));}}
+foreach(['host','player']as$side){$cells=ZoneManager::cellLevels($side)[0];for($i=0;$i<6;$i++){[$row,$col]=array_map('intval',explode('_',$cells[$i]));$d=runGap($s,[],$side,'place_card',['card_id'=>$i+1+($side==='player'?6:0),'row'=>$row,'col'=>$col]);gc(count(gaps($d))===0,'placement is outside text coverage');$count+=count(gaps($d));}}
 $d=runGap($s,[],'host','confirm_place');gc(count(gaps($d))===0,'first confirmation exempt');
-$d=runGap($s,[],'player','confirm_place');$count+=count(gaps($d));gc($s->status==='battle'&&$count===13,'twelve placement + uncertified start = thirteen');
+$d=runGap($s,[],'player','confirm_place');$count+=count(gaps($d));gc($s->status==='battle'&&$count===1,'placement excluded; only uncertified battle start remains');
 gc(count(array_filter($d['events'],fn($e)=>$e['type']==='turn.started'&&$e['host']!==null))===1,'turn still visible with empty catalog');
-$checks[]='PASS actual placement12 + two confirmations: 13 gaps with empty catalog, one visible turn';
+$checks[]='PASS actual placement12 excluded from text coverage; one snapshot certification gap and one visible turn remain';
 $open=[];$s=s31state(['unanswer'=>true]);$s->getCard(3)->revealed=false;$s->getCard(2)->closed=true;
 $d=runGap($s,$catalog,'host','move',['card_id'=>3,'row'=>2,'col'=>3]);$moves=array_values(array_filter($d['events'],fn($e)=>$e['type']==='move.started'));gc(count($moves)===1&&$moves[0]['host']!==null&&$moves[0]['player']===null,'owner projections');
 $checks[]='PASS actual move: owner projection visible, opponent hidden';

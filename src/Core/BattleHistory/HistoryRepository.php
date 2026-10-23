@@ -4,18 +4,17 @@ namespace Berserk\Core\BattleHistory;
 
 use Berserk\Core\Db;
 
-/** Opt-in storage only. Never starts/commits transactions, creates schema or calls Engine. */
+/** Transactional history storage. Never starts/commits transactions, creates schema or calls Engine. */
 final class HistoryRepository
 {
     public function __construct(private Db $db) {}
 
-    /** Explicit provisioning in a caller-owned transaction, before the first recorded command. */
+    /** Mandatory initialization in the creation transaction, before the first recorded command. */
     public function initialize(int $gameId, string $status = 'recording', string $completeness = 'complete'): void
     {
         $this->transaction();
-        if ($gameId <= 0 || !in_array($status, ['recording','disabled'], true)
-            || !in_array($completeness, ['complete','incomplete','none'], true)
-            || ($status === 'disabled') !== ($completeness === 'none')) throw new \InvalidArgumentException('Invalid history provisioning');
+        if ($gameId <= 0 || $status !== 'recording'
+            || !in_array($completeness, ['complete','incomplete'], true)) throw new \InvalidArgumentException('Invalid history provisioning');
         if ($this->db->fetchOne("SELECT ind FROM games WHERE ind=$gameId FOR UPDATE") === null) throw new \LogicException('Missing game');
         $this->insert('battle_history_matches', ['game_id'=>$gameId,'recording_status'=>$status,'completeness'=>$completeness,
             'event_version'=>1,'snapshot_version'=>1,'created_at'=>$this->now(),'updated_at'=>$this->now()]);
@@ -216,7 +215,7 @@ final class HistoryRepository
             // Gaps expose neither their reason nor hidden source, even if projection is null.
             if ($row['event_type']==='recording_gap.started') $text='Часть игровых событий не записана. История неполная.';
             elseif ($row['projection_json']===null) continue;
-            else $text=JournalText::format($row['event_type'],json_decode($row['projection_json'],true,512,JSON_THROW_ON_ERROR));
+            else $text=JournalText::format($row['event_type'],json_decode($row['projection_json'],true,512,JSON_THROW_ON_ERROR),$side);
             if ($text!==null) $entries[]=['seq'=>$cursor,'kind'=>$row['event_type']==='recording_gap.started'?'gap':'event','text'=>$text];
         }
         $gap=$this->db->fetchOne("SELECT e.event_seq FROM battle_history_events e JOIN battle_command_journal j ON j.id=e.journal_id AND j.game_id=e.game_id AND j.status='committed' WHERE e.game_id=$gameId AND e.event_seq<=$watermark AND e.event_type='recording_gap.started' LIMIT 1");

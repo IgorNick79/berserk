@@ -1303,7 +1303,7 @@ final class BattleScreen
 
     private function displayHpMax(CardInstance $card, ?array $info = null): string
     {
-        if ($card->hpMax === 999 && (int) ($card->prop['hp_max_override'] ?? 0) === 999) {
+        if ((int) ($card->prop['hp_max_override'] ?? 0) === 999) {
             return '∞';
         }
 

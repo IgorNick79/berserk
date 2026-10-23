@@ -4,15 +4,19 @@ namespace Berserk\Core\BattleHistory;
 
 use Berserk\Core\{Db,GameRepository};
 
-/** Local server configuration only. No request parameter can enable recording or preview. */
+/** Journal lifecycle is intrinsic to persisted matches. Configuration is for preview only. */
 final class HistoryRuntime
 {
-    public function __construct(private array $config) {}
+    private static ?self $requestRuntime = null;
+    public function __construct(private array $config, private ?Db $db = null) {}
 
-    public static function load(): self
+    public static function load(?Db $db = null): self
     {
+        if ($db === null && self::$requestRuntime !== null) return self::$requestRuntime;
         $file = dirname(__DIR__, 3).'/config/battle_history.local.php';
-        return new self(is_file($file) ? require $file : []);
+        $runtime = new self(is_file($file) ? require $file : [], $db);
+        if ($db !== null) self::$requestRuntime = $runtime;
+        return $runtime;
     }
 
     private function allowed(string $key, int $id): bool
@@ -20,9 +24,12 @@ final class HistoryRuntime
         return $id > 0 && in_array($id, $this->config[$key] ?? [], true);
     }
 
+    /** Metadata or the immutable creation-version marker, never a configuration allowlist. */
     public function records(int $gameId): bool
     {
-        return ($this->config['recording_enabled'] ?? false) === true && $this->allowed('record_game_ids', $gameId);
+        if ($gameId <= 0 || $this->db === null) return false;
+        $row=$this->db->fetchOne("SELECT g.json, h.game_id AS history_id FROM games g LEFT JOIN battle_history_matches h ON h.game_id=g.ind WHERE g.ind=$gameId");
+        return $row !== null && ($row['history_id'] !== null || isset(json_decode($row['json'],true)['journal_schema']));
     }
 
     public function previews(int $gameId): bool
@@ -30,43 +37,15 @@ final class HistoryRuntime
         return ($this->config['preview_enabled'] ?? false) === true && $this->allowed('preview_game_ids', $gameId);
     }
 
-    public function journals(int $gameId): bool
-    {
-        return ($this->config['journal_enabled'] ?? false) === true && $this->allowed('journal_game_ids', $gameId);
-    }
+    public function journals(int $gameId): bool { return $this->records($gameId); }
 
-    public function protects(int $gameId): bool
-    {
-        return $this->allowed('record_game_ids',$gameId) || $this->allowed('journal_game_ids',$gameId);
-    }
-    public function invitations(): ?JournalInvitations
-    {
-        if (($this->config['journal_access_enabled']??false)!==true) return null;
-        $path=$this->config['journal_access_directory']??null;
-        return is_string($path) ? new JournalInvitations($path) : null;
-    }
-    public function localAccessHttp(): bool
-    {
-        return ($this->config['journal_access_local_http']??false)===true;
-    }
-
-    /** Never accepts an HTTP side/user ID. Test bindings are provisioned server-side only. */
+    /** Identity is supplied only by the existing authenticated account session. */
     public function journalSide(int $gameId, int $hostId, int $playerId, array $session): ?string
     {
-        if (!$this->journals($gameId)) return null;
-        $user = $this->principal($session);
+        $user=$this->principal($session);
         if ($user > 0 && $user === $hostId) return 'host';
         if ($user > 0 && $user === $playerId) return 'player';
-        $token = $session['berserk_battle_journal_binding'] ?? null;
-        if (!is_string($token) || !preg_match('/^[a-f0-9]{64}$/D', $token)) return null;
-        if (($this->config['journal_access_enabled']??false)===true) {
-            try { return $this->invitations()?->side($token,$gameId); }
-            catch (\Throwable) { return null; } // Missing/corrupt private ledger denies access.
-        }
-        $binding = $this->config['journal_test_bindings'][$token] ?? null;
-        if (!is_array($binding) || ($binding['game_id'] ?? null) !== $gameId
-            || !is_int($binding['expires_at'] ?? null) || $binding['expires_at'] < time()) return null;
-        return in_array($binding['side'] ?? null,['host','player'],true) ? $binding['side'] : null;
+        return null;
     }
 
     public function admin(int $userId): bool { return $this->allowed('admin_user_ids', $userId); }
@@ -80,8 +59,6 @@ final class HistoryRuntime
 
     public function repository(Db $db): GameRepository
     {
-        $gate = ($this->config['recording_enabled'] ?? false) === true
-            ? new ExperimentalHistory($this->config['record_game_ids'] ?? [], $this->config['catalog'] ?? [], ($this->config['journal_enabled'] ?? false) === true ? ($this->config['journal_game_ids'] ?? []) : []) : null;
-        return new GameRepository($db, $gate);
+        return new GameRepository($db, $this->config['catalog'] ?? []);
     }
 }

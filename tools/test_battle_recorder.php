@@ -3,7 +3,7 @@ declare(strict_types=1);
 if(getenv('BERSERK_STAGE4B_ISOLATED')!=='1'||file_exists(__DIR__.'/../.git'))throw new RuntimeException('Disposable copy required');
 require __DIR__.'/stage31_fixtures.php';
 use Berserk\Core\{Db,GameRepository,CommandJournalRepository,GameState,Engine,Command,InformationalWaitManager};
-use Berserk\Core\BattleHistory\{ExperimentalHistory,HistoryRepository};
+use Berserk\Core\BattleHistory\{HistoryRepository};
 function bcheck(bool $ok,string $why):void{if(!$ok)throw new RuntimeException($why);}
 function bconnect():Db{
     $schema=getenv('STAGE4B_SCHEMA')?:'berserk_stage4b';if(!preg_match('/^berserk_stage4b(?:_run[0-9]+)?$/D',$schema))throw new RuntimeException('Synthetic DB only');
@@ -12,10 +12,15 @@ function bconnect():Db{
     bcheck((int)$p['port']===33389&&strtolower(rtrim(str_replace('\\','/',$p['dir']),'/'))===strtolower('C:/Users/mi/Documents/Berserk/stage4a-verification/data'),'Wrong datadir/port');return $db;
 }
 function bcatalog():array{$out=[];foreach([1,2,3,4,90,91]as$id)$out['s31_'.$id]=['revision'=>'fixture-v1','name'=>'Fixture '.$id,'image'=>'fixture/'.$id.'.png','description'=>'Frozen fixture','type'=>'creature','element'=>'neutral','classes'=>[],'price'=>0];return $out;}
-function brepo(int $g,bool $enabled=true):GameRepository{global $db;return new GameRepository($db,$enabled?new ExperimentalHistory([$g],bcatalog()):null);}
+function brepo(int $g,bool $enabled=true):GameRepository{global $db;return new GameRepository($db,bcatalog());}
 function bnew(array $prop=['unanswer'=>true],bool $enabled=true,bool $start=true):GameState{
-    global $db;$plain=new GameRepository($db);$row=$plain->create(101,202);$s=s31state($prop);$s->gameId=$row->gameId;$s->persistenceVersion=$row->persistenceVersion;$s->persistenceJson=$row->persistenceJson;
-    $s->status='place';$s->getPlayer('host')->confirm('place');$plain->save($s);$s=$plain->findById($s->gameId);
+    global $db;
+    // Synthetic legacy/modern initial positions, never the production creation path.
+    $db->query("INSERT INTO games(host_id,player_id,status,json,version,date,active) VALUES(101,202,'place','{}',1,NOW(),1)");
+    $s=s31state($prop);$s->gameId=$db->lastInsertId();$s->journalSchema=$enabled?1:null;$s->status='place';$s->getPlayer('host')->confirm('place');
+    $db->query("UPDATE games SET json='".$db->escape(json_encode($s->toArray(),JSON_THROW_ON_ERROR))."' WHERE ind=".$s->gameId);
+    if($enabled){$db->beginTransaction();(new HistoryRepository($db))->initialize($s->gameId,'recording','incomplete');$db->commit();}
+    $s=(new GameRepository($db))->findById($s->gameId);
     if($start){bcmd($s,'player','confirm_place',[],$enabled);bcheck($s->status==='battle','battle started');}return $s;
 }
 function bcmd(GameState &$s,string $actor,string $type,array $payload=[],bool $enabled=true,?string $id=null,bool $ok=true):array{
@@ -139,10 +144,10 @@ bt('second initial capture failure rolls back first capture plus initial metadat
     }finally{$db->query('ALTER TABLE battle_history_steps DROP CONSTRAINT initial_fault');}
     brepo($g)->executeLockedCommand($s,$journal,(int)$c['id'],fn($w)=>(new Engine())->apply($w,'player',new Command('confirm_place')));bcheck(count(bsteps($g))===2,'successful original command retry');
 });
-bt('disabled recorder has no history writes and ordinary pending timers and GameLog still work',function()use($db){
+bt('legacy game without history has no fabricated writes and ordinary pending timers and GameLog still work',function()use($db){
     $s=bnew(['unanswer'=>true],false);bcmd($s,'host','strike',['card_id'=>1,'target_id'=>2],false);
     bcheck(!empty($s->battle['strike'])&&!empty($s->battle['turn_timer']),'pending and timer persisted');
-    foreach(['matches','actions','events','steps','batches']as$t)bcheck((int)$db->fetchOne("SELECT COUNT(*) n FROM battle_history_$t WHERE game_id=".$s->gameId)['n']===0,'no disabled history '.$t);
+    foreach(['matches','actions','events','steps','batches']as$t)bcheck((int)$db->fetchOne("SELECT COUNT(*) n FROM battle_history_$t WHERE game_id=".$s->gameId)['n']===0,'no legacy history '.$t);
     bcheck(count(glob(__DIR__.'/../storage/*'))>0,'ordinary diagnostic storage remains');
 });
 bt('uncertified mechanic creates explicit gap and never becomes complete replay',function()use($db,$history){
@@ -165,12 +170,12 @@ bt('real terminal state is captured partial, no false completed replay or Engine
     try{$history->completedServerHistory($s->gameId);throw new RuntimeException('partial full replay unlocked');}catch(LogicException$e){}
     return end($r);
 });
-bt('gate refuses mid-battle activation and direct save bypass',function()use($db){
-    $s=bnew([],false);$j=new CommandJournalRepository($db);$c=$j->registerProcessing($s->gameId,'host','midbattle','move',[],$s->persistenceVersion);$before=bcounts($s->gameId);
-    $failed=false;try{brepo($s->gameId)->executeLockedCommand($s,$j,(int)$c['id'],fn($w)=>(new Engine())->apply($w,'host',new Command('move',['card_id'=>1,'row'=>3,'col'=>2])));}catch(LogicException$e){$failed=true;}bcheck($failed&&bcounts($s->gameId)===$before,'midbattle rejected');
-    $h=new HistoryRepository($db);$db->beginTransaction();$h->initialize($s->gameId,'recording','incomplete');$db->commit();$before=bcounts($s->gameId);
-    $failed=false;try{brepo($s->gameId)->executeLockedCommand($s,$j,(int)$c['id'],fn($w)=>(new Engine())->apply($w,'host',new Command('move',['card_id'=>1,'row'=>3,'col'=>2])));}catch(LogicException$e){$failed=true;}bcheck($failed&&bcounts($s->gameId)===$before,'preexisting metadata cannot bypass missing initial');
-    $failed=false;try{brepo($s->gameId)->save($s);}catch(LogicException$e){$failed=true;}bcheck($failed,'save bypass refused');
+bt('mandatory creation marker refuses missing metadata and direct save bypass',function()use($db){
+    $s=bnew([],true,false);$db->query('DELETE FROM battle_history_matches WHERE game_id='.$s->gameId);
+    $j=new CommandJournalRepository($db);$c=$j->registerProcessing($s->gameId,'player','missingmeta','confirm_place',[],$s->persistenceVersion);$before=bcounts($s->gameId);
+    $failed=false;try{brepo($s->gameId)->executeLockedCommand($s,$j,(int)$c['id'],fn($w)=>(new Engine())->apply($w,'player',new Command('confirm_place')));}catch(LogicException $e){$failed=true;}
+    bcheck($failed&&bcounts($s->gameId)===$before,'missing mandatory metadata fails closed');
+    $failed=false;try{brepo($s->gameId)->save($s);}catch(LogicException $e){$failed=true;}bcheck($failed,'save bypass refused');
 });
 bt('actual HTTP request produces two distinct initial captures and retry reads same committed outcome',function()use($db){
     $s=bnew(['start'=>['type'=>'get_hp','hp'=>5]],true,false);$g=$s->gameId;
@@ -185,7 +190,7 @@ $db=new Berserk\Core\Db(['host'=>'127.0.0.1:33389','user'=>'stage4b','pass'=>'st
 $proof=$db->fetchOne('SELECT @@datadir dir,@@port port');
 if((int)$proof['port']!==33389||strtolower(rtrim(str_replace('\\','/',$proof['dir']),'/'))!==strtolower('C:/Users/mi/Documents/Berserk/stage4a-verification/data'))throw new RuntimeException('Wrong server');
 $g=(int)getenv('STAGE4B_HTTP_GAME');$catalog=json_decode(getenv('STAGE4B_HTTP_CATALOG'),true,512,JSON_THROW_ON_ERROR);
-$repo=new Berserk\Core\GameRepository($db,new Berserk\Core\BattleHistory\ExperimentalHistory([$g],$catalog));
+$repo=new Berserk\Core\GameRepository($db,$catalog);
 $j=new Berserk\Core\CommandJournalRepository($db);$s=$repo->findById($g);
 $input=json_decode(file_get_contents('php://input'),true)??[];
 $type=$input['type']??'confirm_place';$actor=$input['actor']??'player';$payload=$input['payload']??[];

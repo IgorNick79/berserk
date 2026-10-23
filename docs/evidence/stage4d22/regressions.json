@@ -1,0 +1,22 @@
+[
+  {
+    "suite": "test_journal_cosmetics",
+    "status": "PASS"
+  },
+  {
+    "suite": "test_live_battle_journal",
+    "status": "PASS"
+  },
+  {
+    "suite": "test_live_journal_restoration",
+    "status": "PASS"
+  },
+  {
+    "suite": "test_journal_gap_causes",
+    "status": "PASS"
+  },
+  {
+    "suite": "test_battle_vampire_hp_ui",
+    "status": "PASS"
+  }
+]
