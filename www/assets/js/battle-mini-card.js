@@ -5,6 +5,7 @@
 
     var tip = null, trigger = null, describedNode = null, kind = '', pinned = false;
     var hoverCard = null, zoom = null, timer = 0, hoverReady = false;
+    var nameTimer = 0, fadeTimer = 0, dismissedName = null;
     var hover = matchMedia('(hover:hover) and (pointer:fine)');
     var reduced = matchMedia('(prefers-reduced-motion:reduce)');
 
@@ -22,7 +23,7 @@
         tip.hidden = true;
         document.body.append(tip);
         tip.addEventListener('pointerleave', function (event) {
-            if (event.pointerType !== 'touch') closeHint();
+            if (event.pointerType !== 'touch' && !cardAt(event.relatedTarget)) { dismissedName = null; closeHint(); stopZoom(false); }
         });
         return tip;
     }
@@ -32,6 +33,9 @@
         describedNode = null;
     }
     function closeHint() {
+        clearTimeout(nameTimer);
+        clearTimeout(fadeTimer);
+        if (tip) tip.classList.remove('is-fading');
         clearDescription();
         trigger = null;
         kind = '';
@@ -39,19 +43,24 @@
         if (tip) tip.hidden = true;
     }
     function placeHint(node, hintKind) {
-        var r = node.getBoundingClientRect();
-        var gap = hintKind === 'name' ? 19 : 10;
-        tip.style.left = Math.max(8, Math.min(r.left, innerWidth - tip.offsetWidth - 8)) + 'px';
-        tip.style.top = (r.bottom + gap + tip.offsetHeight > innerHeight
-            ? Math.max(8, r.top - tip.offsetHeight - gap) : r.bottom + gap) + 'px';
+        var card = cardAt(node) || node;
+        var r = card.getBoundingClientRect();
+        tip.style.left = Math.max(8, Math.min(r.left + r.width / 2 - tip.offsetWidth / 2, innerWidth - tip.offsetWidth - 8)) + 'px';
+        var top = r.top + r.height / 2 - tip.offsetHeight / 2;
+        var indicators = card.querySelector('.mini-indicators');
+        if (hintKind === 'indicator' && indicators) top = Math.max(top, indicators.getBoundingClientRect().bottom + 4);
+        tip.style.top = Math.max(8, Math.min(top, innerHeight - tip.offsetHeight - 8)) + 'px';
     }
     function show(node, hintKind) {
         if (!node || !node.isConnected) return;
         var text = hintKind === 'name' ? node.dataset.miniName : node.querySelector('.mini-hint-text');
         if (!text) { closeHint(); return; }
         if (trigger === node && kind === hintKind && tip && !tip.hidden) return;
+        clearTimeout(nameTimer);
+        clearTimeout(fadeTimer);
         clearDescription();
         var t = tooltip();
+        t.classList.remove('is-fading');
         trigger = node;
         kind = hintKind;
         t.dataset.kind = hintKind;
@@ -65,6 +74,14 @@
         describedNode.setAttribute('aria-describedby', t.id);
         t.hidden = false;
         placeHint(node, hintKind);
+        if (hintKind === 'name' && !(node.closest('.card-link') || node).matches(':focus-visible')) {
+            nameTimer = setTimeout(function () {
+                if (trigger !== node || kind !== 'name') return;
+                dismissedName = node;
+                t.classList.add('is-fading');
+                fadeTimer = setTimeout(closeHint, reduced.matches ? 0 : 250);
+            }, 1500);
+        }
     }
     function contextHint(node) {
         if (pinned || !hoverReady) return;
@@ -72,7 +89,7 @@
         var indicator = node.closest ? node.closest('[data-mini-hint]') : null;
         var card = cardAt(node);
         if (indicator) show(indicator, 'indicator');
-        else if (card && !card.classList.contains('mini-hidden')) show(card, 'name');
+        else if (card && !card.classList.contains('mini-hidden')) { if (dismissedName !== card) show(card, 'name'); }
         else closeHint();
     }
     function stopZoom(immediate) {
@@ -109,9 +126,9 @@
             clone.removeAttribute('data-mini-card');
             clone.removeAttribute('data-mini-name');
             z.append(clone);
-            // The visual copy never owns hit testing. Keep its 1.20 scale inside the viewport.
-            z.style.left = Math.max(11, Math.min(r.left, innerWidth - r.width - 11)) + 'px';
-            z.style.top = Math.max(10, Math.min(r.top, innerHeight - r.height - 10)) + 'px';
+            // The visual copy never owns hit testing. Keep its 1.25 scale inside the viewport.
+            z.style.left = Math.max(13, Math.min(r.left, innerWidth - r.width - 13)) + 'px';
+            z.style.top = Math.max(12, Math.min(r.top, innerHeight - r.height - 12)) + 'px';
             z.style.width = r.width + 'px';
             z.style.height = r.height + 'px';
             z.style.opacity = appearance.opacity;
@@ -162,6 +179,8 @@
         if (e.pointerType === 'touch' || !hover.matches) return;
         var card = cardAt(e.target);
         if (card && !card.contains(e.relatedTarget)) {
+            if (tip && tip.contains(e.relatedTarget)) return;
+            dismissedName = null;
             stopZoom(false);
             if (!(tip && tip.contains(e.relatedTarget))) closeHint();
         } else if (card && e.relatedTarget && !pinned) contextHint(e.relatedTarget);
@@ -176,6 +195,7 @@
         if (cardAt(e.target) && !cardAt(e.relatedTarget)) closeHint();
     });
     function refresh() {
+        dismissedName = null;
         hoverReady = false;
         closeHint();
         stopZoom(true);

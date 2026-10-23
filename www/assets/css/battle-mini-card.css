@@ -7,22 +7,22 @@
 .battle-page [data-mini-card-design="v2"] :is(.card-link,.fly-card,.fly-page-card){display:flex;align-items:center;justify-content:center}
 .battle-page .battle-card.battle-mini-card{position:relative;isolation:isolate;display:block;flex:0 0 auto;box-sizing:border-box;width:102px;height:92px;padding:0;border:0;border-radius:7px;overflow:hidden;background:#24412c;color:#fff4df;font:10px/1.1 system-ui,sans-serif;text-align:left;cursor:inherit}
 .battle-page .battle-card.battle-mini-card.mini-enemy{background:#4c2424}
-.battle-page .battle-mini-card .mini-art{position:absolute;left:5px;top:5px;width:92px;height:82px;object-fit:contain;pointer-events:none}
+.battle-page .battle-mini-card .mini-art{position:absolute;left:5px;top:5px;width:92px;height:82px;object-fit:cover;pointer-events:none}
 .battle-page .battle-mini-card .mini-frame{position:absolute;inset:0;width:102px;height:92px;object-fit:contain;z-index:4;pointer-events:none}
 .battle-page .mini-indicators{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:max-content;max-width:88px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px;z-index:6}
 .battle-page .mini-indicator{display:inline-flex;align-items:center;gap:0;min-height:16px;padding:0 1px;border-radius:3px;background:rgba(24,20,15,.92);font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;color:#fff4df;font-variant-numeric:tabular-nums}
 .battle-page .mini-indicator img{width:12px;height:12px;object-fit:contain;pointer-events:none}
 .battle-page .mini-hint-text[hidden]{display:none!important}
 .battle-page .mini-indicator:focus-visible{outline:1px solid white;outline-offset:1px}
-.battle-page .battle-mini-card .mini-hp{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:max-content;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:3px 5px;border:1px solid #ad8854;border-radius:4px;background:rgba(16,17,14,.92);font-size:11px;line-height:1;font-weight:750;color:#fff4df;z-index:5;white-space:nowrap;font-variant-numeric:tabular-nums}
-.battle-page .mini-heart{display:block;width:12px;height:12px;fill:#ef5555;stroke:#ffc19a;stroke-width:.6;flex:0 0 auto}
+.battle-page .battle-mini-card .mini-hp{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:max-content;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:3px 5px;border:1px solid #ad8854;border-radius:4px;background:rgba(16,17,14,.92);font-size:10px;line-height:1;font-weight:400;color:#fff4df;z-index:5;white-space:nowrap;font-variant-numeric:tabular-nums}
+.battle-page .mini-heart{display:block;width:10px;height:9px;fill:#ef5555;stroke:#ffc19a;stroke-width:.6;flex:0 0 auto}
 .battle-page .mini-question{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ecd3a0;font:700 56px/1 Georgia,serif;text-shadow:0 2px 0 #57351d,0 0 8px #140f0b;pointer-events:none}
 
 .battle-page .battle-mini-card.mini-hidden{background:#56504a!important;color:#eee}
 .battle-page .battle-mini-card.mini-closed{opacity:.35}
 .battle-page .battle-mini-card.mini-dying{outline:2px dashed #c22;outline-offset:-3px}
 .battle-mini-zoom{position:fixed;z-index:200;pointer-events:none;transform:scale(1);transform-origin:center;transition:transform 250ms ease-out,opacity 250ms ease-out}
-.battle-mini-zoom.is-open{transform:scale(1.20)}
+.battle-mini-zoom.is-open{transform:scale(1.25)}
 .battle-page .battle-mini-zoom .battle-mini-card{cursor:default;opacity:1!important}
 .battle-mini-tooltip{position:fixed;z-index:1000;max-width:min(360px,calc(100vw - 16px));max-height:calc(100dvh - 16px);overflow:auto;box-sizing:border-box;padding:12px 15px;border:1px solid #9d8054;background:#242724;color:#f3ecdc;font:13px/1.4 system-ui,sans-serif;overflow-wrap:anywhere;box-shadow:0 6px 20px #0005}
 .battle-mini-tooltip[hidden]{display:none!important}.battle-mini-tooltip ul{padding-left:18px;margin:0}.battle-mini-tooltip li+li{margin-top:4px}
@@ -31,3 +31,11 @@
 .battle-page [data-mini-card-design="v2"] .field-cell.attack-target .battle-mini-card{outline:2px solid #c33;outline-offset:0}
 .battle-page [data-mini-card-design="v2"] :is(.field-cell,.fly-slot).friendly-attack-target .battle-mini-card{outline:2px solid #d9a21b;outline-offset:0}
 .battle-mini-tooltip[data-kind="name"]{padding:8px 10px;font-size:12px;font-weight:600;border-radius:4px}
+
+.battle-page .mini-indicator:has(img[src$="armor_compact.svg"]){font-size:10px;font-weight:400}
+.battle-page .mini-indicator img[src$="armor_compact.svg"]{width:10px;height:9px}
+.battle-mini-tooltip{opacity:1;transition:opacity 250ms ease-out}
+.battle-mini-tooltip.is-fading{opacity:0;pointer-events:none}
+@media(prefers-reduced-motion:reduce){.battle-mini-tooltip{transition:none}}
+
+.battle-mini-tooltip[data-kind="name"]{pointer-events:none}
