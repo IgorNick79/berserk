@@ -43,7 +43,7 @@ foreach (['host', 'player'] as $viewer) {
             $zone = '//*[@data-fly-side="'.$side.'"]';
             battleSnapshotAssert($x->query($zone.'/*[@class="fly-slot"]')->length === 3, 'Exactly three slots per side');
             battleSnapshotAssert($x->query($zone.'//*[@data-fly-go]')->length === ($n > 3 ? 2 : 0), 'Two bullets only for four or more');
-            battleSnapshotAssert($x->query($zone.'//*[@class="battle-card"]')->length === $n, 'All flying cards remain accessible');
+            battleSnapshotAssert($x->query($zone.'//*[contains(concat(" ",normalize-space(@class)," ")," battle-card ")]')->length === $n, 'All flying cards remain accessible');
             battleSnapshotAssert($x->query($zone.'//*[@data-fly-page="1" and @hidden]')->length === 3, 'Second page starts hidden');
             $links = [];
             foreach ([0, 1] as $page) foreach ($x->query($zone.'//*[@data-fly-page="'.$page.'"]//a[contains(@class,"card-link")]') as $link) $links[] = $link;

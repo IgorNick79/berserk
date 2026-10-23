@@ -154,6 +154,7 @@ final class BattleScreen
                     'pile' => $ui['pile'],
                     'mode_explicit' => $ui['mode_explicit'],
                 ],
+                'mini_card_design' => \Berserk\View\Ui\LiveBattleCard::enabled() ? 'v2' : 'legacy',
                 'pause_root_attr' => \Berserk\Core\MatchPause::blocking($state) ? 'data-match-paused="1"' : '',
                 'pause_field_attr' => \Berserk\Core\MatchPause::blocking($state) ? 'inert aria-hidden="true"' : '',
                 'pause_mask_hidden' => \Berserk\Core\MatchPause::blocking($state) ? '' : 'hidden',
@@ -386,7 +387,7 @@ final class BattleScreen
                     if ($isHiddenForMe) $cellClass .= ' hidden';
                     if ($card->dying)   $cellClass .= ' dying';
 
-                    $cardBody = $this->buildBattleCard($card, $state, $info, $isHiddenForMe, $nameHtml, $hpText);
+                    $cardBody = $this->buildBattleCard($card, $state, $info, $isHiddenForMe, $nameHtml, $hpText, $playerKey);
 
                     if (isset($strangulationTargets[$card->instanceId])) {
                         $cellClass .= ' attack-target';
@@ -522,7 +523,7 @@ final class BattleScreen
                     $cellClass .= ' hidden';
                 }
 
-                $cardBody = $this->buildBattleCard($card, $state, $info, $isHiddenForMe, $nameHtml, $hpText);
+                $cardBody = $this->buildBattleCard($card, $state, $info, $isHiddenForMe, $nameHtml, $hpText, $playerKey);
 
                 if (isset($pendingDefenderTargets[$card->instanceId])) {
                     $cellClass  .= ' attack-target pending-defender-target';
@@ -1320,8 +1321,12 @@ final class BattleScreen
         ?array $info,
         bool $hidden,
         string $nameHtml,
-        string $hpText
+        string $hpText,
+        string $viewer
     ): string {
+        if (\Berserk\View\Ui\LiveBattleCard::enabled()) {
+            return \Berserk\View\Ui\LiveBattleCard::render($card, $state, $viewer, $hidden, $nameHtml, $hpText);
+        }
         $iconHtml = '';
         if (!$hidden) {
             $elementIcon = $this->elementIconPath($card);

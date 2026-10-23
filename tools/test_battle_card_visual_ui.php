@@ -3,6 +3,9 @@
 
 declare(strict_types=1);
 
+// Preserve coverage for the rollback/replay-era markup. Stage 4 has a separate suite.
+putenv('BERSERK_LEGACY_MINICARDS=1');
+
 require_once __DIR__ . '/../src/Core/Autoloader.php';
 
 use Berserk\Core\Autoloader;
