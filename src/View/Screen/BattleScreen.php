@@ -383,7 +383,7 @@ final class BattleScreen
 
                     $ownerClass  = $card->owner === $playerKey ? 'own' : 'enemy';
                     $closedClass = $card->closed ? 'closed' : '';
-                    $cellClass   = "$ownerClass $closedClass";
+                    $cellClass = \Berserk\View\Ui\LiveBattleCard::enabled() ? $closedClass : "$ownerClass $closedClass";
                     if ($isHiddenForMe) $cellClass .= ' hidden';
                     if ($card->dying)   $cellClass .= ' dying';
 

@@ -67,6 +67,8 @@ try {
  $before=serialize($state->toArray());
  $render=fn($ui)=>(new BattleScreen($tpl))->prepare($state,'host','host',null,$cardsInfo,$ui)['data'];
  $data=$render(['sel'=>1,'mode'=>'strike']);
+ $dom=new DOMDocument();@$dom->loadHTML($data['field_html']);$x=new DOMXPath($dom);
+ battleSnapshotAssert($x->query('//*[contains(concat(" ",normalize-space(@class)," ")," field-cell ") and (contains(concat(" ",normalize-space(@class)," ")," own ") or contains(concat(" ",normalize-space(@class)," ")," enemy "))]')->length===0,'Live cells do not have ownership');
  battleSnapshotAssert($before===serialize($state->toArray()),'View projection does not mutate game state');
  battleSnapshotAssert(str_contains($data['field_html'],'mini-art')&&str_contains($data['field_html'],'frame_enemy_102x92'),'Actual renderer uses new image/frame');
  $hpCases=[];$savedHp=$c->hp;$savedMax=$c->hpMax;foreach([7,13,100] as $value){$c->hp=$value;$c->hpMax=$value;$hpCases[(string)$value]=$render(['sel'=>1,'mode'=>'strike']);}$c->hp=$savedHp;$c->hpMax=$savedMax;
