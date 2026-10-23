@@ -16,7 +16,7 @@ try {
     };
     $game=$integer('game',1,PHP_INT_MAX);$after=$integer('after',0,PHP_INT_MAX,0);$limit=$integer('limit',1,200,100);
     $runtime=HistoryRuntime::load();
-    if (!$runtime->journals($game)) throw new DomainException('journal_unavailable',404);
+    if (!$runtime->journalEnabled()) throw new DomainException('journal_unavailable',404);
     if (isset($_COOKIE[\Berserk\Auth\AuthSession::NAME])) {
         $account=\Berserk\Auth\AuthContext::start();
         $db=\Berserk\Auth\AuthContext::gameDb();
@@ -30,6 +30,8 @@ try {
         if (!\Berserk\Auth\GameAccess::legacyJournal($db,$game)) throw new DomainException('journal_access_denied',403);
         $viewer=['berserk_battle_journal_binding'=>$_SESSION['berserk_battle_journal_binding']];
     }
+    $runtime=HistoryRuntime::load($db);
+    if (!$runtime->journals($game)) throw new DomainException('journal_unavailable',404);
     echo json_encode((new LiveJournal($db,$runtime))->read($game,$viewer,$after,$limit),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
 } catch (Throwable $e) {
     $code=$e instanceof DomainException?$e->getCode():503;

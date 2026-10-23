@@ -201,7 +201,7 @@ function sendAjaxJson(array $payload, int $statusCode = 200): never
                 $resignRecord = (new CommandJournalRepository($db))->find($state->gameId, $playerKey, $id);
                 if ($resignRecord !== null && $resignRecord['command_type'] === 'resign'
                     && $resignRecord['status'] === CommandJournalRepository::STATUS_COMMITTED) {
-                    $resignResultState = (\Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db))->findById($state->gameId);
+                    $resignResultState = (\Berserk\Core\BattleHistory\HistoryRuntime::load($db)->repository($db))->findById($state->gameId);
                 }
             }
         } catch (Throwable) {
@@ -463,12 +463,12 @@ function applyAutomaticBattleProgress(Db $db, GameState $state, string $requeste
     // One guard instance per HTTP request, shared by snapshots and command recovery.
     static $progress = null;
     try {
-        $progress ??= new \Berserk\Core\HttpBattleProgress($db, \Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db), new Engine($db));
+        $progress ??= new \Berserk\Core\HttpBattleProgress($db, \Berserk\Core\BattleHistory\HistoryRuntime::load($db)->repository($db), new Engine($db));
         return $progress->check($state, $requester, $allowCombat)->state;
     } catch (Throwable) {
         // HttpBattleProgress latches the stop before propagating any exception.
         error_log('Automatic battle progress unavailable for game ' . $state->gameId);
-        try { return (\Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db))->findById($state->gameId) ?? $state; }
+        try { return (\Berserk\Core\BattleHistory\HistoryRuntime::load($db)->repository($db))->findById($state->gameId) ?? $state; }
         catch (Throwable) { return $state; }
     }
 }
@@ -621,14 +621,14 @@ if ($isChat) {
     } catch (OverflowException $e) { sendAjaxJson(['ok'=>false,'error'=>'rate_limited'],429);
     } catch (Throwable $e) { sendAjaxJson(['ok'=>false,'error'=>'chat_unavailable'],503); }
 }
-try { $repo = \Berserk\Core\BattleHistory\HistoryRuntime::load()->repository($db); } catch (Throwable) { http_response_code(503); exit('game_schema_unavailable'); }
+try { $repo = \Berserk\Core\BattleHistory\HistoryRuntime::load($db)->repository($db); } catch (Throwable) { http_response_code(503); exit('game_schema_unavailable'); }
 $engine   = new Engine($db);
 $deckView = new DeckView($db);
 $tpl     = new Template(__DIR__ . '/../templates', '/');
 
 $state = $repo->findById($gameId);
 if ($state === null) { http_response_code(404); exit('game_not_found'); }
-$historyRuntime = \Berserk\Core\BattleHistory\HistoryRuntime::load();
+$historyRuntime = \Berserk\Core\BattleHistory\HistoryRuntime::load($db);
 $_SESSION['history_prepare_csrf'] = GameTransport::$csrf;
 GameTransport::$version = $state->persistenceVersion ?? 0;
 GameTransport::$stage = $state->status;

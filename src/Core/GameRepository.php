@@ -134,7 +134,8 @@ final class GameRepository
                         throw new \LogicException('Cannot resume experimental history without initial capture');
                     }
                     $open = $this->db->fetchAll("SELECT a.*,EXISTS(SELECT 1 FROM battle_history_events e WHERE e.game_id=a.game_id AND e.event_type='recording_gap.started' AND e.event_seq>=a.started_event_seq) AS contains_gap FROM battle_history_actions a WHERE a.game_id=".$working->gameId." AND a.lifecycle='open' ORDER BY a.started_event_seq");
-                    $working->historyRecorder = new \Berserk\Core\BattleHistory\Recorder($working->gameId,$journalId,$this->history->catalog,$open,in_array($working->gameId,$this->history->journalGameIds,true));
+                    $names=new \Berserk\Core\BattleHistory\JournalCardNames($this->db);
+                    $working->historyRecorder = new \Berserk\Core\BattleHistory\Recorder($working->gameId,$journalId,$this->history->catalog,$open,in_array($working->gameId,$this->history->journalGameIds,true),$names->name(...));
                 }
                 $result = $apply($working);
                 if (!$result instanceof Result) throw new \LogicException('Locked command must return Result');

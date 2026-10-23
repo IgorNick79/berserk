@@ -13,9 +13,9 @@ dt('untrusted zero identity and expired/revoked bindings fail closed',function()
  dcheck($r->journalSide(5,0,2,[])===null,'zero unauthenticated identity');dcheck($r->journalSide(5,1,2,['berserk_battle_journal_binding'=>$t])==='player','server binding');dcheck($r->journalSide(6,1,2,['berserk_battle_journal_binding'=>$t])===null,'foreign game');
  $cfg['journal_test_bindings'][$t]['expires_at']=time()-1;dcheck((new HistoryRuntime($cfg))->journalSide(5,1,2,['berserk_battle_journal_binding'=>$t])===null,'expiry');$cfg['journal_test_bindings']=[];dcheck((new HistoryRuntime($cfg))->journalSide(5,1,2,['berserk_battle_journal_binding'=>$t])===null,'revocation');
 });
-dt('unknown definition is hidden and old unversioned projection is not enriched',function()use($catalog){
+dt('missing definition uses safe visible label and old projection is not enriched',function()use($catalog){
  $s=s31state();$s->getCard(1)->revealed=true;unset($catalog['s31_1']);$r=new Recorder(5,1,$catalog,[],true);$r->commandStarted($s,'host',new Command('fixture'));$r->liveEvent($s,'ability.applied',['source_id'=>1,'ability'=>'Secret'],[1]);$r->commandFinished($s,Result::ok());$data=$r->batch($s)->data();
- foreach($data['events']as$e)if($e['type']==='ability.applied')dcheck($e['host']===null&&$e['player']===null,'unknown refs must hide');dcheck(JournalText::format('combat.started',['attacker_id'=>1,'target_id'=>2])===null,'no current lookup');
+ foreach($data['events']as$e)if($e['type']==='ability.applied')dcheck($e['host']['_journal']['cards']['1']['name']==='Карта'&&$e['player']!==null,'known card retains fallback text without definition');dcheck(JournalText::format('combat.started',['attacker_id'=>1,'target_id'=>2])===null,'no current lookup');
 });
 dt('nested uncertified combat never throws or creates a fake snapshot',function()use($catalog){
  $s=s31state(['unanswer'=>true]);$r=new Recorder(5,1,$catalog,[],true);$r->commandStarted($s,'host',new Command('strike'));$r->combatStarted($s,['attacker_id'=>1,'target_id'=>2]);$r->combatStarted($s,['attacker_id'=>1,'target_id'=>4]);$r->commandFinished($s,Result::ok());$data=$r->batch($s)->data();

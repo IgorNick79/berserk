@@ -7,12 +7,45 @@ use Berserk\Core\{Db,GameRepository};
 /** Local server configuration only. No request parameter can enable recording or preview. */
 final class HistoryRuntime
 {
+    private static ?self $requestRuntime = null;
     public function __construct(private array $config) {}
 
-    public static function load(): self
+    public static function load(?Db $db = null): self
     {
+        if ($db === null && self::$requestRuntime !== null) return self::$requestRuntime;
         $file = dirname(__DIR__, 3).'/config/battle_history.local.php';
-        return new self(is_file($file) ? require $file : []);
+        $runtime = new self(is_file($file) ? require $file : []);
+        if ($db !== null) {
+            $rooms=$runtime->controlRooms();
+            if ((($runtime->config['recording_enabled']??false)===true || $runtime->journalEnabled()) && $rooms) {
+                // Only games enrolled at creation qualify. Adding an already-started room cannot start history.
+                $rows=$db->fetchAll("SELECT r.game_id FROM lobby_rooms r JOIN battle_history_matches h ON h.game_id=r.game_id WHERE r.state='started' AND r.id IN (".implode(',',$rooms).")");
+                foreach ($rows as $row) $runtime=$runtime->withControlGame((int)$row['game_id']);
+            }
+            self::$requestRuntime=$runtime;
+        }
+        return $runtime;
+    }
+
+    public function journalEnabled(): bool { return ($this->config['journal_enabled'] ?? false) === true; }
+    private function controlRooms(): array
+    {
+        $rooms=$this->config['control_room_ids']??[];
+        if (!is_array($rooms)) throw new \InvalidArgumentException('Explicit control room IDs required');
+        foreach ($rooms as $id) if (!is_int($id) || $id<1) throw new \InvalidArgumentException('Explicit control room IDs required');
+        return $rooms;
+    }
+    public function controlsRoom(int $room): bool
+    {
+        return ($this->config['recording_enabled']??false)===true && $this->journalEnabled()
+            && in_array($room,$this->controlRooms(),true);
+    }
+    public function withControlGame(int $game): self
+    {
+        if ($game<1) throw new \InvalidArgumentException('Positive game ID required');
+        $config=$this->config;
+        foreach (['record_game_ids','journal_game_ids'] as $key) $config[$key]=array_values(array_unique([...($config[$key]??[]),$game]));
+        return new self($config);
     }
 
     private function allowed(string $key, int $id): bool

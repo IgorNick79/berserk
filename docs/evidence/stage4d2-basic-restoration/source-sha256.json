@@ -1,0 +1,16 @@
+{
+  "config/battle_history.example.php": "d2b3fab07fc2be560fa8720c51adb5ec55fe6d43c664794f64cc3d4a9dcdf7a4",
+  "tools/test_journal_gap_causes.php": "51e320404bd0ad330c035c14935cf4af756ba5c8ac0f84845984b1f3f05bb691",
+  "tools/test_live_battle_journal.php": "04193bba1dd432f67865b48cd07ced29cf3a48e091401db5633976643c0561d2",
+  "tools/test_live_journal_restoration.php": "f0e61f3fed6bd6b070b598facfd5cf3d6db6db1e663d02cdee2a6dd90d2503d6",
+  "tools/test_live_journal_restoration_browser.cjs": "ee7d6b491e6c2c007a91f11d45fffde61b2d0112ca898660ce5206f3bbc96f89",
+  "tools/test_live_journal_restoration_http.py": "97ad7322e6682fdbf45406b187e4a74c8ce916ba3ad51b6157e59c96ad567ce4",
+  "tools/test_live_journal_restoration_live_browser.cjs": "3f622258cd0ff4e4384984af29db2fc7a66c4b5c897c72603acf0753999c758c",
+  "www/battle-journal.php": "dd20ae6f87ee7c92207b43484993b067d16126630ee3cc75165f6394fbba3a88",
+  "www/index.php": "38753c890cbd2d603c0d18730050bc2075895cf611762aca465797bc5b0fe874",
+  "src/Core/GameRepository.php": "dbec72974f99f5e494afed8e86a5ec41e5a1fd3d9152564335f5f88200edebd3",
+  "src/Lobby/MatchCreator.php": "e37e94c77d60d93a1aa7cf0b462bddf7fdb2632cd55815c8408d9a4f7b265af6",
+  "src/Core/BattleHistory/HistoryRuntime.php": "aa7b40fe02ee98411f5595aee616a8087c9fc7e78f8223bb09f03caf9cc66b36",
+  "src/Core/BattleHistory/JournalCardNames.php": "b747dccf7a198b17aadd271c4801f1b16ea8febe74901016d191d08ee892d171",
+  "src/Core/BattleHistory/Recorder.php": "1d7d0b6b0d0e9e1529228982d0c45e16d9218cb209f57f30e526063ca4817d53"
+}

@@ -18,6 +18,12 @@ final class MatchCreator
         foreach ($state->players as $participant) PlaymatCatalog::assign($participant);
         $setup=$transaction->setup();
         $history = \Berserk\Core\BattleHistory\HistoryRuntime::load();
+        if ($history->controlsRoom($roomId)) {
+            \Berserk\Core\Db::withTransaction($db, static function (\Berserk\Core\Db $connection) use ($id): void {
+                (new \Berserk\Core\BattleHistory\HistoryRepository($connection))->initialize($id,'recording','incomplete');
+            });
+            $history=$history->withControlGame($id);
+        }
         if ($setup !== null && $setup['mode'] === 'lucktest' && ($setup['settings']['lucktest']['quick_game'] ?? false) === true && $history->records($id)) {
             // Private uncommitted seed for the existing locked executor; only final Battle is committed.
             $result = (new \Berserk\Core\Prepare\PrepareProcessor($state))->chooseMode('host', new \Berserk\Core\Command('choose_mode', ['mode'=>'lucktest']));

@@ -1,0 +1,17 @@
+{
+    "status": "PASS",
+    "checks": [
+        "safe names independent of replay catalog; hidden projection null",
+        "missing card definition retains safe generic action",
+        "placement excluded, other uncovered commands still create gaps",
+        "server control room opt-in leaves preview OFF",
+        "actual move\/strike\/ACK\/end_turn DTO and results identical with observer"
+    ],
+    "paired_commands": [
+        "move",
+        "strike",
+        "confirm_strike",
+        "confirm_strike",
+        "end_turn"
+    ]
+}
