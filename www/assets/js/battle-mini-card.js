@@ -7,6 +7,7 @@
     var hoverCard = null, zoom = null, timer = 0, hoverReady = false;
     var nameTimer = 0, fadeTimer = 0, dismissedName = null;
     var pointerX = -1, pointerY = -1, reconcileFrame = 0;
+    var lastMoveX = -1, lastMoveY = -1;
     var hover = matchMedia('(hover:hover) and (pointer:fine)');
     var reduced = matchMedia('(prefers-reduced-motion:reduce)');
 
@@ -206,7 +207,8 @@
     document.addEventListener('pointermove', function (e) {
         if (e.pointerType === 'touch' || !hover.matches) return;
         pointerX = e.clientX; pointerY = e.clientY;
-        hoverReady = true;
+        if (e.clientX !== lastMoveX || e.clientY !== lastMoveY) hoverReady = true;
+        lastMoveX = e.clientX; lastMoveY = e.clientY;
         if (hoverCard && !hoverCard.isConnected) { queueReconcile(); return; }
         contextHint(e.target);
     });
