@@ -19,6 +19,8 @@ final class GameState
     public const PLAYER_HOST   = 'host';
     public const PLAYER_PLAYER = 'player';
 
+    /** Persisted creation provenance. Null for pre-journal games; never a player setting. */
+    public ?int $journalSchema = null;
     public int $version = 0;
     public int $gameId;
     public int $hostId;
@@ -68,6 +70,7 @@ final class GameState
             (int) $data['player_id'],
         );
 
+        $state->journalSchema = isset($data['journal_schema']) ? (int)$data['journal_schema'] : null;
         $state->version        = (int) ($data['version'] ?? 0);
         $state->status         = (string) ($data['status'] ?? 'deck');
         $state->mode           = isset($data['mode']) ? (string) $data['mode'] : null;
@@ -107,6 +110,7 @@ final class GameState
         }
 
         return [
+            ...($this->journalSchema !== null ? ['journal_schema'=>$this->journalSchema] : []),
             'version'          => $this->version,
             'game_id'          => $this->gameId,
             'host_id'          => $this->hostId,

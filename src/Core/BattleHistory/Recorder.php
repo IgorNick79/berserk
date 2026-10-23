@@ -40,7 +40,7 @@ final class Recorder
     {
         if (!$result->success) return;
         // Preparation placement is outside the text journal; keep the replay-only policy unchanged.
-        $outsideText=$this->liveJournal && $state->status==='place' && in_array($this->command,['place_card','unplace_card'],true);
+        $outsideText=$this->liveJournal && !in_array($state->status,['battle','game_over'],true);
         // Technical continuation is covered only by a known existing root, never by absence of pending.
         if (!$outsideText && !$this->covered && !(in_array($this->command,['choose_defender','choose_strike_mode','confirm_strike','turn_ack'],true) && $this->open)
             && $this->command!=='confirm_place') $this->unsupported($state,'uncovered_command:'.$this->command);

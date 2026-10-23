@@ -25,9 +25,9 @@ foreach(['place_card','unplace_card']as$command){$s->status='place';$r=new Recor
 $s->status='battle';$r=new Recorder(1,4,[],[],true);$r->commandStarted($s,'host',new Command('unknown_command'));$r->commandFinished($s,Result::ok());
 jcheck(count(array_filter($r->batch($s)->data()['events'],fn($e)=>$e['type']==='recording_gap.started'))===1,'other command coverage remains strict');
 $checks[]='placement excluded, other uncovered commands still create gaps';
-$runtime=new HistoryRuntime(['recording_enabled'=>true,'journal_enabled'=>true,'control_room_ids'=>[9]]);
-jcheck($runtime->controlsRoom(9)&&!$runtime->controlsRoom(8),'exact server room selection');
-jcheck(!$runtime->withControlGame(7)->previews(7),'control room never enables replay');$checks[]='server control room opt-in leaves preview OFF';
+$runtime=new HistoryRuntime([]);
+jcheck(!$runtime->previews(7),'mandatory journal does not enable preview');
+$checks[]='mandatory journal leaves preview OFF';
 
 // Actual deterministic gameplay, paired with and without the observer. Compare the whole persisted DTO.
 $seed=s31state(['unanswer'=>true]);$plain=GameState::fromArray($seed->toArray());$observed=GameState::fromArray($seed->toArray());$open=[];$seq=10;$now=time();$calls=[];

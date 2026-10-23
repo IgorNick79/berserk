@@ -1059,16 +1059,33 @@ $commandType = is_string($_POST['cmd'] ?? null) ? $_POST['cmd'] : '';
 if ($commandType === 'draft_sync') {
     $changed = false;
     $events = [];
-    $result = (new PrepareProcessor($state, $db))->resolveDraftTimeouts();
-    if ($result->success && !empty($result->events)) {
-        $changed = true;
-        $events = $result->events;
-        try {
-            $repo->save($state);
-        } catch (StaleStateException) {
-            $state = $repo->findById($state->gameId) ?? $state;
-            $changed = true;
-            $events = ['stale_reloaded'];
+    if ($historyRuntime->records($state->gameId)) {
+        $draftJournal=new CommandJournalRepository($db);
+        $draftEntry=$draftJournal->registerProcessing($state->gameId,$playerKey,'draft:'.$state->persistenceVersion.':'.time(),'draft_sync',[],$state->persistenceVersion);
+        $result=\Berserk\Core\Result::ok();
+        if ($draftEntry['is_new'] && $draftEntry['status']==='processing') {
+            try {
+                $repo->executeLockedCommand($state,$draftJournal,(int)$draftEntry['id'],
+                    function(GameState $locked) use ($db,$playerKey,&$result): \Berserk\Core\Result {
+                        $cmd=new Command('draft_sync');
+                        $locked->historyRecorder?->commandStarted($locked,$playerKey,$cmd);
+                        $result=(new PrepareProcessor($locked,$db))->resolveDraftTimeouts();
+                        $locked->historyRecorder?->commandFinished($locked,$result);
+                        return $result->success && !$result->events ? \Berserk\Core\Result::error('no_progress') : $result;
+                    },'draft_no_progress');
+            } catch (StaleStateException) { $events=['stale_reloaded']; }
+        }
+        $fresh=$repo->findById($state->gameId);
+        $changed=$fresh->persistenceVersion!==$state->persistenceVersion;
+        $state=$fresh;
+        if ($changed && !$events) $events=$result->events;
+    } else {
+        // Legacy games remain unrecorded; do not fabricate prior history.
+        $result = (new PrepareProcessor($state, $db))->resolveDraftTimeouts();
+        if ($result->success && !empty($result->events)) {
+            $changed = true; $events = $result->events;
+            try { $repo->save($state); }
+            catch (StaleStateException) { $state=$repo->findById($state->gameId)??$state; $events=['stale_reloaded']; }
         }
     }
 
@@ -1149,8 +1166,7 @@ if ($commandType !== '') {
 
     $cmd = new Command($commandType, $payload);
     $historyPrepared = false;
-    if ($historyRuntime->records($state->gameId) && ($state->status === 'place'
-        || (new PrepareProcessor($state))->isLuckTestQuickStart($cmd))) {
+    if ($historyRuntime->records($state->gameId)) {
         $token = requestParamString($_POST, 'csrf', 64);
         $version = requestParamString($_POST, 'prepare_version', 20);
         if ($token === null || !hash_equals($_SESSION['history_prepare_csrf'] ?? '', $token)
@@ -1413,7 +1429,7 @@ if ($screenName==='battle') {
 }
 
 if (in_array($screenName,['battle','game_over'],true)
-    && $historyRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION)===$playerKey) {
+    && $historyRuntime->journals($state->gameId) && $historyRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION)===$playerKey) {
     if ($screenName==='game_over') $screenHtml .= '<button type="button" class="button" data-action="battle-log" aria-controls="battle-journal">Журнал боя</button>';
     $screenHtml .= '<link rel="stylesheet" href="/assets/css/battle-journal.css">'
         . '<aside id="battle-journal" class="battle-journal" hidden aria-label="Журнал боя">'

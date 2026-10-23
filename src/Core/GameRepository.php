@@ -13,7 +13,7 @@ final class GameRepository
 {
     private static bool $schemaChecked = false;
 
-    public function __construct(private Db $db, private ?\Berserk\Core\BattleHistory\ExperimentalHistory $history = null)
+    public function __construct(private Db $db, private array $historyCatalog = [])
     {
         $this->ensurePersistenceVersionColumn();
     }
@@ -46,10 +46,19 @@ final class GameRepository
         return $state;
     }
 
+    private bool $presentationSave = false;
+    private bool $creationSave = false;
+    private bool $commandSave = false;
+
+    private function requiresHistory(GameState $state): bool
+    {
+        return $state->journalSchema !== null || $this->db->fetchOne('SELECT game_id FROM battle_history_matches WHERE game_id='.$state->gameId) !== null;
+    }
+
     public function save(GameState $state): void
     {
-        if ($this->history?->includes($state->gameId) && in_array($state->status,['battle','game_over'],true) && $state->historyRecorder === null) {
-            throw new \LogicException('Experimental history matches require locked journal execution');
+        if ($this->requiresHistory($state) && !$this->presentationSave && !$this->creationSave && !($this->commandSave && $state->historyRecorder !== null && $this->db->inTransaction())) {
+            throw new \LogicException('Journal matches require locked command execution');
         }
         $json = json_encode(
             $state->toArray(),
@@ -120,22 +129,17 @@ final class GameRepository
             if ($apply !== null) {
                 $working = $this->findById($state->gameId, true);
                 if ($working === null || $working->persistenceVersion !== $beforeVersion) throw new StaleStateException('State changed before locked execution');
-                $quickBoundary = $working->status === 'settings' && $working->mode === GameSettings::MODE_LUCKTEST
-                    && ($journalEntry['command_type'] ?? null) === 'confirm_settings';
-                if ($this->history?->includes($working->gameId)) {
+                if ($this->requiresHistory($working)) {
                     $historyRepo = new \Berserk\Core\BattleHistory\HistoryRepository($this->db);
                     $meta = $this->db->fetchOne('SELECT * FROM battle_history_matches WHERE game_id='.$working->gameId.' FOR UPDATE');
-                    if ($meta === null) {
-                        if ($working->status !== 'place' && !$quickBoundary) throw new \LogicException('Cannot enable history in an existing battle');
-                        $needsHistoryInitialization = true;
-                    } elseif ($meta['recording_status'] !== 'recording' || (bool)$meta['has_final']) {
-                        throw new \LogicException('Experimental history match is not recording');
-                    } elseif ($working->status !== 'place' && !$quickBoundary && !(bool)$meta['has_initial']) {
-                        throw new \LogicException('Cannot resume experimental history without initial capture');
+                    if ($working->journalSchema !== null && $working->journalSchema !== 1) throw new \LogicException('Unsupported mandatory journal version');
+                    if ($meta === null) throw new \LogicException('Missing mandatory journal metadata');
+                    if ($meta['recording_status'] !== 'recording' || (bool)$meta['has_final']) {
+                        throw new \LogicException('Journal match is not writable');
                     }
                     $open = $this->db->fetchAll("SELECT a.*,EXISTS(SELECT 1 FROM battle_history_events e WHERE e.game_id=a.game_id AND e.event_type='recording_gap.started' AND e.event_seq>=a.started_event_seq) AS contains_gap FROM battle_history_actions a WHERE a.game_id=".$working->gameId." AND a.lifecycle='open' ORDER BY a.started_event_seq");
                     $names=new \Berserk\Core\BattleHistory\JournalCardNames($this->db);
-                    $working->historyRecorder = new \Berserk\Core\BattleHistory\Recorder($working->gameId,$journalId,$this->history->catalog,$open,in_array($working->gameId,$this->history->journalGameIds,true),$names->name(...));
+                    $working->historyRecorder = new \Berserk\Core\BattleHistory\Recorder($working->gameId,$journalId,$this->historyCatalog,$open,true,$names->name(...));
                 }
                 $result = $apply($working);
                 if (!$result instanceof Result) throw new \LogicException('Locked command must return Result');
@@ -144,13 +148,11 @@ final class GameRepository
                     if (!$borrowed) $this->db->commit();
                     return;
                 }
-                if ($quickBoundary && ($working->settings->lucktest['quick_game'] !== true
-                    || !in_array($working->status, ['battle', 'game_over'], true))) throw new \LogicException('Quick start did not reach battle');
-            } elseif ($this->history?->includes($working->gameId)) {
-                throw new \LogicException('Experimental history requires execution under game lock');
+            } elseif ($this->requiresHistory($working)) {
+                throw new \LogicException('Journal requires execution under game lock');
             }
-            if (!empty($needsHistoryInitialization)) $historyRepo->initialize($working->gameId,'recording','incomplete');
-            $this->save($working);
+            $this->commandSave=true;
+            try { $this->save($working); } finally { $this->commandSave=false; }
             $afterVersion = $working->persistenceVersion;
             if ($afterVersion === null) {
                 throw new \RuntimeException('Committed state did not receive persistence version');
@@ -190,23 +192,34 @@ final class GameRepository
      */
     public function create(int $hostId, int $playerId): GameState
     {
-        $sql = sprintf(
-            "INSERT INTO games (host_id, player_id, status, json, date, active)
-             VALUES (%d, %d, 'deck', '{}', NOW(), 1)",
-            $hostId,
-            $playerId
-        );
-        $this->db->query($sql);
+        $borrowed=$this->db->isBorrowedTransaction();
+        if (!$borrowed) $this->db->beginTransaction();
+        try {
+            $sql = sprintf(
+                "INSERT INTO games (host_id, player_id, status, json, date, active)
+                 VALUES (%d, %d, 'deck', '{}', NOW(), 1)",
+                $hostId,
+                $playerId
+            );
+            $this->db->query($sql);
 
-        $gameId = $this->db->lastInsertId();
-        $state = new GameState($gameId, $hostId, $playerId);
-        $state->status = 'mode';
-        foreach ($state->players as $participant) PlaymatCatalog::assign($participant);
-        $state->persistenceVersion = 0;
+            $gameId = $this->db->lastInsertId();
+            $state = new GameState($gameId, $hostId, $playerId);
+            $state->status = 'mode';
+            $state->journalSchema = 1;
+            foreach ($state->players as $participant) PlaymatCatalog::assign($participant);
+            $state->persistenceVersion = 0;
 
-        $this->save($state);
+            $this->creationSave=true;
+            try { $this->save($state); } finally { $this->creationSave=false; }
 
-        return $state;
+            (new \Berserk\Core\BattleHistory\HistoryRepository($this->db))->initialize($gameId,'recording','incomplete');
+            if (!$borrowed) $this->db->commit();
+            return $state;
+        } catch (\Throwable $error) {
+            if (!$borrowed && $this->db->inTransaction()) $this->db->rollback();
+            throw $error;
+        }
     }
 
     /** Lock the latest JSON, alter only the identified participant, retain CAS protection. */
@@ -222,7 +235,8 @@ final class GameRepository
             if (!in_array($state->status,['mode','settings','draft','deck','view','turn','side','deal','place','battle'],true) || $state->winner !== null) throw new \InvalidArgumentException('match_finished');
             if ($state->getPlayer($actor)->playmatId !== $id) {
                 $state->getPlayer($actor)->playmatId = $id;
-                $this->save($state);
+                $this->presentationSave=true;
+                try { $this->save($state); } finally { $this->presentationSave=false; }
             }
             $this->db->commit();
             return $state;
@@ -243,7 +257,8 @@ final class GameRepository
             if (!in_array($state->status,['mode','settings','draft','deck','view','turn','side','deal','place'],true) || $state->winner!==null) throw new \InvalidArgumentException('not_preparation');
             if ($state->getPlayer($actor)->soundEnabled!==$enabled) {
                 $state->getPlayer($actor)->soundEnabled=$enabled;
-                $this->save($state);
+                $this->presentationSave=true;
+                try { $this->save($state); } finally { $this->presentationSave=false; }
             }
             $this->db->commit();
             return $state;

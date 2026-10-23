@@ -4,18 +4,17 @@ namespace Berserk\Core\BattleHistory;
 
 use Berserk\Core\Db;
 
-/** Opt-in storage only. Never starts/commits transactions, creates schema or calls Engine. */
+/** Transactional history storage. Never starts/commits transactions, creates schema or calls Engine. */
 final class HistoryRepository
 {
     public function __construct(private Db $db) {}
 
-    /** Explicit provisioning in a caller-owned transaction, before the first recorded command. */
+    /** Mandatory initialization in the creation transaction, before the first recorded command. */
     public function initialize(int $gameId, string $status = 'recording', string $completeness = 'complete'): void
     {
         $this->transaction();
-        if ($gameId <= 0 || !in_array($status, ['recording','disabled'], true)
-            || !in_array($completeness, ['complete','incomplete','none'], true)
-            || ($status === 'disabled') !== ($completeness === 'none')) throw new \InvalidArgumentException('Invalid history provisioning');
+        if ($gameId <= 0 || $status !== 'recording'
+            || !in_array($completeness, ['complete','incomplete'], true)) throw new \InvalidArgumentException('Invalid history provisioning');
         if ($this->db->fetchOne("SELECT ind FROM games WHERE ind=$gameId FOR UPDATE") === null) throw new \LogicException('Missing game');
         $this->insert('battle_history_matches', ['game_id'=>$gameId,'recording_status'=>$status,'completeness'=>$completeness,
             'event_version'=>1,'snapshot_version'=>1,'created_at'=>$this->now(),'updated_at'=>$this->now()]);

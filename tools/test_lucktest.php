@@ -27,6 +27,7 @@ namespace Berserk\Core {
         }
         public function fetchOne(string $sql): ?array
         {
+            if (str_starts_with($sql, 'SELECT game_id FROM battle_history_matches')) return null; // Legacy fixture, no enrollment.
             if (str_starts_with($sql, 'SHOW COLUMNS')) return ['Field' => 'version'];
             if (str_starts_with($sql, 'SELECT * FROM games')) return $this->game ?: null;
             throw new \RuntimeException('Unexpected fixture query');

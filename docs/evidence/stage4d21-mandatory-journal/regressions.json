@@ -1,0 +1,54 @@
+[
+  {
+    "test": "test_stage31_fixes",
+    "exit": 0
+  },
+  {
+    "test": "test_hydra",
+    "exit": 0
+  },
+  {
+    "test": "test_ragnar",
+    "exit": 0
+  },
+  {
+    "test": "test_combat_instant_phases",
+    "exit": 0
+  },
+  {
+    "test": "test_volkhv_wound_transfer",
+    "exit": 0
+  },
+  {
+    "test": "test_nested_combat_ownership",
+    "exit": 0
+  },
+  {
+    "test": "test_pending_wait_timer",
+    "exit": 0
+  },
+  {
+    "test": "test_turn_instant_stack",
+    "exit": 0
+  },
+  {
+    "test": "test_turn_timer",
+    "exit": 0
+  },
+  {
+    "test": "test_lucktest_recorder_atomicity",
+    "exit": 0
+  },
+  {
+    "test": "test_live_battle_journal",
+    "exit": 0
+  },
+  {
+    "test": "test_journal_gap_causes",
+    "exit": 0
+  },
+  {
+    "test": "test_live_journal_restoration",
+    "exit": 0
+  }
+]

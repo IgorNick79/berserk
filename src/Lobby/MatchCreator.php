@@ -15,16 +15,14 @@ final class MatchCreator
         try { $stmt->bind_param('ii',$creator,$accepted); $stmt->execute(); } finally { $stmt->close(); }
         $id = (int)$db->insert_id;
         $state = new GameState($id,$creator,$accepted);
+        $state->journalSchema = 1;
         foreach ($state->players as $participant) PlaymatCatalog::assign($participant);
         $setup=$transaction->setup();
         $history = \Berserk\Core\BattleHistory\HistoryRuntime::load();
-        if ($history->controlsRoom($roomId)) {
-            \Berserk\Core\Db::withTransaction($db, static function (\Berserk\Core\Db $connection) use ($id): void {
-                (new \Berserk\Core\BattleHistory\HistoryRepository($connection))->initialize($id,'recording','incomplete');
-            });
-            $history=$history->withControlGame($id);
-        }
-        if ($setup !== null && $setup['mode'] === 'lucktest' && ($setup['settings']['lucktest']['quick_game'] ?? false) === true && $history->records($id)) {
+        \Berserk\Core\Db::withTransaction($db, static function (\Berserk\Core\Db $connection) use ($id): void {
+            (new \Berserk\Core\BattleHistory\HistoryRepository($connection))->initialize($id,'recording','incomplete');
+        });
+        if ($setup !== null && $setup['mode'] === 'lucktest' && ($setup['settings']['lucktest']['quick_game'] ?? false) === true) {
             // Private uncommitted seed for the existing locked executor; only final Battle is committed.
             $result = (new \Berserk\Core\Prepare\PrepareProcessor($state))->chooseMode('host', new \Berserk\Core\Command('choose_mode', ['mode'=>'lucktest']));
             if (!$result->success) throw new \LogicException('Cannot initialize LuckTest');

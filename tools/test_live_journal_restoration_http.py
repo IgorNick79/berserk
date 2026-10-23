@@ -1,4 +1,4 @@
-"""Stage 5B: real multi-process HTTP, InnoDB races, rollback and browser UI.
+"""Stage 4D.2.1: real multi-process HTTP, InnoDB races, rollback and browser UI.
 No real gameplay config is read. All servers/configs/data stay below a disposable source copy.
 """
 import argparse, concurrent.futures, http.cookiejar, json, os, pathlib, socket
@@ -116,18 +116,18 @@ def main():
             data={'cmd':cmd,'csrf':client.token('account'),'prepare_version':version(game),**payload}
             code,body,_=http(client,game,data)
             assert code==303,(cmd,code,re.findall(r'class="[^"]*flash[^"]*"[^>]*>(.*?)<',body,re.S)[:3]);return state(game)
-        history={'recording_enabled':True,'journal_enabled':True,'control_room_ids':[], 'preview_enabled':False,'preview_game_ids':[], 'catalog':{}}
+        history={'preview_enabled':False,'preview_game_ids':[], 'catalog':{}}
         def history_config():
             text=json.dumps(history,separators=(',',':'))
             (ROOT/'config/battle_history.local.php').write_text("<?php return json_decode('"+text+"',true);",encoding='utf-8')
         def match():
             sql("USE LAB_DB;INSERT INTO lobby_rooms(creator_account_id,state,version,created_at,updated_at)VALUES(1,'open',1,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6));")
             rid=int(sql('USE LAB_DB;SELECT MAX(id) FROM lobby_rooms;'))
-            history['control_room_ids'].append(rid);history_config()
+            # No history configuration, room selection or ID prediction.
             room=a.lobby(rid)[1]['room'];assert b.act(room)[0]==200;w=a.lobby(room['id'])[1]['room'];assert a.act(w,'accept')[0]==200
             return a.lobby(room['id'])[1]['room']['game_id']
         game=match()
-        check('control room enrolled before preparation',sql(f'USE LAB_DB;SELECT has_initial FROM battle_history_matches WHERE game_id={game};')=='0')
+        check('every ordinary lobby game enrolled before preparation',sql(f'USE LAB_DB;SELECT has_initial FROM battle_history_matches WHERE game_id={game};')=='0')
         check('no external replay catalog and preview OFF',history['catalog']=={} and history['preview_enabled'] is False)
         def service(client,file,game,extra=''):
             req=urllib.request.Request(client.base.replace('auth.php',file)+'?game='+str(game)+extra)
@@ -136,18 +136,20 @@ def main():
             return r.code,r.read().decode('utf-8')
         check('replay remains OFF',service(a,'replay.php',game,'&api=metadata')[0]==404)
         check('legacy replay ID collision denied',service(a,'replay.php',1,'&api=metadata')[0] in [403,404])
+        check('journal initialized without local history config',not (ROOT/'config/battle_history.local.php').exists())
+        history.update(recording_enabled=False,journal_enabled=False,record_game_ids=[],journal_game_ids=[],control_room_ids=[])
         token='a'*64
         history['journal_test_bindings']={token:{'game_id':game,'side':'host','expires_at':int(time.time())+3600}};history_config()
         legacy=Client();sid='c'*32
         (LAB/'sessions'/('sess_'+sid)).write_text('berserk_battle_journal_binding|s:64:"'+token+'";berserk_authenticated_user_id|i:1;')
         legacy.jar.set_cookie(Cookie(0,'PHPSESSID',sid,None,False,'127.0.0.1',False,False,'/',True,False,None,True,None,None,{}))
-        check('valid legacy invitation cannot read account journal',service(legacy,'battle-journal.php',game)[0]==403)
+        check('valid legacy invitation cannot read account journal',service(legacy,'battle-journal.php',game)[0] in [401,403])
         check('legacy PHPSESSID cannot supply account principal',http(legacy,game)[0]==401)
         arbitrary=c.create();assert d.act(arbitrary)[0]==200;pending=c.lobby(arbitrary['id'])[1]['room'];assert c.act(pending,'accept')[0]==200
         arbitrary_game=c.lobby(arbitrary['id'])[1]['room']['game_id']
         check('arbitrary account IDs 3 and 4 mapped to host player',state(arbitrary_game)['host_id']==3 and state(arbitrary_game)['player_id']==4 and http(d,arbitrary_game)[0]==200 and http(a,arbitrary_game)[0]==403)
-        history['control_room_ids'].append(arbitrary['id']);history_config()
-        check('late room selection cannot enroll existing game',service(c,'battle-journal.php',arbitrary_game)[0]==404 and sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_matches WHERE game_id={arbitrary_game};')=='0')
+        check('every account match records despite stale disabled config',service(c,'battle-journal.php',arbitrary_game)[0]==200 and service(d,'battle-journal.php',arbitrary_game)[0]==200 and sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_matches WHERE game_id={arbitrary_game};')=='1')
+        check('legacy match not backfilled',sql('USE LAB_DB;SELECT COUNT(*) FROM battle_history_matches WHERE game_id=1;')=='0')
 
         check('game HTML both account actors'  ,http(a,game)[0]==http(b,game)[0]==200)
         check('guest forbidden before any progress',http(Client(),game)[0]==401)
@@ -171,7 +173,19 @@ def main():
         before=version(game);http(b,game,{'cmd':'choose_mode','mode':'system','prepare_version':before,'csrf':b.token('account'),'actor':'host'});check('actor spoof cannot choose host mode',version(game)==before and state(game)['status']=='mode')
         html=http(a,game)[1]
         check('transport strips role inputs and uses POST', 'name="first"' not in html and 'name="second"' not in html and 'method="post" class="mode-actions"' in html)
-        prep(a,game,'choose_mode',mode='system');check('System existing lifecycle deck',state(game)['status']=='deck')
+        before_games=sql('USE LAB_DB;SELECT COUNT(*) FROM games;')
+        denied_room=c.create();assert d.act(denied_room)[0]==200;denied_pending=c.lobby(denied_room['id'])[1]['room']
+        sql("REVOKE INSERT ON LAB_DB.battle_history_matches FROM 'LOBBY_USER'@'127.0.0.1';")
+        try:denied=c.act(denied_pending,'accept')
+        finally:sql("GRANT INSERT ON LAB_DB.battle_history_matches TO 'LOBBY_USER'@'127.0.0.1';")
+        check('metadata failure rolls back new game and room acceptance',denied[0]==503 and sql('USE LAB_DB;SELECT COUNT(*) FROM games;')==before_games and c.lobby(denied_room['id'])[1]['room']['state']!='started')
+        # Deletion/corruption must not turn mandatory recording into a silent legacy bypass.
+        sql(f'USE LAB_DB;CREATE TABLE saved_meta LIKE battle_history_matches;INSERT INTO saved_meta SELECT * FROM battle_history_matches WHERE game_id={game};DELETE FROM battle_history_matches WHERE game_id={game};')
+        before=sql(f'USE LAB_DB;SELECT json,version FROM games WHERE ind={game};')
+        failed=http(a,game,{'cmd':'choose_mode','mode':'system','prepare_version':version(game),'csrf':a.token('account')})
+        check('missing mandatory metadata rejects command without changing state',failed[0]>=500 and sql(f'USE LAB_DB;SELECT json,version FROM games WHERE ind={game};')==before)
+        sql('USE LAB_DB;INSERT INTO battle_history_matches SELECT * FROM saved_meta;DROP TABLE saved_meta;')
+        prep(a,game,'choose_mode',mode='system',fault_recovery='lab');check('System existing lifecycle deck',state(game)['status']=='deck')
         prep(a,game,'select_deck',deck_id=1,other_deck_id=1)
         check('two accounts view own preparation',state(game)['status']=='view' and http(b,game)[0]==200)
         for client in [a,b]:prep(client,game,'confirm_view')
@@ -314,14 +328,41 @@ def main():
         check('reading does not change state or history metadata',sql(f'USE LAB_DB;SELECT json,version FROM games WHERE ind={game};SELECT last_event_seq,last_step_seq,completeness FROM battle_history_matches WHERE game_id={game};')==read_before)
         check('new structured projections contain frozen names',int(sql(f"USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id={game} AND event_type='move.started' AND payload_json LIKE '%Fixture%';"))>=1)
         (LAB/'projections.json').write_text(json.dumps({'host':journal_entries(a,game)[0],'player':journal_entries(b,game)[0]},ensure_ascii=False,indent=2),encoding='utf-8')
+        # Presentation remains cosmetic; it cannot bypass recording for a battle action.
+        before=state(arbitrary_game);count_events=sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id={arbitrary_game};')
+        code,_,_=http(c,arbitrary_game,{'csrf':c.token('account'),'playmat_id':'mat-003'},'&ajax=playmat')
+        expected=json.loads(json.dumps(before));expected['players']['host']['playmat_id']='mat-003'
+        check('mandatory match playmat saves only presentation',code==200 and state(arbitrary_game)==expected and sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id={arbitrary_game};')==count_events)
+        code,_,_=http(c,arbitrary_game,{'csrf':c.token('account'),'sound_enabled':'0'},'&ajax=preparation_preference')
+        check('mandatory preparation sound remains available',code==200 and state(arbitrary_game)['players']['host']['sound_enabled'] is False)
+        # Real configured grid and Solomon rooms, manual timeout through the locked persistence adapter.
+        for draft_type in ['grid','solomon']:
+            code,data=a.lobby(data={'action':'create','csrf':a.token('account'),'setup_mode':'draft' if draft_type=='grid' else 'solomon'})
+            assert code==200,(code,data);room=data['room'];assert b.act(room)[0]==200
+            pending=a.lobby(room['id'])[1]['room'];assert a.act(pending,'accept')[0]==200
+            dg=a.lobby(room['id'])[1]['room']['game_id'];current=state(dg)
+            check('mandatory '+draft_type+' room starts with history',current['status']=='draft' and sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_matches WHERE game_id={dg};')=='1')
+            before=sql(f'USE LAB_DB;SELECT json,version FROM games WHERE ind={dg};');count_events=sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id={dg};')
+            code,body,_=http(a,dg,{'cmd':'draft_sync','csrf':a.token('account')})
+            check('mandatory '+draft_type+' no-progress polling has no confirmed mutation',code==200 and before==sql(f'USE LAB_DB;SELECT json,version FROM games WHERE ind={dg};') and sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id={dg};')==count_events)
+            current=state(dg);clock=current['draft']['timer'];clock['elapsed']={'host':clock['total_limit'],'player':clock['total_limit']};clock['action_started_at']=int(time.time())-1000
+            set_fixture(dg,current)
+            code,body,_=http(a,dg,{'cmd':'draft_sync','csrf':a.token('account')})
+            check('mandatory '+draft_type+' timeout persists through history transaction',code==200 and json.loads(body)['ok'] and state(dg)['status']=='view' and int(sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_batches WHERE game_id={dg};'))==1 and sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id={dg};')==count_events)
+        sql('USE LAB_DB;UPDATE cards SET price=7;')
+        # Non-quick LuckTest must reach placement without the quick-start assertion.
+        code,data=a.lobby(data={'action':'create','csrf':a.token('account'),'setup_mode':'lucktest','lucktest_card_count':'3','lucktest_quick_game':'0'})
+        assert code==200,(code,data);room=data['room'];assert b.act(room)[0]==200;pending=a.lobby(room['id'])[1]['room'];assert a.act(pending,'accept')[0]==200
+        normal=a.lobby(room['id'])[1]['room']['game_id']
+        check('non-quick LuckTest records preparation without quick-only assertion',state(normal)['status']=='turn' and sql(f'USE LAB_DB;SELECT has_initial FROM battle_history_matches WHERE game_id={normal};')=='0')
         # A selected room must also enroll an atomic quick game before its first battle event.
         sql('USE LAB_DB;UPDATE cards SET price=7;')
         code,quick_room=a.lobby(data={'action':'create','csrf':a.token('account'),'setup_mode':'lucktest','lucktest_card_count':'3','lucktest_quick_game':'1'})
         assert code==200,(code,quick_room);quick_room=quick_room['room']
-        history['control_room_ids'].append(quick_room['id']);history_config()
+        # Quick games follow the same mandatory lifecycle.
         assert b.act(quick_room)[0]==200;pending=a.lobby(quick_room['id'])[1]['room'];accepted=a.act(pending,'accept');assert accepted[0]==200,accepted
         quick_game=a.lobby(quick_room['id'])[1]['room']['game_id']
-        check('selected quick game enrolled and initial capture committed',state(quick_game)['status']=='battle' and sql(f'USE LAB_DB;SELECT has_initial FROM battle_history_matches WHERE game_id={quick_game};')=='1')
+        check('every quick game enrolled and initial capture committed',state(quick_game)['status']=='battle' and sql(f'USE LAB_DB;SELECT has_initial FROM battle_history_matches WHERE game_id={quick_game};')=='1')
 
         sql('USE LAB_DB;DELETE FROM auth_login_attempts;')
         live_env=dict(os.environ,INTEGRATION_URL='http://127.0.0.1:33672',JOURNAL_GAME=str(quick_game),JOURNAL_ACTIVE=state(quick_game)['battle']['active'],PLAYWRIGHT_MODULE=args.playwright,BROWSER_EXECUTABLE=args.browser,JOURNAL_EVIDENCE=str(LAB))
@@ -349,7 +390,7 @@ def main():
         death_rows,_=journal_entries(attacker,quick_game)
         check('actual wounds death and natural terminal text',state(quick_game)['status']=='game_over' and all(any(t in e['text'] for e in death_rows) for t in ['получает','погибает','Бой завершён']))
         # Failure linking a selected room must roll back both game creation and enrollment.
-        rollback_room=a.create();history['control_room_ids'].append(rollback_room['id']);history_config();assert b.act(rollback_room)[0]==200
+        rollback_room=a.create();assert b.act(rollback_room)[0]==200
         pending=a.lobby(rollback_room['id'])[1]['room'];before_games=sql('USE LAB_DB;SELECT COUNT(*) FROM games;');before_meta=sql('USE LAB_DB;SELECT COUNT(*) FROM battle_history_matches;')
         sql("REVOKE UPDATE ON LAB_DB.lobby_rooms FROM 'LOBBY_USER'@'127.0.0.1';")
         try: failed=a.act(pending,'accept')
@@ -357,6 +398,8 @@ def main():
         check('failed lobby acceptance rolls enrollment back',failed[0]==503 and sql('USE LAB_DB;SELECT COUNT(*) FROM games;')==before_games and sql('USE LAB_DB;SELECT COUNT(*) FROM battle_history_matches;')==before_meta)
         metadata_check=subprocess.run(php+['-r','require $argv[1]."/src/Core/Autoloader.php"; Berserk\\Core\\Autoloader::register(); Berserk\\Core\\Autoloader::addNamespace("Berserk\\\\",$argv[1]."/src/"); $db=new Berserk\\Core\\Db(require $argv[1]."/config/db.php"); $p=$db->fetchOne("SELECT @@port p,DATABASE() d"); if ((int)$p["p"]!==33671 || !preg_match("/^lobby_[0-9]+$/D",$p["d"])) exit(2); $names=new Berserk\\Core\\BattleHistory\\JournalCardNames($db); $card=new Berserk\\Core\\CardInstance(instanceId:999,ukid:"missing_definition_for_journal",owner:"host"); if ($names->name($card)!==null) exit(3); echo "PASS";',str(ROOT)],capture_output=True,text=True)
         check('missing database card definition safely returns no name',metadata_check.returncode==0 and metadata_check.stdout=='PASS')
+        creation_check=subprocess.run(php+['-r', 'require $argv[1]."/src/Core/Autoloader.php"; Berserk\\Core\\Autoloader::register(); Berserk\\Core\\Autoloader::addNamespace("Berserk\\\\",$argv[1]."/src/"); $db=new Berserk\\Core\\Db(require $argv[1]."/config/db.php"); if((int)$db->fetchOne("SELECT @@port p")["p"]!==33671)exit(2); $repo=new Berserk\\Core\\GameRepository($db); $s=$repo->create(3,4); $denied=false; try{$repo->save($s);}catch(LogicException){$denied=true;} if(!$denied)exit(4); if($s->journalSchema!==1 || !$db->fetchOne("SELECT game_id FROM battle_history_matches WHERE game_id=".$s->gameId))exit(3); echo "PASS";', str(ROOT)],capture_output=True,text=True)
+        check('standalone GameRepository creation initializes mandatory history',creation_check.returncode==0 and creation_check.stdout=='PASS')
         # A browser verification of the REAL account API and DOM, while lab servers are running.
         sql('USE LAB_DB;DELETE FROM auth_login_attempts;')
         env=dict(os.environ,INTEGRATION_URL='http://127.0.0.1:33672',JOURNAL_GAME=str(game),PLAYWRIGHT_MODULE=args.playwright,BROWSER_EXECUTABLE=args.browser,JOURNAL_EVIDENCE=str(LAB))
