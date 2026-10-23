@@ -40,4 +40,4 @@
 
 .battle-mini-tooltip[data-kind="name"]{pointer-events:none}
 
-.battle-mini-tooltip[data-kind="name"]{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible;max-width:min(128px,calc(100vw - 16px));font-weight:400}
+.battle-mini-tooltip[data-kind="name"]{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible;max-width:min(144px,calc(100vw - 16px));font-weight:400}
