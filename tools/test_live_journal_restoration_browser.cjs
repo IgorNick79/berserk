@@ -13,7 +13,7 @@ if(base!=='http://127.0.0.1:33672'||!game||!out)throw Error('Disposable lab only
    for(let i=0;i<100;i++){
     const response=await context.request.get(base+'/battle-journal.php?game='+game+'&after='+cursor+'&limit=2');assert.equal(response.status(),200);const data=await response.json();entries.push(...data.entries);cursor=data.cursor;if(!data.has_more)break;
    }
-   const expected=entries.filter(e=>e.kind!=='gap').map(e=>e.text);assert(expected.some(t=>t.includes('атакует'))&&expected.some(t=>t.includes('Бросок')));
+   const expected=entries.filter(e=>e.kind!=='gap').map(e=>/^Бросок: атакующий \d+, защитник (?:\d+|без броска)\.$/.test(e.text)?'⚄\uFE0E А'+e.text.slice('Бросок: а'.length):e.text);assert(expected.some(t=>t.includes('атакует'))&&expected.some(t=>t.includes('Атакующий')));
    await p.goto(base+'/index.php?game='+game);await p.locator('[data-action="battle-log"]').click();
    await p.waitForFunction(n=>document.querySelectorAll('[data-journal-entries] li').length===n,expected.length);
    assert.deepEqual(await p.locator('[data-journal-entries] li').allTextContents(),expected);

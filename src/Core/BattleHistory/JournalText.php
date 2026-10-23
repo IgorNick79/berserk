@@ -5,7 +5,7 @@ namespace Berserk\Core\BattleHistory;
 /** Formats only a persisted historical projection. No current cards/catalog/Engine. */
 final class JournalText
 {
-    public static function format(string $type, array $p): ?string
+    public static function format(string $type, array $p, string $viewer = 'host'): ?string
     {
         if ($type==='recording_gap.started') return 'Часть игровых событий не записана. История неполная.';
         if (!isset($p['_journal']) || isset($p['redacted'])) return null;
@@ -18,7 +18,7 @@ final class JournalText
             case 'turn.started': return 'Ход '.(int)$p['turn'].'. '.$side($p['active']).'.';
             case 'turn.ended': return $side($p['ending']).' завершает ход '.(int)$p['turn'].'.';
             case 'move.started':
-                return ($n=$name($p['card_id']??null))===null?null:$n.' перемещается: '.implode(':',$p['from']).' → '.implode(':',$p['to']).'.';
+                return ($n=$name($p['card_id']??null))===null?null:$n.' перемещается: '.\Berserk\View\Ui\BattlefieldPosition::label((int)$p['from'][0],(int)$p['from'][1],$viewer).' → '.\Berserk\View\Ui\BattlefieldPosition::label((int)$p['to'][0],(int)$p['to'][1],$viewer).'.';
             case 'combat.started':
                 $a=$name($p['attacker_id']??null);$t=$name($p['target_id']??null);
                 return $a===null||$t===null?null:$a.' атакует '.$t.'.';
@@ -30,7 +30,7 @@ final class JournalText
                 return 'Итог атаки: '.$level($p['attack']).'; ответ: '.$level($p['defend']).'.';
             case 'combat.wounds':
                 if (($n=$name($p['target_id']??null))===null) return null;
-                return (int)$p['wounds']>0?$n.' получает '.(int)$p['wounds'].' ран.':
+                return (int)$p['wounds']>0?$n.' получает '.(int)$p['wounds'].' '.\Berserk\View\Ui\RussianNumber::form((int)$p['wounds'],'рану','раны','ран').'.':
                     (((int)$p['armor_before']>(int)$p['armor_after'])?$n.': броня поглотила удар.':null);
             case 'combat.death': return ($n=$name($p['card_id']??null))===null?null:$n.' погибает.';
             case 'card.healed': return ($n=$name($p['target_id']??null))===null?null:$n.' восстанавливает '.(int)$p['amount'].' HP.';

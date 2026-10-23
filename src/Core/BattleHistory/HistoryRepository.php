@@ -215,7 +215,7 @@ final class HistoryRepository
             // Gaps expose neither their reason nor hidden source, even if projection is null.
             if ($row['event_type']==='recording_gap.started') $text='Часть игровых событий не записана. История неполная.';
             elseif ($row['projection_json']===null) continue;
-            else $text=JournalText::format($row['event_type'],json_decode($row['projection_json'],true,512,JSON_THROW_ON_ERROR));
+            else $text=JournalText::format($row['event_type'],json_decode($row['projection_json'],true,512,JSON_THROW_ON_ERROR),$side);
             if ($text!==null) $entries[]=['seq'=>$cursor,'kind'=>$row['event_type']==='recording_gap.started'?'gap':'event','text'=>$text];
         }
         $gap=$this->db->fetchOne("SELECT e.event_seq FROM battle_history_events e JOIN battle_command_journal j ON j.id=e.journal_id AND j.game_id=e.game_id AND j.status='committed' WHERE e.game_id=$gameId AND e.event_seq<=$watermark AND e.event_type='recording_gap.started' LIMIT 1");

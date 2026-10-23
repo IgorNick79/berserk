@@ -1,0 +1,74 @@
+[
+  {
+    "side": "host",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "status": "PASS",
+    "duplicates": 0,
+    "overflow": false,
+    "dice_accessible": true,
+    "native_title_duplicates": 0
+  },
+  {
+    "side": "player",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "status": "PASS",
+    "duplicates": 0,
+    "overflow": false,
+    "dice_accessible": true,
+    "native_title_duplicates": 0
+  },
+  {
+    "side": "host",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "status": "PASS",
+    "duplicates": 0,
+    "overflow": false,
+    "dice_accessible": true,
+    "native_title_duplicates": 0
+  },
+  {
+    "side": "player",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "status": "PASS",
+    "duplicates": 0,
+    "overflow": false,
+    "dice_accessible": true,
+    "native_title_duplicates": 0
+  },
+  {
+    "side": "host",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "status": "PASS",
+    "duplicates": 0,
+    "overflow": false,
+    "dice_accessible": true,
+    "native_title_duplicates": 0
+  },
+  {
+    "side": "player",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "status": "PASS",
+    "duplicates": 0,
+    "overflow": false,
+    "dice_accessible": true,
+    "native_title_duplicates": 0
+  }
+]

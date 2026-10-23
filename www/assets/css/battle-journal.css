@@ -7,3 +7,8 @@
 .battle-journal ol { list-style:none; margin:0; padding:0; }
 .battle-journal li { padding:7px 0; border-bottom:1px solid #ffffff18; }
 .battle-journal-gap { color:#f0bf6b; }
+
+/* Reuse the game's dice presentation at inline journal size, without a native title tooltip. */
+.battle-journal .battle-journal-dice { width:22px; height:22px; margin:0; border-width:1px; border-radius:4px; font:20px/1 serif; vertical-align:middle; color:#333; flex-shrink:0; }
+.battle-journal li { overflow-wrap:anywhere; }
+@media (max-width:480px) { .battle-journal { right:8px; width:calc(100vw - 16px); } }
