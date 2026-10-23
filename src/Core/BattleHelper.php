@@ -188,6 +188,15 @@ final class BattleHelper
         string $playerKey,
         bool $allowFriendlyFire = false,
     ): array {
+        if (str_starts_with($mode, 'action:')) {
+            foreach ($card->prop['actions'] ?? [] as $action) {
+                if (($action['key'] ?? $action['type'] ?? '') === substr($mode, 7)
+                    && ($action['type'] ?? '') === 'impact' && ($action['effect'] ?? '') === 'matriarch_order') {
+                    return MatriarchOrderProcessor::available($state,$card)
+                        ? array_fill_keys(MatriarchOrderProcessor::targets($state,$card),true) : [];
+                }
+            }
+        }
         if (CardStats::isDisabled($card)) {
             return [];
         }

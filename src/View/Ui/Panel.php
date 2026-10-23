@@ -34,7 +34,8 @@ final class Panel
             foreach ($spec->buttons as $b) {
                 $cls   = 'button' . (!empty($b['class']) ? ' ' . $b['class'] : '');
                 $url   = htmlspecialchars($b['url'], ENT_QUOTES);
-                $label = htmlspecialchars($b['label'], ENT_QUOTES);
+                // As with radio labels below, only server-rendered markup opts in.
+                $label = $b['label_html'] ?? htmlspecialchars($b['label'], ENT_QUOTES);
                 $fallback = !empty($b['cell_marker_target']) ? ' data-cell-marker-fallback' : '';
                 $body .= '<a class="' . htmlspecialchars($cls, ENT_QUOTES) . '" href="' . $url . '"' . $fallback . '>' . $label . '</a> ';
             }

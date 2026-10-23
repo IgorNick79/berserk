@@ -58,6 +58,7 @@ final class ActionResolver
 
         if (!CoinAbilities::actionAvailable($attacker, $action)) return Result::error('Действие недоступно при этом количестве монет');
         $type = $action['type'] ?? '';
+        if ($type === 'impact' && ($action['effect'] ?? '') === 'matriarch_order') return (new MatriarchOrderProcessor($this->state, $this->engine))->start($attacker, $action);
         if (Strangulation::blocksAttack($attacker, $type)) return Result::error('Атаки запрещены маркерами удушения');
         if ($type === 'strangle') return Strangulation::start($this->state, $attacker, $actionKey);
         if ($type === 'uchr') return $this->uchr($playerKey, $cmd);
