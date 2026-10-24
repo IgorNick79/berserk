@@ -104,3 +104,9 @@
 .battle-page [data-panel-theme] .info-panel .instant-summary__who--opp{background:#753c38;color:#ffe8df}
 .battle-page .battle-pause-symbol{border:0;border-radius:0;background:transparent}
 .battle-page .battle-pause-symbol img{display:block;width:100%;height:100%;object-fit:contain}
+
+/* Strike-level choices use the same surface and readable text as other choices. */
+.battle-page [data-panel-theme] .info-panel .choice-item{background:var(--ip-surface);color:var(--ip-text);border:1px solid var(--ip-edge)}
+.battle-page [data-panel-theme] .info-panel .choice-item:hover{background:linear-gradient(#ffffff12,#ffffff12),var(--ip-surface)}
+.battle-page [data-panel-theme] .info-panel .choice-item:has(input:checked){border-color:var(--ip-title);box-shadow:inset 0 0 0 1px var(--ip-edge)}
+.battle-page [data-panel-theme] .info-panel .choice-item:focus-within{outline:2px solid var(--ip-title);outline-offset:2px}
