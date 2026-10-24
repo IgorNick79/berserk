@@ -60,3 +60,10 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 .battle-page [data-mini-card-design="v2"] .fly-slot:has(.attack-target){background:rgba(205,48,43,.45)}
 .battle-page [data-mini-card-design="v2"] .field-cell.attack-target:has([data-drag-owner="own"]),
 .battle-page [data-mini-card-design="v2"] .fly-slot:has(.attack-target [data-drag-owner="own"]){background:rgba(224,174,40,.46)}
+
+/* Movement destinations stay quiet until the pointer or drag reaches them. */
+.battle-page .battle-field{background:rgba(0,0,0,.65)}
+.battle-page .field-cell.move-target{background:rgba(0,200,0,.25);transition:background-color .18s ease}
+.battle-page .field-cell.move-target:hover,
+.battle-page .field-cell.move-target.battle-drag-target{background:rgba(0,200,0,.5)}
+@media(prefers-reduced-motion:reduce){.battle-page .field-cell.move-target{transition:none}}
