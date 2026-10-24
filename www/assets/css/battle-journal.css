@@ -9,6 +9,6 @@
 .battle-journal-gap { color:#f0bf6b; }
 
 /* Reuse the game's dice presentation at inline journal size, without a native title tooltip. */
-.battle-journal .battle-journal-dice { width:22px; height:22px; margin:0; border-width:1px; border-radius:4px; font:20px/1 serif; vertical-align:middle; color:#333; flex-shrink:0; }
+.battle-journal .battle-journal-die { display:inline-block; width:24px; height:24px; margin:0 2px; vertical-align:middle; object-fit:contain; }
 .battle-journal li { overflow-wrap:anywhere; }
 @media (max-width:480px) { .battle-journal { right:8px; width:calc(100vw - 16px); } }

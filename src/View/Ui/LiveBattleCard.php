@@ -27,6 +27,8 @@ final class LiveBattleCard
             $path = '/assets/cards/s' . $set[1] . '/' . $card->ukid . '.webp';
             if (is_file(dirname(__DIR__, 3) . '/www' . $path)) $art = '<img class="mini-art" src="' . self::e($path) . '" alt="">';
         }
+        // Never reveal a hidden enemy's cost class through a frame asset.
+        $frame = !$hidden && !$card->elite ? 'silver' : 'plain';
         $classes = 'battle-card battle-mini-card mini-' . $side;
         if ($hidden) $classes .= ' mini-hidden';
         if ($card->closed) $classes .= ' mini-closed';
@@ -35,7 +37,7 @@ final class LiveBattleCard
         $nameAttr = $hidden ? '' : ' data-mini-name="' . $nameHtml . '"';
         $hp = ($hidden && $hpText === '?/?') ? '' : '<div class="mini-hp"><svg class="mini-heart" viewBox="0 0 20 18" aria-hidden="true"><path d="M10 17 2 9C-3 3 5-3 10 3 15-3 23 3 18 9Z"/></svg><span>' . self::e($hpText) . '</span></div>';
         return '<div class="' . $classes . '" data-mini-card="' . $card->instanceId . '" role="group" aria-label="' . $label . '"' . $nameAttr . '>'
-            . $art . '<img class="mini-frame" src="/assets/images/battle/mini/frame_' . $side . '_102x92_plain.svg" alt="">'
+            . $art . '<img class="mini-frame" src="/assets/images/battle/mini/frame_' . $side . '_102x92_' . $frame . '.svg" alt="">'
             . ($indicators ? '<div class="mini-indicators">' . $indicators . '</div>' : '')
             . ($hidden ? '<span class="mini-question" aria-hidden="true">?</span>' : '')
             . $hp . '</div>';

@@ -46,17 +46,24 @@
                     if (seen.has(entry.seq)) return;
                     if (entry.kind === "gap") { hasGaps = true; seen.add(entry.seq); return; }
                     var item = document.createElement("li");
-                    // Preserve the plain-text API contract and render only the known dice prefix.
-                    // No event HTML is trusted, and historical projections remain untouched.
-                    var dice = /^Бросок: атакующий \d+, защитник (?:\d+|без броска)\.$/.test(entry.text);
+                    // Keep the text API and journal history intact. Asset paths are a fixed 1..6 whitelist.
+                    var dice = /^(Бросок|Изменение кубиков): атакующий (\d+), защитник (\d+|без броска)\.$/.exec(entry.text);
                     if (dice) {
-                        var icon = document.createElement("span");
-                        icon.className = "dice battle-journal-dice";
-                        icon.setAttribute("role", "img");
-                        icon.setAttribute("aria-label", "Бросок кубиков");
-                        icon.textContent = "⚄\uFE0E";
-                        item.appendChild(icon);
-                        item.appendChild(document.createTextNode(" А" + entry.text.slice("Бросок: а".length)));
+                        function appendDie(value) {
+                            if (!/^[1-6]$/.test(value)) { item.appendChild(document.createTextNode(value)); return; }
+                            var icon = document.createElement("img");
+                            icon.className = "battle-journal-die";
+                            icon.src = "/assets/images/battle/dice/dice_" + value + ".svg";
+                            icon.alt = value;
+                            icon.setAttribute("aria-label", "Кубик: " + value);
+                            icon.width = 24; icon.height = 24;
+                            item.appendChild(icon);
+                        }
+                        item.appendChild(document.createTextNode((dice[1] === "Изменение кубиков" ? "Изменение кубиков: " : "") + "Атакующий "));
+                        appendDie(dice[2]);
+                        item.appendChild(document.createTextNode(", защитник "));
+                        appendDie(dice[3]);
+                        item.appendChild(document.createTextNode("."));
                     } else item.textContent = entry.text;
                     item.dataset.eventSeq = String(entry.seq);
                     list.appendChild(item); seen.add(entry.seq);
