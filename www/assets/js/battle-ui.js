@@ -137,12 +137,34 @@
     // Local combat/card view survives snapshots without changing game/UI URLs.
     var combatHost = root.querySelector("[data-battle-fragment='info_panel_html']");
     var combatKey = null, inspectedCombatCard = 0, combatCardViewOpen = false, closedCardId = 0;
+    var secondaryDock=document.createElement('div'), secondary=null, prioritySignature='';
+    secondaryDock.className='battle-secondary-view game-chat'; secondaryDock.hidden=true;
+    root.secondaryPanel=function(panel){
+        if(secondary && secondary!==panel) secondary.hidden=true;
+        secondary=panel; secondaryDock.hidden=!panel;
+        if(panel){secondaryDock.appendChild(panel);panel.hidden=false;}
+        syncCombatPanel();
+    };
     function syncCombatPanel() {
         if (!combatHost) return;
         var content = combatHost.querySelector('.info-panel-content');
         if (!content) return;
         var key = content.dataset.combatKey || '';
-        var priority = content.dataset.panelPriority === '1';
+        var priority = content.dataset.panelPriority === '1' || !!content.querySelector('[data-match-pause-content]');
+        var eventBody=content.querySelector('.info-panel-context,[data-match-pause-content]');
+        var eventCopy=eventBody && eventBody.cloneNode(true);
+        if(eventCopy) eventCopy.querySelectorAll('[data-pause-countdown],[role="timer"]').forEach(function(timer){timer.remove();});
+        var signature=priority ? key+'|'+(eventCopy ? eventCopy.innerHTML : '') : '';
+        if(priority && signature!==prioritySignature && secondary){
+            var composing=secondary.id==='game-chat-panel' && secondary.querySelector('textarea') && secondary.querySelector('textarea').value.trim();
+            if(composing){if(root.berserkTurnTimer)root.berserkTurnTimer.notify();}
+            else {secondary.hidden=true;secondary=null;secondaryDock.hidden=true;}
+        }
+        prioritySignature=signature;
+        root.querySelectorAll('[data-chat-toggle],[data-action="battle-log"]').forEach(function(button){
+            button.setAttribute('aria-expanded',String(!!secondary && secondary.id===(button.hasAttribute('data-chat-toggle')?'game-chat-panel':'battle-journal')));
+        });
+        if(secondaryDock.parentNode!==content) content.appendChild(secondaryDock);
         if (key !== combatKey) { combatKey = key; inspectedCombatCard = 0; combatCardViewOpen = false; hideHint(); }
         var selected = content.querySelector("[data-battle-fragment='panel_html']");
         var context = content.querySelector('.info-panel-context');
@@ -158,7 +180,16 @@
         if (selected) selected.hidden = priority || manuallyClosed || waitingForCard || (!!key && !inspect);
         if (context) context.hidden = !priority && inspect;
         var footer = combatHost.querySelector('.info-panel-footer');
-        if (footer) footer.hidden = inspect;
+        if (footer) footer.hidden = inspect && !secondary;
+        Array.from(content.children).forEach(function(child){
+            if(child===secondaryDock)return;
+            if(secondary){if(!child.hasAttribute('data-secondary-hidden'))child.dataset.secondaryHidden=String(child.hidden);child.hidden=true;}
+            else if(child.hasAttribute('data-secondary-hidden')){child.hidden=child.dataset.secondaryHidden==='true';delete child.dataset.secondaryHidden;}
+        });
+        if(!secondary){
+            if(selected)selected.hidden=priority || manuallyClosed || waitingForCard || (!!key && !inspect);
+            if(context)context.hidden=!priority && inspect;
+        }
         content.dataset.combatView = priority ? 'information' : (key ? (inspect ? 'card' : 'combat') : 'normal');
     }
     if (combatHost) {
@@ -182,6 +213,7 @@
             if (url.searchParams.has('cmd')) {
                 inspectedCombatCard = 0; hideHint(); syncCombatPanel();
             } else if (link.classList.contains('card-link') && url.searchParams.has('sel')) {
+                if(secondary){secondary.hidden=true;secondary=null;secondaryDock.hidden=true;}
                 closedCardId = 0;
                 inspectedCombatCard = Number(url.searchParams.get('sel')) || 0;
                 hideHint(); syncCombatPanel();

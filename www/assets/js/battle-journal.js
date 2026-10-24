@@ -9,6 +9,7 @@
 
     function place() {
         if (panel.hidden) return;
+        if (panel.closest('.battle-secondary-view')) { scroll.style.maxHeight="none"; return; }
         var button = document.querySelector("[data-action='battle-log']");
         if (!button) return;
         button.setAttribute("aria-expanded", "true");
@@ -100,10 +101,16 @@
     document.addEventListener("click", function (event) {
         var button = event.target.closest("[data-action='battle-log']");
         if (button && !button.disabled) {
-            panel.hidden = !panel.hidden;
+            var opening=panel.hidden, battle=document.querySelector("[data-battle-sync-root]");
+            if(battle && battle.secondaryPanel) battle.secondaryPanel(opening?panel:null);
+            panel.hidden = !opening;
             button.setAttribute("aria-expanded", String(!panel.hidden));
             if (!panel.hidden) { place(); refresh(); }
-        } else if (event.target.closest("[data-journal-close]")) panel.hidden = true;
+        } else if (event.target.closest("[data-journal-close]")) {
+            var battle=document.querySelector("[data-battle-sync-root]");
+            if(battle && battle.secondaryPanel) battle.secondaryPanel(null);
+            panel.hidden = true;
+        }
     });
     // Reuse the existing sync lifecycle; no second polling interval or gameplay request.
     document.addEventListener("berserk:battle-updated", refresh);

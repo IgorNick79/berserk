@@ -5,7 +5,7 @@
         <span class="game-chat-unread-text" data-chat-unread-text hidden>Новые</span>
     </button>
     <section id="game-chat-panel" class="game-chat-panel" aria-label="Чат боя" hidden>
-        <div class="game-chat-header"><span>Чат боя</span><button type="button" class="battle-window-close game-chat-close" data-chat-close aria-label="Закрыть чат" title="Закрыть чат">×</button></div>
+        <div class="game-chat-header panel-card-heading"><h3 class="panel-card-title">Сообщения</h3><button type="button" class="battle-window-close game-chat-close" data-chat-close aria-label="Закрыть чат" title="Закрыть чат">×</button></div>
         <button type="button" class="button skip" data-chat-older hidden>Ранее</button>
         <div class="game-chat-history" data-chat-history role="log" aria-label="Сообщения" tabindex="0" aria-live="polite"></div>
         <form data-chat-form>

@@ -2,7 +2,7 @@
     "use strict";
     var root = document.querySelector('[data-game-chat]');
     if (!root) return;
-    var q = function (name) { return root.querySelector('[data-chat-' + name + ']') || (toggle && toggle.querySelector('[data-chat-' + name + ']')); };
+    var q = function (name) { return root.querySelector('[data-chat-' + name + ']') || (panel && panel.querySelector('[data-chat-' + name + ']')) || (toggle && toggle.querySelector('[data-chat-' + name + ']')); };
     var toggle=q('toggle'), panel=document.getElementById('game-chat-panel'), history=q('history');
     var input=q('input'), send=q('send'), status=q('status'), older=q('older');
     var cursor=null, oldest=null, baseline=null, lastRead='0', latest='0', unread=false;
@@ -111,6 +111,8 @@
             .finally(function(){loadingOlder=false;older.disabled=false;});
     });
     function open(value) {
+        var battle=document.querySelector('[data-battle-sync-root]');
+        if(battle && battle.secondaryPanel) battle.secondaryPanel(value?panel:null);
         panel.hidden=!value; toggle.setAttribute('aria-expanded',String(value));
         if(value) {history.scrollTop=history.scrollHeight; if(writable) input.focus(); else history.focus(); markRead();}
         else toggle.focus();
@@ -129,7 +131,7 @@
             q('form').requestSubmit();
         }
     });
-    root.addEventListener('keydown',function(e){if(e.key==='Escape' && !panel.hidden){e.preventDefault();open(false);}});
+    panel.addEventListener('keydown',function(e){if(e.key==='Escape' && !panel.hidden){e.preventDefault();open(false);}});
     history.addEventListener('scroll',markRead);
     document.addEventListener('visibilitychange',function(){if(!document.hidden){markRead();schedule(0);}});
     window.addEventListener('focus',function(){markRead();schedule(0);});

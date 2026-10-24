@@ -51,3 +51,35 @@
  .info-panel .dice-column{min-width:0}
  .battle-page [data-panel-theme] .info-panel .button:not(.green-btn){font-size:12px;padding:8px 6px}
 }
+
+/* Shared themed secondary views and compact dice. */
+.battle-page [data-panel-theme] .info-panel :is(.instant-dice,.dice-block){background:transparent;border:1px solid var(--ip-edge);border-radius:7px;padding:10px;gap:18px;justify-content:center;flex-wrap:wrap}
+.battle-page [data-panel-theme] .info-panel :is(.dice-column,.dice-col){flex:1 1 100px;min-width:0;text-align:center}
+.battle-page [data-panel-theme] .info-panel .panel-dice-face{width:32px;height:32px;flex:0 0 32px}
+.battle-page [data-panel-theme] .turn-timer{border:1px solid var(--ip-edge);border-radius:6px;padding:6px 8px;color:var(--ip-title)}
+.battle-page [data-panel-theme] .battle-pile-heading{background:var(--ip-surface);color:var(--ip-title);border-color:var(--ip-edge)}
+.battle-page [data-panel-theme] .battle-pile-card .prepare-card{background:var(--ip-surface);color:var(--ip-text);border-color:var(--ip-edge)}
+.battle-page [data-panel-theme] .battle-pile-pagination button span{background:var(--ip-base);border-color:var(--ip-edge)}
+.battle-page [data-panel-theme] .battle-pile-pagination button[aria-current="page"] span{background:var(--ip-title);box-shadow:0 0 0 2px var(--ip-edge)}
+.panel-theme-picker > .battle-window-close{position:absolute;right:12px;top:12px}
+.battle-page .info-panel .battle-secondary-view{display:flex;flex-direction:column;min-height:0;height:100%;color:var(--ip-text)}
+.battle-page .info-panel .battle-secondary-view[hidden]{display:none!important}
+.battle-page .info-panel .battle-secondary-view :is(.game-chat-panel,.battle-journal){position:static!important;inset:auto!important;display:flex;flex:1 1 0;flex-direction:column;width:100%;height:100%;max-height:none;min-height:0;box-sizing:border-box;border:0;border-radius:0;background:transparent;color:var(--ip-text);box-shadow:none;font:14px/1.4 system-ui}
+.battle-page .info-panel .battle-secondary-view [hidden]{display:none!important}
+.battle-page .info-panel .battle-secondary-view :is(.game-chat-header,.battle-journal header){display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;margin:0;background:var(--ip-surface);border-bottom:1px solid var(--ip-edge);color:var(--ip-title);font-size:16px;font-weight:600}
+.battle-page .info-panel .battle-secondary-view :is(.game-chat-history,.battle-journal-scroll){flex:1 1 0;min-height:0;max-height:none!important;overflow:auto;padding:8px}
+.battle-page .info-panel .battle-secondary-view :is(form,[data-chat-older]){margin:8px}
+.battle-page .info-panel .battle-secondary-view textarea{box-sizing:border-box;width:100%;background:var(--ip-base);color:var(--ip-text);border:1px solid var(--ip-edge);border-radius:4px;padding:7px}
+.battle-page .info-panel .battle-secondary-view .game-chat-message{background:var(--ip-surface);color:var(--ip-text)}
+.battle-page .info-panel .battle-secondary-view :is(p,.game-chat-message small){color:var(--ip-muted)}
+
+.battle-page .info-panel-content:has(> .battle-secondary-view:not([hidden])){display:flex;flex-direction:column;overflow:hidden}
+.battle-page .info-panel .battle-secondary-view{flex:1 1 0}
+
+.battle-page [data-match-paused="1"] .info-panel-content > .battle-secondary-view:not([hidden]){display:flex!important}
+.battle-page .info-panel .battle-secondary-view .panel-card-title{margin:0;min-width:0;font-size:16px}
+.battle-page [data-panel-theme] .battle-pile-card .prepare-card :is(.prepare-card__name,.prepare-card__stats){color:var(--ip-text)}
+
+.battle-page [data-panel-theme] .battle-side-slot .pile-open{background:var(--ip-surface);color:var(--ip-title);border:1px solid var(--ip-edge);border-radius:4px}
+.battle-page [data-panel-theme] .battle-side-slot .pile-open:hover:not(:disabled){filter:brightness(1.2)}
+.battle-page [data-panel-theme] .battle-side-slot button.pile-open:disabled{background:var(--ip-base);color:var(--ip-muted);border-color:var(--ip-edge);opacity:.55}

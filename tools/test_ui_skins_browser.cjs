@@ -45,7 +45,61 @@ await second.evaluate(d=>{document.querySelector('[data-battle-fragment=info_pan
 await second.locator('.info-panel').scrollIntoViewIfNeeded();await second.screenshot({path:path.join(out,'theme-mobile.png')});
 await second.locator('.battle-menu').click();await second.locator('[data-menu-panel-theme]').click();assert(await second.locator('[data-panel-theme-picker]').evaluate(e=>e.getBoundingClientRect().right<=innerWidth));await second.keyboard.press('Escape');await second.keyboard.press('Escape');await second.close();
 await replace(data.normal,true);const mini=page.locator('[data-mini-card="1"]').first();await mini.hover();await page.waitForTimeout(300);assert.strictEqual(await page.locator('.battle-mini-zoom.is-open').count(),1);
-await replace(data.closed,true);await mini.hover();await page.waitForTimeout(350);assert.strictEqual(await page.locator('.battle-mini-zoom').count(),0);assert(await mini.evaluate(e=>getComputedStyle(e).transform!=='none'&&getComputedStyle(e,'::after').backgroundColor==='rgba(25, 31, 34, 0.18)'));
+await replace(data.closed,true);await mini.hover();await page.waitForTimeout(350);assert.strictEqual(await page.locator('.battle-mini-zoom').count(),0);assert(await mini.evaluate(e=>getComputedStyle(e).transform!=='none'&&getComputedStyle(e,'::after').backgroundColor==='rgb(255, 255, 255)'&&getComputedStyle(e,'::after').opacity==='0.3'));
+// Secondary panels survive fragment replacement, yield to new events, and retain drafts.
+await replace(data.normal,true);
+await page.evaluate(()=>{
+ const root=document.querySelector('[data-battle-sync-root]');
+ const chat=document.createElement('section');chat.id='game-chat-panel';chat.className='game-chat-panel';chat.innerHTML='<div class="game-chat-header">Сообщения</div><textarea></textarea>';window.secondaryChat=chat;
+ window.notices=0;root.berserkTurnTimer={notify(){window.notices++;}};
+ root.secondaryPanel(chat);
+});
+assert(await page.locator('.battle-secondary-view').isVisible());
+assert(await page.locator('.battle-selected-card').isHidden());
+await page.locator('#game-chat-panel textarea').fill('Неотправленный текст');
+await replace(data.dice,false);
+assert(await page.locator('#game-chat-panel').isVisible());
+assert.strictEqual(await page.locator('#game-chat-panel textarea').inputValue(),'Неотправленный текст');
+assert.strictEqual(await page.evaluate(()=>window.notices),1);
+await page.locator('#game-chat-panel textarea').fill('');
+await replace(data.normal,false);await replace(data.dice,false);
+assert(await page.locator('#game-chat-panel').isHidden());
+await page.evaluate(()=>document.querySelector('[data-battle-sync-root]').secondaryPanel(window.secondaryChat));
+assert(await page.locator('#game-chat-panel').isVisible());
+await page.evaluate(()=>document.querySelector('[data-battle-sync-root]').secondaryPanel(null));
+assert(await page.locator('.battle-secondary-view').isHidden());
+// Exercise actual chat and journal handlers after docking, including sending and reopening.
+await replace(data.normal,false);
+await page.evaluate(()=>window.secondaryChat.remove());
+await page.addStyleTag({content:read('www/assets/css/battle-chat.css')+'\n'+read('www/assets/css/battle-journal.css').replace(/^@import[^;]+;/,'')});
+await page.evaluate(html=>document.body.insertAdjacentHTML('beforeend',html),read('templates/includes/game_chat.tpl').replace(/{{chat_game_id}}/g,'1').replace(/{{chat_sender_id}}/g,'2').replace(/{{chat_csrf}}/g,'csrf'));
+let sent=[];
+await page.route('https://skins.test/?**',async r=>{
+ const u=new URL(r.request().url()),action=u.searchParams.get('ajax');
+ if(action==='chat_send'){sent.push(new URLSearchParams(r.request().postData()).get('message'));return r.fulfill({json:{ok:true}});}
+ return r.fulfill({json:{ok:true,messages:[],latest_id:'0',last_read_id:'0',can_send:true,has_more:false,unread:false}});
+});
+await page.addScriptTag({content:read('www/assets/js/battle-chat.js')});
+await page.waitForFunction(()=>!document.querySelector('[data-chat-input]').disabled);
+await page.locator('[data-chat-toggle]').click();
+assert(await page.locator('.info-panel #game-chat-panel').isVisible());
+await page.locator('[data-chat-input]').fill('Проверка переноса');await page.locator('[data-chat-input]').press('Enter');
+await page.waitForFunction(()=>document.querySelector('[data-chat-input]').value==='');
+assert.deepStrictEqual(sent,['Проверка переноса']);
+await replace(data.normal,false);assert(await page.locator('.info-panel #game-chat-panel').isVisible());
+await page.locator('[data-chat-close]').click();assert(await page.locator('#game-chat-panel').isHidden());
+await page.locator('[data-chat-toggle]').click();assert(await page.locator('#game-chat-panel').isVisible());
+await page.route('https://skins.test/battle-journal.php**',r=>r.fulfill({json:{entries:[{seq:1,kind:'event',text:'Проверка журнала'}],cursor:1,recording:{available:true,has_gaps:false},has_more:false}}));
+await page.evaluate(code=>{document.body.insertAdjacentHTML('beforeend','<section id="battle-journal" class="battle-journal" hidden><header>Лог игры<button data-journal-close>×</button></header><p data-journal-notice></p><p data-journal-state></p><div data-journal-scroll class="battle-journal-scroll"><ol data-journal-entries></ol></div></section>');const script=document.createElement('script');script.dataset.journalUrl='/battle-journal.php';script.textContent=code;document.body.appendChild(script);},read('www/assets/js/battle-journal.js'));
+await page.locator('[data-action=battle-log]').evaluate(b=>{b.disabled=false;b.removeAttribute('aria-disabled');b.click();});
+await page.waitForFunction(()=>document.querySelector('[data-journal-entries]').textContent.includes('Проверка журнала'));
+assert(await page.locator('.info-panel #battle-journal').isVisible());assert(await page.locator('#game-chat-panel').isHidden());
+await page.screenshot({path:path.join(out,'journal-infopanel.png')});
+await page.setViewportSize({width:375,height:900});
+assert(await page.locator('#battle-journal').evaluate(e=>{const r=e.getBoundingClientRect(),p=e.closest('.info-panel').getBoundingClientRect();return r.left>=p.left&&r.right<=p.right+1;}));
+await page.screenshot({path:path.join(out,'journal-infopanel-mobile.png')});
+await page.setViewportSize({width:1600,height:1000});
+await page.locator('[data-journal-close]').click();assert(await page.locator('#battle-journal').isHidden());
 assert(!errors.length,errors.join('\n'));assert(posts.every(p=>Object.keys(p).sort().join(',')==='csrf,theme'));
-console.log('PASS: four real themes + screenshots, 440px panel, themed buttons/dice, unchanged end-turn/menu, save/error/reload/AJAX, mobile picker, closed zoom disabled including snapshot transition.');
+console.log('PASS: four real themes + screenshots, 440px panel, themed buttons/dice, unchanged end-turn/menu, save/error/reload/AJAX, mobile picker, closed zoom disabled, real chat send/reopen, journal docking, pending priority and draft notification.');
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

@@ -13,3 +13,5 @@
 .battle-journal .battle-journal-die { display:inline-block; width:24px; height:24px; margin:0 2px; vertical-align:middle; object-fit:contain; }
 .battle-journal li { overflow-wrap:anywhere; }
 @media (max-width:480px) { .battle-journal { right:8px; width:calc(100vw - 16px); } }
+
+.battle-journal header h3{margin:0;font:inherit}

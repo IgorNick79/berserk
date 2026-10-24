@@ -28,3 +28,5 @@
 .game-chat [data-chat-older] { align-self:flex-start; padding:3px 12px; font-size:12px; }
 .game-chat [data-chat-status] { margin:4px 0; font-size:12px; }
 .game-chat [data-chat-status]:empty { display:none; }
+
+.game-chat-header h3{margin:0;font:inherit}

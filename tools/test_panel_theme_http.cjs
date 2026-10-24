@@ -33,6 +33,6 @@ assert.strictEqual((await (await get(one)).json()).theme,'leather');assert.stric
 assert.strictEqual((await post(two,{theme:'stone',csrf:two.csrf})).status,200);
 assert.strictEqual((await (await get(one)).json()).theme,'leather');assert.strictEqual((await (await get(two)).json()).theme,'stone');
 sql(`$db->select_db('${database}');$db->query('RENAME TABLE account_ui_preferences TO missing_preferences');`);
-const unavailable=await get(one);assert.strictEqual(unavailable.status,503);assert.strictEqual((await unavailable.json()).error,'theme_storage_unavailable');
+const unavailable=await get(one);assert.strictEqual(unavailable.status,503);assert.strictEqual((await unavailable.json()).error,'theme_schema_missing');
 console.log('PASS HTTP + MySQL: real AuthSession/AuthStore, anonymous 401, CSRF 403, whitelist/identity injection 400, method 405, account-isolated persistence and missing-schema 503. No game bootstrap.');
 }finally{if(server)server.kill();sql(`$db->query('DROP DATABASE ${database}');`);}})().catch(e=>{console.error(e);process.exit(1)});

@@ -23,7 +23,8 @@ try {
     $theme=$method==='POST'?$store->saveTheme($account->id,$_POST['theme']):$store->theme($account->id);
     echo json_encode(['ok'=>true,'theme'=>$theme,'catalog'=>PanelTheme::ITEMS,'csrf'=>$csrf],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
 } catch (Throwable $e) {
+    $missingSchema=$e instanceof mysqli_sql_exception && $e->getCode()===1146;
     $status=$e instanceof DomainException && $e->getCode()>=400 && $e->getCode()<=599?$e->getCode():503;
     http_response_code($status);
-    echo json_encode(['ok'=>false,'error'=>$status===503?'theme_storage_unavailable':$e->getMessage()]);
+    echo json_encode(['ok'=>false,'error'=>$status===503?($missingSchema?'theme_schema_missing':'theme_storage_unavailable'):$e->getMessage()]);
 }

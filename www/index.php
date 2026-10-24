@@ -1431,13 +1431,13 @@ if ($screenName==='battle') {
 if (in_array($screenName,['battle','game_over'],true)
     && $historyRuntime->journals($state->gameId) && $historyRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION)===$playerKey) {
     if ($screenName==='game_over') $screenHtml .= '<button type="button" class="button" data-action="battle-log" aria-controls="battle-journal">Журнал боя</button>';
-    $screenHtml .= '<link rel="stylesheet" href="/assets/css/battle-journal.css?v=3">'
+    $screenHtml .= '<link rel="stylesheet" href="/assets/css/battle-journal.css?v=4">'
         . '<aside id="battle-journal" class="battle-journal" hidden aria-label="Журнал боя">'
-        . '<header><strong>Журнал боя</strong><button type="button" data-journal-close aria-label="Закрыть журнал">×</button></header>'
+        . '<header class="panel-card-heading"><h3 class="panel-card-title">Журнал боя</h3><button type="button" data-journal-close aria-label="Закрыть журнал">×</button></header>'
         . '<p data-journal-notice>Экспериментальная неполная история.</p>'
         . '<div class="battle-journal-scroll" data-journal-scroll tabindex="0"><ol data-journal-entries></ol></div>'
         . '<p data-journal-state role="status"></p></aside>';
-    $scriptsHtml .= '<script src="/assets/js/battle-journal.js?v=3" data-journal-url="/battle-journal.php?game='
+    $scriptsHtml .= '<script src="/assets/js/battle-journal.js?v=4" data-journal-url="/battle-journal.php?game='
         .$state->gameId.'" defer></script>';
 }
 
@@ -1448,7 +1448,7 @@ if (in_array($screenName, ['battle','game_over'], true)) {
         'chat_sender_id'=>$userId,
         'chat_csrf'=>htmlspecialchars($_SESSION['chat_csrf'],ENT_QUOTES),
     ]);
-    $scriptsHtml .= '<script src="/assets/js/battle-chat.js?v=4" defer></script>';
+    $scriptsHtml .= '<script src="/assets/js/battle-chat.js?v=5" defer></script>';
 }
 // Resolve the URL before passing the HTML slot to the single-pass template parser.
 $preGameResourceKey = $isPreGame
@@ -1462,7 +1462,7 @@ $page = $tpl->parse('page.tpl', [
     'screen'  => $screenHtml,
     'scripts' => $scriptsHtml,
     'page_class' => $screenName === 'battle' ? 'battle-page' : ($isPreGame ? 'pregame-page' : ''),
-    'page_styles' => in_array($screenName, ['battle','game_over'], true) ? '<link rel="stylesheet" href="/assets/css/battle-chat.css?v=4">' : ($isPreGame ? '<link rel="stylesheet" href="/assets/css/pregame.css?v=' . $preGameResourceKey . '">' : ''),
+    'page_styles' => in_array($screenName, ['battle','game_over'], true) ? '<link rel="stylesheet" href="/assets/css/battle-chat.css?v=5">' : ($isPreGame ? '<link rel="stylesheet" href="/assets/css/pregame.css?v=' . $preGameResourceKey . '">' : ''),
     // PreGame opts into a stable CSS version; battle keeps its existing rkey policy.
     'rkey' => $preGameResourceKey,
 ]);
