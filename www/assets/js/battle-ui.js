@@ -151,7 +151,11 @@
         combatCardViewOpen = inspect;
         if (priority && card) closedCardId = Number(card.dataset.panelCardId);
         var manuallyClosed = !!(card && closedCardId === Number(card.dataset.panelCardId));
-        if (selected) selected.hidden = priority || manuallyClosed || (!!key && !inspect);
+        // The old fragment can survive until the selection snapshot arrives.
+        // Never reopen it for a different creature while that request is pending.
+        var waitingForCard = !!(inspectedCombatCard && card && Number(card.dataset.panelCardId) !== inspectedCombatCard);
+        if (!key && card && Number(card.dataset.panelCardId) === inspectedCombatCard) inspectedCombatCard = 0;
+        if (selected) selected.hidden = priority || manuallyClosed || waitingForCard || (!!key && !inspect);
         if (context) context.hidden = !priority && inspect;
         var footer = combatHost.querySelector('.info-panel-footer');
         if (footer) footer.hidden = inspect;

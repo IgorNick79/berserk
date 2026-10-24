@@ -21,6 +21,15 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
  const card=page.locator('.battle-selected-card'),context=page.locator('.info-panel-context');
  const clickCard=id=>page.locator('.battle-field .card-link[href*="sel='+id+'"]').first().click();
  assert(await card.isVisible(),'Normal card visible');
+ await clickCard(5);assert(await card.isHidden(),'Previous card hidden immediately during selection request');
+ await page.waitForTimeout(120);assert(await card.isHidden(),'Previous card stays hidden while network is delayed');
+ await update('normal',1);assert(await card.isHidden(),'Old selection fragment cannot reopen previous creature');
+ await update('normal',5);assert(await card.isVisible()&&await card.locator('[data-panel-card-id]').getAttribute('data-panel-card-id')==='5','Matching snapshot displays only requested creature');
+ await update('normal',1);assert(await card.isVisible(),'Completed request does not block later selection by drag/snapshot');
+ await update('normal',5);
+ await card.locator('.panel-card-media').hover();await card.locator('[data-panel-card-close]').click();
+ await clickCard(1);assert(await card.isHidden(),'Closed previous card never flashes on next selection');
+ await update('normal',1);assert(await card.isVisible()&&await card.locator('[data-panel-card-id]').getAttribute('data-panel-card-id')==='1','New creature opens after response');
  const close=card.locator('[data-panel-card-close]');
  await page.mouse.move(20,20);await page.waitForTimeout(220);
  assert(await close.evaluate(e=>getComputedStyle(e).opacity==='0'),'Cross hidden at rest');
