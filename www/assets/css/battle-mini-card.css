@@ -20,7 +20,7 @@
 
 .battle-page .battle-mini-card.mini-hidden{background:#56504a!important;color:#eee}
 .battle-page .battle-mini-card.mini-closed{opacity:1;transform:translateY(2px) scale(.9);transform-origin:center center}
-.battle-page .battle-mini-card.mini-closed .mini-art{filter:saturate(.58) brightness(.88)}
+.battle-page .battle-mini-card.mini-closed .mini-art{filter:saturate(.3) brightness(.88)}
 .battle-page .battle-mini-card.mini-closed::after{content:"";position:absolute;inset:5px;border-radius:4px;background:#fff;opacity:.3;z-index:3;pointer-events:none}
 .battle-page .battle-mini-card.mini-dying{outline:2px dashed #c22;outline-offset:-3px}
 .battle-mini-zoom{position:fixed;z-index:200;pointer-events:none;transform:scale(1);transform-origin:center;transition:transform 250ms ease-out,opacity 250ms ease-out}

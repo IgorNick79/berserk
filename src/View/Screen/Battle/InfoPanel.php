@@ -2220,13 +2220,14 @@ final class InfoPanel
         foreach ($options as $index => $option) {
             $labelHtml = $option['label_html'] ?? \Berserk\View\Ui\Coords::text((string) $option['label']);
             $card = $this->state->getCard((int) ($option['card_id'] ?? 0));
-            if ($card !== null) {
-                $labelHtml .= ' ' . \Berserk\View\Ui\Coords::renderResult($card->row, $card->col, $this->playerKey, $card->owner);
-            }
+            $coordsHtml = $card !== null
+                ? \Berserk\View\Ui\Coords::renderResult($card->row, $card->col, $this->playerKey)
+                : '';
+
             $body .= '<label class="' . htmlspecialchars('choice-radio ' . ($option['class'] ?? ''), ENT_QUOTES) . '">'
                 . '<input type="radio" name="choice" value="' . htmlspecialchars($option['value'], ENT_QUOTES) . '"'
                 . ($index === 0 ? ' checked="checked"' : '') . '>'
-                . '<span>' . $labelHtml . '</span></label>';
+                . '<span class="defender-option-text">' . $labelHtml . '</span>' . $coordsHtml . '</label>';
         }
         $body .= '</div>'
             . '<div class="death-choice-buttons' . ($skipDefender ? ' defender-choice-actions' : '') . '">';

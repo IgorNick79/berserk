@@ -24,22 +24,26 @@ const assert = (condition, message) => { if (!condition) throw new Error(message
                 }));
                 await page.goto('https://defender.test/');
                 const html = read('templates/screen/battle.tpl')
-                    .replace(/<script[\s\S]*?<\/script>/g, '')
+                    .replace(/<script[\s\S]*?<\/script>/g, '').replace(/<link[^>]*>/g, '')
                     .replace(/{{(\w+)}}/g, (_, key) => data[key] || '');
                 const show = () => page.setContent('<html class="battle-page"><head><meta charset="utf-8">'
-                    + '<style>' + read('www/assets/css/global.css') + '</style></head>'
+                    + '<style>' + read('www/assets/css/global.css') + read('www/assets/css/battle-ui-skins.css').replace(/^@import[^;]+;/,'') + read('www/assets/css/battle-coordinates.css') + '</style></head>'
                     + '<body class="battle-page">' + html + '</body></html>');
                 await show();
                 const choices = page.locator('.defender-radio-list input[type=radio]');
                 assert(await choices.count() === 2, 'Only creatures are radio choices');
                 const badges = page.locator('.defender-radio-list .coords');
                 assert(await badges.count() === 2, 'Every defender has a coordinate badge');
-                assert((await badges.allTextContents()).every(text => /# \[I{1,3}:\d\]/.test(text)), 'Roman row labels');
+                assert((await badges.allTextContents()).every(text => /\[I{1,3}:\d\]/.test(text)), 'Roman row labels');
                 assert(await badges.first().evaluate(el => el.classList.contains('coords--own')), 'Own field color');
+                assert(await badges.nth(1).evaluate(el => el.classList.contains('coords--enemy')), 'Crossed own creature uses enemy field color');
+                assert((await badges.nth(1).textContent()).includes(viewer==='host'?'[I:4]':'[I:2]'), 'Viewer-relative columns after crossing');
+                const edges=await badges.evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().right));
+                assert(Math.abs(edges[0]-edges[1])<1, 'Coordinate badges align at the right edge '+JSON.stringify(await badges.evaluateAll(nodes=>nodes.map(e=>[e.getBoundingClientRect().right,e.parentNode.clientWidth,getComputedStyle(e.parentNode).display,getComputedStyle(e.parentNode).gridTemplateColumns,e.closest('.info-panel').clientWidth]))));
                 const style = await badges.first().evaluate(el => ({
-                    fg: getComputedStyle(el).color, bg: getComputedStyle(el).backgroundColor,
+                    fg: getComputedStyle(el).color, bg: getComputedStyle(el).backgroundImage,
                 }));
-                assert(style.fg !== style.bg && style.bg !== 'rgba(0, 0, 0, 0)', 'Coordinate colors are applied');
+                assert(style.fg !== style.bg && style.bg !== 'none', 'Coordinate colors are applied');
                 await choices.nth(1).check();
                 assert(await choices.nth(1).isChecked(), 'Second creature is selectable');
                 const skip = page.getByRole('link', { name: 'Пропустить', exact: true });

@@ -94,7 +94,7 @@ if (($argv[1] ?? '') === '--fixture') {
     $viewer = ($argv[2] ?? 'player') === 'host' ? 'host' : 'player';
     $state = defenderUiState($viewer === 'host' ? 'player' : 'host', [
         defenderUiCard(3, 'def_a', $viewer, $viewer === 'host' ? 2 : 4, 2),
-        defenderUiCard(4, 'def_b', $viewer, $viewer === 'host' ? 1 : 5, 4),
+        defenderUiCard(4, 'def_b', $viewer, $viewer === 'host' ? 4 : 3, 4),
     ]);
     echo json_encode(defenderUiRender($state, $viewer, $viewer, $cardsInfo), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
     exit;
@@ -108,15 +108,15 @@ $playerState = defenderUiState(GameState::PLAYER_HOST, [
 $playerHtml = defenderUiRender($playerState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 
 defenderUiAssert(
-    preg_match('/Защитник A <span class="coords coords--own"[^>]*>.*?\[I:4\]/s', $playerHtml['info_panel_html']) === 1,
+    preg_match('/Защитник A<\/span><span class="coords coords--enemy"[^>]*>.*?\[I:4\]/s', $playerHtml['info_panel_html']) === 1,
     'Defender label should use colored Roman rows and viewer-relative column.'
 );
 defenderUiAssert(
-    preg_match('/Защитник B <span class="coords coords--own"[^>]*>.*?\[I:2\]/s', $playerHtml['info_panel_html']) === 1,
+    preg_match('/Защитник B<\/span><span class="coords coords--own"[^>]*>.*?\[I:2\]/s', $playerHtml['info_panel_html']) === 1,
     'Second defender should use player-relative coordinates.'
 );
 defenderUiAssert(
-    preg_match('/Защитник C <span class="coords coords--own"[^>]*>.*?\[III:1\]/s', $playerHtml['info_panel_html']) === 1,
+    preg_match('/Защитник C<\/span><span class="coords coords--own"[^>]*>.*?\[III:1\]/s', $playerHtml['info_panel_html']) === 1,
     'Third defender should use player-relative coordinates.'
 );
 defenderUiAssert(
@@ -134,7 +134,7 @@ $hostState = defenderUiState(GameState::PLAYER_PLAYER, [
 $hostHtml = defenderUiRender($hostState, GameState::PLAYER_HOST, 'host', $cardsInfo);
 
 defenderUiAssert(
-    preg_match('/Защитник A <span class="coords coords--own"[^>]*>.*?\[II:5\]/s', $hostHtml['info_panel_html']) === 1,
+    preg_match('/Защитник A<\/span><span class="coords coords--own"[^>]*>.*?\[II:5\]/s', $hostHtml['info_panel_html']) === 1,
     'Host defender label should use game row and host column.'
 );
 defenderUiAssert(
@@ -175,6 +175,19 @@ foreach (['host', 'player'] as $viewer) {
     $other = $emptyState->getOpponentKey($viewer);
     $waitHtml = defenderUiRender($emptyState, $other, $other, $cardsInfo)['info_panel_html'];
     defenderUiAssert(!str_contains($waitHtml, 'cmd=choose_defender'), 'Attacker cannot see a defender skip control.');
+}
+
+// Own defenders crossing the centre retain the field half color and viewer orientation.
+foreach (['host', 'player'] as $viewer) {
+    $row = $viewer === 'host' ? 4 : 3;
+    $crossed = defenderUiState($viewer === 'host' ? 'player' : 'host', [
+        defenderUiCard(3, 'def_a', $viewer, $row, 2),
+        defenderUiCard(4, 'def_b', $viewer, $row, 4),
+    ]);
+    $crossedHtml = defenderUiRender($crossed, $viewer, $viewer, $cardsInfo)['info_panel_html'];
+    $column = $viewer === 'host' ? 2 : 4;
+    defenderUiAssert(preg_match('/Защитник A<\/span><span class="coords coords--enemy"[^>]*>.*?\[I:' . $column . '\]/s', $crossedHtml) === 1, 'Crossed defender uses opposing half color and viewer-relative column.');
+    defenderUiAssert(str_contains($crossedHtml, 'value="defender:3"') && str_contains($crossedHtml, 'value="defender:4"'), 'Coordinate presentation preserves defender ids.');
 }
 
 $unsafeInfo = $cardsInfo;

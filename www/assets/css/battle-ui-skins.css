@@ -83,3 +83,13 @@
 .battle-page [data-panel-theme] .battle-side-slot .pile-open{background:var(--ip-surface);color:var(--ip-title);border:1px solid var(--ip-edge);border-radius:4px}
 .battle-page [data-panel-theme] .battle-side-slot .pile-open:hover:not(:disabled){filter:brightness(1.2)}
 .battle-page [data-panel-theme] .battle-side-slot button.pile-open:disabled{background:var(--ip-base);color:var(--ip-muted);border-color:var(--ip-edge);opacity:.55}
+
+.battle-page .defender-radio-list .choice-radio{display:flex;align-items:center;gap:8px}
+.battle-page .defender-radio-list .choice-radio>input{flex:0 0 auto;margin:0}
+.battle-page .defender-radio-list .defender-option-text{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.battle-page .defender-radio-list .choice-radio>.coords{flex:0 0 auto;margin-left:auto}
+
+@container(max-width:300px){
+ .battle-page .defender-radio-list .choice-radio{display:grid;grid-template-columns:14px minmax(0,1fr);padding:8px;gap:6px}
+ .battle-page .defender-radio-list .choice-radio>.coords{grid-column:1 / -1;justify-self:end}
+}

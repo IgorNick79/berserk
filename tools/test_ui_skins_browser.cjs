@@ -45,7 +45,7 @@ await second.evaluate(d=>{document.querySelector('[data-battle-fragment=info_pan
 await second.locator('.info-panel').scrollIntoViewIfNeeded();await second.screenshot({path:path.join(out,'theme-mobile.png')});
 await second.locator('.battle-menu').click();await second.locator('[data-menu-panel-theme]').click();assert(await second.locator('[data-panel-theme-picker]').evaluate(e=>e.getBoundingClientRect().right<=innerWidth));await second.keyboard.press('Escape');await second.keyboard.press('Escape');await second.close();
 await replace(data.normal,true);const mini=page.locator('[data-mini-card="1"]').first();await mini.hover();await page.waitForTimeout(300);assert.strictEqual(await page.locator('.battle-mini-zoom.is-open').count(),1);
-await replace(data.closed,true);await mini.hover();await page.waitForTimeout(350);assert.strictEqual(await page.locator('.battle-mini-zoom').count(),0);assert(await mini.evaluate(e=>getComputedStyle(e).transform!=='none'&&getComputedStyle(e,'::after').backgroundColor==='rgb(255, 255, 255)'&&getComputedStyle(e,'::after').opacity==='0.3'));
+await replace(data.closed,true);await mini.hover();await page.waitForTimeout(350);assert.strictEqual(await page.locator('.battle-mini-zoom').count(),0);assert(await mini.evaluate(e=>getComputedStyle(e).transform!=='none'&&getComputedStyle(e.querySelector('.mini-art')||e.appendChild(Object.assign(document.createElement('img'),{className:'mini-art'}))).filter==='saturate(0.3) brightness(0.88)'&&getComputedStyle(e,'::after').backgroundColor==='rgb(255, 255, 255)'&&getComputedStyle(e,'::after').opacity==='0.3'));
 // Secondary panels survive fragment replacement, yield to new events, and retain drafts.
 await replace(data.normal,true);
 await page.evaluate(()=>{
