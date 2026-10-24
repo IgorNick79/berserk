@@ -201,6 +201,7 @@ final class MovementResolver
             toRow: $row,
             toCol: $col,
             movementType: MovementContext::TYPE_JUMP,
+            origin: $spendAction ? 'ordinary' : 'passive',
         );
         $this->effects->apply($context);
         $this->tryShaksiRoll($card, $playerKey);

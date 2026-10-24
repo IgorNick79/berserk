@@ -83,6 +83,7 @@ final class CellEffectDirectionChoice implements ChoiceHandlerInterface
             if (!isset($options[$direction]) || $options[$direction]['cells'] !== $p['options'][$direction]['cells']) {
                 return Result::error('Положение источника изменилось');
             }
+            \Berserk\Core\ActionResolution::effect($state, $card, 'cell_effect', 'passive', ['effect'=>'lantern_light']);
             foreach ($options[$direction]['cells'] as $cell) {
                 ZoneManager::addMarker($state, $cell, [
                     'type' => 'lantern_light', 'source' => $playerKey, 'owner' => $playerKey,

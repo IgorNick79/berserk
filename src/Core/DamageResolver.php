@@ -114,6 +114,7 @@ final class DamageResolver
             if ($heal > 0) {
                 $journalHpBefore=$attacker->hp;
                 $attacker->hp += $heal;
+                ActionResolution::healed($this->state, $attacker, $attacker, $journalHpBefore, 'vampire');
                 $this->state->historyRecorder?->healed($this->state,$attacker,$journalHpBefore,$attacker,'vampire');
 
                 if (!empty($this->state->battle['strike'])) {
@@ -210,7 +211,9 @@ final class DamageResolver
                 if (!empty($source->prop['deadeat_hp_bonus'])) {
                     $source->hpMax += (int) $source->prop['deadeat_hp_bonus'];
                 }
+                $resolutionHpBefore = $source->hp;
                 $source->hp = $source->hpMax;
+                ActionResolution::healed($this->state, $source, $source, $resolutionHpBefore, 'deadeat');
             }
         }
 
@@ -378,6 +381,7 @@ final class DamageResolver
                 case 'heal':
                     $target->hp += $value;
                     if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
+                    ActionResolution::healed($this->state, $died, $target, $hpBefore, 'on_death');
                     break;
                 case 'poison':
                     $this->applyPoison($target, $value, $died->owner);
@@ -476,6 +480,7 @@ final class DamageResolver
             case 'heal':
                 $target->hp += $value;
                 if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
+                if ($died) ActionResolution::healed($this->state, $died, $target, $hpBefore, 'on_death');
                 break;
             case 'poison':
                 $this->applyPoison($target, $value, $died->owner);
@@ -518,6 +523,7 @@ final class DamageResolver
 
             $hpBefore = $card->hp;
             $card->hp = $card->hpMax;
+            ActionResolution::healed($this->state, $card, $card, $hpBefore, 'deadeat');
 
             if ($card->hp > $hpBefore) {
                 $this->state->battle['strike']['deadeat'][] = [

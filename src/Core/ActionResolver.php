@@ -279,6 +279,7 @@ final class ActionResolver
             if ($this->engine->tryProphecyBlock($this->state, $attacker, $target, $type)) {
                 $attacker->closed = true;
                 $this->state->bumpVersion();
+                ActionResolution::effect($this->state, $attacker, $type, 'ordinary', ['blocked_before_execution'=>true]);
                 return Result::ok(["action_blocked:{$type}:{$cardId}->{$targetId}"]);
             }
         }
@@ -422,6 +423,7 @@ final class ActionResolver
             $attacker->closed = true;
             $this->state->bumpVersion();
             (new CoinAbilities($this->state, $this->engine))->offerGain($attacker, $uchrAction);
+            ActionResolution::effect($this->state, $attacker, 'uchr', 'ordinary', ['blocked_before_execution'=>true]);
             return Result::ok(["uchr_blocked:{$cardId}->{$targetId}"]);
         }
 
@@ -455,6 +457,7 @@ final class ActionResolver
         $attacker->closed = true;
         $coins = new CoinAbilities($this->state, $this->engine);
         if ((new FirstStrikeJump($this->state, $this->engine))->tryBlock($attacker, $target, 'uchr')) {
+            ActionResolution::effect($this->state, $attacker, 'uchr', 'ordinary', ['blocked_before_execution'=>true]);
             return Result::ok(['first_strike_blocked']);
         }
         if (!$coinBlockChecked && $coins->offerBlock($attacker, $target, 'uchr', [
@@ -510,6 +513,7 @@ final class ActionResolver
         $successfulHit = $val > 0;
 
         $hpBefore = $target->hp;
+        ActionResolution::effect($this->state, $attacker, 'uchr', 'ordinary');
         $this->engine->applyDamage($this->state, $target, $val, 'uchr', $attacker);
         $woundsDealt = max(0, $hpBefore - $target->hp);
         $this->state->battle['strike']['damage_reduction'] = $reduction;
@@ -854,7 +858,7 @@ final class ActionResolver
         return $this->resolveExecute(
             $attacker,
             $target,
-            ['type' => 'execute', 'value' => $value, 'name' => $name],
+            ['type' => 'execute', 'value' => $value, 'name' => $name, '_resolution_origin'=>'forced'],
             $cardId,
             $targetId,
             $playerKey
@@ -932,6 +936,7 @@ final class ActionResolver
         ];
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'apply_delayed_marker'], $action));
         return Result::ok(["delayed_marker:{$markerType}:{$cardId}->{$targetId}"]);
     }
 
@@ -969,6 +974,7 @@ final class ActionResolver
         ];
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'become_fly'], $action));
         return Result::ok(["become_fly:{$playerKey}:{$cardId}"]);
     }
 
@@ -976,6 +982,7 @@ final class ActionResolver
         CardInstance $attacker, CardInstance $target, array $action,
         int $cardId, int $targetId, string $playerKey
     ): Result {
+        ActionResolution::bind($this->state, $action, $attacker, 'heal');
         if (CardStats::canHealInsteadWound($target)) {
             $healRaw = $action['value'] ?? 0;
             $healValue = ($healRaw === 'full') ? 0 : (int) $healRaw;
@@ -1009,6 +1016,8 @@ final class ActionResolver
                 ];
 
                 $this->state->bumpVersion();
+                $this->state->battle['strike'][ActionResolution::ID] = $action[ActionResolution::ID];
+                ActionResolution::resolve($this->state, $action, 'no_effect', ['hp_restored'=>0, 'replacement'=>'wound']);
                 return Result::ok(['heal_instead_wound_started']);
             }
         }
@@ -1022,6 +1031,7 @@ final class ActionResolver
             $fullHp      = ($target->hp >= $target->hpMax);
 
             if ($fullHp && (!$oncePerTurn || !$alreadyUsed)) {
+                ActionResolution::effect($this->state, $target, 'open', 'passive', ['target_id'=>$target->instanceId]);
                 $this->engine->openCard($target);
                 $target->flags['on_heal_open_used_this_turn'] = true;
                 $openedInstead = true;
@@ -1075,7 +1085,11 @@ final class ActionResolver
         }
 
         InformationalWaitManager::publish($this->state);
+        $strike[ActionResolution::ID] = $action[ActionResolution::ID];
         $this->state->battle['strike'] = $strike;
+        $restored = max(0, $target->hp - $journalHpBefore);
+        ActionResolution::resolve($this->state, $action, $restored > 0 ? 'performed' : 'no_effect',
+            ['hp_restored'=>$restored, 'target_id'=>$targetId, 'replacement'=>$openedInstead ? 'open' : null]);
 
         $this->state->bumpVersion();
         return Result::ok(["heal:{$playerKey}:{$cardId}->{$targetId}:value={$healValue}"]);
@@ -1116,6 +1130,7 @@ final class ActionResolver
         ];
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'shield'], $action ?? []));
         return Result::ok(["shield:{$playerKey}:{$attacker->instanceId}->{$target->instanceId}:{$amount}"]);
     }
 
@@ -1143,6 +1158,7 @@ final class ActionResolver
         $poison = (int) ($action['poison'] ?? 0);
         $applied = [];
 
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'impact'], $action));
         if (($action['target'] ?? '') === 'all_near') {
             foreach ($this->state->cards as $c) {
                 if ($c->zone !== CardInstance::ZONE_FIELD) continue;
@@ -1212,6 +1228,7 @@ final class ActionResolver
             'confirmed'   => [],
         ];
 
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'execute'], $action));
         $this->engine->forceDeath($this->state, $target, 'execute', $attacker);
 
         $attacker->closed = true;
@@ -1260,6 +1277,7 @@ final class ActionResolver
         ];
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'grant_modifier'], $action));
         return Result::ok(["modifier:{$playerKey}:{$cardId}:{$modifier['stat']}"]);
     }
 
@@ -1288,6 +1306,7 @@ final class ActionResolver
         bool $skipRedirect = false,
         bool $coinBlockChecked = false
     ): Result {
+        ActionResolution::bind($this->state, $action, $attacker, $type, !empty($action['_coin_post_combat']) ? 'passive' : 'ordinary');
         if (!$skipRedirect && $this->maybeStartRangedAttackRedirect($attacker, $target, $action, $type, $cardId, $targetId, $playerKey, $forcedCoinSpend)) {
             $this->state->bumpVersion();
             return Result::ok(['ranged_attack_redirect_pending']);
@@ -1295,6 +1314,8 @@ final class ActionResolver
 
         if ((new FirstStrikeJump($this->state, $this->engine))->tryBlock($attacker, $target, $type, $action)) {
             if (!empty($action['_granted_flag_key'])) $attacker->flags[$action['_granted_flag_key']]['used'] = true;
+            $this->state->battle['strike'][ActionResolution::ID] = $action[ActionResolution::ID];
+            ActionResolution::resolve($this->state, $action, 'blocked', ['hit'=>false]);
             return Result::ok(['first_strike_blocked']);
         }
         if (!$coinBlockChecked && (new CoinAbilities($this->state, $this->engine))->offerBlock($attacker, $target, $type, [
@@ -1377,6 +1398,7 @@ final class ActionResolver
             }
         }
 
+        $resolutionBaseValue = $val;
         // Защита цели. Action-специфичный ignore — только для shot/throw.
         $defended = false;
         $extraIgnore = [];
@@ -1414,6 +1436,7 @@ final class ActionResolver
             'confirmed'   => [],
         ];
 
+        $this->state->battle['strike'][ActionResolution::ID] = $action[ActionResolution::ID];
         // Эффекты действия (strike_effects) — например, яд при среднем/сильном разряде
         if (!empty($action['strike_effects'])) {
             $this->engine->applyStrikeEffects($attacker, $target, $level, $action['strike_effects']);
@@ -1452,6 +1475,9 @@ final class ActionResolver
         $nextActionBonus = CardStats::getNextActionBonus($attacker, $type);
         $val += $nextActionBonus;
 
+        $resolutionHit = max($resolutionBaseValue, $val) > 0;
+        ActionResolution::resolve($this->state, $action, $resolutionHit ? 'hit' : 'miss',
+            ['hit'=>$resolutionHit, 'level'=>$level, 'value_before_protection'=>$resolutionBaseValue, 'target_id'=>$targetId]);
         $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, $type, null, $extraIgnore);
         $val -= $reduction;
         if ($val < 0) $val = 0;
@@ -1872,6 +1898,7 @@ final class ActionResolver
             'confirmed'   => [],
         ];
 
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'self_wound_strike'], $action));
         $this->engine->applyDamage($this->state, $attacker, $amount, 'self_wound', $attacker);
         $diedSelf = $attacker->dying || $attacker->hp <= 0;
 
@@ -1913,6 +1940,7 @@ final class ActionResolver
             return Result::error('Нет подходящих целей');
         }
 
+        ActionResolution::bind($this->state, $action, $attacker, 'heal');
         $this->state->battle['pending_multi_heal'] = [
             'attacker_id' => $cardId,
             'action'      => $action,
@@ -2014,6 +2042,13 @@ final class ActionResolver
             'confirmed'   => [],
         ];
 
+        $resolutionAction = $pmh['action'];
+        ActionResolution::bind($this->state, $resolutionAction, $attacker, 'heal');
+        $this->state->battle['strike'][ActionResolution::ID] = $resolutionAction[ActionResolution::ID];
+        $restored = array_sum(array_column($healed, 'heal'));
+        ActionResolution::resolve($this->state, $resolutionAction, $restored > 0 ? 'performed' : 'no_effect',
+            ['hp_restored'=>$restored, 'targets'=>$healed]);
+
         // после обычного heal — если есть отложенные, ставим первый pending
         if (!empty($deferred)) {
             $first = $deferred[0];
@@ -2109,6 +2144,7 @@ final class ActionResolver
         ];
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'steal_strike'], $action));
         return Result::ok(["steal_weapon:{$playerKey}:{$cardId}->{$targetId}"]);
     }
 
@@ -2164,6 +2200,7 @@ final class ActionResolver
 
         $this->engine->flushDeadeatQueue($this->state);
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'sand_claws'], $action));
         return Result::ok(["sand_claws:{$playerKey}:{$cardId}->{$targetId}"]);
     }
 
@@ -2226,6 +2263,7 @@ final class ActionResolver
             'confirmed'   => [],
         ];
 
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'multi_discharge'], $pmd['action'] ?? []));
         foreach ($targetIds as $tid) {
             $target = $this->state->getCard($tid);
             if (!$target) continue;
@@ -2258,6 +2296,7 @@ final class ActionResolver
     public function cancelPending(string $playerKey, Command $cmd): Result
     {
         $state = $this->state;
+        $resolutionPendingBefore = $state->battle;
 
         if (!empty($state->battle['pending_forced_strike'])) {
             return Result::error('Обязательная атака — отмена невозможна');
@@ -2341,6 +2380,11 @@ final class ActionResolver
         }
 
         $state->bumpVersion();
+        foreach ($resolutionPendingBefore as $key => $pending) {
+            if (!str_starts_with((string)$key, 'pending_') || !is_array($pending) || isset($state->battle[$key])) continue;
+            $context = $pending['action'] ?? $pending;
+            if (isset($context[ActionResolution::ID])) ActionResolution::resolve($state, $context, 'cancelled');
+        }
         return Result::ok(['cancelled:' . implode(',', $cancelled)]);
     }
 
@@ -2415,6 +2459,7 @@ final class ActionResolver
         $hpBefore = $card->hp;
         $card->hp = min($card->hpMax, $card->hp + $value);
         $healed = max(0, $card->hp - $hpBefore);
+        ActionResolution::healed($this->state, $card, $card, $hpBefore, 'on_successful_hit');
 
         unset($this->state->battle['pending_kobold_heal']);
 
@@ -2655,6 +2700,7 @@ final class ActionResolver
 
     private function resolveLineOpenOnStrike(CardInstance $source, CardInstance $target, string $flag): void
     {
+        ActionResolution::effect($this->state, $source, 'open', 'passive', ['target_id'=>$target->instanceId]);
         $this->engine->openCard($target);
         $target->modifiers[] = [
             'stat' => 'cannot_attack',
@@ -2741,6 +2787,7 @@ final class ActionResolver
             $this->reviveFlyer($healer, $card, $pr);
             unset($this->state->battle['pending_revive']);
             $this->state->bumpVersion();
+            ActionResolution::performed($this->state, $healer, ['type'=>'revive']);
             return Result::ok(["revived:{$card->instanceId}:flyer"]);
         }
 
@@ -2805,6 +2852,7 @@ final class ActionResolver
         unset($this->state->battle['pending_revive']);
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $healer, array_replace(['type'=>'revive'], $pr['action'] ?? []));
         return Result::ok(["revived:{$card->instanceId}:{$row}_{$col}"]);
     }
 
@@ -2895,6 +2943,7 @@ final class ActionResolver
 
         if (empty($enemies) && empty($allies)) {
             $this->state->bumpVersion();
+            ActionResolution::effect($this->state, $attacker, 'grezy_prophecy', 'ordinary');
             return Result::ok(['grezy_no_targets']);
         }
 
@@ -2979,6 +3028,7 @@ final class ActionResolver
         }
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'grezy_prophecy'], $pg['action'] ?? []));
         return Result::ok(array_merge(['grezy_applied'], $log));
     }
 
@@ -3105,6 +3155,7 @@ final class ActionResolver
             if ($source->coins < 0) $source->coins = 0;
             $this->engine->syncCoinBonus($source);
         }
+        ActionResolution::performed($this->state, $source, array_replace(['type'=>'destroy_self_and_target'], $action));
         $source->closed = true;
 
         InformationalWaitManager::publish($this->state);
@@ -3238,6 +3289,7 @@ final class ActionResolver
             'confirmed'   => [],
         ];
 
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'blood_tap'], $pb['action'] ?? []));
         $this->engine->applyDamage($this->state, $attacker, $x, 'blood_tap', $attacker);
 
         if (!$attacker->dying) {
@@ -3298,6 +3350,7 @@ final class ActionResolver
         ];
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'poison_boost'], $action));
         return Result::ok(["poison_boost:{$targetId}:{$current}->{$new}"]);
     }
 
@@ -3335,6 +3388,7 @@ final class ActionResolver
         ];
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'poison_target'], $action));
         return Result::ok(["poison_target:{$targetId}:{$value}"]);
     }
 
@@ -3346,6 +3400,7 @@ final class ActionResolver
         $filter = (string) ($action['filter'] ?? 'enemy');
 
         $affected = [];
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'damage_poisoned'], $action));
         foreach ($this->state->cards as $c) {
             if ($c->zone !== CardInstance::ZONE_FIELD
                 && $c->zone !== CardInstance::ZONE_FLYING) continue;
@@ -3447,6 +3502,8 @@ final class ActionResolver
         $need        = (int) $p['count'];
 
         if ($chosenCount >= $need) {
+            $resolutionActor = $this->state->getCard((int)($p['source_id'] ?? $p['card_id'] ?? 0));
+            if ($resolutionActor) ActionResolution::effect($this->state, $resolutionActor, 'place_gates', 'passive');
             foreach ($this->state->battle['pending_gate_pick']['chosen'] as $k) {
                 ZoneManager::addMarker($this->state, $k, [
                     'type'   => 'gate',
@@ -3512,6 +3569,7 @@ final class ActionResolver
         unset($this->state->battle['pending_cell_marker_pick']);
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'place_cell_marker'], $pm['action'] ?? []));
         return Result::ok(["cell_marker:{$row}_{$col}"]);
     }
 
@@ -3558,6 +3616,7 @@ final class ActionResolver
         $affected = [];
 
         // Основная цель
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'dissonance'], $action));
         $hpBefore = $target->hp;
         $this->engine->applyDamage($this->state, $target, $value, 'impact', $attacker);
         $affected[] = [
@@ -3679,6 +3738,7 @@ final class ActionResolver
         ];
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'give_coin'], $action));
         return Result::ok(["give_coin:{$playerKey}:{$cardId}->{$targetId}:{$cost}"]);
     }
 
@@ -3714,6 +3774,7 @@ final class ActionResolver
         ];
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'grant_prop'], $action));
         return Result::ok(["grant_prop:{$playerKey}:{$cardId}:{$propKey}"]);
     }
 
@@ -3769,6 +3830,7 @@ final class ActionResolver
         ];
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'steal_coin'], $action));
         return Result::ok(["steal_coin:{$playerKey}:{$cardId}->{$targetId}:{$stolen}"]);
     }
 
@@ -3824,6 +3886,7 @@ final class ActionResolver
 
         $attacker->closed = true;
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'freeze_moves'], $action));
         return Result::ok(["freeze_moves:{$playerKey}:{$limit}"]);
     }
 
@@ -3940,6 +4003,7 @@ final class ActionResolver
         unset($this->state->battle['pending_opponent_row_marker']);
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $card, array_replace(['type'=>'mark_opponent_row'], $action));
         return Result::ok(["opponent_row_marker:{$logicalRow}->{$physicalRow}"]);
     }
 
@@ -4043,6 +4107,8 @@ final class ActionResolver
             return Result::error('Не хватает монет');
         }
 
+        ActionResolution::bind($this->state, $action, $attacker, 'blood_storm');
+        ActionResolution::resolve($this->state, $action, 'performed');
         // 1. Получить допку (раны сохраняются)
         $attacker->hpMax += 1;
         $attacker->hp += 1;
@@ -4093,10 +4159,12 @@ final class ActionResolver
                 'confirmed'   => [],
             ];
             $this->state->bumpVersion();
+            ActionResolution::performed($this->state, $attacker, $action);
             return Result::ok(["blood_storm_no_target:{$x}"]);
         }
 
         $this->state->battle['pending_blood_storm'] = [
+            'action' => $action,
             'owner'      => $playerKey,
             'card_id'    => $cardId,
             'x'          => $x,
@@ -4296,6 +4364,7 @@ final class ActionResolver
         $this->engine->flushDeadeatQueue($this->state);
         $this->engine->checkGameOver($this->state);
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'blood_storm'], $pending['action'] ?? []));
         return Result::ok(["blood_storm:{$x}->{$targetId}:dmg={$dealt}"]);
     }
 
@@ -4398,6 +4467,7 @@ final class ActionResolver
 
         $this->engine->flushDeadeatQueue($this->state);
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'particle'], $p['action'] ?? []));
         return Result::ok(['particle_done']);
     }
 
@@ -4486,6 +4556,7 @@ final class ActionResolver
         $this->engine->syncCoinBonus($attacker);
         $attacker->closed = true;
 
+        $resolutionParent = ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'life_gift'], $p['action'] ?? []));
         // Урон врагу — cast (защита zom)
         $defended = CardStats::hasDefense($this->state, $enemy, 'cast', $attacker);
         $hpBefore = $enemy->hp;
@@ -4498,6 +4569,7 @@ final class ActionResolver
         $allyHpBefore = $ally->hp;
         $ally->hp = min($ally->hpMax, $ally->hp + $x);
         $healed = $ally->hp - $allyHpBefore;
+        ActionResolution::healed($this->state, $attacker, $ally, $allyHpBefore, 'life_gift', $resolutionParent);
 
         InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
@@ -4564,6 +4636,8 @@ final class ActionResolver
 
         $value      = (int) ($action['value'] ?? 1);
         $bombDamage = (int) ($action['bomb_damage'] ?? 2);
+        ActionResolution::bind($this->state, $action, $attacker, 'bomb_shot');
+        ActionResolution::resolve($this->state, $action, $value > 0 ? 'hit' : 'miss', ['hit'=>$value > 0, 'attack_type'=>'shot', 'target_id'=>$targetId]);
         $attackReduction = $this->engine->reduceAttackValueByCellMarkers($this->state, $attacker, $value);
         $value = (int) $attackReduction['value'];
         $webBlocked = $this->engine->tryBlockDamageAttackWithMarker($this->state, $target, 'shot', $value);
@@ -4633,6 +4707,7 @@ final class ActionResolver
         $action = $pd['action'];
 
         // 1. Запоминаем где была цель
+        $resolutionParent = ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'dive'], $action));
         $oldRow = $target->row;
         $oldCol = $target->col;
 
@@ -4659,6 +4734,7 @@ final class ActionResolver
                 toRow: $row,
                 toCol: $col,
                 movementType: \Berserk\Core\Movement\MovementContext::TYPE_FORCED_MOVE,
+                parentId: $resolutionParent,
             ));
 
         // 4. Кубик и урон
@@ -4794,6 +4870,7 @@ final class ActionResolver
         }
 
         unset($this->state->battle['pending_row_spell_pick']);
+        if ($source) ActionResolution::performed($this->state, $source, array_replace(['type'=>'row_spell'], $action));
 
         $results = [];
         foreach ($targetIds as $tid) {
@@ -4874,7 +4951,7 @@ final class ActionResolver
                 fromCol: $oldCol,
                 toRow: $row,
                 toCol: $col,
-                movementType: \Berserk\Core\Movement\MovementContext::TYPE_FORCED_MOVE,
+                movementType: \Berserk\Core\Movement\MovementContext::TYPE_TELEPORT,
             ));
 
         // AoE 8 клеток
@@ -5096,6 +5173,7 @@ final class ActionResolver
         $filter = (string) ($action['filter'] ?? 'enemy');
 
         $affected = [];
+        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'damage_ranged'], $action));
         foreach ($this->state->cards as $c) {
             if ($c->zone !== CardInstance::ZONE_FIELD
                 && $c->zone !== CardInstance::ZONE_FLYING) continue;
@@ -5217,6 +5295,7 @@ final class ActionResolver
         }
         $action = $pt['action'];
 
+        $resolutionParent = ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'teleport_target'], $action));
         $oldRow = (int) $target->row;
         $oldCol = (int) $target->col;
         $target->row = $row;
@@ -5230,7 +5309,8 @@ final class ActionResolver
                 fromCol: $oldCol,
                 toRow: $row,
                 toCol: $col,
-                movementType: \Berserk\Core\Movement\MovementContext::TYPE_FORCED_MOVE,
+                movementType: \Berserk\Core\Movement\MovementContext::TYPE_TELEPORT,
+                parentId: $resolutionParent,
             ));
 
         $attacker->closed = true;
@@ -5390,6 +5470,7 @@ final class ActionResolver
         $hpBefore = $victim->hp;
         $victim->hp += $value;
         if ($victim->hp > $victim->hpMax) $victim->hp = $victim->hpMax;
+        ActionResolution::healed($this->state, $healer, $victim, $hpBefore, 'on_move_heal_adjacent');
 
         $this->state->bumpVersion();
         return Result::ok([
@@ -5542,6 +5623,7 @@ final class ActionResolver
             $hpBefore = $target->hp;
             $target->hp = min($target->hpMax, $target->hp + $value);
             $healed = $target->hp - $hpBefore;
+            ActionResolution::healed($this->state, $source, $target, $hpBefore, 'shaksi');
 
             if (!empty($this->state->battle['strike'])) {
                 $this->state->battle['strike']['shaksi_heal'][] = [
@@ -5644,6 +5726,7 @@ final class ActionResolver
         unset($this->state->battle['pending_dverg_gift']);
 
         $this->state->bumpVersion();
+        ActionResolution::performed($this->state, $dverg, array_replace(['type'=>'dverg_gift'], $pending['action'] ?? []));
         return Result::ok(["dverg_gift:{$targetId}"]);
     }
 }

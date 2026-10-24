@@ -896,6 +896,7 @@ final class InstantProcessor
         }
 
         $before = $this->captureCombatSnapshot();
+        $effect['_resolution_type'] = (string)(($item['action_type'] ?? '') ?: 'instant');
         $reason = $this->engine->applyCombatEffect(
             $this->state,
             $effect,
@@ -904,6 +905,7 @@ final class InstantProcessor
             $item['choice'] ?? null,
             $effectTarget
         );
+        if ($reason === null && !in_array($type, ['damage_cap','damage_on_dice'], true)) ActionResolution::effect($this->state, $source, (string)(($item['action_type'] ?? '') ?: 'instant'), 'instant', ['effect_type'=>$type]);
         $after = $this->captureCombatSnapshot();
 
         return [
@@ -975,6 +977,8 @@ final class InstantProcessor
             if ($closeSource && (empty($this->state->battle['strike']['matriarch_order']) || $this->combatItemRequiresTap($item))) $source->closed = true;
             unset($source->flags['in_stack']);
         }
+        if ($applied && $source && ($item['effect']['type'] ?? '') !== 'redistribute_wounds')
+            ActionResolution::effect($this->state, $source, (string)(($item['action_type'] ?? '') ?: 'instant'), 'instant', ['effect_type'=>$item['effect']['type'] ?? '']);
         $this->appendInstantSummary($item, $applied, $reason, $source, $effectResult);
         $this->resumeCombatResolution();
     }
@@ -1325,6 +1329,7 @@ final class InstantProcessor
         $strike = &$this->state->battle['strike'];
 
         if (!$this->strikeCanContinueAfterBeforeWindow($strike)) {
+            if (isset($strike[ActionResolution::ID])) ActionResolution::resolve($this->state, $strike, 'cancelled', ['hit'=>false]);
             CombatContinuation::localDone($this->state, $this->state->battle['strike'] ?? []);
             $this->state->battle['strike'] = null;
             $this->engine->finalizeDying($this->state);
@@ -1786,13 +1791,24 @@ final class InstantProcessor
             } elseif ($this->isTurnInstantDefended($item, $source, $target)) {
                 $reason = 'цель защищена';
             } else {
-                $this->engine->applyInstantEffect(
-                    $this->state,
-                    (array) $item['effect'],
-                    $source,
-                    $target,
-                    (string) $item['player']
-                );
+                $resolutionItem = $item;
+                ActionResolution::bind($this->state, $resolutionItem, $source, (string)(($item['action_type'] ?? '') ?: 'instant'), 'instant',
+                    $continuation['combat_origin_strike'][ActionResolution::ID] ?? null);
+                ActionResolution::resolve($this->state, $resolutionItem, 'performed', ['effect_type'=>$item['effect']['type'] ?? '']);
+                $resolutionScope = $this->state->battle[ActionResolution::KEY]['scope_id'] ?? null;
+                $this->state->battle[ActionResolution::KEY]['scope_id'] = $resolutionItem[ActionResolution::ID];
+                try {
+                    $this->engine->applyInstantEffect(
+                        $this->state,
+                        (array) $item['effect'],
+                        $source,
+                        $target,
+                        (string) $item['player']
+                    );
+                } finally {
+                    if ($resolutionScope === null) unset($this->state->battle[ActionResolution::KEY]['scope_id']);
+                    else $this->state->battle[ActionResolution::KEY]['scope_id'] = $resolutionScope;
+                }
                 $after = $this->captureTurnTargetSnapshot($target);
                 $effectResult = $this->buildTurnEffectResult((array) $item['effect'], $before, $after, $target);
                 $effectType = (string) (($item['effect']['type'] ?? '') ?: '');

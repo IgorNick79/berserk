@@ -656,6 +656,7 @@ final class TurnPhaseProcessor
             $card->hp += $regen;
             if ($card->hp > $card->hpMax) $card->hp = $card->hpMax;
 
+            ActionResolution::healed($this->state, $card, $card, $hpBefore, 'regeneration');
             $affected[] = ['instance_id' => $card->instanceId, 'delta' => $card->hp - $hpBefore];
         }
 
@@ -866,8 +867,10 @@ final class TurnPhaseProcessor
                 }
             } elseif ($type === 'heal') {
                 $value = (int) ($eff['value'] ?? 1);
+                $resolutionHpBefore = $card->hp;
                 $card->hp += $value;
                 if ($card->hp > $card->hpMax) $card->hp = $card->hpMax;
+                ActionResolution::healed($this->state, $card, $card, $resolutionHpBefore, 'turn_end');
                 $items[] = ['instance_id' => $card->instanceId, 'delta' => $value];
             } elseif ($type === 'get_coins') {
                 $value = (int) ($eff['coins'] ?? 1);

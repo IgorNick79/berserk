@@ -111,6 +111,7 @@ final class Strangulation
             return Result::error('Неверная цель удушения');
         }
         unset($state->battle[self::PENDING]);
+        ActionResolution::effect($state, $source, 'strangle', 'ordinary');
         $source->closed = true;
         $engine->revealCard($state, $target);
         $n = min(3, self::count($target) + 1);

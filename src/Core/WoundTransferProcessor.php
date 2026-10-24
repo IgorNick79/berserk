@@ -326,6 +326,9 @@ final class WoundTransferProcessor
             ];
         }
 
+        $resolutionParent = $source ? ActionResolution::effect($this->state, $source, 'wound_transfer',
+            ($pw['options']['on_finish'] ?? 'main_phase') === 'combat_resolution' ? 'instant' : 'ordinary') : null;
+        $resolutionHpBefore = $donor->hp;
         // Лечим донора ровно на реально переданное (фикс утечки HP)
         $transferred = 0;
         foreach ($appliedTransfers as $t) {
@@ -336,6 +339,7 @@ final class WoundTransferProcessor
             if ($donor->hp > $donor->hpMax) $donor->hp = $donor->hpMax;
         }
 
+        if ($source) ActionResolution::healed($this->state, $source, $donor, $resolutionHpBefore, 'wound_transfer', $resolutionParent);
         foreach ($appliedTransfers as $t) {
             $target = $this->state->getCard($t['target_id']);
             if (!$target) continue;

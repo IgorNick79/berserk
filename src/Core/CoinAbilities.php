@@ -236,6 +236,7 @@ final class CoinAbilities
             $s['state'] = 'results';
             $s['damage_total'] = 0;
         } else {
+            if (isset($context['action'][ActionResolution::ID])) ActionResolution::resolve($this->state, $context['action'], 'blocked', ['hit'=>false]);
             $source->closed = true;
             InformationalWaitManager::publish($this->state);
             $this->state->battle['strike'] = [

@@ -78,8 +78,14 @@ final class Engine
             $error = InformationalWaitManager::validateAck($state, $playerKey, $cmd->get('wait_id'));
             if ($error !== null) return Result::error($error);
         }
+        $resolutionBefore = $state->battle[ActionResolution::KEY] ?? null;
+        ActionResolution::beginCommand($state);
         TurnTimer::settle($state, $this->serverNow());
         $result = $this->doApply($state, $playerKey, $cmd);
+        if (!$result->success) {
+            if ($resolutionBefore === null) unset($state->battle[ActionResolution::KEY]);
+            else $state->battle[ActionResolution::KEY] = $resolutionBefore;
+        }
         if ($result->success) (new CoinAbilities($state, $this))->advance();
         if ($result->success) CombatContinuation::settle($state, $this);
         if ($result->success) (new MatriarchOrderProcessor($state, $this))->advance();
@@ -458,6 +464,7 @@ final class Engine
                 }
 
                 $cap = (int) ($effect['value'] ?? 0);
+                if ($source) ActionResolution::effect($state, $source, (string)($effect['_resolution_type'] ?? 'instant'), 'instant', ['effect_type'=>$type]);
                 $strike['damage_cap'] = $cap;
 
                 $selfWound = (int) ($effect['self_wound'] ?? 0);
@@ -561,6 +568,7 @@ final class Engine
                     return 'кубик противника ≠ ' . $diceVal;
                 }
 
+                if ($source) ActionResolution::effect($state, $source, (string)($effect['_resolution_type'] ?? 'instant'), 'instant', ['effect_type'=>$type]);
                 foreach ($hits as $t) {
                     $this->applyDamage($state, $t, $damage, 'damage_on_dice', $source);
                 }
@@ -577,6 +585,7 @@ final class Engine
 
         switch ($type) {
             case 'open':
+                ActionResolution::effect($state, $source ?? $target, 'open', 'passive', ['target_id'=>$target->instanceId]);
                 $this->openCard($target);
                 $damage = (int) ($effect['damage'] ?? 0);
                 if ($damage > 0) {
@@ -624,6 +633,7 @@ final class Engine
                 );
                 break;
         }
+        if (in_array($type,['heal','heal_turn_wounds'],true) && $source) ActionResolution::healed($state, $source, $target, $journalHpBefore, $type);
         if (in_array($type,['heal','heal_turn_wounds'],true)) $state->historyRecorder?->healed($state,$target,$journalHpBefore,$source,$type);
         if ($target->closed!==$journalClosedBefore || $type==='marker') {
             $state->historyRecorder?->liveEvent($state,'card.status',[
@@ -823,6 +833,7 @@ final class Engine
         $this->syncCoinBonus($card);
         $state->bumpVersion();
 
+        ActionResolution::effect($state, $card, 'gain_coin', 'ordinary');
         return Result::ok(["coin_gained:{$playerKey}:{$cardId}:total={$card->coins}"]);
     }
 
@@ -1105,6 +1116,7 @@ final class Engine
         $effect = $pa['effect'];
         $val = (int) ($effect['value'] ?? 0);
 
+        ActionResolution::effect($state, $source, 'shot', 'passive', ['hit'=>$val > 0, 'target_id'=>$targetId, 'ability'=>'auto']);
         // Применяем урон
         $hpBefore = $target->hp;
         $this->applyDamage($state, $target, $val, 'shot', $source);

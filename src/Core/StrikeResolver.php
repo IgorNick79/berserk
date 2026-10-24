@@ -293,6 +293,7 @@ final class StrikeResolver
         if ($this->engine->tryProphecyBlock($this->state, $attacker, $target, 'strike')) {
             $attacker->closed = true;
             $this->state->bumpVersion();
+            ActionResolution::effect($this->state, $attacker, 'strike', 'ordinary', ['hit'=>false, 'blocked_before_execution'=>true]);
             return Result::ok(["strike_blocked:{$playerKey}:{$cardId}->{$targetId}"]);
         }
         
@@ -323,6 +324,7 @@ final class StrikeResolver
             $strike['ragnar_unanswer'] = $ragnarUnanswer;
         }
         InformationalWaitManager::publish($this->state);
+        ActionResolution::bind($this->state, $strike, $attacker, 'strike');
         $this->state->battle['strike'] = $strike;
         CombatContinuation::begin($this->state, $returnTo);
 
@@ -391,6 +393,7 @@ final class StrikeResolver
         if ($this->engine->tryProphecyBlock($this->state, $attacker, $target, 'strike')) {
             if (!$order) $attacker->closed = true;
             else CombatContinuation::blocked($this->state, $order);
+            ActionResolution::effect($this->state, $attacker, 'strike', 'forced', ['hit'=>false, 'blocked_before_execution'=>true]);
             return Result::ok(["forced_strike_blocked:{$attacker->instanceId}->{$target->instanceId}"]);
         }
 
@@ -425,6 +428,7 @@ final class StrikeResolver
             if ($ragnar !== null) $this->state->battle['strike']['ragnar_unanswer'] = $ragnar;
             $this->state->historyRecorder?->combatStarted($this->state, $this->state->battle['strike']);
         }
+        ActionResolution::bind($this->state, $this->state->battle['strike'], $attacker, 'strike', 'forced');
         CombatContinuation::begin($this->state, $order);
         $ip = new InstantProcessor($this->state, $this->engine);
         $beforeWindowOpened = $ip->openWindow('before', $playerKey);
@@ -498,7 +502,9 @@ final class StrikeResolver
 
                             // Обычное излечение
                             $before = $target->hp;
+                            $resolutionHpBefore = $target->hp;
                             $target->hp = min($target->hpMax, $target->hp + $healValue);
+                            ActionResolution::healed($this->state, $defender, $target, $resolutionHpBefore, 'defender_heal');
                             $healed = $target->hp - $before;
                             if ($healed > 0) {
                                 $this->state->battle['strike']['defender_heal'][] = [
@@ -854,6 +860,11 @@ final class StrikeResolver
         ];
         $this->state->historyRecorder?->combatEvent($this->state,'combat.result',$strike['final'],[$attacker->instanceId,$defendCard->instanceId]);
 
+        ActionResolution::bind($this->state, $strike, $attacker, 'strike');
+        $resolutionBlocked = !empty($strike['coin_blocked']) || !empty($strike['first_strike_blocked']);
+        ActionResolution::resolve($this->state, $strike, $resolutionBlocked ? 'blocked' : ($attackStrike !== '' ? 'hit' : 'miss'),
+            ['hit'=>!$resolutionBlocked && $attackStrike !== '', 'level'=>$attackStrike, 'target_id'=>$defendCard->instanceId]);
+
         // Эффекты от удара (включая промах)
         if (empty($strike['coin_blocked']) && empty($strike['first_strike_blocked'])) $this->engine->applyStrikeEffects($attacker, $defendCard, $attackStrike);
 
@@ -964,6 +975,7 @@ final class StrikeResolver
             $strike['defend_damage_total'] = 0;
         }
         if ($defendStrike !== '') {
+            ActionResolution::effect($this->state, $defendCard, 'answer', 'response', ['hit'=>true, 'level'=>$defendStrike, 'target_id'=>$attacker->instanceId]);
             $val = match ($defendStrike) {
                 'weak'   => $defendCard->strikeWeak,
                 'medium' => $defendCard->strikeMedium,
@@ -1038,7 +1050,9 @@ final class StrikeResolver
 
                 if ($attacker->hp < $attacker->hpMax) {
                     $healValue = (int) ($selfHeal['value'] ?? 0);
+                    $resolutionHpBefore = $attacker->hp;
                     $attacker->hp = min($attacker->hpMax, $attacker->hp + $healValue);
+                    ActionResolution::healed($this->state, $attacker, $attacker, $resolutionHpBefore, 'on_strike_self_heal');
                 }
 
                 if (!empty($selfHeal['no_close_if_full']) && $attacker->hp >= $attacker->hpMax) {

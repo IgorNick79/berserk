@@ -84,6 +84,7 @@ final class MatriarchOrderProcessor
             $ids=self::recipients($this->state,$owner,$target);
             if(!$ids)return Result::error('Нет получателей приказа');
             unset($this->state->battle[self::PENDING]);
+            ActionResolution::effect($this->state, $source, 'impact', 'ordinary', ['ability'=>'matriarch_order']);
             $source->coins-=1;$source->closed=true;
             $this->state->battle['matriarch_order']=['order_id'=>$p['id'],'source_id'=>$source->instanceId,'owner'=>$owner,
                 'target_id'=>$id,'initial_ids'=>$ids,'completed_ids'=>[],'excluded'=>[], 'current_id'=>null,
