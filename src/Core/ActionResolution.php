@@ -78,6 +78,7 @@ final class ActionResolution
         $event['facts'] = $facts;
         // Stage 2 consumes this boundary synchronously. This batch is replaced next command.
         $data['notifications'][] = $event;
+        OchiKronga::onResolution($state, $event);
     }
 
     public static function effect(GameState $state, CardInstance $actor, string $type, string $origin, array $facts = [], ?int $parent = null): int

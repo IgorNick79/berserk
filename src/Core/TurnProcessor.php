@@ -66,6 +66,7 @@ final class TurnProcessor
         ];
 
         TurnTimer::prepare($this->state, $activeKey);
+        OchiKronga::startOwnTurn($this->state, $activeKey);
 
         // Стартовые эффекты
         $this->state->historyRecorder?->initial($this->state);
@@ -157,6 +158,7 @@ final class TurnProcessor
     public function afterEndPhase(string $endingKey, string $nextActiveKey): void
     {
         TurnTimer::prepare($this->state, $nextActiveKey);
+        OchiKronga::startOwnTurn($this->state, $nextActiveKey);
         // Сброс выданных действий в конце хода источника
         foreach ($this->state->cards as $card) {
             foreach (array_keys($card->flags) as $k) {

@@ -217,6 +217,7 @@ final class GameState
 
     public function removeCard(int $instanceId): void
     {
+        if (isset($this->cards[$instanceId])) OchiKronga::leftPlay($this->cards[$instanceId]);
         unset($this->cards[$instanceId]);
         Strangulation::refresh($this);
     }

@@ -413,6 +413,7 @@ final class ZoneManager
 
     private function clearPosition(CardInstance $card): void
     {
+        OchiKronga::leftPlay($card);
         $card->row  = null;
         $card->col  = null;
         $card->slot = 0;
