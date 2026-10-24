@@ -35,7 +35,7 @@ final class Panel
                 $cls   = 'button' . (!empty($b['class']) ? ' ' . $b['class'] : '');
                 $url   = htmlspecialchars($b['url'], ENT_QUOTES);
                 // As with radio labels below, only server-rendered markup opts in.
-                $label = $b['label_html'] ?? htmlspecialchars($b['label'], ENT_QUOTES);
+                $label = $b['label_html'] ?? Coords::text((string) $b['label']);
                 $fallback = !empty($b['cell_marker_target']) ? ' data-cell-marker-fallback' : '';
                 $body .= '<a class="' . htmlspecialchars($cls, ENT_QUOTES) . '" href="' . $url . '"' . $fallback . '>' . $label . '</a> ';
             }
@@ -100,7 +100,7 @@ final class Panel
         foreach ($items as $it) {
             $value    = htmlspecialchars((string) ($it['value'] ?? ''), ENT_QUOTES);
             // label_html is trusted server-rendered markup; plain labels remain escaped.
-            $label = $it['label_html'] ?? htmlspecialchars((string) ($it['label'] ?? ''), ENT_QUOTES);
+            $label = $it['label_html'] ?? Coords::text((string) ($it['label'] ?? ''));
             $checked  = !empty($it['checked']) ? ' checked' : '';
             $disabled = !empty($it['disabled']) ? ' disabled' : '';
 

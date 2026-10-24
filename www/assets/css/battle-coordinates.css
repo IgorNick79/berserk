@@ -1,0 +1,4 @@
+.coords{--coord-edge:#8a816e;display:inline-flex;align-items:center;gap:5px;vertical-align:middle;white-space:nowrap;font:600 12px/1.25 ui-monospace,Consolas,monospace;padding:3px 6px;border-radius:4px;color:#f1e5c7;background:linear-gradient(180deg,#3e3b30,#262923);border:1px solid var(--coord-edge);box-shadow:inset 0 1px #ffffff12}
+.coords.coords--own{--coord-edge:#80bc8d;color:#f1e5c7}.coords.coords--enemy{--coord-edge:#d28c7f;color:#f1e5c7}
+.coords::before{content:none!important;display:none!important}
+.coords .coords-icon,.coords>img{width:12px;height:12px;flex:none;display:block;margin:0}

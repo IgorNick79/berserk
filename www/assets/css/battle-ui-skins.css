@@ -1,0 +1,53 @@
+@import url('/assets/css/battle-coordinates.css?v=1');
+/* Panel themes affect presentation only; battlefield geometry and actions are unchanged. */
+[data-panel-theme="grimoire"],.panel-theme-option[data-theme-choice="grimoire"]{--ip-base:#29231f;--ip-surface:#3a3028;--ip-edge:#92724c;--ip-title:#efd7aa;--ip-text:#f4eee4;--ip-muted:#c8bbab;--ip-glow:#59422c}
+[data-panel-theme="stone"],.panel-theme-option[data-theme-choice="stone"]{--ip-base:#242a29;--ip-surface:#333d3b;--ip-edge:#77867d;--ip-title:#e1e7db;--ip-text:#f0f3ed;--ip-muted:#c4d0c8;--ip-glow:#45534d}
+[data-panel-theme="leather"],.panel-theme-option[data-theme-choice="leather"]{--ip-base:#463126;--ip-surface:#614737;--ip-edge:#b58c57;--ip-title:#ffe5b6;--ip-text:#fff0d9;--ip-muted:#e3cbb0;--ip-glow:#77513b}
+[data-panel-theme="parchment"],.panel-theme-option[data-theme-choice="parchment"]{--ip-base:#343029;--ip-surface:#484034;--ip-edge:#a69a78;--ip-title:#f4e5be;--ip-text:#f4eedf;--ip-muted:#d7cbb2;--ip-glow:#665b47}
+.battle-page [data-panel-theme] .info-panel{container-type:inline-size;box-sizing:border-box;border:2px solid var(--ip-edge);border-radius:9px;background:radial-gradient(ellipse at 30% 0%,var(--ip-glow),transparent 55%),repeating-linear-gradient(112deg,transparent 0 6px,#ffffff06 7px 8px,transparent 9px 20px),var(--ip-base);box-shadow:0 12px 35px #0009,inset 0 0 0 3px #0006;color:var(--ip-text)}
+.battle-page [data-panel-theme] .info-panel-header,.battle-page [data-panel-theme] .info-panel-footer{background:#0003;border-color:var(--ip-edge);color:var(--ip-text)}
+.battle-page [data-panel-theme] .info-status,.battle-page [data-panel-theme] .info-panel h2,.battle-page [data-panel-theme] .info-panel h3{color:var(--ip-title)}
+.battle-page [data-panel-theme] .info-phase,.battle-page [data-panel-theme] .turn-timer-label,.battle-page [data-panel-theme] .info-panel .wait{color:var(--ip-muted)}
+.battle-page [data-panel-theme] .panel-card-heading,.battle-page [data-panel-theme] .panel-card-stats,.battle-page [data-panel-theme] .combat-panel-heading{background:var(--ip-surface);color:var(--ip-text);border-color:var(--ip-edge)}
+.battle-page [data-panel-theme] .panel-card-cost,.battle-page [data-panel-theme] .panel-stat-hint{color:var(--ip-text)}
+.battle-page [data-panel-theme] .info-panel :is(.card-choice,.strike-box,.info-box,.choice-radio,.task-card,.instant-summary){background:linear-gradient(140deg,#ffffff0b,transparent 65%),var(--ip-surface);color:var(--ip-text);border-color:var(--ip-edge);border-radius:7px}
+.battle-page [data-panel-theme] .info-panel :is(.instant-summary__title,.instant-summary__who--mine,.instant-summary__who--opp,.dice-label,.dice-column .label){color:var(--ip-title)}
+.battle-page [data-panel-theme] .info-panel :is(.choice-radio,.task-card){box-shadow:inset 0 1px #ffffff10}
+.battle-page [data-panel-theme] .info-panel a:not(.button):not(.panel-card-preview):not(.panel-stat-hint):not(.battle-icon-control){color:var(--ip-title)}
+/* Shared semantic button palette is independent of the selected material. */
+.battle-page [data-panel-theme] .info-panel .button:not(.green-btn){--btn-top:#50ad62;--btn-bottom:#26773b;--btn-edge:#91c78b;box-sizing:border-box;max-width:100%;min-height:40px;padding:10px 14px;border-radius:6px;border:1px solid var(--btn-edge);background:linear-gradient(180deg,#ffffff26,transparent 45%),linear-gradient(180deg,var(--btn-top),var(--btn-bottom));box-shadow:inset 0 1px #ffffff50,0 3px 0 #0005,0 4px 9px #0004;color:#fff;font-weight:700;text-shadow:0 1px 1px #0009;cursor:pointer;transition:filter .15s,transform .15s,box-shadow .15s}
+.battle-page [data-panel-theme] .info-panel .battle-mode-buttons .button:not(.green-btn){--btn-top:#c39b4c;--btn-bottom:#8e6025;--btn-edge:#ebc780}
+.battle-page [data-panel-theme] .info-panel .button.skip:not(.green-btn){--btn-top:#5e98c7;--btn-bottom:#30608c;--btn-edge:#94b5d2}
+.battle-page [data-panel-theme] .info-panel .button.cancel:not(.green-btn),.battle-page [data-panel-theme] .info-panel .button.red:not(.green-btn){--btn-top:#c66a63;--btn-bottom:#913a38;--btn-edge:#df9a8b}
+.battle-page [data-panel-theme] .info-panel .button:not(.green-btn):hover:not(:disabled):not(.disabled){filter:brightness(1.17)}
+.battle-page [data-panel-theme] .info-panel .button:not(.green-btn):active:not(:disabled):not(.disabled){transform:translateY(2px);box-shadow:inset 0 2px 5px #0006}
+.battle-page [data-panel-theme] .info-panel .button:not(.green-btn):focus-visible{outline:3px solid #f9df8a;outline-offset:3px}
+.battle-page [data-panel-theme] .info-panel .button:not(.green-btn):disabled,.battle-page [data-panel-theme] .info-panel .button.disabled:not(.green-btn){--btn-top:#777b7c;--btn-bottom:#4d5355;--btn-edge:#9a9d9b;cursor:not-allowed;filter:saturate(.3);opacity:.52;box-shadow:none}
+/* Bronze menu remains identical across InfoPanel themes. Existing bar animation is retained. */
+.battle-page .battle-menu{width:44px;height:44px;border-radius:8px;color:#e5c48d;background:linear-gradient(145deg,#6e5133 0%,#3a2b21 35%,#211e1a 66%,#59412b 100%);border:1px solid #ad8350;box-shadow:inset 0 1px #e7bb7777,inset 0 -2px 3px #0009,0 3px 9px #0009;transition:box-shadow .2s,filter .2s}
+.battle-page .battle-menu::before{content:"";position:absolute;inset:4px;border:1px solid #b48b4c55;border-radius:4px;pointer-events:none}
+.battle-page .battle-menu:hover{filter:brightness(1.16);box-shadow:0 0 14px #c08a394d,inset 0 1px #e7bb7777}
+.battle-page .battle-menu:focus-visible{outline:2px solid #efcf8d;outline-offset:3px}
+.battle-page .battle-menu-panel{top:56px;background:linear-gradient(135deg,#30281f,#191d19);border:1px solid #ad8350;color:#e9dec9;box-shadow:0 12px 35px #0009,inset 0 1px #e7bb7733}
+.battle-page .battle-menu-panel [role^="menuitem"]:hover:not(:disabled):not([aria-disabled="true"]){background:#70533255}
+.battle-page .battle-menu-panel [role^="menuitem"]:disabled,.battle-page .battle-menu-panel [aria-disabled="true"]{color:#a59d8e;background:#ffffff06}
+.battle-page .battle-menu-panel small,.battle-page .battle-menu-saving{color:#bfb09a}
+.battle-page .battle-menu-panel [data-sound-check]{color:#d7bd81}
+.panel-theme-picker{position:fixed;z-index:1200;top:70px;left:20px;box-sizing:border-box;width:min(430px,calc(100vw - 40px));max-height:calc(100dvh - 100px);overflow:auto;padding:20px;background:#211e19;border:1px solid #ad8350;border-radius:8px;color:#e9dec9;box-shadow:0 12px 35px #0009}
+.panel-theme-picker[hidden]{display:none!important}.panel-theme-picker h2{font:700 20px Georgia,serif;margin:0 30px 16px 0;color:#e5c48d}
+.panel-theme-options{display:grid;grid-template-columns:1fr 1fr;gap:12px}.panel-theme-option{position:relative;min-height:95px;padding:16px;border:2px solid var(--ip-edge);border-radius:6px;background:radial-gradient(ellipse at top,var(--ip-glow),transparent 65%),var(--ip-base);color:var(--ip-title);font:600 14px/1.4 system-ui;cursor:pointer}
+.panel-theme-option[aria-pressed="true"]{outline:2px solid #f4dfb5;outline-offset:2px}.panel-theme-option:focus-visible{outline:3px solid white;outline-offset:2px}.panel-theme-option:disabled{opacity:.55;cursor:wait}
+.panel-theme-picker p{font:13px/1.4 system-ui;color:#d4c2a8}
+.battle-page [data-panel-theme] .info-panel .dice{width:auto;min-width:40px;height:auto;min-height:38px;padding:5px;background:transparent;border:0;box-shadow:none;font-size:18px;line-height:1.3}
+.panel-dice-value{display:inline-flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;vertical-align:middle;line-height:1.3;white-space:normal;font-variant-numeric:tabular-nums}.panel-dice-face{display:block;flex:0 0 32px;width:32px;height:32px;object-fit:contain}.panel-dice-modifier{font-size:16px;color:inherit}.panel-dice-total{font-size:17px;font-weight:700;color:inherit}
+@media(prefers-reduced-motion:reduce){.battle-page .battle-menu,.battle-page [data-panel-theme] .info-panel .button{transition:none}}
+
+@container(max-width:300px){
+ .combat-panel-body{padding:8px}
+ .info-panel :is(.strike-box,.card-choice,.info-box){padding:8px;margin:8px 0}
+ .info-panel .combat-panel-heading{padding:8px;gap:6px}
+ .info-panel .combat-panel-heading h3{font-size:14px}
+ .info-panel .dice-block{gap:12px;flex-wrap:wrap;justify-content:center;margin:12px 0}
+ .info-panel .dice-column{min-width:0}
+ .battle-page [data-panel-theme] .info-panel .button:not(.green-btn){font-size:12px;padding:8px 6px}
+}

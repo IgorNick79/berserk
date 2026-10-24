@@ -107,15 +107,15 @@ $playerState = redirectUiState(GameState::PLAYER_HOST, [
 $playerHtml = redirectUiRender($playerState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 
 redirectUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Близнец Вражеский [1:4]'),
+    str_contains(strip_tags($playerHtml['info_panel_html']), 'Близнец [I:4]'),
     'Player-relative redirect label should use enemy front row and mirrored column, independently of card owner.'
 );
 redirectUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Близнец Свой [1:2]'),
+    str_contains(strip_tags($playerHtml['info_panel_html']), 'Близнец [I:2]'),
     'Identical redirect cards should be distinguishable by game rows and viewer-relative columns.'
 );
 redirectUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Дальний Свой [3:1]'),
+    str_contains(strip_tags($playerHtml['info_panel_html']), 'Дальний [III:1]'),
     'Edge redirect coordinate should use own game row 3 and player column 1.'
 );
 redirectUiAssert(
@@ -152,7 +152,7 @@ $hostState = redirectUiState(GameState::PLAYER_PLAYER, [
 $hostHtml = redirectUiRender($hostState, GameState::PLAYER_HOST, 'host', $cardsInfo);
 
 redirectUiAssert(
-    str_contains($hostHtml['info_panel_html'], 'Близнец Свой [2:5]'),
+    str_contains(strip_tags($hostHtml['info_panel_html']), 'Близнец [II:5]'),
     'Host-relative redirect label should use own game row 2 and host column 5, independently of card owner.'
 );
 redirectUiAssert(
@@ -171,7 +171,7 @@ $flyState = redirectUiState(GameState::PLAYER_HOST, [
 ]);
 $flyHtml = redirectUiRender($flyState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 redirectUiAssert(
-    str_contains($flyHtml['info_panel_html'], 'Летун Вражеский [3:1]'),
+    str_contains(strip_tags($flyHtml['info_panel_html']), 'Летун [III:1]'),
     'Flying redirect candidate should still use viewer-relative coordinates when present.'
 );
 redirectUiAssert(

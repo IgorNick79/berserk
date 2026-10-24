@@ -25,15 +25,14 @@ final class CardButton
         $label = (string) ($cardInfo['name'] ?? $card->ukid);
         $showCoordinates = $options['show_coordinates'] ?? self::isBattlefieldCard($card);
 
+        $labelHtml = htmlspecialchars($label, ENT_QUOTES);
         if ($showCoordinates && self::isBattlefieldCard($card)) {
-            $positionLabel = BattlefieldPosition::label($card->row, $card->col, $viewerKey);
-            if ($positionLabel !== '') {
-                $label .= ' ' . $positionLabel;
-            }
+            $coords = Coords::render($card->row, $card->col, $viewerKey, $card->owner);
+            if ($coords !== '') $labelHtml .= ' ' . $coords;
         }
 
         return (string) $tpl->parse('includes/battle/defender_button.tpl', [
-            'name'  => htmlspecialchars($label, ENT_QUOTES),
+            'name'  => $labelHtml,
             'link'  => htmlspecialchars($link, ENT_QUOTES),
             'class' => htmlspecialchars((string) ($options['class'] ?? ''), ENT_QUOTES),
         ]);

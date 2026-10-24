@@ -40,6 +40,7 @@ final class Form
             $itemOpts = [
                 'checked'  => !empty($item['checked']),
                 'disabled' => !empty($item['disabled']),
+                'label_html' => $item['label_html'] ?? null,
             ];
             if (!empty($opts['class'])) {
                 $itemOpts['class'] = $opts['class'];
@@ -68,7 +69,7 @@ final class Form
             'class' => implode(' ', $classes),
         ]));
 
-        return '<a' . $attrs . '>' . self::esc($label) . '</a>';
+        return '<a' . $attrs . '>' . Coords::text($label) . '</a>';
     }
 
     /**
@@ -178,7 +179,7 @@ final class Form
         if (!empty($opts['attrs']))    $attrs = array_merge($attrs, $opts['attrs']);
 
         $inputHtml = '<input' . self::buildAttrs($attrs) . '>';
-        $labelHtml = '<span>' . self::esc($label) . '</span>';
+        $labelHtml = '<span>' . ($opts['label_html'] ?? Coords::text($label)) . '</span>';
 
         $class = 'choice-radio';
         if (!empty($opts['class'])) {

@@ -109,7 +109,7 @@
         var indicator = node.closest ? node.closest('[data-mini-hint]') : null;
         var card = cardAt(node);
         if (indicator) show(indicator, 'indicator');
-        else if (card && !card.classList.contains('mini-hidden')) { if (dismissedName !== card && (reduced.matches || !hover.matches || zoom && hoverCard === card)) show(card, 'name'); }
+        else if (card && !card.classList.contains('mini-hidden')) { if (dismissedName !== card && (reduced.matches || !hover.matches || card.classList.contains('mini-closed') || zoom && hoverCard === card)) show(card, 'name'); }
         else closeHint();
     }
     function stopZoom(immediate) {
@@ -148,12 +148,13 @@
             card.classList.add('mini-zoom-source');
     }
     function startZoom(card) {
+        if (card.classList.contains('mini-closed')) { stopZoom(true); return; }
         if (document.documentElement.hasAttribute('data-battle-dragging') || !hover.matches || reduced.matches || card.classList.contains('mini-hidden')) return;
         if (hoverCard === card) return;
         stopZoom(true);
         hoverCard = card;
         timer = setTimeout(function () {
-            if (!card.isConnected || hoverCard !== card) return;
+            if (!card.isConnected || hoverCard !== card || card.classList.contains('mini-closed')) return;
             var z = document.createElement('div');
             z.className = 'battle-mini-zoom';
             z.setAttribute('aria-hidden', 'true');
@@ -251,7 +252,7 @@
             var fresh = document.querySelector('[data-mini-card="' + id + '"]');
             var hit = document.elementFromPoint(pointerX, pointerY);
             var rect = fresh && fresh.getBoundingClientRect();
-            if (!fresh || fresh.classList.contains('mini-hidden') || !rect.width ||
+            if (!fresh || fresh.classList.contains('mini-hidden') || fresh.classList.contains('mini-closed') || !rect.width ||
                 pointerX < rect.left || pointerX > rect.right || pointerY < rect.top || pointerY > rect.bottom ||
                 (cardAt(hit) !== fresh && !(tip && tip.contains(hit)))) {
                 dismissedName = null;

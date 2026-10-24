@@ -25,6 +25,7 @@
             }
             function closeMenu(restore) {
                 if (root.closePlaymats) root.closePlaymats();
+                if (root.closePanelThemes) root.closePanelThemes();
                 open = false; menu.hidden = true; syncButton();
                 if (restore) button.focus({preventScroll: true});
             }
@@ -68,7 +69,7 @@
                 (available.length ? available[last ? available.length - 1 : 0] : menu).focus({preventScroll: true});
             }
             function click(event) {
-                var node = event.target.closest && event.target.closest(".battle-menu, [data-menu-sound], [data-menu-debug], [data-menu-playmat], [data-menu-debug-close]");
+                var node = event.target.closest && event.target.closest(".battle-menu, [data-menu-sound], [data-menu-debug], [data-menu-playmat], [data-menu-panel-theme], [data-menu-debug-close]");
                 if (!node || !root.contains(node)) return;
                 if (node === button) {
                     event.preventDefault(); event.stopImmediatePropagation();
@@ -76,6 +77,9 @@
                 } else if (node.hasAttribute("data-menu-debug-close")) {
                     event.preventDefault(); event.stopImmediatePropagation();
                     closeMenu(false); closeDebug(true);
+                } else if (node.hasAttribute("data-menu-panel-theme")) {
+                    event.preventDefault(); event.stopImmediatePropagation();
+                    if (root.openPanelThemes) root.openPanelThemes();
                 } else if (node.hasAttribute("data-menu-playmat")) {
                     event.preventDefault(); event.stopImmediatePropagation();
                     if (root.openPlaymats) root.openPlaymats();
@@ -95,7 +99,7 @@
                 }
             }
             function outside(event) {
-                if (open && !menu.contains(event.target) && !event.target.closest("[data-playmat-picker]") && !button.contains(event.target)) closeMenu(false);
+                if (open && !menu.contains(event.target) && !event.target.closest("[data-playmat-picker],[data-panel-theme-picker]") && !button.contains(event.target)) closeMenu(false);
             }
             function keydown(event) {
                 if (event.key === "Escape" && (open || debugOpen)) {

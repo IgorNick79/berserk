@@ -39,7 +39,7 @@ final class TaskCard
         $coords = '';
         if ($withCoords && isset($task['row']) && $task['row'] !== null) {
             $coords = $viewerKey !== null
-                ? ' ' . Coords::render($task['row'], $task['col'] ?? null, $viewerKey)
+                ? ' ' . Coords::render($task['row'], $task['col'] ?? null, $viewerKey, $task['owner'] ?? null)
                 : ' (' . (int) $task['row'] . ',' . (int) ($task['col'] ?? 0) . ')';
         }
 

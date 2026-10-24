@@ -19,8 +19,9 @@
 .battle-page .mini-question{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ecd3a0;font:700 56px/1 Georgia,serif;text-shadow:0 2px 0 #57351d,0 0 8px #140f0b;pointer-events:none}
 
 .battle-page .battle-mini-card.mini-hidden{background:#56504a!important;color:#eee}
-.battle-page .battle-mini-card.mini-closed{opacity:1}
-.battle-page .battle-mini-card.mini-closed::after{content:"";position:absolute;inset:5px;border-radius:4px;background:rgba(12,17,19,.55);z-index:3;pointer-events:none}
+.battle-page .battle-mini-card.mini-closed{opacity:1;transform:translateY(2px) scale(.95);transform-origin:center center}
+.battle-page .battle-mini-card.mini-closed .mini-art{filter:saturate(.58) brightness(.88)}
+.battle-page .battle-mini-card.mini-closed::after{content:"";position:absolute;inset:5px;border-radius:4px;background:rgba(25,31,34,.18);z-index:3;pointer-events:none}
 .battle-page .battle-mini-card.mini-dying{outline:2px dashed #c22;outline-offset:-3px}
 .battle-mini-zoom{position:fixed;z-index:200;pointer-events:none;transform:scale(1);transform-origin:center;transition:transform 250ms ease-out,opacity 250ms ease-out}
 .battle-mini-zoom.is-open{transform:scale(1.25)}

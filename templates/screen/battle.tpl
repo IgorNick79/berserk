@@ -1,6 +1,7 @@
+<link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=1">
 <link rel="stylesheet" href="/assets/css/battle-mini-nameplate.css?v=2">
-<link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=8">
-<div class="battle-sync-root battle-shell" data-battle-sync-root data-mini-card-design="{{mini_card_design}}" {{pause_root_attr}}>
+<link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=9">
+<div class="battle-sync-root battle-shell" data-battle-sync-root data-panel-theme="grimoire" data-mini-card-design="{{mini_card_design}}" {{pause_root_attr}}>
     <div class="battle-ajax-message" data-battle-message hidden></div>
     <button class="battle-menu" type="button" disabled aria-expanded="false" aria-haspopup="menu" aria-controls="battle-menu-panel" aria-label="Меню матча" title="Меню матча">
         <span class="battle-menu-icon" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -8,6 +9,7 @@
     <div id="battle-menu-panel" class="battle-menu-panel" role="menu" aria-label="Меню матча" tabindex="-1" hidden>
         <button type="button" role="menuitemcheckbox" data-menu-sound aria-checked="{{sound_checked}}"><span>Звук</span><span data-sound-check aria-hidden="true">✓</span></button>
         <button type="button" role="menuitem" data-menu-playmat><span>Коврик</span></button>
+        <button type="button" role="menuitem" data-menu-panel-theme>Тема InfoPanel</button>
         <button type="button" role="menuitem" disabled aria-disabled="true"><span>Отложить игру</span><small>Скоро</small></button>
         {{debug_menu_html}}
         <span class="battle-menu-saving" data-menu-saving role="status" hidden>Сохраняем…</span>
@@ -28,7 +30,8 @@
 </div>
 <script src="/assets/js/cell-marker-picker.js?v=1" defer></script>
 <script src="/assets/js/battle-ui.js?v=12" defer></script>
+<script src="/assets/js/battle-panel-themes.js?v=1" defer></script>
 <script src="/assets/js/card-image-popup.js?v=1" defer></script>
 
-<script src="/assets/js/battle-mini-card.js?v=8" defer></script>
+<script src="/assets/js/battle-mini-card.js?v=9" defer></script>
 <script src="/assets/js/battle-drag.js?v=1" defer></script>

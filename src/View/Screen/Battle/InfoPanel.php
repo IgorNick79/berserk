@@ -411,6 +411,7 @@ final class InfoPanel
                     $options[] = [
                         'value' => 'redirect:' . (int) $tid,
                         'label' => $this->battleCardLabel($tc, $ti, $playerKey),
+                        'label_html' => htmlspecialchars((string) ($ti['name'] ?? $tc->ukid), ENT_QUOTES) . ' ' . \Berserk\View\Ui\Coords::render($tc->row, $tc->col, $playerKey, $tc->owner),
                         'class' => 'redirect-target',
                     ];
                 }
@@ -457,18 +458,16 @@ final class InfoPanel
                 $dm = (int) ($strike['defend_mod'] ?? 0);
                 $res = $strike['result'] ?? ['attack' => '', 'defend' => ''];
 
-                $adText = (string) $ad . ($am > 0 ? ' +' . $am : ($am < 0 ? ' ' . $am : ''));
-                $ddText = $dd > 0
-                    ? (string) $dd . ($dm > 0 ? ' +' . $dm : ($dm < 0 ? ' ' . $dm : ''))
-                    : '—';
+                $adText = \Berserk\View\Ui\DiceValue::render((int) $ad, (int) $am);
+                $ddText = \Berserk\View\Ui\DiceValue::render((int) $dd, (int) $dm);
 
                 $diceHtml = '<div class="instant-dice">'
                     . '<div class="dice-col"><span class="dice-label">Атакующий</span>'
-                    . '<span class="dice-value">' . htmlspecialchars($adText, ENT_QUOTES) . '</span>'
+                    . '<span class="dice-value">' . $adText . '</span>'
                     . '<span class="dice-level">' . htmlspecialchars(BattleHelper::strikeName($res['attack']), ENT_QUOTES) . '</span>'
                     . '</div>'
                     . '<div class="dice-col"><span class="dice-label">Защитник</span>'
-                    . '<span class="dice-value">' . htmlspecialchars($ddText, ENT_QUOTES) . '</span>'
+                    . '<span class="dice-value">' . $ddText . '</span>'
                     . '<span class="dice-level">' . htmlspecialchars(BattleHelper::strikeName($res['defend']), ENT_QUOTES) . '</span>'
                     . '</div>'
                     . '</div>';
@@ -562,10 +561,8 @@ final class InfoPanel
             $am = $strike['attack_mod'] ?? 0;
             $dm = $strike['defend_mod'] ?? 0;
 
-            $adText = (string) $ad . ($am > 0 ? ' +' . $am : ($am < 0 ? ' ' . $am : ''));
-            $ddText = $dd > 0
-                ? (string) $dd . ($dm > 0 ? ' +' . $dm : ($dm < 0 ? ' ' . $dm : ''))
-                : '—';
+            $adText = \Berserk\View\Ui\DiceValue::render((int) $ad, (int) $am);
+            $ddText = \Berserk\View\Ui\DiceValue::render((int) $dd, (int) $dm);
             $res = $strike['result'];
 
             $defendDiceHtml = $this->tpl->parse('includes/battle/dice_column.tpl', [
@@ -691,10 +688,8 @@ final class InfoPanel
             $am = $strike['attack_mod'] ?? 0;
             $dm = $strike['defend_mod'] ?? 0;
 
-            $adText = (string) $ad . ($am > 0 ? ' +' . $am : ($am < 0 ? ' ' . $am : ''));
-            $ddText = $dd > 0
-                ? (string) $dd . ($dm > 0 ? ' +' . $dm : ($dm < 0 ? ' ' . $dm : ''))
-                : '—';
+            $adText = \Berserk\View\Ui\DiceValue::render((int) $ad, (int) $am);
+            $ddText = \Berserk\View\Ui\DiceValue::render((int) $dd, (int) $dm);
 
             $fin = $strike['final'] ?? $strike['result'];
 
@@ -776,10 +771,8 @@ final class InfoPanel
             $am = $strike['attack_mod'] ?? 0;
             $dm = $strike['defend_mod'] ?? 0;
 
-            $adText = (string) $ad . ($am > 0 ? ' +' . $am : ($am < 0 ? ' ' . $am : ''));
-            $ddText = $dd > 0
-                ? (string) $dd . ($dm > 0 ? ' +' . $dm : ($dm < 0 ? ' ' . $dm : ''))
-                : '—';
+            $adText = \Berserk\View\Ui\DiceValue::render((int) $ad, (int) $am);
+            $ddText = \Berserk\View\Ui\DiceValue::render((int) $dd, (int) $dm);
 
             $fin = $strike['final'] ?? $strike['result'];
 
@@ -1666,7 +1659,7 @@ final class InfoPanel
                 $victim = $state->getCard((int) ($discharge['target_id'] ?? 0));
                 $victimName = $victim ? ($cardsInfo[$victim->ukid]['name'] ?? 'Цель') : 'Цель';
                 $resultText .= '<br>Разряд при ударе: ' . htmlspecialchars($victimName, ENT_QUOTES)
-                    . ', кубик ' . (int) ($discharge['attack_dice'] ?? 0)
+                    . ', кубик ' . \Berserk\View\Ui\DiceValue::render((int) ($discharge['attack_dice'] ?? 0))
                     . ', урон ' . (int) ($discharge['damage_total'] ?? 0) . '.';
             }
             $extraResultHtml = $autoHtml . $pushHtml . $impactHtml . $huntHtml
@@ -2225,10 +2218,10 @@ final class InfoPanel
 
         $body = '<div class="defender-radio-list">';
         foreach ($options as $index => $option) {
-            $labelHtml = htmlspecialchars($option['label'], ENT_QUOTES);
+            $labelHtml = $option['label_html'] ?? \Berserk\View\Ui\Coords::text((string) $option['label']);
             $card = $this->state->getCard((int) ($option['card_id'] ?? 0));
             if ($card !== null) {
-                $labelHtml .= ' ' . \Berserk\View\Ui\Coords::renderResult($card->row, $card->col, $this->playerKey);
+                $labelHtml .= ' ' . \Berserk\View\Ui\Coords::renderResult($card->row, $card->col, $this->playerKey, $card->owner);
             }
             $body .= '<label class="' . htmlspecialchars('choice-radio ' . ($option['class'] ?? ''), ENT_QUOTES) . '">'
                 . '<input type="radio" name="choice" value="' . htmlspecialchars($option['value'], ENT_QUOTES) . '"'

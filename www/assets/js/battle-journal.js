@@ -64,7 +64,20 @@
                         item.appendChild(document.createTextNode(", защитник "));
                         appendDie(dice[3]);
                         item.appendChild(document.createTextNode("."));
-                    } else item.textContent = entry.text;
+                    } else {
+                        var positions = /(Свой|Вражеский) \[([1-3]):([1-5])\]/g, match, offset = 0;
+                        while ((match = positions.exec(entry.text))) {
+                            item.appendChild(document.createTextNode(entry.text.slice(offset, match.index)));
+                            var badge = document.createElement("span");
+                            badge.className = "coords coords--" + (match[1] === "Свой" ? "own" : "enemy");
+                            var icon = document.createElement("img");
+                            icon.src = "/assets/images/battle/coordinate.svg"; icon.alt = ""; icon.width = 12; icon.height = 12;
+                            badge.setAttribute("aria-label", match[0]);
+                            badge.append(icon, document.createTextNode("[" + ["", "I", "II", "III"][Number(match[2])] + ":" + match[3] + "]"));
+                            item.appendChild(badge); offset = positions.lastIndex;
+                        }
+                        item.appendChild(document.createTextNode(entry.text.slice(offset)));
+                    }
                     item.dataset.eventSeq = String(entry.seq);
                     list.appendChild(item); seen.add(entry.seq);
                 });

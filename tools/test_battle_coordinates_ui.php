@@ -37,7 +37,7 @@ foreach (['host', 'player'] as $viewer) {
                 $card = new CardInstance(instanceId: 1, ukid: 'test', owner: $cardOwner, zone: CardInstance::ZONE_FIELD, row: $row, col: $col);
                 $label = ($side === 'own' ? 'Свой' : 'Вражеский') . ' [' . $gameRow . ':' . ($viewer === 'host' ? $col : 6 - $col) . ']';
                 $button = CardButton::battle(new Template(__DIR__ . '/../templates'), $card, ['name' => 'Карта'], '?cmd=test', $viewer);
-                coordsAssert(str_contains($button, 'Карта ' . $label), 'CardButton side must follow field half, not card owner');
+                coordsAssert(str_contains($button, 'Карта ') && str_contains($button, 'coords--' . ($cardOwner === $viewer ? 'own' : 'enemy')) && str_contains($button, '[' . Coords::rowLabel($gameRow) . ':' . ($viewer === 'host' ? $col : 6-$col) . ']'), 'CardButton badge follows actual creature ownership with unchanged orientation');
             }
             $cells[] = $row . '_' . $col;
         }
@@ -142,7 +142,7 @@ foreach ([[null, 1], [1, null], [0, 1], [7, 1], [1, 0], [1, 6], [-1, -1]] as [$r
 }
 coordsAssert(Coords::render(1, 1, '<script>') === '', 'Invalid viewer accepted');
 $task = TaskCard::render(['label' => '<script>', 'row' => 6, 'col' => 5], '?second&x="', [], true, 'player');
-coordsAssert(str_contains($task, 'Свой [3:1]') && str_contains($task, '&lt;script&gt;') && str_contains($task, '&quot;'), 'Task coordinates or escaping wrong');
+coordsAssert(str_contains($task, '[III:1]') && str_contains($task, 'coordinate.svg') && str_contains($task, '&lt;script&gt;') && str_contains($task, '&quot;'), 'Task coordinates or escaping wrong');
 $state = new GameState(77, 101, 202);
 $state->battle['pending_cell_marker_pick'] = ['owner' => 'host', 'cells' => ['0_1', '1_6', '<script>', '3_5'], 'marker' => 'bonfire'];
 $spec = new PanelSpec(title: '<script>', buttons: [

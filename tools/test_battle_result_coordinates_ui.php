@@ -53,7 +53,7 @@ foreach (['host', 'player'] as $viewer) {
     foreach ($rows as $row => $roman) {
         for ($col = 1; $col <= 5; $col++) {
             $side = (($row <= 3 ? 'host' : 'player') === $viewer) ? 'own' : 'enemy';
-            $label = '# [' . $roman . ':' . ($viewer === 'host' ? $col : 6 - $col) . ']';
+            $label = '[' . $roman . ':' . ($viewer === 'host' ? $col : 6 - $col) . ']';
             $expected = [[$label, 'coords coords--' . $side]];
             resultCoordsAssert(resultCoordsBadges(Coords::renderResult($row, $col, $viewer)) === $expected, 'Result formatter conversion/color wrong');
             foreach (['cell_marker', 'teleport_target', 'bomb_shot', 'strike'] as $kind) {
@@ -81,8 +81,8 @@ foreach (['host', 'player'] as $viewer) {
     $s = resultCoordsState('teleport_target', 3, 2);
     $s->battle['strike']['push_result'] = ['type' => 'moved', 'new_row' => 4, 'new_col' => 5];
     $expected = $viewer === 'host'
-        ? [['# [I:2]', 'coords coords--own'], ['# [I:5]', 'coords coords--enemy']]
-        : [['# [I:4]', 'coords coords--enemy'], ['# [I:1]', 'coords coords--own']];
+        ? [['[I:2]', 'coords coords--own'], ['[I:5]', 'coords coords--enemy']]
+        : [['[I:4]', 'coords coords--enemy'], ['[I:1]', 'coords coords--own']];
     resultCoordsAssert(resultCoordsBadges(resultCoordsRender($s, $viewer)) === $expected, 'Multiple coordinate results must have independent sides');
     $s = resultCoordsState('impact', null, null, 'Обычный результат');
     $html = resultCoordsRender($s, $viewer);
@@ -92,6 +92,6 @@ foreach (['host', 'player'] as $viewer) {
     resultCoordsAssert(resultCoordsBadges(resultCoordsRender($s, $viewer)) === [], 'Missing result payload became a cell');
 }
 resultCoordsAssert(Coords::renderResult(3, 2, '<script>') === '', 'Invalid viewer accepted');
-resultCoordsAssert(Coords::render(3, 2, 'host') === '<span class="coords coords--own">Свой [1:2]</span>', 'Legacy render changed');
-resultCoordsAssert(Coords::render(3, 2, 'player') === '<span class="coords coords--enemy">Вражеский [1:4]</span>', 'Legacy viewer render changed');
+resultCoordsAssert(resultCoordsBadges(Coords::render(3, 2, 'host')) === [['[I:2]', 'coords coords--own']], 'Legacy render changed');
+resultCoordsAssert(resultCoordsBadges(Coords::render(3, 2, 'player')) === [['[I:4]', 'coords coords--enemy']], 'Legacy viewer render changed');
 echo "Battle result coordinate UI tests passed.\n";

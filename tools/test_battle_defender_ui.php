@@ -108,15 +108,15 @@ $playerState = defenderUiState(GameState::PLAYER_HOST, [
 $playerHtml = defenderUiRender($playerState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 
 defenderUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Защитник A <span class="coords coords--enemy"># [I:4]</span>'),
+    preg_match('/Защитник A <span class="coords coords--own"[^>]*>.*?\[I:4\]/s', $playerHtml['info_panel_html']) === 1,
     'Defender label should use colored Roman rows and viewer-relative column.'
 );
 defenderUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Защитник B <span class="coords coords--own"># [I:2]</span>'),
+    preg_match('/Защитник B <span class="coords coords--own"[^>]*>.*?\[I:2\]/s', $playerHtml['info_panel_html']) === 1,
     'Second defender should use player-relative coordinates.'
 );
 defenderUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Защитник C <span class="coords coords--own"># [III:1]</span>'),
+    preg_match('/Защитник C <span class="coords coords--own"[^>]*>.*?\[III:1\]/s', $playerHtml['info_panel_html']) === 1,
     'Third defender should use player-relative coordinates.'
 );
 defenderUiAssert(
@@ -134,7 +134,7 @@ $hostState = defenderUiState(GameState::PLAYER_PLAYER, [
 $hostHtml = defenderUiRender($hostState, GameState::PLAYER_HOST, 'host', $cardsInfo);
 
 defenderUiAssert(
-    str_contains($hostHtml['info_panel_html'], 'Защитник A <span class="coords coords--own"># [II:5]</span>'),
+    preg_match('/Защитник A <span class="coords coords--own"[^>]*>.*?\[II:5\]/s', $hostHtml['info_panel_html']) === 1,
     'Host defender label should use game row and host column.'
 );
 defenderUiAssert(

@@ -57,7 +57,7 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
  await update('closed',1);
  assert(await page.locator('.field-cell.closed,.fly-card.closed').count()===0,'No closed class on live cells');
  const mini=page.locator('[data-mini-card="1"]').first();
- assert(await mini.evaluate(e=>getComputedStyle(e).opacity==='1'&&getComputedStyle(e,'::after').backgroundColor==='rgba(12, 17, 19, 0.55)'&&getComputedStyle(e,'::after').pointerEvents==='none'),'Closed overlay only, no dimmed HP/frame');
+ assert(await mini.evaluate(e=>getComputedStyle(e).opacity==='1'&&getComputedStyle(e,'::after').backgroundColor==='rgba(25, 31, 34, 0.18)'&&getComputedStyle(e,'::after').pointerEvents==='none'),'Closed overlay only, no dimmed HP/frame');
  await update('normal',1);
  if(viewer==='host'){
   const enemy=page.locator('.field-cell.attack-target').first();assert(await enemy.evaluate(e=>getComputedStyle(e).backgroundColor==='rgba(205, 48, 43, 0.45)'),'Enemy target filled red');

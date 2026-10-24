@@ -1431,13 +1431,13 @@ if ($screenName==='battle') {
 if (in_array($screenName,['battle','game_over'],true)
     && $historyRuntime->journals($state->gameId) && $historyRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION)===$playerKey) {
     if ($screenName==='game_over') $screenHtml .= '<button type="button" class="button" data-action="battle-log" aria-controls="battle-journal">Журнал боя</button>';
-    $screenHtml .= '<link rel="stylesheet" href="/assets/css/battle-journal.css?v=2">'
+    $screenHtml .= '<link rel="stylesheet" href="/assets/css/battle-journal.css?v=3">'
         . '<aside id="battle-journal" class="battle-journal" hidden aria-label="Журнал боя">'
         . '<header><strong>Журнал боя</strong><button type="button" data-journal-close aria-label="Закрыть журнал">×</button></header>'
         . '<p data-journal-notice>Экспериментальная неполная история.</p>'
         . '<div class="battle-journal-scroll" data-journal-scroll tabindex="0"><ol data-journal-entries></ol></div>'
         . '<p data-journal-state role="status"></p></aside>';
-    $scriptsHtml .= '<script src="/assets/js/battle-journal.js?v=2" data-journal-url="/battle-journal.php?game='
+    $scriptsHtml .= '<script src="/assets/js/battle-journal.js?v=3" data-journal-url="/battle-journal.php?game='
         .$state->gameId.'" defer></script>';
 }
 
