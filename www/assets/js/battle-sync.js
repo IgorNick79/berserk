@@ -37,7 +37,7 @@
         ? window.BerserkTurnTimer.create(root, script.dataset.viewerKey, syncVersion, script.dataset.turnSoundUrl || "")
         : null;
 
-    var matchPause = null, battleMenu = null;
+    var matchPause = null, battleMenu = null, drag = null;
 
     function updateTurnTimer(data) {
         document.dispatchEvent(new Event("berserk:battle-updated"));
@@ -52,6 +52,7 @@
         }
         if (resumeEvent && turnTimer) turnTimer.notify();
         if (battleMenu) battleMenu.render();
+        if (drag) drag.observe(data);
     }
 
     var uiState = {
@@ -286,6 +287,8 @@
             return false;
         }
 
+        if (drag) drag.beforeSnapshot(data, requestUiRevision);
+
         // panel_html now belongs to the replaceable InfoPanel content. Compose
         // both fragments before replacement, never write into its detached node.
         var info = document.createElement("template");
@@ -309,6 +312,7 @@
         syncVersion = incomingVersion;
         if (data.render_token) renderToken = data.render_token;
         uiState = normalizeUi(data.ui);
+        if (drag) drag.afterSnapshot();
         updateTurnTimer(data);
         if (turnTimer) turnTimer.render();
         return true;
@@ -415,6 +419,7 @@
             ? pendingCommand.pauseRequestId : null;
         if (readyRetry) finalError = null;
         commandState = "idle";
+        if (drag) drag.refresh();
         pendingCommand = null;
         statusInFlight = false;
         statusController = null;
@@ -725,7 +730,9 @@
         }
 
         var commandUiRevision = uiRevision;
+        if (drag) drag.cancel();
         commandState = "sending";
+        if (drag) drag.refresh();
         pendingCommand = {
             id: commandId,
             type: params.get("cmd"), pauseRequestId: params.get("request_id"), readyRetryCount: readyRetryCount || 0,
@@ -773,7 +780,8 @@
             });
     }
 
-    function updateUiFromUrl(url) {
+    function updateUiFromUrl(url, fromDrag) {
+        if (drag && !fromDrag) drag.cancel();
         uiState = {
             sel: url.searchParams.has("sel") ? (parseInt(url.searchParams.get("sel") || "0", 10) || 0) : 0,
             mode: url.searchParams.has("mode") && url.searchParams.get("mode") !== ""
@@ -783,6 +791,7 @@
             pile: url.searchParams.has("pile") ? (url.searchParams.get("pile") || "") : ""
         };
         uiRevision++;
+        if (drag) drag.refresh();
     }
 
     root.addEventListener("click", function (event) {
@@ -921,5 +930,31 @@
         cancelStatusRequest();
     });
 
+    function initDrag() {
+        if (drag || !window.BerserkBattleDrag) return;
+        drag = window.BerserkBattleDrag.create(root, {
+            state: function () { return { selected: uiState.sel, mode: uiState.mode,
+                revision: uiRevision, version: syncVersion, busy: stopped || commandInFlight() }; },
+            select: function (id) {
+                var url = new URL(window.location.href);
+                Array.from(url.searchParams.keys()).forEach(function (key) {
+                    if (key !== 'first' && key !== 'second' && key !== 'game') url.searchParams.delete(key);
+                });
+                url.searchParams.set('sel', id);
+                updateUiFromUrl(url, true);
+                window.history.pushState(null, '', url.pathname + url.search);
+                requestSnapshot(true);
+                return uiRevision;
+            },
+            submit: function (url) {
+                if (!isCommandUrl(url) || commandInFlight() || stopped) return;
+                var params = new URLSearchParams();
+                appendCommandParamsFromUrl(params, url);
+                submitCommand(params);
+            }
+        });
+    }
+    initDrag();
+    window.addEventListener('berserk:battle-drag-ready', initDrag);
     requestSnapshot(false);
 })();

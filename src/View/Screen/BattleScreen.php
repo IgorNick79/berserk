@@ -116,6 +116,22 @@ final class BattleScreen
             $selectedCardId, $mode, $baseUrl, $attackTargets, $pendingDefenderTargets, $pendingRedirectTargets, $pendingAutoTargets, $pendingDeathTargets, $pendingAllyModifierTargets,
             $explicitAttackMode
         );
+        // Public UI projection only: never expose hidden card properties or classify pending in JS.
+        $dragAllowed = $state->status === 'battle' && $state->winner === null && $isActive
+            && !$strike && !$instantContext && $mode === 'strike'
+            && !\Berserk\Core\MatchPause::blocking($state)
+            && \Berserk\Core\BattleWaitResolver::current($state) === null
+            && ChoiceRegistry::current($state) === null
+            && empty($state->battle['matriarch_order'])
+            && empty($state->battle['informational_wait'])
+            && empty($state->battle['informational_wait_pending']);
+        if (isset($state->battle['turn_timer'])) {
+            $clock = \Berserk\Core\TurnTimeoutEligibility::clock($state, time());
+            $dragAllowed = $dragAllowed && $clock !== null && !$clock['expired'];
+        }
+        // Travel in the existing replaceable field fragment, including AJAX snapshots.
+        $fieldHtml = '<span hidden data-battle-drag-state data-drag-enabled="' . ($dragAllowed ? '1' : '0')
+            . '" data-drag-selected="' . $selectedCardId . '"></span>' . $fieldHtml;
         $pilesHtml = $this->buildPiles($state, $playerKey, $oppKey, $baseUrl);
         $panelHtml      = $this->buildPanel(
             $state, $playerKey, $selectedCardId, $cardsInfo,
@@ -1325,7 +1341,8 @@ final class BattleScreen
         string $viewer
     ): string {
         if (\Berserk\View\Ui\LiveBattleCard::enabled()) {
-            return \Berserk\View\Ui\LiveBattleCard::render($card, $state, $viewer, $hidden, $nameHtml, $hpText);
+            $markup = \Berserk\View\Ui\LiveBattleCard::render($card, $state, $viewer, $hidden, $nameHtml, $hpText);
+            return $this->withDragAttributes($markup, $card, $viewer);
         }
         $iconHtml = '';
         if (!$hidden) {
@@ -1351,7 +1368,17 @@ final class BattleScreen
 
         $markersHtml = $hidden ? '' : $this->buildCardBadges($card, $state);
 
-        return \Berserk\View\Ui\BattleCardMarkup::render($iconHtml, $nameHtml, $hpText, $markersHtml, $coinsBadge, $armorBadge);
+        return $this->withDragAttributes(\Berserk\View\Ui\BattleCardMarkup::render($iconHtml, $nameHtml, $hpText, $markersHtml, $coinsBadge, $armorBadge), $card, $viewer);
+    }
+
+    private function withDragAttributes(string $markup, CardInstance $card, string $viewer): string
+    {
+        $own = $card->owner === $viewer;
+        $source = $own && !$card->dying && !CardStats::isDisabled($card)
+            && in_array($card->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true);
+        return preg_replace('/^(<\w+)/', '$1 data-drag-card="' . $card->instanceId
+            . '" data-drag-owner="' . ($own ? 'own' : 'enemy')
+            . '" data-drag-source="' . ($source ? '1' : '0') . '"', $markup, 1) ?? $markup;
     }
 
     private function elementIconPath(CardInstance $card): ?string

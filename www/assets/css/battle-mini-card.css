@@ -45,3 +45,10 @@
 .battle-mini-tooltip.is-entering{opacity:0}
 
 .battle-page .battle-mini-card.mini-zoom-source{opacity:0!important}
+/* Drag is a visual overlay; the original card and field remain server-owned. */
+.battle-page [data-battle-drag-ready] [data-drag-source="1"]{cursor:grab}
+html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!important;user-select:none!important}
+.battle-drag-ghost{position:fixed;z-index:1100;pointer-events:none!important;opacity:.9}
+.battle-drag-ghost *{pointer-events:none!important}
+.battle-drag-ghost .battle-card{margin:0!important;opacity:1!important}
+.battle-page .battle-drag-target{outline:2px solid #e8cd82!important;outline-offset:-2px}

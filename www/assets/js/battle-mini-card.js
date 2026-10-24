@@ -54,6 +54,7 @@
         tip.style.top = Math.max(8, Math.min(top, innerHeight - tip.offsetHeight - 8)) + 'px';
     }
     function show(node, hintKind) {
+        if (document.documentElement.hasAttribute('data-battle-dragging')) return;
         if (!node || !node.isConnected) return;
         var text = hintKind === 'name' ? node.dataset.miniName : node.querySelector('.mini-hint-text');
         if (!text) { closeHint(); return; }
@@ -102,6 +103,7 @@
         }
     }
     function contextHint(node) {
+        if (document.documentElement.hasAttribute('data-battle-dragging')) return;
         if (pinned || !hoverReady) return;
         if (tip && tip.contains(node)) return;
         var indicator = node.closest ? node.closest('[data-mini-hint]') : null;
@@ -146,7 +148,7 @@
             card.classList.add('mini-zoom-source');
     }
     function startZoom(card) {
-        if (!hover.matches || reduced.matches || card.classList.contains('mini-hidden')) return;
+        if (document.documentElement.hasAttribute('data-battle-dragging') || !hover.matches || reduced.matches || card.classList.contains('mini-hidden')) return;
         if (hoverCard === card) return;
         stopZoom(true);
         hoverCard = card;
@@ -267,6 +269,7 @@
         });
     }
     document.addEventListener('berserk:battle-updated', queueReconcile);
+    document.addEventListener('berserk:battle-drag-start', refresh);
     window.addEventListener('scroll', function (e) {
         if (tip && tip.contains(e.target)) return;
         refresh();
