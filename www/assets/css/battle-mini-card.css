@@ -19,7 +19,8 @@
 .battle-page .mini-question{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ecd3a0;font:700 56px/1 Georgia,serif;text-shadow:0 2px 0 #57351d,0 0 8px #140f0b;pointer-events:none}
 
 .battle-page .battle-mini-card.mini-hidden{background:#56504a!important;color:#eee}
-.battle-page .battle-mini-card.mini-closed{opacity:.35}
+.battle-page .battle-mini-card.mini-closed{opacity:1}
+.battle-page .battle-mini-card.mini-closed::after{content:"";position:absolute;inset:5px;border-radius:4px;background:rgba(12,17,19,.55);z-index:3;pointer-events:none}
 .battle-page .battle-mini-card.mini-dying{outline:2px dashed #c22;outline-offset:-3px}
 .battle-mini-zoom{position:fixed;z-index:200;pointer-events:none;transform:scale(1);transform-origin:center;transition:transform 250ms ease-out,opacity 250ms ease-out}
 .battle-mini-zoom.is-open{transform:scale(1.25)}
@@ -52,3 +53,9 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 .battle-drag-ghost *{pointer-events:none!important}
 .battle-drag-ghost .battle-card{margin:0!important;opacity:1!important}
 .battle-page .battle-drag-target{outline:2px solid #e8cd82!important;outline-offset:-2px}
+
+/* Fill the cell, independently of the ownership of other occupants. */
+.battle-page [data-mini-card-design="v2"] .field-cell.attack-target,
+.battle-page [data-mini-card-design="v2"] .fly-slot:has(.attack-target){background:rgba(205,48,43,.45)}
+.battle-page [data-mini-card-design="v2"] .field-cell.attack-target:has([data-drag-owner="own"]),
+.battle-page [data-mini-card-design="v2"] .fly-slot:has(.attack-target [data-drag-owner="own"]){background:rgba(224,174,40,.46)}

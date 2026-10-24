@@ -2336,3 +2336,13 @@ body.battle-page {
 .game-menu-panel [role="status"] { margin: 0; padding: 0 10px; color: #8b2929; }
 
 .cell-marker-lantern_light { background-image: url("/assets/images/lantern.png"); background-size: cover; border: 1px solid #916314; box-sizing: border-box; }
+
+/* Close the selected creature without covering its illustration at rest. */
+.battle-page .panel-card-media{position:relative}
+.battle-page .panel-card-close{position:absolute;top:8px;right:8px;z-index:8;display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:4px;border:0;background:rgba(30,25,20,.65);border-radius:4px;cursor:pointer;opacity:0;transition:opacity 180ms ease-out}
+.battle-page .panel-card-close img{display:block;width:28px;height:28px}
+.battle-page .panel-card-media:hover .panel-card-close,.battle-page .panel-card-media:focus-within .panel-card-close,.battle-page .panel-card-close:focus-visible{opacity:1}
+.battle-page .panel-card-close:focus-visible{outline:2px solid #b18d56;outline-offset:2px}
+.battle-page .panel-information-icon{display:block;flex:0 0 24px;width:24px;height:24px}
+@media(hover:none){.battle-page .panel-card-close{opacity:1}}
+@media(prefers-reduced-motion:reduce){.battle-page .panel-card-close{transition:none}}

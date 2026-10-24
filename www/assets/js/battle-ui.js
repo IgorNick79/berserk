@@ -136,36 +136,40 @@
     }
     // Local combat/card view survives snapshots without changing game/UI URLs.
     var combatHost = root.querySelector("[data-battle-fragment='info_panel_html']");
-    var combatKey = null, inspectedCombatCard = 0, combatCardViewOpen = false;
+    var combatKey = null, inspectedCombatCard = 0, combatCardViewOpen = false, closedCardId = 0;
     function syncCombatPanel() {
         if (!combatHost) return;
         var content = combatHost.querySelector('.info-panel-content');
         if (!content) return;
         var key = content.dataset.combatKey || '';
+        var priority = content.dataset.panelPriority === '1';
         if (key !== combatKey) { combatKey = key; inspectedCombatCard = 0; combatCardViewOpen = false; hideHint(); }
         var selected = content.querySelector("[data-battle-fragment='panel_html']");
         var context = content.querySelector('.info-panel-context');
         var card = selected && selected.querySelector('[data-panel-card-id]');
-        var inspect = !!(key && inspectedCombatCard && card && (Number(card.dataset.panelCardId) === inspectedCombatCard || combatCardViewOpen));
+        var inspect = !!(!priority && key && inspectedCombatCard && card && (Number(card.dataset.panelCardId) === inspectedCombatCard || combatCardViewOpen));
         combatCardViewOpen = inspect;
-        if (selected) selected.hidden = !!key && !inspect;
-        if (context) context.hidden = inspect;
+        if (priority && card) closedCardId = Number(card.dataset.panelCardId);
+        var manuallyClosed = !!(card && closedCardId === Number(card.dataset.panelCardId));
+        if (selected) selected.hidden = priority || manuallyClosed || (!!key && !inspect);
+        if (context) context.hidden = !priority && inspect;
         var footer = combatHost.querySelector('.info-panel-footer');
         if (footer) footer.hidden = inspect;
-        content.dataset.combatView = key ? (inspect ? 'card' : 'combat') : 'normal';
+        content.dataset.combatView = priority ? 'information' : (key ? (inspect ? 'card' : 'combat') : 'normal');
     }
     if (combatHost) {
         root.addEventListener('click', function (event) {
             if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-            var close = event.target.closest('[data-combat-back]');
+            var close = event.target.closest('[data-combat-back],[data-panel-card-close]');
             if (close) {
                 event.preventDefault(); event.stopImmediatePropagation();
-                inspectedCombatCard = 0; hideHint(); syncCombatPanel();
+                var selectedHeading = combatHost.querySelector('[data-panel-card-id]');
+                closedCardId = selectedHeading ? Number(selectedHeading.dataset.panelCardId) : 0;
+                inspectedCombatCard = 0; combatCardViewOpen = false; hideHint(); syncCombatPanel();
                 var heading = combatHost.querySelector('.combat-panel-heading h3');
                 if (heading) heading.focus({preventScroll: true});
                 return;
             }
-            if (!combatKey) return;
             var link = event.target.closest('a[href]');
             if (!link || !root.contains(link)) return;
             var url;
@@ -174,6 +178,7 @@
             if (url.searchParams.has('cmd')) {
                 inspectedCombatCard = 0; hideHint(); syncCombatPanel();
             } else if (link.classList.contains('card-link') && url.searchParams.has('sel')) {
+                closedCardId = 0;
                 inspectedCombatCard = Number(url.searchParams.get('sel')) || 0;
                 hideHint(); syncCombatPanel();
                 // Existing battle-sync handles selection and retrieves fresh card HTML.

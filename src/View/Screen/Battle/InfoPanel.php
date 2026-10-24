@@ -61,7 +61,18 @@ final class InfoPanel
         }
         $inCombat = !empty($state->battle['strike']);
         $inInstantStack = !$inCombat && (!empty($state->battle['turn_instant_stack']) || !empty($state->battle['turn_instant_result']));
-        $exclusive = $inCombat || $inInstantStack;
+        // Required UI always wins over a previously selected creature, for both players.
+        // Reuse server wait ownership; the pending fallback is deliberately conservative.
+        $priority = $inCombat || $inInstantStack
+            || \Berserk\Core\BattleWaitResolver::current($state) !== null
+            || ChoiceRegistry::current($state) !== null
+            || !empty($state->battle['instant_result']) || !empty($state->battle['any_death_messages'])
+            || !empty($state->battle['degasca_messages'])
+            || !empty($state->battle['informational_wait']) || !empty($state->battle['informational_wait_pending']);
+        foreach ($state->battle as $key => $value) {
+            if (str_starts_with((string) $key, 'pending_') && !empty($value)) $priority = true;
+        }
+        $exclusive = $priority;
         $combatKey = '';
         if ($inCombat) {
             $strike = $state->battle['strike'];
@@ -73,11 +84,12 @@ final class InfoPanel
             ]);
         }
         if ($inInstantStack) $combatKey = 'instant:' . ($state->battle['turn'] ?? 0);
+        if ($priority && $combatKey === '') $combatKey = 'information:' . ($state->battle['turn'] ?? 0);
         return '<header class="info-panel-header">' . $this->renderStatusHeader() . $this->renderTimer() . '</header>'
-            . '<div class="info-panel-content" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
-            . $pileHtml
+            . '<div class="info-panel-content" data-panel-priority="' . ($priority ? '1' : '0') . '" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
+            . ($priority ? '' : $pileHtml)
             . '<div class="battle-selected-card" data-battle-fragment="panel_html"' . ($exclusive ? ' hidden' : '') . '>' . $selectedCardHtml . '</div>'
-            . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive ? '<div class="combat-panel-heading"><h3 tabindex="-1">' . ($inCombat ? 'Сражение' : 'Стек инстантов') . '</h3></div><div class="combat-panel-body">' : '') . $this->renderBody() . ($exclusive ? '</div>' : '') . '</div>'
+            . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/cell_info.svg" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">Информация</h3></div><div class="combat-panel-body">' : '') . $this->renderBody() . ($exclusive ? '</div>' : '') . '</div>'
             . '</div>'
             . '<footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
     }
