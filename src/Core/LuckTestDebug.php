@@ -32,7 +32,7 @@ final class LuckTestDebug
             if ($actor !== 'host') throw new \DomainException('Сценарий LuckTest задаёт только хост');
             // confirm_settings is parsed by PrepareProcessor; validate its effective K/quick flag in scenario().
             $confirming = $cmd->type === 'confirm_settings';
-            $entries = LuckTestScenario::parse($cmd->payload['lucktest_scenario'], $confirming ? 10 : $state->settings->lucktest['card_count']);
+            $entries = LuckTestScenario::parse($cmd->payload['lucktest_scenario'], $confirming ? 10 : $state->settings->lucktest['card_count'], $confirming);
             if (!$confirming && $entries !== [] && $state->settings->lucktest['quick_game'] !== true) throw new \DomainException('Сценарий LuckTest доступен только в быстрой игре');
             if ($entries === []) unset($state->lucktestDebug['scenario'], $state->lucktestDebug['scenario_account_id'], $state->lucktestDebug['bindings']);
             else { $state->lucktestDebug['scenario'] = $entries; $state->lucktestDebug['scenario_account_id'] = $id; }
@@ -88,6 +88,6 @@ final class LuckTestDebug
             throw new \DomainException('Сценарий LuckTest: разрешение хоста отозвано');
         }
         if ($settings->lucktest['quick_game'] !== true) throw new \DomainException('Сценарий LuckTest доступен только в быстрой игре');
-        return LuckTestScenario::parse(json_encode(['cards'=>$entries], JSON_THROW_ON_ERROR), $settings->lucktest['card_count']);
+        return LuckTestScenario::parse(json_encode(LuckTestScenario::root($entries), JSON_THROW_ON_ERROR), $settings->lucktest['card_count']);
     }
 }

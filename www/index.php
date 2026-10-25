@@ -731,6 +731,7 @@ if ($isBattleSync) {
             $role,
             [
                 'sel' => ajaxParamInt('sel') ?? 0,
+                'inspect' => ajaxParamInt('inspect') ?? 0,
                 'mode' => ajaxParamString('mode', 64) ?? '',
                 'pile' => ajaxParamString('pile', 32) ?? '',
             ]
@@ -797,6 +798,7 @@ if ($isBattleCommand) {
 
         $uiState = [
             'sel' => ajaxPostParamInt('sel') ?? 0,
+            'inspect' => ajaxPostParamInt('inspect') ?? 0,
             'mode' => ajaxPostParamString('mode', 64) ?? '',
             'pile' => ajaxPostParamString('pile', 32) ?? '',
         ];
@@ -1398,6 +1400,7 @@ switch ($state->status) {
             . ' data-render-token="' . \Berserk\Core\PlaymatCatalog::renderToken($state) . '"'
             . ' data-version="' . (int) ($state->persistenceVersion ?? 0) . '"'
             . ' data-sel="' . (int) ($ui['sel'] ?? 0) . '"'
+            . ' data-inspect="' . (int) ($ui['inspect'] ?? 0) . '"'
             . ' data-mode="' . htmlspecialchars((string) ($ui['mode'] ?? 'strike'), ENT_QUOTES) . '"'
             . ' data-mode-explicit="' . (!empty($ui['mode_explicit']) ? '1' : '0') . '"'
             . ' data-pile="' . htmlspecialchars((string) ($ui['pile'] ?? ''), ENT_QUOTES) . '"'

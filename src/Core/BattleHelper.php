@@ -326,7 +326,7 @@ final class BattleHelper
                         $dc = abs($target->col - $card->col);
                         if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
                     }
-                } elseif (MemoryLoss::isAction($action)) {
+                } elseif (MemoryLoss::isAction($action) || ($type === 'impact' && ($action['effect'] ?? '') === 'prophecy_wounds')) {
                     if (!in_array($target->type, ['creature', 'fly'], true) || $target->dying || $target->hp <= 0) continue;
                     if (CardStats::hasDefense($state, $target, 'impact', $card)) continue;
                 } elseif ($type === 'heal') {

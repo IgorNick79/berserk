@@ -18,6 +18,10 @@ use Berserk\View\Template;
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
 
+function defenderUiHighlights(string $html,string $class): int {
+    $dom=new DOMDocument();@$dom->loadHTML($html);$x=new DOMXPath($dom);
+    return $x->query('//*[contains(concat(" ",normalize-space(@class)," ")," field-cell ") and contains(concat(" ",normalize-space(@class)," ")," '.$class.' ")]')->length;
+}
 function defenderUiAssert(bool $condition, string $message): void
 {
     if (!$condition) {
@@ -120,12 +124,12 @@ defenderUiAssert(
     'Third defender should use player-relative coordinates.'
 );
 defenderUiAssert(
-    substr_count($playerHtml['field_html'], 'pending-defender-target') === 3,
+    defenderUiHighlights($playerHtml['field_html'], 'pending-defender-target') === 3,
     'All three player defender candidates should be highlighted on battlefield.'
 );
 defenderUiAssert(
-    str_contains($playerHtml['field_html'], 'cmd=choose_defender&defender_id=4'),
-    'Battlefield defender click should use the same choose_defender command.'
+    str_contains($playerHtml['field_html'], 'inspect=4') && !str_contains($playerHtml['field_html'], 'cmd=choose_defender'),
+    'Battlefield defender click inspects; the existing radio executes defender choice.'
 );
 
 $hostState = defenderUiState(GameState::PLAYER_PLAYER, [
@@ -138,7 +142,7 @@ defenderUiAssert(
     'Host defender label should use game row and host column.'
 );
 defenderUiAssert(
-    substr_count($hostHtml['field_html'], 'pending-defender-target') === 1,
+    defenderUiHighlights($hostHtml['field_html'], 'pending-defender-target') === 1,
     'Single host defender candidate should be highlighted on battlefield.'
 );
 

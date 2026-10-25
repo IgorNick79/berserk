@@ -1042,6 +1042,9 @@ final class TurnProcessor
         if (!$res['ok']) return Result::error($res['error']);
 
         $context = $res['context'];
+        if ($context === 'swamp_queen' && is_array($res['swamp_queen'] ?? null)) {
+            return (new SwampQueenProcessor($this->state, $this->engine))->finishProphecy($res['swamp_queen']);
+        }
 
         // Если в подочереди — удаляем обработанную подзадачу
         if (!empty($this->state->battle['turn_phase']['sub']['pending_id'])) {

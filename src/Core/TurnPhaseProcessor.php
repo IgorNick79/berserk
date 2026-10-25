@@ -556,6 +556,7 @@ final class TurnPhaseProcessor
             'opponent_turn_start' => $this->executeTurnStartEffect($task, $passiveKey),
             'turn_end'            => $this->executeTurnEndEffect($task, $activeKey),
             'opponent_turn_end'   => $this->executeTurnEndEffect($task, $passiveKey),
+            'deck_summon' => (new SwampQueenProcessor($this->state, $this->engine))->startSummon($this->state->getCard($task['card_id']), (int) $task['effect_index']),
             'prophecy'            => ['label' => 'Пророчество', 'items' => []],
             'valhalla'            => ['label' => 'Вальхалла', 'items' => []],
             'bombs'               => $this->executeBombs($activeKey),
@@ -973,6 +974,7 @@ final class TurnPhaseProcessor
     {
         $battle = $this->state->battle;
         [$base] = explode(':', $type . ':') + [''];
+        if ($base === 'deck_summon' && !empty($battle[SwampQueenProcessor::PENDING])) return true;
 
         if ($base === 'poison' && !empty($battle['pending_any_death'])) return true;
         if ($base === 'incarnation'
@@ -1078,6 +1080,18 @@ final class TurnPhaseProcessor
             ];
         }
 
+        // This automatic passive has no opening/tap cost, including on a closed Queen.
+        foreach ($this->state->cards as $card) {
+            if ($card->owner !== $passiveKey || !SwampQueenProcessor::live($card)) continue;
+            foreach ($card->effectiveProp()['opponent_turn_end'] ?? [] as $index => $effect) {
+                if (($effect['type'] ?? '') !== 'deck_summon') continue;
+                $processor = new SwampQueenProcessor($this->state, $this->engine);
+                if (!$processor->cells($card,$effect) || !$processor->candidates($card,$effect)) continue;
+                $queue[] = ['id'=>'deck_summon:'.$card->instanceId.':'.$index,'type'=>'deck_summon',
+                    'card_id'=>$card->instanceId,'effect_index'=>$index,'ukid'=>$card->ukid,'label'=>'Призыв'];
+            }
+        }
+
         // opponent_turn_end
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $passiveKey) continue;
@@ -1085,6 +1099,7 @@ final class TurnPhaseProcessor
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying || CardStats::isDisabled($card)) continue;
             if (empty($card->effectiveProp()['opponent_turn_end'])) continue;
+            if (!array_filter($card->effectiveProp()['opponent_turn_end'], static fn($e) => ($e['type'] ?? '') !== 'deck_summon')) continue;
 
             $queue[] = [
                 'id'      => 'ote:' . $card->instanceId,

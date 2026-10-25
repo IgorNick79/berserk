@@ -14,7 +14,19 @@ use Berserk\Core\Prepare\PrepareProcessor;
  */
 final class Engine
 {
-    public function __construct(private ?Db $db = null, private ?\Closure $clock = null, private ?\Closure $preparationRandom = null) {}
+    public function __construct(private ?Db $db = null, private ?\Closure $clock = null, private ?\Closure $preparationRandom = null,
+        private ?\Closure $cardNameLookup = null) {}
+
+    /** Printed catalog names, not feature keys or UKID equivalence. No state mutation. */
+    public function cardNames(array $ukids): array
+    {
+        $ukids = array_values(array_unique($ukids));
+        if ($this->cardNameLookup !== null) return ($this->cardNameLookup)($ukids);
+        if ($this->db === null) return [];
+        $quoted = array_map(fn(string $id): string => "'" . $this->db->escape($id) . "'", $ukids);
+        if (!$quoted) return [];
+        return array_column($this->db->fetchAll('SELECT ukid,name FROM cards WHERE ukid IN (' . implode(',', $quoted) . ')'), 'name', 'ukid');
+    }
 
     public function serverNow(): int
     {

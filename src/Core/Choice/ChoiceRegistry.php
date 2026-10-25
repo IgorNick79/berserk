@@ -34,6 +34,7 @@ final class ChoiceRegistry
                 new InstantPickChoice(),
                 new CombatPickChoice(),
                 new ForcedStrikeAdjacentChoice(),
+                new SwampQueenSummonChoice(),
                 new DegascaSequenceChoice(),
                 new RangedAttackRedirectChoice(),
                 new IncarnationWoundChoice(),

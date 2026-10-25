@@ -70,7 +70,7 @@ final class RoomSetup
             $entries = $debug['scenario'] ?? [];
             if (!is_array($entries)) throw new \DomainException('Некорректный сценарий LuckTest',400);
             if ($entries !== []) {
-                $debug['scenario'] = \Berserk\Core\Prepare\LuckTestScenario::parse(json_encode(['cards'=>$entries],JSON_THROW_ON_ERROR),$s->lucktest['card_count']);
+                $debug['scenario'] = \Berserk\Core\Prepare\LuckTestScenario::parse(json_encode(\Berserk\Core\Prepare\LuckTestScenario::root($entries),JSON_THROW_ON_ERROR),$s->lucktest['card_count']);
                 if ($s->lucktest['quick_game'] !== true) throw new \DomainException('Сценарий LuckTest доступен только в быстрой игре',400);
             }
             if (isset($debug['roll'])) $debug['roll'] = \Berserk\Core\LuckTestDebug::rollInput($debug['roll']);
@@ -85,7 +85,7 @@ final class RoomSetup
         if (($setup['debug']['account_id'] ?? null) !== $state->hostId || !\Berserk\Auth\DebugAccess::allowsId($state->hostId)) throw new \DomainException('Разрешение Debug хоста отсутствует или отозвано',403);
         $payload = [];
         if (array_key_exists('url_roll_enabled',$setup['debug'])) $payload['lucktest_url_roll'] = $setup['debug']['url_roll_enabled'];
-        if (($setup['debug']['scenario'] ?? []) !== []) $payload['lucktest_scenario'] = json_encode(['cards'=>$setup['debug']['scenario']],JSON_THROW_ON_ERROR);
+        if (($setup['debug']['scenario'] ?? []) !== []) $payload['lucktest_scenario'] = json_encode(\Berserk\Core\Prepare\LuckTestScenario::root($setup['debug']['scenario']),JSON_THROW_ON_ERROR);
         if (isset($setup['debug']['roll'])) $payload['debug_roll'] = $setup['debug']['roll'];
         \Berserk\Core\LuckTestDebug::configure($state,'host',new Command('confirm_settings',$payload));
     }

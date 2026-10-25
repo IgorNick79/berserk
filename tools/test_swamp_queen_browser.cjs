@@ -1,0 +1,20 @@
+const fs=require('fs'),path=require('path'),{execFileSync}=require('child_process');
+const {chromium}=require('C:/Users/mi/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const root=path.resolve(__dirname,'..'),out=path.resolve(root,'../swamp-queen-validation');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8'),check=(v,m)=>{if(!v)throw Error(m)};
+(async()=>{const browser=await chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
+try{for(const width of [1600,800,375]){const page=await browser.newPage({viewport:{width,height:900}});
+for(const stage of ['cards','cells']){
+ const data=JSON.parse(execFileSync('C:/OSPanel/modules/php/PHP_8.1/php.exe',[root+'/tools/test_swamp_queen.php','--fixture',stage],{encoding:'utf8'}));
+ const html=read('templates/screen/battle.tpl').replace(/<script[\s\S]*?<\/script>/g,'').replace(/<link[^>]*>/g,'').replace(/{{(\w+)}}/g,(_,k)=>data[k]||'');
+ await page.setContent('<style>'+['global.css','battle-ui-skins.css','battle-mini-card.css','battle-mini-nameplate.css','battle-coordinates.css'].map(n=>read('www/assets/css/'+n)).join('\n')+'</style>'+html);
+ await page.evaluate(()=>document.body.className='battle-page');
+ const name=stage==='cards'?'card_id':'cell',radios=page.locator('.card-choice input[type=radio][name='+name+']');
+ check(await radios.count()>=2,'multiple mandatory choices '+stage);
+ await radios.first().check();check(await radios.first().isChecked(),'radio usable '+stage);
+ const form=radios.first().locator('xpath=ancestor::form');
+ check(await form.locator('[name=cmd]').inputValue()===(stage==='cards'?'choose_swamp_queen_card':'choose_swamp_queen_cell'),'native command '+stage);
+ check(!(await form.innerText()).includes('Отмена'),'no refusal');
+ check(await form.evaluate(e=>e.scrollWidth<=e.clientWidth+1),'choice fits width '+width+' '+stage);
+ await page.screenshot({path:path.join(out,`swamp-${stage}-${width}.png`)});
+}await page.close();console.log('PASS '+width+'px card/cell radios, native commands, no cancel, no overflow');}}finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

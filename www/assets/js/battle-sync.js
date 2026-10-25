@@ -57,6 +57,7 @@
 
     var uiState = {
         sel: parseInt(script.dataset.sel || "0", 10) || 0,
+        inspect: parseInt(script.dataset.inspect || "0", 10) || 0,
         mode: script.dataset.mode || "strike",
         modeExplicit: script.dataset.modeExplicit === "1",
         pile: script.dataset.pile || ""
@@ -155,6 +156,7 @@
         url.searchParams.set("since_version", String(Math.max(0, syncVersion)));
         url.searchParams.delete("settings_sync_id");
         url.searchParams.set("sel", String(uiState.sel || 0));
+        url.searchParams.set("inspect", String(uiState.inspect || 0));
         if (uiState.modeExplicit) {
             url.searchParams.set("mode", uiState.mode || "strike");
         } else {
@@ -175,6 +177,7 @@
         url.searchParams.delete("since_version");
         url.searchParams.delete("force_snapshot");
         url.searchParams.delete("sel");
+        url.searchParams.delete("inspect");
         url.searchParams.delete("mode");
         url.searchParams.delete("pile");
         return url;
@@ -187,6 +190,7 @@
         url.searchParams.delete("since_version");
         url.searchParams.delete("force_snapshot");
         url.searchParams.delete("sel");
+        url.searchParams.delete("inspect");
         url.searchParams.delete("mode");
         url.searchParams.delete("pile");
         return url;
@@ -195,6 +199,7 @@
     function addUiAndVersion(params) {
         params.set("expected_version", String(Math.max(0, syncVersion)));
         params.set("sel", String(uiState.sel || 0));
+        params.set("inspect", String(uiState.inspect || 0));
         if (!params.has("mode") && uiState.modeExplicit) {
             params.set("mode", uiState.mode || "strike");
         }
@@ -269,6 +274,7 @@
     function normalizeUi(ui) {
         return {
             sel: parseInt(ui.sel || "0", 10) || 0,
+            inspect: parseInt(ui.inspect || "0", 10) || 0,
             mode: typeof ui.mode === "string" && ui.mode !== "" ? ui.mode : "strike",
             modeExplicit: ui.mode_explicit === true || ui.mode_explicit === 1 || ui.mode_explicit === "1",
             pile: typeof ui.pile === "string" ? ui.pile : ""
@@ -729,6 +735,7 @@
             return;
         }
 
+        uiState.inspect = 0;
         var commandUiRevision = uiRevision;
         if (drag) drag.cancel();
         commandState = "sending";
@@ -784,6 +791,7 @@
         if (drag && !fromDrag) drag.cancel();
         uiState = {
             sel: url.searchParams.has("sel") ? (parseInt(url.searchParams.get("sel") || "0", 10) || 0) : 0,
+            inspect: parseInt(url.searchParams.get("inspect") || "0", 10) || 0,
             mode: url.searchParams.has("mode") && url.searchParams.get("mode") !== ""
                 ? url.searchParams.get("mode")
                 : "strike",

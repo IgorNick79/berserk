@@ -1551,6 +1551,7 @@ final class PrepareProcessor
             $generator = new LuckTestGenerator();
             $entries = \Berserk\Core\LuckTestDebug::scenario($this->state, $settings);
             $fixed = LuckTestScenario::fixed($entries, $catalog);
+            $fixedDeck = LuckTestScenario::fixed($entries, $catalog, 'deck');
             $squads = $legacy ? [] : $generator->generate($catalog, $settings, $fixed);
             $working = GameState::fromArray($this->state->toArray());
             $working->settings = $settings;
@@ -1569,7 +1570,7 @@ final class PrepareProcessor
                 foreach ($working->getCardsInZone($owner, CardInstance::ZONE_SQUAD) as $card) {
                     $card->flags['lucktest_squad'] = true;
                 }
-                $reserve = $generator->generateReserve($catalog, GameSettings::MIN_DECK_SIZE - $settings->lucktest['card_count']);
+                $reserve = $generator->generateReserve($catalog, GameSettings::MIN_DECK_SIZE - $settings->lucktest['card_count'], $fixedDeck[$owner]);
                 $worker->createDeckInstances($owner, $reserve);
                 foreach ($working->getCardsInZone($owner, CardInstance::ZONE_DECK) as $card) {
                     $card->flags['lucktest_reserve'] = true;

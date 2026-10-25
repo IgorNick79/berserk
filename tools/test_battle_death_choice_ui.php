@@ -16,6 +16,10 @@ use Berserk\View\Template;
 Autoloader::register();
 Autoloader::addNamespace('Berserk\\', __DIR__ . '/../src/');
 
+function deathChoiceUiHighlights(string $html,string $class): int {
+    $dom=new DOMDocument();@$dom->loadHTML($html);$x=new DOMXPath($dom);
+    return $x->query('//*[contains(concat(" ",normalize-space(@class)," ")," field-cell ") and contains(concat(" ",normalize-space(@class)," ")," '.$class.' ")]')->length;
+}
 function deathChoiceUiAssert(bool $condition, string $message): void
 {
     if (!$condition) {
@@ -149,12 +153,12 @@ deathChoiceUiAssert(
     'Three compact death target radios retain the original candidate IDs.'
 );
 deathChoiceUiAssert(
-    substr_count($playerHtml['field_html'], 'pending-death-target') === 3,
+    deathChoiceUiHighlights($playerHtml['field_html'], 'pending-death-target') === 3,
     'All existing field death target candidates should be highlighted.'
 );
 deathChoiceUiAssert(
-    str_contains($playerHtml['field_html'], 'cmd=choose_death_target&target_id=4'),
-    'Battlefield death target click should use choose_death_target command.'
+    str_contains($playerHtml['field_html'], 'inspect=4') && !str_contains($playerHtml['field_html'], 'cmd=choose_death_target'),
+    'Battlefield target click inspects; the existing radio executes death choice.'
 );
 
 $hostState = deathChoiceUiState(GameState::PLAYER_HOST, [
@@ -167,7 +171,7 @@ deathChoiceUiAssert(
     'Host-relative death target label should use own game row 2 and host column 5, independently of card owner.'
 );
 deathChoiceUiAssert(
-    substr_count($hostHtml['field_html'], 'pending-death-target') === 1,
+    deathChoiceUiHighlights($hostHtml['field_html'], 'pending-death-target') === 1,
     'Single host death target candidate should be highlighted.'
 );
 
@@ -191,7 +195,7 @@ deathChoiceUiAssert(
 );
 deathChoiceUiAssert(
     str_contains($flyHtml['fly_zones_html'], 'pending-death-target')
-        && str_contains($flyHtml['fly_zones_html'], 'cmd=choose_death_target&target_id=6'),
+        && str_contains($flyHtml['fly_zones_html'], 'inspect=6'),
     'Flying death target candidate should be highlighted and clickable.'
 );
 

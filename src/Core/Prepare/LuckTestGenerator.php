@@ -58,12 +58,13 @@ final class LuckTestGenerator
     }
 
     /** Random reserve order is the creation/instanceId order consumed by ProphecyProcessor. */
-    public function generateReserve(array $catalog, int $count): array
+    public function generateReserve(array $catalog, int $count, array $fixed = []): array
     {
         if ($count < 0 || $count > GameSettings::MIN_DECK_SIZE) throw new \InvalidArgumentException('Неверный размер резерва LuckTest');
         [$catalog] = $this->catalogGroups($catalog);
-        $result = [];
-        for ($i = 0; $i < $count; $i++) {
+        if (count($fixed)>$count) throw new \DomainException('Обязательных карт больше размера резерва LuckTest');
+        $result = array_map(static function(array $card): array { $card['count']=1; return $card; }, $fixed);
+        for ($i = count($result); $i < $count; $i++) {
             $card = $this->pick($catalog);
             $card['count'] = 1;
             $result[] = $card;

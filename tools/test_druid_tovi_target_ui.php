@@ -35,7 +35,7 @@ foreach(['host','player'] as $owner)foreach(['heal','throw'] as $kind){
     mtAssert(!str_contains($screen->prepare($s,$other,$other,null,$info,['sel'=>1,'mode'=>'action:test'])['data']['info_panel_html'],'name="target_id"'),'Opponent cannot use active radio form');
     if($kind==='throw'){
         $s->getCard(6)->revealed=false;$info[$s->getCard(6)->ukid]['name']='SECRET_TARGET';
-        $hidden=$screen->prepare($s,$owner,$owner,null,$info,['sel'=>1,'mode'=>'action:test'])['data']['panel_html'];
+        $hidden=$screen->prepare($s,$owner,$owner,null,$info,['sel'=>1,'mode'=>'action:test'])['data']['info_panel_html'];
         mtAssert(!str_contains($hidden,'SECRET_TARGET')&&str_contains($hidden,'???')&&!str_contains($hidden,'?/? HP'),'Hidden target name is concealed; HP is omitted from compact choices');
     }
 }
