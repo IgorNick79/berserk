@@ -15,6 +15,7 @@ const assert = (ok, message) => { if (!ok) throw Error(message); };
         const url = new URL(req.url, 'http://localhost');
         if (url.searchParams.has('ajax')) {res.setHeader('Content-Type','application/json');res.end(JSON.stringify({ok:true,latest_id:'0',last_read_id:'0',can_send:true,messages:[],has_more:false,unread:false}));return;}
         const pathname = url.pathname;
+        if (pathname === '/battle-journal.php') {res.setHeader('Content-Type','application/json');res.end(JSON.stringify({entries:[],cursor:0}));return;}
         if (pathname === '/') {res.setHeader('Content-Type','text/html; charset=utf-8');res.end(fixture);return;}
         for (const dir of [root, repo]) {
             const file = path.join(dir, 'www', pathname);
@@ -41,12 +42,35 @@ const assert = (ok, message) => { if (!ok) throw Error(message); };
             assert(await page.locator('[data-open-pause],.resign,.turn-timer').count()===0,'No obsolete controls');
             await page.locator('.game-menu summary').click();
             assert(await page.locator('.game-menu-panel').isVisible(),'Burger opens');
+            await page.waitForFunction(()=>document.querySelector('.game-menu summary').getAttribute('aria-expanded')==='true' && getComputedStyle(document.querySelector('.battle-menu-icon i:nth-child(2)')).opacity==='0');
+            assert(await page.locator('.game-menu').evaluate(m=>getComputedStyle(m.querySelector('.battle-menu-icon i:nth-child(2)')).opacity==='0'),'Burger animates to cross');
+            for (const label of ['В лобби','Профиль','Выйти']) {
+                const item=page.locator('.game-menu-panel [role="menuitem"]').filter({hasText:label});
+                assert(await item.isVisible(),'Menu item visible: '+label);
+                assert(await item.evaluate(e=>getComputedStyle(e).color===getComputedStyle(e.closest('.game-menu-panel')).color),'Readable menu item: '+label);
+            }
+            assert(await page.locator('.game-menu-panel').getByText('Отложить игру').count()===0,'No postpone after battle');
             await page.locator('.game-menu summary').click();
             assert(!(await page.locator('.game-menu-panel').isVisible()),'Burger closes');
             assert(await page.locator('[data-chat-anchor] [data-chat-toggle]').count()===1,'Chat mounted in footer');
             await page.locator('[data-chat-toggle]').click();
             assert(await page.locator('#game-chat-panel').isVisible(),'Chat opens');
+            assert(await page.locator('.info-panel-content .battle-secondary-view #game-chat-panel').count()===1,'Chat docks in right column');
+            assert(!(await page.locator('.result-summary').isVisible()),'Result replaced by chat');
+            await page.locator('[data-action="battle-log"]').click();
+            assert(await page.locator('.info-panel-content #battle-journal').isVisible(),'History docks in right column');
+            assert(!(await page.locator('#game-chat-panel').isVisible()),'History replaces chat');
+            await page.locator('[data-journal-close]').click();
+            assert(await page.locator('.result-summary').isVisible(),'History close restores result');
+            await page.locator('[data-chat-toggle]').click();
             await page.locator('[data-chat-close]').click();
+            assert(await page.locator('.result-summary').isVisible(),'Chat close restores result');
+            await page.keyboard.press('Tab');
+            await page.locator('.result-share').focus();
+            await page.waitForFunction(()=>getComputedStyle(document.querySelector('.result-share .battle-icon-tooltip')).visibility==='visible');
+            assert(await page.locator('.result-share .battle-icon-tooltip').evaluate(e=>getComputedStyle(e).visibility==='visible'),'Share tooltip');
+            const size=await page.locator('.result-video').evaluate(v=>v.getBoundingClientRect().width / v.parentElement.getBoundingClientRect().width);
+            assert(size<0.95 && size>0.85,'Smaller video');
             await page.screenshot({path:path.join(output,`result-${width}x${height}.png`)});
         }
         assert(!errors.length,errors.join('\n'));

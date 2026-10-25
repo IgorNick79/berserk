@@ -28,7 +28,7 @@ final class GameMenu
             .'<a href="/lobby.php" role="menuitem">В лобби</a>'
             .'<button type="button" role="menuitemcheckbox" data-preparation-sound aria-checked="'.($sound?'true':'false').'"'.($finished?' disabled':'').'>Звук <span data-preparation-sound-check>'.($sound?'✓':'').'</span></button>'
             .'<button type="button" role="menuitem" data-preparation-playmat'.($finished?' disabled':'').'>Коврик</button>'
-            .'<button type="button" role="menuitem" disabled>Отложить игру <small>Скоро</small></button>'
+            .($finished ? '' : '<button type="button" role="menuitem" disabled>Отложить игру <small>Скоро</small></button>')
             .self::debug($state,$playerKey,$csrf)
             .self::account($csrf).'<p data-preparation-menu-notice role="status"></p></div></details>';
     }

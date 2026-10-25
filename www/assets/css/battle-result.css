@@ -1,5 +1,5 @@
 .battle-page .battle-result .result-media { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; }
-.result-video { display: block; width: 100%; height: 100%; object-fit: contain; border: 0; }
+.result-video { display: block; width: 90%; height: 90%; object-fit: contain; border: 0; }
 .battle-result .result-summary { padding: 22px 20px; }
 .battle-result .result-outcome { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font: 700 30px/1.2 'Philosopher', Georgia, serif; }
 .battle-result .result-outcome img { flex: 0 0 28px; }
@@ -23,3 +23,10 @@
     .battle-result .result-stats { margin-top: 16px; }
     .battle-result .result-stats > div { padding: 12px 0; }
 }
+
+.result-page .game-menu-panel [role^="menuitem"] { color: inherit; }
+.result-page .game-menu[open] .battle-menu-icon i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.result-page .game-menu[open] .battle-menu-icon i:nth-child(2) { transform: scaleX(.5); opacity: 0; }
+.result-page .game-menu[open] .battle-menu-icon i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.result-share .battle-icon-tooltip { left: auto; right: 0; transform: translateY(4px); }
+.result-share:hover .battle-icon-tooltip, .result-share:focus-visible .battle-icon-tooltip { transform: translateY(0); }

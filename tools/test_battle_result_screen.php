@@ -46,6 +46,8 @@ if (in_array('--fixture', $argv, true)) {
     $menu = \Berserk\View\Ui\GameMenu::preparation('test', true, true, $s, 'host');
     $menu = str_replace(['<summary aria-label=', '>☰</summary>', 'class="game-menu-panel"'],
         ['<summary class="battle-menu" aria-label=', '><span class="battle-menu-icon"><i></i><i></i><i></i></span></summary>', 'class="game-menu-panel battle-menu-panel"'], $menu);
+    check(!str_contains($menu, 'Отложить игру'), 'Finished menu omits postpone');
+    $html .= '<link rel="stylesheet" href="/assets/css/battle-journal.css"><aside id="battle-journal" class="battle-journal" hidden aria-label="Журнал боя"><header class="panel-card-heading"><h3 class="panel-card-title">Журнал боя</h3><button type="button" data-journal-close aria-label="Закрыть журнал">×</button></header><p data-journal-notice></p><div class="battle-journal-scroll" data-journal-scroll tabindex="0"><ol data-journal-entries></ol></div><p data-journal-state role="status"></p></aside><script src="/assets/js/battle-journal.js" data-journal-url="/battle-journal.php" defer></script>';
     $html .= $tpl->parse('includes/game_chat.tpl', ['chat_game_id'=>42,'chat_sender_id'=>1,'chat_csrf'=>'test']);
     $html .= '<link rel="stylesheet" href="/assets/css/battle-chat.css"><script src="/assets/js/battle-chat.js" defer></script>';
     echo '<!doctype html><html class="battle-page result-page"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/assets/css/global.css"></head><body class="battle-page result-page"><div class="screen">'.$menu.$html.'</div></body></html>';
