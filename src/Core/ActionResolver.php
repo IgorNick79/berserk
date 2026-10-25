@@ -56,6 +56,10 @@ final class ActionResolver
             return Result::error('Действие не найдено');
         }
 
+        if (MemoryLoss::isAction($action) && !MemoryLoss::available($attacker)) {
+            return Result::error('Потеря памяти недоступна');
+        }
+
         if (!CoinAbilities::actionAvailable($attacker, $action)) return Result::error('Действие недоступно при этом количестве монет');
         $type = $action['type'] ?? '';
         if ($type === 'impact' && ($action['effect'] ?? '') === 'matriarch_order') return (new MatriarchOrderProcessor($this->state, $this->engine))->start($attacker, $action);
@@ -303,7 +307,7 @@ final class ActionResolver
         }
 
         // Выбор количества монет
-        $coinConfig = $attacker->prop['coins'][$type] ?? null;
+        $coinConfig = $attacker->effectiveProp()['coins'][$type] ?? null;
         if (is_array($coinConfig)
             && ($coinConfig['spend'] ?? '') === 'choice'
             && $attacker->coins > 0
@@ -399,7 +403,7 @@ final class ActionResolver
         }
 
         $uchrAction = null;
-        foreach ($attacker->prop['actions'] ?? [] as $a) {
+        foreach ($attacker->effectiveProp()['actions'] ?? [] as $a) {
             if (($a['type'] ?? '') === 'uchr' && CoinAbilities::actionAvailable($attacker, $a)) {
                 $uchrAction = $a;
                 break;
@@ -554,6 +558,26 @@ final class ActionResolver
 
     // ─── Проверки ─────────────────────────────────────────────
 
+    /** Complete an unapplied ability choice without touching technical battle frames. */
+    private function skipSuppressedChoice(string $owner, string $key, string $sourceField): ?Result
+    {
+        $pending = $this->state->battle[$key] ?? null;
+        if (!$pending) return null;
+        $source = $this->state->getCard((int) ($pending[$sourceField] ?? 0));
+        if (!$source || ($pending['owner'] ?? $source->owner) !== $owner
+            || !EffectiveFeatures::suppressed($source)) return null;
+        // Suppression is not a player cancellation: keep costs already paid.
+        unset($this->state->battle[$key]);
+        if (is_array($pending['degasca_sequence'] ?? null)) {
+            (new DegascaProcessor($this->state, $this->engine))
+                ->restoreAndResume($pending['degasca_sequence']);
+        } elseif (!empty($this->state->battle['turn_phase'])) {
+            (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+        }
+        $this->state->bumpVersion();
+        return Result::ok(['ability_suppressed:' . $key]);
+    }
+
     private function validateAttacker(?CardInstance $attacker, string $playerKey): ?Result
     {
         if (!$attacker
@@ -571,7 +595,8 @@ final class ActionResolver
 
     private function findAction(CardInstance $attacker, string $actionKey): ?array
     {
-        foreach ($attacker->prop['actions'] ?? [] as $a) {
+        if (EffectiveFeatures::suppressed($attacker)) return null;
+        foreach ($attacker->effectiveProp()['actions'] ?? [] as $a) {
             $key = $a['key'] ?? $a['type'] ?? '';
             if ($key === $actionKey) {
                 return $a;
@@ -641,7 +666,7 @@ final class ActionResolver
             if ($target->type === 'fly') {
                 return Result::error('Нельзя добить летающего');
             }
-            if (!empty($target->prop['incorporeal'])) {
+            if (!empty($target->effectiveProp()['incorporeal'])) {
                 return Result::error('Нельзя добить бестелесного');
             }
             $value = CardStats::getExecuteValue($this->state, $attacker, $target, $action);
@@ -654,6 +679,10 @@ final class ActionResolver
                 return Result::error('Цель не соседняя');
             }
         } elseif ($type === 'impact') {
+            if (MemoryLoss::isAction($action)
+                && (!in_array($target->type, ['creature', 'fly'], true) || $target->dying || $target->hp <= 0)) {
+                return Result::error('Цель должна быть живым существом');
+            }
             if (CardStats::hasDefense($this->state, $target, 'impact', $attacker)) {
                 return Result::error('Цель защищена');
             }
@@ -1022,7 +1051,7 @@ final class ActionResolver
             }
         }
         // Серк и подобные: при полном hp вместо излечения — открыться
-        $insteadOpen  = $target->prop['on_heal_instead_open'] ?? null;
+        $insteadOpen  = $target->effectiveProp()['on_heal_instead_open'] ?? null;
         $openedInstead = false;
 
         if (is_array($insteadOpen)) {
@@ -1159,7 +1188,17 @@ final class ActionResolver
         $applied = [];
 
         ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'impact'], $action));
-        if (($action['target'] ?? '') === 'all_near') {
+        if (MemoryLoss::isAction($action)) {
+            $target = $this->state->getCard($targetId);
+            EffectiveFeatures::applyMemoryLoss($this->state, $attacker, $target);
+            $attacker->flags[MemoryLoss::USED] = true;
+            $applied[] = ['target_id' => $targetId, 'damage' => 0, 'poison' => 0];
+            $this->state->battle['strike']['effect'] = 'memory_loss';
+            $this->state->historyRecorder?->liveEvent($this->state, 'ability.applied', [
+                'source_id' => $cardId, 'ability' => $action['name'] ?? 'Потеря памяти',
+                '_private_owner' => $attacker->owner,
+            ], [$cardId, $targetId]);
+        } elseif (($action['target'] ?? '') === 'all_near') {
             foreach ($this->state->cards as $c) {
                 if ($c->zone !== CardInstance::ZONE_FIELD) continue;
                 if ($c->instanceId === $attacker->instanceId) continue;
@@ -1286,6 +1325,13 @@ final class ActionResolver
         $attacker = $this->state->getCard((int) $context['card_id']);
         $target = $this->state->getCard((int) $context['target_id']);
         if (!$attacker || !$target) return Result::error('Атака недоступна');
+        if ($attacker->owner !== $context['player']) return Result::error('Источник атаки изменился');
+        if (EffectiveFeatures::suppressed($attacker)) {
+            // Fixed costs may already have been paid by handle(). No damage,
+            // variable coin spend or new tap has happened in resolveDamage yet.
+            $this->state->bumpVersion();
+            return Result::ok(['coin_attack_suppressed']);
+        }
         return $this->resolveDamage($attacker, $target, $context['action'], $context['type'],
             $attacker->instanceId, $target->instanceId, $context['player'], $context['forced_coin_spend'], true, true);
     }
@@ -1361,7 +1407,7 @@ final class ActionResolver
         // Монеты за действие (Арбалетчик, Повелитель)
         $coinBonus = 0;
         $coinsSpent = 0;
-        $coinConfig = $attacker->prop['coins'][$type] ?? null;
+        $coinConfig = $attacker->effectiveProp()['coins'][$type] ?? null;
         // Аргвальд: coin_bonus + reset
         if (!empty($action['coin_bonus']) && $attacker->coins > 0) {
             $perCoin = (int) $action['coin_bonus'];
@@ -1411,8 +1457,8 @@ final class ActionResolver
         }
 
         // Аргвальд: получает монету при разряде по нему
-        if ($type === 'discharge' && !empty($target->prop['on_discharge_self'])) {
-            $bonus = (int) ($target->prop['on_discharge_self']['coins'] ?? 1);
+        if ($type === 'discharge' && !empty($target->effectiveProp()['on_discharge_self'])) {
+            $bonus = (int) ($target->effectiveProp()['on_discharge_self']['coins'] ?? 1);
             if ($bonus > 0) {
                 $target->coins += $bonus;
                 $this->engine->syncCoinBonus($target);
@@ -1616,7 +1662,7 @@ final class ActionResolver
         $seen = [];
         $options = [];
         foreach ($this->state->cards as $source) {
-            $config = $source->prop['attack_redirect'] ?? null;
+            $config = $source->effectiveProp()['attack_redirect'] ?? null;
             if (!is_array($config)) continue;
             if ($source->owner !== $originalTarget->owner) continue;
             if ($source->zone !== CardInstance::ZONE_FIELD) continue;
@@ -1763,6 +1809,7 @@ final class ActionResolver
 
     private function consumeNextActionBonuses(CardInstance $card, string $actionType): void
     {
+        if (EffectiveFeatures::suppressed($card)) return;
         $kept = [];
         foreach ($card->modifiers as $m) {
             if (($m['stat'] ?? '') !== 'next_action_bonus' || empty($m['consume'])) {
@@ -1783,7 +1830,7 @@ final class ActionResolver
         CardInstance $attacker, array $action, string $type,
         int $cardId, int $targetId, string $playerKey
     ): Result {
-        $coinConfig = $attacker->prop['coins'][$type];
+        $coinConfig = $attacker->effectiveProp()['coins'][$type];
 
         $maxByProp = (int) ($coinConfig['max_value'] ?? 0);
         $max = $maxByProp > 0 ? min($attacker->coins, $maxByProp) : $attacker->coins;
@@ -1806,6 +1853,7 @@ final class ActionResolver
 
     public function chooseCoinSpend(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_coin_spend', 'attacker_id')) return $skipped;
         $pcs = $this->state->battle['pending_coin_spend'] ?? null;
         if (!$pcs) {
             return Result::error('Нет ожидающего выбора');
@@ -1849,6 +1897,7 @@ final class ActionResolver
 
     public function chooseSelfWound(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_self_wound', 'attacker_id')) return $skipped;
         $psw = $this->state->battle['pending_self_wound'] ?? null;
         if (!$psw) {
             return Result::error('Нет ожидающего выбора');
@@ -1997,6 +2046,7 @@ final class ActionResolver
 
     public function chooseMultiHeal(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_multi_heal', 'attacker_id')) return $skipped;
         $parsed = $this->parseMultiPick($playerKey, $cmd, 'pending_multi_heal');
         if ($parsed instanceof Result) return $parsed;
 
@@ -2236,6 +2286,7 @@ final class ActionResolver
 
     public function chooseMultiDischarge(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_multi_discharge', 'attacker_id')) return $skipped;
         $parsed = $this->parseMultiPick($playerKey, $cmd, 'pending_multi_discharge');
         if ($parsed instanceof Result) return $parsed;
 
@@ -2412,12 +2463,12 @@ final class ActionResolver
 
     public function openSuccessfulHitOptionalHeal(CardInstance $card): bool
     {
-        if (empty($card->prop['on_successful_hit'])) return false;
+        if (empty($card->effectiveProp()['on_successful_hit'])) return false;
         if ($card->zone !== CardInstance::ZONE_FIELD) return false;
         if ($card->dying || $card->hp <= 0) return false;
         if ($card->hp >= $card->hpMax) return false;
 
-        $config = $card->prop['on_successful_hit'];
+        $config = $card->effectiveProp()['on_successful_hit'];
         if (!is_array($config) || ($config['type'] ?? '') !== 'optional_heal') return false;
         if (($config['value_from'] ?? '') !== 'opposite_creature_strike_medium') return false;
 
@@ -2439,6 +2490,7 @@ final class ActionResolver
 
     public function chooseKoboldHeal(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_kobold_heal', 'card_id')) return $skipped;
         $pending = $this->state->battle['pending_kobold_heal'] ?? null;
         if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
             return Result::error('Нет выбора излечения');
@@ -2477,12 +2529,12 @@ final class ActionResolver
 
     public function triggerTalionIncarnationToken(CardInstance $source): bool
     {
-        $config = $source->prop['on_strong_strike'] ?? null;
+        $config = $source->effectiveProp()['on_strong_strike'] ?? null;
         if (!is_array($config) || ($config['type'] ?? '') !== 'incarnation_token_graveyard') {
             return false;
         }
 
-        foreach ((array) ($source->prop['strike_effects'] ?? []) as $effect) {
+        foreach ((array) ($source->effectiveProp()['strike_effects'] ?? []) as $effect) {
             if (!empty($effect['incarnation_token_graveyard'])
                 || (($effect['type'] ?? '') === 'incarnation_token_graveyard')) {
                 return false;
@@ -2517,6 +2569,7 @@ final class ActionResolver
 
     public function chooseTalionIncarnation(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_talion_incarnation', 'source_id')) return $skipped;
         $pending = $this->state->battle['pending_talion_incarnation'] ?? null;
         if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
             return Result::error('Нет выбора жетона инкарнации');
@@ -2574,7 +2627,7 @@ final class ActionResolver
     private function addIncarnationToken(CardInstance $card): void
     {
         if (!isset($card->markers['incarnation'])) {
-            $inc = $card->prop['incarnation'] ?? null;
+            $inc = $card->effectiveProp()['incarnation'] ?? null;
             $threshold = 0;
             $open = false;
 
@@ -2609,14 +2662,14 @@ final class ActionResolver
             'target_id' => $target->instanceId,
             'value' => (int) ($target->markers['incarnation']['value'] ?? 0),
             'threshold' => (int) ($target->markers['incarnation']['threshold'] ?? 0),
-            'has_incarnation' => array_key_exists('incarnation', $target->prop),
+            'has_incarnation' => array_key_exists('incarnation', $target->effectiveProp()),
         ];
     }
 
     public function triggerLineOpenOnStrike(CardInstance $source): bool
     {
         $configs = [];
-        $ownConfig = $source->prop['on_successful_strike'] ?? null;
+        $ownConfig = $source->effectiveProp()['on_successful_strike'] ?? null;
         if (is_array($ownConfig)) $configs[] = $ownConfig;
         foreach (CardStats::getInheritedLineBonusValues($this->state, $source, 'on_successful_strike') as $inheritedConfig) {
             if (is_array($inheritedConfig)) $configs[] = $inheritedConfig;
@@ -2665,6 +2718,7 @@ final class ActionResolver
 
     public function chooseHolvertOpen(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_holvert_open', 'source_id')) return $skipped;
         $pending = $this->state->battle['pending_holvert_open'] ?? null;
         if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
             return Result::error('Нет выбора открытия');
@@ -2762,6 +2816,7 @@ final class ActionResolver
 
     public function chooseReviveTarget(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_revive', 'healer_id')) return $skipped;
         $pr = $this->state->battle['pending_revive'] ?? null;
         if (!$pr || ($pr['step'] ?? '') !== 'card') {
             return Result::error('Нет ожидающего выбора');
@@ -2800,6 +2855,7 @@ final class ActionResolver
 
     public function chooseReviveCell(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_revive', 'healer_id')) return $skipped;
         $pr = $this->state->battle['pending_revive'] ?? null;
         if (!$pr || ($pr['step'] ?? '') !== 'cell') {
             return Result::error('Нет ожидающего выбора');
@@ -2840,7 +2896,7 @@ final class ActionResolver
         $card->revealed  = true;
         $card->markers   = [];      // сбрасываем incarnation и всё остальное
         $card->modifiers = [];
-        $card->flags     = [];      // moved_this_turn и т.д. — с нуля
+        $card->flags = MemoryLoss::persistentFlags($card);      // moved_this_turn и т.д. — с нуля
                                     // flags.incarnated НЕ ставим — это не инкарнация
 
         $healer->closed = true;
@@ -2871,7 +2927,7 @@ final class ActionResolver
         $card->revealed  = true;
         $card->markers   = [];
         $card->modifiers = [];
-        $card->flags     = [];
+        $card->flags = MemoryLoss::persistentFlags($card);
 
         $healer->closed = true;
         $healer->flags['revive_used'] = true;
@@ -2963,6 +3019,7 @@ final class ActionResolver
 
     public function grezyPick(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_grezy', 'attacker_id')) return $skipped;
         $pg = $this->state->battle['pending_grezy'] ?? null;
         if (!$pg) return Result::error('Нет ожидающего выбора');
 
@@ -3034,6 +3091,7 @@ final class ActionResolver
 
     public function chooseWhipTarget(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_whip', 'source_id')) return $skipped;
         $pw = $this->state->battle['pending_whip'] ?? null;
         if (!$pw) return Result::error('Нет ожидающего выбора');
         if ($pw['owner'] !== $playerKey) return Result::error('Не ваш выбор');
@@ -3108,6 +3166,7 @@ final class ActionResolver
 
     public function chooseDestroySelfAndTarget(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_destroy_self_and_target', 'source_id')) return $skipped;
         $pending = $this->state->battle['pending_destroy_self_and_target'] ?? null;
         if (!$pending) return Result::error('Нет ожидающего выбора');
         if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
@@ -3253,6 +3312,7 @@ final class ActionResolver
 
     public function chooseBloodTap(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_blood_tap', 'attacker_id')) return $skipped;
         $pb = $this->state->battle['pending_blood_tap'] ?? null;
         if (!$pb) return Result::error('Нет ожидающего выбора');
 
@@ -3480,6 +3540,7 @@ final class ActionResolver
 
     public function chooseGate(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_gate_pick', 'source_id')) return $skipped;
         $p = $this->state->battle['pending_gate_pick'] ?? null;
         if (!$p || $p['owner'] !== $playerKey) {
             return Result::error('Не ваш выбор');
@@ -3524,6 +3585,7 @@ final class ActionResolver
 
     public function chooseCellMarker(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_cell_marker_pick', 'card_id')) return $skipped;
         $pm = $this->state->battle['pending_cell_marker_pick'] ?? null;
         if (!$pm) return Result::error('Нет ожидающего выбора');
         if ($pm['owner'] !== $playerKey) return Result::error('Не ваш выбор');
@@ -3704,7 +3766,7 @@ final class ActionResolver
             return Result::error('Цель не может потратить монеты');
         }
 
-        $max = (int) ($target->prop['coins']['max_value'] ?? 0);
+        $max = (int) ($target->effectiveProp()['coins']['max_value'] ?? 0);
         if ($max > 0 && $target->coins >= $max) {
             return Result::error('У цели максимум монет');
         }
@@ -3949,6 +4011,7 @@ final class ActionResolver
 
     public function chooseOpponentRowMarker(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_opponent_row_marker', 'card_id')) return $skipped;
         $pending = $this->state->battle['pending_opponent_row_marker'] ?? null;
         if (!$pending || ($pending['owner'] ?? null) !== $playerKey) {
             return Result::error('Не ваш выбор');
@@ -4256,6 +4319,7 @@ final class ActionResolver
 
     public function chooseSeggerShield(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_segger_shield', 'source_id')) return $skipped;
         $pending = $this->state->battle['pending_segger_shield'] ?? null;
         if (!$pending) return Result::error('Нет ожидающего выбора');
         if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
@@ -4306,6 +4370,7 @@ final class ActionResolver
 
     public function chooseBloodStormTarget(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_blood_storm', 'card_id')) return $skipped;
         $pending = $this->state->battle['pending_blood_storm'] ?? null;
         if (!$pending) return Result::error('Нет ожидающего выбора');
         if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
@@ -4404,6 +4469,7 @@ final class ActionResolver
 
     public function chooseParticlePick(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_particle_pick', 'card_id')) return $skipped;
         $p = $this->state->battle['pending_particle_pick'] ?? null;
         if (!$p || $p['owner'] !== $playerKey) {
             return Result::error('Не ваш выбор');
@@ -4519,6 +4585,7 @@ final class ActionResolver
 
     public function chooseLifeGift(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_life_gift', 'card_id')) return $skipped;
         $p = $this->state->battle['pending_life_gift'] ?? null;
         if (!$p || $p['owner'] !== $playerKey) {
             return Result::error('Не ваш выбор');
@@ -4687,6 +4754,7 @@ final class ActionResolver
 
     public function chooseDiveCell(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_dive', 'attacker_id')) return $skipped;
         $pd = $this->state->battle['pending_dive'] ?? null;
         if (!$pd) return Result::error('Нет ожидающего выбора');
         if ($pd['owner'] !== $playerKey) return Result::error('Не ваш выбор');
@@ -4774,6 +4842,8 @@ final class ActionResolver
         if (!$pf) return Result::error('Нет ожидающего выбора');
         if ($pf['owner'] !== $playerKey) return Result::error('Не ваш выбор');
 
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_forced_strike', 'attacker_id')) return $skipped;
+
         $targetId = (int) $cmd->get('target_id', 0);
         if (!in_array($targetId, $pf['candidates'], true)) {
             return Result::error('Неверная цель');
@@ -4795,6 +4865,7 @@ final class ActionResolver
 
     public function chooseRow(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_row_pick', 'card_id')) return $skipped;
         $p = $this->state->battle['pending_row_pick'] ?? null;
         if (!$p || $p['owner'] !== $playerKey) {
             return Result::error('Не ваш выбор');
@@ -4838,6 +4909,7 @@ final class ActionResolver
 
     public function chooseRowSpellTargets(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_row_spell_pick', 'source_id')) return $skipped;
         $p = $this->state->battle['pending_row_spell_pick'] ?? null;
         if (!$p || $p['owner'] !== $playerKey) {
             return Result::error('Не ваш выбор');
@@ -4912,6 +4984,7 @@ final class ActionResolver
 
     public function chooseGreedTeleport(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_greed_teleport', 'source_id')) return $skipped;
         $p = $this->state->battle['pending_greed_teleport'] ?? null;
         if (!$p || $p['owner'] !== $playerKey) {
             return Result::error('Не ваш выбор');
@@ -5018,20 +5091,25 @@ final class ActionResolver
             return Result::error('Источник не найден');
         }
 
-        $raw = $cmd->get('target_ids', []);
-        if (!is_array($raw)) $raw = [$raw];
-        $targetIds = array_values(array_unique(array_map('intval', $raw)));
+        if ($source->owner !== $playerKey) return Result::error('Источник изменился');
+        $targetIds = [];
+        if (!EffectiveFeatures::suppressed($source)) {
+            $raw = $cmd->get('target_ids', []);
+            if (!is_array($raw)) $raw = [$raw];
+            $targetIds = array_values(array_unique(array_map('intval', $raw)));
 
-        $count = (int) $item['count'];
-        if (count($targetIds) !== $count) {
-            return Result::error('Нужно выбрать ровно ' . $count
-                . ' цел' . ($count === 1 ? 'ь' : 'и'));
-        }
-
-        foreach ($targetIds as $tid) {
-            if (!in_array($tid, $item['candidates'], true)) {
-                return Result::error('Неверная цель');
+            $count = (int) $item['count'];
+            if (count($targetIds) !== $count) {
+                return Result::error('Нужно выбрать ровно ' . $count
+                    . ' цел' . ($count === 1 ? 'ь' : 'и'));
             }
+
+            foreach ($targetIds as $tid) {
+                if (!in_array($tid, $item['candidates'], true)) {
+                    return Result::error('Неверная цель');
+                }
+            }
+
         }
 
         $value = (int) $item['value'];
@@ -5096,7 +5174,7 @@ final class ActionResolver
             return Result::error('Не ваш выбор');
         }
 
-        $targetId = (int) $cmd->get('target_id', 0);
+        $targetId = EffectiveFeatures::suppressed($nokami) ? 0 : (int) $cmd->get('target_id', 0);
 
         if ($targetId === 0) {
             array_shift($this->state->battle['pending_nokami_wound']);
@@ -5270,6 +5348,7 @@ final class ActionResolver
 
     public function chooseTeleportTargetCell(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_teleport_target', 'attacker_id')) return $skipped;
         $pt = $this->state->battle['pending_teleport_target'] ?? null;
         if (!$pt) return Result::error('Нет ожидающего выбора');
         if ($pt['owner'] !== $playerKey) return Result::error('Не ваш выбор');
@@ -5371,6 +5450,8 @@ final class ActionResolver
             return Result::error('Источник не найден');
         }
 
+        if (EffectiveFeatures::suppressed($hydra)) return $this->chooseAttackSeriesEnd($playerKey, $cmd);
+
         $targetId = (int) $cmd->get('target_id', 0);
         if (!in_array($targetId, $p['candidates'], true)) {
             return Result::error('Неверная цель');
@@ -5423,6 +5504,7 @@ final class ActionResolver
 
     public function chooseWildHealerHeal(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_wild_healer_move', 'card_id')) return $skipped;
         $pending = $this->state->battle['pending_wild_healer_move'] ?? null;
         if (!$pending) return Result::error('Нет ожидающего выбора');
         if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
@@ -5491,7 +5573,7 @@ final class ActionResolver
         }
 
         // Отмена
-        if ($cmd->type === 'cancel_pending' || (int) $cmd->get('target_id', 0) === 0) {
+        if (EffectiveFeatures::suppressed($target) || $cmd->type === 'cancel_pending' || (int) $cmd->get('target_id', 0) === 0) {
             unset($this->state->battle['pending_heal_instead_wound']);
 
             // Переезжаем на следующего отложенного
@@ -5597,6 +5679,7 @@ final class ActionResolver
 
     public function chooseShaksiRoll(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_shaksi_roll', 'source_id')) return $skipped;
         $pending = $this->state->battle['pending_shaksi_roll'] ?? null;
         if (!$pending) return Result::error('Нет ожидающего выбора');
         if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
@@ -5631,9 +5714,9 @@ final class ActionResolver
                     'heal'    => $healed,
                 ];
             }
-        } elseif ($type === 'get_coin' && (empty($target->prop['coins_receive_deny'])
+        } elseif ($type === 'get_coin' && (empty($target->effectiveProp()['coins_receive_deny'])
             || $target->instanceId === $source->instanceId)) {
-            $max = (int) ($target->prop['coins']['max_value'] ?? 0);
+            $max = (int) ($target->effectiveProp()['coins']['max_value'] ?? 0);
             $target->coins += $value;
             if ($max > 0 && $target->coins > $max) $target->coins = $max;
             $this->engine->syncCoinBonus($target);
@@ -5687,6 +5770,7 @@ final class ActionResolver
 
     public function chooseDvergGiftTarget(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_dverg_gift', 'source_id')) return $skipped;
         $pending = $this->state->battle['pending_dverg_gift'] ?? null;
         if (!$pending) return Result::error('Нет ожидающего выбора');
         if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');

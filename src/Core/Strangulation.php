@@ -13,7 +13,7 @@ final class Strangulation
     }
     public static function isStrangler(CardInstance $card): bool
     {
-        foreach ($card->prop['actions'] ?? [] as $action) {
+        foreach ($card->effectiveProp()['actions'] ?? [] as $action) {
             if (($action['type'] ?? '') === 'strangle') return true;
         }
         return false;
@@ -102,7 +102,7 @@ final class Strangulation
             return Result::error('Источник недоступен');
         }
         $action = null;
-        foreach ($source->prop['actions'] ?? [] as $a) {
+        foreach ($source->effectiveProp()['actions'] ?? [] as $a) {
             if (($a['key'] ?? $a['type'] ?? '') === $p['action_key'] && ($a['type'] ?? '') === 'strangle') $action = $a;
         }
         if (!$action || !CoinAbilities::actionAvailable($source, $action)) return Result::error('Действие недоступно');

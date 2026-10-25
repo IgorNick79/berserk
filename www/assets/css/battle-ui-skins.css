@@ -141,3 +141,11 @@
  .battle-page .choice-radio>span:has(.creature-choice-name){flex-wrap:wrap;gap:4px}
  .battle-page .creature-choice-name{flex-basis:100%}
 }
+.battle-page .impact-targets{margin-top:12px;padding-top:12px;border-top:1px solid var(--ip-edge,#bbb)}
+.battle-page .impact-targets ul{list-style:none;margin:0;padding:0}
+.battle-page .impact-targets li{display:flex;align-items:baseline;gap:8px;margin:0;padding:5px 0}
+.battle-page .impact-target-name{flex:1;min-width:0;overflow-wrap:anywhere}
+.battle-page .impact-target-result{flex:0 1 auto;text-align:right}
+.battle-page .memory-loss-notice{padding:12px;margin-bottom:12px;background:var(--ip-surface,#fbe9e7);border-left:3px solid #d96255;border-radius:4px}
+.battle-page .memory-loss-notice h3{margin-top:0}
+.battle-page .memory-loss-notice p:last-child{margin-bottom:0}

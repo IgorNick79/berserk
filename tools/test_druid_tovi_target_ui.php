@@ -36,7 +36,7 @@ foreach(['host','player'] as $owner)foreach(['heal','throw'] as $kind){
     if($kind==='throw'){
         $s->getCard(6)->revealed=false;$info[$s->getCard(6)->ukid]['name']='SECRET_TARGET';
         $hidden=$screen->prepare($s,$owner,$owner,null,$info,['sel'=>1,'mode'=>'action:test'])['data']['panel_html'];
-        mtAssert(!str_contains($hidden,'SECRET_TARGET')&&str_contains($hidden,'?/? HP'),'Hidden target name and HP remain hidden');
+        mtAssert(!str_contains($hidden,'SECRET_TARGET')&&str_contains($hidden,'???')&&!str_contains($hidden,'?/? HP'),'Hidden target name is concealed; HP is omitted from compact choices');
     }
 }
 $s=mtFixture('heal');unset($s->battle['pending_multi_heal']);

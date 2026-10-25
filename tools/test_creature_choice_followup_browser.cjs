@@ -3,7 +3,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'C:/Users/mi/.cache/code
 const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const out=process.env.CREATURE_CHOICE_ARTIFACTS||path.resolve(root,'../king-priest-ui-validation');fs.mkdirSync(out,{recursive:true});
 const check=(v,m)=>{if(!v)throw Error(m)};
-function fixture(stage){return JSON.parse(execFileSync(process.env.PHP_BINARY||'C:/OSPanel/modules/php/PHP_8.1/php.exe',[root+'/tools/test_creature_choice_followup.php','--fixture',stage],{encoding:'utf8'}));}
+function fixture(stage){const file=['memory_notice','area_impact'].includes(stage)?'test_king_priest_main_merge.php':'test_creature_choice_followup.php';return JSON.parse(execFileSync(process.env.PHP_BINARY||'C:/OSPanel/modules/php/PHP_8.1/php.exe',[root+'/tools/'+file,'--fixture',stage],{encoding:'utf8'}));}
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE||'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
  try{for(const width of (process.env.CHOICE_WIDTH?[Number(process.env.CHOICE_WIDTH)]:[1600,800,375])){
@@ -56,6 +56,18 @@ function fixture(stage){return JSON.parse(execFileSync(process.env.PHP_BINARY||'
   const colors=await page.locator('.vampire').evaluate(e=>({bg:getComputedStyle(e).backgroundColor,fg:getComputedStyle(e).color}));
   check(colors.bg==='rgb(58, 48, 40)'&&colors.fg==='rgb(244, 238, 228)','vampirism uses readable theme colors');
   await page.screenshot({path:path.join(out,`vampire-${width}.png`)});
+  await show('memory_notice');
+  check(await page.locator('.memory-loss-notice').isVisible(),'memory alert visible');
+  const notice=await page.locator('.info-panel').innerText();
+  check(notice.includes('Гидра')&&notice.includes('уникальные особенности отключены'),'actual memory impact names target and effect');
+  check(await page.locator('.info-panel .dice-block,.info-panel .impact-targets').count()===0,'no dice or fake damage for memory');
+  check(await page.locator('.info-panel a[href*="cmd=confirm_strike"]').innerText()==='Продолжить','memory alert keeps normal Continue ACK');
+  await page.screenshot({path:path.join(out,`memory-notice-${width}.png`)});
+  await show('area_impact');
+  check(((await page.locator('.strike-box').innerText()).match(/Болотник/g)||[]).length===1,'area impact names source once');
+  check(await page.locator('.impact-targets').evaluate(e=>getComputedStyle(e).borderTopWidth)==='1px','area target list has a divider');
+  check(await page.locator('.impact-targets li').count()===2,'actual area victims remain separate rows');
+  await page.screenshot({path:path.join(out,`area-impact-${width}.png`)});
   check(!errors.length,errors.join('\n'));console.log(`PASS ${width}px: side toggle/polling, compact rows, door grid, instant footer, no dice, death radios, vampire contrast`);
   await page.close();
  }}finally{await browser.close();}

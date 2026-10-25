@@ -19,7 +19,7 @@ final class IncarnationTokenProcessor
 
     public function onTokenGranted(CardInstance $card, int $newValue): void
     {
-        $config = $card->prop['on_incarnation_token'] ?? null;
+        $config = $card->effectiveProp()['on_incarnation_token'] ?? null;
         if (!is_array($config)) return;
 
         $value = (int) ($config['value'] ?? 1);

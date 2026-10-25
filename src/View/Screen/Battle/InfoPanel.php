@@ -378,6 +378,17 @@ final class InfoPanel
         $contentHtml = '';
         $kind = $strike['kind'] ?? 'strike';
 
+        if ($kind === 'impact' && ($strike['effect'] ?? '') === 'memory_loss' && $strike['state'] === 'results') {
+            $confirmed = $strike['confirmed'] ?? [];
+            $continue = !in_array($playerKey, $confirmed, true)
+                ? $this->confirmStrikeLink($state, $baseUrl)
+                : '<p class="wait">Ожидание оппонента...</p>';
+            return '<div class="strike-box"><div class="memory-loss-notice" role="status">'
+                . '<h3>Потеря памяти</h3><p><b>' . $tn . '</b>: уникальные особенности отключены.</p>'
+                . '<p>Воздействие действует, пока <b>' . $an . '</b> остаётся на поле боя.</p>'
+                . '</div>' . $continue . '</div>';
+        }
+
         if ($strike['state'] === 'results' && !empty($strike['cell_marker'])) {
             $cm = $strike['cell_marker'];
             $label = $strike['action_name'] ?? 'Маркер';
@@ -1217,7 +1228,7 @@ final class InfoPanel
                     . '»: ' . $sourceEsc . ' и ' . $targetEsc . ' уничтожены';
             } elseif ($kind === 'impact') {
                 $name = $strike['action_name'] ?? 'Воздействие';
-                $resultText = $name;
+                $resultText = $name === 'Воздействие' ? '' : htmlspecialchars((string) $name, ENT_QUOTES);
             } else {
                 $resultText = 'Атакующий: <b>' . BattleHelper::strikeName($fin['attack']).'</b>'
                     . ' | Защитник: <b>' . BattleHelper::strikeName($fin['defend']).'</b>';
@@ -1360,25 +1371,24 @@ final class InfoPanel
 
             $impactHtml = '';
             if (!empty($strike['impact_targets'])) {
+                $impactHtml = '<div class="impact-targets" aria-label="Результаты воздействия"><ul>';
                 foreach ($strike['impact_targets'] as $it) {
                     $tc = $state->getCard($it['target_id']);
                     $ti = $tc ? ($cardsInfo[$tc->ukid] ?? null) : null;
                     $tn2 = $ti ? htmlspecialchars($ti['name'], ENT_QUOTES) : '?';
 
-                    $impactHtml .= '<p class="impact">'
-                        . $tn2 . ': −' . $it['damage'] . ' ❤️ HP';
+                    $impactHtml .= '<li class="impact"><span class="impact-target-name">' . $tn2
+                        . '</span><span class="impact-target-result">−' . (int) $it['damage'] . ' ❤️ HP';
                     if (!empty($it['poison'])) {
                         $impactHtml .= ' (отравление ' . $it['poison'] . ')';
                     }
-                    $impactHtml .= '</p>';
+                    $impactHtml .= '</span></li>';
                 }
+                $impactHtml .= '</ul></div>';
             }
 
             if (!empty($strike['self_destroyed'])) {
-                $selfCard = $state->getCard($strike['attacker_id']);
-                $selfInfo = $selfCard ? ($cardsInfo[$selfCard->ukid] ?? null) : null;
-                $selfName = $selfInfo ? htmlspecialchars($selfInfo['name'], ENT_QUOTES) : '?';
-                $impactHtml .= '<p class="impact">' . $selfName . ' уничтожен</p>';
+                $impactHtml .= '<p class="impact">Источник воздействия уничтожен.</p>';
             }
 
             $pushHtml = '';
@@ -1690,7 +1700,7 @@ final class InfoPanel
                     'confirm_html'     => $confirmHtml,
                 ]);
             } else {
-                $contentHtml = '<p>' . $summaryHtml . $resultText . $extraResultHtml . '</p>' . $confirmHtml;
+                $contentHtml = $summaryHtml . ($resultText !== '' ? '<p>' . $resultText . '</p>' : '') . $extraResultHtml . $confirmHtml;
             }
         }
 
@@ -1730,6 +1740,11 @@ final class InfoPanel
                 'after'  => 'Сражение завершено',
                 default  => 'Объявление удара',
             };
+        }
+
+        if ($kind === 'impact' && (int) $strike['attacker_id'] === (int) $strike['target_id']) {
+            return '<div class="strike-box"><p>' . htmlspecialchars($headerText, ENT_QUOTES)
+                . ': <b>' . $an . '</b></p>' . $contentHtml . '</div>';
         }
 
         return $this->tpl->parse('includes/battle/strike.tpl', [

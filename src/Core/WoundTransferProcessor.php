@@ -31,6 +31,7 @@ final class WoundTransferProcessor
      */
     public function start(string $playerKey, CardInstance $source, array $options): Result
     {
+        if (EffectiveFeatures::suppressed($source)) return Result::error('Потеря памяти');
         $kind         = (string) ($options['kind'] ?? 'hermit');
         $maxTransfer  = (int) ($options['max_transfer'] ?? 0);
         $cost         = (int) ($options['coins_cost'] ?? 0);
@@ -125,6 +126,7 @@ final class WoundTransferProcessor
 
     public function chooseSource(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->finishSuppressed($playerKey)) return $skipped;
         $pw = $this->state->battle['pending_wound_transfer'] ?? null;
         if (!$pw || $pw['step'] !== 'source') return Result::error('Не тот шаг');
         if ($pw['owner'] !== $playerKey)     return Result::error('Не ваш выбор');
@@ -145,6 +147,7 @@ final class WoundTransferProcessor
 
     public function chooseAmount(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->finishSuppressed($playerKey)) return $skipped;
         $pw = $this->state->battle['pending_wound_transfer'] ?? null;
         if (!$pw || $pw['step'] !== 'amount') return Result::error('Не тот шаг');
         if ($pw['owner'] !== $playerKey)      return Result::error('Не ваш выбор');
@@ -179,6 +182,7 @@ final class WoundTransferProcessor
 
     public function chooseTarget(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->finishSuppressed($playerKey)) return $skipped;
         $pw = $this->state->battle['pending_wound_transfer'] ?? null;
         if (!$pw || $pw['step'] !== 'target') return Result::error('Не тот шаг');
         if ($pw['owner'] !== $playerKey)      return Result::error('Не ваш выбор');
@@ -218,6 +222,7 @@ final class WoundTransferProcessor
 
     public function chooseTargetAmount(string $playerKey, Command $cmd): Result
     {
+        if ($skipped = $this->finishSuppressed($playerKey)) return $skipped;
         $pw = $this->state->battle['pending_wound_transfer'] ?? null;
         if (!$pw || $pw['step'] !== 'target_amount') return Result::error('Не тот шаг');
         if ($pw['owner'] !== $playerKey)             return Result::error('Не ваш выбор');
@@ -243,6 +248,43 @@ final class WoundTransferProcessor
         $this->state->battle['pending_wound_transfer']['step'] = 'target';
         $this->state->bumpVersion();
         return Result::ok(['wt_target_amount_done']);
+    }
+
+    /** A fizzled ability, not the refundable cancellation chosen by its owner. */
+    private function finishSuppressed(string $owner): ?Result
+    {
+        $pending = $this->state->battle['pending_wound_transfer'] ?? null;
+        if (!$pending || $pending['owner'] !== $owner) return null;
+        $source = $this->state->getCard((int) $pending['source_id']);
+        if (!$source || !EffectiveFeatures::suppressed($source)) return null;
+        $onFinish = $pending['options']['on_finish'] ?? 'main_phase';
+        if ($onFinish === 'combat_resolution') {
+            $item = $this->state->battle['strike']['instant_resolution']['queue'][0] ?? null;
+            if (!$item || (int) ($item['card_id'] ?? 0) !== $source->instanceId
+                || ($item['effect']['type'] ?? '') !== 'redistribute_wounds') {
+                return Result::error('Нет приостановленного переноса ран');
+            }
+        }
+        unset($this->state->battle['pending_wound_transfer']);
+        // Follow normal completion's tap commitment; never undo a prior cost.
+        if (in_array($onFinish, ['strike_after', 'combat', 'main_phase'], true)) {
+            $source->closed = true;
+            unset($source->flags['in_stack']);
+        }
+        if ($onFinish === 'combat_resolution') {
+            (new InstantProcessor($this->state, $this->engine))->completePausedCombatItem(
+                false, 'Потеря памяти', ['transferred' => 0, 'transfers' => []]
+            );
+        } else {
+            if (in_array($this->state->battle['strike']['instant_phase'] ?? '', ['after', 'combat'], true)) {
+                $this->state->battle['strike']['instant_passed'] = [];
+            }
+            if (!empty($this->state->battle['turn_phase'])) {
+                (new TurnPhaseProcessor($this->state, $this->engine))->resume();
+            }
+        }
+        $this->state->bumpVersion();
+        return Result::ok(['wound_transfer_suppressed']);
     }
 
     public function cancel(string $playerKey): Result
@@ -285,6 +327,7 @@ final class WoundTransferProcessor
 
     public function finish(string $playerKey): Result
     {
+        if ($skipped = $this->finishSuppressed($playerKey)) return $skipped;
         $pw = $this->state->battle['pending_wound_transfer'] ?? null;
         if (!$pw) return Result::error('Нет ожидающего выбора');
         if ($pw['owner'] !== $playerKey) return Result::error('Не ваш выбор');

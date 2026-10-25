@@ -53,14 +53,14 @@ final class MovementEffectResolver
 
     private function applyMovePenalty(CardInstance $card): void
     {
-        if (!empty($card->prop['lose_coins_on_move']) && $card->coins > 0) {
+        if (!empty($card->effectiveProp()['lose_coins_on_move']) && $card->coins > 0) {
             $card->coins = 0;
         }
     }
 
     private function maybeOpenWildHealer(CardInstance $card, string $playerKey): void
     {
-        if (empty($card->prop['on_move_heal_adjacent'])) return;
+        if (empty($card->effectiveProp()['on_move_heal_adjacent'])) return;
         if ($card->zone !== CardInstance::ZONE_FIELD) return;
         if ($card->dying || $card->hp <= 0) return;
 
@@ -82,7 +82,7 @@ final class MovementEffectResolver
         $this->state->battle['pending_wild_healer_move'] = [
             'owner'      => $playerKey,
             'card_id'    => $card->instanceId,
-            'value'      => (int) ($card->prop['on_move_heal_adjacent']['value'] ?? 1),
+            'value'      => (int) ($card->effectiveProp()['on_move_heal_adjacent']['value'] ?? 1),
             'candidates' => $candidates,
         ];
     }
@@ -91,7 +91,7 @@ final class MovementEffectResolver
     {
         $card = $context->card;
 
-        $effects = $card->prop['on_move'] ?? [];
+        $effects = $card->effectiveProp()['on_move'] ?? [];
         if (is_array($effects)) {
             foreach ($effects as $effect) {
                 if (($effect['type'] ?? '') !== 'modifier') continue;
@@ -111,7 +111,7 @@ final class MovementEffectResolver
             }
         }
 
-        $halfEffects = $card->prop['on_move_half'] ?? [];
+        $halfEffects = $card->effectiveProp()['on_move_half'] ?? [];
         if (!is_array($halfEffects) || empty($halfEffects)) {
             return;
         }
@@ -150,7 +150,7 @@ final class MovementEffectResolver
     private function applyMovementDirectionBonus(MovementContext $context): void
     {
         $card = $context->card;
-        $config = $card->prop['movement_direction_bonus'] ?? null;
+        $config = $card->effectiveProp()['movement_direction_bonus'] ?? null;
         if (!is_array($config)) {
             return;
         }
@@ -235,7 +235,7 @@ final class MovementEffectResolver
 
         // Только телепортация (jump с большим range)
         $jumpRange = 0;
-        foreach ($moved->prop['actions'] ?? [] as $a) {
+        foreach ($moved->effectiveProp()['actions'] ?? [] as $a) {
             if (($a['type'] ?? '') === 'jump') {
                 $jumpRange = (int) ($a['range'] ?? 0);
                 break;
@@ -253,7 +253,7 @@ final class MovementEffectResolver
             if ($imp->zone !== CardInstance::ZONE_FIELD) continue;
             if ($imp->dying || $imp->hp <= 0) continue;
 
-            $config = $imp->prop['on_teleport_adjacent_bonus'] ?? null;
+            $config = $imp->effectiveProp()['on_teleport_adjacent_bonus'] ?? null;
             if (!is_array($config)) continue;
 
             // Стартовая клетка прыжка должна быть соседней с Импом
@@ -286,7 +286,7 @@ final class MovementEffectResolver
         $moved = $context->card;
 
         $hasMagic = false;
-        foreach ($moved->prop['actions'] ?? [] as $action) {
+        foreach ($moved->effectiveProp()['actions'] ?? [] as $action) {
             $type = $action['type'] ?? '';
             if (in_array($type, ['discharge', 'magic', 'cast'], true)) {
                 $hasMagic = true;
@@ -301,7 +301,7 @@ final class MovementEffectResolver
             if ($airin->owner !== $moved->owner) continue;
             if ($airin->instanceId === $moved->instanceId) continue;
             if ($airin->zone !== CardInstance::ZONE_FIELD) continue;
-            if (empty($airin->prop['airin_trigger'])) continue;
+            if (empty($airin->effectiveProp()['airin_trigger'])) continue;
             if ($airin->dying || $airin->hp <= 0) continue;
 
             if ($this->isAdjacent($context->fromRow, $context->fromCol, $airin->row, $airin->col)) {
@@ -334,7 +334,7 @@ final class MovementEffectResolver
 
     private function maybeOpenForcedStrike(CardInstance $card, string $playerKey): void
     {
-        if (empty($card->prop['forced_strike'])) return;
+        if (empty($card->effectiveProp()['forced_strike'])) return;
         if ($card->move > 0) return;
         if ($card->closed) return;
 
@@ -364,7 +364,7 @@ final class MovementEffectResolver
     private function maybeOpenForcedDirectionalMove(MovementContext $context): void
     {
         $card = $context->card;
-        $config = $card->prop['force_opponent_directional_move'] ?? null;
+        $config = $card->effectiveProp()['force_opponent_directional_move'] ?? null;
         if (!is_array($config)) return;
         if ($context->movementType !== MovementContext::TYPE_MOVE) return;
         if ($context->manhattanDistance() !== 1) return;

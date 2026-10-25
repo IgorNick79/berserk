@@ -64,11 +64,11 @@ final class MovementResolver
         $drow = abs($row - $card->row);
         $dcol = abs($col - $card->col);
 
-        $canDiag = !empty($card->prop['can_move_diagonal']);
+        $canDiag = !empty($card->effectiveProp()['can_move_diagonal']);
         $isOrtho = ($drow + $dcol) === 1;
         $isDiag  = $canDiag && $drow === 1 && $dcol === 1;
 
-        $isRowExtreme = !empty($card->prop['row_extreme'])
+        $isRowExtreme = !empty($card->effectiveProp()['row_extreme'])
             && $drow === 0
             && (($card->col === 1 && $col === 5) || ($card->col === 5 && $col === 1));
 
@@ -89,7 +89,7 @@ final class MovementResolver
         $card->flags['moved_this_turn'] = true;
         $this->markMovedUnderLimit($card);
 
-        if (!empty($card->prop['strike_consecutive'])
+        if (!empty($card->effectiveProp()['strike_consecutive'])
             && (int) ($card->flags['attacks_used_this_turn'] ?? 0) > 0) {
             $card->flags['strike_chain_broken'] = true;
         }
@@ -188,7 +188,7 @@ final class MovementResolver
         $this->markMovedUnderLimit($card);
 
         // Берсерк: движение после атаки ломает цепочку
-        if ($spendAction && !empty($card->prop['strike_consecutive'])
+        if ($spendAction && !empty($card->effectiveProp()['strike_consecutive'])
             && (int) ($card->flags['attacks_used_this_turn'] ?? 0) > 0) {
             $card->flags['strike_chain_broken'] = true;
         }
@@ -266,7 +266,7 @@ final class MovementResolver
 
     private function findJumpAction(CardInstance $card): ?array
     {
-        foreach ($card->prop['actions'] ?? [] as $action) {
+        foreach ($card->effectiveProp()['actions'] ?? [] as $action) {
             if (($action['type'] ?? '') === 'jump') {
                 return $action;
             }
@@ -277,7 +277,7 @@ final class MovementResolver
 
     private function keepsForcedStrikeTarget(CardInstance $card, int $row, int $col): bool
     {
-        if (empty($card->prop['forced_strike'])) {
+        if (empty($card->effectiveProp()['forced_strike'])) {
             return true;
         }
 
@@ -327,7 +327,7 @@ final class MovementResolver
 
     private function tryShaksiRoll(CardInstance $card, string $playerKey): void
     {
-        $config = $card->prop['on_jump_roll'] ?? null;
+        $config = $card->effectiveProp()['on_jump_roll'] ?? null;
         if (!is_array($config) || empty($config)) return;
         if ($card->zone !== CardInstance::ZONE_FIELD) return;
         if ($card->row === null || $card->col === null) return;
@@ -384,8 +384,8 @@ final class MovementResolver
 
         foreach ($nearby as $c) {
             if ($type === 'get_coin') {
-                if (!empty($c->prop['coins_receive_deny'])) continue;
-                $max = (int) ($c->prop['coins']['max_value'] ?? 0);
+                if (!empty($c->effectiveProp()['coins_receive_deny'])) continue;
+                $max = (int) ($c->effectiveProp()['coins']['max_value'] ?? 0);
                 if ($max > 0 && $c->coins >= $max) continue;
             }
             $candidates[] = $c->instanceId;

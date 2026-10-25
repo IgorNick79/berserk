@@ -241,7 +241,7 @@ final class TurnProcessor
 
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $endingKey) continue;
-            if (empty($card->prop['movement_direction_bonus'])) continue;
+            if (empty($card->effectiveProp()['movement_direction_bonus'])) continue;
 
             unset($card->flags['movement_direction_bonus']);
         }
@@ -319,7 +319,7 @@ final class TurnProcessor
                 if ($card->owner !== $oppKey) continue;
                 if ($card->zone !== CardInstance::ZONE_FIELD
                     && $card->zone !== CardInstance::ZONE_FLYING) continue;
-                if (empty($card->prop['open_on_opponent_turn'])) continue;
+                if (empty($card->effectiveProp()['open_on_opponent_turn'])) continue;
                 if (!$card->closed) continue;
 
                 $card->closed = false;
@@ -375,7 +375,7 @@ final class TurnProcessor
             foreach ($this->state->cards as $card) {
                 if ($card->zone !== CardInstance::ZONE_FIELD
                     && $card->zone !== CardInstance::ZONE_FLYING) continue;
-                if (!empty($card->prop['airin_trigger'])) {
+                if (!empty($card->effectiveProp()['airin_trigger'])) {
                     $card->flags['airin_triggered_this_turn'] = 0;
                 }
             }
@@ -492,7 +492,7 @@ final class TurnProcessor
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $activeKey) continue;
             if ($card->zone !== CardInstance::ZONE_GRAVEYARD) continue;
-            if (!array_key_exists('incarnation', $card->prop)) continue;
+            if (!array_key_exists('incarnation', $card->effectiveProp())) continue;
             if (!empty($card->flags['incarnation_ready'])) continue;
             if (empty($card->markers['incarnation'])) continue;
 
@@ -525,10 +525,10 @@ final class TurnProcessor
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $activeKey) continue;
             if ($card->zone !== CardInstance::ZONE_GRAVEYARD) continue;
-            if (!array_key_exists('incarnation', $card->prop)) continue;
+            if (!array_key_exists('incarnation', $card->effectiveProp())) continue;
             if (empty($card->flags['incarnation_ready'])) continue;
 
-            $inc     = $card->prop['incarnation'] ?? null;
+            $inc     = $card->effectiveProp()['incarnation'] ?? null;
             $incType = is_array($inc) ? ($inc['type'] ?? null) : null;
             if ($incType !== 'fly') continue;
 
@@ -552,10 +552,10 @@ final class TurnProcessor
             foreach ($this->state->cards as $card) {
                 if ($card->owner !== $activeKey) continue;
                 if ($card->zone !== CardInstance::ZONE_GRAVEYARD) continue;
-                if (!array_key_exists('incarnation', $card->prop)) continue;
+                if (!array_key_exists('incarnation', $card->effectiveProp())) continue;
                 if (empty($card->flags['incarnation_ready'])) continue;
 
-                $inc     = $card->prop['incarnation'] ?? null;
+                $inc     = $card->effectiveProp()['incarnation'] ?? null;
                 $incType = is_array($inc) ? ($inc['type'] ?? null) : null;
                 if ($incType === 'fly') continue;
 
@@ -612,7 +612,7 @@ final class TurnProcessor
                 ];
             }
 
-            $config = $card->prop['start_pre_battle'] ?? null;
+            $config = $card->effectiveProp()['start_pre_battle'] ?? null;
             if (!is_array($config) || empty($config)) continue;
 
             foreach ($config as $variant) {
@@ -715,10 +715,10 @@ final class TurnProcessor
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->owner !== $activeKey) continue;
-            if (empty($card->prop['pre_turn_start'])) continue;
+            if (empty($card->effectiveProp()['pre_turn_start'])) continue;
             if (!empty($card->flags['choice_done'])) continue;
 
-            $config = $card->prop['pre_turn_start'];
+            $config = $card->effectiveProp()['pre_turn_start'];
             $this->state->battle['pending_card_choice'] = [
                 'card_id' => $card->instanceId,
                 'options' => $config['options'] ?? [],
@@ -775,7 +775,7 @@ final class TurnProcessor
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
 
-            $start = $card->prop['start'] ?? null;
+            $start = $card->effectiveProp()['start'] ?? null;
             if (!$start || !is_array($start)) continue;
 
             $cardSide = $this->state->getPlayer($card->owner)->side ?? 0;
@@ -835,7 +835,7 @@ final class TurnProcessor
                 break;
             case 'get_coins':
                 $coins = (int) ($start['coins'] ?? 1);
-                $max = (int) ($card->prop['coins']['max_value'] ?? 0);
+                $max = (int) ($card->effectiveProp()['coins']['max_value'] ?? 0);
 
                 $card->coins += $coins;
                 if ($max > 0 && $card->coins > $max) {
@@ -896,7 +896,7 @@ final class TurnProcessor
         $card = $this->state->getCard($pi['current']);
         if (!$card) return Result::error('Карта не найдена');
 
-        $inc = $card->prop['incarnation'] ?? null;
+        $inc = $card->effectiveProp()['incarnation'] ?? null;
         $open = is_array($inc) && !empty($inc['open']);
 
         // Возврат: базовые настройки + reset
@@ -911,7 +911,7 @@ final class TurnProcessor
         $card->revealed = true;
         $card->markers  = [];               // снимаем маркер incarnation
         $card->modifiers = [];              // уже пустые, но на всякий
-        $card->flags = [];                  // сбрасываем moved_this_turn, choice_done и т.д.
+        $card->flags = MemoryLoss::persistentFlags($card);                  // сбрасываем moved_this_turn, choice_done и т.д.
         $card->flags['incarnated'] = true;
 
         // Бафы после инкарнации
@@ -972,7 +972,7 @@ final class TurnProcessor
         $card->revealed  = true;
         $card->markers   = [];
         $card->modifiers = [];
-        $card->flags     = [];
+        $card->flags = MemoryLoss::persistentFlags($card);
         $card->flags['incarnated'] = true;
 
         // Бафы после инкарнации
@@ -999,10 +999,10 @@ final class TurnProcessor
             if ($card->owner !== $activeKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if (empty($card->prop['prophecy'])) continue;
+            if (empty($card->effectiveProp()['prophecy'])) continue;
             if (!empty($card->flags['prophecy_done_this_turn'])) continue;
 
-            $count = (int) $card->prop['prophecy'];
+            $count = (int) $card->effectiveProp()['prophecy'];
             if ($count <= 0) continue;
 
             $peeked = $pp->peek($activeKey, $count);
@@ -1011,7 +1011,7 @@ final class TurnProcessor
                 continue;
             }
 
-            $isTransform = !empty($card->prop['prophecy_transform']);
+            $isTransform = !empty($card->effectiveProp()['prophecy_transform']);
             $allElite    = $peeked['meta']['all_elite'];
 
             if ($isTransform && $allElite) {
@@ -1108,17 +1108,17 @@ final class TurnProcessor
 
     public function triggerProphecyForCard(CardInstance $card, string $activeKey): void
     {
-        if (empty($card->prop['prophecy'])) return;
+        if (empty($card->effectiveProp()['prophecy'])) return;
         if (!empty($card->flags['prophecy_done_this_turn'])) return;
 
-        $count = (int) $card->prop['prophecy'];
+        $count = (int) $card->effectiveProp()['prophecy'];
         if ($count <= 0) return;
 
         $pp = new ProphecyProcessor($this->state, $this->engine);
         $peeked = $pp->peek($activeKey, $count);
         if ($peeked === null) return;
 
-        $isTransform = !empty($card->prop['prophecy_transform']);
+        $isTransform = !empty($card->effectiveProp()['prophecy_transform']);
         $allElite    = $peeked['meta']['all_elite'];
 
         if ($isTransform && $allElite) {

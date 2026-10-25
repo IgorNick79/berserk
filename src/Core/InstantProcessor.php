@@ -155,7 +155,7 @@ final class InstantProcessor
             if ($card->dying) continue;
             if ($type !== 'turn' && CardStats::combatClosed($this->state, $card)) continue;
             if (!empty($card->flags['in_stack'])) continue;
-            if (empty($card->prop['instants'])) continue;
+            if (empty($card->effectiveProp()['instants'])) continue;
 
             // Карта в активном pending — тоже занята: отменить и только потом
             // играть инстанты. Даже если pending отменяемый.
@@ -163,7 +163,7 @@ final class InstantProcessor
                 continue;
             }
 
-            foreach ($card->prop['instants'] as $inst) {
+            foreach ($card->effectiveProp()['instants'] as $inst) {
                 if (($inst['trigger'] ?? '') !== $type) continue;
                 if (!$this->combatSourceAvailable($card, $inst, $type, $phase, $strike)) continue;
                 if (!empty($strike['matriarch_order']) && ($inst['effect']['type'] ?? '') === 'redirect_strike') continue;
@@ -417,7 +417,7 @@ final class InstantProcessor
         }
 
         $inst = null;
-        foreach ($card->prop['instants'] ?? [] as $i) {
+        foreach ($card->effectiveProp()['instants'] ?? [] as $i) {
             if (($i['trigger'] ?? '') !== $wantedType) continue;
             if (($i['key'] ?? '') === $key) { $inst = $i; break; }
         }
@@ -559,10 +559,14 @@ final class InstantProcessor
 
         $source = $this->state->getCard($pc['card_id']);
         if (!$source) return Result::error('Источник не найден');
+        if (EffectiveFeatures::suppressed($source)) {
+            unset($this->state->battle['pending_combat_pick']);
+            $this->state->bumpVersion();
+            return Result::ok(['combat_pick_suppressed']);
+        }
         if (!$this->combatSourceAvailable($source, ['effect' => $pc['effect']], 'combat', 'combat', $this->state->battle['strike'] ?? null)) {
             return Result::error('Существо занято сражением');
         }
-
 
         $source->flags['in_stack'] = true;
 
@@ -653,7 +657,13 @@ final class InstantProcessor
             $effect = (array) ($item['effect'] ?? []);
             $label  = $item['label'] ?? 'Инстант';
 
-            if (!$target) {
+            if ($source && EffectiveFeatures::suppressed($source)) {
+                $summary[] = [
+                    'label' => $label, 'card_ukid' => $source->ukid,
+                    'player' => $item['player'] ?? null,
+                    'applied' => false, 'reason' => 'Потеря памяти',
+                ];
+            } elseif (!$target) {
                 $summary[] = [
                     'label'     => $label,
                     'card_ukid' => $source ? $source->ukid : '',
@@ -868,6 +878,9 @@ final class InstantProcessor
         if (!$source) {
             return ['source' => null, 'applied' => false, 'reason' => 'источник не найден', 'result' => []];
         }
+        if (EffectiveFeatures::suppressed($source)) {
+            return ['source' => $source, 'applied' => false, 'reason' => 'Потеря памяти', 'result' => []];
+        }
         if (!$this->combatSourceAvailable($source, ['effect' => $effect], 'combat', 'combat', $this->state->battle['strike'] ?? null)) {
             return ['source' => $source, 'applied' => false, 'reason' => 'существо занято сражением', 'result' => []];
         }
@@ -949,6 +962,14 @@ final class InstantProcessor
         $item = $queue[0];
         $source = $this->state->getCard((int) ($item['card_id'] ?? 0));
         if (!$source) return Result::error('Карта не найдена');
+        if (EffectiveFeatures::suppressed($source)) {
+            unset($this->state->battle['pending_dice_choice']);
+            // Use the existing failed-item completion, including its normal
+            // tap commitment. Suppression never opens the card or refunds costs.
+            $this->completePausedCombatItem(false, 'Потеря памяти');
+            $this->state->bumpVersion();
+            return Result::ok(['dice_choice_suppressed']);
+        }
 
         $before = $this->captureCombatSnapshot();
         $reason = $this->engine->applyCombatEffect(
@@ -1569,6 +1590,11 @@ final class InstantProcessor
 
         $source = $this->state->getCard((int) $pi['card_id']);
         if (!$source) return Result::error('Источник не найден');
+        if (EffectiveFeatures::suppressed($source)) {
+            unset($this->state->battle['pending_instant_pick']);
+            $this->state->bumpVersion();
+            return Result::ok(['instant_pick_suppressed']);
+        }
         if (!$this->isLegalTurnTarget($source, $target, (string) ($pi['target'] ?? 'self'), $condition)) {
             return Result::error('Цель недоступна');
         }
@@ -1622,6 +1648,12 @@ final class InstantProcessor
         $pending = $this->state->battle['pending_forced_strike_adjacent'] ?? null;
         if (!$pending) return Result::error('Нет ожидающего выбора');
         if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
+        $source = $this->state->getCard((int) ($pending['card_id'] ?? 0));
+        if ($source && EffectiveFeatures::suppressed($source)) {
+            unset($this->state->battle['pending_forced_strike_adjacent']);
+            $this->state->bumpVersion();
+            return Result::ok(['forced_strike_instant_suppressed']);
+        }
 
         $targetId = (int) $cmd->get('target_id', 0);
         if (!in_array($targetId, (array) ($pending['candidates'] ?? []), true)) {
@@ -1799,6 +1831,8 @@ final class InstantProcessor
 
             if (!$source) {
                 $reason = 'источник не найден';
+            } elseif (EffectiveFeatures::suppressed($source)) {
+                $reason = 'Потеря памяти';
             } elseif (!$target || $target->dying || $target->hp <= 0) {
                 $reason = 'цель не найдена';
             } elseif (empty($item['effect'])) {
@@ -2082,6 +2116,8 @@ final class InstantProcessor
     private function combatItemRequiresTap(array $item): bool
     {
         $source = $this->state->getCard((int) ($item['card_id'] ?? 0));
+        // This is the declared tap contract, not feature execution. Suppression
+        // must not turn an existing no_close instant into a new tap cost.
         foreach ($source?->prop['instants'] ?? [] as $instant) {
             if (($instant['key'] ?? '') === ($item['instant_key'] ?? '')) return $this->instantRequiresTap($instant);
         }

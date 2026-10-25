@@ -21,7 +21,7 @@ final class OchiKronga
 
     private static function enabled(CardInstance $source): bool
     {
-        $config = $source->prop[self::PROP] ?? null;
+        $config = $source->effectiveProp()[self::PROP] ?? null;
         return is_array($config) && ($config['filter'] ?? null) === 'forests';
     }
 
@@ -78,6 +78,8 @@ final class OchiKronga
     {
         $kind = self::classify($event);
         foreach ($state->cards as $source) {
+            // Suppression pauses the ability; it must not reset its per-turn usage.
+            if (EffectiveFeatures::suppressed($source)) continue;
             if (!self::live($source) || !self::enabled($source)) { self::leftPlay($source); continue; }
             $period = self::period($state, $source->owner);
             if ($period === null) continue;

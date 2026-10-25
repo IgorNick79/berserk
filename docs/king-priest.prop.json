@@ -1,0 +1,19 @@
+{
+  "save_coins": true,
+  "actions": [
+    {
+      "key": "memory_loss",
+      "name": "Потеря памяти",
+      "type": "impact",
+      "effect": "memory_loss",
+      "coins": 1,
+      "once_per_battle": true
+    },
+    {
+      "key": "heal",
+      "name": "Излечение на 2",
+      "type": "heal",
+      "value": 2
+    }
+  ]
+}
