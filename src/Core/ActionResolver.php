@@ -4690,7 +4690,9 @@ final class ActionResolver
             return Result::error('Превышена дальность');
         }
 
-        $cellKey = "{$target->row}_{$target->col}";
+        $bombRow = $target->row;
+        $bombCol = $target->col;
+        $cellKey = "{$bombRow}_{$bombCol}";
         if (ZoneManager::hasMarker($this->state, $cellKey)) {
             return Result::error('Клетка уже помечена');
         }
@@ -4737,8 +4739,8 @@ final class ActionResolver
             'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
             'damage'      => $realDamage,
             'bomb'        => [
-                'row'    => $target->row,
-                'col'    => $target->col,
+                'row'    => $bombRow,
+                'col'    => $bombCol,
                 'damage' => $bombDamage,
             ],
             'confirmed'   => [],

@@ -24,4 +24,8 @@ for($i=0;$i<4;$i++){$card=battleSnapshotCard($s->nextInstanceId(),'extra'.$i,'ho
 $out['six']=$render();$s->cell_markers['3_2']=array_fill(0,12,['type'=>'bomb']);$out['overflow']=$render();
 unset($s->cards[$ids[1]]);foreach($s->cards as $id=>$card)if(!in_array($id,$ids,true))unset($s->cards[$id]);$out['removed']=$render();
 $s->cell_markers=[];$out['clean']=$render();
+$s->cards=[];
+foreach([1,2,3,12] as $n){$s->cell_markers=['3_2'=>array_slice(array_merge([['type'=>'bomb'],['type'=>'reduce_attack'],['type'=>'row_spell']],array_fill(0,9,['type'=>'gate'])),0,$n)];$out['empty'.$n]=$render();}
+$s->cell_markers=['3_2'=>[['type'=>'bonfire'],['type'=>'bomb'],['type'=>'reduce_attack']]];$out['empty_fire']=$render();
+$s->cell_markers=['3_2'=>[['type'=>'bonfire']]];$out['empty_fire_only']=$render();
 echo json_encode($out,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);

@@ -75,11 +75,11 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 .battle-page [data-cell-occupant]>.card-link{width:100%;height:100%}
 .battle-page .cell-presentation:has(.cell-bottom-strip) [data-cell-occupant]{bottom:16px}
 .battle-page .cell-presentation:has(.cell-bottom-strip) [data-cell-occupant] .battle-mini-card{zoom:.87}
-.battle-page .cell-bottom-strip{position:absolute;bottom:0;left:0;right:0;height:16px;display:flex;align-items:center;gap:2px;background:rgba(221, 221, 221, 0.55);color:#d3b383;z-index:21;box-sizing:border-box;padding:0 2px;pointer-events:none}
-.battle-page .cell-bottom-strip .cell-markers{position:static;display:flex;flex:1 1 0;min-width:0;height:16px;gap:1px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;pointer-events:auto}
-.battle-page .cell-bottom-strip .cell-marker{position:static;flex:0 0 14px;width:14px;height:14px;line-height:14px;font-size:13px;text-align:center;border:0;border-radius:0;background:transparent;text-shadow:none;pointer-events:auto}
-.battle-page .cell-bottom-strip .cell-marker::after{content:none}
-.battle-page .cell-bottom-strip .cell-marker-lantern_light{background:url('/assets/images/lantern.png') center/contain no-repeat}
+.battle-page :is(.cell-bottom-strip,.cell-marker-island){position:absolute;bottom:0;left:0;right:0;height:16px;display:flex;align-items:center;gap:2px;background:rgba(221, 221, 221, 0.55);color:#d3b383;z-index:21;box-sizing:border-box;padding:0 2px;pointer-events:none}
+.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-markers{position:static;display:flex;flex:1 1 0;min-width:0;height:16px;gap:1px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;pointer-events:auto}
+.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-marker{position:static;flex:0 0 14px;width:14px;height:14px;line-height:14px;font-size:13px;text-align:center;border:0;border-radius:0;background:transparent;text-shadow:none;pointer-events:auto}
+.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-marker::after{content:none}
+.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-marker-lantern_light{background:url('/assets/images/lantern.png') center/contain no-repeat}
 .battle-page .cell-switch{display:flex;align-items:center;flex:0 0 auto;height:16px;font:10px/16px system-ui,sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:auto;color:#d3b383}
 .battle-page .cell-switch button{all:unset;box-sizing:border-box;width:13px;height:16px;text-align:center;font:16px/16px system-ui,sans-serif;cursor:pointer;color:inherit}
 .battle-page .cell-switch button:focus-visible{outline:1px solid #e4c28d;outline-offset:-1px}
@@ -90,3 +90,8 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 
 .battle-page .cell-marker[data-cell-hint]{cursor:pointer}
 .battle-page .cell-marker[data-cell-hint]:focus-visible{outline:1px solid #9d8054;outline-offset:-1px}
+
+/* Empty cells share the same marker component, centred to its content. */
+.battle-page .cell-marker-island{left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%);width:max-content;max-width:calc(100% - 8px);height:22px;padding:3px 4px;border-radius:4px}
+.battle-page .cell-marker-island .cell-markers{flex:0 1 auto;width:max-content;height:16px;max-width:100%}
+.battle-page .cell-marker-island--below-fire{top:76px;transform:translateX(-50%)}

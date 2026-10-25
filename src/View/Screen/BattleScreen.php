@@ -1764,7 +1764,8 @@ final class BattleScreen
             . '<span data-cell-counter aria-live="polite">1/' . $count . '</span>'
             . '<button type="button" data-cell-step="1" aria-label="Следующее существо">›</button></span>' : '';
         if ($markers === '' && $switch === '') return $fire;
-        return $fire . '<div class="cell-bottom-strip"><div class="cell-markers">' . $markers . '</div>' . $switch . '</div>';
+        $barClass = $count > 0 ? 'cell-bottom-strip' : 'cell-marker-island' . ($fire !== '' ? ' cell-marker-island--below-fire' : '');
+        return $fire . '<div class="' . $barClass . '"><div class="cell-markers">' . $markers . '</div>' . $switch . '</div>';
     }
 
 }
