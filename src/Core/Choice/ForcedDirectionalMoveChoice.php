@@ -11,6 +11,8 @@ use Berserk\Core\GameState;
 use Berserk\Core\Movement\ForcedMovementResolver;
 use Berserk\Core\Result;
 use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\Coords;
+use Berserk\View\Ui\Form;
 
 final class ForcedDirectionalMoveChoice implements ChoiceHandlerInterface
 {
@@ -45,26 +47,28 @@ final class ForcedDirectionalMoveChoice implements ChoiceHandlerInterface
         $deltaRow = (int) ($pending['delta_row'] ?? 0);
         $deltaCol = (int) ($pending['delta_col'] ?? 0);
 
-        $buttons = [];
+        $items = [];
         foreach ($forced->eligibleTargets($playerKey, $deltaRow, $deltaCol) as $card) {
             $name = $cardsInfo[$card->ukid]['name'] ?? $card->ukid;
             $destination = $forced->destination($card, $deltaRow, $deltaCol);
             if ($destination === null) continue;
 
-            $buttons[] = [
-                'label' => $name . ' -> (' . $destination['row'] . ',' . $destination['col'] . ')',
-                'url'   => "{$baseUrl}&cmd=choose_forced_directional_move&target_id={$card->instanceId}",
+            $items[] = [
+                'value' => $card->instanceId,
+                'label' => $name,
+                'label_html' => htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                    . ' ' . Coords::renderResult($card->row, $card->col, $playerKey, $card->owner)
+                    . ' → ' . Coords::renderResult($destination['row'], $destination['col'], $playerKey, $card->owner),
             ];
         }
-        $buttons[] = [
-            'label' => 'Закрыть',
-            'url'   => "{$baseUrl}&cmd=cancel_pending",
-            'class' => 'skip',
-        ];
 
         return new PanelSpec(
             title: 'Выберите существо для обязательного перемещения',
-            buttons: $buttons,
+            form: [
+                'type' => 'radio', 'name' => 'target_id', 'items' => $items,
+                'hidden' => Form::battleHidden($role, $state->gameId, 'choose_forced_directional_move'),
+                'submit' => 'Переместить', 'cancel' => $baseUrl . '&cmd=cancel_pending',
+            ],
         );
     }
 

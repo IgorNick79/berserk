@@ -1094,6 +1094,34 @@ final class BattleScreen
                 $statusHtml = '<p>Кликни по существу оппонента для атаки.</p>';
             }
         }
+        // Use the exact same native candidate set as the battlefield highlights.
+        if ($isActive && !$strike && str_starts_with($mode, 'action:') && !empty($attackTargets)
+            && $c->owner === $playerKey && !\Berserk\Core\MatchPause::blocking($state)
+            && ChoiceRegistry::current($state) === null
+            && empty($state->battle['turn_instant_stack']) && empty($state->battle['turn_instant_result'])) {
+            $items = [];
+            foreach ($attackTargets as $targetId => $_) {
+                $target = $state->getCard((int) $targetId);
+                if (!$target) continue;
+                $hidden = !$target->revealed && $target->owner !== $playerKey;
+                $name = $hidden ? '???' : (string) ($cardsInfo[$target->ukid]['name'] ?? $target->ukid);
+                $hp = $hidden ? '?/?' : $target->hp . '/' . $target->hpMax;
+                $items[] = ['value' => (int) $targetId, 'label' => $name,
+                    'label_html' => htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                        . ' ' . \Berserk\View\Ui\Coords::renderResult($target->row, $target->col, $playerKey, $target->owner)
+                        . ' (❤️ ' . $hp . ' HP)'];
+            }
+            $statusHtml = \Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(
+                title: 'Выберите цель способности',
+                form: ['type' => 'radio', 'name' => 'target_id', 'items' => $items,
+                    'hidden' => \Berserk\View\Ui\Form::battleHidden($playerKey, $state->gameId, 'action', [
+                        'card_id' => $c->instanceId, 'action_key' => substr($mode, 7),
+                        'sel' => $c->instanceId, 'mode' => $mode,
+                    ]),
+                    'submit' => 'Применить', 'cancel' => $baseUrl,
+                ],
+            ));
+        }
         if (!empty($c->prop['on_wounding_strike'])) {
             $effect = $c->prop['on_wounding_strike'];
             $values = array_map('intval', (array) ($effect['strike'] ?? []));

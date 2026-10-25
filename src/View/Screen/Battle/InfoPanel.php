@@ -274,7 +274,7 @@ final class InfoPanel
                             ? $cardsInfo[$tUkid]['name']
                             : '?';
                         $dmg = (int) ($t['damage'] ?? 0);
-                        $parts[] = $tName . ' -' . $dmg . 'HP';
+                        $parts[] = $tName . ' -' . $dmg . ' ❤️ HP';
                     }
 
                     $text = $sourceName . ': ' . implode(', ', $parts);
@@ -923,7 +923,7 @@ final class InfoPanel
                     if (!empty($r['defended'])) {
                         $parts[] = $tn . ' — защита (0)';
                     } else {
-                        $parts[] = $tn . ' −' . $r['damage'] . ' HP';
+                        $parts[] = $tn . ' −' . $r['damage'] . ' ❤️ HP';
                     }
                 }
                 $resultText = $name . ': ' . implode(', ', $parts);
@@ -935,13 +935,13 @@ final class InfoPanel
                     $tc = $state->getCard($h['target_id']);
                     $ti = $tc ? ($cardsInfo[$tc->ukid] ?? null) : null;
                     $tn = $ti ? htmlspecialchars($ti['name'], ENT_QUOTES) : '?';
-                    $parts[] = $tn . ' +' . $h['heal'] . ' HP';
+                    $parts[] = $tn . ' +' . $h['heal'] . ' ❤️ HP';
                 }
                 if (!empty($strike['heal_instead_wound'])) {
                     foreach ($strike['heal_instead_wound'] as $hw) {
                         $tc = $state->getCard((int) $hw['target_id']);
                         $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
-                        $parts[] = $tn . ' −' . (int) $hw['value'] . ' HP (рана)';
+                        $parts[] = $tn . ' −' . (int) $hw['value'] . ' ❤️ HP (рана)';
                     }
                 }
                 $resultText = $name . ': ' . implode(', ', $parts);
@@ -951,7 +951,7 @@ final class InfoPanel
                 if ($bt) {
                     $tCard = $state->getCard($bt['target_id']);
                     $tName = $tCard ? ($cardsInfo[$tCard->ukid]['name'] ?? '?') : '?';
-                    $resultText = $name . ': −' . $bt['x'] . ' HP, ' . $tName . ' получает ' . $bt['x'] . ' урона';
+                    $resultText = $name . ': −' . $bt['x'] . ' ❤️ HP, ' . $tName . ' получает ' . $bt['x'] . ' урона';
                 } else {
                     $resultText = $name;
                 }
@@ -982,7 +982,7 @@ final class InfoPanel
                 foreach ($pd as $r) {
                     $tc = $state->getCard($r['target_id']);
                     $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
-                    $parts[] = $tn . ' −' . $r['damage'] . ' HP';
+                    $parts[] = $tn . ' −' . $r['damage'] . ' ❤️ HP';
                 }
                 $resultText = $name . ': '
                     . (empty($parts) ? 'нет отравленных целей' : implode(', ', $parts));
@@ -1008,7 +1008,7 @@ final class InfoPanel
                     $resultText = $name . ': ' . htmlspecialchars($tn, ENT_QUOTES)
                         . ' открывается вместо излечения';
                 } else {
-                    $resultText = $name . ': +' . ($strike['heal'] ?? 0) . ' HP';
+                    $resultText = $name . ': +' . ($strike['heal'] ?? 0) . ' ❤️ HP';
                     if (!empty($strike['poison_removed'])) {
                         $resultText .= ' (яд снят)';
                     }
@@ -1358,7 +1358,7 @@ final class InfoPanel
                     $tn2 = $ti ? htmlspecialchars($ti['name'], ENT_QUOTES) : '?';
 
                     $impactHtml .= '<p class="impact">'
-                        . $tn2 . ': −' . $it['damage'] . ' HP';
+                        . $tn2 . ': −' . $it['damage'] . ' ❤️ HP';
                     if (!empty($it['poison'])) {
                         $impactHtml .= ' (отравление ' . $it['poison'] . ')';
                     }
@@ -1487,7 +1487,7 @@ final class InfoPanel
                     $info = $cardsInfo[$t['ukid']] ?? null;
                     $name = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
                     $deadeatHtml .= '<div class="deadeat">'
-                        . '<b>' . $name . '</b> — трупоедство: +' . $t['heal'] . ' HP'
+                        . '<b>' . $name . '</b> — трупоедство: +' . $t['heal'] . ' ❤️ HP'
                         . '</div>';
                 }
             }
@@ -1498,7 +1498,7 @@ final class InfoPanel
                     $info = $cardsInfo[$v['ukid']] ?? null;
                     $name = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
                     $vampireHtml .= '<div class="vampire">'
-                        . '<b>' . $name . '</b> — вампиризм: +' . $v['heal'] . ' HP'
+                        . '<b>' . $name . '</b> — вампиризм: +' . $v['heal'] . ' ❤️ HP'
                         . '</div>';
                 }
             }
@@ -1567,7 +1567,7 @@ final class InfoPanel
                         if ($damage <= 0) continue;
 
                         $vampireHtml .= '<div class="vampire">'
-                            . 'Цепи Анубисара: <b>' . $targetName . '</b> -' . $damage . ' HP'
+                            . 'Цепи Анубисара: <b>' . $targetName . '</b> -' . $damage . ' ❤️ HP'
                             . '</div>';
                     }
                 }
@@ -1584,7 +1584,7 @@ final class InfoPanel
                             if ($damage <= 0) continue;
 
                             $vampireHtml .= '<div class="vampire">'
-                                . 'Цепи Анубисара: <b>' . $targetName . '</b> -' . $damage . ' HP'
+                                . 'Цепи Анубисара: <b>' . $targetName . '</b> -' . $damage . ' ❤️ HP'
                                 . '</div>';
                         }
                         continue;
@@ -1601,7 +1601,7 @@ final class InfoPanel
                         if ($damage > 0) {
                             $vampireHtml .= '<div class="vampire">'
                                 . 'Слабый удар карты позади: <b>' . $sourceName . '</b> -'
-                                . $damage . ' HP по <b>' . $targetName . '</b>'
+                                . $damage . ' ❤️ HP по <b>' . $targetName . '</b>'
                                 . '</div>';
                         }
                         continue;
