@@ -21,3 +21,5 @@ Limitations / failed infrastructure check:
 Re-run: `node tools/test_cell_stack.cjs`. The PHP and Edge/Playwright paths in the test match this Windows environment; CELL_STACK_OUTPUT can override the screenshot directory.
 
 Follow-up: empty footers are omitted; single unmarked cards retain 102x92 size; bonfire alone has no footer; footer background is rgba(221, 221, 221, 0.55). Marker pointer events enable the existing native title hint. Browser checks for original size, absent empty strips, background and bomb hover hit-testing passed. Updated screenshots include cell-stack-clean-tested.png.
+
+Marker hint follow-up: native title replaced with the existing buff tooltip (data-mini-hint), positioned below the marker; pointer cursor added. Browser checks passed for matching tooltip, below-marker placement, no native title, pointer cursor, hover, pinned click without game action, focus/Enter/Escape, and cleanup on field update.

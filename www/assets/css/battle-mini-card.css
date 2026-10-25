@@ -87,3 +87,6 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 .battle-page [data-mini-card-design="v2"] .field-cell.attack-target:has([data-cell-occupant]:not([hidden]) [data-drag-owner="own"]){background:rgba(224,174,40,.46)}
 
 .battle-page .cell-presentation:has(.cell-bottom-strip) .cell-bonfire{bottom:16px}
+
+.battle-page .cell-marker[data-cell-hint]{cursor:pointer}
+.battle-page .cell-marker[data-cell-hint]:focus-visible{outline:1px solid #9d8054;outline-offset:-1px}

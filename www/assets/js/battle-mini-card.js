@@ -84,7 +84,7 @@
         var card = cardAt(node) || node;
         var r = card.getBoundingClientRect();
         tip.style.left = Math.max(8, Math.min(r.left + r.width / 2 - tip.offsetWidth / 2, innerWidth - tip.offsetWidth - 8)) + 'px';
-        var top = hintKind === 'name' ? r.bottom + 8 : r.top + r.height / 2 - tip.offsetHeight / 2;
+        var top = hintKind === 'name' || node.hasAttribute('data-cell-hint') ? r.bottom + 8 : r.top + r.height / 2 - tip.offsetHeight / 2;
         var indicators = card.querySelector('.mini-indicators');
         if (hintKind === 'indicator' && indicators) top = Math.max(top, indicators.getBoundingClientRect().bottom + 4);
         tip.style.top = Math.max(8, Math.min(top, innerHeight - tip.offsetHeight - 8)) + 'px';
@@ -242,6 +242,7 @@
         var card = cardAt(e.target);
         if (hoverCard && !hoverCard.isConnected) { queueReconcile(); return; }
         if (card) startZoom(card);
+        if (e.target.closest('[data-cell-hint]')) hoverReady = true;
         contextHint(e.target);
     });
     document.addEventListener('pointermove', function (e) {
@@ -254,6 +255,8 @@
     });
     document.addEventListener('pointerout', function (e) {
         if (e.pointerType === 'touch' || !hover.matches) return;
+        var marker = e.target.closest('[data-cell-hint]');
+        if (marker && !marker.contains(e.relatedTarget) && !(tip && tip.contains(e.relatedTarget)) && !pinned) closeHint();
         var card = cardAt(e.target);
         if (card && !card.isConnected) { queueReconcile(); return; }
         if (card && !card.contains(e.relatedTarget)) {
@@ -270,7 +273,7 @@
         else if (card && !card.classList.contains('mini-hidden')) { pinned = false; show(card, 'name'); }
     });
     document.addEventListener('focusout', function (e) {
-        if (cardAt(e.target) && !cardAt(e.relatedTarget)) closeHint();
+        if ((cardAt(e.target) && !cardAt(e.relatedTarget)) || e.target.closest('[data-cell-hint]') && !pinned) closeHint();
     });
     function refresh() {
         dismissedName = null;

@@ -1755,8 +1755,9 @@ final class BattleScreen
             }
             $safe = htmlspecialchars($type, ENT_QUOTES);
             $label = htmlspecialchars($labels[$type] ?? $type, ENT_QUOTES);
-            $markers .= '<span class="cell-marker cell-marker-' . $safe . '" role="img" aria-label="'
-                . $label . '" title="' . $label . '">' . ($icons[$type] ?? '') . '</span>';
+            $markers .= '<span class="cell-marker cell-marker-' . $safe . '" data-mini-hint data-cell-hint role="button" tabindex="0" aria-expanded="false" aria-label="'
+                . $label . '">' . ($icons[$type] ?? '')
+                . '<span class="mini-hint-text" hidden>' . $label . '</span></span>';
         }
         $switch = $count > 1 ? '<span class="cell-switch" aria-label="Существа в клетке">'
             . '<button type="button" data-cell-step="-1" aria-label="Предыдущее существо">‹</button>'
