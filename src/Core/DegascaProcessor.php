@@ -20,7 +20,7 @@ final class DegascaProcessor
 
     public static function hasPreBattleTrigger(CardInstance $card): bool
     {
-        foreach ((array) ($card->prop['start_pre_battle'] ?? []) as $entry) {
+        foreach ((array) ($card->effectiveProp()['start_pre_battle'] ?? []) as $entry) {
             $effect = (array) ($entry['effect'] ?? []);
             if (($effect['type'] ?? '') === 'degasca_study') {
                 return true;
@@ -31,7 +31,7 @@ final class DegascaProcessor
 
     public static function hasStrongStrikeTrigger(CardInstance $card, string $level): bool
     {
-        foreach ((array) ($card->prop['strike_effects'] ?? []) as $effect) {
+        foreach ((array) ($card->effectiveProp()['strike_effects'] ?? []) as $effect) {
             if (($effect['type'] ?? '') !== 'degasca_sequence') continue;
             if (!self::isStrongOnlyEffect($effect)) continue;
             return $level === 'strong';
@@ -178,7 +178,12 @@ final class DegascaProcessor
 
         $source = $this->state->getCard((int) ($pending['source_id'] ?? 0));
         if (!$this->canActivate($source)) {
+            $suppressed = $source && EffectiveFeatures::suppressed($source);
             $this->finishSequence($pending, null, true);
+            if ($suppressed) {
+                $this->state->bumpVersion();
+                return Result::ok(['degasca_sequence_suppressed']);
+            }
             return Result::error('Дегаска недоступна');
         }
 
@@ -454,6 +459,7 @@ final class DegascaProcessor
      */
     private function learnedEffectEntries(CardInstance $source): array
     {
+        if (EffectiveFeatures::suppressed($source)) return [];
         $entries = $source->flags['degasca_learned_effects'] ?? [];
         if (!is_array($entries)) return [];
 
@@ -571,7 +577,7 @@ final class DegascaProcessor
     private function learnableEffects(CardInstance $card): array
     {
         $effects = [];
-        foreach ((array) ($card->prop['strike_effects'] ?? []) as $effect) {
+        foreach ((array) ($card->effectiveProp()['strike_effects'] ?? []) as $effect) {
             if (!is_array($effect)) continue;
             if (!self::isStrongOnlyEffect($effect)) continue;
             if (($effect['type'] ?? '') === 'degasca_sequence') continue;

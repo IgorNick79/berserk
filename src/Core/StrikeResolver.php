@@ -95,7 +95,7 @@ final class StrikeResolver
             $canDefend = false;
 
             if ($card->type === 'fly' && $card->zone === CardInstance::ZONE_FLYING) {
-                if (!empty($card->prop['fly_defend'])) {
+                if (!empty($card->effectiveProp()['fly_defend'])) {
                     $canDefend = true;
                 } elseif ($targetIsFlying) {
                     $canDefend = true;
@@ -155,14 +155,14 @@ final class StrikeResolver
         if (CardStats::hasCannotAttack($attacker)) {
             return Result::error(Strangulation::count($attacker) >= 2 ? 'Атаки запрещены маркерами удушения' : 'Карта не может атаковать до конца хода');
         }
-        $isSeries = !empty($attacker->prop['attack_series']);
+        $isSeries = !empty($attacker->effectiveProp()['attack_series']);
         $seriesActive = !empty($attacker->flags['attack_series_active']);
         $attacksUsed = (int) ($attacker->flags['attacks_used_this_turn'] ?? 0);
 
         if (!$seriesActive) {
-            $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
+            $attackLimit = (int) ($attacker->effectiveProp()['attacks_per_turn'] ?? 1);
 
-            if (!empty($attacker->prop['strike_consecutive'])
+            if (!empty($attacker->effectiveProp()['strike_consecutive'])
                 && !empty($attacker->flags['strike_chain_broken'])) {
                 $attackLimit = 1;
             }
@@ -173,7 +173,7 @@ final class StrikeResolver
         }
 
         // Берсерк: второй удар только по другой цели
-        if (!empty($attacker->prop['strike_targets_unique']) && $attacksUsed > 0) {
+        if (!empty($attacker->effectiveProp()['strike_targets_unique']) && $attacksUsed > 0) {
             $firstTarget = (int) ($attacker->flags['first_attack_target_id'] ?? 0);
             if ($firstTarget > 0 && $firstTarget === $targetId) {
                 return Result::error('Второй удар должен быть по другой цели');
@@ -221,7 +221,7 @@ final class StrikeResolver
 
         if (!$attackerIsFlying) {
             // Ограничение «только по карте напротив» (Циклоп)
-            if (!empty($attacker->prop['strike']['opposite'])) {
+            if (!empty($attacker->effectiveProp()['strike']['opposite'])) {
                 if (!CardStats::isOpposite($attacker, $target)) {
                     return Result::error('Удар возможен только по карте напротив');
                 }
@@ -232,15 +232,15 @@ final class StrikeResolver
 
                 $isAdjacent = ($drow <= 1 && $dcol <= 1 && $dist > 0);
 
-                $isRowExtreme = !empty($attacker->prop['row_extreme'])
+                $isRowExtreme = !empty($attacker->effectiveProp()['row_extreme'])
                     && $target->row === $attacker->row
                     && (($attacker->col === 1 && $target->col === 5)
                         || ($attacker->col === 5 && $target->col === 1));
 
-                $isLineRange = !empty($attacker->prop['strike_range_line'])
+                $isLineRange = !empty($attacker->effectiveProp()['strike_range_line'])
                     && CardStats::isInLine($this->state, $attacker)
                     && $dist > 0
-                    && $dist <= (int) $attacker->prop['strike_range_line'];
+                    && $dist <= (int) $attacker->effectiveProp()['strike_range_line'];
 
                 if (!$isAdjacent && !$isRowExtreme && !$isLineRange) {
                     return Result::error('Цель не соседняя');
@@ -272,7 +272,7 @@ final class StrikeResolver
             : $this->findDefenders($attacker, $target, $oppKey);
 
         // Волот: перенаправление вместо выбора защитника
-        $redirectConfig = $attacker->prop['strike']['redirect'] ?? null;
+        $redirectConfig = $attacker->effectiveProp()['strike']['redirect'] ?? null;
         $redirectCandidates = [];
 
         if ($redirectConfig && !$friendlyFire) {
@@ -471,8 +471,8 @@ final class StrikeResolver
 
             // Триггер «стал защитником»
             $defender = $this->state->getCard($defenderId);
-            if ($defender && !empty($defender->prop['on_become_defender'])) {
-                foreach ($defender->prop['on_become_defender'] as $m) {
+            if ($defender && !empty($defender->effectiveProp()['on_become_defender'])) {
+                foreach ($defender->effectiveProp()['on_become_defender'] as $m) {
                     // Спец-эффект: излечить защищаемого (Бьерн)
                     if (($m['type'] ?? '') === 'heal_target') {
                         $targetId = (int) ($this->state->battle['strike']['target_id'] ?? 0);
@@ -599,7 +599,7 @@ final class StrikeResolver
             if ($card->closed || $card->dying || $card->hp <= 0) continue;
             if (!empty($card->flags['in_stack'])) continue;
             if ((int) $card->instanceId === (int) $attacker->instanceId) continue;
-            if (empty($card->prop['instants'])) continue;
+            if (empty($card->effectiveProp()['instants'])) continue;
 
             if (CardStats::hasDefense($this->state, $attacker, 'magic', $card)) {
                 continue;
@@ -616,7 +616,7 @@ final class StrikeResolver
                 continue;
             }
 
-            foreach ($card->prop['instants'] as $inst) {
+            foreach ($card->effectiveProp()['instants'] as $inst) {
                 $effect = (array) ($inst['effect'] ?? []);
                 if (($inst['trigger'] ?? '') !== 'combat') continue;
                 if (($inst['target'] ?? 'self') !== 'adjacent_ally') continue;
@@ -753,7 +753,7 @@ final class StrikeResolver
         $strike['coin_block_checked'] = true;
         $attackDice = Dice::roll();
 
-        $defendWhileClosed = !empty($defendCard->prop['defend_while_closed']);
+        $defendWhileClosed = !empty($defendCard->effectiveProp()['defend_while_closed']);
         $isClosed = CardStats::combatClosed($this->state, $defendCard) && !$defendWhileClosed;
 
         $hasUnanswer = CardStats::hasUnanswer($this->state, $attacker, $defendCard);
@@ -842,7 +842,7 @@ final class StrikeResolver
         }
 
         // Сведение ударов (Степной волколак)
-        $strikeReduction = $defendCard->prop['strike_reduction'] ?? null;
+        $strikeReduction = $defendCard->effectiveProp()['strike_reduction'] ?? null;
         if (is_array($strikeReduction) && isset($strikeReduction[$attackStrike])) {
             $attackStrike = $strikeReduction[$attackStrike];
         }
@@ -858,7 +858,7 @@ final class StrikeResolver
         if (empty($strike['coin_blocked']) && empty($strike['first_strike_blocked'])) $this->engine->applyStrikeEffects($attacker, $defendCard, $attackStrike);
 
         if ($attackStrike !== '') {
-            if (!empty($attacker->prop['copy_target_strike'])) {
+            if (!empty($attacker->effectiveProp()['copy_target_strike'])) {
                 $val = match ($attackStrike) {
                     'weak'   => $defendCard->strikeWeak,
                     'medium' => $defendCard->strikeMedium,
@@ -899,7 +899,7 @@ final class StrikeResolver
             }
 
             if ($attackStrike === 'weak'
-                && !empty($defendCard->prop['block_weak_strike'])
+                && !empty($defendCard->effectiveProp()['block_weak_strike'])
                 && !CardStats::isDefenseIgnored($attacker, 'block_weak_strike')) {
                 $val = 0;
                 $hitWasBlocked = true;
@@ -918,8 +918,8 @@ final class StrikeResolver
             $this->applyStrongStrikeFollowUpEffects($attacker, $defendCard, $attackStrike, null, $woundsDealt);
 
             // Наложение маркера при попадании (Владыка небес)
-            if ($val > 0 && !empty($attacker->prop['on_hit_marker'])) {
-                $this->engine->applyMarker($defendCard, $attacker->prop['on_hit_marker'], $attacker->owner);
+            if ($val > 0 && !empty($attacker->effectiveProp()['on_hit_marker'])) {
+                $this->engine->applyMarker($defendCard, $attacker->effectiveProp()['on_hit_marker'], $attacker->owner);
             }
             $this->state->battle['strike']['attack_reduction'] = $reduction;
             if ($abilityBonus > 0) {
@@ -945,8 +945,8 @@ final class StrikeResolver
             }
 
             // Реакция цели на попадание
-            if ($val > 0 && !empty($defendCard->prop['on_hit_gain'])) {
-                foreach ($defendCard->prop['on_hit_gain'] as $m) {
+            if ($val > 0 && !empty($defendCard->effectiveProp()['on_hit_gain'])) {
+                foreach ($defendCard->effectiveProp()['on_hit_gain'] as $m) {
                     $defendCard->modifiers[] = [
                         'stat'   => $m['stat'],
                         'value'  => (int) ($m['value'] ?? 1),
@@ -991,7 +991,7 @@ final class StrikeResolver
             if (CardStats::hasDefense($this->state, $attacker, 'strike', $defendCard)) {
                 $val = 0;
             }
-            if ($defendStrike === 'weak' && !empty($attacker->prop['block_weak_strike'])) {
+            if ($defendStrike === 'weak' && !empty($attacker->effectiveProp()['block_weak_strike'])) {
                 $val = 0;
                 $this->state->battle['strike']['defend_blocked_by_weak'] = true;
             }
@@ -1011,8 +1011,8 @@ final class StrikeResolver
                     ->triggerLineOpenOnStrike($defendCard);
             }
 
-            if ($val > 0 && !empty($attacker->prop['on_hit_gain'])) {
-                foreach ($attacker->prop['on_hit_gain'] as $m) {
+            if ($val > 0 && !empty($attacker->effectiveProp()['on_hit_gain'])) {
+                foreach ($attacker->effectiveProp()['on_hit_gain'] as $m) {
                     $attacker->modifiers[] = [
                         'stat'   => $m['stat'],
                         'value'  => (int) ($m['value'] ?? 1),
@@ -1031,7 +1031,7 @@ final class StrikeResolver
 
         if (empty($attacker->flags['attack_series_active']) || !empty($strike['matriarch_order'])) {
             // Келе и подобные: авто-heal при попадании, условное не-закрытие
-            $selfHeal = $attacker->prop['on_strike_self_heal'] ?? null;
+            $selfHeal = $attacker->effectiveProp()['on_strike_self_heal'] ?? null;
             if (is_array($selfHeal)
                 && !empty($strike['strike_hit'])
                 && $attacker->hp > 0) {
@@ -1051,13 +1051,13 @@ final class StrikeResolver
             $attacker->flags['attacks_used_this_turn'] =
                 ((int) ($attacker->flags['attacks_used_this_turn'] ?? 0)) + 1;
 
-            if (!empty($attacker->prop['strike_targets_unique'])
+            if (!empty($attacker->effectiveProp()['strike_targets_unique'])
                 && empty($attacker->flags['first_attack_target_id'])) {
                 $attacker->flags['first_attack_target_id'] = (int) ($strike['target_id'] ?? 0);
             }
 
-            $attackLimit = (int) ($attacker->prop['attacks_per_turn'] ?? 1);
-            $noClose     = !empty($noClose) || !empty($attacker->prop['no_close_after_attack'])
+            $attackLimit = (int) ($attacker->effectiveProp()['attacks_per_turn'] ?? 1);
+            $noClose     = !empty($noClose) || !empty($attacker->effectiveProp()['no_close_after_attack'])
                 || !empty($attacker->flags['no_close_this_turn']);
 
             
@@ -1076,14 +1076,14 @@ final class StrikeResolver
         }
 
         $redirectUsed = !empty($strike['redirect_used']);
-        $staysOpen    = !empty($defendCard->prop['defender']['all']);
+        $staysOpen    = !empty($defendCard->effectiveProp()['defender']['all']);
 
         if ($defenderId && !$redirectUsed && !$staysOpen) {
             $defendCard->closed = true;
         }
 
         // Сброс зарядов от пророчества после удара
-        $attacker->modifiers = array_values(array_filter(
+        if (!EffectiveFeatures::suppressed($attacker)) $attacker->modifiers = array_values(array_filter(
             $attacker->modifiers,
             fn($m) => ($m['source'] ?? '') !== 'prophecy_charge'
         ));
@@ -1116,7 +1116,7 @@ final class StrikeResolver
         ?array $effects = null,
         int $woundsDealt = 0
     ): void {
-        $effects = $effects ?? ($attacker->prop['strike_effects'] ?? []);
+        $effects = $effects ?? ($attacker->effectiveProp()['strike_effects'] ?? []);
         foreach ($effects as $effect) {
             $levels = $effect['levels'] ?? ['strong'];
             if (!in_array($attackStrike, $levels, true)) continue;
@@ -1157,13 +1157,14 @@ final class StrikeResolver
         array $effects,
         int $woundsDealt = 0
     ): void {
+        if (EffectiveFeatures::suppressed($attacker)) return;
         $this->engine->applyStrikeEffects($attacker, $target, $attackStrike, $effects);
         $this->applyStrongStrikeFollowUpEffects($attacker, $target, $attackStrike, $effects, $woundsDealt);
     }
 
     private function hasIncarnationTokenStrikeEffect(CardInstance $attacker): bool
     {
-        foreach ((array) ($attacker->prop['strike_effects'] ?? []) as $effect) {
+        foreach ((array) ($attacker->effectiveProp()['strike_effects'] ?? []) as $effect) {
             $levels = $effect['levels'] ?? null;
             if ($levels !== null && !in_array('strong', (array) $levels, true)) continue;
             if (!empty($effect['incarnation_token_graveyard'])
@@ -1261,6 +1262,16 @@ final class StrikeResolver
 
         $attacker = $this->state->getCard((int) ($pending['source_id'] ?? 0));
         $attacked = $this->state->getCard((int) ($pending['attacked_id'] ?? 0));
+        if ($attacker && EffectiveFeatures::suppressed($attacker)) {
+            // No new choice of targets is needed for an unavailable effect.
+            // Restore the saved continuation through its existing owner.
+            unset($this->state->battle['pending_anubisar_chain']);
+            if (is_array($pending['degasca_sequence'] ?? null)) {
+                (new DegascaProcessor($this->state, $this->engine))->restoreAndResume($pending['degasca_sequence']);
+            }
+            $this->state->bumpVersion();
+            return Result::ok(['anubisar_chain_suppressed']);
+        }
         if (!$attacker || !$attacked) {
             unset($this->state->battle['pending_anubisar_chain']);
             return Result::error('Исходный удар недоступен');
@@ -1299,7 +1310,8 @@ final class StrikeResolver
         }
 
         unset($this->state->battle['pending_anubisar_chain']);
-        $applied = $this->applyChainDamageToTargets($attacker, $attacked, $targetIds, (int) ($pending['value'] ?? 1));
+        $applied = EffectiveFeatures::suppressed($attacker) ? []
+            : $this->applyChainDamageToTargets($attacker, $attacked, $targetIds, (int) ($pending['value'] ?? 1));
         if (is_array($degascaSequence)) {
             if (!empty($applied)) {
                 $this->state->battle['degasca_messages'][] = [
@@ -1356,6 +1368,7 @@ final class StrikeResolver
 
     private function consumeNextStrikeBonuses(CardInstance $card): void
     {
+        if (EffectiveFeatures::suppressed($card)) return;
         $card->modifiers = array_values(array_filter(
             $card->modifiers,
             fn($modifier) => ($modifier['stat'] ?? '') !== 'next_strike_bonus'
@@ -1610,6 +1623,7 @@ final class StrikeResolver
         $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
         if (!$attacker || !empty($strike['matriarch_order'])) return false;
         if (empty($attacker->flags['attack_series_active'])) return false;
+        if (EffectiveFeatures::suppressed($attacker)) { $this->finishAttackSeries($attacker); return false; }
 
         // Гидра погибла — завершаем серию
         if ($attacker->dying
@@ -1674,6 +1688,12 @@ final class StrikeResolver
             return Result::error('Источник добивания не найден');
         }
 
+        if (EffectiveFeatures::suppressed($source)) {
+            unset($this->state->battle['pending_after_strike_execute']);
+            $this->state->bumpVersion();
+            return Result::ok(['after_strike_execute_suppressed']);
+        }
+
         $targetId = (int) $cmd->get('target_id', 0);
         $candidates = array_map('intval', (array) ($pending['candidate_ids'] ?? []));
         if (!in_array($targetId, $candidates, true)) {
@@ -1709,12 +1729,12 @@ final class StrikeResolver
 
         $source = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
         if (!$source) return false;
-        if (!array_key_exists('execute', $source->prop)) return false;
+        if (!array_key_exists('execute', $source->effectiveProp())) return false;
 
         $value = CardStats::getStat($source, 'execute');
         if ($value <= 0) return false;
 
-        $limit = (int) ($source->prop['after_strike_execute_limit'] ?? 2);
+        $limit = (int) ($source->effectiveProp()['after_strike_execute_limit'] ?? 2);
         if ($limit > 0 && (int) ($source->flags['after_strike_execute_used_this_turn'] ?? 0) >= $limit) {
             return false;
         }
@@ -1770,7 +1790,7 @@ final class StrikeResolver
         if (!$attacker) return false;
 
         $push = null;
-        foreach ($attacker->prop['strike_effects'] ?? [] as $eff) {
+        foreach ($attacker->effectiveProp()['strike_effects'] ?? [] as $eff) {
             if (isset($eff['push'])) {
                 $levels = $eff['levels'] ?? null;
                 $attackLevel = $strike['final']['attack'] ?? '';
@@ -1843,6 +1863,16 @@ final class StrikeResolver
             return Result::error('Не ваш выбор');
         }
 
+        $featureSource = $this->state->getCard((int) ($this->state->battle['strike']['attacker_id'] ?? 0));
+        if ($featureSource && EffectiveFeatures::suppressed($featureSource)) {
+            unset($this->state->battle['strike']['pending_push']);
+            InformationalWaitManager::publish($this->state);
+            $this->state->battle['strike']['state'] = 'results';
+            $this->state->battle['strike']['confirmed'] = [];
+            $this->state->bumpVersion();
+            return Result::ok(['strike_follow_up_suppressed']);
+        }
+
         $choice = (string) $cmd->get('choice', '');
         if (!in_array($choice, ['move', 'damage'], true)) {
             return Result::error('Неверный выбор');
@@ -1854,7 +1884,7 @@ final class StrikeResolver
             $defendCard->row = $pp['new_row'];
             $defendCard->col = $pp['new_col'];
 
-            if (!empty($defendCard->prop['lose_coins_on_move']) && $defendCard->coins > 0) {
+            if (!empty($defendCard->effectiveProp()['lose_coins_on_move']) && $defendCard->coins > 0) {
                 $defendCard->coins = 0;
                 $this->engine->syncCoinBonus($defendCard);
             }
@@ -1895,7 +1925,7 @@ final class StrikeResolver
 
     private function triggerStrikeProphecy(CardInstance $attacker, CardInstance $target): void
     {
-        $config = $attacker->prop['strike_prophecy'] ?? null;
+        $config = $attacker->effectiveProp()['strike_prophecy'] ?? null;
         if (!$config) return;
         if (!empty($this->state->battle['pending_prophecy'])) return;
 
@@ -1930,7 +1960,7 @@ final class StrikeResolver
     {
         if ($friendlyFire) return null;
 
-        $defendWhileClosed = !empty($target->prop['defend_while_closed']);
+        $defendWhileClosed = !empty($target->effectiveProp()['defend_while_closed']);
         if (CardStats::combatClosed($this->state, $target, $context) && !$defendWhileClosed) return null;
         if (CardStats::hasUnanswer($this->state, $attacker, $target)) return null;
 
@@ -1938,7 +1968,7 @@ final class StrikeResolver
             if ($card->owner !== $attacker->owner) continue;
             if ($card->zone !== CardInstance::ZONE_GRAVEYARD) continue;
             if (empty($card->flags['valhalla_active'])) continue;
-            if (empty($card->prop['ragnar_first_strike_unanswer'])) continue;
+            if (empty($card->effectiveProp()['ragnar_first_strike_unanswer'])) continue;
             if (!empty($card->flags['ragnar_unanswer_used_this_turn'])) continue;
 
             $card->flags['ragnar_unanswer_used_this_turn'] = true;
@@ -1971,7 +2001,7 @@ final class StrikeResolver
             : $this->state->getCard($strike['target_id']);
 
         $attackValue = (int) ($strike['attack_dice'] ?? 0) + (int) ($strike['attack_mod'] ?? 0);
-        $defendWhileClosed = !empty($defendCard->prop['defend_while_closed']);
+        $defendWhileClosed = !empty($defendCard->effectiveProp()['defend_while_closed']);
         $defendValue = (CardStats::combatClosed($this->state, $defendCard) && !$defendWhileClosed)
             ? 0
             : (int) ($strike['defend_dice'] ?? 0) + (int) ($strike['defend_mod'] ?? 0);
@@ -2023,7 +2053,7 @@ final class StrikeResolver
         if (!$defendCard || $defendCard->dying || $defendCard->hp <= 0) return false;
 
         $eff = null;
-        foreach ($attacker->prop['strike_effects'] ?? [] as $e) {
+        foreach ($attacker->effectiveProp()['strike_effects'] ?? [] as $e) {
             if (!isset($e['close_or_damage'])) continue;
 
             $levels      = $e['levels'] ?? null;
@@ -2065,6 +2095,16 @@ final class StrikeResolver
             return Result::error('Не ваш выбор');
         }
 
+        $featureSource = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+        if ($featureSource && EffectiveFeatures::suppressed($featureSource)) {
+            unset($this->state->battle['strike']['pending_close_or_damage']);
+            InformationalWaitManager::publish($this->state);
+            $this->state->battle['strike']['state'] = 'results';
+            $this->state->battle['strike']['confirmed'] = [];
+            $this->state->bumpVersion();
+            return Result::ok(['strike_follow_up_suppressed']);
+        }
+
         $choice = (string) $cmd->get('choice', '');
         if (!in_array($choice, ['close', 'damage'], true)) {
             return Result::error('Неверный выбор');
@@ -2100,7 +2140,7 @@ final class StrikeResolver
         if (!$attacker) return false;
 
         $eff = null;
-        foreach ($attacker->prop['strike_effects'] ?? [] as $e) {
+        foreach ($attacker->effectiveProp()['strike_effects'] ?? [] as $e) {
             if (!isset($e['grant_ally_modifier'])) continue;
             $levels      = $e['levels'] ?? null;
             $attackLevel = $strike['final']['attack'] ?? '';
@@ -2124,7 +2164,7 @@ final class StrikeResolver
 
             if ($filter === 'has_magic') {
                 $hasMagic = false;
-                foreach ($c->prop['actions'] ?? [] as $a) {
+                foreach ($c->effectiveProp()['actions'] ?? [] as $a) {
                     $t = $a['type'] ?? '';
                     if (in_array($t, ['discharge', 'magic', 'cast'], true)) {
                         $hasMagic = true;
@@ -2160,6 +2200,16 @@ final class StrikeResolver
         $source = $this->state->getCard($pam['source_id']);
         if (!$source || $source->owner !== $playerKey) {
             return Result::error('Не ваш выбор');
+        }
+
+        $featureSource = $source;
+        if ($featureSource && EffectiveFeatures::suppressed($featureSource)) {
+            unset($this->state->battle['strike']['pending_ally_modifier']);
+            InformationalWaitManager::publish($this->state);
+            $this->state->battle['strike']['state'] = 'results';
+            $this->state->battle['strike']['confirmed'] = [];
+            $this->state->bumpVersion();
+            return Result::ok(['strike_follow_up_suppressed']);
         }
 
         $targetId = (int) $cmd->get('target_id', 0);
@@ -2198,7 +2248,7 @@ final class StrikeResolver
     {
         $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
         if (!$attacker) return false;
-        if (empty($attacker->prop['on_strike_ally_shield'])) return false;
+        if (empty($attacker->effectiveProp()['on_strike_ally_shield'])) return false;
 
         $level = (string) ($strike['final']['attack'] ?? '');
         $x = match ($level) {
@@ -2231,7 +2281,7 @@ final class StrikeResolver
             'source_id'  => $attacker->instanceId,
             'max_value'  => $x,
             'candidates' => $candidates,
-            'types'      => (array) ($attacker->prop['on_strike_ally_shield']['types'] ?? []),
+            'types'      => (array) ($attacker->effectiveProp()['on_strike_ally_shield']['types'] ?? []),
         ];
 
         $this->state->battle['strike']['state'] = 'waiting_segger_shield';

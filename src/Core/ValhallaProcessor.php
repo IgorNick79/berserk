@@ -19,7 +19,7 @@ final class ValhallaProcessor
 
     public function markPending(CardInstance $card, string $attackType): void
     {
-        if (empty($card->prop['valhalla'])) return;
+        if (empty($card->effectiveProp()['valhalla'])) return;
         if (!in_array($attackType, self::TRIGGER_TYPES, true)) return;
         $card->flags['valhalla_pending'] = true;
     }
@@ -33,7 +33,7 @@ final class ValhallaProcessor
             if (empty($card->flags['valhalla_active'])) continue;
 
             // Проверяем, есть ли кандидаты, если эффект требует выбора
-            $effects = $card->prop['valhalla'] ?? [];
+            $effects = $card->effectiveProp()['valhalla'] ?? [];
             $needsChoice = false;
             foreach ($effects as $eff) {
                 $t = $eff['target'] ?? 'self';
@@ -56,7 +56,7 @@ final class ValhallaProcessor
      */
     public function beginExecute(CardInstance $card, string $ownerKey): bool
     {
-        $effects = $card->prop['valhalla'] ?? [];
+        $effects = $card->effectiveProp()['valhalla'] ?? [];
         if (!is_array($effects) || empty($effects)) return false;
         $repeat = $this->consumeRagnarValhallaRepeat($ownerKey);
 
@@ -172,7 +172,7 @@ final class ValhallaProcessor
      */
     public function collectCandidates(CardInstance $card, string $ownerKey): array
     {
-        $effects = $card->prop['valhalla'] ?? [];
+        $effects = $card->effectiveProp()['valhalla'] ?? [];
 
         $needOwn        = false;
         $needEnemy      = false;
@@ -198,12 +198,12 @@ final class ValhallaProcessor
             if ($c->dying || $c->hp <= 0) continue;
 
             if ($needOwn && $c->owner === $ownerKey) {
-                if ($ownNeedsCoins && empty($c->prop['save_coins'])) continue;
+                if ($ownNeedsCoins && empty($c->effectiveProp()['save_coins'])) continue;
                 $candidates[] = $c->instanceId;
             } elseif ($needEnemy && $c->owner !== $ownerKey) {
                 $candidates[] = $c->instanceId;
             } elseif ($needOwnYordling && $c->owner === $ownerKey && CardStats::hasClass($c, 'Йордлинг')) {
-                if ($ownNeedsCoins && empty($c->prop['save_coins'])) continue;
+                if ($ownNeedsCoins && empty($c->effectiveProp()['save_coins'])) continue;
                 $candidates[] = $c->instanceId;
             }
         }
@@ -212,7 +212,7 @@ final class ValhallaProcessor
 
     private function applyAll(CardInstance $card, string $ownerKey, ?CardInstance $chosen, int $repeat = 1): void
     {
-        $effects = $card->prop['valhalla'] ?? [];
+        $effects = $card->effectiveProp()['valhalla'] ?? [];
         if (!is_array($effects)) return;
 
         $repeat = max(1, min(2, $repeat));
@@ -273,13 +273,13 @@ final class ValhallaProcessor
                 break;
 
             case 'get_coins':
-                if (!$target || (!empty($target->prop['coins_receive_deny'])
+                if (!$target || (!empty($target->effectiveProp()['coins_receive_deny'])
                     && $target->instanceId !== $source->instanceId)) return;
-                if ($this->engine === null && !empty($target->prop['coin_strike_bonus'])) {
+                if ($this->engine === null && !empty($target->effectiveProp()['coin_strike_bonus'])) {
                     throw new \LogicException('Valhalla get_coins requires Engine coin bonus synchronization');
                 }
 
-                $max = (int) ($target->prop['coins']['max_value'] ?? 0);
+                $max = (int) ($target->effectiveProp()['coins']['max_value'] ?? 0);
                 $target->coins += $value;
                 if ($max > 0 && $target->coins > $max) $target->coins = $max;
 
@@ -303,7 +303,7 @@ final class ValhallaProcessor
             if ($card->owner !== $ownerKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying || $card->hp <= 0) continue;
-            if (empty($card->prop['ragnar_valhalla_double'])) continue;
+            if (empty($card->effectiveProp()['ragnar_valhalla_double'])) continue;
             if (!empty($card->flags['ragnar_valhalla_double_used_this_turn'])) continue;
 
             $card->flags['ragnar_valhalla_double_used_this_turn'] = true;

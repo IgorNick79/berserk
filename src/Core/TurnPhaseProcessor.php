@@ -314,7 +314,7 @@ final class TurnPhaseProcessor
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying) continue;
-            if (empty($card->prop['opponent_turn_start'])) continue;
+            if (empty($card->effectiveProp()['opponent_turn_start'])) continue;
             $otsCards[] = $card;
         }
         $queue = array_merge($queue, $this->buildTurnStartTasks($otsCards, 'opponent_turn_start'));
@@ -389,7 +389,7 @@ final class TurnPhaseProcessor
             if ($card->owner !== $activeKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if (empty($card->prop['prophecy'])) continue;
+            if (empty($card->effectiveProp()['prophecy'])) continue;
             if (!empty($card->flags['prophecy_done_this_turn'])) continue;
             $prophets[] = $card;
         }
@@ -447,10 +447,10 @@ final class TurnPhaseProcessor
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying || CardStats::isDisabled($card)) continue;
-            if (empty($card->prop['turn_start'])) continue;
+            if (empty($card->effectiveProp()['turn_start'])) continue;
 
             $hasNonCoin = false;
-            foreach ($card->prop['turn_start'] as $eff) {
+            foreach ($card->effectiveProp()['turn_start'] as $eff) {
                 if (($eff['type'] ?? '') !== 'get_coins') { $hasNonCoin = true; break; }
             }
             if ($hasNonCoin) $tsCards[] = $card;
@@ -489,7 +489,7 @@ final class TurnPhaseProcessor
         $tasks = [];
 
         foreach ($cards as $card) {
-            $effects = $card->prop[$propKey] ?? [];
+            $effects = $card->effectiveProp()[$propKey] ?? [];
             if (!is_array($effects)) continue;
 
             foreach ($effects as $eff) {
@@ -672,9 +672,9 @@ final class TurnPhaseProcessor
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying || CardStats::isDisabled($card)) continue;
-            if (empty($card->prop['turn_start'])) continue;
+            if (empty($card->effectiveProp()['turn_start'])) continue;
 
-            foreach ($card->prop['turn_start'] as $eff) {
+            foreach ($card->effectiveProp()['turn_start'] as $eff) {
                 if (($eff['type'] ?? '') !== 'get_coins') continue;
 
                 if (!empty($eff['line']) && !CardStats::isInLine($this->state, $card)) continue;
@@ -686,7 +686,7 @@ final class TurnPhaseProcessor
                 }
 
                 $coins  = (int) ($eff['coins'] ?? 1);
-                $max    = (int) ($card->prop['coins']['max_value'] ?? 0);
+                $max    = (int) ($card->effectiveProp()['coins']['max_value'] ?? 0);
                 $before = $card->coins;
 
                 $card->coins += $coins;
@@ -712,6 +712,7 @@ final class TurnPhaseProcessor
     {
         $card = $this->state->getCard($task['card_id']);
         if (!$card) return ['label' => $task['label'], 'items' => []];
+        if (EffectiveFeatures::suppressed($card)) return ['label' => $task['label'], 'items' => []];
 
         $eff = $task['payload'] ?? [];
         $type = $eff['type'] ?? '';
@@ -849,7 +850,7 @@ final class TurnPhaseProcessor
         $card = $this->state->getCard($task['card_id']);
         if (!$card) return ['label' => $task['label'], 'items' => []];
 
-        $effects = $card->prop['turn_end'] ?? $card->prop['opponent_turn_end'] ?? [];
+        $effects = $card->effectiveProp()['turn_end'] ?? $card->effectiveProp()['opponent_turn_end'] ?? [];
         if (!is_array($effects)) return ['label' => $task['label'], 'items' => []];
 
         $items = [];
@@ -1000,9 +1001,9 @@ final class TurnPhaseProcessor
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying || CardStats::isDisabled($card)) continue;
-            if (empty($card->prop['turn_start'])) continue;
+            if (empty($card->effectiveProp()['turn_start'])) continue;
 
-            foreach ($card->prop['turn_start'] as $eff) {
+            foreach ($card->effectiveProp()['turn_start'] as $eff) {
                 if (($eff['type'] ?? '') !== 'get_coins') continue;
                 if (!empty($eff['line']) && !CardStats::isInLine($this->state, $card)) continue;
 
@@ -1011,7 +1012,7 @@ final class TurnPhaseProcessor
                     if (!empty($card->flags['moved_last_turn'])) continue;
                 }
 
-                $max = (int) ($card->prop['coins']['max_value'] ?? 0);
+                $max = (int) ($card->effectiveProp()['coins']['max_value'] ?? 0);
                 if ($max > 0 && $card->coins >= $max) continue;   // уже максимум
 
                 return true;
@@ -1079,7 +1080,7 @@ final class TurnPhaseProcessor
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying || CardStats::isDisabled($card)) continue;
-            if (empty($card->prop['opponent_turn_end'])) continue;
+            if (empty($card->effectiveProp()['opponent_turn_end'])) continue;
 
             $queue[] = [
                 'id'      => 'ote:' . $card->instanceId,
@@ -1166,6 +1167,11 @@ final class TurnPhaseProcessor
             );
         }
 
+        // A scheduled unique spell is still unexecuted. Always consume its
+        // technical schedule/markers above, but never roll or open a new pick
+        // from a suppressed source's cached action.
+        if (EffectiveFeatures::suppressed($card)) return ['label' => 'Цветущие руны', 'items' => []];
+
         // Считаем X — свои без ран в этом ряду
         $x = 0;
         foreach ($this->state->cards as $c) {
@@ -1234,9 +1240,9 @@ final class TurnPhaseProcessor
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying || CardStats::isDisabled($card)) continue;
-            if (empty($card->prop['instants'])) continue;
+            if (empty($card->effectiveProp()['instants'])) continue;
 
-            foreach ($card->prop['instants'] as $inst) {
+            foreach ($card->effectiveProp()['instants'] as $inst) {
                 if (($inst['trigger'] ?? '') !== 'turn') continue;
                 $instants[] = [
                     'id'      => 'instant_' . $card->instanceId . '_' . ($inst['key'] ?? ''),
@@ -1265,7 +1271,7 @@ final class TurnPhaseProcessor
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying || CardStats::isDisabled($card)) continue;
-            if (empty($card->prop['turn_end'])) continue;
+            if (empty($card->effectiveProp()['turn_end'])) continue;
 
             $queue[] = [
                 'id'      => 'te:' . $card->instanceId,

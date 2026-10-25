@@ -26,7 +26,7 @@ final class FirstStrikeJump
 
     public function tryBlock(CardInstance $source, CardInstance $target, string $type, array $action = []): bool
     {
-        $config = $target->prop['first_strike_jump'] ?? null;
+        $config = $target->effectiveProp()['first_strike_jump'] ?? null;
         if (!is_array($config)) return false;
         $types = $config['types'] ?? ['strike', 'uchr', 'tap', 'magic', 'answer'];
         if (!is_array($types) || !in_array($type, $types, true)
@@ -78,7 +78,7 @@ final class FirstStrikeJump
                 'damage_applied' => true,
             ];
             if ($type === 'uchr') {
-                foreach ($source->prop['actions'] ?? [] as $action) {
+                foreach ($source->effectiveProp()['actions'] ?? [] as $action) {
                     if (($action['type'] ?? '') === 'uchr' && CoinAbilities::actionAvailable($source, $action)) {
                         (new CoinAbilities($this->state, $this->engine))->offerGain($source, $action);
                         break;
@@ -94,6 +94,7 @@ final class FirstStrikeJump
     /** Called only by the shared post-combat queue, after ACKs and combat continuations. */
     public function openAfterCombat(CardInstance $target, array $config): bool
     {
+        if (EffectiveFeatures::suppressed($target)) return false;
         $range = (int) ($config['range'] ?? 2);
         $cells = (new MovementResolver($this->state, $this->engine))->triggeredJumpCells($target, $range);
         if ($cells) {
@@ -130,6 +131,11 @@ final class FirstStrikeJump
         if (!$p || $p['owner'] !== $owner) return Result::error('Не ваш выбор');
         if (!hash_equals($p['id'], (string) $cmd->get('choice_id', ''))) return Result::error('Выбор устарел');
         $card = $this->state->getCard((int) $p['card_id']);
+        if ($card && EffectiveFeatures::suppressed($card)) {
+            unset($this->state->battle[self::PENDING]);
+            $this->state->bumpVersion();
+            return Result::ok(['first_strike_movement_suppressed']);
+        }
         if ($p['stage'] === 'jump') {
             if (!$card || $card->owner !== $owner || $card->row !== $p['from_row'] || $card->col !== $p['from_col']) {
                 return Result::error('Исходная карта недоступна');

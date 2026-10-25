@@ -24,7 +24,7 @@ final class CardStats
 
     public static function hasAnyStrike(CardInstance $card): bool
     {
-        if (!empty($card->prop['copy_target_strike'])) return true;
+        if (!empty($card->effectiveProp()['copy_target_strike'])) return true;
 
         return $card->strikeWeak > 0
             || $card->strikeMedium > 0
@@ -43,10 +43,10 @@ final class CardStats
 
     public static function canHealInsteadWound(CardInstance $card): bool
     {
-        if (empty($card->prop['on_heal_instead_wound'])) return false;
+        if (empty($card->effectiveProp()['on_heal_instead_wound'])) return false;
         if ($card->hp < $card->hpMax) return false;   // нужен полный HP
         $used = (int) ($card->flags['on_heal_wound_used_this_turn'] ?? 0);
-        $limit = (int) ($card->prop['on_heal_instead_wound']['uses_per_turn'] ?? 3);
+        $limit = (int) ($card->effectiveProp()['on_heal_instead_wound']['uses_per_turn'] ?? 3);
         return $limit <= 0 || $used < $limit;
     }
 
@@ -58,7 +58,7 @@ final class CardStats
     public static function getStat(CardInstance $card, string $stat): int
     {
         $value = 0;
-        $prop = $card->prop[$stat] ?? null;
+        $prop = $card->effectiveProp()[$stat] ?? null;
 
         if (is_numeric($prop)) {
             $value = (int) $prop;
@@ -66,7 +66,7 @@ final class CardStats
             $value = (int) ($prop['value'] ?? 0);
         }
 
-        foreach ($card->modifiers as $modifier) {
+        foreach ($card->effectiveModifiers() as $modifier) {
             if (($modifier['stat'] ?? '') === $stat) {
                 $value += (int) ($modifier['value'] ?? 0);
             }
@@ -98,7 +98,7 @@ final class CardStats
         if ($target->dying || $target->hp <= 0) return false;
         if (self::hasDefense($state, $target, 'execute', $attacker)) return false;
         if ($target->type === 'fly') return false;
-        if (!empty($target->prop['incorporeal'])) return false;
+        if (!empty($target->effectiveProp()['incorporeal'])) return false;
         if ($target->hp > $value) return false;
 
         $dr = abs($target->row - $attacker->row);
@@ -177,7 +177,7 @@ final class CardStats
     {
         $val = 0;
 
-        $ova = $card->prop['ova'] ?? 0;
+        $ova = $card->effectiveProp()['ova'] ?? 0;
         if ($ova) {
             if (is_array($ova)) {
                 $ok = self::checkLineCondition($state, $card, $ova)
@@ -190,7 +190,7 @@ final class CardStats
             }
         }
 
-        foreach ($card->modifiers as $m) {
+        foreach ($card->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') === 'ova') $val += (int) ($m['value'] ?? 0);
         }
 
@@ -209,7 +209,7 @@ final class CardStats
     {
         $val = 0;
 
-        $ovz = $card->prop['ovz'] ?? 0;
+        $ovz = $card->effectiveProp()['ovz'] ?? 0;
         if ($ovz) {
             if (is_array($ovz)) {
                 $ok = self::checkLineCondition($state, $card, $ovz)
@@ -222,7 +222,7 @@ final class CardStats
             }
         }
 
-        foreach ($card->modifiers as $m) {
+        foreach ($card->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') === 'ovz') $val += (int) ($m['value'] ?? 0);
         }
 
@@ -274,7 +274,7 @@ final class CardStats
 
     private static function hasDefenseValue(GameState $state, CardInstance $target, string $def): bool
     {
-        $d = $target->prop[$def] ?? null;
+        $d = $target->effectiveProp()[$def] ?? null;
         if (!empty($d)) {
             if (is_array($d) && !empty($d['line']) && !self::isInLine($state, $target)) {
                 return false;
@@ -286,7 +286,7 @@ final class CardStats
             if (!empty($d)) return true;
         }
 
-        foreach ($target->modifiers as $m) {
+        foreach ($target->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') === $def && !empty($m['value'])) {
                 return true;
             }
@@ -300,7 +300,7 @@ final class CardStats
         array $extraIgnore = []
     ): bool {
         // Общий ignore на карте (Мантикора)
-        $ignore = $attacker->prop['ignore'] ?? null;
+        $ignore = $attacker->effectiveProp()['ignore'] ?? null;
         if (is_array($ignore)) {
             if (array_is_list($ignore) && in_array($defense, $ignore, true)) {
                 return true;
@@ -323,7 +323,7 @@ final class CardStats
     public static function getShotBonus(CardInstance $card): int
     {
         $bonus = 0;
-        foreach ($card->modifiers as $m) {
+        foreach ($card->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') === 'shot_bonus') {
                 $bonus += (int) ($m['value'] ?? 0);
             }
@@ -334,7 +334,7 @@ final class CardStats
     public static function getNextActionBonus(CardInstance $card, string $actionType): int
     {
         $bonus = 0;
-        foreach ($card->modifiers as $m) {
+        foreach ($card->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') !== 'next_action_bonus') continue;
 
             $types = $m['types'] ?? null;
@@ -349,7 +349,7 @@ final class CardStats
     public static function getNextStrikeBonus(CardInstance $card): int
     {
         $bonus = 0;
-        foreach ($card->modifiers as $m) {
+        foreach ($card->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') === 'next_strike_bonus') {
                 $bonus += (int) ($m['value'] ?? 0);
             }
@@ -376,7 +376,7 @@ final class CardStats
         if ($actionType === '') return 0;
 
         $bonus = 0;
-        foreach ($card->modifiers as $m) {
+        foreach ($card->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') !== 'action_range') continue;
 
             $types = $m['types'] ?? null;
@@ -399,7 +399,7 @@ final class CardStats
             if ($source->zone !== CardInstance::ZONE_FIELD) continue;
             if ($source->col !== $card->col) continue;
 
-            $aura = $source->prop['column_range_aura'] ?? null;
+            $aura = $source->effectiveProp()['column_range_aura'] ?? null;
             if (!is_array($aura)) continue;
 
             $target = (string) ($aura['target'] ?? 'ally');
@@ -425,7 +425,7 @@ final class CardStats
         $result = 0;
 
         // Модификаторы
-        foreach ($attacker->modifiers as $m) {
+        foreach ($attacker->effectiveModifiers() as $m) {
             $stat = $m['stat'] ?? '';
             if ($stat === 'ability_strike') {
                 $lvl = $m['levels'] ?? null;
@@ -445,7 +445,7 @@ final class CardStats
         }
 
         // Собираем ability как массив
-        $abilities = self::normalizeAbilityList($attacker->prop['ability'] ?? null);
+        $abilities = self::normalizeAbilityList($attacker->effectiveProp()['ability'] ?? null);
         foreach (self::getInheritedLineBonusValues($state, $attacker, 'ability') as $inherited) {
             foreach (self::normalizeAbilityList($inherited) as $ability) {
                 $abilities[] = $ability;
@@ -558,7 +558,7 @@ final class CardStats
             }
 
             if (!$matched && isset($ability['types']) && is_array($ability['types'])) {
-                foreach ($target->prop['actions'] ?? [] as $a) {
+                foreach ($target->effectiveProp()['actions'] ?? [] as $a) {
                     if (in_array($a['type'] ?? '', $ability['types'], true)) {
                         $matched = true;
                         break;
@@ -568,7 +568,7 @@ final class CardStats
 
             if (!$matched && isset($ability['prop']) && is_array($ability['prop'])) {
                 foreach ($ability['prop'] as $flag) {
-                    if (!empty($target->prop[$flag])) {
+                    if (!empty($target->effectiveProp()[$flag])) {
                         $matched = true;
                         break;
                     }
@@ -584,10 +584,10 @@ final class CardStats
     public static function canSpendCoins(CardInstance $card): bool
     {
         // Явный запрет
-        if (!empty($card->prop['coins_receive_deny'])) return false;
+        if (!empty($card->effectiveProp()['coins_receive_deny'])) return false;
 
         // A. coins[type].spend (Арбалетчик, Мастер топора, Пустотник, Повелитель)
-        $coinsProp = $card->prop['coins'] ?? null;
+        $coinsProp = $card->effectiveProp()['coins'] ?? null;
         if (is_array($coinsProp)) {
             foreach ($coinsProp as $key => $cfg) {
                 if ($key === 'max_value') continue;
@@ -596,10 +596,10 @@ final class CardStats
         }
 
         // B. coin_strike_bonus (Камнедрев — бьёт и тратит все монеты)
-        if (!empty($card->prop['coin_strike_bonus'])) return true;
+        if (!empty($card->effectiveProp()['coin_strike_bonus'])) return true;
 
         // C. actions[].coins > 0 (Знахарь, Болотник, Волхв)
-        foreach ($card->prop['actions'] ?? [] as $a) {
+        foreach ($card->effectiveProp()['actions'] ?? [] as $a) {
             if ((int) ($a['coins'] ?? 0) > 0) return true;
         }
 
@@ -619,7 +619,7 @@ final class CardStats
         $total = 0;
 
         // Из prop
-        $reductions = $target->prop['damage_reduction'] ?? [];
+        $reductions = $target->effectiveProp()['damage_reduction'] ?? [];
         if (is_array($reductions)) {
             foreach ($reductions as $r) {
                 $total += self::damageReductionValue($state, $attacker, $target, $actionType, (array) $r, $level);
@@ -641,7 +641,7 @@ final class CardStats
                 if ($neighbor->instanceId === $target->instanceId) continue;
                 if ($neighbor->zone !== CardInstance::ZONE_FIELD) continue;
 
-                $aura = $neighbor->prop['aura_plains_ranged'] ?? null;
+                $aura = $neighbor->effectiveProp()['aura_plains_ranged'] ?? null;
                 if (!$aura) continue;
 
                 if ($neighbor->row !== $target->row) continue;
@@ -656,7 +656,7 @@ final class CardStats
         }
 
         // Из модификаторов (Грезы Архааля и т.п.)
-        foreach ($target->modifiers as $m) {
+        foreach ($target->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') !== 'damage_reduction') continue;
             $types = $m['types'] ?? null;
             if ($types !== null && !in_array($actionType, $types, true)) continue;
@@ -677,7 +677,7 @@ final class CardStats
         $val = 0;
 
         // Базовая броня из prop
-        $armor = $card->prop['armor'] ?? null;
+        $armor = $card->effectiveProp()['armor'] ?? null;
         if ($armor && is_array($armor)) {
             if (self::checkLineCondition($state, $card, $armor)) {
                 $val = (int) ($armor['value'] ?? 0);
@@ -690,7 +690,7 @@ final class CardStats
         }
 
         // Модификаторы (инкарнация, способности)
-        foreach ($card->modifiers as $m) {
+        foreach ($card->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') === 'armor') {
                 $val += (int) ($m['value'] ?? 0);
             }
@@ -701,14 +701,14 @@ final class CardStats
 
     public static function hasLine(CardInstance $card): bool
     {
-        if (!empty($card->prop['has_line'])) return true;
-        return self::hasLineDeep($card->prop);
+        if (!empty($card->effectiveProp()['has_line'])) return true;
+        return self::hasLineDeep($card->effectiveProp());
     }
 
     public static function hasCannotAttack(CardInstance $card): bool
     {
         if (Strangulation::count($card) >= 2) return true;
-        foreach ($card->modifiers as $m) {
+        foreach ($card->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') === 'cannot_attack') return true;
         }
         return false;
@@ -744,7 +744,7 @@ final class CardStats
         }
 
         $actionKey = substr($mode, 7);
-        foreach ($card->prop['actions'] ?? [] as $action) {
+        foreach ($card->effectiveProp()['actions'] ?? [] as $action) {
             $key = $action['key'] ?? $action['type'] ?? '';
             if ($key === $actionKey) {
                 return self::canFriendlyFireAction($action);
@@ -828,7 +828,7 @@ final class CardStats
      */
     public static function getInheritedLineBonusSources(GameState $state, CardInstance $card): array
     {
-        $config = $card->prop['inherit_line_bonuses'] ?? null;
+        $config = $card->effectiveProp()['inherit_line_bonuses'] ?? null;
         if (!is_array($config)) return [];
         if ($card->zone !== CardInstance::ZONE_FIELD || $card->dying || $card->hp <= 0) return [];
 
@@ -848,7 +848,7 @@ final class CardStats
             if ($source->zone !== CardInstance::ZONE_FIELD) continue;
             if ($source->dying || $source->hp <= 0) continue;
             if ($element !== '' && $source->element !== $element) continue;
-            if (!empty($source->prop['inherit_line_bonuses'])) continue;
+            if (!empty($source->effectiveProp()['inherit_line_bonuses'])) continue;
             $sources[] = $source;
         }
         return $sources;
@@ -861,8 +861,8 @@ final class CardStats
     {
         $values = [];
         foreach (self::getInheritedLineBonusSources($state, $card) as $source) {
-            if (!array_key_exists($propKey, $source->prop)) continue;
-            $value = $source->prop[$propKey];
+            if (!array_key_exists($propKey, $source->effectiveProp())) continue;
+            $value = $source->effectiveProp()[$propKey];
             if ($propKey === 'ability') {
                 foreach (self::normalizeAbilityList($value) as $ability) {
                     if (!empty($ability['line'])) $values[] = $ability;
@@ -949,7 +949,7 @@ final class CardStats
     {
         $bonus = 0;
         foreach ($state->cards as $source) {
-            $aura = $source->prop['line_strike_aura'] ?? null;
+            $aura = $source->effectiveProp()['line_strike_aura'] ?? null;
             if (!is_array($aura)) continue;
             if ($source->owner !== $attacker->owner) continue;
             if ($source->zone !== CardInstance::ZONE_FIELD) continue;
@@ -1038,7 +1038,7 @@ final class CardStats
 
     public static function canAttackFlying(GameState $state, CardInstance $card): bool
     {
-        $caf = $card->prop['can_attack_flying'] ?? null;
+        $caf = $card->effectiveProp()['can_attack_flying'] ?? null;
         if (!$caf) return false;
 
         // Может быть просто true или {condition: ...}
@@ -1054,14 +1054,14 @@ final class CardStats
     public static function isDirectStrike(GameState $state, CardInstance $attacker, CardInstance $target, ?array $context = null): bool
     {
         // Модификатор direct (Бегущая)
-        foreach ($attacker->modifiers as $m) {
+        foreach ($attacker->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') === 'direct' && !empty($m['value'])) {
                 return true;
             }
         }
 
         // Владыка небес: direct_if_marker
-        $abilities = $attacker->prop['ability'] ?? null;
+        $abilities = $attacker->effectiveProp()['ability'] ?? null;
         if ($abilities) {
             $list = isset($abilities['value']) ? [$abilities] : $abilities;
             foreach ($list as $a) {
@@ -1072,7 +1072,7 @@ final class CardStats
             }
         }
 
-        $direct = $attacker->prop['direct'] ?? false;
+        $direct = $attacker->effectiveProp()['direct'] ?? false;
 
         if ($direct === true) return true;
 
@@ -1082,7 +1082,7 @@ final class CardStats
         }
         
         if (is_array($direct) && !empty($direct['check']) && !empty($direct['types'])) {
-            foreach ($target->prop['actions'] ?? [] as $a) {
+            foreach ($target->effectiveProp()['actions'] ?? [] as $a) {
                 if (in_array($a['type'] ?? '', $direct['types'], true)) {
                     return true;
                 }
@@ -1119,7 +1119,7 @@ final class CardStats
 
     public static function getClumsyPenalty(CardInstance $card): int
     {
-        $c = $card->prop['clumsy'] ?? 0;
+        $c = $card->effectiveProp()['clumsy'] ?? 0;
         return is_array($c) ? (int) ($c['value'] ?? 0) : (int) $c;
     }
 
@@ -1143,7 +1143,7 @@ final class CardStats
     public static function getForcedStrikeTarget(GameState $state, CardInstance $card): ?CardInstance
     {
         if (Strangulation::count($card) >= 2) return null;
-        if (empty($card->prop['forced_strike'])) return null;
+        if (empty($card->effectiveProp()['forced_strike'])) return null;
         if ($card->zone !== CardInstance::ZONE_FIELD) return null;
         if ($card->closed) return null;
         if (!self::hasAnyStrike($card)) return null;
@@ -1243,7 +1243,7 @@ final class CardStats
         CardInstance $attacker,
         CardInstance $target
     ): bool {
-        $unanswer = $attacker->prop['unanswer'] ?? null;
+        $unanswer = $attacker->effectiveProp()['unanswer'] ?? null;
         if (!$unanswer) return false;
 
         if ($unanswer === true) return true;
@@ -1285,7 +1285,7 @@ final class CardStats
 
     public static function hasZoal(GameState $state, CardInstance $card): bool
     {
-        return self::hasDefense($state, $card, 'strike', null) && !empty($card->prop['zoal']);
+        return self::hasDefense($state, $card, 'strike', null) && !empty($card->effectiveProp()['zoal']);
     }
 
     public static function hasAllyPriceNear(
@@ -1318,7 +1318,7 @@ final class CardStats
             if ($card->owner === $attackerKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD) continue;
             if ($card->dying || $card->hp <= 0) continue;
-            if (empty($card->prop['air_intercept'])) continue;
+            if (empty($card->effectiveProp()['air_intercept'])) continue;
             $result[] = $card;
         }
         return $result;
@@ -1362,7 +1362,7 @@ final class CardStats
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying || $card->hp <= 0) continue;
 
-            $config = $card->prop['ranged_intercept'] ?? null;
+            $config = $card->effectiveProp()['ranged_intercept'] ?? null;
             if ($config === null) continue;
 
             // Массив типов — проверяем конкретный тип
@@ -1495,7 +1495,7 @@ final class CardStats
         $result = [];
 
         // OVA
-        $ova = $card->prop['ova'] ?? null;
+        $ova = $card->effectiveProp()['ova'] ?? null;
         if ($ova !== null) {
             $val = 0;
             $ok  = true;
@@ -1517,7 +1517,7 @@ final class CardStats
         }
 
         // OVZ
-        $ovz = $card->prop['ovz'] ?? null;
+        $ovz = $card->effectiveProp()['ovz'] ?? null;
         if ($ovz !== null) {
             $val = 0;
             $ok  = true;
@@ -1539,7 +1539,7 @@ final class CardStats
         }
 
         // Direct
-        $direct = $card->prop['direct'] ?? null;
+        $direct = $card->effectiveProp()['direct'] ?? null;
         if ($direct !== null) {
             $show = false;
             if ($direct === true) {
@@ -1559,14 +1559,14 @@ final class CardStats
         }
 
         // Regeneration
-        $regen = $card->prop['regeneration'] ?? null;
+        $regen = $card->effectiveProp()['regeneration'] ?? null;
         if ($regen !== null) {
             $val = is_array($regen) ? (int) ($regen['value'] ?? 0) : (int) $regen;
             if ($val > 0) $result['regeneration'] = $val;
         }
 
         // Ability — условные бонусы к удару
-        $abilities = $card->prop['ability'] ?? null;
+        $abilities = $card->effectiveProp()['ability'] ?? null;
         if ($abilities !== null) {
             if (isset($abilities['value'])) $abilities = [$abilities];
 
@@ -1652,7 +1652,7 @@ final class CardStats
 
     public static function enemyHasMagic(CardInstance $card): bool
     {
-        foreach ($card->prop['actions'] ?? [] as $a) {
+        foreach ($card->effectiveProp()['actions'] ?? [] as $a) {
             $t = $a['type'] ?? '';
             if (in_array($t, ['discharge', 'magic', 'cast'], true)) return true;
         }
@@ -1661,7 +1661,7 @@ final class CardStats
 
     public static function hasRangedAction(CardInstance $card): bool
     {
-        foreach ($card->prop['actions'] ?? [] as $a) {
+        foreach ($card->effectiveProp()['actions'] ?? [] as $a) {
             $t = (string) ($a['type'] ?? '');
             if (self::isRangedAction($t)) return true;
         }

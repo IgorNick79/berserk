@@ -78,7 +78,7 @@ final class MatriarchOrderProcessor
             if(!$source || !self::available($this->state,$source) || !self::live($target) || $target->owner===$owner)
                 return Result::error('Источник или цель недоступны');
             $action=null;
-            foreach($source->prop['actions']??[] as $candidate)if(($candidate['key']??$candidate['type']??'')===$p['action_key'])$action=$candidate;
+            foreach($source->effectiveProp()['actions']??[] as $candidate)if(($candidate['key']??$candidate['type']??'')===$p['action_key'])$action=$candidate;
             if(!$action || ($action['type']??'')!=='impact' || ($action['effect']??'')!=='matriarch_order')
                 return Result::error('Способность приказа недоступна');
             $ids=self::recipients($this->state,$owner,$target);

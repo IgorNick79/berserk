@@ -351,6 +351,7 @@ final class Engine
         ?string $choice = null,
         ?CardInstance $target = null
     ): ?string {
+        if ($source && EffectiveFeatures::suppressed($source)) return 'Потеря памяти';
         $type = $effect['type'] ?? '';
         $strike = &$state->battle['strike'];
 
@@ -571,6 +572,7 @@ final class Engine
 
     public function applyInstantEffect(GameState $state, array $effect, ?CardInstance $source, CardInstance $target, string $ownerKey): void
     {
+        if ($source && EffectiveFeatures::suppressed($source)) return;
         $type = $effect['type'] ?? '';
         $journalHpBefore=$target->hp;
         $journalClosedBefore=$target->closed;
@@ -809,11 +811,11 @@ final class Engine
             $reason = CardStats::disabledReason($card);
             return Result::error($reason !== '' ? $reason : 'Карта не может действовать');
         }
-        if (empty($card->prop['save_coins'])) {
+        if (empty($card->effectiveProp()['save_coins'])) {
             return Result::error('Карта не умеет копить монеты');
         }
 
-        $max = (int) ($card->prop['coins']['max_value'] ?? 0);
+        $max = (int) ($card->effectiveProp()['coins']['max_value'] ?? 0);
         if ($max > 0 && $card->coins >= $max) {
             return Result::error('Максимум монет');
         }
@@ -861,7 +863,7 @@ final class Engine
     {
         if ($value <= 0) return;
 
-        if (!empty($target->prop['zoo'])) {
+        if (!empty($target->effectiveProp()['zoo'])) {
             return;
         }
 
@@ -880,12 +882,12 @@ final class Engine
 
     public function applyRegeneration(CardInstance $card): void
     {
-        $regen = $card->prop['regeneration'] ?? 0;
+        $regen = $card->effectiveProp()['regeneration'] ?? 0;
         if (is_array($regen)) $regen = (int) ($regen['value'] ?? 0);
         else $regen = (int) $regen;
 
         // Модификаторы (на будущее)
-        foreach ($card->modifiers as $m) {
+        foreach ($card->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') === 'regeneration') {
                 $regen += (int) ($m['value'] ?? 0);
             }
@@ -940,7 +942,8 @@ final class Engine
         string $level,
         ?array $effects = null
     ): void {
-        $effects = $effects ?? ($attacker->prop['strike_effects'] ?? []);
+        if (EffectiveFeatures::suppressed($attacker)) return;
+        $effects = $effects ?? ($attacker->effectiveProp()['strike_effects'] ?? []);
         if (!is_array($effects)) return;
 
         foreach ($effects as $effect) {
@@ -991,7 +994,7 @@ final class Engine
 
     public function openAutoChoice(GameState $state, CardInstance $attacker): bool
     {
-        $auto = $attacker->prop['auto'] ?? null;
+        $auto = $attacker->effectiveProp()['auto'] ?? null;
         if (!$auto || !is_array($auto)) return false;
 
         foreach ($auto as $effect) {
@@ -1168,11 +1171,11 @@ final class Engine
 
     public function getRegenerationAmount(CardInstance $card): int
     {
-        $regen = $card->prop['regeneration'] ?? 0;
+        $regen = $card->effectiveProp()['regeneration'] ?? 0;
         if (is_array($regen)) $regen = (int) ($regen['value'] ?? 0);
         else $regen = (int) $regen;
 
-        foreach ($card->modifiers as $m) {
+        foreach ($card->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') === 'regeneration') {
                 $regen += (int) ($m['value'] ?? 0);
             }
@@ -1196,7 +1199,7 @@ final class Engine
         CardInstance $target,
         string $actionType
     ): bool {
-        $config = $target->prop['prophecy_block'] ?? null;
+        $config = $target->effectiveProp()['prophecy_block'] ?? null;
         if (!$config) return false;
 
         $attackTypes = ['strike', 'tap', 'uchr', 'shot', 'throw'];
@@ -1230,6 +1233,7 @@ final class Engine
 
     public function syncCoinBonus(CardInstance $card): void
     {
+        // Maintain the raw derived cache even while its gameplay view is suppressed.
         if (empty($card->prop['coin_strike_bonus'])) return;
 
         // Убираем старый модификатор

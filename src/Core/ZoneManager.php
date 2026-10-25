@@ -24,6 +24,7 @@ final class ZoneManager
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_HAND;
+        EffectiveFeatures::leftBattlefield($this->state, $card);
         $this->normalizeFlyingSlots($flyingOwner);
         Strangulation::refresh($this->state);
     }
@@ -34,6 +35,7 @@ final class ZoneManager
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_SQUAD;
+        EffectiveFeatures::leftBattlefield($this->state, $card);
         $this->normalizeFlyingSlots($flyingOwner);
         Strangulation::refresh($this->state);
     }
@@ -44,6 +46,7 @@ final class ZoneManager
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_DECK;
+        EffectiveFeatures::leftBattlefield($this->state, $card);
         $this->normalizeFlyingSlots($flyingOwner);
         Strangulation::refresh($this->state);
     }
@@ -54,6 +57,7 @@ final class ZoneManager
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $this->clearPosition($card);
         $card->zone = CardInstance::ZONE_SIDEBOARD;
+        EffectiveFeatures::leftBattlefield($this->state, $card);
         $this->normalizeFlyingSlots($flyingOwner);
         Strangulation::refresh($this->state);
     }
@@ -106,9 +110,10 @@ final class ZoneManager
         }
 
         $valhallaReady = !empty($card->flags['valhalla_pending'])
-            && !empty($card->prop['valhalla']);
+            && !empty($card->effectiveProp()['valhalla']);
 
         $card->zone      = CardInstance::ZONE_GRAVEYARD;
+        EffectiveFeatures::leftBattlefield($this->state, $card);
         $card->dying     = false;
         $card->closed    = true;
         $card->hp        = 0;
@@ -118,7 +123,7 @@ final class ZoneManager
         $card->modifiers = [];
         $this->clearPosition($card);
 
-        $inc = $card->prop['incarnation'] ?? null;
+        $inc = $card->effectiveProp()['incarnation'] ?? null;
         if ($inc !== null) {
             $threshold = is_array($inc) ? (int) ($inc['turns'] ?? 3) : (int) $inc;
             $open      = is_array($inc) && !empty($inc['open']);
@@ -132,7 +137,7 @@ final class ZoneManager
             ];
         } else {
             $card->markers   = [];
-            $card->flags     = [];
+            $card->flags = MemoryLoss::persistentFlags($card);
 
             if ($valhallaReady) {
                 $card->flags['valhalla_active'] = true;
@@ -149,6 +154,7 @@ final class ZoneManager
         $flyingOwner = $this->flyingOwnerBeforeTransition($card);
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $card->zone      = CardInstance::ZONE_EXILE;
+        EffectiveFeatures::leftBattlefield($this->state, $card);
         $card->dying     = false;
         $card->closed    = true;
         $card->revealed  = true;
@@ -158,7 +164,7 @@ final class ZoneManager
         $card->coins     = 0;
         $card->modifiers = [];
         $card->markers   = [];
-        $card->flags     = [];
+        $card->flags = MemoryLoss::persistentFlags($card);
         $this->clearPosition($card);
         $this->normalizeFlyingSlots($flyingOwner);
         Strangulation::refresh($this->state);

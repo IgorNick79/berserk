@@ -23,6 +23,7 @@ final class CellEffectDirectionChoice implements ChoiceHandlerInterface
     /** Lantern is passive: closing alone does not disable it; other restrictions remain. */
     public static function canCreateLight(CardInstance $card): bool
     {
+        if (\Berserk\Core\EffectiveFeatures::suppressed($card)) return false;
         return $card->zone === CardInstance::ZONE_FIELD && !$card->dying && $card->hp > 0
             && !isset($card->markers['spider_web']);
     }

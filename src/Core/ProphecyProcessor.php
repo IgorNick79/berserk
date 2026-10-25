@@ -81,7 +81,7 @@ final class ProphecyProcessor
         $summonCards = [];
         $hasNonSummon = false;
         foreach ($peeked['cards'] as $c) {
-            if (!empty($c->prop['prophecy_summon'])) {
+            if (!empty($c->effectiveProp()['prophecy_summon'])) {
                 $summonCards[] = $c;
             } else {
                 $hasNonSummon = true;
@@ -216,7 +216,7 @@ final class ProphecyProcessor
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying || $card->hp <= 0) continue;
 
-            $config = $card->prop['prophecy_charge'] ?? null;
+            $config = $card->effectiveProp()['prophecy_charge'] ?? null;
             if (!$config) continue;
 
             $cap = (int) ($config['cap'] ?? 3);
@@ -263,10 +263,13 @@ final class ProphecyProcessor
         foreach ($pp['original_ids'] as $id) {
             $card = $this->state->getCard($id);
             if (!$card) continue;
-            if (!empty($card->prop['prophecy_summon'])) continue;  // Отряд не двигаем
+            if (!empty($card->effectiveProp()['prophecy_summon'])) continue;  // Отряд не двигаем
             $cards[] = $card;
         }
         if (empty($cards)) return Result::error('Нет карт для перестановки');
+
+        // source_id remains the seeker; reordering belongs to this exact instance.
+        $pp['reorder_source_id'] = $machinator->instanceId;
 
         if (count($cards) === 1) {
             $this->putOnTop($cards[0]);
@@ -284,6 +287,7 @@ final class ProphecyProcessor
                 'source_ukid'  => $pp['source_ukid'],
                 'shown_ukids'  => $pp['shown_ukids'],
                 'title'        => 'Карта отправлена наверх колоды',
+                'reorder_source_id' => $pp['reorder_source_id'],
                 'actions'      => $actions,
                 'context'      => $pp['context'],
                 'meta'         => $pp['meta'],
@@ -295,6 +299,7 @@ final class ProphecyProcessor
         }
 
         $this->state->battle['pending_prophecy']['reorder_mode'] = true;
+        $this->state->battle['pending_prophecy']['reorder_source_id'] = $machinator->instanceId;
         $this->state->battle['pending_prophecy']['reorder_remaining']
             = array_map(fn($c) => $c->instanceId, $cards);
         return Result::ok(['reorder_mode']);
@@ -306,6 +311,17 @@ final class ProphecyProcessor
         if (!$pp) return Result::error('Нет ожидающего выбора');
         if ($pp['owner'] !== $playerKey) return Result::error('Не ваш выбор');
         if (empty($pp['reorder_mode'])) return Result::error('Не режим перестановки');
+
+        $source = $this->state->getCard((int) ($pp['reorder_source_id'] ?? 0));
+        if (!$source || $source->owner !== $playerKey
+            || !EffectiveFeatures::onBattlefield($source) || $source->dying || $source->hp <= 0
+            || empty($source->effectiveProp()['prophecy_reorder'])) {
+            // Legacy pending has no trustworthy origin. Also use this path when
+            // the recorded origin loses its feature. Finalize the existing
+            // prophecy and its control flow, without another rearrangement.
+            return (new TurnProcessor($this->state, $this->engine))
+                ->closeProphecy($playerKey, new Command('close_prophecy'));
+        }
 
         $remaining = $pp['reorder_remaining'] ?? [];
         if (!in_array($cardId, $remaining, true)) {
@@ -344,6 +360,7 @@ final class ProphecyProcessor
                 'source_ukid'  => $pp['source_ukid'],
                 'shown_ukids'  => $pp['shown_ukids'],
                 'title'        => 'Карты разложены',
+                'reorder_source_id' => $pp['reorder_source_id'],
                 'actions'      => $actions,
                 'context'      => $pp['context'],
                 'meta'         => $pp['meta'],
@@ -362,7 +379,7 @@ final class ProphecyProcessor
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying || $card->hp <= 0) continue;
-            if (empty($card->prop['prophecy_reorder'])) continue;
+            if (empty($card->effectiveProp()['prophecy_reorder'])) continue;
             if (!empty($card->flags['prophecy_reorder_used_this_turn'])) continue;
             return $card;
         }
@@ -400,7 +417,7 @@ final class ProphecyProcessor
         if (empty($card->flags['in_prophecy_pending'])) {
             return Result::error('Карта не в пророчестве');
         }
-        if (empty($card->prop['prophecy_summon'])) {
+        if (empty($card->effectiveProp()['prophecy_summon'])) {
             return Result::error('Не карта вызова');
         }
 

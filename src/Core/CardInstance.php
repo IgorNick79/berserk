@@ -134,6 +134,16 @@ final class CardInstance
         return $this->zone === self::ZONE_FIELD;
     }
 
+    public function effectiveProp(): array
+    {
+        return EffectiveFeatures::prop($this);
+    }
+
+    public function effectiveModifiers(): array
+    {
+        return EffectiveFeatures::modifiers($this);
+    }
+
     public function isAlive(): bool
     {
         return $this->hp > 0 && $this->zone !== self::ZONE_GRAVEYARD;
@@ -142,7 +152,7 @@ final class CardInstance
     public function effectiveMove(): int
     {
         $bonus = 0;
-        foreach ($this->modifiers as $m) {
+        foreach ($this->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') === 'move') {
                 $bonus += (int) ($m['value'] ?? 0);
             }

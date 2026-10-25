@@ -9,15 +9,16 @@ final class CoinAbilities
 
     public static function actionAvailable(CardInstance $card, array $action): bool
     {
+        if (EffectiveFeatures::suppressed($card)) return false;
         return !isset($action['coins_required']) || $card->coins === (int) $action['coins_required'];
     }
 
     public function gain(CardInstance $target, int $value, ?CardInstance $source = null, bool $selfEffect = false): int
     {
         if ($value <= 0) return 0;
-        if (!empty($target->prop['coins_receive_deny'])
+        if (!empty($target->effectiveProp()['coins_receive_deny'])
             && (!$selfEffect || !$source || $source->instanceId !== $target->instanceId)) return 0;
-        $max = (int) ($target->prop['coins']['max_value'] ?? 0);
+        $max = (int) ($target->effectiveProp()['coins']['max_value'] ?? 0);
         $before = $target->coins;
         $target->coins = $max > 0 ? min($max, $before + $value) : $before + $value;
         $this->engine->syncCoinBonus($target);
@@ -26,6 +27,7 @@ final class CoinAbilities
 
     public function offerGain(CardInstance $card, array $action): void
     {
+        if (EffectiveFeatures::suppressed($card)) return;
         $value = (int) ($action['optional_self_coin'] ?? 0);
         if ($value <= 0 || $card->coins > 0 || $card->dying || $card->hp <= 0) return;
         $this->defer([
@@ -72,7 +74,7 @@ final class CoinAbilities
 
     public function offerBlock(CardInstance $source, CardInstance $target, string $type, array $continuation): bool
     {
-        $config = $target->prop['coin_block'] ?? null;
+        $config = $target->effectiveProp()['coin_block'] ?? null;
         if (!is_array($config) || !in_array($type, $config['types'] ?? [], true)) return false;
         if ($target->coins < (int) ($config['cost'] ?? 1) || $target->dying || $target->hp <= 0) return false;
         // Universal attack protection has the same bypass rules as zoa/zoan/zoal.
@@ -104,7 +106,7 @@ final class CoinAbilities
 
     public function triggerDischarge(CardInstance $source, int $wounds, string $type): void
     {
-        $config = $source->prop['on_wounding_strike'] ?? null;
+        $config = $source->effectiveProp()['on_wounding_strike'] ?? null;
         if ($wounds <= 0 || !in_array($type, ['strike', 'answer', 'uchr', 'tap', 'magic'], true)) return;
         if (!is_array($config) || $source->coins < (int) ($config['min_coins'] ?? 1)) return;
         if ($source->dying || $source->hp <= 0) return;
@@ -124,7 +126,20 @@ final class CoinAbilities
         if (!hash_equals($p['id'], (string) $cmd->get('choice_id', ''))) return Result::error('Выбор устарел');
         $card = $this->state->getCard((int) $p['card_id']);
         if (!$card || $card->owner !== $owner) return Result::error('Карта недоступна');
+        if ($p['kind'] === 'block' && ($p['continuation']['kind'] ?? '') === 'damage') {
+            $attackSource = $this->state->getCard((int) $p['continuation']['card_id']);
+            if ($attackSource && EffectiveFeatures::suppressed($attackSource)) {
+                // The attack has not executed; do not charge a fresh defensive
+                // block against an unavailable ability. Keep earlier attack costs.
+                unset($this->state->battle['pending_coin_ability']);
+                return (new ActionResolver($this->state, $this->engine))->resumeCoinAttack($p['continuation']);
+            }
+        }
+        // An unavailable optional protection takes its normal decline path,
+        // which resumes the attack; never discard that technical continuation.
+        $suppressed = EffectiveFeatures::suppressed($card);
         $choice = (string) $cmd->get('choice', '');
+        if ($suppressed) $choice = 'no';
         if ($p['kind'] === 'discharge') {
             $targetId = (int) $cmd->get('target_id', 0);
             $targets = $this->dischargeTargets($card, $p['action']);
@@ -143,7 +158,7 @@ final class CoinAbilities
             }
             unset($this->state->battle['pending_coin_ability']);
             if ($p['kind'] === 'gain') {
-                if ($choice === 'yes' && !$card->dying && $card->hp > 0) $this->gain($card, $p['value'], $card, true);
+                if ($choice === 'yes' && !$suppressed && !$card->dying && $card->hp > 0) $this->gain($card, $p['value'], $card, true);
             } else {
                 $context = $p['continuation'];
                 if ($choice === 'yes') {
@@ -197,6 +212,7 @@ final class CoinAbilities
             $effect['executed'] = true;
             $this->state->battle['coin_post_combat_history'][$id] = $effect;
             $source = $this->state->getCard((int) $effect['card_id']);
+            if ($source && EffectiveFeatures::suppressed($source)) continue;
             if (!$source || $source->owner !== $effect['owner'] || $source->dying || $source->hp <= 0
                 || !in_array($source->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) continue;
             if ($effect['kind'] === 'ranged_neighbor_teleport') {
@@ -247,7 +263,7 @@ final class CoinAbilities
                 'final' => ['attack' => '', 'defend' => '', 'decreased' => false], 'confirmed' => [],
             ];
             if ($pending['type'] === 'uchr') {
-                foreach ($source->prop['actions'] ?? [] as $a) {
+                foreach ($source->effectiveProp()['actions'] ?? [] as $a) {
                     if (($a['type'] ?? '') === 'uchr' && self::actionAvailable($source, $a)) {
                         $this->offerGain($source, $a);
                         break;

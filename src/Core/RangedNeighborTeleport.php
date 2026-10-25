@@ -13,7 +13,7 @@ final class RangedNeighborTeleport
         if ($wounds < 1 || !in_array($type, ['shot', 'throw', 'discharge'], true)
             || !in_array($target->type, ['creature', 'fly'], true) || empty($state->battle['strike'])) return;
         foreach ($state->cards as $card) {
-            $config = $card->prop['on_ranged_neighbor_wounded'] ?? null;
+            $config = $card->effectiveProp()['on_ranged_neighbor_wounded'] ?? null;
             if (!is_array($config) || !in_array($type, $config['types'] ?? [], true)
                 || empty($config['optional']) || empty($config['once_per_battle'])
                 || ($config['destination'] ?? '') !== 'adjacent_attacker'
@@ -37,6 +37,7 @@ final class RangedNeighborTeleport
 
     private static function available(CardInstance $card): bool
     {
+        if (EffectiveFeatures::suppressed($card)) return false;
         return $card->zone === CardInstance::ZONE_FIELD && !$card->dying && $card->hp > 0
             && Strangulation::count($card) === 0 && empty($card->flags['ranged_neighbor_teleport_used']);
     }

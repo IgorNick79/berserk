@@ -78,6 +78,14 @@ final class ForcedDirectionalMoveChoice implements ChoiceHandlerInterface
         if (!$pending) return Result::error('Нет ожидающего выбора');
         if (($pending['owner'] ?? '') !== $playerKey) return Result::error('Не ваш выбор');
 
+        $source = $state->getCard((int) ($pending['source_id'] ?? 0));
+        if ($source && \Berserk\Core\EffectiveFeatures::suppressed($source)) {
+            // Neither the movement nor the unique fallback can execute.
+            unset($state->battle[ForcedMovementResolver::PENDING_KEY]);
+            $state->bumpVersion();
+            return Result::ok(['forced_directional_move_suppressed']);
+        }
+
         if ($cmd->type === 'cancel_pending') {
             return $this->decline($state, $pending);
         }

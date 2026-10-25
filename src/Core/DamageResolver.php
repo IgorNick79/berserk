@@ -20,7 +20,7 @@ final class DamageResolver
     ): void {
         if ($val <= 0) return;
 
-        if ($actionType === 'answer' && !empty($target->prop['block_strike_answer'])) {
+        if ($actionType === 'answer' && !empty($target->effectiveProp()['block_strike_answer'])) {
             if (!empty($this->state->battle['strike'])) {
                 $this->state->battle['strike']['answer_blocked'][] = [
                     'target_id' => $target->instanceId,
@@ -30,7 +30,7 @@ final class DamageResolver
             return;
         }
 
-        foreach ($target->modifiers as $m) {
+        foreach ($target->effectiveModifiers() as $m) {
             if (($m['stat'] ?? '') === 'shield_light') {
                 $magicTypes = [
                     'magic', 'cast', 'discharge', 'poison',
@@ -99,16 +99,16 @@ final class DamageResolver
 
         $vampireTypes = ['strike', 'tap', 'magic', 'execute'];
         if ($attacker
-            && !empty($attacker->prop['vampire'])
+            && !empty($attacker->effectiveProp()['vampire'])
             && in_array($actionType, $vampireTypes, true)
             && $attacker->instanceId !== $target->instanceId
             && $attacker->hp > 0) {
 
-            $offset = (int) ($attacker->prop['vampire_offset'] ?? 0);
+            $offset = (int) ($attacker->effectiveProp()['vampire_offset'] ?? 0);
             $healAmount = $val + $offset;
             if ($healAmount < 0) $healAmount = 0;
 
-            $maxHp = (int) ($attacker->prop['hp_max_override'] ?? $attacker->hpMax);
+            $maxHp = (int) ($attacker->effectiveProp()['hp_max_override'] ?? $attacker->hpMax);
             $heal = min($healAmount, $maxHp - $attacker->hp);
 
             if ($heal > 0) {
@@ -198,7 +198,7 @@ final class DamageResolver
         $this->clearRootedBySource($target->instanceId);
 
         if ($source
-            && !empty($source->prop['deadeat'])
+            && !empty($source->effectiveProp()['deadeat'])
             && $this->shouldTriggerDeadeat($cause)
             && $source->hp > 0) {
 
@@ -207,8 +207,8 @@ final class DamageResolver
                     'instance_id' => $source->instanceId,
                 ];
             } else {
-                if (!empty($source->prop['deadeat_hp_bonus'])) {
-                    $source->hpMax += (int) $source->prop['deadeat_hp_bonus'];
+                if (!empty($source->effectiveProp()['deadeat_hp_bonus'])) {
+                    $source->hpMax += (int) $source->effectiveProp()['deadeat_hp_bonus'];
                 }
                 $source->hp = $source->hpMax;
             }
@@ -263,7 +263,7 @@ final class DamageResolver
                 && $source->zone !== CardInstance::ZONE_FLYING) continue;
             if ($source->instanceId !== $died->instanceId && $source->dying) continue;
 
-            $config = $source->prop['line_death_next_strike_bonus'] ?? null;
+            $config = $source->effectiveProp()['line_death_next_strike_bonus'] ?? null;
             if (!is_array($config)) continue;
 
             $value = (int) ($config['value'] ?? 0);
@@ -334,9 +334,9 @@ final class DamageResolver
 
     public function triggerOnDeath(CardInstance $died): void
     {
-        if (empty($died->prop['on_death'])) return;
+        if (empty($died->effectiveProp()['on_death'])) return;
 
-        foreach ($died->prop['on_death'] as $effect) {
+        foreach ($died->effectiveProp()['on_death'] as $effect) {
             $this->applyDeathEffect($died, $effect);
         }
     }
@@ -457,6 +457,15 @@ final class DamageResolver
             return Result::error('Не ваш выбор');
         }
 
+        // The reaction is not committed until this choice is executed. Dying
+        // remains on the battlefield, so its effective features still apply.
+        if (EffectiveFeatures::suppressed($died)) {
+            unset($this->state->battle['strike']['pending_choice']);
+            InformationalWaitManager::publish($this->state);
+            $this->state->bumpVersion();
+            return Result::ok(['death_choice_suppressed']);
+        }
+
         $targetId = (int) $cmd->get('target_id', 0);
         if (!in_array($targetId, $candidates, true)) {
             return Result::error('Неверная цель');
@@ -510,10 +519,11 @@ final class DamageResolver
         foreach ($queue as $item) {
             $card = $this->state->getCard($item['instance_id']);
             if (!$card) continue;
+            if (EffectiveFeatures::suppressed($card)) continue;
             if ($card->hp <= 0) continue;
 
-            if (!empty($card->prop['deadeat_hp_bonus'])) {
-                $card->hpMax += (int) $card->prop['deadeat_hp_bonus'];
+            if (!empty($card->effectiveProp()['deadeat_hp_bonus'])) {
+                $card->hpMax += (int) $card->effectiveProp()['deadeat_hp_bonus'];
             }
 
             $hpBefore = $card->hp;
@@ -535,7 +545,7 @@ final class DamageResolver
         CardInstance $attacker,
         string $actionType
     ): void {
-        $answer = $defender->prop['answer'] ?? null;
+        $answer = $defender->effectiveProp()['answer'] ?? null;
         if (!$answer || !is_array($answer)) return;
 
         if ($defender->hp <= 0) return;
@@ -588,7 +598,7 @@ final class DamageResolver
             if ($seeder->dying) continue;
             if ($seeder->instanceId === $died->instanceId) continue;
 
-            foreach ($this->normalizeAnyDeathConfigs($seeder->prop['on_any_death'] ?? null) as $configIndex => $config) {
+            foreach ($this->normalizeAnyDeathConfigs($seeder->effectiveProp()['on_any_death'] ?? null) as $configIndex => $config) {
                 $sideFilter = $config['side'] ?? 'enemy';
                 if ($sideFilter === 'enemy' && $seeder->owner === $died->owner) continue;
                 if ($sideFilter === 'own' && $seeder->owner !== $died->owner) continue;
@@ -614,7 +624,7 @@ final class DamageResolver
                     $filter = $config['filter'] ?? 'any';
                     if ($filter === 'not_flying' && CardStats::isFlyingCreature($died)) continue;
 
-                    $max = (int) ($seeder->prop['coins']['max_value'] ?? 0);
+                    $max = (int) ($seeder->effectiveProp()['coins']['max_value'] ?? 0);
                     $before = $seeder->coins;
 
                     $seeder->coins += $value;
@@ -891,6 +901,7 @@ final class DamageResolver
     private function isLiveAnyDeathSource(?CardInstance $source): bool
     {
         if (!$source) return false;
+        if (EffectiveFeatures::suppressed($source)) return false;
         if ($source->dying || $source->hp <= 0) return false;
         return $source->zone === CardInstance::ZONE_FIELD || $source->zone === CardInstance::ZONE_FLYING;
     }
@@ -924,7 +935,7 @@ final class DamageResolver
     private function applyPoison(CardInstance $target, int $value, string $sourceKey): void
     {
         if ($value <= 0) return;
-        if (!empty($target->prop['zoo'])) return;
+        if (!empty($target->effectiveProp()['zoo'])) return;
 
         if (!isset($target->markers['poison'])) {
             $target->markers['poison'] = [
@@ -966,7 +977,7 @@ final class DamageResolver
 
     private function syncCoinBonusViaOwner(CardInstance $card): void
     {
-        if (empty($card->prop['coin_strike_bonus'])) return;
+        if (empty($card->effectiveProp()['coin_strike_bonus'])) return;
 
         if ($this->syncCoinBonus === null) {
             throw new \LogicException('Coin bonus synchronization is required for this damage lifecycle path');
@@ -984,7 +995,7 @@ final class DamageResolver
             if ($nokami->zone !== CardInstance::ZONE_FIELD) continue;
             if ($nokami->dying || $nokami->hp <= 0) continue;
 
-            $config = $nokami->prop['on_poison_damage'] ?? null;
+            $config = $nokami->effectiveProp()['on_poison_damage'] ?? null;
             if (!is_array($config)) continue;
 
             // Пробуем найти в существующей очереди запись этого Ноками

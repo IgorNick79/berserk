@@ -51,7 +51,7 @@ final class BattleHelper
     public static function abilities(CardInstance $card): array
     {
         $hasUchr = false;
-        foreach ($card->prop['actions'] ?? [] as $a) {
+        foreach ($card->effectiveProp()['actions'] ?? [] as $a) {
             if (($a['type'] ?? '') === 'uchr' && CoinAbilities::actionAvailable($card, $a)) { $hasUchr = true; break; }
         }
         return [
@@ -82,11 +82,11 @@ final class BattleHelper
         }
 
         $dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-        if (!empty($card->prop['can_move_diagonal'])) {
+        if (!empty($card->effectiveProp()['can_move_diagonal'])) {
             $dirs = array_merge($dirs, [[-1, -1], [-1, 1], [1, -1], [1, 1]]);
         }
 
-        $forced = (!empty($card->prop['forced_strike']))
+        $forced = (!empty($card->effectiveProp()['forced_strike']))
             ? CardStats::getForcedStrikeTarget($state, $card)
             : null;
 
@@ -116,7 +116,7 @@ final class BattleHelper
         }
 
         // Возница: ход между крайними клетками ряда за 1 move
-        if (!empty($card->prop['row_extreme'])
+        if (!empty($card->effectiveProp()['row_extreme'])
             && ($card->col === 1 || $card->col === 5)) {
 
             $targetCol = ($card->col === 1) ? 5 : 1;
@@ -143,7 +143,7 @@ final class BattleHelper
         }
 
         $jumpAction = null;
-        foreach ($card->prop['actions'] ?? [] as $a) {
+        foreach ($card->effectiveProp()['actions'] ?? [] as $a) {
             if (($a['type'] ?? '') === 'jump') {
                 $jumpAction = $a;
                 break;
@@ -189,7 +189,7 @@ final class BattleHelper
         bool $allowFriendlyFire = false,
     ): array {
         if (str_starts_with($mode, 'action:')) {
-            foreach ($card->prop['actions'] ?? [] as $action) {
+            foreach ($card->effectiveProp()['actions'] ?? [] as $action) {
                 if (($action['key'] ?? $action['type'] ?? '') === substr($mode, 7)
                     && ($action['type'] ?? '') === 'impact' && ($action['effect'] ?? '') === 'matriarch_order') {
                     return MatriarchOrderProcessor::available($state,$card)
@@ -204,9 +204,9 @@ final class BattleHelper
             return [];
         }
 
-        $attackLimit = (int) ($card->prop['attacks_per_turn'] ?? 1);
+        $attackLimit = (int) ($card->effectiveProp()['attacks_per_turn'] ?? 1);
 
-        if (!empty($card->prop['strike_consecutive'])
+        if (!empty($card->effectiveProp()['strike_consecutive'])
             && !empty($card->flags['strike_chain_broken'])) {
             $attackLimit = 1;
         }
@@ -215,7 +215,7 @@ final class BattleHelper
         if ($attacksUsed >= $attackLimit) return [];
 
         $firstTargetId = 0;
-        if (!empty($card->prop['strike_targets_unique']) && $attacksUsed > 0) {
+        if (!empty($card->effectiveProp()['strike_targets_unique']) && $attacksUsed > 0) {
             $firstTargetId = (int) ($card->flags['first_attack_target_id'] ?? 0);
         }
         
@@ -225,7 +225,7 @@ final class BattleHelper
         if (str_starts_with($mode, 'action:')) {
             $actionKey = substr($mode, 7);
             $action = null;
-            foreach ($card->prop['actions'] ?? [] as $a) {
+            foreach ($card->effectiveProp()['actions'] ?? [] as $a) {
                 $key = $a['key'] ?? $a['type'] ?? '';
                 if ($key === $actionKey) {
                     $action = $a;
@@ -234,6 +234,7 @@ final class BattleHelper
             }
             // Выданное действие (Дверг и подобные)
             if ($action === null) {
+                if (EffectiveFeatures::suppressed($card)) return [];
                 $grantedKey = 'granted_action:' . $actionKey;
                 $granted = $card->flags[$grantedKey] ?? null;
                 if (is_array($granted) && empty($granted['used'])) {
@@ -241,6 +242,8 @@ final class BattleHelper
                 }
             }
             if (!$action) return [];
+
+            if (MemoryLoss::isAction($action) && !MemoryLoss::available($card)) return [];
 
             $type = $action['type'] ?? '';
             if (Strangulation::blocksAttack($card, $type)) return [];
@@ -323,6 +326,9 @@ final class BattleHelper
                         $dc = abs($target->col - $card->col);
                         if ($dr > 1 || $dc > 1 || ($dr + $dc) === 0) continue;
                     }
+                } elseif (MemoryLoss::isAction($action)) {
+                    if (!in_array($target->type, ['creature', 'fly'], true) || $target->dying || $target->hp <= 0) continue;
+                    if (CardStats::hasDefense($state, $target, 'impact', $card)) continue;
                 } elseif ($type === 'heal') {
                     if ($target->type !== 'creature' && $target->type !== 'fly') continue;
                     if (!empty($action['own']) && $target->owner !== $playerKey) continue;
@@ -379,7 +385,7 @@ final class BattleHelper
                     if ($target->dying || $target->hp <= 0) continue;
                     if (!CardStats::canSpendCoins($target)) continue;
 
-                    $max = (int) ($target->prop['coins']['max_value'] ?? 0);
+                    $max = (int) ($target->effectiveProp()['coins']['max_value'] ?? 0);
                     if ($max > 0 && $target->coins >= $max) continue;
                 } elseif ($type === 'steal_coin') {
                     if ($target->owner === $playerKey) continue;
@@ -479,7 +485,7 @@ final class BattleHelper
             // Берсерк: вторая атака — только по другой цели.
             // Первую цель не подсвечиваем, чтобы UI не расходился с declare.
             $alreadyHitId = 0;
-            if (!empty($card->prop['strike_targets_unique']) && $attacksUsed > 0) {
+            if (!empty($card->effectiveProp()['strike_targets_unique']) && $attacksUsed > 0) {
                 $alreadyHitId = (int) ($card->flags['first_attack_target_id'] ?? 0);
             }
 
@@ -524,7 +530,7 @@ final class BattleHelper
                 } elseif ($targetIsFlying) {
                     if (!$canAttackFlying) continue;
                 } else {
-                    if (!empty($card->prop['strike']['opposite'])) {
+                    if (!empty($card->effectiveProp()['strike']['opposite'])) {
                         if (!CardStats::isOpposite($card, $target)) continue;
                     } else {
                         $dr = abs($target->row - $card->row);
@@ -533,16 +539,16 @@ final class BattleHelper
 
                         $isAdjacent = ($dr <= 1 && $dc <= 1 && $dist > 0);
 
-                        $isRowExtreme = !empty($card->prop['row_extreme'])
+                        $isRowExtreme = !empty($card->effectiveProp()['row_extreme'])
                             && $target->row === $card->row
                             && (($card->col === 1 && $target->col === 5)
                                 || ($card->col === 5 && $target->col === 1));
 
                         // Страж чертогов: дальность 2 в строю
-                        $isLineRange = !empty($card->prop['strike_range_line'])
+                        $isLineRange = !empty($card->effectiveProp()['strike_range_line'])
                             && CardStats::isInLine($state, $card)
                             && $dist > 0
-                            && $dist <= (int) $card->prop['strike_range_line'];
+                            && $dist <= (int) $card->effectiveProp()['strike_range_line'];
 
                         if (!$isAdjacent && !$isRowExtreme && !$isLineRange) continue;
                     }
