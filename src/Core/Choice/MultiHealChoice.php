@@ -10,6 +10,7 @@ use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
 use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\Coords;
 
 final class MultiHealChoice implements ChoiceHandlerInterface
 {
@@ -20,7 +21,7 @@ final class MultiHealChoice implements ChoiceHandlerInterface
 
     public function commandTypes(): array
     {
-        return ['choose_multi_heal'];
+        return ['choose_multi_heal', 'cancel_pending'];
     }
 
     public function spec(
@@ -55,6 +56,9 @@ final class MultiHealChoice implements ChoiceHandlerInterface
             $items[] = [
                 'value' => $tid,
                 'label' => $tn . ' (' . $tc->hp . '/' . $tc->hpMax . ')',
+                'label_html' => htmlspecialchars($tn, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                    . ' ' . Coords::renderResult($tc->row, $tc->col, $playerKey, $tc->owner)
+                    . ' (' . $tc->hp . '/' . $tc->hpMax . ')',
             ];
         }
 
@@ -84,6 +88,9 @@ final class MultiHealChoice implements ChoiceHandlerInterface
         Command $cmd
     ): Result {
         $ar = new \Berserk\Core\ActionResolver($state, $engine);
+        if ($cmd->type === 'cancel_pending') {
+            return $ar->cancelPending($playerKey, $cmd);
+        }
         return $ar->chooseMultiHeal($playerKey, $cmd);
     }
 }

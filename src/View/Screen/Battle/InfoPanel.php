@@ -89,9 +89,24 @@ final class InfoPanel
             . '<div class="info-panel-content" data-panel-priority="' . ($priority ? '1' : '0') . '" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
             . ($priority ? '' : $pileHtml)
             . '<div class="battle-selected-card" data-battle-fragment="panel_html"' . ($exclusive ? ' hidden' : '') . '>' . $selectedCardHtml . '</div>'
-            . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/cell_info.svg" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">Информация</h3></div><div class="combat-panel-body">' : '') . $this->renderBody() . ($exclusive ? '</div>' : '') . '</div>'
+            . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/cell_info.svg" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">Информация</h3></div><div class="combat-panel-body">' : '') . $this->renderOchiKrongaNotice() . $this->renderBody() . ($exclusive ? '</div>' : '') . '</div>'
             . '</div>'
             . '<footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
+    }
+
+    /** The per-card counter is persisted with gameplay; rendering never consumes it. */
+    private function renderOchiKrongaNotice(): string
+    {
+        $html = '';
+        foreach ($this->state->cards as $card) {
+            $uses = (int) ($card->flags[\Berserk\Core\OchiKronga::STATE]['uses'] ?? 0);
+            if ($uses < 1 || !in_array($card->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) continue;
+            $side = $card->owner === $this->playerKey ? 'Ваши' : 'У соперника';
+            $coords = \Berserk\View\Ui\Coords::renderResult($card->row, $card->col, $this->playerKey, $card->owner);
+            $html .= '<p class="bonus" role="status">' . $side . ' Очи Кронга открылись ' . $coords
+                . ' — срабатываний за ход: ' . $uses . '/2.</p>';
+        }
+        return $html === '' ? '' : '<div class="info-box ochi-kronga-notice">' . $html . '</div>';
     }
 
     private function renderFooter(): string

@@ -14,4 +14,10 @@ s31check($a->success&&$b->success&&$plain->toArray()===$observed->toArray(),'who
 s31check(!$plain->getCard(9)->closed&&$plain->getCard(9)->flags[OchiKronga::STATE]['uses']===1,'native heal opens once');
 $events=$recorder->batch($observed)->data()['events'];$opens=array_values(array_filter($events,fn($e)=>$e['type']==='card.status'&&($e['payload']['target_id']??null)===9));
 s31check(count($opens)===1&&$opens[0]['payload']['closed']===false,'existing journal receives exactly one safe opening status');
+foreach (['host','player','public'] as $viewer) {
+    s31check(is_array($opens[0][$viewer]), 'opening visible in journal to '.$viewer);
+    $text=\Berserk\Core\BattleHistory\JournalText::format('card.status',$opens[0][$viewer],$viewer);
+    s31check($text === 'Fixture 9 открывается.', 'readable opening text for '.$viewer);
+}
+
 echo "Ochi Kronga: native opening DTO identical with/without mandatory Recorder; status recorded once\n";

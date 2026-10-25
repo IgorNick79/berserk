@@ -101,7 +101,7 @@ final class OchiKronga
                     // Automatic consequence, not a new independent action. No recursive notification.
                     (new Engine())->openCard($source);
                     $state->historyRecorder?->liveEvent($state, 'card.status',
-                        ['target_id'=>$source->instanceId, 'closed'=>false, 'effect'=>'open', '_private_owner'=>$source->owner],
+                        ['target_id'=>$source->instanceId, 'closed'=>false, 'effect'=>'open'],
                         [$source->instanceId]);
                 }
             }
