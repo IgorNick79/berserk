@@ -178,7 +178,7 @@ final class ProphecyProcessor
 
         unset($this->state->battle['pending_prophecy']);
 
-        return ['ok' => true, 'context' => $context];
+        return ['ok' => true, 'context' => $context, 'swamp_queen' => $pp['swamp_queen'] ?? null];
     }
 
     public function transformSeeker(string $playerKey): Result
@@ -186,6 +186,7 @@ final class ProphecyProcessor
         $pp = $this->state->battle['pending_prophecy'] ?? null;
         if (!$pp) return Result::error('Нет ожидающего выбора');
         if ($pp['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+        if (($pp['context'] ?? '') === 'swamp_queen') return Result::error('Трансформация не входит в это пророчество');
         if (empty($pp['meta']['all_elite'])) return Result::error('Только для элитной карты');
 
         $seeker = $this->state->getCard($pp['source_id']);
@@ -294,6 +295,7 @@ final class ProphecyProcessor
                 'original_ids' => $pp['original_ids'],
                 'reorder_mode' => false,
             ];
+            if (isset($pp['swamp_queen'])) $this->state->battle['pending_prophecy']['swamp_queen'] = $pp['swamp_queen'];
 
             return Result::ok(['reorder_single']);
         }
@@ -367,6 +369,7 @@ final class ProphecyProcessor
                 'original_ids' => $pp['original_ids'],
                 'reorder_mode' => false,
             ];
+            if (isset($pp['swamp_queen'])) $this->state->battle['pending_prophecy']['swamp_queen'] = $pp['swamp_queen'];
         }
 
         return Result::ok(['reorder_card:' . $direction]);
@@ -426,7 +429,7 @@ final class ProphecyProcessor
         for ($r = 1; $r <= 6; $r++) {
             for ($c = 1; $c <= 5; $c++) {
                 if ($this->isFieldOccupied($r, $c)) continue;
-                if (ZoneManager::hasBlockingMarker($state, "{$r}_{$c}")) continue;
+                if (ZoneManager::hasBlockingMarker($this->state, "{$r}_{$c}")) continue;
                 if (!$this->hasNeighborCreature($r, $c)) continue;
                 $cells[] = "{$r}_{$c}";
             }
@@ -526,6 +529,7 @@ final class ProphecyProcessor
             'original_ids' => $pp['original_ids'],
             'reorder_mode' => false,
         ];
+            if (isset($pp['swamp_queen'])) $this->state->battle['pending_prophecy']['swamp_queen'] = $pp['swamp_queen'];
 
         return Result::ok(['summon_cancelled']);
     }
@@ -552,15 +556,7 @@ final class ProphecyProcessor
             }
         }
 
-        // Выход на поле
-        unset($card->flags['in_prophecy_pending']);
-        $card->closed   = true;
-        $card->revealed = true;
-        $card->dying    = false;
-        $card->hp       = $card->hpMax;
-        $card->move     = $card->moveMax;
-
-        (new ZoneManager($this->state))->toField($card, $row, $col);
+        (new ZoneManager($this->state))->summonFromDeck($card, $row, $col);
 
         // Пересобираем pending_prophecy с нуля
         $ids = array_values(array_filter(
@@ -590,6 +586,7 @@ final class ProphecyProcessor
             'original_ids' => $ids,
             'reorder_mode' => false,
         ];
+            if (isset($pp['swamp_queen'])) $this->state->battle['pending_prophecy']['swamp_queen'] = $pp['swamp_queen'];
 
         return Result::ok(['summoned:' . $card->instanceId]);
     }

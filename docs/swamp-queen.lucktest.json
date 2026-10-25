@@ -1,0 +1,16 @@
+{
+  "cards": [
+    { "owner": "host", "ukid": "s1_130", "row": 1, "col": 2 },
+    { "owner": "host", "ukid": "s1_1", "row": 1, "col": 3 },
+    { "owner": "host", "ukid": "s1_1", "row": 1, "col": 4 },
+    { "owner": "host", "ukid": "s1_1", "row": 2, "col": 2 },
+    { "owner": "host", "ukid": "s1_1", "row": 2, "col": 4 },
+    { "owner": "host", "ukid": "s1_1", "row": 3, "col": 2 },
+    { "owner": "host", "ukid": "s1_1", "row": 3, "col": 3 },
+    { "owner": "host", "ukid": "s1_1", "row": 3, "col": 4 }
+  ],
+  "deck": [
+    { "owner": "host", "ukid": "s1_128" },
+    { "owner": "host", "ukid": "s1_125" }
+  ]
+}

@@ -16,6 +16,25 @@ final class ZoneManager
 {
     public function __construct(private GameState $state) {}
 
+    /** Same arrival contract as the existing prophecy summon; moves this instance. */
+    public function summonFromDeck(CardInstance $card, int $row, int $col): void
+    {
+        unset($card->flags['in_prophecy_pending']);
+        $card->closed = true; $card->revealed = true; $card->dying = false;
+        $card->hp = $card->hpMax; $card->move = $card->moveMax;
+        $this->toField($card, $row, $col);
+    }
+
+    /** Shared with Degasca: shuffle remaining physical deck instances once. */
+    public function shuffleDeck(string $owner): void
+    {
+        $deck = $this->state->getCardsInZone($owner, CardInstance::ZONE_DECK);
+        usort($deck, fn(CardInstance $a, CardInstance $b): int => ($a->order ?? PHP_INT_MAX) <=> ($b->order ?? PHP_INT_MAX)
+            ?: $a->instanceId <=> $b->instanceId);
+        shuffle($deck);
+        foreach ($deck as $i => $card) $card->order = $i + 1;
+    }
+
     // ─── Переходы ─────────────────────────────────────────────
 
     public function toHand(CardInstance $card): void

@@ -45,6 +45,7 @@ final class DamageResolver
         }
 
         $armorIgnores = [
+            'prophecy_wounds',
             'cast', 'magic', 'discharge', 'poison', 'heal',
             'damage_on_dice', 'self_wound', 'transfer_wounds',
             'wound_transfer', 'whip', 'blood_tap',

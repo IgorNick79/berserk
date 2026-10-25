@@ -44,16 +44,7 @@ final class DegascaSequenceChoice implements ChoiceHandlerInterface
 
         $roleParam = $role === 'host' ? 'first' : 'second';
         if ($stage === 'choose_card') {
-            $items = [];
-            foreach ((array) ($pending['candidate_ids'] ?? []) as $cardId) {
-                $card = $state->getCard((int) $cardId);
-                if (!$card) continue;
-                $name = $cardsInfo[$card->ukid]['name'] ?? $card->ukid;
-                $items[] = [
-                    'value' => $card->instanceId,
-                    'label' => $name . ' — изучить способность',
-                ];
-            }
+            $items = \Berserk\View\Ui\DeckCardChoice::items($state, (array) ($pending['candidate_ids'] ?? []), $cardsInfo, ' — изучить способность');
             return new PanelSpec(
                 title: $sourceName . ': выберите карту в колоде',
                 form: [

@@ -328,6 +328,9 @@ final class ActionResolver
         }
 
         // Особые пути
+        if ($type === 'impact' && ($action['effect'] ?? '') === 'prophecy_wounds') {
+            return (new SwampQueenProcessor($this->state, $this->engine))->startProphecy($attacker, $target, $action);
+        }
         if ($type === 'heal')   return $this->resolveHeal($attacker, $target, $action, $cardId, $targetId, $playerKey);
         if ($type === 'impact') return $this->resolveImpact($attacker, $action, $cardId, $targetId, $playerKey);
         if ($type === 'execute') return $this->resolveExecute($attacker, $target, $action, $cardId, $targetId, $playerKey);

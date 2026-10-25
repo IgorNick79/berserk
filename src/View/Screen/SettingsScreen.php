@@ -235,7 +235,7 @@ final class SettingsScreen
                 . ($settings[$key] === true ? ' checked' : '') . '><span>' . $label . '</span></label>';
         }
         if (\Berserk\Auth\DebugAccess::forPlayer($state,'host')) {
-            $scenario = isset($state->lucktestDebug['scenario']) ? json_encode(['cards'=>$state->lucktestDebug['scenario']],JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT) : '';
+            $scenario = isset($state->lucktestDebug['scenario']) ? json_encode(\Berserk\Core\Prepare\LuckTestScenario::root($state->lucktestDebug['scenario']),JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT) : '';
             $form .= '<fieldset class="settings-fieldset debug-fieldtest"><legend>Debug</legend>'
                 . \Berserk\View\Ui\LuckTestDebugFields::toggle(($state->lucktestDebug['url_roll_enabled'] ?? false) === true)
                 . \Berserk\View\Ui\LuckTestDebugFields::scenario($scenario, $settings['quick_game'])

@@ -588,14 +588,7 @@ final class DegascaProcessor
 
     private function shuffleDeck(string $owner): void
     {
-        $deck = $this->state->getCardsInZone($owner, CardInstance::ZONE_DECK);
-        usort($deck, fn(CardInstance $a, CardInstance $b): int => ($a->order ?? PHP_INT_MAX) <=> ($b->order ?? PHP_INT_MAX)
-            ?: $a->instanceId <=> $b->instanceId);
-        shuffle($deck);
-        $order = 1;
-        foreach ($deck as $card) {
-            $card->order = $order++;
-        }
+        (new ZoneManager($this->state))->shuffleDeck($owner);
     }
 
     private function canActivate(?CardInstance $source): bool

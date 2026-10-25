@@ -1,0 +1,9 @@
+{
+  "zom": true,
+  "opponent_turn_end": [
+    { "type": "deck_summon", "element": "swamps", "max_price": 5, "own_neighbors": 8 }
+  ],
+  "actions": [
+    { "key": "prophecy_wounds", "name": "Пророчество 1", "type": "impact", "effect": "prophecy_wounds", "count": 1 }
+  ]
+}
