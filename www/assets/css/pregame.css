@@ -289,3 +289,25 @@ body.pregame-page {
 .screen-prepare-view .prepare-card:has(.prepare-card__count) .prepare-card__price { padding-right: 58px; min-height: 24px; }
 
 .pregame-page .button:disabled { opacity: .5; cursor: default; }
+
+/* Private LuckTest preparation tools. */
+.debug-fieldtest{min-width:0;margin-top:20px;padding:18px;border:1px solid #9b896c;border-radius:10px;background:#f3eee5;color:#302d27}
+.debug-fieldtest legend{padding:0 8px;font-weight:700;color:#60503b}
+.debug-url-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600}
+.debug-url-toggle input{width:18px;height:18px;accent-color:#79613b;flex:none}
+.debug-help{margin:8px 0 14px;font-size:13px;line-height:1.5;color:#635e54}
+.debug-scenario{border-top:1px solid #d8cebd;margin-top:16px;padding-top:16px}
+.debug-scenario[hidden]{display:none!important}
+.debug-json-label{display:block;font-weight:600;font-size:14px}
+.debug-json-label textarea{display:block;width:100%;box-sizing:border-box;min-height:130px;resize:vertical;margin:8px 0 12px;padding:12px;border:1px solid #b6a78d;border-radius:7px;background:#fffdf8;color:#302d27;font:13px/1.5 Consolas,monospace}
+.debug-json-label textarea:focus{outline:2px solid #a07d44;outline-offset:2px}
+.debug-json-help summary{cursor:pointer;font-weight:600;font-size:14px;padding:6px 0}
+.debug-json-help dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;font-size:13px;line-height:1.5;margin:10px 0 14px}
+.debug-json-help dt{font-family:Consolas,monospace;font-weight:700}.debug-json-help dd{margin:0;overflow-wrap:anywhere}
+.debug-code{border:1px solid #4b4c49;border-radius:8px;overflow:hidden;background:#202522;color:#e4e9df}
+.debug-code-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 10px;background:#2e3530;border-bottom:1px solid #4b4c49;font:12px/1.4 system-ui}
+.debug-copy{display:grid;place-items:center;width:32px;height:32px;border:1px solid transparent;border-radius:5px;background:transparent;color:#dce8d7;cursor:pointer}
+.debug-copy:hover{background:#455046}.debug-copy:focus-visible{outline:2px solid #d9bf83;outline-offset:1px}
+.debug-code pre{margin:0;padding:14px;overflow:auto;max-height:340px;font:13px/1.6 Consolas,monospace;text-align:left}
+.debug-copy-status{display:block;padding:0 12px 8px;font-size:12px;line-height:1.4;color:#c6dfba}.debug-copy-status:empty{display:none}
+@media(max-width:480px){.debug-fieldtest{padding:12px}.debug-json-help dl{grid-template-columns:1fr;gap:3px}.debug-json-help dd{margin-bottom:8px}}

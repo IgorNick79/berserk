@@ -93,3 +93,20 @@
  .battle-page .defender-radio-list .choice-radio{display:grid;grid-template-columns:14px minmax(0,1fr);padding:8px;gap:6px}
  .battle-page .defender-radio-list .choice-radio>.coords{grid-column:1 / -1;justify-self:end}
 }
+
+/* Typography from the supplied Philosopher / Golos Text specimen. */
+.battle-page{--battle-body-font:'Golos Text',Arial,sans-serif;--battle-heading-font:'Philosopher',Georgia,serif;font-family:var(--battle-body-font)}
+.battle-page :is(button,input,textarea,select,.battle-mini-card,.battle-mini-tooltip,.battle-stat-tooltip,.panel-card-class,.battle-icon-tooltip,.panel-theme-option,.panel-theme-picker p,.game-chat,.battle-journal,.coords,.turn-timer-value,.match-pause-countdown,.battle-pause-picker output){font-family:var(--battle-body-font)}
+.battle-page .info-panel .battle-secondary-view :is(.game-chat-panel,.battle-journal){font-family:var(--battle-body-font)}
+.battle-page :is(h1,h2,h3,h4,.info-status,.instant-summary__title,.mini-nameplate__text){font-family:var(--battle-heading-font)}
+.battle-page [data-panel-theme] .info-panel .button.green-btn{font-family:var(--battle-heading-font)}
+.battle-page [data-panel-theme] .info-panel .instant-summary__who--mine{background:#285b38;color:#e6f5df}
+.battle-page [data-panel-theme] .info-panel .instant-summary__who--opp{background:#753c38;color:#ffe8df}
+.battle-page .battle-pause-symbol{border:0;border-radius:0;background:transparent}
+.battle-page .battle-pause-symbol img{display:block;width:100%;height:100%;object-fit:contain}
+
+/* Strike-level choices use the same surface and readable text as other choices. */
+.battle-page [data-panel-theme] .info-panel .choice-item{background:var(--ip-surface);color:var(--ip-text);border:1px solid var(--ip-edge)}
+.battle-page [data-panel-theme] .info-panel .choice-item:hover{background:linear-gradient(#ffffff12,#ffffff12),var(--ip-surface)}
+.battle-page [data-panel-theme] .info-panel .choice-item:has(input:checked){border-color:var(--ip-title);box-shadow:inset 0 0 0 1px var(--ip-edge)}
+.battle-page [data-panel-theme] .info-panel .choice-item:focus-within{outline:2px solid var(--ip-title);outline-offset:2px}

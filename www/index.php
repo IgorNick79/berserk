@@ -558,7 +558,7 @@ try {
         if ($ajax !== null || isset($_GET['cmd']) || isset($_GET['first']) || isset($_GET['second'])) throw new DomainException('invalid_game',400);
         header('Location: lobby.php',true,303); exit;
     }
-    if (isset($_GET['first']) || isset($_GET['second']) || isset($_GET['debug']) || isset($_GET['debug_roll'])) throw new DomainException('prototype_parameter_disabled',400);
+    if (isset($_GET['first']) || isset($_GET['second']) || isset($_GET['debug'])) throw new DomainException('prototype_parameter_disabled',400);
     $db = \Berserk\Auth\AuthContext::gameDb();
     $role = GameAccess::resolve($db,$gameId,$account->id);
     $userId = $account->id;
@@ -632,9 +632,35 @@ $historyRuntime = \Berserk\Core\BattleHistory\HistoryRuntime::load($db);
 $_SESSION['history_prepare_csrf'] = GameTransport::$csrf;
 GameTransport::$version = $state->persistenceVersion ?? 0;
 GameTransport::$stage = $state->status;
-if (isset($_POST['debug_roll']) || isset($_POST['lucktest_scenario']) || ($_POST['cmd'] ?? null) === 'set_lucktest_debug') {
+if (array_key_exists('debug_roll', $_GET)) {
+    try {
+        if ($requestMethod !== 'GET' || $ajax !== null || !\Berserk\Auth\DebugAccess::forPlayer($state,$playerKey)
+            || !\Berserk\Core\LuckTestDebug::urlAllowed($state,$playerKey)) throw new DomainException('debug_roll_disabled',403);
+        $raw = \Berserk\Core\LuckTestDebug::rollInput($_GET['debug_roll']);
+        $debugCommand = new Command('set_lucktest_url_roll',['debug_roll'=>$raw]);
+        $debugJournal = new CommandJournalRepository($db);
+        $debugEntry = $debugJournal->registerProcessing($state->gameId,$playerKey,'url-roll:'.bin2hex(random_bytes(16)),
+            $debugCommand->type,$debugCommand->payload,(int)$state->persistenceVersion);
+        $debugResult = null;
+        $repo->executeLockedCommand($state,$debugJournal,(int)$debugEntry['id'],
+            function(GameState $locked) use ($engine,$playerKey,$debugCommand,&$debugResult): \Berserk\Core\Result {
+                return $debugResult = $engine->apply($locked,$playerKey,$debugCommand);
+            },'debug_roll_rejected');
+        if ($debugResult === null || !$debugResult->success) throw new DomainException($debugResult?->error ?? 'debug_roll_rejected',403);
+        header('Location: index.php?game='.$gameId,true,303); exit;
+    } catch (\Berserk\Core\StaleStateException $e) {
+        http_response_code(409); exit('Состояние изменилось. Повторите URL с debug_roll.');
+    } catch (DomainException $e) {
+        http_response_code($e->getCode() === 403 ? 403 : 400); exit(htmlspecialchars($e->getMessage(),ENT_QUOTES));
+    } catch (Throwable $e) {
+        http_response_code(503); exit('Не удалось сохранить debug_roll. Обновите страницу и проверьте состояние перед повтором.');
+    }
+}
+
+if (isset($_POST['debug_roll']) || isset($_POST['lucktest_url_roll']) || isset($_POST['lucktest_scenario']) || ($_POST['cmd'] ?? null) === 'set_lucktest_debug') {
     if (!\Berserk\Auth\DebugAccess::forPlayer($state,$playerKey)) { http_response_code(403); exit('debug_forbidden'); }
     if ($state->status !== 'settings' || $state->cards !== [] || !in_array($_POST['cmd'] ?? '', ['confirm_settings','set_lucktest_debug'],true)) { http_response_code(409); exit('debug_preparation_started'); }
+    if (isset($_POST['debug_roll'])) { http_response_code(400); exit('Задавайте броски через debug_roll в URL; разрешение включается в pre-game.'); }
     if (isset($_POST['lucktest_scenario']) && $playerKey !== 'host') { http_response_code(403); exit('scenario_host_only'); }
 }
 

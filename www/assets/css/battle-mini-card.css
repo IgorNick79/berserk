@@ -27,7 +27,7 @@
 .battle-mini-zoom.is-open{transform:scale(1.25)}
 .battle-page .battle-mini-zoom .battle-mini-card{cursor:default;opacity:1!important}
 .battle-mini-tooltip{position:fixed;z-index:1000;max-width:min(360px,calc(100vw - 16px));max-height:calc(100dvh - 16px);overflow:auto;box-sizing:border-box;padding:12px 15px;border:1px solid #9d8054;background:#242724;color:#f3ecdc;font:13px/1.4 system-ui,sans-serif;overflow-wrap:anywhere;box-shadow:0 6px 20px #0005}
-.battle-mini-tooltip[hidden]{display:none!important}.battle-mini-tooltip ul{padding-left:18px;margin:0}.battle-mini-tooltip li+li{margin-top:4px}
+.battle-mini-tooltip[hidden]{display:none!important}.battle-mini-tooltip ul{padding:0;margin:0;list-style:none}.battle-mini-tooltip li+li{margin-top:4px}
 @media(prefers-reduced-motion:reduce){.battle-mini-zoom{transition:none}}
 
 .battle-page [data-mini-card-design="v2"] .field-cell.attack-target .battle-mini-card{outline:2px solid #c33;outline-offset:0}
@@ -35,7 +35,7 @@
 .battle-mini-tooltip[data-kind="name"]{padding:8px 10px;font-size:12px;font-weight:600;border-radius:4px}
 
 .battle-page .mini-indicator:has(img[src$="armor_compact.svg"]){font-size:10px;font-weight:400}
-.battle-page .mini-indicator img[src$="armor_compact.svg"]{width:10px;height:9px}
+.battle-page .mini-indicator img[src$="armor_compact.svg"]{width:12px;height:12px}
 .battle-mini-tooltip{opacity:1;transition:opacity 250ms ease-out}
 .battle-mini-tooltip.is-fading{opacity:0;pointer-events:none}
 @media(prefers-reduced-motion:reduce){.battle-mini-tooltip{transition:none}}

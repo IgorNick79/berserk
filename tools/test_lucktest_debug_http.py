@@ -41,7 +41,7 @@ def main():
         payload={'cmd':'set_lucktest_debug','csrf':ordinary_token,'prepare_version':version,'debug_roll':'6*','account_id':fixture['host'],'role':'host','debug_allowed':'1'}
         code,body,_=request(ordinary,'index.php?game='+str(fixture['settings']),payload);check('forged account/role/debug direct POST denied',code==403 and inspect(fixture['settings'])==before)
         code,_,_=request(host,'index.php?game='+str(fixture['settings']),{'cmd':'set_lucktest_debug','csrf':'bad','prepare_version':version,'debug_roll':'6,1'});check('debug POST requires CSRF',code==403)
-        for key in ['debug=1','debug_roll=6*','first=1','second=1']:
+        for key in ['debug=1','first=1','second=1']:
             code,_,_=request(host,'index.php?game='+str(fixture['settings'])+'&'+key);check('legacy GET rejected '+key,code==400)
         code,body,_=request(host,'index.php?game='+str(fixture['draft']));check('other mode no debug UI',code==200 and 'name="debug_roll"' not in body and '>Debug<' not in body)
         code,_,_=request(host,'index.php?game='+str(fixture['draft']),{'cmd':'set_lucktest_debug','csrf':token,'prepare_version':1,'debug_roll':'6*'});check('other mode direct debug denied',code==403)
@@ -55,11 +55,11 @@ def main():
         tester=Browser(port=33988);login(tester,'debug_second')
         code,body,_=request(tester,'index.php?game='+str(fixture['settings_second']));check('second tester has own Debug as player',code==200 and '>Debug<' in body and 'lucktest_scenario' not in body)
         second_token=re.search(r'data-csrf="([a-f0-9]{64})"',body).group(1);second_version=inspect(fixture['settings_second'])['version']
-        code,_,_=request(tester,'index.php?game='+str(fixture['settings_second']),{'cmd':'set_lucktest_debug','csrf':second_token,'prepare_version':second_version,'debug_roll':'6*'});check('permitted player configures own cursor',code==303)
-        second_state=json.loads(inspect(fixture['settings_second'])['json']);check('player queue uses actual player account',str(fixture['second']) in second_state['lucktest_debug']['rolls'] and str(fixture['host']) not in second_state['lucktest_debug']['rolls'])
+        code,_,_=request(tester,'index.php?game='+str(fixture['settings_second']),{'cmd':'set_lucktest_debug','csrf':second_token,'prepare_version':second_version,'debug_roll':'6*'});check('raw preparation roll field is no longer accepted',code==400)
+        second_state=json.loads(inspect(fixture['settings_second'])['json']);check('rejected raw field stores no cursor',second_state['lucktest_debug']==[])
         code,_,_=request(tester,'index.php?game='+str(fixture['settings_second']),{'cmd':'set_lucktest_debug','csrf':second_token,'prepare_version':inspect(fixture['settings_second'])['version'],'lucktest_scenario':'{"cards":[{"owner":"host","ukid":"army"}]}'});check('permitted player cannot configure host scenario',code==403)
         check('native start pending survives HTTP reads',bool(json.loads(inspect(fixture['battle'])['json'])['battle'].get('pending_card_choice')))
-        invalid_before=inspect(fixture['settings']);code,body,_=request(host,'index.php?game='+str(fixture['settings']),{'cmd':'confirm_settings','csrf':token,'prepare_version':version,'lucktest_quick_game':'0','lucktest_scenario':'{"cards":[{"owner":"host","ukid":"army"}]}'});check('manual scenario rejected through real HTTP',code==200 and inspect(fixture['settings'])==invalid_before)
+        invalid_before=inspect(fixture['settings']);code,body,_=request(host,'index.php?game='+str(fixture['settings']),{'cmd':'confirm_settings','csrf':token,'prepare_version':version,'lucktest_quick_game':'0','lucktest_scenario':'{"cards":[{"owner":"host","ukid":"army"}]}'});check('manual scenario rejected through real HTTP',code==409 and inspect(fixture['settings'])==invalid_before)
         code,_,headers=request(ordinary,'lobby.php',{'action':'create','csrf':ordinary_token,'setup_mode':'lucktest','lucktest_quick_game':'1','lucktest_card_count':'3'});check('ordinary account creates LuckTest room',code==303)
         room_path=headers['Location'];room_id=urllib.parse.parse_qs(urllib.parse.urlparse(room_path).query)['room'][0]
         code,_,_=request(host,'lobby.php?room='+room_id,{'action':'open','csrf':token,'version':1});check('tester can join ordinary LuckTest',code==303)
@@ -68,18 +68,32 @@ def main():
         code,body,_=request(ordinary,'lobby.php?room='+room_id+'&api=1');new_game=json.loads(body)['room']['game_id'];new_state=json.loads(inspect(new_game)['json']);check('ordinary Quick Game remains normal',new_state['status']=='battle' and new_state['lucktest_debug']==[] and len(new_state['cards'])==60)
         code,body,_=request(ordinary,'index.php?game='+str(new_game));check('ordinary host does not inherit tester opponent Debug',code==200 and 'data-menu-debug' not in body and 'id="battle-debug"' not in body)
         code,body,_=request(host,'index.php?game='+str(new_game));check('tester opponent retains own account Debug',code==200 and 'data-menu-debug' in body)
-        # Configure this game, then verify another game and account see no cursor.
-        code,_,_=request(host,'index.php?game='+str(fixture['settings']),{'cmd':'set_lucktest_debug','csrf':token,'prepare_version':version,'debug_roll':'6,1,4'});check('authorized preparation queue stored',code==303)
-        queued=json.loads(inspect(fixture['settings'])['json']);check('queue keyed to actual account/game',queued['lucktest_debug']['rolls'][str(fixture['host'])]['game_id']==fixture['settings'])
+        # URL queues are enabled once in preparation, and changing them never advances the game.
+        before=inspect(fixture['settings'])
+        code,_,_=request(host,'index.php?game='+str(fixture['settings'])+'&debug_roll=6,1,4');check('default-off URL denied without mutation',code==403 and inspect(fixture['settings'])==before)
+        code,_,_=request(host,'index.php?game='+str(fixture['settings']),{'cmd':'set_lucktest_debug','csrf':token,'prepare_version':before['version'],'lucktest_url_roll':'1'});check('host enables URL checkbox',code==303)
+        code,_,headers=request(host,'index.php?game='+str(fixture['settings'])+'&debug_roll=6,1,4');check('URL queue saved with clean redirect',code==303 and 'debug_roll' not in headers.get('Location',''))
+        queued=json.loads(inspect(fixture['settings'])['json']);check('URL queue belongs to account/game',queued['lucktest_debug']['rolls'][str(fixture['host'])]['game_id']==fixture['settings'])
         check('another game unchanged',json.loads(inspect(fixture['other'])['json'])['lucktest_debug']==[])
+        before=inspect(fixture['settings']);code,_,_=request(ordinary,'index.php?game='+str(fixture['settings'])+'&debug_roll=6*');check('ordinary opponent denied even when enabled',code==403 and inspect(fixture['settings'])==before)
+        code,_,_=request(host,'index.php?game='+str(fixture['settings'])+'&debug_roll[]=6');check('array URL rejected without mutation',code==400 and inspect(fixture['settings'])==before)
+        code,_,_=request(host,'index.php?game='+str(fixture['settings'])+'&debug_roll=9');check('out of range URL rejected',code==400 and inspect(fixture['settings'])==before)
         scenario='{"cards":[{"owner":"host","ukid":"army","row":2,"col":3}]}'
-        launch={'cmd':'confirm_settings','csrf':token,'prepare_version':inspect(fixture['settings'])['version'],'lucktest_quick_game':'1','lucktest_card_count':'3','lucktest_scenario':scenario,'debug_roll':'6,1,4'}
+        launch={'cmd':'confirm_settings','csrf':token,'prepare_version':inspect(fixture['settings'])['version'],'lucktest_quick_game':'1','lucktest_card_count':'3','lucktest_scenario':scenario}
         cursor_before_failure=inspect(fixture['settings']);cli('fail_write',fixture['settings'])
-        code,body,_=request(host,'index.php?game='+str(fixture['settings']),launch);check('SQL failure returns generic error without PHP details',code==503 and 'SQLSTATE' not in body and 'Stack trace' not in body and '.php' not in body)
+        code,body,_=request(host,'index.php?game='+str(fixture['settings'])+'&debug_roll=6,1,4');check('URL SQL failure returns generic error without PHP details',code==503 and 'SQLSTATE' not in body and 'Stack trace' not in body and '.php' not in body)
         check('HTTP SQL failure preserves durable cursor and scenario',inspect(fixture['settings'])==cursor_before_failure);cli('clear_failure')
+        code,_,_=request(host,'index.php?game='+str(fixture['settings'])+'&debug_roll=6,1,4');check('URL retry after write failure succeeds',code==303)
+        launch['prepare_version']=inspect(fixture['settings'])['version']
         code,_,_=request(host,'index.php?game='+str(fixture['settings']),launch);check('real HTTP launches required card scenario',code==303)
         launched=inspect(fixture['settings']);game=json.loads(launched['json']);pin=game['lucktest_debug']['bindings'][0];card=game['cards'][str(pin['instance_id'])];check('required cell and remaining cursor saved',card['row']==2 and card['col']==3 and game['lucktest_debug']['rolls'][str(fixture['host'])]['state']['queue']==[4])
         code,_,_=request(host,'index.php?game='+str(fixture['settings']),launch);check('repeat HTTP launch cannot modify battle',code==409 and inspect(fixture['settings'])==launched)
+        pending_before=json.loads(inspect(fixture['battle'])['json'])
+        code,_,_=request(host,'index.php?game='+str(fixture['battle'])+'&debug_roll=6*');check('disabled existing battle URL rejected before pending progress',code==403 and json.loads(inspect(fixture['battle'])['json'])==pending_before)
+        before=json.loads(inspect(fixture['settings'])['json'])
+        code,_,_=request(host,'index.php?game='+str(fixture['settings'])+'&debug_roll=2*');check('enabled battle URL accepted during battle',code==303)
+        after=json.loads(inspect(fixture['settings'])['json']);check('URL configuration preserves cards/combat/clock',before['cards']==after['cards'] and before['battle']==after['battle'])
+        code,_,_=request(host,'index.php?game='+str(fixture['settings'])+'&debug_roll=off');check('URL off clears own queue',code==303 and str(fixture['host']) not in json.loads(inspect(fixture['settings'])['json'])['lucktest_debug']['rolls'])
         code,_,_=request(host,'auth.php?page=logout',{'csrf':token});check('logout succeeds',code==303)
         login(host,'ordinary_user');code,body,_=request(host,'index.php?game='+str(fixture['battle']));check('account switch loses debug UI',code==200 and 'HTTP_OPAQUE_SECRET' not in body and 'data-menu-debug' not in body)
         # Revoke the private permission and verify a previously authenticated tester immediately loses HTML/AJAX access.

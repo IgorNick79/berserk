@@ -92,7 +92,7 @@ if ($api) {
 }
 header('Content-Type: text/html; charset=utf-8');
 ?>
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css?v=2"><link rel="stylesheet" href="assets/css/pregame.css"><script src="assets/js/settings.js" defer></script><script src="assets/js/lobby.js?v=2" defer></script></head><body class="lobby-page">
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css?v=2"><link rel="stylesheet" href="assets/css/pregame.css?v=2"><script src="assets/js/settings.js" defer></script><script src="assets/js/lobby.js?v=2" defer></script></head><body class="lobby-page">
 <main id="lobby" class="screen lobby" data-state="<?= $escape(json_encode($data,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)) ?>" data-csrf="<?= $escape($csrf) ?>" data-authenticated="<?= $account ? '1' : '0' ?>" data-wizard="<?= $wizard !== '' ? '1' : '0' ?>">
 <header class="lobby-header"><a href="lobby.php" class="lobby-brand">Berserk</a><details class="profile-menu"><summary aria-label="Профиль" title="Профиль"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg></summary><nav aria-label="Профиль">
 <?php if ($account): ?><span><?= $escape($account->login) ?></span><a href="auth.php?page=account">Профиль</a><form method="post" action="auth.php?page=logout"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><button type="submit">Выйти</button></form>
@@ -100,4 +100,4 @@ header('Content-Type: text/html; charset=utf-8');
 <p id="notice" role="status"><?= $escape($error ?? '') ?></p>
 <?php if ($data !== null): ?>
 <?php if ($wizard !== ''): ?><section class="lobby-wizard"><?= $wizard ?></section><?php else: ?><section id="content"></section><?php endif; ?><noscript>Для автоматического обновления лобби включите JavaScript.</noscript>
-<?php else: ?><p><a href="lobby.php">Вернуться в лобби</a></p><?php endif; ?></main><script src="/assets/js/lucktest-debug.js?v=1" defer></script></body></html>
+<?php else: ?><p><a href="lobby.php">Вернуться в лобби</a></p><?php endif; ?></main><script src="/assets/js/lucktest-debug.js?v=2" defer></script></body></html>

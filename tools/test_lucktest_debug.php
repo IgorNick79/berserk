@@ -99,7 +99,7 @@ $s->mode='draft';$data=(new BattleScreen($tpl))->prepare($s,'host','host',null,[
 $normal=fresh();$normal->mode='draft';$_SESSION['debug_roll']='6*';Dice::init();
 LuckTestDice::run($normal,'host',static function(){check(Dice::remaining()===[],'authenticated normal mode ignores legacy session Dice');return Result::ok();});
 check(!isset($_SESSION['debug_roll']) && Dice::remaining()===[],'HTTP context permanently quarantines legacy Dice session');
-$s=fresh();$view=(new SettingsScreen())->prepare($s,'host','host',null)['data']['actions_html'];check(str_contains($view,'name="lucktest_scenario"') && str_contains($view,'name="debug_roll"'),'permitted host fields');
+$s=fresh();$view=(new SettingsScreen())->prepare($s,'host','host',null)['data']['actions_html'];check(str_contains($view,'name="lucktest_scenario"') && str_contains($view,'name="lucktest_url_roll"') && !str_contains($view,'name="debug_roll"'),'permitted host checkbox and scenario fields');
 DebugAccess::bind(new Account(33,'ordinary'));$view=(new SettingsScreen())->prepare($s,'host','host',null)['data']['actions_html'];check(!str_contains($view,'lucktest_scenario') && !str_contains(GameMenu::preparation('token',true,false,$s,'host'),'Debug'),'ordinary preparation has no debug');
 $blankRoom=RoomSetup::parse('lucktest',['lucktest_scenario'=>'','debug_roll'=>'off'],11);check(!isset($blankRoom['debug']),'empty scenario/off room is ordinary LuckTest');
 $room=RoomSetup::parse('lucktest',['lucktest_scenario'=>scenarioJson([['owner'=>'host','ukid'=>'army','row'=>2,'col'=>3]]),'debug_roll'=>'6,1'],11);$lobby=new GameState(321,11,33);RoomSetup::apply($lobby,$room,fixture([card('army')]));check($lobby->status==='battle' && count($lobby->lucktestDebug['bindings'])===1,'Lobby scenario route');

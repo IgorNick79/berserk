@@ -14,11 +14,12 @@ final class GameMenu
     {
         if ($state === null || !\Berserk\Auth\DebugAccess::forPlayer($state,$key) || $state->status === 'game_over') return '';
         if ($state->status !== 'settings' || $state->cards !== []) return '<details><summary>Debug</summary><p>Настройка бросков закрыта после запуска подготовки.</p></details>';
-        $raw = $state->lucktestDebug['rolls'][(string)$state->getPlayer($key)->userId]['raw'] ?? 'off';
+        if ($key !== 'host') return '<details><summary>Debug</summary><p>URL-броски ' . (($state->lucktestDebug['url_roll_enabled'] ?? false) ? 'разрешены' : 'выключены') . '. Разрешение задаёт создатель игры.</p></details>';
         return '<details><summary>Debug</summary><form method="post"><input type="hidden" name="game" value="'.$state->gameId.'">'
             .'<input type="hidden" name="cmd" value="set_lucktest_debug"><input type="hidden" name="csrf" value="'.htmlspecialchars($csrf,ENT_QUOTES).'">'
             .'<input type="hidden" name="prepare_version" value="'.(int)$state->persistenceVersion.'">'
-            .'<label><input aria-label="Броски Dice" placeholder="Броски Dice: 6,1,4 или off" name="debug_roll" maxlength="1024" value="'.htmlspecialchars($raw,ENT_QUOTES).'"></label><button type="submit">Сохранить Debug</button></form></details>';
+            .LuckTestDebugFields::toggle(($state->lucktestDebug['url_roll_enabled'] ?? false) === true)
+            .'<button type="submit">Сохранить Debug</button></form></details>';
     }
 
     public static function preparation(string $csrf, bool $sound, bool $finished, ?\Berserk\Core\GameState $state = null, string $playerKey = ''): string

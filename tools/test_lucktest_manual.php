@@ -276,7 +276,7 @@ foreach (['turn', 'side', 'place'] as $stage) {
 // Router explicitly avoids View; existing modes keep the shared read-only presentation.
 $router = file_get_contents(__DIR__ . '/../www/index.php');
 check(substr_count($router, '$deckData = $state->mode === \\Berserk\\Core\\GameSettings::MODE_LUCKTEST ? []') === 2, 'Turn/Side router guards View for LuckTest');
-check(str_contains($router, "\$state->status === 'place'") && str_contains($router, '->isLuckTestQuickStart($cmd)')
-    && str_contains($router, '$repo->executeLockedCommand'), 'manual Place retains existing history transaction boundary');
+check(str_contains($router, '$prepareJournal->registerProcessing') && str_contains($router, '$repo->executeLockedCommand')
+    && str_contains($router, 'Invalid preparation token/version'), 'preparation retains existing journal, locked execution and version boundary');
 unset($_SESSION['debug_roll'], $_SESSION['debug_roll_state']); Dice::init();
 echo 'LuckTest manual: ' . ($checks - $manualStart) . " checks passed (no live database).\n";
