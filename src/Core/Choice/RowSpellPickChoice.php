@@ -50,7 +50,7 @@ final class RowSpellPickChoice implements ChoiceHandlerInterface
             $resultHtml = '<div class="dice-block">'
                 . '<div class="dice-column">'
                 . '<div class="label">Кубик</div>'
-                . '<div class="dice">' . $dice . '</div>'
+                . '<div class="dice">' . \Berserk\View\Ui\DiceValue::render($dice) . '</div>'
                 . '</div>'
                 . '</div>'
                 . '<p><b>Урон: ' . $val . ' на цель</b></p>';
@@ -63,7 +63,7 @@ final class RowSpellPickChoice implements ChoiceHandlerInterface
             if (!$tc) continue;
             $info = $cardsInfo[$tc->ukid] ?? null;
             $name = $info['name'] ?? '?';
-            $coord = '(' . $tc->row . ';' . $tc->col . ')';
+            $coord = \Berserk\View\Ui\BattlefieldPosition::label($tc->row, $tc->col, $playerKey);
             $items[] = [
                 'value' => (int) $tid,
                 'label' => $name . ' ' . $coord . ' — ' . $tc->hp . '/' . $tc->hpMax,

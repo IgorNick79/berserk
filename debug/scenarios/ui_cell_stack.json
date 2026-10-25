@@ -1,0 +1,21 @@
+{
+  "first_player": "host",
+  "host_side": 1,
+  "player_side": 2,
+  "cards": [
+    {
+      "owner": "host",
+      "ukid": "s1_55",
+      "row": 3,
+      "col": 2,
+      "hp": 2
+    },
+    {
+      "owner": "player",
+      "ukid": "s1_75",
+      "row": 3,
+      "col": 2,
+      "hp": 4
+    }
+  ]
+}

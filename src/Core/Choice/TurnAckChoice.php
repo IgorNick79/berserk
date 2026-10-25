@@ -32,7 +32,7 @@ final class TurnAckChoice implements ChoiceHandlerInterface
         $tp = $state->battle['turn_phase'] ?? null;
         if (!$tp || empty($tp['pending_ack'])) return null;
 
-        $text = $this->formatAck($tp['pending_ack'], $state, $cardsInfo);
+        $text = $this->formatAck($tp['pending_ack'], $state, $cardsInfo, $playerKey);
 
         return new PanelSpec(
             title: $text,
@@ -44,7 +44,7 @@ final class TurnAckChoice implements ChoiceHandlerInterface
         );
     }
 
-    private function formatAck($ack, GameState $state, array $cardsInfo): string
+    private function formatAck($ack, GameState $state, array $cardsInfo, string $playerKey): string
     {
         if (is_array($ack)) {
             $label = (string) ($ack['label'] ?? '');
@@ -60,6 +60,12 @@ final class TurnAckChoice implements ChoiceHandlerInterface
             $parts = [];
             foreach ($items as $it) {
                 // Строки без карты (события-сообщения, «бомба взорвалась на (3;3)»)
+                if (($it['position_event'] ?? '') === 'teleport') {
+                    $pos = \Berserk\View\Ui\BattlefieldPosition::display($it['row'] ?? null, $it['col'] ?? null, $playerKey);
+                    if ($pos) $parts[] = 'телепортировался на ' . ($pos['side'] === 'own' ? 'Свой' : 'Вражеский')
+                        . ' [' . \Berserk\View\Ui\Coords::rowLabel($pos['row']) . ':' . $pos['col'] . ']';
+                    continue;
+                }
                 if (isset($it['standalone_text'])) {
                     $parts[] = $it['standalone_text'];
                     continue;

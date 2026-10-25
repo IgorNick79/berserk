@@ -48,7 +48,7 @@ final class BattleScreen
         $fieldMap = [];
         foreach ($state->cards as $card) {
             if ($card->zone === CardInstance::ZONE_FIELD) {
-                $fieldMap["{$card->row}_{$card->col}"] = $card;
+                $fieldMap["{$card->row}_{$card->col}"][] = $card;
             }
         }
 
@@ -382,72 +382,84 @@ final class BattleScreen
                 $key         = "{$r}_{$c}";
                 $cellContent = '';
                 $cellClass   = '';
-                $card        = $fieldMap[$key] ?? null;
+                $occupants = $fieldMap[$key] ?? [];
+                usort($occupants, static fn($a, $b) => $a->instanceId <=> $b->instanceId);
+                $card = $occupants[0] ?? null;
 
                 if ($card) {
-                    $info = $cardsInfo[$card->ukid] ?? null;
+                    $variants = '';
+                    $firstClass = '';
+                    foreach ($occupants as $index => $card) {
+                        $info = $cardsInfo[$card->ukid] ?? null;
 
-                    $isHiddenForMe = (!$card->revealed && $card->owner !== $playerKey);
+                        $isHiddenForMe = (!$card->revealed && $card->owner !== $playerKey);
 
-                    if ($isHiddenForMe) {
-                        $nameHtml = '???';
-                        $hpText   = '?/?';
-                    } else {
-                        $nameHtml = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
-                        $hpText   = $card->hp . '/' . $this->displayHpMax($card);
-                    }
-
-                    $ownerClass  = $card->owner === $playerKey ? 'own' : 'enemy';
-                    $closedClass = $card->closed ? 'closed' : '';
-                    $cellClass = \Berserk\View\Ui\LiveBattleCard::enabled() ? '' : "$ownerClass $closedClass";
-                    if ($isHiddenForMe) $cellClass .= ' hidden';
-                    if ($card->dying)   $cellClass .= ' dying';
-
-                    $cardBody = $this->buildBattleCard($card, $state, $info, $isHiddenForMe, $nameHtml, $hpText, $playerKey);
-
-                    if (isset($strangulationTargets[$card->instanceId])) {
-                        $cellClass .= ' attack-target';
-                        $url = htmlspecialchars($baseUrl . '&sel=' . $card->instanceId, ENT_QUOTES);
-                        $cellContent = '<a class="card-link" href="' . $url . '">' . $cardBody . '</a>';
-                    } elseif (isset($movementCards[$card->instanceId])) {
-                        $cellClass .= ' attack-target pending-first-strike-target';
-                        $url = htmlspecialchars($movementUrl . '&target_id=' . $card->instanceId, ENT_QUOTES, 'UTF-8');
-                        $cellContent = '<a class="card-link" href="' . $url . '">' . $cardBody . '</a>';
-                    } elseif (isset($pendingDefenderTargets[$card->instanceId])) {
-                        $cellClass  .= ' attack-target pending-defender-target';
-                        $cellContent = '<a class="card-link" href="' . $pendingDefenderTargets[$card->instanceId] . '">' . $cardBody . '</a>';
-                    } elseif (isset($pendingRedirectTargets[$card->instanceId])) {
-                        $cellClass  .= ' attack-target pending-redirect-target';
-                        $cellContent = '<a class="card-link" href="' . $pendingRedirectTargets[$card->instanceId] . '">' . $cardBody . '</a>';
-                    } elseif (isset($pendingAutoTargets[$card->instanceId])) {
-                        $cellClass  .= ' attack-target pending-auto-target';
-                        $cellContent = '<a class="card-link" href="' . $pendingAutoTargets[$card->instanceId] . '">' . $cardBody . '</a>';
-                    } elseif (isset($pendingDeathTargets[$card->instanceId])) {
-                        $cellClass  .= ' attack-target pending-death-target';
-                        $cellContent = '<a class="card-link" href="' . $pendingDeathTargets[$card->instanceId] . '">' . $cardBody . '</a>';
-                    } elseif (isset($pendingAllyModifierTargets[$card->instanceId])) {
-                        $cellClass  .= ' attack-target pending-ally-modifier-target';
-                        $cellContent = '<a class="card-link" href="' . $pendingAllyModifierTargets[$card->instanceId] . '">' . $cardBody . '</a>';
-                    } elseif (isset($attackTargets[$card->instanceId]) && $selectedCardId > 0 && $card->instanceId !== $selectedCardId) {
-                        if (str_starts_with($mode, 'action:')) {
-                            $actionKey = substr($mode, 7);
-                            $atkUrl = "{$baseUrl}&cmd=action&action_key={$actionKey}&card_id={$selectedCardId}&target_id={$card->instanceId}&sel={$selectedCardId}&mode={$mode}";
+                        if ($isHiddenForMe) {
+                            $nameHtml = '???';
+                            $hpText   = '?/?';
                         } else {
-                            $atkUrl = "{$baseUrl}&cmd={$mode}&card_id={$selectedCardId}&target_id={$card->instanceId}&sel={$selectedCardId}&mode={$mode}";
+                            $nameHtml = $info ? htmlspecialchars($info['name'], ENT_QUOTES) : '?';
+                            $hpText   = $card->hp . '/' . $this->displayHpMax($card);
                         }
-                        $isFriendlyAttack = $card->owner === $playerKey
-                            && $explicitAttackMode
-                            && ($selected = $state->getCard($selectedCardId))
-                            && BattleHelper::isFriendlyFireTarget($selected, $card, $mode);
-                        $cellClass  .= $isFriendlyAttack ? ' attack-target friendly-attack-target' : ' attack-target';
-                        $confirmAttr = $isFriendlyAttack ? $this->friendlyAttackConfirmAttribute($card, $info ?? []) : '';
-                        $cellContent = '<a class="card-link" href="' . $atkUrl . '"' . $confirmAttr . '>' . $cardBody . '</a>';
-                    } elseif ($card->owner === $playerKey || $card->revealed) {
-                        $selUrl      = "{$baseUrl}&sel={$card->instanceId}";
-                        $cellContent = '<a class="card-link" href="' . $selUrl . '">' . $cardBody . '</a>';
-                    } else {
-                        $cellContent = $cardBody;
+
+                        $ownerClass  = $card->owner === $playerKey ? 'own' : 'enemy';
+                        $closedClass = $card->closed ? 'closed' : '';
+                        $cellClass = \Berserk\View\Ui\LiveBattleCard::enabled() ? '' : "$ownerClass $closedClass";
+                        if ($isHiddenForMe) $cellClass .= ' hidden';
+                        if ($card->dying)   $cellClass .= ' dying';
+
+                        $cardBody = $this->buildBattleCard($card, $state, $info, $isHiddenForMe, $nameHtml, $hpText, $playerKey);
+
+                        if (isset($strangulationTargets[$card->instanceId])) {
+                            $cellClass .= ' attack-target';
+                            $url = htmlspecialchars($baseUrl . '&sel=' . $card->instanceId, ENT_QUOTES);
+                            $cellContent = '<a class="card-link" href="' . $url . '">' . $cardBody . '</a>';
+                        } elseif (isset($movementCards[$card->instanceId])) {
+                            $cellClass .= ' attack-target pending-first-strike-target';
+                            $url = htmlspecialchars($movementUrl . '&target_id=' . $card->instanceId, ENT_QUOTES, 'UTF-8');
+                            $cellContent = '<a class="card-link" href="' . $url . '">' . $cardBody . '</a>';
+                        } elseif (isset($pendingDefenderTargets[$card->instanceId])) {
+                            $cellClass  .= ' attack-target pending-defender-target';
+                            $cellContent = '<a class="card-link" href="' . $pendingDefenderTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                        } elseif (isset($pendingRedirectTargets[$card->instanceId])) {
+                            $cellClass  .= ' attack-target pending-redirect-target';
+                            $cellContent = '<a class="card-link" href="' . $pendingRedirectTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                        } elseif (isset($pendingAutoTargets[$card->instanceId])) {
+                            $cellClass  .= ' attack-target pending-auto-target';
+                            $cellContent = '<a class="card-link" href="' . $pendingAutoTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                        } elseif (isset($pendingDeathTargets[$card->instanceId])) {
+                            $cellClass  .= ' attack-target pending-death-target';
+                            $cellContent = '<a class="card-link" href="' . $pendingDeathTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                        } elseif (isset($pendingAllyModifierTargets[$card->instanceId])) {
+                            $cellClass  .= ' attack-target pending-ally-modifier-target';
+                            $cellContent = '<a class="card-link" href="' . $pendingAllyModifierTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                        } elseif (isset($attackTargets[$card->instanceId]) && $selectedCardId > 0 && $card->instanceId !== $selectedCardId) {
+                            if (str_starts_with($mode, 'action:')) {
+                                $actionKey = substr($mode, 7);
+                                $atkUrl = "{$baseUrl}&cmd=action&action_key={$actionKey}&card_id={$selectedCardId}&target_id={$card->instanceId}&sel={$selectedCardId}&mode={$mode}";
+                            } else {
+                                $atkUrl = "{$baseUrl}&cmd={$mode}&card_id={$selectedCardId}&target_id={$card->instanceId}&sel={$selectedCardId}&mode={$mode}";
+                            }
+                            $isFriendlyAttack = $card->owner === $playerKey
+                                && $explicitAttackMode
+                                && ($selected = $state->getCard($selectedCardId))
+                                && BattleHelper::isFriendlyFireTarget($selected, $card, $mode);
+                            $cellClass  .= $isFriendlyAttack ? ' attack-target friendly-attack-target' : ' attack-target';
+                            $confirmAttr = $isFriendlyAttack ? $this->friendlyAttackConfirmAttribute($card, $info ?? []) : '';
+                            $cellContent = '<a class="card-link" href="' . $atkUrl . '"' . $confirmAttr . '>' . $cardBody . '</a>';
+                        } elseif ($card->owner === $playerKey || $card->revealed) {
+                            $selUrl      = "{$baseUrl}&sel={$card->instanceId}";
+                            $cellContent = '<a class="card-link" href="' . $selUrl . '">' . $cardBody . '</a>';
+                        } else {
+                            $cellContent = $cardBody;
+                        }
+                        if ($index === 0) $firstClass = $cellClass;
+                        $variants .= '<div data-cell-occupant="' . $card->instanceId
+                            . '" data-occupant-class="' . htmlspecialchars($cellClass, ENT_QUOTES)
+                            . '"' . ($index > 0 ? ' hidden' : '') . '>' . $cellContent . '</div>';
                     }
+                    $cellClass = $firstClass;
+                    $cellContent = $variants;
                 } elseif (isset($movementCells[$key])) {
                     $url = htmlspecialchars($movementUrl . "&row={$r}&col={$c}", ENT_QUOTES, 'UTF-8');
                     $label = htmlspecialchars(\Berserk\View\Ui\BattlefieldPosition::label($r, $c, $playerKey), ENT_QUOTES, 'UTF-8');
@@ -474,7 +486,8 @@ final class BattleScreen
                 }
 
                 // ─── ОВЕРЛЕЙ: всегда в конце, на уровне клетки ───
-                $cellContent .= $this->buildCellMarkersOverlay($state, $key);
+                $cellContent .= $this->buildCellMarkersOverlay($state, $key, count($occupants));
+                $cellContent = '<div class="cell-presentation" data-cell-stack="' . $key . '">' . $cellContent . '</div>';
 
                 $rowCells .= $this->tpl->parse('includes/battle_cell.tpl', [
                     'cl'      => $cellClass,
@@ -531,7 +544,7 @@ final class BattleScreen
                     $hpText   = $card->hp . '/' . $this->displayHpMax($card);
                 }
                 $ownerClass = $card->owner === $playerKey ? 'own' : 'enemy';
-                $cellClass .= ' ' . $ownerClass;
+                if (!\Berserk\View\Ui\LiveBattleCard::enabled()) $cellClass .= ' ' . $ownerClass;
                 if ($card->closed && !\Berserk\View\Ui\LiveBattleCard::enabled()) {
                     $cellClass .= ' closed';
                 }
@@ -1728,20 +1741,31 @@ final class BattleScreen
             . '</pre>';
     }
 
-    private function buildCellMarkersOverlay(GameState $state, string $key): string
+    private function buildCellMarkersOverlay(GameState $state, string $key, int $count = 0): string
     {
-        $markers = ZoneManager::markersAt($state, $key);
-        if (empty($markers)) return '';
-
-        $html = '<div class="cell-markers">';
-        foreach ($markers as $m) {
-            $type = htmlspecialchars((string) ($m['type'] ?? ''), ENT_QUOTES);
-            $title = $type === 'lantern_light' ? 'Свет фонаря: +1 рана от дальних атак, отравления и удара источника света.' : '';
-            $html .= '<div class="cell-marker cell-marker-' . $type . '" title="' . htmlspecialchars($title, ENT_QUOTES) . '"></div>';
+        $labels = ['bomb'=>'Бомба орка', 'reduce_attack'=>'Мороз, мгла, ливень',
+            'row_spell'=>'Цветущие руны', 'gate'=>'Врата', 'lantern_light'=>'Свет фонаря'];
+        $icons = ['bomb'=>'💣', 'reduce_attack'=>'❄', 'row_spell'=>'ᚱ', 'gate'=>'⛩', 'lantern_light'=>''];
+        $markers = ''; $fire = '';
+        foreach (ZoneManager::markersAt($state, $key) as $marker) {
+            $type = (string) ($marker['type'] ?? '');
+            if ($type === 'bonfire') {
+                $fire = '<span class="cell-bonfire" role="img" aria-label="Костёр">🔥</span>';
+                continue;
+            }
+            $safe = htmlspecialchars($type, ENT_QUOTES);
+            $label = htmlspecialchars($labels[$type] ?? $type, ENT_QUOTES);
+            $markers .= '<span class="cell-marker cell-marker-' . $safe . '" data-mini-hint data-cell-hint role="button" tabindex="0" aria-expanded="false" aria-label="'
+                . $label . '">' . ($icons[$type] ?? '')
+                . '<span class="mini-hint-text" hidden>' . $label . '</span></span>';
         }
-        $html .= '</div>';
-
-        return $html;
+        $switch = $count > 1 ? '<span class="cell-switch" aria-label="Существа в клетке">'
+            . '<button type="button" data-cell-step="-1" aria-label="Предыдущее существо">‹</button>'
+            . '<span data-cell-counter aria-live="polite">1/' . $count . '</span>'
+            . '<button type="button" data-cell-step="1" aria-label="Следующее существо">›</button></span>' : '';
+        if ($markers === '' && $switch === '') return $fire;
+        $barClass = $count > 0 ? 'cell-bottom-strip' : 'cell-marker-island' . ($fire !== '' ? ' cell-marker-island--below-fire' : '');
+        return $fire . '<div class="' . $barClass . '"><div class="cell-markers">' . $markers . '</div>' . $switch . '</div>';
     }
 
 }

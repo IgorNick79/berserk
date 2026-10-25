@@ -902,6 +902,7 @@ final class TurnPhaseProcessor
                 // Свободные клетки с gate (без других карт)
                 $freeGates = [];
                 foreach ($gates as $k) {
+                    if (ZoneManager::hasBlockingMarker($this->state, $k)) continue;
                     [$r, $c] = explode('_', $k);
                     $r = (int) $r; $c = (int) $c;
                     $blocked = false;
