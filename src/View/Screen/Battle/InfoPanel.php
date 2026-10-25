@@ -103,10 +103,15 @@ final class InfoPanel
             if ($uses < 1 || !in_array($card->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) continue;
             $side = $card->owner === $this->playerKey ? 'Ваши' : 'У соперника';
             $coords = \Berserk\View\Ui\Coords::renderResult($card->row, $card->col, $this->playerKey, $card->owner);
-            $html .= '<p class="bonus" role="status">' . $side . ' Очи Кронга открылись ' . $coords
+            $period = (string) ($card->flags[\Berserk\Core\OchiKronga::STATE]['period'] ?? 'legacy');
+            $id = htmlspecialchars($card->instanceId . ':' . $period . ':' . $uses . ':'
+                . (int) ($card->flags[\Berserk\Core\OchiKronga::STATE]['last_open_sequence'] ?? 0), ENT_QUOTES, 'UTF-8');
+            $html .= '<p class="bonus" role="status" data-ochi-opening="' . $id . '">' . $side . ' Очи Кронга открылись ' . $coords
                 . ' — срабатываний за ход: ' . $uses . '/2.</p>';
         }
-        return $html === '' ? '' : '<div class="info-box ochi-kronga-notice">' . $html . '</div>';
+        return $html === '' ? '' : '<details open class="info-box ochi-kronga-notice" data-ochi-notice="'
+            . $this->state->gameId . ':' . $this->playerKey . '"><summary><h3>Информация</h3></summary>'
+            . $html . '<button type="button" class="button" data-dismiss-ochi>Продолжить</button></details>';
     }
 
     private function renderFooter(): string

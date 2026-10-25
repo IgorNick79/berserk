@@ -56,9 +56,9 @@ final class ForcedDirectionalMoveChoice implements ChoiceHandlerInterface
             $items[] = [
                 'value' => $card->instanceId,
                 'label' => $name,
-                'label_html' => htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
-                    . ' ' . Coords::renderResult($card->row, $card->col, $playerKey, $card->owner)
-                    . ' → ' . Coords::renderResult($destination['row'], $destination['col'], $playerKey, $card->owner),
+                'label_html' => '<span class="directional-target-option"><span>'
+                    . htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>'
+                    . Coords::renderResult($destination['row'], $destination['col'], $playerKey, $card->owner) . '</span>',
             ];
         }
 

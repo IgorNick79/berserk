@@ -49,6 +49,7 @@ foreach(['host','player'] as $viewer){
     $html=$panel->render($s,$viewer,$viewer,[], '?game=1');
     mtAssert(str_contains($html,'Очи Кронга открылись'),'Both players see opening even with pending heal');
     mtAssert(str_contains($html,'1/2'),'Opening count shown');
+    mtAssert(str_contains($html,'<h3>Информация</h3>')&&str_contains($html,'data-dismiss-ochi>Продолжить</button>'),'Dismissible information block');
     mtAssert(str_contains($html,$viewer==='host'?'Ваши Очи':'У соперника Очи'),'Ownership readable');
     mtAssert(str_contains($html,Coords::renderResult(2,2,$viewer,'host')),'Opening has viewer coordinates');
 }

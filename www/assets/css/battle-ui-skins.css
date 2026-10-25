@@ -110,3 +110,13 @@
 .battle-page [data-panel-theme] .info-panel .choice-item:hover{background:linear-gradient(#ffffff12,#ffffff12),var(--ip-surface)}
 .battle-page [data-panel-theme] .info-panel .choice-item:has(input:checked){border-color:var(--ip-title);box-shadow:inset 0 0 0 1px var(--ip-edge)}
 .battle-page [data-panel-theme] .info-panel .choice-item:focus-within{outline:2px solid var(--ip-title);outline-offset:2px}
+
+/* Keep forced-move destinations in one right-aligned column. */
+.battle-page .choice-radio:has(.directional-target-option){display:flex;align-items:center;gap:8px}
+.battle-page .choice-radio:has(.directional-target-option)>input{flex:0 0 auto;margin:0}
+.battle-page .choice-radio:has(.directional-target-option)>span{flex:1;min-width:0}
+.battle-page .directional-target-option{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%}
+.battle-page .directional-target-option>span:first-child{min-width:0;overflow-wrap:anywhere}
+.battle-page .directional-target-option>.coords{flex:0 0 auto;margin-left:auto;white-space:nowrap}
+.battle-page .ochi-kronga-notice[hidden],.battle-page [data-ochi-opening][hidden]{display:none!important}
+.battle-page .ochi-kronga-notice>summary h3{display:inline}

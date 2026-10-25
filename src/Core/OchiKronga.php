@@ -98,6 +98,7 @@ final class OchiKronga
                 $memory['sequence'] = [];
                 if ($memory['uses'] < 2 && $source->closed) {
                     ++$memory['uses'];
+                    $memory['last_open_sequence'] = $sequence;
                     // Automatic consequence, not a new independent action. No recursive notification.
                     (new Engine())->openCard($source);
                     $state->historyRecorder?->liveEvent($state, 'card.status',

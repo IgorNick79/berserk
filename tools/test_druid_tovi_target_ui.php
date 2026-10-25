@@ -43,7 +43,12 @@ $s=mtFixture('heal');unset($s->battle['pending_multi_heal']);
 $s->battle[ForcedMovementResolver::PENDING_KEY]=['owner'=>'host','source_id'=>6,'delta_row'=>-1,'delta_col'=>0,'fallback'=>[]];
 $spec=(new ForcedDirectionalMoveChoice())->spec($s,'host',[],'?first&game=1','host');
 mtAssert($spec->form['type']==='radio'&&$spec->form['name']==='target_id','Tovi forced target is radio');
-foreach($spec->form['items'] as $item){$c=$s->getCard((int)$item['value']);mtAssert(str_contains($item['label_html'],Coords::renderResult($c->row,$c->col,'host',$c->owner)),'Origin coordinate');mtAssert(str_contains($item['label_html'],' → '),'Destination shown');}
+foreach($spec->form['items'] as $item){
+    $c=$s->getCard((int)$item['value']);
+    mtAssert(str_contains($item['label_html'],Coords::renderResult($c->row-1,$c->col,'host',$c->owner)),'Only destination coordinate');
+    mtAssert(substr_count($item['label_html'],'class="coords coords--')===1,'Single coordinate per option');
+    mtAssert(str_contains($item['label_html'],'directional-target-option')&&!str_contains($item['label_html'],' → '),'Aligned destination layout');
+}
 mtAssert(str_contains(Panel::render($spec),'name="cmd" value="choose_forced_directional_move"'),'Forced command unchanged');
 $s=mtFixture('heal');unset($s->battle['pending_multi_heal']);$s->battle['strike']=['attacker_id'=>1,'target_id'=>2,'state'=>'results','kind'=>'heal','heal'=>1,'confirmed'=>[],'attack_dice'=>0,'defend_dice'=>0,'result'=>[]];
 $html=(new InfoPanel($tpl))->render($s,'host','host',[],'?first&game=1');
