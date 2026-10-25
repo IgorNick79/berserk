@@ -85,12 +85,16 @@ final class InfoPanel
         }
         if ($inInstantStack) $combatKey = 'instant:' . ($state->battle['turn'] ?? 0);
         if ($priority && $combatKey === '') $combatKey = 'information:' . ($state->battle['turn'] ?? 0);
+        $body = $this->renderOchiKrongaNotice() . $this->renderBody();
+        $instantAtBottom = $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
+            || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
         return '<header class="info-panel-header">' . $this->renderStatusHeader() . $this->renderTimer() . '</header>'
             . '<div class="info-panel-content" data-panel-priority="' . ($priority ? '1' : '0') . '" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
             . ($priority ? '' : $pileHtml)
             . '<div class="battle-selected-card" data-battle-fragment="panel_html"' . ($exclusive ? ' hidden' : '') . '>' . $selectedCardHtml . '</div>'
-            . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/cell_info.svg" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">Информация</h3></div><div class="combat-panel-body">' : '') . $this->renderOchiKrongaNotice() . $this->renderBody() . ($exclusive ? '</div>' : '') . '</div>'
+            . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive && !$instantAtBottom ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/cell_info.svg" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">Информация</h3></div><div class="combat-panel-body">' : '') . ($instantAtBottom ? '' : $body) . ($exclusive && !$instantAtBottom ? '</div>' : '') . '</div>'
             . '</div>'
+            . ($instantAtBottom ? '<section class="info-panel-instants" aria-label="Инстанты">' . $body . '</section>' : $this->renderInstantOffer())
             . '<footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
     }
 
@@ -253,9 +257,11 @@ final class InfoPanel
             $spec = $handler->spec($state, $playerKey, $cardsInfo, $baseUrl, $role);
             if ($spec !== null) {
                 if ($handler instanceof \Berserk\Core\Choice\CellMarkerChoice
-                    || $handler instanceof \Berserk\Core\Choice\RangedNeighborTeleportChoice) {
+                    || $handler instanceof \Berserk\Core\Choice\RangedNeighborTeleportChoice
+                    || $handler instanceof \Berserk\Core\Choice\TeleportTargetChoice) {
                     \Berserk\View\Ui\CellMarkerPicker::decorate($spec, $state, $playerKey, $baseUrl);
                 }
+                \Berserk\View\Ui\CreatureChoice::decorate($spec, $state, $playerKey, $cardsInfo);
                 return \Berserk\View\Ui\Panel::render($spec);
             }
         }
@@ -328,23 +334,20 @@ final class InfoPanel
             return '';
         }
 
-        $isActive = ($state->battle['active'] === $playerKey);
-
-        if ($isActive && empty($state->battle['strike'])) {
-            // Проверяем, есть ли у активного turn-инстанты
-            $sr = new \Berserk\Core\StrikeResolver($state, new \Berserk\Core\Engine());
-            $hasInstants = !empty($sr->getCombatInstants($playerKey, 'before'));
-
-            $instantBtn = '';
-            if ($hasInstants) {
-                $instantBtn = '<span style="flex: 1"><a class="button instant" href="' . $baseUrl . '&cmd=open_turn_instants">Сыграть инстант</a></span>';
-            }
-
-            return $anyDeathMessageHtml . $instantResultHtml . $instantBtn;
-        }
-
         return $anyDeathMessageHtml . $instantResultHtml;
 
+    }
+
+    private function renderInstantOffer(): string
+    {
+        $state = $this->state;
+        if ($state->winner !== null || $state->status !== 'battle' || MatchPause::blocking($state)
+            || ($state->battle['active'] ?? null) !== $this->playerKey || !empty($state->battle['strike'])
+            || ChoiceRegistry::current($state) !== null) return '';
+        $processor = new \Berserk\Core\InstantProcessor($state, new Engine());
+        if (!$processor->getInstants($this->playerKey, 'before', 'turn')) return '';
+        return '<section class="info-panel-instants" aria-label="Инстанты"><a class="button instant" href="'
+            . $this->baseUrl . '&cmd=open_turn_instants">Сыграть инстант</a></section>';
     }
 
     private function cancelUrl(): string
@@ -1643,26 +1646,16 @@ final class InfoPanel
                 $chooserKey = $died ? $died->owner : null;
 
                 if ($playerKey === $chooserKey) {
-                    $buttons = '';
+                    $buttons = [];
                     foreach ($pc['candidates'] as $tid) {
                         $tc = $state->getCard($tid);
                         if (!$tc) continue;
-                        $ti = $cardsInfo[$tc->ukid] ?? [];
-                        $url = "{$baseUrl}&cmd=choose_death_target&target_id={$tid}";
-                        $buttons .= CardButton::battle(
-                            $this->tpl,
-                            $tc,
-                            $ti,
-                            $url,
-                            $playerKey,
-                            ['class' => 'death-target']
-                        );
+                        $buttons[] = ['label' => $cardsInfo[$tc->ukid]['name'] ?? '?',
+                            'url' => "{$baseUrl}&cmd=choose_death_target&target_id={$tid}"];
                     }
-
-                    $confirmHtml = '<div class="death-choice">'
-                        . '<p><b>' . $diedName . '</b> погибает. Выбери цель:</p>'
-                        . '<div class="death-choice-buttons">' . $buttons . '</div>'
-                        . '</div>';
+                    $spec = new \Berserk\View\Ui\PanelSpec(title: (string) ($diedInfo['name'] ?? '?') . ': выберите существо', buttons: $buttons);
+                    \Berserk\View\Ui\CreatureChoice::decorate($spec, $state, $playerKey, $cardsInfo);
+                    $confirmHtml = Panel::render($spec);
                 } else {
                     $confirmHtml = '<p class="wait">Ожидание выбора цели оппонентом...</p>';
                 }
@@ -1688,7 +1681,7 @@ final class InfoPanel
                 . $abilityBonusHtml . $coinBonusHtml . $reductionHtml
                 . $spiderWebHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml;
 
-            $noDiceKinds = ['strangle', 'heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'become_fly', 'bomb_shot', 'apply_delayed_marker', 'particle', 'life_gift', 'poison_boost', 'damage_ranged', 'teleport_target', 'blood_storm', 'row_spell'];
+            $noDiceKinds = ['impact', 'strangle', 'heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'become_fly', 'bomb_shot', 'apply_delayed_marker', 'particle', 'life_gift', 'poison_boost', 'damage_ranged', 'teleport_target', 'blood_storm', 'row_spell'];
             if (!in_array($kind, $noDiceKinds, true)) {
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,

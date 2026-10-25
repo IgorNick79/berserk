@@ -66,7 +66,7 @@ final class Panel
         } else {
             $name = (string) ($form['name'] ?? 'value');
             $items = $form['items'] ?? [];
-            $body = self::renderChoiceItems($items, $type, $name);
+            $body = (!empty($form['side_toggle']) ? CreatureChoice::controls() : '') . self::renderChoiceItems($items, $type, $name);
         }
 
         $submit = $form['submit'] ?? 'Подтвердить';
@@ -104,7 +104,8 @@ final class Panel
             $checked  = !empty($it['checked']) ? ' checked' : '';
             $disabled = !empty($it['disabled']) ? ' disabled' : '';
 
-            $html .= '<label class="choice-radio">'
+            $side = isset($it['side']) ? ' data-creature-owner="' . htmlspecialchars($it['side'], ENT_QUOTES) . '"' : '';
+            $html .= '<label class="choice-radio"' . $side . '>'
                 . '<input type="' . htmlspecialchars($type, ENT_QUOTES) . '"'
                 . ' name="' . htmlspecialchars($name, ENT_QUOTES) . '"'
                 . ' value="' . $value . '"' . $checked . $disabled . '>'

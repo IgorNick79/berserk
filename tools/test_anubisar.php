@@ -236,7 +236,7 @@ $html = (new InfoPanel(new Template(__DIR__ . '/../templates')))->render($state,
     'card_4' => ['name' => 'Цель цепей B'],
 ], '?first&game=2601');
 anAssert(str_contains($html, 'Цепи Анубисара'), 'InfoPanel should mention Anubisar chains.');
-anAssert(str_contains($html, 'Цель цепей A') && str_contains($html, '-1 HP'), 'InfoPanel should list chain targets with -1 HP.');
+anAssert(str_contains($html, 'Цель цепей A') && str_contains($html, '-1 ❤️ HP'), 'InfoPanel should list chain targets with -1 HP.');
 
 $state = anState(anAnubisar(), anEnemy(2, 4, 4), anEnemy(3, 4, 3));
 $state->battle['strike'] = ['attacker_id' => 26, 'target_id' => 2, 'defender_id' => null, 'state' => 'results', 'attack_dice' => 6, 'defend_dice' => 0, 'confirmed' => []];

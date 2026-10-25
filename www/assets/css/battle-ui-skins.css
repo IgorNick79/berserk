@@ -120,3 +120,24 @@
 .battle-page .directional-target-option>.coords{flex:0 0 auto;margin-left:auto;white-space:nowrap}
 .battle-page .ochi-kronga-notice[hidden],.battle-page [data-ochi-opening][hidden]{display:none!important}
 .battle-page .ochi-kronga-notice>summary h3{display:inline}
+.battle-page .info-panel-instants{flex:0 1 auto;min-height:0;max-height:45vh;overflow:auto;padding:12px;border-top:1px solid var(--ip-edge,#bbb)}
+.battle-page .info-panel-instants>.button{display:block;text-align:center}
+.battle-page .info-panel-instants .card-choice{margin:0}
+.battle-page [data-panel-theme] .info-panel .vampire{background:var(--ip-surface);color:var(--ip-text);border-color:var(--ip-edge)}
+.battle-page .choice-radio>span:has(.creature-choice-name){display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.battle-page .choice-radio:has(.creature-choice-name){display:flex;align-items:center;gap:8px}
+.battle-page .choice-radio:has(.creature-choice-name)>input{flex:0 0 auto;margin:0}
+.battle-page .creature-choice-name{flex:1;min-width:0;overflow-wrap:anywhere}
+.battle-page .choice-radio .creature-choice-name+.coords{margin-left:auto;flex:0 0 auto}
+.battle-page .creature-choice-sides{display:flex;gap:8px;margin:0 0 8px}
+.battle-page .creature-choice-sides[hidden],.battle-page .choice-radio[hidden]{display:none!important}
+.battle-page .creature-choice-sides button{flex:1;padding:6px;cursor:pointer;background:var(--ip-surface,#eee);color:var(--ip-text,#222);border:1px solid var(--ip-edge,#aaa);border-radius:4px}
+.battle-page .creature-choice-sides button[aria-pressed=true]{border-color:var(--ip-accent,#785);box-shadow:inset 0 0 0 1px var(--ip-accent,#785)}
+@container(max-width:260px){
+ .battle-page .card-choice:has(.creature-choice-name){padding:8px}
+ .battle-page .card-choice:has(.creature-choice-name) h3{overflow-wrap:anywhere}
+ .battle-page .choice-radio:has(.creature-choice-name){padding:6px;gap:5px;align-items:flex-start}
+ .battle-page .choice-radio:has(.creature-choice-name)>input{margin-top:3px}
+ .battle-page .choice-radio>span:has(.creature-choice-name){flex-wrap:wrap;gap:4px}
+ .battle-page .creature-choice-name{flex-basis:100%}
+}

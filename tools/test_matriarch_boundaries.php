@@ -22,21 +22,21 @@ start($s);finish($s);ca(!empty($s->battle['pending_after_strike_execute']),'exec
 ca(CombatContinuation::active($s),'root waits for execute');$s=cr($s);cmd($s,'host','choose_after_strike_execute',['target_id'=>8]);finish($s);
 ca(!CombatContinuation::active($s),'execute completion');echo "execute/reload passed\n";
 
-// No-close combat ability is available to the effectively-open defender; tap is not free.
+// An engaged defender cannot use a combat instant, including no_close.
 $s=os();$s->getCard(5)->prop['stamina']=true;
 $cap=['key'=>'cap','name'=>'cap','trigger'=>'combat','phase'=>'setter','target'=>'self','no_close'=>true,'effect'=>['type'=>'damage_cap','value'=>1]];
 $tap=$cap;$tap['key']='tapcap';unset($tap['no_close']);
 $redirect=$cap;$redirect['key']='redirect';$redirect['effect']=['type'=>'redirect_strike'];
 $s->getCard(2)->prop['instants']=[$cap,$tap,$redirect];activate($s);chooseOrder($s,2);
-ca(($s->battle['strike']['state']??'')==='waiting_instant','combat instant window');
 $instants=(new InstantProcessor($s,new Engine()))->getInstants('player','combat','combat');
-ca(array_column(array_column($instants,'payload'),'key')===['cap'],'UI allows no-close, hides tap and redirect');
-$bad=(new Engine())->apply($s,'player',new Command('combat_instant_play',['card_id'=>2,'instant_key'=>'tapcap']));ca(!$bad->success,'server rejects unaffordable tap');
-cmd($s,'player','combat_instant_play',['card_id'=>2,'instant_key'=>'cap']);
-for($i=0;$i<12&&($s->battle['strike']['state']??'')==='waiting_instant';$i++)cmd($s,$s->battle['strike']['instant_priority'],'combat_instant_pass');
-if(($s->battle['strike']['state']??'')==='waiting_choice')cmd($s,'host','choose_strike_mode',['mode'=>'normal']);
-finish($s);ca($s->getCard(2)->closed,'no physical opening');ca(($s->getCard(2)->flags['instant_uses_this_turn']['cap']??0)===1,'own usage resource consumed');
-echo "combat no_close/tap/redirect availability and server admission passed\n";
+ca($instants===[],'engaged defender has no combat abilities; order still forbids redirect');
+foreach(['cap','tapcap'] as $key){
+ $bad=(new Engine())->apply($s,'player',new Command('combat_instant_play',['card_id'=>2,'instant_key'=>$key]));
+ ca(!$bad->success,'server rejects engaged defender instant');
+}
+finish($s);ca($s->getCard(2)->closed,'no physical opening');
+ca(empty($s->getCard(2)->flags['instant_uses_this_turn']['cap']),'unavailable instant not consumed');
+echo "combat defender exclusion, no_close and redirect admission passed\n";
 
 // A real after effect kills the next snapshot participant; no second battle may be created.
 $s=os();$s->getCard(3)->prop['instants']=[['key'=>'kill','trigger'=>'turn','target'=>'enemy','effect'=>['type'=>'damage','value'=>100]]];
@@ -118,10 +118,10 @@ $s=cr($s);cmd($s,'player','choose_death_target',['target_id'=>5]);finish($s);
 ca(empty($s->battle['matriarch_order'])&&$s->getCard(5)->zone==='graveyard','death pending resolved before target death stops order');
 echo "target death/nested death pending/grave/reload passed\n";
 
-$s=os();$s->getCard(5)->prop['stamina']=true;$s->getCard(2)->closed=false;
-$s->getCard(2)->prop['instants']=[['key'=>'luck','trigger'=>'combat','phase'=>'dice','target'=>'self','no_close'=>true,'effect'=>['type'=>'dice_choice']]];
-activate($s);chooseOrder($s,2);cmd($s,'player','combat_instant_play',['card_id'=>2,'instant_key'=>'luck']);
+$s=os();$s->getCard(5)->prop['stamina']=true;$s->getCard(3)->closed=false;
+$s->getCard(3)->prop['instants']=[['key'=>'luck','trigger'=>'combat','phase'=>'dice','target'=>'self','no_close'=>true,'effect'=>['type'=>'dice_choice']]];
+activate($s);chooseOrder($s,2);cmd($s,'player','combat_instant_play',['card_id'=>3,'instant_key'=>'luck']);
 for($i=0;$i<10&&empty($s->battle['pending_dice_choice']);$i++)cmd($s,$s->battle['strike']['instant_priority'],'combat_instant_pass');
 ca(!empty($s->battle['pending_dice_choice']),'dice pending');$s=cr($s);cmd($s,'player','choose_dice_choice',['choice'=>'plus:own']);
-ca(!$s->getCard(2)->closed,'no_close survives paused dice choice');finish($s);
+ca(!$s->getCard(3)->closed,'no_close survives paused dice choice');finish($s);
 echo "no_close dice pending/reload preserves physical openness passed\n";

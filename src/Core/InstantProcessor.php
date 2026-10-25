@@ -116,6 +116,21 @@ final class InstantProcessor
     //  ОБЩЕЕ: список доступных инстантов
     // ═══════════════════════════════════════════════════════
 
+    private function combatSourceAvailable(CardInstance $card, array $instant, string $type, string $phase, ?array $strike): bool
+    {
+        if (!$strike) return true;
+        $attacker = (int) ($strike['attacker_id'] ?? 0);
+        $defender = (int) (($strike['defender_id'] ?? 0) ?: ($strike['target_id'] ?? 0));
+        $redirect = ($instant['effect']['type'] ?? '') === 'redirect_strike';
+        if ($card->instanceId === $attacker) {
+            return $type === 'combat' && $redirect && empty($strike['matriarch_order']);
+        }
+        if ($card->instanceId !== $defender) return true;
+        // A turn instant resolves before engagement and pays its usual closure.
+        // During combat only redirection (Mage's trick) is an exception.
+        return $type === 'turn' ? $phase === 'before' : $redirect;
+    }
+
     /**
      * Возвращает список доступных инстантов для игрока.
      * $phase: 'before' | 'combat' | 'after'  (для combat-окна)
@@ -132,10 +147,6 @@ final class InstantProcessor
             $activeKey = $attacker ? $attacker->owner : null;
         }
 
-        $strikeAttackerId = $strike !== null
-            ? (int) ($strike['attacker_id'] ?? 0)
-            : 0;
-
         $result = [];
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $ownerKey) continue;
@@ -146,11 +157,6 @@ final class InstantProcessor
             if (!empty($card->flags['in_stack'])) continue;
             if (empty($card->prop['instants'])) continue;
 
-            // Атакующий уже объявил действие (strike/shot/...) — свои инстанты
-            // в этом сражении не играет, даже если это тот же владелец.
-            if ($strikeAttackerId > 0 && $strikeAttackerId === $card->instanceId) {
-                continue;
-            }
             // Карта в активном pending — тоже занята: отменить и только потом
             // играть инстанты. Даже если pending отменяемый.
             if ($this->isCardInPending($card)) {
@@ -159,6 +165,7 @@ final class InstantProcessor
 
             foreach ($card->prop['instants'] as $inst) {
                 if (($inst['trigger'] ?? '') !== $type) continue;
+                if (!$this->combatSourceAvailable($card, $inst, $type, $phase, $strike)) continue;
                 if (!empty($strike['matriarch_order']) && ($inst['effect']['type'] ?? '') === 'redirect_strike') continue;
                 if ($type === 'combat' && !empty($strike['matriarch_order']) && $this->instantRequiresTap($inst) && $card->closed) continue;
                 if ($type === 'turn' && $this->instantRequiresTap($inst) && $card->closed) continue;
@@ -415,6 +422,7 @@ final class InstantProcessor
             if (($i['key'] ?? '') === $key) { $inst = $i; break; }
         }
         if (!$inst) return Result::error('Инстант не найден');
+        if (!$this->combatSourceAvailable($card, $inst, $wantedType, $phase, $strike)) return Result::error('Существо занято сражением');
         if (!empty($strike['matriarch_order']) && ($inst['effect']['type'] ?? '') === 'redirect_strike') return Result::error('Перенаправление запрещено');
         if (!empty($strike['matriarch_order']) && $this->instantRequiresTap($inst) && $card->closed) return Result::error('Карта не может оплатить закрытие');
         if (!empty($strike['matriarch_order'])) {
@@ -551,6 +559,10 @@ final class InstantProcessor
 
         $source = $this->state->getCard($pc['card_id']);
         if (!$source) return Result::error('Источник не найден');
+        if (!$this->combatSourceAvailable($source, ['effect' => $pc['effect']], 'combat', 'combat', $this->state->battle['strike'] ?? null)) {
+            return Result::error('Существо занято сражением');
+        }
+
 
         $source->flags['in_stack'] = true;
 
@@ -855,6 +867,9 @@ final class InstantProcessor
 
         if (!$source) {
             return ['source' => null, 'applied' => false, 'reason' => 'источник не найден', 'result' => []];
+        }
+        if (!$this->combatSourceAvailable($source, ['effect' => $effect], 'combat', 'combat', $this->state->battle['strike'] ?? null)) {
+            return ['source' => $source, 'applied' => false, 'reason' => 'существо занято сражением', 'result' => []];
         }
         if (empty($effect)) {
             return ['source' => $source, 'applied' => false, 'reason' => 'нет эффекта', 'result' => []];

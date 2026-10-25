@@ -46,20 +46,17 @@ final class TeleportTargetChoice implements ChoiceHandlerInterface
             );
         }
 
-        $items = [];
-        $first = true;
+        $buttons = [];
         foreach ($pt['cells'] as $c) {
             $row = (int) $c['row'];
             $col = (int) $c['col'];
-            $items[] = [
-                'value'   => $row . '_' . $col,
-                'label'   => '(' . $row . ';' . $col . ')',
-                'checked' => $first,
+            $buttons[] = [
+                'label' => '(' . $row . ';' . $col . ')',
+                'url' => $baseUrl . '&cmd=choose_teleport_cell&cell=' . $row . '_' . $col,
             ];
-            $first = false;
         }
 
-        if (empty($items)) {
+        if (empty($buttons)) {
             return new PanelSpec(
                 title: $sourceName . ': нет свободных клеток',
                 buttons: [[
@@ -70,22 +67,10 @@ final class TeleportTargetChoice implements ChoiceHandlerInterface
             );
         }
 
-        $roleParam = $role === 'host' ? 'first' : 'second';
-
+        $buttons[] = ['label' => 'Отмена', 'url' => $baseUrl . '&cmd=cancel_pending', 'class' => 'skip'];
         return new PanelSpec(
             title: $sourceName . ': дверь измерений — куда переместить ' . $targetName . '?',
-            form: [
-                'type'   => 'radio',
-                'name'   => 'cell',
-                'items'  => $items,
-                'hidden' => [
-                    $roleParam => '',
-                    'game'     => $state->gameId,
-                    'cmd'      => 'choose_teleport_cell',
-                ],
-                'submit' => 'Переместить',
-                'cancel' => $baseUrl . '&cmd=cancel_pending',
-            ],
+            buttons: $buttons,
         );
     }
 

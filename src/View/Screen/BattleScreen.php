@@ -1105,15 +1105,12 @@ final class BattleScreen
                 if (!$target) continue;
                 $hidden = !$target->revealed && $target->owner !== $playerKey;
                 $name = $hidden ? '???' : (string) ($cardsInfo[$target->ukid]['name'] ?? $target->ukid);
-                $hp = $hidden ? '?/?' : $target->hp . '/' . $target->hpMax;
-                $items[] = ['value' => (int) $targetId, 'label' => $name,
-                    'label_html' => htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
-                        . ' ' . \Berserk\View\Ui\Coords::renderResult($target->row, $target->col, $playerKey, $target->owner)
-                        . ' (❤️ ' . $hp . ' HP)'];
+                $items[] = \Berserk\View\Ui\CreatureChoice::item($target, $name, $playerKey);
             }
             $statusHtml = \Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(
                 title: 'Выберите цель способности',
                 form: ['type' => 'radio', 'name' => 'target_id', 'items' => $items,
+                    'side_toggle' => count(array_unique(array_column($items, 'side'))) > 1,
                     'hidden' => \Berserk\View\Ui\Form::battleHidden($playerKey, $state->gameId, 'action', [
                         'card_id' => $c->instanceId, 'action_key' => substr($mode, 7),
                         'sel' => $c->instanceId, 'mode' => $mode,

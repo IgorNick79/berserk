@@ -9,6 +9,17 @@ final class CellMarkerPicker
 {
     public static function targets(GameState $state, string $viewerKey, string $baseUrl): array
     {
+        $door = $state->battle['pending_teleport_target'] ?? null;
+        if ($door && ($door['owner'] ?? null) === $viewerKey
+            && \Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\TeleportTargetChoice) {
+            $targets = [];
+            foreach ($door['cells'] as $cell) {
+                $row = (int) $cell['row']; $col = (int) $cell['col']; $key = $row . '_' . $col;
+                $targets[$key] = ['row' => $row, 'col' => $col,
+                    'url' => $baseUrl . '&cmd=choose_teleport_cell&cell=' . $key];
+            }
+            return $targets;
+        }
         $teleport = $state->battle[\Berserk\Core\RangedNeighborTeleport::PENDING] ?? null;
         if ($teleport && $teleport['owner'] === $viewerKey && $teleport['stage'] === 'cell'
             && \Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\RangedNeighborTeleportChoice) {
@@ -60,12 +71,17 @@ final class CellMarkerPicker
         }
         unset($button);
         $spec->cellPicker = $pickerKey !== '' && $pickerTargets !== []
-            ? ['id' => $pickerKey, 'targets' => $pickerTargets, 'title' => isset($state->battle[\Berserk\Core\RangedNeighborTeleport::PENDING]) ? 'Выберите клетку для телепортации' : '🔥 Выберите клетку для костра'] : null;
+            ? ['id' => $pickerKey, 'targets' => $pickerTargets, 'title' => isset($state->battle[\Berserk\Core\RangedNeighborTeleport::PENDING]) || isset($state->battle['pending_teleport_target']) ? 'Выберите клетку для телепортации' : '🔥 Выберите клетку для костра'] : null;
     }
 
     /** Snapshot identity only; no new pending state is written. */
     public static function identity(GameState $state, string $viewerKey): string
     {
+        $door = $state->battle['pending_teleport_target'] ?? null;
+        if ($door && ($door['owner'] ?? null) === $viewerKey
+            && \Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\TeleportTargetChoice) {
+            return hash('sha256', json_encode([$state->gameId, $state->version, $viewerKey, $door], JSON_THROW_ON_ERROR));
+        }
         $teleport = $state->battle[\Berserk\Core\RangedNeighborTeleport::PENDING] ?? null;
         if ($teleport && $teleport['owner'] === $viewerKey && $teleport['stage'] === 'cell'
             && \Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\RangedNeighborTeleportChoice) {

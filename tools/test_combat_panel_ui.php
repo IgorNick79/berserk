@@ -42,7 +42,9 @@ if (in_array('--fixture',$argv??[],true)) {
         $d=combatPanelFixture($stage,$viewer,1);
         battleSnapshotAssert(str_contains($d['info_panel_html'],'data-panel-priority="1"'), 'Every pending/info stage is priority: '.$stage);
         battleSnapshotAssert(str_contains($d['info_panel_html'],'data-battle-fragment="panel_html" hidden'), 'Priority hides creature before JS: '.$stage);
-        battleSnapshotAssert(str_contains($d['info_panel_html'],'>Информация</h3>') && str_contains($d['info_panel_html'],'cell_info.svg'), 'Shared information heading/icon');
+        battleSnapshotAssert(in_array($stage,['instant','instant_result'],true)
+            ? str_contains($d['info_panel_html'],'info-panel-instants')
+            : str_contains($d['info_panel_html'],'>Информация</h3>') && str_contains($d['info_panel_html'],'cell_info.svg'), 'Priority heading or bottom instant section');
         if ($stage==='instant_result') battleSnapshotAssert(str_contains($d['info_panel_html'],'cmd=turn_instant_result_ok'), 'Instant OK survives selected creature');
     }
     $closed=combatPanelFixture('closed','host',1);

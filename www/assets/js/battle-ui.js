@@ -151,7 +151,7 @@
         if (!content) return;
         var key = content.dataset.combatKey || '';
         var priority = content.dataset.panelPriority === '1' || !!content.querySelector('[data-match-pause-content]');
-        var eventBody=content.querySelector('.info-panel-context,[data-match-pause-content]');
+        var eventBody=combatHost.querySelector('.info-panel-instants') || content.querySelector('.info-panel-context,[data-match-pause-content]');
         var eventCopy=eventBody && eventBody.cloneNode(true);
         if(eventCopy) eventCopy.querySelectorAll('[data-pause-countdown],[role="timer"]').forEach(function(timer){timer.remove();});
         var signature=priority ? key+'|'+(eventCopy ? eventCopy.innerHTML : '') : '';

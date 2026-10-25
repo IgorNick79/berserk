@@ -42,14 +42,18 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
  await close.focus();await page.keyboard.press('Enter');assert(await card.isHidden(),'Keyboard close');
  for(const stage of ['combat','pending','instant','instant_result','message']){
   await clickCard(1);await update('normal',1);assert(await card.isVisible(),'Normal inspection before '+stage);
-  await update(stage,1);assert(await card.isHidden()&&await context.isVisible(),'Priority closes old creature: '+stage);
-  assert(await context.locator('.panel-card-heading').innerText()==='Информация','Information heading');
-  assert(await context.locator('.panel-information-icon').evaluate(e=>e.complete&&e.naturalWidth>0),'Provided icon loads');
+  await update(stage,1);
+  const eventPanel=(stage==='instant'||stage==='instant_result')?page.locator('.info-panel-instants'):context;
+  assert(await card.isHidden()&&await eventPanel.isVisible(),'Priority closes old creature: '+stage);
+  if(stage!=='instant'&&stage!=='instant_result'){
+   assert(await context.locator('.panel-card-heading').innerText()==='Информация','Information heading');
+   assert(await context.locator('.panel-information-icon').evaluate(e=>e.complete&&e.naturalWidth>0),'Provided icon loads');
+  }
   assert(await page.locator('.info-panel-footer').isVisible(),'Priority never hides footer');
-  await clickCard(1);await update(stage,1);assert(await card.isHidden()&&await context.isVisible(),'Card cannot hide required UI: '+stage);
-  if(stage==='instant_result')assert(await context.locator('a[href*="cmd=turn_instant_result_ok"]').isVisible(),'OK is visible');
+  await clickCard(1);await update(stage,1);assert(await card.isHidden()&&await eventPanel.isVisible(),'Card cannot hide required UI: '+stage);
+  if(stage==='instant_result')assert(await eventPanel.locator('a[href*="cmd=turn_instant_result_ok"]').isVisible(),'OK is visible');
   if(stage==='combat')assert(await context.locator('a[href*="cmd=confirm_strike"]').isVisible(),'Combat confirmation visible');
-  if(stage==='instant'&&viewer==='host')assert(await context.locator('a[href*="cmd=pass_turn_instant"]').isVisible(),'Instant pass visible');
+  if(stage==='instant'&&viewer==='host')assert(await eventPanel.locator('a[href*="cmd=pass_turn_instant"]').isVisible(),'Instant pass visible');
   await update(stage,1);assert(await card.isHidden(),'Polling preserves priority');
   if(stage==='instant_result'&&viewer==='host'&&(width===1600||width===375))await page.screenshot({path:path.join(output,'information-'+width+'.png')});
   await update('normal',1);assert(await card.isHidden(),'Completed pending does not reopen old image');
