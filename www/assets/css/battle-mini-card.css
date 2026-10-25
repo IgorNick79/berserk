@@ -62,7 +62,7 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 .battle-page [data-mini-card-design="v2"] .fly-slot:has(.attack-target [data-drag-owner="own"]){background:rgba(224,174,40,.46)}
 
 /* Movement destinations stay quiet until the pointer or drag reaches them. */
-.battle-page .battle-field{background:rgba(0,0,0,.65)}
+.battle-page .battle-field{background:rgba(0,0,0,.55)}
 .battle-page .field-cell.move-target{background:rgba(0,200,0,.25);transition:background-color .18s ease}
 .battle-page .field-cell.move-target:hover,
 .battle-page .field-cell.move-target.battle-drag-target{background:rgba(0,200,0,.5)}
@@ -92,6 +92,11 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 .battle-page .cell-marker[data-cell-hint]:focus-visible{outline:1px solid #9d8054;outline-offset:-1px}
 
 /* Empty cells share the same marker component, centred to its content. */
-.battle-page .cell-marker-island{left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%);width:max-content;max-width:calc(100% - 8px);height:22px;padding:3px 4px;border-radius:4px}
+.battle-page .cell-marker-island{left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%);width:max-content;max-width:calc(100% - 8px);height:28px;padding:6px 4px;border-radius:4px}
 .battle-page .cell-marker-island .cell-markers{flex:0 1 auto;width:max-content;height:16px;max-width:100%}
-.battle-page .cell-marker-island--below-fire{top:76px;transform:translateX(-50%)}
+.battle-page .cell-marker-island--below-fire{top:calc(50% + 21px);transform:translateX(-50%)}
+
+/* Neutral cells; ownership stays on the miniature frame. */
+.battle-page [data-mini-card-design="v2"] :is(.fly-slot,.battle-side-slot){background:rgba(0,0,0,.55)}
+.battle-page [data-mini-card-design="v2"] .fly-slot .field-cell{background:transparent}
+.battle-page .cell-marker[data-cell-hint]{color:#111}

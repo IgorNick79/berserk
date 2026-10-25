@@ -63,7 +63,7 @@ final class RowSpellPickChoice implements ChoiceHandlerInterface
             if (!$tc) continue;
             $info = $cardsInfo[$tc->ukid] ?? null;
             $name = $info['name'] ?? '?';
-            $coord = '(' . $tc->row . ';' . $tc->col . ')';
+            $coord = \Berserk\View\Ui\BattlefieldPosition::label($tc->row, $tc->col, $playerKey);
             $items[] = [
                 'value' => (int) $tid,
                 'label' => $name . ' ' . $coord . ' — ' . $tc->hp . '/' . $tc->hpMax,

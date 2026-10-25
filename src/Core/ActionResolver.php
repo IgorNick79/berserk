@@ -2357,6 +2357,10 @@ final class ActionResolver
             return (new WoundTransferProcessor($state, $this->engine))->cancel($playerKey);
         }
 
+        if (!empty($state->battle['pending_gate_pick'])) {
+            return Result::error('Необходимо поставить все врата — отмена невозможна');
+        }
+
         $cancelled = [];
 
         // Простые: unset если owner === playerKey
@@ -2373,7 +2377,6 @@ final class ActionResolver
             ['pending_forced_directional_move', 'owner'],
             ['pending_row_pick',                'owner'],
             ['pending_opponent_row_marker',     'owner'],
-            ['pending_gate_pick',               'owner'],
             ['pending_destroy_self_and_target', 'owner'],
             ['pending_particle_pick',           'owner'],
             ['pending_life_gift',               'owner'],
@@ -5006,6 +5009,11 @@ final class ActionResolver
             return Result::error('Карта недоступна');
         }
 
+        if (ZoneManager::hasBlockingMarker($this->state, $key)) return Result::error('Клетка заблокирована костром');
+        foreach ($this->state->cards as $other) {
+            if ($other->zone === CardInstance::ZONE_FIELD && $other->row === $row && $other->col === $col && $other->instanceId !== $card->instanceId) return Result::error('Клетка занята');
+        }
+
         if (Strangulation::count($card) > 0) return Result::error('Самостоятельное передвижение запрещено маркерами удушения');
         $damage     = (int) $p['damage'];
         $gates      = $p['gates'];
@@ -5059,7 +5067,7 @@ final class ActionResolver
             $this->state->battle['turn_phase']['pending_ack'] = [
                 'label' => 'Демон жадности',
                 'items' => array_merge(
-                    [['standalone_text' => "телепортировался на ({$row};{$col})"]],
+                    [['position_event'=>'teleport', 'row'=>$row, 'col'=>$col]],
                     $hits
                 ),
             ];

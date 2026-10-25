@@ -1,0 +1,17 @@
+const fs=require('fs'),path=require('path'),{execFileSync}=require('child_process');
+const {chromium}=require('C:/Users/mi/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const repo=path.resolve(__dirname,'..'),read=f=>fs.readFileSync(path.join(repo,f),'utf8'),assert=(ok,m)=>{if(!ok)throw Error(m)};
+const fixtures=JSON.parse(execFileSync('C:/OSPanel/modules/php/PHP_8.1/php.exe',[path.join(__dirname,'test_greed_field_fixes.php'),'--fixture'],{encoding:'utf8'}));
+(async()=>{const browser=await chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});try{
+for(const viewer of ['host','player']){const page=await browser.newPage({viewport:{width:1600,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));const d=fixtures[viewer];
+let template=read('templates/screen/battle.tpl').replace(/<script[\s\S]*?<\/script>/g,'').replace(/<link[^>]+>/g,'');let html=template.replace(/{{(\w+)}}/g,(_,key)=>d[key]||'');
+await page.setContent('<body class="battle-page"><style>'+read('www/assets/css/global.css')+read('www/assets/css/battle-mini-card.css')+'</style><div class="screen">'+html+'</div></body>');
+await page.evaluate(()=>{window.actions=[];document.addEventListener('click',e=>{let a=e.target.closest('a[href]');if(a){actions.push(a.getAttribute('href'));e.preventDefault()}})});
+await page.addScriptTag({content:read('www/assets/js/cell-marker-picker.js')});
+assert(await page.locator('[data-cell-marker-compact]').isVisible(),'shared picker visible');assert(await page.locator('.info-panel a[href*="cancel_pending"]').count()===0,'no cancel button');assert((await page.locator('.cell-picker-title').textContent()).includes('врат'),'gate title');
+const key=viewer==='host'?'1_1':'6_5';await page.locator('[data-picker-side="own"]').click();await page.locator('[data-picker-row="3"]').click();let link=page.locator('[data-picker-column="'+key+'"]');assert(await link.isVisible(),'viewer-relative gate column');await link.click();assert((await page.evaluate(()=>actions)).at(-1).includes(viewer==='host'?'row=1&col=1':'row=6&col=5'),'system coordinates preserved');
+assert(await page.locator('.battle-field').evaluate(e=>getComputedStyle(e).backgroundColor)==='rgba(0, 0, 0, 0.55)','field alpha .55');
+assert(await page.locator('.fly-slot,.battle-side-slot').evaluateAll(es=>es.length>0&&es.every(e=>getComputedStyle(e).backgroundColor==='rgba(0, 0, 0, 0.55)')),'fly/grave/terrain alpha .55');
+assert(await page.locator('.fly-card.own,.fly-card.enemy').count()===0,'fly ownership background classes absent');assert(await page.locator('.fly-card .mini-friendly').count()===1,'ownership frame retained');assert(!errors.length,'JS errors');await page.close();}
+console.log('PASS: shared gate picker both viewers; cell navigation/system coordinates; no cancel; .55 field/fly/grave/terrain backgrounds; neutral fly cells, ownership frame retained; no JS errors');
+}finally{await browser.close()}})().catch(e=>{console.error(e);process.exit(1)});

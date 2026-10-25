@@ -14,7 +14,7 @@ use Berserk\View\Ui\PanelSpec;
 final class GatePickChoice implements ChoiceHandlerInterface
 {
     public function pendingKey(): string { return 'pending_gate_pick'; }
-    public function commandTypes(): array { return ['choose_gate', 'cancel_pending']; }
+    public function commandTypes(): array { return ['choose_gate']; }
 
     public function spec(
         GameState $state,
@@ -40,27 +40,16 @@ final class GatePickChoice implements ChoiceHandlerInterface
         $chosen = count($p['chosen']);
         $left   = $need - $chosen;
 
-        $isHost = $playerKey === 'host';
-
         $buttons = [];
         foreach ($p['candidates'] as $k) {
             [$row, $col] = explode('_', $k);
             $row = (int) $row; $col = (int) $col;
 
-            // Зеркалирование для player
-            $uiRow = $isHost ? $row : (7 - $row);
-            $uiCol = $isHost ? $col : (6 - $col);
-
             $buttons[] = [
-                'label' => "({$uiRow};{$uiCol})",
-                'url'   => "{$baseUrl}&cmd=choose_gate&row={$row}&col={$col}",
+                'label' => \Berserk\View\Ui\BattlefieldPosition::label($row, $col, $playerKey),
+                'url' => "{$baseUrl}&cmd=choose_gate&row={$row}&col={$col}",
             ];
         }
-        $buttons[] = [
-            'label' => 'Отмена',
-            'url'   => $baseUrl . '&cmd=cancel_pending',
-            'class' => 'skip',
-        ];
 
         $title = $srcName . ': выбери клетку для врат';
         if ($chosen > 0) {
@@ -78,10 +67,6 @@ final class GatePickChoice implements ChoiceHandlerInterface
         string $playerKey,
         Command $cmd
     ): Result {
-        if ($cmd->type === 'cancel_pending') {
-            return (new \Berserk\Core\ActionResolver($state, $engine))
-                ->cancelPending($playerKey, $cmd);
-        }
         return (new \Berserk\Core\ActionResolver($state, $engine))
             ->chooseGate($playerKey, $cmd);
     }

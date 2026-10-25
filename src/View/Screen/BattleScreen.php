@@ -544,7 +544,7 @@ final class BattleScreen
                     $hpText   = $card->hp . '/' . $this->displayHpMax($card);
                 }
                 $ownerClass = $card->owner === $playerKey ? 'own' : 'enemy';
-                $cellClass .= ' ' . $ownerClass;
+                if (!\Berserk\View\Ui\LiveBattleCard::enabled()) $cellClass .= ' ' . $ownerClass;
                 if ($card->closed && !\Berserk\View\Ui\LiveBattleCard::enabled()) {
                     $cellClass .= ' closed';
                 }
