@@ -23,6 +23,12 @@ final class Engine
 
     public function apply(GameState $state, string $playerKey, Command $cmd): Result
     {
+        if ($cmd->type === 'set_lucktest_url_roll') {
+            $state->historyRecorder?->commandStarted($state, $playerKey, $cmd);
+            $result = LuckTestDebug::setUrlRoll($state, $playerKey, $cmd);
+            $state->historyRecorder?->commandFinished($state, $result);
+            return $result;
+        }
         if (($state->mode === GameSettings::MODE_LUCKTEST && $state->status === 'settings' && $cmd->type === 'confirm_settings')
             || LuckTestDebug::hasInput($cmd) || LuckTestDice::hasQueue($state, $playerKey)) {
             try {

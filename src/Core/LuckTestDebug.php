@@ -10,7 +10,7 @@ final class LuckTestDebug
 {
     public static function hasInput(Command $cmd): bool
     {
-        return $cmd->type === 'set_lucktest_debug' || array_key_exists('lucktest_scenario', $cmd->payload) || array_key_exists('debug_roll', $cmd->payload);
+        return $cmd->type === 'set_lucktest_debug' || array_key_exists('lucktest_scenario', $cmd->payload) || array_key_exists('debug_roll', $cmd->payload) || array_key_exists('lucktest_url_roll', $cmd->payload);
     }
 
     public static function configure(GameState $state, string $actor, Command $cmd): void
@@ -22,6 +22,12 @@ final class LuckTestDebug
             throw new \DomainException('Debug недоступен для этого аккаунта, режима или стадии');
         }
         $id = $state->players[$actor]->userId;
+        if (array_key_exists('lucktest_url_roll', $cmd->payload)) {
+            if ($actor !== 'host') throw new \DomainException('Разрешение URL-бросков задаёт только хост');
+            $enabled = self::urlInput($cmd->payload['lucktest_url_roll']);
+            $state->lucktestDebug['url_roll_enabled'] = $enabled;
+            if (!$enabled) unset($state->lucktestDebug['rolls']);
+        }
         if (array_key_exists('lucktest_scenario', $cmd->payload)) {
             if ($actor !== 'host') throw new \DomainException('Сценарий LuckTest задаёт только хост');
             // confirm_settings is parsed by PrepareProcessor; validate its effective K/quick flag in scenario().
@@ -36,6 +42,33 @@ final class LuckTestDebug
             if ($raw === 'off') unset($state->lucktestDebug['rolls'][(string)$id]);
             else $state->lucktestDebug['rolls'][(string)$id] = ['game_id'=>$state->gameId,'account_id'=>$id,'raw'=>$raw,'state'=>null];
         }
+    }
+
+    public static function urlInput(mixed $value): bool
+    {
+        if (!in_array($value, ['0', '1', 0, 1, false, true], true)) throw new \DomainException('Debug: неверное разрешение URL-бросков');
+        return in_array($value, ['1', 1, true], true);
+    }
+
+    public static function urlAllowed(GameState $state, string $actor): bool
+    {
+        $id = $state->players[$actor]->userId ?? 0;
+        return $state->mode === GameSettings::MODE_LUCKTEST && $state->status !== 'game_over'
+            && $state->winner === null && ($state->lucktestDebug['url_roll_enabled'] ?? false) === true
+            && DebugAccess::allowsId($id);
+    }
+
+    /** Configures only the actor's cursor. No clock, pending, RNG or combat progress. */
+    public static function setUrlRoll(GameState $state, string $actor, Command $cmd): Result
+    {
+        if (!self::urlAllowed($state, $actor)) return Result::error('debug_roll_disabled');
+        try { $raw = self::rollInput($cmd->get('debug_roll')); }
+        catch (\DomainException $e) { return Result::error($e->getMessage()); }
+        $id = $state->players[$actor]->userId;
+        if ($raw === 'off') unset($state->lucktestDebug['rolls'][(string)$id]);
+        else $state->lucktestDebug['rolls'][(string)$id] = ['game_id'=>$state->gameId, 'account_id'=>$id, 'raw'=>$raw, 'state'=>null];
+        $state->bumpVersion();
+        return Result::ok();
     }
 
     public static function rollInput(mixed $raw): string
