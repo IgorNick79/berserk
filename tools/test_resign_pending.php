@@ -37,7 +37,7 @@ function resignState(string $active, string $owner, string $context): GameState 
     $s->battle['degasca_messages'] = ['sentinel'];
     return $s;
 }
-$engine = new Engine();
+$engine = new Engine(null, static fn(): int => 1000);
 $cases = 0;
 foreach (['host','player'] as $active) foreach (['host','player'] as $owner) {
     foreach (['none','cell','target','action','ack','result'] as $context) {
@@ -55,7 +55,9 @@ foreach (['host','player'] as $active) foreach (['host','player'] as $owner) {
             resignAssert($r->events === ['resigned:'.$actor, 'winner:'.$opponent], 'Existing event contract changed');
             $expected = $before;
             $expected['status'] = 'game_over'; $expected['winner'] = $opponent; $expected['version']++;
-            resignAssert($s->toArray() === $expected, 'Surrender must only change status/winner/version; no pending execution: '.$context);
+            $expected['battle']['finished_at'] = 1000;
+            $expected['battle']['result_reason'] = 'resign';
+            resignAssert($s->toArray() === $expected, 'Surrender must only change status/winner/version and result metadata; no pending execution: '.$context);
             foreach (['host','player'] as $repeatActor) {
                 $after = $s->toArray();
                 resignAssert(!$engine->apply($s, $repeatActor, new Command('resign'))->success, 'Repeated surrender must be rejected');

@@ -59,6 +59,7 @@ final class TurnProcessor
         }
 
         $this->state->battle = [
+            'started_at' => $this->engine->serverNow(),
             'turn'   => 1,
             'active' => $activeKey,
             'strike' => null,

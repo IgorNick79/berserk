@@ -783,6 +783,8 @@ final class Engine
 
         $state->winner = $state->getOpponentKey($playerKey);
         $state->status = 'game_over';
+        $state->battle['finished_at'] = $this->serverNow();
+        $state->battle['result_reason'] = 'resign';
         $state->bumpVersion();
 
         return Result::ok(["resigned:{$playerKey}", "winner:{$state->winner}"]);

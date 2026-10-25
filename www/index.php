@@ -1407,12 +1407,9 @@ switch ($state->status) {
     case 'game_over':
         $screenName = 'game_over';
 
-        $youWon = ($state->winner === $playerKey);
-
-        $screenData = [
-            'text'    => $youWon ? 'Победа!' : 'Поражение',
-            'message' => $message ?? '',
-        ];
+        $screenData = (new \Berserk\View\Screen\GameOverScreen($tpl))->prepare($state, $playerKey,
+            $historyRuntime->journals($state->gameId)
+            && $historyRuntime->journalSide($state->gameId, $state->hostId, $state->playerId, $_SESSION) === $playerKey);
         break;
 
     default:
@@ -1448,7 +1445,12 @@ if ($screenName==='battle') {
 } else {
     $menu=\Berserk\View\Ui\GameMenu::preparation(GameTransport::$csrf,$state->getPlayer($playerKey)->soundEnabled,$screenName==='game_over',$state,$playerKey);
     if ($isPreGame) $screenHtml=preg_replace('/<button class="pregame-menu".*?<\/button>/s',$menu,$screenHtml,1);
-    else $screenHtml=$menu.$screenHtml;
+    elseif ($screenName === 'game_over') {
+        $menu = str_replace('<summary aria-label=', '<summary class="battle-menu" aria-label=', $menu);
+        $menu = str_replace('>☰</summary>', '><span class="battle-menu-icon" aria-hidden="true"><i></i><i></i><i></i></span></summary>', $menu);
+        $menu = str_replace('class="game-menu-panel"', 'class="game-menu-panel battle-menu-panel"', $menu);
+        $screenHtml = $menu . $screenHtml;
+    } else $screenHtml=$menu.$screenHtml;
     $scriptsHtml.='<script type="application/json" id="preparation-menu-config">'.json_encode(['game'=>$state->gameId,'csrf'=>GameTransport::$csrf],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>'
         .'<script type="application/json" id="battle-playmats">'.json_encode(['catalog'=>\Berserk\Core\PlaymatCatalog::ITEMS,'csrf'=>GameTransport::$csrf,'state'=>\Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey)],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>'
         .'<script src="/assets/js/battle-playmats.js?v=2"></script><script src="/assets/js/game-menu.js?v=1"></script>';
@@ -1456,7 +1458,6 @@ if ($screenName==='battle') {
 
 if (in_array($screenName,['battle','game_over'],true)
     && $historyRuntime->journals($state->gameId) && $historyRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION)===$playerKey) {
-    if ($screenName==='game_over') $screenHtml .= '<button type="button" class="button" data-action="battle-log" aria-controls="battle-journal">Журнал боя</button>';
     $screenHtml .= '<link rel="stylesheet" href="/assets/css/battle-journal.css?v=4">'
         . '<aside id="battle-journal" class="battle-journal" hidden aria-label="Журнал боя">'
         . '<header class="panel-card-heading"><h3 class="panel-card-title">Журнал боя</h3><button type="button" data-journal-close aria-label="Закрыть журнал">×</button></header>'
@@ -1487,7 +1488,7 @@ $page = $tpl->parse('page.tpl', [
     'role'    => $role,
     'screen'  => $screenHtml,
     'scripts' => $scriptsHtml,
-    'page_class' => $screenName === 'battle' ? 'battle-page' : ($isPreGame ? 'pregame-page' : ''),
+    'page_class' => $screenName === 'battle' ? 'battle-page' : ($screenName === 'game_over' ? 'battle-page result-page' : ($isPreGame ? 'pregame-page' : '')),
     'page_styles' => in_array($screenName, ['battle','game_over'], true) ? '<link rel="stylesheet" href="/assets/css/battle-chat.css?v=6">' : ($isPreGame ? '<link rel="stylesheet" href="/assets/css/pregame.css?v=' . $preGameResourceKey . '">' : ''),
     // PreGame opts into a stable CSS version; battle keeps its existing rkey policy.
     'rkey' => $preGameResourceKey,

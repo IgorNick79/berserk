@@ -1,0 +1,25 @@
+.battle-page .battle-result .result-media { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; }
+.result-video { display: block; width: 100%; height: 100%; object-fit: contain; border: 0; }
+.battle-result .result-summary { padding: 22px 20px; }
+.battle-result .result-outcome { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font: 700 30px/1.2 'Philosopher', Georgia, serif; }
+.battle-result .result-outcome img { flex: 0 0 28px; }
+.battle-result .result-reason { margin: 0; line-height: 1.6; color: var(--ip-muted); }
+.battle-result .result-stats { margin: 26px 0 0; border-top: 1px solid var(--ip-edge); }
+.battle-result .result-stats > div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--ip-edge); }
+.battle-result .result-stats dt { color: var(--ip-muted); font-size: 14px; }
+.battle-result .result-stats dd { margin: 0; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.battle-result .result-stat-note { font-size: 12px; line-height: 1.5; color: var(--ip-muted); }
+.battle-page .battle-result .info-panel-footer .info-actions { gap: 12px; }
+.battle-result .result-share img { display: block; width: 40px; height: 40px; object-fit: contain; }
+.battle-result .battle-icon-actions { margin-left: auto; }
+/* The shared account menu uses the same bronze burger as the battle. */
+.result-page .game-menu > .battle-menu { position: relative; top: 0; left: 0; display: flex; align-items: center; justify-content: center; }
+.result-page .game-menu > .battle-menu-panel { position: absolute; top: 48px; }
+.result-page .game-menu:not([open]) > .battle-menu-panel { display: none; }
+@media (max-width: 700px) {
+    .battle-page .battle-result { padding: 58px 8px 8px; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(120px, 42%) minmax(0, 1fr); gap: 8px; }
+    .battle-result .result-summary { padding: 14px; }
+    .battle-result .result-outcome { font-size: 24px; }
+    .battle-result .result-stats { margin-top: 16px; }
+    .battle-result .result-stats > div { padding: 12px 0; }
+}

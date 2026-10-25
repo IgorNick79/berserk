@@ -302,6 +302,8 @@ final class DamageResolver
             if (!$this->hasCreaturesOnField($key)) {
                 $this->state->winner = $this->state->getOpponentKey($key);
                 $this->state->status = 'game_over';
+                $this->state->battle['finished_at'] = time();
+                $this->state->battle['result_reason'] = 'elimination';
                 return;
             }
         }
