@@ -22,3 +22,9 @@ Actual checks:
 No Queen of the Swamp-specific implementation or data was changed. No database-backed game was started; local fixture tests use actual engine/renderer code, not production card catalog data. Full live server/network polling was not exercised.
 
 Changed source files: src/Core/ActionResolver.php, src/Core/TurnPhaseProcessor.php, src/Core/Choice/{GatePickChoice,GreedTeleportChoice,RowPickChoice,RowSpellPickChoice,TurnAckChoice}.php, src/View/Screen/Battle/InfoPanel.php, src/View/Screen/BattleScreen.php, src/View/Ui/CellMarkerPicker.php, www/assets/css/battle-mini-card.css, templates/screen/battle.tpl (CSS cache version). Tests: tools/test_greed_field_fixes.php/.cjs and tools/test_cell_stack.cjs. Evidence: docs/evidence/cell-stack/*.png.
+
+Rune die / button palette follow-up:
+- RowSpellPickChoice used a plain numeric value instead of the shared DiceValue presentation. It now renders the saved die with the existing SVG die component; no rolling or resolution logic changed.
+- Tergala row buttons say only Row I/II/III (Russian), with green own-half / red enemy-half semantic button colors. Existing choose_row mapping retained.
+- Greed teleport buttons use the same green/red palette based on BattlefieldPosition (field half relative to viewer), not the source creature owner.
+- Actual PHP checks through BattleScreen/InfoPanel passed for all six saved die values, both viewers, render immutability and button sides. Actual headless Edge checks passed for die visibility/path, damage text, red/green theme colors, three red and three own row buttons without ownership wording; existing gate picker and field checks also passed.

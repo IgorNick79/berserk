@@ -47,8 +47,10 @@ final class GreedTeleportChoice implements ChoiceHandlerInterface
                 if ($other->zone === \Berserk\Core\CardInstance::ZONE_FIELD && $other->row === $row && $other->col === $col && $other->instanceId !== $p['source_id']) $occupied = true;
             }
             if ($occupied) continue;
+            $pos = \Berserk\View\Ui\BattlefieldPosition::display($row, $col, $playerKey);
             $buttons[] = [
                 'label' => \Berserk\View\Ui\BattlefieldPosition::label($row, $col, $playerKey),
+                'class' => 'coords--' . $pos['side'] . ($pos['side'] === 'enemy' ? ' red' : ''),
                 'label_html' => \Berserk\View\Ui\Coords::render($row, $col, $playerKey),
                 'url' => "{$baseUrl}&cmd=choose_greed_teleport&row={$row}&col={$col}",
             ];

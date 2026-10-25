@@ -48,8 +48,8 @@ final class RowPickChoice implements ChoiceHandlerInterface
             $physicalRow = $playerKey === 'host' ? $uiRow : 7 - $uiRow;
             $pos = \Berserk\View\Ui\BattlefieldPosition::display($physicalRow, 1, $playerKey);
             $buttons[] = [
-                'label' => ($pos['side'] === 'own' ? 'Свой' : 'Вражеский') . ' ряд ' . \Berserk\View\Ui\Coords::rowLabel($pos['row']),
-                'class' => 'coords--' . $pos['side'],
+                'label' => 'Ряд ' . \Berserk\View\Ui\Coords::rowLabel($pos['row']),
+                'class' => 'coords--' . $pos['side'] . ($pos['side'] === 'enemy' ? ' red' : ''),
                 'url'   => "{$baseUrl}&cmd=choose_row&row={$uiRow}",
             ];
         }

@@ -50,7 +50,7 @@ final class RowSpellPickChoice implements ChoiceHandlerInterface
             $resultHtml = '<div class="dice-block">'
                 . '<div class="dice-column">'
                 . '<div class="label">Кубик</div>'
-                . '<div class="dice">' . $dice . '</div>'
+                . '<div class="dice">' . \Berserk\View\Ui\DiceValue::render($dice) . '</div>'
                 . '</div>'
                 . '</div>'
                 . '<p><b>Урон: ' . $val . ' на цель</b></p>';
