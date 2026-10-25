@@ -149,3 +149,8 @@
 .battle-page .memory-loss-notice{padding:12px;margin-bottom:12px;background:var(--ip-surface,#fbe9e7);border-left:3px solid #d96255;border-radius:4px}
 .battle-page .memory-loss-notice h3{margin-top:0}
 .battle-page .memory-loss-notice p:last-child{margin-bottom:0}
+
+/* Instants share the same scrollable context as choices and confirmations. */
+.battle-page .info-panel-context .info-panel-instants{max-height:none;overflow:visible;padding:0;border:0}
+.battle-page .creature-choice-health{flex:0 0 auto;white-space:nowrap;font-size:12px}
+.battle-page .choice-radio>span:has(.creature-choice-health){flex-wrap:wrap;row-gap:3px}

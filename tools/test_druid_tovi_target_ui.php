@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+if (($argv[1]??'')==='--fixture') ob_start();
 require __DIR__.'/test_ajax_multi_target.php';
 use Berserk\Core\{BattleHelper,Command,Engine,GameState};
 use Berserk\Core\Choice\ForcedDirectionalMoveChoice;
@@ -30,6 +31,7 @@ foreach(['host','player'] as $owner)foreach(['heal','throw'] as $kind){
     mtAssert(substr_count($html,'name="target_id" value=')===count($targets),'No additional targets');
     mtAssert(str_contains($html,'name="action_key" value="test"'),'Native action key preserved');
     mtAssert(!str_contains($html,'Цель <2>'),'Names escaped');
+    mtAssert($kind==='heal' ? str_contains($html,'creature-choice-health')&&str_contains($html,'8/10 HP') : !str_contains($html,'creature-choice-health'),'Current HP appears only for healing targets');
     mtAssert($s->toArray()===$before,'UI has no game mutations');
     $other=$owner==='host'?'player':'host';
     mtAssert(!str_contains($screen->prepare($s,$other,$other,null,$info,['sel'=>1,'mode'=>'action:test'])['data']['info_panel_html'],'name="target_id"'),'Opponent cannot use active radio form');
@@ -54,3 +56,9 @@ $s=mtFixture('heal');unset($s->battle['pending_multi_heal']);$s->battle['strike'
 $html=(new InfoPanel($tpl))->render($s,'host','host',[],'?first&game=1');
 mtAssert(str_contains($html,'+1 ❤️ HP'),'Healing result has heart before HP');
 echo "Druid/Tovi target radios, coordinates, privacy and HP results passed\n";
+
+$s=mtFixture('heal');$info=[];foreach($s->cards as $c)$info[$c->ukid]=['name'=>'Существо '.$c->instanceId];
+$before=$s->toArray();$data=$screen->prepare($s,'host','host',null,$info,['sel'=>1])['data'];$html=$data['info_panel_html'];
+mtAssert(str_contains($html,'name="cmd" value="choose_multi_heal"')&&str_contains($html,'8/10 HP'),'Druid multi-heal pending keeps current/max HP after shared decoration');
+mtAssert($s->toArray()===$before,'Health labels do not change healing or pending');
+if (($argv[1]??'')==='--fixture') { ob_end_clean();echo json_encode($data,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);exit; }

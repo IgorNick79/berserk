@@ -92,15 +92,17 @@ final class InfoPanel
         if ($inInstantStack) $combatKey = 'instant:' . ($state->battle['turn'] ?? 0);
         if ($priority && $combatKey === '') $combatKey = 'information:' . ($state->battle['turn'] ?? 0);
         $body = $actionChoiceHtml !== '' ? $actionChoiceHtml : $this->renderOchiKrongaNotice() . $this->renderBody();
-        $instantAtBottom = $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
+        $instantWindow = $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
+        $contextBody = $instantWindow
+            ? '<section class="info-panel-instants" aria-label="Инстанты">' . $body . '</section>'
+            : $body . $this->renderInstantOffer();
         return '<header class="info-panel-header">' . $this->renderStatusHeader() . $this->renderTimer() . '</header>'
             . '<div class="info-panel-content" data-panel-priority="' . ($priority ? '1' : '0') . '" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" data-inspected-card="' . $inspectedCardId . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
             . ($priority ? '' : $pileHtml)
             . '<div class="battle-selected-card" data-battle-fragment="panel_html"' . ($exclusive ? ' hidden' : '') . '>' . $selectedCardHtml . '</div>'
-            . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive && !$instantAtBottom ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/cell_info.svg" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">Информация</h3></div><div class="combat-panel-body">' : '') . ($instantAtBottom ? '' : $body) . ($exclusive && !$instantAtBottom ? '</div>' : '') . '</div>'
+            . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/cell_info.svg" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">Информация</h3></div><div class="combat-panel-body">' : '') . $contextBody . ($exclusive ? '</div>' : '') . '</div>'
             . '</div>'
-            . ($instantAtBottom ? '<section class="info-panel-instants" aria-label="Инстанты">' . $body . '</section>' : $this->renderInstantOffer())
             . '<footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
     }
 

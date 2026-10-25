@@ -6,10 +6,12 @@ use Berserk\Core\{CardInstance, GameState};
 /** Shared creature presentation; never changes gameplay candidates. */
 final class CreatureChoice
 {
-    public static function item(CardInstance $card, string $name, string $viewer): array
+    public static function item(CardInstance $card, string $name, string $viewer, bool $showHealth = false): array
     {
         return ['value' => $card->instanceId, 'label' => $name, 'side' => $card->owner === $viewer ? 'own' : 'enemy',
             'label_html' => '<span class="creature-choice-name">' . htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>'
+                . ($showHealth && ($card->owner === $viewer || $card->revealed)
+                    ? '<span class="creature-choice-health">❤ ' . $card->hp . '/' . $card->hpMax . ' HP</span>' : '')
                 . Coords::renderResult($card->row, $card->col, $viewer, $card->owner)];
     }
 
@@ -34,13 +36,16 @@ final class CreatureChoice
             }
         }
         if ($spec->form === null || !in_array($spec->form['name'] ?? '', ['target_id', 'target_ids[]', 'card_id'], true)) return;
+        $showHealth = in_array($spec->form['hidden']['cmd'] ?? '', ['choose_multi_heal', 'choose_wild_healer_heal'], true)
+            || (($spec->form['hidden']['cmd'] ?? '') === 'choose_instant_pick'
+                && ($state->battle['pending_instant_pick']['effect']['type'] ?? '') === 'heal');
         foreach ($spec->form['items'] as &$item) {
             $value = (string) ($item['value'] ?? '');
             if (!ctype_digit($value)) continue;
             $card = $state->getCard((int) $value);
             if (!$card || !in_array($card->zone, ['field', 'flying'], true)) continue;
             $name = !$card->revealed && $card->owner !== $viewer ? '???' : (string) ($catalog[$card->ukid]['name'] ?? $card->ukid);
-            $item = array_replace($item, self::item($card, $name, $viewer));
+            $item = array_replace($item, self::item($card, $name, $viewer, $showHealth));
         }
         unset($item);
         $spec->form['side_toggle'] = ($spec->form['type'] ?? 'radio') === 'radio' && count(array_unique(array_column($spec->form['items'], 'side'))) > 1;

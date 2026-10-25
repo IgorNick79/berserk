@@ -95,9 +95,11 @@ uxCheck(str_contains($html,'creature-choice-name') && str_contains($html,'coords
 $html=uxFixture('impact')['info_panel_html'];
 uxCheck(!str_contains($html,'class="strike-dice"') && !str_contains($html,'class="dice-value"'),'impact result has no dice');
 $html=uxFixture('instant')['info_panel_html'];
-uxCheck(strpos($html,'info-panel-instants')<strpos($html,'<footer') && strpos($html,'info-panel-instants')>strpos($html,'info-panel-content'),'instant offer is above footer, after content');
+$dom=new DOMDocument();@$dom->loadHTML($html);$x=new DOMXPath($dom);
+uxCheck($x->query('//*[contains(@class,"info-panel-context")]//section[contains(@class,"info-panel-instants")]')->length===1,'instant offer is inside shared information context');
 $html=uxFixture('stack')['info_panel_html'];
-uxCheck(strpos($html,'Стек инстантов')>strpos($html,'info-panel-instants'),'actual instant stack uses bottom section');
+uxCheck(strpos($html,'Стек инстантов')>strpos($html,'info-panel-instants'),'actual instant stack uses shared context section');
+@$dom->loadHTML($html);uxCheck((new DOMXPath($dom))->query('//*[contains(@class,"info-panel-context")]//section[contains(@class,"info-panel-instants")]')->length===1,'active instant stack is in the same scrollable context');
 $html=uxFixture('death')['info_panel_html'];
 uxCheck(substr_count($html,'type="radio" name="target_id"')===3 && str_contains($html,'value="choose_death_target"'),'death choice is radio with original command');
 $s=uxState(); $s->getCard(2)->flags['memory_loss_sources']=[1=>true];

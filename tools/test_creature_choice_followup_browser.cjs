@@ -3,7 +3,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'C:/Users/mi/.cache/code
 const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const out=process.env.CREATURE_CHOICE_ARTIFACTS||path.resolve(root,'../king-priest-ui-validation');fs.mkdirSync(out,{recursive:true});
 const check=(v,m)=>{if(!v)throw Error(m)};
-function fixture(stage){const file=['memory_notice','area_impact'].includes(stage)?'test_king_priest_main_merge.php':'test_creature_choice_followup.php';return JSON.parse(execFileSync(process.env.PHP_BINARY||'C:/OSPanel/modules/php/PHP_8.1/php.exe',[root+'/tools/'+file,'--fixture',stage],{encoding:'utf8'}));}
+function fixture(stage){const file=stage==='heal'?'test_druid_tovi_target_ui.php':['memory_notice','area_impact'].includes(stage)?'test_king_priest_main_merge.php':'test_creature_choice_followup.php';return JSON.parse(execFileSync(process.env.PHP_BINARY||'C:/OSPanel/modules/php/PHP_8.1/php.exe',[root+'/tools/'+file,'--fixture',stage],{encoding:'utf8'}));}
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE||'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
  try{for(const width of (process.env.CHOICE_WIDTH?[Number(process.env.CHOICE_WIDTH)]:[1600,800,375])){
@@ -46,9 +46,9 @@ function fixture(stage){const file=['memory_notice','area_impact'].includes(stag
   await page.screenshot({path:path.join(out,`door-${width}.png`)});
   for(const stage of ['instant','stack']){
    await show(stage);
-   const b=await page.locator('.info-panel-instants').boundingBox(),f=await page.locator('.info-panel-footer').boundingBox();
-   check(b&&f&&b.y+b.height<=f.y+1,'instant panel directly above footer');
-   check(await page.locator('.info-panel-instants').evaluate(e=>getComputedStyle(e).borderTopWidth)==='1px','instant separator visible');
+   const b=await page.locator('.info-panel-instants').boundingBox(),f=await page.locator('.info-panel-content').boundingBox();
+   check(b&&f&&b.y>=f.y && b.y+b.height<=f.y+f.height+1,'instant panel fits within shared scrollable content');
+   check(await page.locator('.info-panel-instants').evaluate(e=>getComputedStyle(e).borderTopWidth)==='0px','no detached footer separator');
   }
   await show('impact');check(await page.locator('.info-panel .dice-value').count()===0,'impact has no dice');
   await show('death');check(await page.locator('input[type="radio"][name="target_id"]').count()===3,'King of Dead uses radio choice');
@@ -68,6 +68,11 @@ function fixture(stage){const file=['memory_notice','area_impact'].includes(stag
   check(await page.locator('.impact-targets').evaluate(e=>getComputedStyle(e).borderTopWidth)==='1px','area target list has a divider');
   check(await page.locator('.impact-targets li').count()===2,'actual area victims remain separate rows');
   await page.screenshot({path:path.join(out,`area-impact-${width}.png`)});
+  await show('heal');
+  check(await page.locator('.creature-choice-health:visible').count()>0,'Druid healing shows current and maximum HP');
+  check(await page.locator('.creature-choice-health').first().innerText()==='❤ 8/10 HP','Druid health values are actual');
+  check(await page.locator('.info-panel .choice-radio').evaluateAll(rows=>rows.every(row=>row.scrollWidth<=row.clientWidth+1)),'Healing rows fit viewport');
+  await page.screenshot({path:path.join(out,`healing-${width}.png`)});
   check(!errors.length,errors.join('\n'));console.log(`PASS ${width}px: side toggle/polling, compact rows, door grid, instant footer, no dice, death radios, vampire contrast`);
   await page.close();
  }}finally{await browser.close();}

@@ -856,13 +856,17 @@ final class BattleScreen
             && $c->owner === $playerKey && !\Berserk\Core\MatchPause::blocking($state)
             && ChoiceRegistry::current($state) === null
             && empty($state->battle['turn_instant_stack']) && empty($state->battle['turn_instant_result'])) {
+            $showHealth = false;
+            foreach ($c->effectiveProp()['actions'] ?? [] as $action) {
+                if (($action['key'] ?? $action['type'] ?? '') === substr($mode, 7)) $showHealth = ($action['type'] ?? '') === 'heal';
+            }
             $items = [];
             foreach ($attackTargets as $targetId => $_) {
                 $target = $state->getCard((int) $targetId);
                 if (!$target) continue;
                 $hidden = !$target->revealed && $target->owner !== $playerKey;
                 $name = $hidden ? '???' : (string) ($cardsInfo[$target->ukid]['name'] ?? $target->ukid);
-                $items[] = \Berserk\View\Ui\CreatureChoice::item($target, $name, $playerKey);
+                $items[] = \Berserk\View\Ui\CreatureChoice::item($target, $name, $playerKey, $showHealth);
             }
             return \Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(
                 title: 'Выберите цель способности',
