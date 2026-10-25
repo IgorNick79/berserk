@@ -19,7 +19,7 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
  let version=0;
  async function update(stage,sel){const d=fixture(stage,viewer,sel);await page.evaluate(({d,v})=>{const fragments={};for(const key of ['field_html','fly_zones_html','panel_html','piles_html','pile_reveal_html','info_panel_html'])fragments[key]=d[key]||'';if(!testSnapshot({sync_version:v,fragments,ui:d.ui}))throw Error('Snapshot failed');},{d,v:++version});await page.waitForTimeout(20);}
  const card=page.locator('.battle-selected-card'),context=page.locator('.info-panel-context');
- const clickCard=id=>page.locator('.battle-field .card-link[href*="sel='+id+'"]').first().click();
+ const clickCard=async id=>{const inspected=page.locator('.battle-field .card-link[href*="inspect='+id+'"]');return (await inspected.count()?inspected:page.locator('.battle-field .card-link[href*="sel='+id+'"]')).first().click();};
  assert(await card.isVisible(),'Normal card visible');
  await clickCard(5);assert(await card.isHidden(),'Previous card hidden immediately during selection request');
  await page.waitForTimeout(120);assert(await card.isHidden(),'Previous card stays hidden while network is delayed');
@@ -50,7 +50,8 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
    assert(await context.locator('.panel-information-icon').evaluate(e=>e.complete&&e.naturalWidth>0),'Provided icon loads');
   }
   assert(await page.locator('.info-panel-footer').isVisible(),'Priority never hides footer');
-  await clickCard(1);await update(stage,1);assert(await card.isHidden()&&await eventPanel.isVisible(),'Card cannot hide required UI: '+stage);
+  await clickCard(1);await update(stage,1);assert(await card.isVisible()&&await eventPanel.isHidden(),'Explicit inspection overlays required UI: '+stage);
+  await card.locator('[data-panel-card-close]').focus();await page.keyboard.press('Enter');assert(await card.isHidden()&&await eventPanel.isVisible(),'Cross restores required UI: '+stage);
   if(stage==='instant_result')assert(await eventPanel.locator('a[href*="cmd=turn_instant_result_ok"]').isVisible(),'OK is visible');
   if(stage==='combat')assert(await context.locator('a[href*="cmd=confirm_strike"]').isVisible(),'Combat confirmation visible');
   if(stage==='instant'&&viewer==='host')assert(await eventPanel.locator('a[href*="cmd=pass_turn_instant"]').isVisible(),'Instant pass visible');
@@ -68,6 +69,6 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
   await update('friendly_targets',1);const ally=page.locator('.field-cell.attack-target').filter({has:page.locator('[data-drag-owner="own"]')}).first();assert(await ally.evaluate(e=>getComputedStyle(e).backgroundColor==='rgba(224, 174, 40, 0.46)'),'Own target filled yellow');
  }
  assert(!errors.length,errors.join('\n'));
- console.log('PASS '+width+'px '+viewer+': hover/keyboard close, polling, all pending + OK, instant priority, closed overlay and target fills');await page.close();
+ console.log('PASS '+width+'px '+viewer+': hover/keyboard close, polling, all pending + OK, instant inspection, closed overlay and target fills');await page.close();
 }
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

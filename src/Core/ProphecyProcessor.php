@@ -75,6 +75,9 @@ final class ProphecyProcessor
         $originalIds = [];
         foreach ($peeked['cards'] as $c) {
             $originalIds[] = $c->instanceId;
+            // A shuffled deck has explicit order values. Normal prophecy puts
+            // revealed cards below it; only Machinator may explicitly put one on top.
+            $c->order = null;
         }
 
         // Собираем карты с prophecy_summon — каждая даёт свою кнопку

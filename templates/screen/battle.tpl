@@ -33,7 +33,7 @@
 </div>
 <script src="/assets/js/cell-marker-picker.js?v=1" defer></script>
 <script src="/assets/js/creature-choice.js?v=1" defer></script>
-<script src="/assets/js/battle-ui.js?v=14" defer></script>
+<script src="/assets/js/battle-ui.js?v=15" defer></script>
 <script src="/assets/js/battle-panel-themes.js?v=2" defer></script>
 <script src="/assets/js/card-image-popup.js?v=1" defer></script>
 

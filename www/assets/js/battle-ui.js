@@ -169,16 +169,19 @@
         var selected = content.querySelector("[data-battle-fragment='panel_html']");
         var context = content.querySelector('.info-panel-context');
         var card = selected && selected.querySelector('[data-panel-card-id]');
-        var inspect = !!(!priority && key && inspectedCombatCard && card && (Number(card.dataset.panelCardId) === inspectedCombatCard || combatCardViewOpen));
+        var requestedCard = inspectedCombatCard || Number(content.dataset.inspectedCard) || 0;
+        var inspect = !!(key && requestedCard && card && Number(card.dataset.panelCardId) === requestedCard && closedCardId !== requestedCard);
         combatCardViewOpen = inspect;
-        if (priority && card) closedCardId = Number(card.dataset.panelCardId);
+
         var manuallyClosed = !!(card && closedCardId === Number(card.dataset.panelCardId));
         // The old fragment can survive until the selection snapshot arrives.
         // Never reopen it for a different creature while that request is pending.
         var waitingForCard = !!(inspectedCombatCard && card && Number(card.dataset.panelCardId) !== inspectedCombatCard);
         if (!key && card && Number(card.dataset.panelCardId) === inspectedCombatCard) inspectedCombatCard = 0;
-        if (selected) selected.hidden = priority || manuallyClosed || waitingForCard || (!!key && !inspect);
-        if (context) context.hidden = !priority && inspect;
+        if (selected) selected.hidden = manuallyClosed || waitingForCard || (!!key && !inspect);
+        if (context) context.hidden = inspect;
+        var instants = combatHost.querySelector('.info-panel-instants');
+        if (instants) instants.hidden = inspect;
         var footer = combatHost.querySelector('.info-panel-footer');
         if (footer) footer.hidden = inspect && !secondary;
         Array.from(content.children).forEach(function(child){
@@ -187,10 +190,10 @@
             else if(child.hasAttribute('data-secondary-hidden')){child.hidden=child.dataset.secondaryHidden==='true';delete child.dataset.secondaryHidden;}
         });
         if(!secondary){
-            if(selected)selected.hidden=priority || manuallyClosed || waitingForCard || (!!key && !inspect);
-            if(context)context.hidden=!priority && inspect;
+            if(selected)selected.hidden=manuallyClosed || waitingForCard || (!!key && !inspect);
+            if(context)context.hidden=inspect;
         }
-        content.dataset.combatView = priority ? 'information' : (key ? (inspect ? 'card' : 'combat') : 'normal');
+        content.dataset.combatView = inspect ? 'card' : (priority ? 'information' : (key ? 'combat' : 'normal'));
     }
     if (combatHost) {
         root.addEventListener('click', function (event) {
@@ -212,10 +215,10 @@
             if (url.origin !== location.origin || url.pathname !== location.pathname) return;
             if (url.searchParams.has('cmd')) {
                 inspectedCombatCard = 0; hideHint(); syncCombatPanel();
-            } else if (link.classList.contains('card-link') && url.searchParams.has('sel')) {
+            } else if (link.classList.contains('card-link') && (url.searchParams.has('sel') || url.searchParams.has('inspect'))) {
                 if(secondary){secondary.hidden=true;secondary=null;secondaryDock.hidden=true;}
                 closedCardId = 0;
-                inspectedCombatCard = Number(url.searchParams.get('sel')) || 0;
+                inspectedCombatCard = Number(url.searchParams.get('inspect') || url.searchParams.get('sel')) || 0;
                 hideHint(); syncCombatPanel();
                 // Existing battle-sync handles selection and retrieves fresh card HTML.
             }

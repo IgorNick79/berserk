@@ -19,6 +19,8 @@ final class BattleScreen
 {
     public function __construct(private Template $tpl) {}
 
+    private string $inspectionBase = '';
+
     /**
      * @return array{screen: string, data: array}
      */
@@ -92,6 +94,11 @@ final class BattleScreen
         $pendingDeathTargets = $this->pendingDeathTargets($state, $playerKey, $baseUrl);
         $pendingAllyModifierTargets = $this->pendingAllyModifierTargets($state, $playerKey, $baseUrl);
 
+        $actionChoice = $this->actionTargetChoice($state, $playerKey, $selectedCardId, $cardsInfo,
+            $baseUrl, $mode, $isActive, $strike, $attackTargets);
+        $this->inspectionBase = (InfoPanel::hasRequiredInteraction($state) || $actionChoice !== '')
+            ? $baseUrl . '&sel=' . $selectedCardId . '&mode=' . rawurlencode($mode) : '';
+
         // Порядок осей
         $rowOrder = $isHost ? [6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6];
         $colOrder = $isHost ? [1, 2, 3, 4, 5] : [5, 4, 3, 2, 1];
@@ -134,8 +141,9 @@ final class BattleScreen
             . '" data-drag-selected="' . $selectedCardId . '"></span>' . $fieldHtml;
         $pilesHtml = $this->buildPiles($state, $playerKey, $oppKey, $baseUrl);
         $panelHtml      = $this->buildPanel(
-            $state, $playerKey, $selectedCardId, $cardsInfo,
-            $baseUrl, $mode, $isActive, $strike, $attackTargets, $explicitAttackMode
+            $state, $playerKey, $ui['inspect'] ?? $selectedCardId, $cardsInfo,
+            $baseUrl, $mode, $isActive, $strike, $attackTargets, $explicitAttackMode,
+            isset($ui['inspect']) || InfoPanel::hasRequiredInteraction($state) || $actionChoice !== ''
         );
         
         $pilePanelHtml = '';
@@ -149,7 +157,7 @@ final class BattleScreen
                 $pilePanelHtml = $this->buildPilePanel($state, $playerKey, $oppKey, $cardsInfo, $ui['pile'], $baseUrl, $selectedCardId);
             }
         }
-        $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml, $pilePanelHtml);
+        $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml, $pilePanelHtml, $actionChoice, $ui['inspect'] ?? 0);
 
         $debugHtml = '';
         if (!\Berserk\Core\MatchPause::blocking($state) && \Berserk\Auth\DebugAccess::forPlayer($state, $playerKey)) {
@@ -169,6 +177,7 @@ final class BattleScreen
                     'mode' => $ui['mode'],
                     'pile' => $ui['pile'],
                     'mode_explicit' => $ui['mode_explicit'],
+                    ...(isset($ui['inspect']) ? ['inspect' => $ui['inspect']] : []),
                 ],
                 'mini_card_design' => \Berserk\View\Ui\LiveBattleCard::enabled() ? 'v2' : 'legacy',
                 'pause_root_attr' => \Berserk\Core\MatchPause::blocking($state) ? 'data-match-paused="1"' : '',
@@ -213,6 +222,10 @@ final class BattleScreen
             }
         }
 
+        $inspect = (int) ($source['inspect'] ?? 0);
+        $inspected = $state->getCard($inspect);
+        if (!$inspected || !$this->isSelectableBattleCard($inspected, $playerKey)) $inspect = 0;
+
         $rawMode = (string) ($source['mode'] ?? 'strike');
         $modeExplicit = array_key_exists('mode', $source) && $rawMode !== '';
         $mode = $rawMode === '' ? 'strike' : $rawMode;
@@ -233,6 +246,7 @@ final class BattleScreen
             'mode' => $mode,
             'pile' => $pile,
             'mode_explicit' => $modeExplicit,
+            ...($inspect > 0 ? ['inspect' => $inspect] : []),
         ];
     }
 
@@ -454,6 +468,7 @@ final class BattleScreen
                             $cellContent = $cardBody;
                         }
                         if ($index === 0) $firstClass = $cellClass;
+                        $cellContent = $this->inspectableCard($cellContent, $card, $playerKey);
                         $variants .= '<div data-cell-occupant="' . $card->instanceId
                             . '" data-occupant-class="' . htmlspecialchars($cellClass, ENT_QUOTES)
                             . '"' . ($index > 0 ? ' hidden' : '') . '>' . $cellContent . '</div>';
@@ -590,6 +605,7 @@ final class BattleScreen
                     $cellContent = $cardBody;
                 }
 
+                $cellContent = $this->inspectableCard($cellContent, $card, $playerKey);
                 $cardsHtml[] = $this->tpl->parse('includes/battle_cell.tpl', [
                     'cl'      => $cellClass,
                     'content' => $cellContent,
@@ -830,6 +846,47 @@ final class BattleScreen
 
     // ─── Панель выбранной карты ──────────────────────────────
 
+    private function actionTargetChoice(GameState $state, string $playerKey, int $selectedCardId, array $cardsInfo,
+        string $baseUrl, string $mode, bool $isActive, ?array $strike, array $attackTargets): string
+    {
+        $c = $state->getCard($selectedCardId);
+        if (!$c || InfoPanel::hasRequiredInteraction($state)) return '';
+        // Use the exact same native candidate set as the battlefield highlights.
+        if ($isActive && !$strike && str_starts_with($mode, 'action:') && !empty($attackTargets)
+            && $c->owner === $playerKey && !\Berserk\Core\MatchPause::blocking($state)
+            && ChoiceRegistry::current($state) === null
+            && empty($state->battle['turn_instant_stack']) && empty($state->battle['turn_instant_result'])) {
+            $items = [];
+            foreach ($attackTargets as $targetId => $_) {
+                $target = $state->getCard((int) $targetId);
+                if (!$target) continue;
+                $hidden = !$target->revealed && $target->owner !== $playerKey;
+                $name = $hidden ? '???' : (string) ($cardsInfo[$target->ukid]['name'] ?? $target->ukid);
+                $items[] = \Berserk\View\Ui\CreatureChoice::item($target, $name, $playerKey);
+            }
+            return \Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(
+                title: 'Выберите цель способности',
+                form: ['type' => 'radio', 'name' => 'target_id', 'items' => $items,
+                    'side_toggle' => count(array_unique(array_column($items, 'side'))) > 1,
+                    'hidden' => \Berserk\View\Ui\Form::battleHidden($playerKey, $state->gameId, 'action', [
+                        'card_id' => $c->instanceId, 'action_key' => substr($mode, 7),
+                        'sel' => $c->instanceId, 'mode' => $mode,
+                    ]),
+                    'submit' => 'Применить', 'cancel' => $baseUrl,
+                ],
+            ));
+        }
+        return '';
+    }
+
+    private function inspectableCard(string $html, CardInstance $card, string $viewer): string
+    {
+        if ($this->inspectionBase === '' || !$this->isSelectableBattleCard($card, $viewer)) return $html;
+        $url = htmlspecialchars($this->inspectionBase . '&inspect=' . $card->instanceId, ENT_QUOTES);
+        // Selection executes in the InfoPanel; clicking a visible creature inspects it.
+        return preg_replace('/<a class="card-link"[^>]*>/', '<a class="card-link" href="' . $url . '">', $html, 1) ?? $html;
+    }
+
     private function buildPanel(
         GameState $state,
         string $playerKey,
@@ -840,7 +897,8 @@ final class BattleScreen
         bool $isActive,
         ?array $strike,
         array $attackTargets,
-        bool $explicitAttackMode
+        bool $explicitAttackMode,
+        bool $readOnly = false
     ): string {
         if ($selectedCardId <= 0) return '';
 
@@ -1107,31 +1165,6 @@ final class BattleScreen
                 $statusHtml = '<p>Кликни по существу оппонента для атаки.</p>';
             }
         }
-        // Use the exact same native candidate set as the battlefield highlights.
-        if ($isActive && !$strike && str_starts_with($mode, 'action:') && !empty($attackTargets)
-            && $c->owner === $playerKey && !\Berserk\Core\MatchPause::blocking($state)
-            && ChoiceRegistry::current($state) === null
-            && empty($state->battle['turn_instant_stack']) && empty($state->battle['turn_instant_result'])) {
-            $items = [];
-            foreach ($attackTargets as $targetId => $_) {
-                $target = $state->getCard((int) $targetId);
-                if (!$target) continue;
-                $hidden = !$target->revealed && $target->owner !== $playerKey;
-                $name = $hidden ? '???' : (string) ($cardsInfo[$target->ukid]['name'] ?? $target->ukid);
-                $items[] = \Berserk\View\Ui\CreatureChoice::item($target, $name, $playerKey);
-            }
-            $statusHtml = \Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(
-                title: 'Выберите цель способности',
-                form: ['type' => 'radio', 'name' => 'target_id', 'items' => $items,
-                    'side_toggle' => count(array_unique(array_column($items, 'side'))) > 1,
-                    'hidden' => \Berserk\View\Ui\Form::battleHidden($playerKey, $state->gameId, 'action', [
-                        'card_id' => $c->instanceId, 'action_key' => substr($mode, 7),
-                        'sel' => $c->instanceId, 'mode' => $mode,
-                    ]),
-                    'submit' => 'Применить', 'cancel' => $baseUrl,
-                ],
-            ));
-        }
         if (!empty($c->prop['on_wounding_strike'])) {
             $effect = $c->prop['on_wounding_strike'];
             $values = array_map('intval', (array) ($effect['strike'] ?? []));
@@ -1254,9 +1287,9 @@ final class BattleScreen
         }
 
         // While combat is pending this card is informational only.
-        if ($strike || !empty($state->battle['turn_instant_stack']) || !empty($state->battle['turn_instant_result'])) {
+        if ($readOnly || $strike || !empty($state->battle['turn_instant_stack']) || !empty($state->battle['turn_instant_result'])) {
             $modeButtons = '<button type="button" class="button small cancel" data-combat-back>Закрыть</button>';
-            $statusHtml = '';
+            if ($strike || !empty($state->battle['turn_instant_stack']) || !empty($state->battle['turn_instant_result'])) $statusHtml = '';
         }
 
         if (in_array($c->zone, [CardInstance::ZONE_GRAVEYARD, CardInstance::ZONE_EXILE], true)) {
