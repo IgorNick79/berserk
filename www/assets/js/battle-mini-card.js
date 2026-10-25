@@ -11,6 +11,42 @@
     var hover = matchMedia('(hover:hover) and (pointer:fine)');
     var reduced = matchMedia('(prefers-reduced-motion:reduce)');
 
+    // Presentation state only: never issues a command or changes a selected target.
+    var cellSelection = new Map();
+    function showOccupant(stack, id) {
+        var cards = Array.from(stack.querySelectorAll(':scope > [data-cell-occupant]'));
+        if (!cards.length) return;
+        var chosen = cards.find(function (card) { return card.dataset.cellOccupant === id; }) || cards[0];
+        cards.forEach(function (card) { card.hidden = card !== chosen; });
+        cellSelection.set(stack.dataset.cellStack, chosen.dataset.cellOccupant);
+        stack.closest('.field-cell').className = 'field-cell ' + chosen.dataset.occupantClass;
+        var counter = stack.querySelector('[data-cell-counter]');
+        if (counter) counter.textContent = (cards.indexOf(chosen) + 1) + '/' + cards.length;
+    }
+    function restoreOccupants() {
+        var live = new Set();
+        document.querySelectorAll('[data-cell-stack]').forEach(function (stack) {
+            live.add(stack.dataset.cellStack);
+            showOccupant(stack, cellSelection.get(stack.dataset.cellStack));
+        });
+        cellSelection.forEach(function (_, key) { if (!live.has(key)) cellSelection.delete(key); });
+    }
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-cell-step]');
+        if (!button) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        var stack = button.closest('[data-cell-stack]');
+        var cards = Array.from(stack.querySelectorAll(':scope > [data-cell-occupant]'));
+        if (!cards.length) return;
+        var current = cards.findIndex(function (card) { return !card.hidden; });
+        var next = (current + Number(button.dataset.cellStep) + cards.length) % cards.length;
+        refresh();
+        showOccupant(stack, cards[next].dataset.cellOccupant);
+    }, true);
+    document.addEventListener('berserk:battle-updated', restoreOccupants);
+    restoreOccupants();
+
     function cardAt(node) {
         if (!node || !node.closest) return null;
         return node.closest('[data-mini-card]') ||
@@ -131,6 +167,7 @@
             var clone = card.cloneNode(true);
             clone.classList.remove('mini-zoom-source');
             var appearance = getComputedStyle(card);
+            clone.style.zoom = appearance.zoom;
             clone.style.outline = appearance.outline;
             clone.style.outlineOffset = appearance.outlineOffset;
             clone.style.boxShadow = appearance.boxShadow;
