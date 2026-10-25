@@ -31,5 +31,10 @@ await update(data.overflow);assert(await stack.locator('.cell-markers').evaluate
 assert(await page.locator('[data-cell-stack="1_1"] .cell-bonfire').count()===1,'fire alone');assert(await page.locator('[data-cell-stack="1_2"] .cell-marker').count()===2,'fire with two markers');assert(await page.locator('.cell-bonfire').first().evaluate(e=>getComputedStyle(e).pointerEvents==='none'&&getComputedStyle(e).fontSize==='42px'),'fire size/click passthrough');
 await visible().hover();await page.waitForTimeout(480);assert(await page.locator('.battle-mini-zoom.is-open').count()===1,'zoom after switch');await page.mouse.move(1100,800);await page.waitForTimeout(300);
 assert(await page.locator('.field-cell').evaluateAll(es=>es.every(e=>e.offsetWidth===110&&e.offsetHeight===100)),'cell geometry');assert(!errors.length,'JS errors '+errors.join());
-await page.screenshot({path:out+'/cell-stack-tested.png'});console.log('PASS: real PHP renderer; two/same/mixed owners; both cyclic directions; 3 and 6; HP/status/frame/ID links; arrows no actions; markers/fire; update retention/removal; zoom; 110x100,16px,3/6 layout; no JS errors');
+await update(data.two);
+const bomb=stack.locator('.cell-marker-bomb');await bomb.hover();assert(await bomb.getAttribute('title')==='Бомба орка','bomb hint');assert(await bomb.evaluate(e=>{const r=e.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e}),'marker receives hover for native hint');
+assert(await stack.locator('.cell-bottom-strip').evaluate(e=>getComputedStyle(e).backgroundColor)==='rgba(221, 221, 221, 0.55)','footer background');
+await page.screenshot({path:out+'/cell-stack-tested.png'});
+await update(data.clean);assert(await page.locator('.cell-bottom-strip').count()===0,'no empty footers');assert(await visible().locator('.battle-mini-card').evaluate(e=>{let r=e.getBoundingClientRect();return Math.abs(r.width-102)<.1&&Math.abs(r.height-92)<.1}),'unmarked single card retains original size');
+await page.screenshot({path:out+'/cell-stack-clean-tested.png'});console.log('PASS: real PHP renderer; two/same/mixed owners; both cyclic directions; 3 and 6; HP/status/frame/ID links; arrows no actions; markers/fire; update retention/removal; zoom; 110x100,16px,3/6 layout; no JS errors');
 }finally{await browser.close()}})().catch(e=>{console.error(e);process.exit(1)});

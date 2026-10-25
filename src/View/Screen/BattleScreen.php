@@ -1762,6 +1762,7 @@ final class BattleScreen
             . '<button type="button" data-cell-step="-1" aria-label="Предыдущее существо">‹</button>'
             . '<span data-cell-counter aria-live="polite">1/' . $count . '</span>'
             . '<button type="button" data-cell-step="1" aria-label="Следующее существо">›</button></span>' : '';
+        if ($markers === '' && $switch === '') return $fire;
         return $fire . '<div class="cell-bottom-strip"><div class="cell-markers">' . $markers . '</div>' . $switch . '</div>';
     }
 

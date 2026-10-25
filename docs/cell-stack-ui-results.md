@@ -1,6 +1,6 @@
 # Cell markers and creature switch — 2026-10-25
 
-Implemented only the view: stable instanceId sorting and grouping, independent cell markers, cyclic local switch, 16px footer, 42px pointer-transparent bonfire. Miniatures on the field scale uniformly to .87; frame, HP and status structure remain intact. Zoom copies retain this scale. Flying/pile cards retain their dimensions. Confirmed marker types only: bomb, reduce_attack, row_spell, bonfire, gate, lantern_light. Lantern uses the existing PNG; flowering runes use a rune glyph. No tremor/rot mapping was added.
+Implemented only the view: stable instanceId sorting and grouping, independent cell markers, cyclic local switch, 16px footer, 42px pointer-transparent bonfire. Only miniatures in cells with a footer scale uniformly to .87; frame, HP and status structure remain intact. Zoom copies retain this scale. Flying/pile cards retain their dimensions. Confirmed marker types only: bomb, reduce_attack, row_spell, bonfire, gate, lantern_light. Lantern uses the existing PNG; flowering runes use a rune glyph. No tremor/rot mapping was added.
 
 Changed: BattleScreen.php; battle-mini-card.css; battle-mini-card.js; .gitignore (whitelist this one debug scenario); debug/scenarios/ui_cell_stack.json; tools/test_cell_stack.php; tools/test_cell_stack.cjs. Screenshot: docs/evidence/cell-stack/cell-stack-tested.png.
 
@@ -19,3 +19,5 @@ Limitations / failed infrastructure check:
 - No combat action, server targeting rule, engine, placement validation, LuckTest loader, symbiote or spirit mechanic was changed.
 
 Re-run: `node tools/test_cell_stack.cjs`. The PHP and Edge/Playwright paths in the test match this Windows environment; CELL_STACK_OUTPUT can override the screenshot directory.
+
+Follow-up: empty footers are omitted; single unmarked cards retain 102x92 size; bonfire alone has no footer; footer background is rgba(221, 221, 221, 0.55). Marker pointer events enable the existing native title hint. Browser checks for original size, absent empty strips, background and bomb hover hit-testing passed. Updated screenshots include cell-stack-clean-tested.png.

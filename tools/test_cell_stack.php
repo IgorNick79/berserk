@@ -23,4 +23,5 @@ $s->cards[$ids[1]]->owner='host';$out['same']=$render();$s->cards[$ids[1]]->owne
 for($i=0;$i<4;$i++){$card=battleSnapshotCard($s->nextInstanceId(),'extra'.$i,'host',CardInstance::ZONE_FIELD,3,2,true);$s->addCard($card);$info[$card->ukid]=['name'=>'Extra '.$i];if($i===0)$out['three']=$render();}
 $out['six']=$render();$s->cell_markers['3_2']=array_fill(0,12,['type'=>'bomb']);$out['overflow']=$render();
 unset($s->cards[$ids[1]]);foreach($s->cards as $id=>$card)if(!in_array($id,$ids,true))unset($s->cards[$id]);$out['removed']=$render();
+$s->cell_markers=[];$out['clean']=$render();
 echo json_encode($out,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);

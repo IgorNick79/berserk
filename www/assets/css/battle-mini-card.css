@@ -70,17 +70,20 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 
 /* One shared footer, independent of the creature currently displayed. */
 .battle-page .cell-presentation{position:relative;width:100%;height:100%}
-.battle-page [data-cell-occupant]{position:absolute;inset:0 0 16px;display:flex;align-items:center;justify-content:center}
+.battle-page [data-cell-occupant]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
 .battle-page [data-cell-occupant][hidden]{display:none!important}
 .battle-page [data-cell-occupant]>.card-link{width:100%;height:100%}
-.battle-page [data-cell-occupant] .battle-mini-card{zoom:.87}
-.battle-page .cell-bottom-strip{position:absolute;bottom:0;left:0;right:0;height:16px;display:flex;align-items:center;gap:2px;background:rgba(27,23,18,.9);color:#d3b383;z-index:21;box-sizing:border-box;padding:0 2px;pointer-events:none}
+.battle-page .cell-presentation:has(.cell-bottom-strip) [data-cell-occupant]{bottom:16px}
+.battle-page .cell-presentation:has(.cell-bottom-strip) [data-cell-occupant] .battle-mini-card{zoom:.87}
+.battle-page .cell-bottom-strip{position:absolute;bottom:0;left:0;right:0;height:16px;display:flex;align-items:center;gap:2px;background:rgba(221, 221, 221, 0.55);color:#d3b383;z-index:21;box-sizing:border-box;padding:0 2px;pointer-events:none}
 .battle-page .cell-bottom-strip .cell-markers{position:static;display:flex;flex:1 1 0;min-width:0;height:16px;gap:1px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;pointer-events:auto}
-.battle-page .cell-bottom-strip .cell-marker{position:static;flex:0 0 14px;width:14px;height:14px;line-height:14px;font-size:13px;text-align:center;border:0;border-radius:0;background:transparent;text-shadow:none;pointer-events:none}
+.battle-page .cell-bottom-strip .cell-marker{position:static;flex:0 0 14px;width:14px;height:14px;line-height:14px;font-size:13px;text-align:center;border:0;border-radius:0;background:transparent;text-shadow:none;pointer-events:auto}
 .battle-page .cell-bottom-strip .cell-marker::after{content:none}
 .battle-page .cell-bottom-strip .cell-marker-lantern_light{background:url('/assets/images/lantern.png') center/contain no-repeat}
 .battle-page .cell-switch{display:flex;align-items:center;flex:0 0 auto;height:16px;font:10px/16px system-ui,sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:auto;color:#d3b383}
 .battle-page .cell-switch button{all:unset;box-sizing:border-box;width:13px;height:16px;text-align:center;font:16px/16px system-ui,sans-serif;cursor:pointer;color:inherit}
 .battle-page .cell-switch button:focus-visible{outline:1px solid #e4c28d;outline-offset:-1px}
-.battle-page .cell-bonfire{position:absolute;inset:0 0 16px;display:flex;align-items:center;justify-content:center;font:42px/1 system-ui,sans-serif;z-index:20;pointer-events:none}
+.battle-page .cell-bonfire{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:42px/1 system-ui,sans-serif;z-index:20;pointer-events:none}
 .battle-page [data-mini-card-design="v2"] .field-cell.attack-target:has([data-cell-occupant]:not([hidden]) [data-drag-owner="own"]){background:rgba(224,174,40,.46)}
+
+.battle-page .cell-presentation:has(.cell-bottom-strip) .cell-bonfire{bottom:16px}
