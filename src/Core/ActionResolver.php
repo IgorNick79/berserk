@@ -475,6 +475,8 @@ final class ActionResolver
         }
         $dice   = Dice::roll();
         $level  = BattleHelper::diceToLevel($dice);
+        $strikeAura = CardStats::hasHorizontalStrikeReduction($this->state, $target);
+        if ($strikeAura) $level = 'weak';
 
         $val = 0;
         if (isset($uchrAction['strike'])) {
@@ -497,11 +499,16 @@ final class ActionResolver
             'damage'      => $val,
             'confirmed'   => [],
         ];
+        if ($strikeAura) $this->state->battle['strike']['strike_aura']['attack'] = true;
 
         $val += CardStats::getAbilityBonus($this->state, $attacker, $target, 'uchr');
         $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, 'uchr');
         $val -= $reduction;
         if ($val < 0) $val = 0;
+        $val = CardStats::setIncomingStrikeValue($this->state, $target, $val);
+        if (isset($target->effectiveProp()['closed_strike_value']) && CardStats::combatClosed($this->state, $target)) {
+            $this->state->battle['strike']['strike_value_set']['attack'] = $val;
+        }
 
         $attackReduction = $this->engine->reduceAttackValueByCellMarkers($this->state, $attacker, $val);
         $val = (int) $attackReduction['value'];
@@ -1381,6 +1388,9 @@ final class ActionResolver
 
         $dice   = Dice::roll();
         $level  = BattleHelper::diceToLevel($dice);
+        $strikeAura = in_array($type, ['tap', 'magic'], true)
+            && CardStats::hasHorizontalStrikeReduction($this->state, $target);
+        if ($strikeAura) $level = 'weak';
 
         $val = 0;
         if (isset($action['strike']) && is_array($action['strike'])) {
@@ -1484,6 +1494,7 @@ final class ActionResolver
             'defended'    => $defended,
             'confirmed'   => [],
         ];
+        if ($strikeAura) $this->state->battle['strike']['strike_aura']['attack'] = true;
 
         $this->state->battle['strike'][ActionResolution::ID] = $action[ActionResolution::ID];
         // Эффекты действия (strike_effects) — например, яд при среднем/сильном разряде
@@ -1525,11 +1536,20 @@ final class ActionResolver
         $val += $nextActionBonus;
 
         $resolutionHit = max($resolutionBaseValue, $val) > 0;
+        if (!$defended && in_array($type, ['tap', 'magic'], true)) {
+            $resolutionHit = $resolutionHit || CardStats::setIncomingStrikeValue($this->state, $target, 0) > 0;
+        }
         ActionResolution::resolve($this->state, $action, $resolutionHit ? 'hit' : 'miss',
             ['hit'=>$resolutionHit, 'level'=>$level, 'value_before_protection'=>$resolutionBaseValue, 'target_id'=>$targetId]);
         $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, $type, null, $extraIgnore);
         $val -= $reduction;
         if ($val < 0) $val = 0;
+        if (in_array($type, ['tap', 'magic'], true) && !$defended) {
+            $val = CardStats::setIncomingStrikeValue($this->state, $target, $val);
+            if (isset($target->effectiveProp()['closed_strike_value']) && CardStats::combatClosed($this->state, $target)) {
+                $this->state->battle['strike']['strike_value_set']['attack'] = $val;
+            }
+        }
 
         $attackReduction = $this->engine->reduceAttackValueByCellMarkers($this->state, $attacker, $val);
         $val = (int) $attackReduction['value'];

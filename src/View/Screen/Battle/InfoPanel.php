@@ -1292,6 +1292,15 @@ final class InfoPanel
             if (!empty($strike['damage_reduction'])) {
                 $reductionHtml .= '<p class="wait">Урон снижен на ' . $strike['damage_reduction'] . '</p>';
             }
+            foreach (['attack' => 'Урон по цели', 'defend' => 'Урон ответки'] as $side => $label) {
+                if (isset($strike['strike_value_set'][$side])) {
+                    $reductionHtml .= '<p class="wait">' . $label . ' сведён к ' . (int) $strike['strike_value_set'][$side] . '</p>';
+                }
+                if (!empty($strike['strike_aura'][$side])) {
+                    $reductionHtml .= '<p class="wait">' . ($side === 'attack' ? 'Удар по цели' : 'Ответный удар')
+                        . ' сведён к слабому защитной аурой</p>';
+                }
+            }
             if (!empty($strike['attack_value_reduction'])) {
                 foreach ((array) $strike['attack_value_reduction'] as $event) {
                     $label = htmlspecialchars((string) ($event['label'] ?? 'Способность'), ENT_QUOTES);

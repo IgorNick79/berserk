@@ -848,9 +848,14 @@ final class StrikeResolver
         }
 
         // Сведение ударов (Степной волколак)
-        $strikeReduction = $defendCard->effectiveProp()['strike_reduction'] ?? null;
-        if (is_array($strikeReduction) && isset($strikeReduction[$attackStrike])) {
-            $attackStrike = $strikeReduction[$attackStrike];
+        $attackStrike = CardStats::reduceStrikeLevel($this->state, $defendCard, $attackStrike);
+        if ($attackStrike !== '' && CardStats::hasHorizontalStrikeReduction($this->state, $defendCard)) {
+            $strike['strike_aura']['attack'] = true;
+        }
+        // The aura also protects an attacker receiving the defender's return strike.
+        if (CardStats::hasHorizontalStrikeReduction($this->state, $attacker) && $defendStrike !== '') {
+            $defendStrike = 'weak';
+            $strike['strike_aura']['defend'] = true;
         }
 
         $strike['final'] = [
@@ -891,6 +896,10 @@ final class StrikeResolver
             $reduction = CardStats::getDamageReduction($this->state, $attacker, $defendCard, 'strike', $attackStrike);
             $val -= $reduction;
             if ($val < 0) $val = 0;
+            $val = CardStats::setIncomingStrikeValue($this->state, $defendCard, $val);
+            if (isset($defendCard->effectiveProp()['closed_strike_value']) && CardStats::combatClosed($this->state, $defendCard)) {
+                $strike['strike_value_set']['attack'] = $val;
+            }
             if (!empty($strike['damage_cap'])) {
                 $val = min($val, (int) $strike['damage_cap']);
             }
@@ -999,6 +1008,12 @@ final class StrikeResolver
             }
             $val -= $defReduction;
             if ($val < 0) $val = 0;
+            if (isset($attacker->effectiveProp()['closed_strike_value'])
+                && CardStats::combatClosed($this->state, $attacker)) {
+                $val = CardStats::setIncomingStrikeValue($this->state, $attacker, $val);
+                $strike['strike_value_set']['defend'] = $val;
+                if (!empty($strike['damage_cap'])) $val = min($val, (int) $strike['damage_cap']);
+            }
 
             if (CardStats::hasDefense($this->state, $attacker, 'strike', $defendCard)) {
                 $val = 0;
