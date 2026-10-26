@@ -1,0 +1,18 @@
+{
+  "instants": [
+    {
+      "key": "bone",
+      "name": "Кость",
+      "effect": {
+        "type": "damage",
+        "value": 1
+      },
+      "target": "enemy",
+      "trigger": "turn"
+    }
+  ],
+  "on_ally_incarnation": {
+    "open_self": true,
+    "move_bonus": 1
+  }
+}

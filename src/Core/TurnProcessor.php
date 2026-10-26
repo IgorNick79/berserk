@@ -927,6 +927,8 @@ final class TurnProcessor
             ];
         }
 
+        $this->applyAlliedIncarnationEffects($card);
+
         // Пересчёт брони (учитывает строй)
         $this->engine->refreshArmor($this->state);
 
@@ -988,7 +990,52 @@ final class TurnProcessor
             ];
         }
 
+        $this->applyAlliedIncarnationEffects($card);
         $this->engine->refreshArmor($this->state);
+    }
+
+    /** Called only after a successful incarnation's zone/reset/own abilities, before continuation. */
+    private function applyAlliedIncarnationEffects(CardInstance $recipient): void
+    {
+        if (!in_array($recipient->type, ['creature', 'fly'], true)
+            || !EffectiveFeatures::onBattlefield($recipient)
+            || $recipient->dying || $recipient->hp <= 0) return;
+
+        $moveBonus = 0;
+        foreach ($this->state->cards as $source) {
+            if ($source->owner !== $recipient->owner
+                || !EffectiveFeatures::onBattlefield($source)
+                || $source->dying || $source->hp <= 0) continue;
+            $effect = $source->effectiveProp()['on_ally_incarnation'] ?? null;
+            if (!is_array($effect)) continue;
+            if (!empty($effect['open_self']) && $source->closed) {
+                $this->engine->openCard($source);
+            }
+            // Several providers grant the strongest copy once, independently of other movement effects.
+            $moveBonus = max($moveBonus, (int) ($effect['move_bonus'] ?? 0));
+        }
+        if ($moveBonus <= 0) return;
+
+        $previousBonus = 0;
+        $kept = [];
+        foreach ($recipient->modifiers as $modifier) {
+            if (($modifier['stack_key'] ?? '') === 'ally_incarnation_move') {
+                $previousBonus += (int) ($modifier['value'] ?? 0);
+            } else {
+                $kept[] = $modifier;
+            }
+        }
+        $kept[] = [
+            'stat' => 'move',
+            'value' => $moveBonus,
+            'expire' => 2, // Current own turn ends first; the next own turn ends second.
+            'timing' => 'owner_turn',
+            'source' => $recipient->owner,
+            'stack_key' => 'ally_incarnation_move',
+        ];
+        $recipient->modifiers = $kept;
+        // Like the existing whip bonus: grant current movement without changing moveMax or refilling spent moves.
+        $recipient->move = max(0, $recipient->move + $moveBonus - $previousBonus);
     }
 
     public function triggerProphecy(string $activeKey): bool
