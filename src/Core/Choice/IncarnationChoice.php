@@ -59,7 +59,8 @@ final class IncarnationChoice implements ChoiceHandlerInterface
             if ($occupied) continue;
 
             $buttons[] = [
-                'label' => 'Клетка ' . $backRow . '_' . $col,
+                'label' => \Berserk\View\Ui\BattlefieldPosition::label($backRow, $col, $playerKey),
+                'label_html' => \Berserk\View\Ui\Coords::render($backRow, $col, $playerKey),
                 'url'   => "{$baseUrl}&cmd=choose_incarnation_cell&row={$backRow}&col={$col}",
             ];
         }
