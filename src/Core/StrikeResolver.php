@@ -849,9 +849,13 @@ final class StrikeResolver
 
         // Сведение ударов (Степной волколак)
         $attackStrike = CardStats::reduceStrikeLevel($this->state, $defendCard, $attackStrike);
+        if ($attackStrike !== '' && CardStats::hasHorizontalStrikeReduction($this->state, $defendCard)) {
+            $strike['strike_aura']['attack'] = true;
+        }
         // The aura also protects an attacker receiving the defender's return strike.
         if (CardStats::hasHorizontalStrikeReduction($this->state, $attacker) && $defendStrike !== '') {
             $defendStrike = 'weak';
+            $strike['strike_aura']['defend'] = true;
         }
 
         $strike['final'] = [
@@ -893,6 +897,9 @@ final class StrikeResolver
             $val -= $reduction;
             if ($val < 0) $val = 0;
             $val = CardStats::setIncomingStrikeValue($this->state, $defendCard, $val);
+            if (isset($defendCard->effectiveProp()['closed_strike_value']) && CardStats::combatClosed($this->state, $defendCard)) {
+                $strike['strike_value_set']['attack'] = $val;
+            }
             if (!empty($strike['damage_cap'])) {
                 $val = min($val, (int) $strike['damage_cap']);
             }
@@ -1004,6 +1011,7 @@ final class StrikeResolver
             if (isset($attacker->effectiveProp()['closed_strike_value'])
                 && CardStats::combatClosed($this->state, $attacker)) {
                 $val = CardStats::setIncomingStrikeValue($this->state, $attacker, $val);
+                $strike['strike_value_set']['defend'] = $val;
                 if (!empty($strike['damage_cap'])) $val = min($val, (int) $strike['damage_cap']);
             }
 

@@ -204,4 +204,39 @@ EffectiveFeatures::applyMemoryLoss($s,$s->getCard(4),$s->getCard(3));morokAura($
 $s=morokState();$s->getCard(2)->prop=['ability'=>['value'=>3]];morokFrame($s);$s->battle['strike']['damage_cap']=1;morokHit($s,'','weak');
 checkMorok($s->getCard(1)->hp===16,'Existing response cap-before-bonus order preserved');
 
+// Result explanations come from resolved effects, not the cards' later state.
+function morokResultHtml(GameState $s):string {
+    $s->battle['strike'] += ['attack_dice'=>6,'defend_dice'=>0,'attack_mod'=>0,'defend_mod'=>0];
+    $s->battle['strike']['result'] ??= ['attack'=>'strong','defend'=>'','winner'=>'attack'];
+    $info=[];foreach ($s->cards as $c) $info[$c->ukid]=['name'=>'Card '.$c->instanceId,'health'=>20];
+    return (new Berserk\View\Screen\Battle\InfoPanel(new Berserk\View\Template(__DIR__.'/../templates')))->render($s,'host','host',$info,'?game=1');
+}
+$s=morokState();$s->getCard(2)->closed=true;morokFrame($s);morokHit($s,'strong');
+$s=morokReload($s);$s->getCard(2)->closed=false;
+checkMorok(str_contains(morokResultHtml($s),'Урон по цели сведён к 1'),'Numeric explanation survives reload/opening');
+$s=morokState();$s->getCard(2)->prop=[];$s->addCard(morokCard(3,'host',3,5,morokProp()));morokFrame($s);morokHit($s,'strong');
+$s->getCard(3)->zone='hand';$s=morokReload($s);
+checkMorok(str_contains(morokResultHtml($s),'Удар по цели сведён к слабому защитной аурой'),'Aura explanation survives source leaving/reload');
+$s=morokState();morokFrame($s);morokHit($s,'','strong');
+checkMorok(str_contains(morokResultHtml($s),'Ответный удар сведён к слабому защитной аурой'),'Return aura explanation');
+$s=morokState();$s->getCard(1)->prop=morokProp();$s->getCard(1)->closed=true;$s->getCard(2)->prop=[];morokFrame($s);morokHit($s,'','strong');
+checkMorok(str_contains(morokResultHtml($s),'Урон ответки сведён к 1'),'Return numeric explanation');
+foreach ([false,true] as $suppressed) {
+    $s=morokState();$s->getCard(2)->closed=true;if ($suppressed) EffectiveFeatures::applyMemoryLoss($s,$s->getCard(1),$s->getCard(2));
+    morokFrame($s);morokHit($s,'');$html=morokResultHtml($s);
+    checkMorok(!str_contains($html,'сведён к 1')&&!str_contains($html,'защитной аурой'),'No explanations on miss');
+    if ($suppressed) {morokFrame($s);morokHit($s,'strong');checkMorok(!str_contains(morokResultHtml($s),'сведён к 1'),'No suppressed numeric explanation');}
+}
+foreach (['tap','magic','uchr','shot','throw'] as $type) {
+    $s=morokState();$s->getCard(2)->closed=true;
+    if ($type==='uchr') {$s->getCard(2)->col=5;$s->addCard(morokCard(3,'host',3,4,morokProp()));}
+    else $s->addCard(morokCard(3,'host',3,5,morokProp()));
+    $s->getCard(1)->prop=['actions'=>[['key'=>'probe','type'=>$type,'value'=>3,'range'=>3,'near_shot'=>true]]];morokRoll('6');
+    $r=(new Engine())->apply($s,'host',new Command($type==='uchr'?'uchr':'action',['card_id'=>1,'target_id'=>2,'action_key'=>'probe']));
+    checkMorok($r->success,'Explanation action '.$type.': '.$r->error);$html=morokResultHtml($s);$isStrike=in_array($type,['tap','magic','uchr'],true);
+    checkMorok(str_contains($html,'Урон по цели сведён к 1')===$isStrike,'Numeric action explanation '.$type);
+    checkMorok(str_contains($html,'Удар по цели сведён к слабому защитной аурой')===$isStrike,'Aura action explanation '.$type);
+    if (!$isStrike) checkMorok(str_contains($html,'Урон снижен на 1'),'Existing ranged explanation retained '.$type);
+}
+
 echo "OK: $checks Morok checks\n";
