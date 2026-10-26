@@ -1407,6 +1407,10 @@ final class BattleScreen
             return '∞';
         }
 
+        if (!empty($card->flags['stitched_unique_loss'])) {
+            return (string) $card->hpMax;
+        }
+
         if ($info !== null && isset($info['health'])) {
             return (string) $info['health'];
         }
