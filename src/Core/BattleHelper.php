@@ -312,7 +312,7 @@ final class BattleHelper
             foreach ($state->cards as $target) {
                 if ($target->zone !== CardInstance::ZONE_FIELD
                     && $target->zone !== CardInstance::ZONE_FLYING) continue;
-                if ($target->instanceId === $card->instanceId) continue;
+                if ($target->instanceId === $card->instanceId && empty($action['heal_gain_coin'])) continue;
 
                 if ($type === 'tap') {
                     if (!empty($action['self']) && $target->instanceId !== $card->instanceId) continue;
@@ -330,6 +330,7 @@ final class BattleHelper
                     if (!in_array($target->type, ['creature', 'fly'], true) || $target->dying || $target->hp <= 0) continue;
                     if (CardStats::hasDefense($state, $target, 'impact', $card)) continue;
                 } elseif ($type === 'heal') {
+                    if (!StitchRevival::legalHealTarget($card, $target, $action)) continue;
                     if ($target->type !== 'creature' && $target->type !== 'fly') continue;
                     if (!empty($action['own']) && $target->owner !== $playerKey) continue;
                     if (!empty($action['self']) && $target->instanceId !== $card->instanceId) continue;

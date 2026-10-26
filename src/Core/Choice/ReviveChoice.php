@@ -21,7 +21,7 @@ final class ReviveChoice implements ChoiceHandlerInterface
 
     public function commandTypes(): array
     {
-        return ['choose_revive_target', 'choose_revive_cell'];
+        return ['choose_revive_target', 'choose_revive_cell', 'cancel_pending'];
     }
 
     public function spec(
@@ -33,6 +33,9 @@ final class ReviveChoice implements ChoiceHandlerInterface
     ): ?PanelSpec {
         $pr = $state->battle['pending_revive'] ?? null;
         if (!$pr) return null;
+        if (\Berserk\Core\StitchRevival::isPending($state)) {
+            return \Berserk\Core\StitchRevival::spec($state, $playerKey, $cardsInfo, $baseUrl);
+        }
 
         $healer     = $state->getCard($pr['healer_id']);
         $healerName = $healer ? ($cardsInfo[$healer->ukid]['name'] ?? '?') : '?';
@@ -131,8 +134,12 @@ final class ReviveChoice implements ChoiceHandlerInterface
         string $playerKey,
         Command $cmd
     ): Result {
+        if (\Berserk\Core\StitchRevival::isPending($state)) {
+            return (new \Berserk\Core\StitchRevival($state, $engine))->choose($playerKey, $cmd);
+        }
         $ar = new \Berserk\Core\ActionResolver($state, $engine);
         return match ($cmd->type) {
+            'cancel_pending' => $ar->cancelPending($playerKey, $cmd),
             'choose_revive_target' => $ar->chooseReviveTarget($playerKey, $cmd),
             'choose_revive_cell'   => $ar->chooseReviveCell($playerKey, $cmd),
             default                => Result::error('Неизвестная команда'),

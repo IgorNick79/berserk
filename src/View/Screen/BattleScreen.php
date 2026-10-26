@@ -1004,6 +1004,14 @@ final class BattleScreen
                 foreach ($c->prop['actions'] ?? [] as $a) {
                     if (!\Berserk\Core\CoinAbilities::actionAvailable($c, $a)) continue;
                     $type = $a['type'] ?? '';
+                    if ((\Berserk\Core\StitchRevival::isAction($a)
+                            && !\Berserk\Core\StitchRevival::available($state, $c, $a))
+                        || (!empty($a['heal_gain_coin'])
+                            && !BattleHelper::getAttackTargets($state, $c, 'action:' . ($a['key'] ?? $type), $c->owner))) {
+                        $modeButtons .= '<span class="button small disabled">'
+                            . htmlspecialchars($a['name'] ?? $type, ENT_QUOTES) . '</span> ';
+                        continue;
+                    }
                     if ($type === 'impact' && ($a['effect'] ?? '') === 'matriarch_order'
                         && (!\Berserk\Core\MatriarchOrderProcessor::available($state, $c)
                             || !\Berserk\Core\MatriarchOrderProcessor::targets($state, $c))) {

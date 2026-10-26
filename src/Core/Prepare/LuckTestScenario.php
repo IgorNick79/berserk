@@ -23,9 +23,12 @@ final class LuckTestScenario
             foreach ($list as $entry) {
                 if (!$entry instanceof \stdClass) throw new \DomainException('Сценарий LuckTest: запись карты должна быть объектом');
                 $e=get_object_vars($entry);
-                $allowed=$zone==='cards'?['owner','ukid','row','col']:['owner','ukid'];
+                $allowed=$zone==='cards'?['owner','ukid','row','col','hp']:['owner','ukid'];
                 if (array_diff(array_keys($e),$allowed) || !in_array($e['owner']??null,['host','player'],true)
                     || !is_string($e['ukid']??null) || $e['ukid']==='' || strlen($e['ukid'])>128) throw new \DomainException('Сценарий LuckTest: неверные поля карты');
+                if (array_key_exists('hp', $e) && (!is_int($e['hp']) || $e['hp'] < 1)) {
+                    throw new \DomainException('Сценарий LuckTest: hp должно быть положительным целым числом');
+                }
                 $owner=$e['owner'];
                 $limit=$zone==='cards'?$count:($deferDeckCapacity?\Berserk\Core\GameSettings::MIN_DECK_SIZE:\Berserk\Core\GameSettings::MIN_DECK_SIZE-$count);
                 if (++$counts[$zone][$owner]>$limit) throw new \DomainException('Сценарий LuckTest: обязательных карт больше доступных мест в '.$zone);
@@ -85,6 +88,14 @@ final class LuckTestScenario
         if ($bindings !== []) $state->lucktestDebug['bindings'] = $bindings;
     }
 
+    /** Applied only at the validated Quick Game preparation boundary, before the initial history snapshot. */
+    public static function applyInitialHealth(GameState $state): void
+    {
+        foreach ($state->lucktestDebug['bindings'] ?? [] as $entry) {
+            if (isset($entry['hp'])) $state->getCard($entry['instance_id'])->hp = $entry['hp'];
+        }
+    }
+
     public static function verify(GameState $state): void
     {
         foreach ($state->lucktestDebug['bindings'] ?? [] as $entry) {
@@ -92,6 +103,9 @@ final class LuckTestScenario
             if ($card === null || $card->owner !== $entry['owner'] || $card->ukid !== $entry['ukid'] || $card->zone !== (($entry['zone'] ?? null) === 'deck' ? CardInstance::ZONE_DECK : CardInstance::ZONE_FIELD)
                 || (isset($entry['row']) && ($card->row !== $entry['row'] || $card->col !== $entry['col']))) {
                 throw new \DomainException('Сценарий LuckTest: обязательная расстановка не выполнена');
+            }
+            if (isset($entry['hp']) && $entry['hp'] > $card->hpMax) {
+                throw new \DomainException('Сценарий LuckTest: hp превышает максимальное здоровье карты');
             }
         }
     }

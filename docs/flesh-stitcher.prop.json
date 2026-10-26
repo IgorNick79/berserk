@@ -1,0 +1,7 @@
+{
+  "save_coins": true,
+  "actions": [
+    {"key": "stitch_revive", "type": "revive", "name": "Сшить плоть", "stitch": true, "coins": 3, "once_per_battle": true},
+    {"key": "dark_heal", "type": "heal", "name": "Излечить тёмное существо", "own": true, "value": 1, "heal_gain_coin": 1}
+  ]
+}

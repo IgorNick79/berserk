@@ -279,6 +279,7 @@ final class Engine
             new Command('choose_side', ['side'=>$this->preparationRandomInt(1, 2)]))));
         foreach (['host', 'player'] as $owner) $events = array_merge($events, $this->randomPlaceSquad($state, $prepare, $owner));
         \Berserk\Core\Prepare\LuckTestScenario::verify($state);
+        \Berserk\Core\Prepare\LuckTestScenario::applyInitialHealth($state);
         // This is the SAME final validation and startBattle boundary used by manual confirm_place.
         foreach (['host', 'player'] as $owner) $events = array_merge($events,
             $this->preparationEvents($this->confirmPreparePlace($state, $owner, $prepare)));

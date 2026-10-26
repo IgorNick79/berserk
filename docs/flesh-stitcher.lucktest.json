@@ -1,0 +1,10 @@
+{
+  "cards": [
+    { "owner": "host", "ukid": "s1_148", "row": 2, "col": 3, "hp": 1 },
+    { "owner": "host", "ukid": "s1_151", "row": 1, "col": 2, "hp": 1 },
+    { "owner": "host", "ukid": "s1_141", "row": 1, "col": 4, "hp": 1 },
+    { "owner": "player", "ukid": "s1_151", "row": 5, "col": 3 },
+    { "owner": "player", "ukid": "s1_151", "row": 6, "col": 2 },
+    { "owner": "player", "ukid": "s1_141", "row": 6, "col": 4 }
+  ]
+}

@@ -14,9 +14,10 @@ final class EffectiveFeatures
         return in_array($card->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true);
     }
 
+    /** Stitched loss belongs to the recipient; only memory loss follows a source link. */
     public static function suppressed(CardInstance $card): bool
     {
-        return self::onBattlefield($card) && !empty($card->flags[self::MEMORY_LOSS]);
+        return self::onBattlefield($card) && (!empty($card->flags[self::MEMORY_LOSS]) || !empty($card->flags['stitched_unique_loss']));
     }
 
     public static function prop(CardInstance $card): array
