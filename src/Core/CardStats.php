@@ -606,6 +606,37 @@ final class CardStats
         return false;
     }
 
+    /** Live horizontal aura projection; every instance in either adjacent cell qualifies. */
+    public static function hasHorizontalStrikeReduction(GameState $state, CardInstance $target): bool
+    {
+        if ($target->zone !== CardInstance::ZONE_FIELD || $target->dying || $target->hp <= 0
+            || $target->row < 1 || $target->row > 6 || $target->col < 1 || $target->col > 5) return false;
+        foreach ($state->cards as $source) {
+            if ($source->zone !== CardInstance::ZONE_FIELD || $source->dying || $source->hp <= 0) continue;
+            if ($source->col < 1 || $source->col > 5) continue;
+            if ($source->row !== $target->row || abs($source->col - $target->col) !== 1) continue;
+            if (!empty($source->effectiveProp()['horizontal_strike_reduction'])) return true;
+        }
+        return false;
+    }
+
+    public static function reduceStrikeLevel(GameState $state, CardInstance $target, string $level): string
+    {
+        if ($level === '') return ''; // A passive never creates a hit from a miss.
+        $mapping = $target->effectiveProp()['strike_reduction'] ?? null;
+        if (is_array($mapping) && isset($mapping[$level])) $level = $mapping[$level];
+        if ($level !== '' && self::hasHorizontalStrikeReduction($state, $target)) return 'weak';
+        return $level;
+    }
+
+    /** Numeric setter, after value modifiers and before explicit caps/protection/wounds. */
+    public static function setIncomingStrikeValue(GameState $state, CardInstance $target, int $value): int
+    {
+        $setter = $target->effectiveProp()['closed_strike_value'] ?? null;
+        if ($setter !== null && self::combatClosed($state, $target)) return max(0, (int) $setter);
+        return $value;
+    }
+
     public static function getDamageReduction(
         GameState $state,
         CardInstance $attacker,
@@ -908,6 +939,14 @@ final class CardStats
         if (!empty($r['levels'])) {
             if ($level === null) return 0;
             if (!in_array($level, (array) $r['levels'], true)) return 0;
+        }
+
+        if (!empty($r['defender'])) {
+            $strike = $state->battle['strike'] ?? [];
+            if ($actionType !== 'strike'
+                || ($strike['defender_id'] ?? null) !== $target->instanceId
+                || ($strike['attacker_id'] ?? null) !== $attacker->instanceId
+                || self::combatClosed($state, $target)) return 0;
         }
 
         if (!empty($r['require_no_wounds']) && $target->hp < $target->hpMax) return 0;

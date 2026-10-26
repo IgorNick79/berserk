@@ -1,0 +1,21 @@
+{
+  "ovz": 1,
+  "damage_reduction": [
+    {
+      "types": [
+        "shot",
+        "throw"
+      ],
+      "value": 1
+    },
+    {
+      "types": [
+        "strike"
+      ],
+      "defender": true,
+      "value": 1
+    }
+  ],
+  "closed_strike_value": 1,
+  "horizontal_strike_reduction": true
+}

@@ -9,6 +9,9 @@ final class ActiveCardEffects
     public static function forCard(CardInstance $card, GameState $state): array
     {
         $rows = []; $groups = [];
+        if (CardStats::hasHorizontalStrikeReduction($state, $card)) {
+            $rows[] = 'Защитная аура: удары по карте сводятся к слабому';
+        }
         if (in_array($card->zone, ['field', 'flying'], true) && !empty($card->flags['memory_loss_sources'])) {
             $rows[] = 'Потеря памяти: уникальные особенности отключены до ухода источника с поля боя';
         }
