@@ -9,6 +9,9 @@ final class ActiveCardEffects
     public static function forCard(CardInstance $card, GameState $state): array
     {
         $rows = []; $groups = [];
+        if (in_array($card->zone, ['field', 'flying'], true) && !empty($card->flags['stitched_unique_loss'])) {
+            $rows[] = 'Модифицировано Сшивателем плоти';
+        }
         if (CardStats::hasHorizontalStrikeReduction($state, $card)) {
             $rows[] = 'Защитная аура: удары по карте сводятся к слабому';
         }

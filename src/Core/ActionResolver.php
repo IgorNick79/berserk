@@ -62,6 +62,9 @@ final class ActionResolver
 
         if (!CoinAbilities::actionAvailable($attacker, $action)) return Result::error('Действие недоступно при этом количестве монет');
         $type = $action['type'] ?? '';
+        if (!empty($action['heal_gain_coin']) && ($attacker->dying || $attacker->hp <= 0)) {
+            return Result::error('Источник лечения недоступен');
+        }
         if ($type === 'impact' && ($action['effect'] ?? '') === 'matriarch_order') return (new MatriarchOrderProcessor($this->state, $this->engine))->start($attacker, $action);
         if (Strangulation::blocksAttack($attacker, $type)) return Result::error('Атаки запрещены маркерами удушения');
         if ($type === 'strangle') return Strangulation::start($this->state, $attacker, $actionKey);
@@ -204,6 +207,9 @@ final class ActionResolver
         }
 
         // Возрождение (Знахарь племени)
+        if (StitchRevival::isAction($action)) {
+            return (new StitchRevival($this->state, $this->engine))->start($attacker, $action);
+        }
         if ($type === 'revive') {
             return $this->startRevive($attacker, $action, $cardId, $playerKey);
         }
@@ -653,6 +659,9 @@ final class ActionResolver
                 }
             }
         } elseif ($type === 'heal') {
+            if (!StitchRevival::legalHealTarget($attacker, $target, $action)) {
+                return Result::error('Нужно своё раненое тёмное существо');
+            }
             if ($target->type !== 'creature' && $target->type !== 'fly') {
                 return Result::error('Можно лечить только существ');
             }
@@ -1127,6 +1136,9 @@ final class ActionResolver
         $strike[ActionResolution::ID] = $action[ActionResolution::ID];
         $this->state->battle['strike'] = $strike;
         $restored = max(0, $target->hp - $journalHpBefore);
+        if ($restored > 0 && !empty($action['heal_gain_coin'])) {
+            (new CoinAbilities($this->state, $this->engine))->gain($attacker, (int) $action['heal_gain_coin'], $attacker, true);
+        }
         ActionResolution::resolve($this->state, $action, $restored > 0 ? 'performed' : 'no_effect',
             ['hp_restored'=>$restored, 'target_id'=>$targetId, 'replacement'=>$openedInstead ? 'open' : null]);
 
@@ -2842,6 +2854,9 @@ final class ActionResolver
 
     public function chooseReviveTarget(string $playerKey, Command $cmd): Result
     {
+        if (StitchRevival::isPending($this->state)) {
+            return (new StitchRevival($this->state, $this->engine))->choose($playerKey, $cmd);
+        }
         if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_revive', 'healer_id')) return $skipped;
         $pr = $this->state->battle['pending_revive'] ?? null;
         if (!$pr || ($pr['step'] ?? '') !== 'card') {
@@ -2881,6 +2896,9 @@ final class ActionResolver
 
     public function chooseReviveCell(string $playerKey, Command $cmd): Result
     {
+        if (StitchRevival::isPending($this->state)) {
+            return (new StitchRevival($this->state, $this->engine))->choose($playerKey, $cmd);
+        }
         if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_revive', 'healer_id')) return $skipped;
         $pr = $this->state->battle['pending_revive'] ?? null;
         if (!$pr || ($pr['step'] ?? '') !== 'cell') {

@@ -23,6 +23,6 @@ final class MemoryLoss
     /** Keep this battle usage when existing zone/return paths clear transient flags. */
     public static function persistentFlags(CardInstance $card): array
     {
-        return array_intersect_key($card->flags, [self::USED => true]);
+        return array_intersect_key($card->flags, [self::USED => true, 'stitch_revive_used' => true, 'stitched_unique_loss' => true]);
     }
 }
