@@ -23,7 +23,11 @@ final class EffectiveFeatures
     public static function prop(CardInstance $card): array
     {
         if (!self::suppressed($card)) return $card->prop;
-        return array_intersect_key($card->prop, array_fill_keys(PermanentFeatures::KEYS, true));
+        $prop = array_intersect_key($card->prop, array_fill_keys(PermanentFeatures::KEYS, true));
+        $armor = $card->prop['armor'] ?? null;
+        if (is_array($armor) && !empty($armor['permanent'])
+            && !array_diff(array_keys($armor), ['value', 'permanent'])) $prop['armor'] = $armor;
+        return $prop;
     }
 
     public static function modifiers(CardInstance $card): array

@@ -85,6 +85,21 @@ final class WoundTransferProcessor
         return Result::ok(['wt_started:' . $kind]);
     }
 
+    /** Admission only; the existing transfer choices and effect keep their rules. */
+    public function canRedistributeCombatWounds(CardInstance $source): bool
+    {
+        foreach ($this->collectDonors($source->owner, ['donor_filter'=>'damaged_this_strike'], $source->instanceId) as $id=>$amount) {
+            $donor=$this->state->getCard((int)$id);
+            if (!$donor || $donor->hp >= $donor->hpMax) continue;
+            foreach ($this->state->cards as $recipient) {
+                if ($recipient->owner === $source->owner && $recipient->instanceId !== $id
+                    && !$recipient->dying && $recipient->hp > 0
+                    && in_array($recipient->zone, [CardInstance::ZONE_FIELD,CardInstance::ZONE_FLYING],true)) return true;
+            }
+        }
+        return false;
+    }
+
     private function collectDonors(string $playerKey, array $options, int $sourceId): array
     {
         $filter      = (string) ($options['donor_filter'] ?? 'wounded');

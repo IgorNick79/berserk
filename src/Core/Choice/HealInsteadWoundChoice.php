@@ -53,6 +53,7 @@ final class HealInsteadWoundChoice implements ChoiceHandlerInterface
 
         $roleParam = $role === 'host' ? 'first' : 'second';
         $x = (int) $p['heal_value'];
+        $healingSuffix = isset($p['token']) ? '&heal_token=' . rawurlencode($p['token']) : '';
 
         $toggleLabel = ($side === 'enemy') ? 'Все существа' : 'Только чужие';
         $toggleSide  = ($side === 'enemy') ? 'all' : 'enemy';
@@ -66,7 +67,7 @@ final class HealInsteadWoundChoice implements ChoiceHandlerInterface
                 title: $vName . ': нет соседей на этой стороне',
                 buttons: array_merge($buttons, [[
                     'label' => 'Отмена',
-                    'url'   => $baseUrl . '&cmd=cancel_pending',
+                    'url'   => $baseUrl . '&cmd=cancel_pending' . $healingSuffix,
                     'class' => 'skip',
                 ]]),
             );
@@ -99,9 +100,10 @@ final class HealInsteadWoundChoice implements ChoiceHandlerInterface
                     'game'     => $state->gameId,
                     'cmd'      => 'choose_heal_instead_wound',
                     'hw_side'  => $side,
+                    'heal_token' => $p['token'] ?? '',
                 ],
                 'submit' => 'Ранить',
-                'cancel' => $baseUrl . '&cmd=cancel_pending',
+                'cancel' => $baseUrl . '&cmd=cancel_pending' . $healingSuffix,
             ],
         );
     }

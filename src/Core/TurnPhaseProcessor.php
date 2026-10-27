@@ -154,7 +154,7 @@ final class TurnPhaseProcessor
         $this->executeSub($subTask, $sub['parent_type'], $tp['active_key']);
 
         // Проверяем, создался ли pending
-        $hasPending = false;
+        $hasPending = CardHealing::waiting($this->state);
         if ($parentType === 'prophecy' && !empty($this->state->battle['pending_prophecy']))       $hasPending = true;
         if ($parentType === 'valhalla' && !empty($this->state->battle['pending_valhalla_pick']))  $hasPending = true;
         if ($parentType === 'instants'
@@ -202,6 +202,7 @@ final class TurnPhaseProcessor
 
     public function resume(): void
     {
+        if (CardHealing::waiting($this->state)) return;
         if (!empty($this->state->battle['pending_cell_effect_direction'])) return;
         $tp = $this->state->battle['turn_phase'] ?? null;
         if (!$tp) return;
@@ -584,7 +585,7 @@ final class TurnPhaseProcessor
             $vp->beginExecute($card, $activeKey);
 
             // Если pending_valhalla_pick открылся — ждём выбора
-            if (!empty($this->state->battle['pending_valhalla_pick'])) {
+            if (CardHealing::waiting($this->state) || !empty($this->state->battle['pending_valhalla_pick'])) {
                 // не удаляем подзадачу — вернёмся к ней после выбора
             }
         } elseif ($parentType === 'instants') {
@@ -847,16 +848,15 @@ final class TurnPhaseProcessor
         }
     }
 
-    private function executeTurnEndEffect(array $task, string $ownerKey)
+    private function executeTurnEndEffect(array $task, string $ownerKey, ?array $remaining = null, array $items = [])
     {
         $card = $this->state->getCard($task['card_id']);
         if (!$card) return ['label' => $task['label'], 'items' => []];
 
-        $effects = $card->effectiveProp()['turn_end'] ?? $card->effectiveProp()['opponent_turn_end'] ?? [];
-        if (!is_array($effects)) return ['label' => $task['label'], 'items' => []];
-
-        $items = [];
-        foreach ($effects as $eff) {
+        $effects = $remaining ?? ($card->effectiveProp()['turn_end'] ?? $card->effectiveProp()['opponent_turn_end'] ?? []);
+        if (!is_array($effects)) return ['label'=>$task['label'],'items'=>[]];
+        $effects=array_values($effects);
+        foreach ($effects as $effectIndex=>$eff) {
             $type = $eff['type'] ?? '';
 
             if ($type === 'discharge') {
@@ -866,14 +866,18 @@ final class TurnPhaseProcessor
                     $value = (int) ($eff['value'] ?? 1);
                     $this->engine->applyDamage($this->state, $target, $value, 'discharge', $card);
                     $items[] = ['instance_id' => $target->instanceId, 'delta' => -$value];
+                    if(CardHealing::waiting($this->state)) {
+                        CardHealing::defer($this->state,['handler'=>'turn','kind'=>'after_effect','task'=>$task,'owner'=>$ownerKey,
+                            'remaining'=>array_slice($effects,$effectIndex+1),'items'=>$items]);
+                        return ['label'=>$task['label'],'items'=>$items];
+                    }
                 }
             } elseif ($type === 'heal') {
                 $value = (int) ($eff['value'] ?? 1);
-                $resolutionHpBefore = $card->hp;
-                $card->hp += $value;
-                if ($card->hp > $card->hpMax) $card->hp = $card->hpMax;
-                ActionResolution::healed($this->state, $card, $card, $resolutionHpBefore, 'turn_end');
-                $items[] = ['instance_id' => $card->instanceId, 'delta' => $value];
+                $to=['handler'=>'turn','task'=>$task,'owner'=>$ownerKey,'remaining'=>array_slice($effects,$effectIndex+1),'items'=>$items];
+                $r=(new CardHealing($this->state,$this->engine))->begin($card,$card,$value,'turn_end',$to);
+                if($r===null)return ['label'=>$task['label'],'items'=>$items];
+                $items[]=['instance_id'=>$card->instanceId,'delta'=>$r['restored']];
             } elseif ($type === 'get_coins') {
                 $value = (int) ($eff['coins'] ?? 1);
                 $card->coins += $value;
@@ -972,6 +976,7 @@ final class TurnPhaseProcessor
 
     private function hasPendingFromTask(string $type): bool
     {
+        if (CardHealing::waiting($this->state)) return true;
         $battle = $this->state->battle;
         [$base] = explode(':', $type . ':') + [''];
         if ($base === 'deck_summon' && !empty($battle[SwampQueenProcessor::PENDING])) return true;
@@ -1305,4 +1310,12 @@ final class TurnPhaseProcessor
 
         return $queue;
     }
+    public function continueCardHealing(array $to,array $r): Result
+    {
+        if(($to['kind']??'')!=='after_effect')$to['items'][]=['instance_id'=>$r['target_id'],'delta'=>$r['restored']];
+        $desc=$this->executeTurnEndEffect($to['task'],$to['owner'],$to['remaining'],$to['items']);
+        if(!CardHealing::waiting($this->state))$this->state->battle['turn_phase']['pending_ack']=$desc;
+        $this->state->bumpVersion();return Result::ok(['card_heal_turn_continued']);
+    }
+
 }

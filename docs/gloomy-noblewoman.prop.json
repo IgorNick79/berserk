@@ -1,0 +1,7 @@
+{
+  "zor": true,
+  "armor": {"value": 1, "permanent": true},
+  "vampire": true,
+  "hp_max_override": 12,
+  "first_card_heal": {"threshold": 8}
+}

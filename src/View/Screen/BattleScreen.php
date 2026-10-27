@@ -158,6 +158,13 @@ final class BattleScreen
             }
         }
         $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml, $pilePanelHtml, $actionChoice, $ui['inspect'] ?? 0);
+        $healingMessages = $state->battle['card_healing']['messages'] ?? [];
+        if ($healingMessages) {
+            $infoPanelHtml .= \Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(
+                title: 'Блокировка излечения',
+                text: array_map(static fn(string $message): string => htmlspecialchars($message, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'), $healingMessages)
+            ));
+        }
 
         $debugHtml = '';
         if (!\Berserk\Core\MatchPause::blocking($state) && \Berserk\Auth\DebugAccess::forPlayer($state, $playerKey)) {
@@ -872,6 +879,7 @@ final class BattleScreen
                 title: 'Выберите цель способности',
                 form: ['type' => 'radio', 'name' => 'target_id', 'items' => $items,
                     'side_toggle' => count(array_unique(array_column($items, 'side'))) > 1,
+                    'side_default' => $showHealth ? 'own' : 'enemy',
                     'hidden' => \Berserk\View\Ui\Form::battleHidden($playerKey, $state->gameId, 'action', [
                         'card_id' => $c->instanceId, 'action_key' => substr($mode, 7),
                         'sel' => $c->instanceId, 'mode' => $mode,
@@ -1407,7 +1415,7 @@ final class BattleScreen
             return '∞';
         }
 
-        if (!empty($card->flags['stitched_unique_loss'])) {
+        if (!empty($card->flags['stitched_unique_loss']) || !empty($card->prop['first_card_heal'])) {
             return (string) $card->hpMax;
         }
 

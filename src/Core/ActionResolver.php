@@ -1031,81 +1031,26 @@ final class ActionResolver
         int $cardId, int $targetId, string $playerKey
     ): Result {
         ActionResolution::bind($this->state, $action, $attacker, 'heal');
-        if (CardStats::canHealInsteadWound($target)) {
-            $healRaw = $action['value'] ?? 0;
-            $healValue = ($healRaw === 'full') ? 0 : (int) $healRaw;
+        $attacker->closed = true;
+        $to = ['handler'=>'action', 'kind'=>'active', 'source_id'=>$cardId, 'target_id'=>$targetId,
+            'action'=>$action, 'owner'=>$playerKey];
+        $value = ($action['value'] ?? 0) === 'full' ? max(0,$target->hpMax-$target->hp) : (int)($action['value']??0);
+        $r = (new CardHealing($this->state,$this->engine))->begin($attacker,$target,$value,'heal',$to,['active'=>true,'allow_open'=>true,'full'=>($action['value']??0)==='full','action_id'=>$action[ActionResolution::ID]]);
+        $this->state->bumpVersion();
+        return $r === null ? Result::ok(['card_heal_waiting']) : $this->continueCardHealing($to,$r);
+    }
 
-            if ($healValue > 0 && $this->findAdjacentCreatures($target)) {
-                $attacker->closed = true;
-
-                $this->state->battle['pending_heal_instead_wound'] = [
-                    'owner'      => $target->owner,
-                    'source_id'  => $attacker->instanceId,
-                    'target_id'  => $target->instanceId,
-                    'heal_value' => $healValue,
-                    'candidates' => $this->findAdjacentCreatures($target),
-                ];
-
-                InformationalWaitManager::publish($this->state);
-                $this->state->battle['strike'] = [
-                    'kind'        => 'multi_heal',
-                    'action_name' => $action['name'] ?? 'Излечение',
-                    'attacker_id' => $cardId,
-                    'target_id'   => $targetId,
-                    'defender_id' => null,
-                    'state'       => 'results',
-                    'attack_dice' => 0,
-                    'defend_dice' => 0,
-                    'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
-                    'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
-                    'damage'      => 0,
-                    'healed'      => [],
-                    'confirmed'   => [],
-                ];
-
-                $this->state->bumpVersion();
-                $this->state->battle['strike'][ActionResolution::ID] = $action[ActionResolution::ID];
-                ActionResolution::resolve($this->state, $action, 'no_effect', ['hp_restored'=>0, 'replacement'=>'wound']);
-                return Result::ok(['heal_instead_wound_started']);
-            }
+    public function continueCardHealing(array $to, array $r): Result
+    {
+        $attacker=$this->state->getCard($to['source_id']);
+        $target=$this->state->getCard($to['target_id']);
+        if (($to['kind']??'') !== 'active') return $this->continuePassiveCardHealing($to,$r);
+        $action=$to['action'];$cardId=$attacker->instanceId;$targetId=$target->instanceId;$playerKey=$to['owner'];
+        $journalHpBefore=$r['before'];$healValue=$r['restored'];$openedInstead=$r['opened'];
+        $poisonRemoved=false;
+        if (!$openedInstead && !empty($action['heal_poison']) && isset($target->markers['poison'])) {
+            unset($target->markers['poison']);$poisonRemoved=true;
         }
-        // Серк и подобные: при полном hp вместо излечения — открыться
-        $insteadOpen  = $target->effectiveProp()['on_heal_instead_open'] ?? null;
-        $openedInstead = false;
-
-        if (is_array($insteadOpen)) {
-            $oncePerTurn = !empty($insteadOpen['once_per_turn']);
-            $alreadyUsed = !empty($target->flags['on_heal_open_used_this_turn']);
-            $fullHp      = ($target->hp >= $target->hpMax);
-
-            if ($fullHp && (!$oncePerTurn || !$alreadyUsed)) {
-                ActionResolution::effect($this->state, $target, 'open', 'passive', ['target_id'=>$target->instanceId]);
-                $this->engine->openCard($target);
-                $target->flags['on_heal_open_used_this_turn'] = true;
-                $openedInstead = true;
-            }
-        }
-
-        $journalHpBefore = $target->hp;
-        $healValue     = 0;
-        $poisonRemoved = false;
-
-        if (!$openedInstead) {
-            $healRaw = $action['value'] ?? 0;
-            if ($healRaw === 'full') {
-                $healValue = $target->hpMax - $target->hp;
-            } else {
-                $healValue = (int) $healRaw;
-            }
-            $target->hp += $healValue;
-            if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
-
-            if (!empty($action['heal_poison']) && isset($target->markers['poison'])) {
-                unset($target->markers['poison']);
-                $poisonRemoved = true;
-            }
-        }
-
         $attacker->closed = true;
         $this->state->historyRecorder?->liveEvent($this->state,'ability.applied',[
             'source_id'=>$cardId,'ability'=>$action['name']??'Лечение','_private_owner'=>$attacker->owner],[$cardId,$targetId]);
@@ -1128,6 +1073,10 @@ final class ActionResolver
             'confirmed'      => [],
         ];
 
+        if ($r['replaced']) {
+            $strike['kind']='multi_heal';$strike['healed']=[];
+            $strike['heal_instead_wound']=[['source_id'=>$targetId,'target_id'=>$r['replacement_target_id'],'value'=>$r['modified']]];
+        }
         if ($openedInstead) {
             $strike['heal_instead_open'] = ['target_id' => $target->instanceId];
         }
@@ -1135,12 +1084,12 @@ final class ActionResolver
         InformationalWaitManager::publish($this->state);
         $strike[ActionResolution::ID] = $action[ActionResolution::ID];
         $this->state->battle['strike'] = $strike;
-        $restored = max(0, $target->hp - $journalHpBefore);
+        $restored = $r['restored'];
         if ($restored > 0 && !empty($action['heal_gain_coin'])) {
             (new CoinAbilities($this->state, $this->engine))->gain($attacker, (int) $action['heal_gain_coin'], $attacker, true);
         }
         ActionResolution::resolve($this->state, $action, $restored > 0 ? 'performed' : 'no_effect',
-            ['hp_restored'=>$restored, 'target_id'=>$targetId, 'replacement'=>$openedInstead ? 'open' : null]);
+            ['hp_restored'=>$restored, 'target_id'=>$targetId, 'replacement'=>$openedInstead ? 'open' : ($r['replaced']?'wound':null)]);
 
         $this->state->bumpVersion();
         return Result::ok(["heal:{$playerKey}:{$cardId}->{$targetId}:value={$healValue}"]);
@@ -2089,72 +2038,32 @@ final class ActionResolver
         $targetIds = $parsed['targetIds'];
         $pmh       = $parsed['config'];
 
-        $value  = (int) $pmh['value'];
-        $healed = [];
+        $attacker->closed=true;
+        $to=['handler'=>'action','kind'=>'multi','source_id'=>$attacker->instanceId,'target_id'=>0,
+            'remaining'=>$targetIds,'value'=>(int)$pmh['value'],'action'=>$pmh['action'],'healed'=>[]];
+        return $this->advanceMultiCardHealing($to);
+    }
 
-        $deferred = [];
-        foreach ($targetIds as $tid) {
-            $card = $this->state->getCard($tid);
-            if (!$card) continue;
-
-            if (CardStats::canHealInsteadWound($card) && $this->findAdjacentCreatures($card)) {
-                $deferred[] = $card->instanceId;
-                continue;
-            }
-
-            $hpBefore = $card->hp;
-            $card->hp += $value;
-            if ($card->hp > $card->hpMax) $card->hp = $card->hpMax;
-            $healed[] = ['target_id' => $tid, 'heal' => $card->hp - $hpBefore];
+    private function advanceMultiCardHealing(array $to): Result
+    {
+        while ($to['remaining']) {
+            $id=array_shift($to['remaining']);$target=$this->state->getCard($id);
+            if(!CardHealing::live($target))continue;
+            $to['target_id']=$id;
+            return $this->startPassiveCardHealing($this->state->getCard($to['source_id']),$target,$to['value'],'multi_heal',$to);
         }
-
-        $attacker->closed = true;
-
+        $source=$this->state->getCard($to['source_id']);
         InformationalWaitManager::publish($this->state);
-        $this->state->battle['strike'] = [
-            'kind'        => 'multi_heal',
-            'action_name' => $pmh['action']['name'] ?? 'Излечение',
-            'attacker_id' => $attacker->instanceId,
-            'target_id'   => $targetIds[0] ?? 0,
-            'defender_id' => null,
-            'state'       => 'results',
-            'attack_dice' => 0,
-            'defend_dice' => 0,
-            'result'      => ['attack' => '', 'defend' => '', 'winner' => ''],
-            'final'       => ['attack' => '', 'defend' => '', 'decreased' => false],
-            'damage'      => 0,
-            'healed'      => $healed,
-            'confirmed'   => [],
-        ];
-
-        $resolutionAction = $pmh['action'];
-        ActionResolution::bind($this->state, $resolutionAction, $attacker, 'heal');
-        $this->state->battle['strike'][ActionResolution::ID] = $resolutionAction[ActionResolution::ID];
-        $restored = array_sum(array_column($healed, 'heal'));
-        ActionResolution::resolve($this->state, $resolutionAction, $restored > 0 ? 'performed' : 'no_effect',
-            ['hp_restored'=>$restored, 'targets'=>$healed]);
-
-        // после обычного heal — если есть отложенные, ставим первый pending
-        if (!empty($deferred)) {
-            $first = $deferred[0];
-            $card = $this->state->getCard($first);
-            if (!$card) {
-                $this->state->bumpVersion();
-                return Result::ok(['multi_heal_done']);
-            }
-            $this->state->battle['pending_heal_instead_wound'] = [
-                'owner'          => $card->owner,
-                'source_id'      => $attacker->instanceId,
-                'target_id'      => $first,
-                'heal_value'     => $value,
-                'candidates'     => $this->findAdjacentCreatures($card),
-                'remaining'      => array_slice($deferred, 1),
-                'healed_summary' => $healed,   // ← добавили
-            ];
-        }
-
-        $this->state->bumpVersion();
-        return Result::ok(['multi_heal_done']);
+        $this->state->battle['strike']=['kind'=>'multi_heal','action_name'=>$to['action']['name']??'Излечение',
+            'attacker_id'=>$source->instanceId,'target_id'=>$to['healed'][0]['target_id']??0,'defender_id'=>null,
+            'state'=>'results','attack_dice'=>0,'defend_dice'=>0,'result'=>['attack'=>'','defend'=>'','winner'=>''],
+            'final'=>['attack'=>'','defend'=>'','decreased'=>false],'damage'=>0,'healed'=>$to['healed'],'confirmed'=>[]];
+        if(!empty($to['replacements']))$this->state->battle['strike']['heal_instead_wound']=$to['replacements'];
+        $action=$to['action'];ActionResolution::bind($this->state,$action,$source,'heal');
+        $this->state->battle['strike'][ActionResolution::ID]=$action[ActionResolution::ID];
+        ActionResolution::resolve($this->state,$action,array_sum(array_column($to['healed'],'heal'))>0?'performed':'no_effect',
+            ['hp_restored'=>array_sum(array_column($to['healed'],'heal')),'targets'=>$to['healed']]);
+        $this->state->bumpVersion();return Result::ok(['multi_heal_done']);
     }
 
     private function resolveStealStrike(
@@ -2546,23 +2455,8 @@ final class ActionResolver
             return Result::error('Излечение недоступно');
         }
 
-        $hpBefore = $card->hp;
-        $card->hp = min($card->hpMax, $card->hp + $value);
-        $healed = max(0, $card->hp - $hpBefore);
-        ActionResolution::healed($this->state, $card, $card, $hpBefore, 'on_successful_hit');
-
         unset($this->state->battle['pending_kobold_heal']);
-
-        if (!empty($this->state->battle['strike'])) {
-            $this->state->battle['strike']['kobold_heal'][] = [
-                'card_id' => $card->instanceId,
-                'value' => $value,
-                'heal' => $healed,
-            ];
-        }
-
-        $this->state->bumpVersion();
-        return Result::ok(["kobold_heal:{$card->instanceId}:{$healed}"]);
+        return $this->startPassiveCardHealing($card,$card,$value,'on_successful_hit',['kind'=>'kobold']);
     }
 
     public function triggerTalionIncarnationToken(CardInstance $source): bool
@@ -4676,12 +4570,20 @@ final class ActionResolver
         }
         $dealt = max(0, $hpBefore - $enemy->hp);
 
-        // Heal союзнику на X (с капом)
-        $allyHpBefore = $ally->hp;
-        $ally->hp = min($ally->hpMax, $ally->hp + $x);
-        $healed = $ally->hp - $allyHpBefore;
-        ActionResolution::healed($this->state, $attacker, $ally, $allyHpBefore, 'life_gift', $resolutionParent);
+        $to=['handler'=>'action','kind'=>'life','source_id'=>$attacker->instanceId,'target_id'=>$ally->instanceId,
+            'enemy_id'=>$enemyId,'x'=>$x,'dealt'=>$dealt,'defended'=>$defended,'parent'=>$resolutionParent];
+        if(CardHealing::waiting($this->state)) {
+            $to['kind']='life_after_damage';CardHealing::defer($this->state,$to);return Result::ok(['card_heal_waiting']);
+        }
+        $r=(new CardHealing($this->state,$this->engine))->begin($attacker,$ally,$x,'life_gift',$to,['parent'=>$resolutionParent]);
+        return $r===null?Result::ok(['card_heal_waiting']):$this->continuePassiveCardHealing($to,$r);
+    }
 
+    private function finishLifeGift(array $to,array $r): Result
+    {
+        $attacker=$this->state->getCard($to['source_id']);$ally=$this->state->getCard($to['target_id']);
+        $enemy=$this->state->getCard($to['enemy_id']);$x=$to['x'];$dealt=$to['dealt'];$defended=$to['defended'];
+        $healed=$r['restored'];
         InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
             'kind'        => 'life_gift',
@@ -5586,33 +5488,14 @@ final class ActionResolver
         $value = (int) $pending['value'];
         unset($this->state->battle['pending_wild_healer_move']);
 
-        // Цепочка: если цель — Вожак с полным HP и соседями — открываем его окно
-        if (CardStats::canHealInsteadWound($victim) && $this->findAdjacentCreatures($victim)) {
-            $this->state->battle['pending_heal_instead_wound'] = [
-                'owner'      => $victim->owner,
-                'source_id'  => $healer->instanceId,
-                'target_id'  => $victim->instanceId,
-                'heal_value' => $value,
-                'candidates' => $this->findAdjacentCreatures($victim),
-            ];
-            $this->state->bumpVersion();
-            return Result::ok(['wild_healer_to_vozhak']);
-        }
-
-        // Обычное излечение
-        $hpBefore = $victim->hp;
-        $victim->hp += $value;
-        if ($victim->hp > $victim->hpMax) $victim->hp = $victim->hpMax;
-        ActionResolution::healed($this->state, $healer, $victim, $hpBefore, 'on_move_heal_adjacent');
-
-        $this->state->bumpVersion();
-        return Result::ok([
-            "wild_healer_heal:{$targetId}:" . ($victim->hp - $hpBefore),
-        ]);
+        return $this->startPassiveCardHealing($healer,$victim,$value,'on_move_heal_adjacent',['kind'=>'wild']);
     }
 
     public function chooseHealInsteadWound(string $playerKey, Command $cmd): Result
     {
+        if (!empty($this->state->battle['pending_heal_instead_wound']['card_heal'])) {
+            return (new CardHealing($this->state, $this->engine))->chooseSatyr($playerKey, $cmd);
+        }
         $pending = $this->state->battle['pending_heal_instead_wound'] ?? null;
         if (!$pending) return Result::error('Нет ожидающего выбора');
         if (($pending['owner'] ?? null) !== $playerKey) return Result::error('Не ваш выбор');
@@ -5754,17 +5637,8 @@ final class ActionResolver
         if ($type === 'damage') {
             $this->engine->applyDamage($this->state, $target, $value, 'impact', $source);
         } elseif ($type === 'heal') {
-            $hpBefore = $target->hp;
-            $target->hp = min($target->hpMax, $target->hp + $value);
-            $healed = $target->hp - $hpBefore;
-            ActionResolution::healed($this->state, $source, $target, $hpBefore, 'shaksi');
-
-            if (!empty($this->state->battle['strike'])) {
-                $this->state->battle['strike']['shaksi_heal'][] = [
-                    'card_id' => $target->instanceId,
-                    'heal'    => $healed,
-                ];
-            }
+            unset($this->state->battle['pending_shaksi_roll']);
+            return $this->startPassiveCardHealing($source,$target,$value,'shaksi',['kind'=>'shaksi']);
         } elseif ($type === 'get_coin' && (empty($target->effectiveProp()['coins_receive_deny'])
             || $target->instanceId === $source->instanceId)) {
             $max = (int) ($target->effectiveProp()['coins']['max_value'] ?? 0);
@@ -5864,4 +5738,33 @@ final class ActionResolver
         ActionResolution::performed($this->state, $dverg, array_replace(['type'=>'dverg_gift'], $pending['action'] ?? []));
         return Result::ok(["dverg_gift:{$targetId}"]);
     }
+    private function startPassiveCardHealing(CardInstance $source,CardInstance $target,int $value,string $ability,array $to): Result
+    {
+        $to+=['handler'=>'action','source_id'=>$source->instanceId,'target_id'=>$target->instanceId];
+        $r=(new CardHealing($this->state,$this->engine))->begin($source,$target,$value,$ability,$to,['active'=>($to['kind']??'')==='multi','action_id'=>$to['action'][ActionResolution::ID]??null]);
+        $this->state->bumpVersion();return $r===null?Result::ok(['card_heal_waiting']):$this->continuePassiveCardHealing($to,$r);
+    }
+
+    private function continuePassiveCardHealing(array $to,array $r): Result
+    {
+        if($to['kind']==='life_after_damage') {
+            $to['kind']='life';$source=$this->state->getCard($to['source_id']);$target=$this->state->getCard($to['target_id']);
+            $r=(new CardHealing($this->state,$this->engine))->begin($source,$target,$to['x'],'life_gift',$to,['parent'=>$to['parent']]);
+            return $r===null?Result::ok(['card_heal_waiting']):$this->finishLifeGift($to,$r);
+        }
+        if($to['kind']==='multi') {
+            $to['healed'][]=['target_id'=>$to['target_id'],'heal'=>$r['restored']];
+            if($r['replaced'])$to['replacements'][]=['source_id'=>$to['target_id'],'target_id'=>$r['replacement_target_id'],'value'=>$r['modified']];
+            return $this->advanceMultiCardHealing($to);
+        }
+        if($to['kind']==='life')return $this->finishLifeGift($to,$r);
+        $field=match($to['kind']){'kobold'=>'kobold_heal','shaksi'=>'shaksi_heal',default=>null};
+        if($field && !empty($this->state->battle['strike']))$this->state->battle['strike'][$field][]=
+            ['card_id'=>$to['target_id'],'value'=>$r['modified'],'heal'=>$r['restored']];
+        if($to['kind']==='shaksi') {
+            $this->engine->flushDeadeatQueue($this->state);$this->engine->checkGameOver($this->state);
+        }
+        $this->state->bumpVersion();return Result::ok(['card_heal_completed:'.$to['kind']]);
+    }
+
 }

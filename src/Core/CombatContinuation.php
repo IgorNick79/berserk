@@ -93,7 +93,10 @@ final class CombatContinuation
             }
             if (!$context['frames']) return;
             foreach ($context['frames'] as $stage) if ($stage !== 'done') return;
-            $state->historyRecorder?->combatFinished($state);
+            // A reservation root owns nested frames but is not itself a combat.
+            if (($context['return_to']['kind'] ?? null) !== 'instant_reservation' || $context['next_id'] > 1) {
+                $state->historyRecorder?->combatFinished($state);
+            }
             $state->battle['combat_completion'] = $context['return_to'];
             unset($state->battle['combat_continuation']);
             return;

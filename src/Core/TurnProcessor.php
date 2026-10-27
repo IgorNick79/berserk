@@ -67,7 +67,9 @@ final class TurnProcessor
         ];
 
         TurnTimer::prepare($this->state, $activeKey);
+        InstantReservation::beginPeriod($this->state, $activeKey);
         OchiKronga::startOwnTurn($this->state, $activeKey);
+        CardHealing::startTurn($this->state, $activeKey);
 
         // Стартовые эффекты
         $this->state->historyRecorder?->initial($this->state);
@@ -110,6 +112,7 @@ final class TurnProcessor
         }
 
         $journalEndingTurn=(int)($this->state->battle['turn']??0);
+        InstantReservation::endPeriod($this->state);
         $oppKey = $this->state->getOpponentKey($playerKey);
         $timerId = $this->state->battle['turn_timer']['period_id'] ?? null;
         if ($timerId !== null) {
@@ -159,7 +162,9 @@ final class TurnProcessor
     public function afterEndPhase(string $endingKey, string $nextActiveKey): void
     {
         TurnTimer::prepare($this->state, $nextActiveKey);
+        InstantReservation::beginPeriod($this->state, $nextActiveKey);
         OchiKronga::startOwnTurn($this->state, $nextActiveKey);
+        CardHealing::startTurn($this->state, $nextActiveKey);
         // Сброс выданных действий в конце хода источника
         foreach ($this->state->cards as $card) {
             foreach (array_keys($card->flags) as $k) {

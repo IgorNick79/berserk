@@ -96,7 +96,7 @@ final class InfoPanel
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
         $contextBody = $instantWindow
             ? '<section class="info-panel-instants" aria-label="Инстанты">' . $body . '</section>'
-            : $body . $this->renderInstantOffer();
+            : $body;
         return '<header class="info-panel-header">' . $this->renderStatusHeader() . $this->renderTimer() . '</header>'
             . '<div class="info-panel-content" data-panel-priority="' . ($priority ? '1' : '0') . '" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" data-inspected-card="' . $inspectedCardId . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
             . ($priority ? '' : $pileHtml)
@@ -131,6 +131,7 @@ final class InfoPanel
         $state = $this->state;
         $inBattle = $state->status === 'battle' && $state->winner === null;
         $canEnd = $inBattle && !MatchPause::blocking($state) && ($state->battle['active'] ?? null) === $this->playerKey
+            && !\Berserk\Core\InstantReservation::blocks($state,'end_turn')
             && ChoiceRegistry::current($state) === null && empty($state->battle['strike'])
             && empty($state->battle['pending_prophecy']) && empty($state->battle['pending_dive']);
         if ($canEnd) {
@@ -180,6 +181,7 @@ final class InfoPanel
                 . '<button type="submit" class="button" data-http-resign>Сдаться</button></form>' : '';
         return '<noscript><style>[data-battle-sync-root] [data-open-pause], [data-battle-sync-root] [data-pause-command], [data-battle-sync-root] a.resign { display: none !important; }</style>'
             . '<p class="pause-noscript-notice">Управление паузой требует JavaScript. Сдаться можно без JavaScript.</p>' . $httpResign . '</noscript>'
+            . $this->renderInstantControl()
             . '<div class="info-actions">' . $end . '<div class="battle-icon-actions">' . $pauseIcon . '<span class="battle-chat-anchor" data-chat-anchor></span>' . $log . $resign . '</div></div>';
     }
     private function renderPauseBody(): string
@@ -347,16 +349,29 @@ final class InfoPanel
 
     }
 
-    private function renderInstantOffer(): string
+    private function renderInstantControl(): string
     {
-        $state = $this->state;
-        if ($state->winner !== null || $state->status !== 'battle' || MatchPause::blocking($state)
-            || ($state->battle['active'] ?? null) !== $this->playerKey || !empty($state->battle['strike'])
-            || ChoiceRegistry::current($state) !== null) return '';
-        $processor = new \Berserk\Core\InstantProcessor($state, new Engine());
-        if (!$processor->getInstants($this->playerKey, 'before', 'turn')) return '';
-        return '<section class="info-panel-instants" aria-label="Инстанты"><a class="button instant" href="'
-            . $this->baseUrl . '&cmd=open_turn_instants">Сыграть инстант</a></section>';
+        $p=InstantControl::project($this->state,$this->playerKey,time());
+        if(!$p['visible'])return '';
+        $esc=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
+        $url=fn($cmd,$payload=[])=>$esc($this->baseUrl.'&'.http_build_query(['cmd'=>$cmd]+$payload));
+        $label=$esc($p['label']).($p['cost']===null?'':' <span class="instant-control-cost">'.$esc($p['cost']).'</span>');
+        if($p['command']!==null)$action='<a class="button instant-control-main" aria-label="'.$esc($p['label']).'" href="'.$url($p['command'],$p['payload']).'">'.$label.'</a>';
+        elseif($p['enabled']){
+            $cards='';foreach($p['options']as$option){
+                $card=$this->state->getCard((int)$option['card_id']);if(!$card)continue;
+                $hint=$option['label'];$target=$this->state->getCard((int)($option['target_id']??0));
+                if($target)$hint.=' → '.($this->cardsInfo[$target->ukid]['name']??$target->ukid);
+                $cards.=TaskCard::render(['label'=>$hint,'hint'=>$hint,'card_ukid'=>$card->ukid,'row'=>$card->row,'col'=>$card->col,'is_instant'=>true],
+                    html_entity_decode($url($option['command'],$option['payload']),ENT_QUOTES,'UTF-8'),$this->cardsInfo);
+            }
+            $action='<details class="instant-control-picker"><summary class="button instant-control-main">'.$label.'</summary><div class="task-list instant-control-options">'.$cards.'</div></details>';
+        }else $action='<button type="button" class="button instant-control-main" disabled>'.$label.'</button>';
+        $meta=$p['cost']===null?'':'<span class="instant-control-quota" aria-label="Остаток платных резервирований">'.$esc($p['quota']).'</span>';
+        $pass=$p['pass']===null?'':'<a class="button skip" data-instant-pass href="'.$url($p['pass']).'">Пас</a>';
+        $decline=$p['decline']===null?'':'<a class="button skip" href="'.$url($p['decline']['command'],$p['decline']['payload']).'">Отказаться</a>';
+        $cancel=$p['cancel']===null?'':'<a class="button skip" href="'.$url($p['cancel']['command'],$p['cancel']['payload']).'">Отменить резерв</a>';
+        return '<section class="instant-control" data-instant-control data-instant-phase="'.$esc($p['phase']).'" aria-label="Инстант"><h3>Инстант</h3><div class="instant-control-actions">'.$action.$meta.$pass.$decline.$cancel.'</div></section>';
     }
 
     private function cancelUrl(): string
@@ -458,23 +473,7 @@ final class InfoPanel
                         'class' => 'redirect-target',
                     ];
                 }
-                $sr = new \Berserk\Core\StrikeResolver($state, new \Berserk\Core\Engine());
-                foreach ($sr->getMageRedirectOptions($playerKey) as $option) {
-                    $source = $state->getCard((int) $option['card_id']);
-                    $sourceInfo = $source ? ($cardsInfo[$source->ukid] ?? []) : [];
-                    $sourceName = $sourceInfo['name'] ?? ($source ? $source->ukid : '?');
-                    foreach ($option['target_ids'] as $tid) {
-                        $targetCard = $state->getCard((int) $tid);
-                        if (!$targetCard) continue;
-                        $targetInfo = $cardsInfo[$targetCard->ukid] ?? [];
-                        $targetName = $targetInfo['name'] ?? $targetCard->ukid;
-                        $options[] = [
-                            'value' => 'mage:' . (int) $option['card_id'] . ':' . (int) $tid,
-                            'label' => $sourceName . ': ' . ($option['label'] ?? 'Перенаправить') . ' → ' . $targetName,
-                            'class' => 'redirect-target',
-                        ];
-                    }
-                }
+
                 $options[] = [
                     'value' => 'redirect:0',
                     'label' => 'Не перенаправлять (' . $origName . ')',
@@ -524,33 +523,18 @@ final class InfoPanel
             $whoLabel = ($attackerKey === $priority) ? 'Атакующий' : 'Защитник';
             $stackHtml = $this->renderCombatInstantStack($strike, true);
             $window = (string) ($strike['combat_instant_window'] ?? 'main');
-            $windowLabel = $window === 'dice'
-                ? 'Работа с кубиками'
-                : 'Боевые инстанты';
+            $windowLabel = match ($window) {
+                'dice' => 'Работа с кубиками',
+                'wounds' => 'После нанесения ран',
+                default => 'Боевые инстанты',
+            };
             $windowHtml = '<p class="instant-window-label">' . htmlspecialchars($windowLabel, ENT_QUOTES) . '</p>';
 
             if ($isMine) {
                 $sr = new \Berserk\Core\StrikeResolver($state, new \Berserk\Core\Engine());
                 $instants = $sr->getCombatInstants($playerKey, $phase, $type);
 
-                $cards = '';
-                foreach ($instants as $inst) {
-                    $cardName = $cardsInfo[$inst['ukid']]['name'] ?? $inst['ukid'];
-                    $label    = $inst['label'] ?? '';
-                    $url = "{$baseUrl}&cmd=combat_instant_play&card_id={$inst['card_id']}&instant_key=" . urlencode($inst['payload']['key'] ?? '');
-                    $cards .= '<a class="task-card task-card--instant" href="' . $url . '">'
-                        . '<div class="task-card__name">' . htmlspecialchars($cardName, ENT_QUOTES) . '</div>'
-                        . '<div class="task-card__hint">' . htmlspecialchars($label, ENT_QUOTES) . '</div>'
-                        . '</a> ';
-                }
-
-                $contentHtml = $diceHtml . $windowHtml . $stackHtml . '<p>Твой ход: ' . $whoLabel . '. Сыграть инстант?</p>';
-                if (!empty($cards)) {
-                    $contentHtml .= '<div class="task-list">' . $cards . '</div>';
-                }
-                $contentHtml .= '<div class="death-choice-buttons">'
-                    . '<a class="button skip" href="' . $baseUrl . '&cmd=combat_instant_pass">Продолжить</a>'
-                    . '</div>';
+                $contentHtml = $diceHtml . $windowHtml . $stackHtml . '<p>Ваш приоритет. Выберите инстант или пас в нижнем блоке.</p>';
             } else {
                 $contentHtml = $diceHtml . $windowHtml . $stackHtml . '<p class="wait">Ожидание — оппонент решает, сыграть инстант...</p>';
             }
@@ -559,23 +543,7 @@ final class InfoPanel
             if ($playerKey === $chooserKey) {
                 $options = [];
                 $sr = new \Berserk\Core\StrikeResolver($state, new \Berserk\Core\Engine());
-                foreach ($sr->getMageRedirectOptions($playerKey) as $option) {
-                    $source = $state->getCard((int) $option['card_id']);
-                    $sourceInfo = $source ? ($cardsInfo[$source->ukid] ?? []) : [];
-                    $sourceName = $sourceInfo['name'] ?? ($source ? $source->ukid : '?');
-                    foreach ($option['target_ids'] as $targetId) {
-                        $targetCard = $state->getCard((int) $targetId);
-                        if (!$targetCard) continue;
-                        $targetInfo = $cardsInfo[$targetCard->ukid] ?? [];
-                        $targetName = $targetInfo['name'] ?? $targetCard->ukid;
-                        $options[] = [
-                            'value' => 'mage:' . (int) $option['card_id'] . ':' . (int) $targetId,
-                            'label' => $sourceName . ': ' . ($option['label'] ?? 'Перенаправить') . ' → ' . $targetName,
-                            'card_id' => (int) $targetId,
-                            'class' => 'redirect-target',
-                        ];
-                    }
-                }
+
                 foreach ($strike['defenders'] ?? [] as $defId) {
                     $dc = $state->getCard($defId);
                     if (!$dc) continue;

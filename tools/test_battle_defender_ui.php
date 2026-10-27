@@ -226,12 +226,12 @@ $mageState->addCard($redirectAlly);
 $mageHtml = defenderUiRender($mageState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 
 defenderUiAssert(
-    str_contains($mageHtml['info_panel_html'], 'Бешеный маг: Магический трюк'),
-    'Defender window should render Mage redirect as a defender-side action.'
+    str_contains($mageHtml['info_panel_html'], 'Магический трюк') && str_contains($mageHtml['info_panel_html'], 'data-instant-control'),
+    'Defender window should render Mage redirect in the common instant control.'
 );
 defenderUiAssert(
-    str_contains($mageHtml['info_panel_html'], 'value="mage:6:7"'),
-    'Mage redirect radio should encode source and target.'
+    str_contains($mageHtml['info_panel_html'], 'choice=mage%3A6%3A7'),
+    'Mage redirect link should encode source and target.'
 );
 
 $zomMageState = defenderUiState(GameState::PLAYER_HOST, []);
@@ -244,7 +244,7 @@ $zomMageState->addCard($zomRedirectAlly);
 $zomMageHtml = defenderUiRender($zomMageState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 
 defenderUiAssert(
-    !str_contains($zomMageHtml['info_panel_html'], 'value="mage:'),
+    !str_contains($zomMageHtml['info_panel_html'], 'choice=mage'),
     'Defender window should hide Mage redirect when every redirect target has zom.'
 );
 

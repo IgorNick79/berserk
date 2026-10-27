@@ -183,7 +183,7 @@
         var instants = combatHost.querySelector('.info-panel-instants');
         if (instants) instants.hidden = inspect;
         var footer = combatHost.querySelector('.info-panel-footer');
-        if (footer) footer.hidden = inspect && !secondary;
+        if (footer) footer.hidden = false;
         Array.from(content.children).forEach(function(child){
             if(child===secondaryDock)return;
             if(secondary){if(!child.hasAttribute('data-secondary-hidden'))child.dataset.secondaryHidden=String(child.hidden);child.hidden=true;}

@@ -92,6 +92,7 @@ final class Engine
         }
         $error = ExpiredCommandGuard::error($state, $playerKey, $cmd, $now);
         if ($error !== null) return Result::error($error);
+        if (InstantReservation::blocks($state, $cmd->type)) return Result::error('instant_reservation_priority_held');
         if ($cmd->type === 'confirm_strike') {
             $error = InformationalWaitManager::validateAck($state, $playerKey, $cmd->get('wait_id'));
             if ($error !== null) return Result::error($error);
@@ -112,6 +113,7 @@ final class Engine
         }
         if ($result->success) {
             InformationalWaitManager::reconcile($state, $this->serverNow());
+            InstantReservation::afterCommand($state, $this, $cmd);
             TurnTimer::reconcileWaiting($state, $this->serverNow());
         }
         TurnTimer::settle($state, $this->serverNow());
@@ -124,6 +126,10 @@ final class Engine
         // Сдача завершает матч независимо от активного обязательного выбора.
         if ($cmd->type === 'resign') {
             return $this->resign($state, $playerKey, $cmd);
+        }
+
+        if (in_array($cmd->type, InstantReservation::COMMANDS, true)) {
+            return InstantReservation::apply($state, $this, $playerKey, $cmd);
         }
 
         if (!empty($state->battle['matriarch_order']) && in_array($cmd->type,
@@ -625,17 +631,11 @@ final class Engine
                 $this->applyDamage($state, $target, $value, 'impact', $source);
                 break;
             case 'heal_turn_wounds':
-                $wounds = (int) ($target->flags['damage_taken_this_turn'] ?? 0);
-                if ($wounds > 0) {
-                    $target->hp += $wounds;
-                    if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
-                }
-                break;
             case 'heal':
-                $value = (int) ($effect['value'] ?? 1);
-                $target->hp += $value;
-                if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
-                break;
+                $value=$type==='heal_turn_wounds'?(int)($target->flags['damage_taken_this_turn']??0):(int)($effect['value']??1);
+                (new CardHealing($state,$this))->begin($source,$target,$value,$type,$effect['_heal_return_to']??[],
+                    ['parent'=>ActionResolution::parent($state)]);
+                return;
             case 'close_target':
                 $target->closed = true;
                 break;

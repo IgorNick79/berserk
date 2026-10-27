@@ -18,6 +18,7 @@ final class InstantProcessor
 
     private const COMBAT_WINDOW_DICE = 'dice';
     private const COMBAT_WINDOW_MAIN = 'main';
+    private const COMBAT_WINDOW_WOUNDS = 'wounds';
 
     public function __construct(
         private GameState $state,
@@ -138,84 +139,73 @@ final class InstantProcessor
      */
     public function getInstants(string $ownerKey, string $phase = 'before', string $type = 'turn'): array
     {
+        return $this->availableInstants($ownerKey, $phase, $type);
+    }
+
+    /** Lifecycle trigger only, not admission. A dying suppressor may release a living source. */
+    public function hasCombatWoundsSource(): bool
+    {
+        foreach ($this->state->cards as $card) {
+            if ($card->hp <= 0 || $card->dying || !$card->revealed
+                || !in_array($card->zone,[CardInstance::ZONE_FIELD,CardInstance::ZONE_FLYING],true)) continue;
+            foreach ($card->prop['instants']??[] as $inst) {
+                if (($inst['trigger']??'')==='combat' && $this->instantCombatPhase($inst)==='wounds') return true;
+            }
+        }
+        return false;
+    }
+
+    /** Source legality is shared with the special defender-redirection route. No priority is granted here. */
+    public function getSourceInstants(CardInstance $card, string $phase, string $type, ?string $ownPending = null): array
+    {
+        if (!in_array($type, ['turn', 'combat'], true)) return [];
+        if (!in_array($card->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)
+            || $card->dying || $card->hp <= 0 || !$card->revealed || !empty($card->flags['in_stack'])
+            || $this->isCardInPending($card, $ownPending)) return [];
         $strike = $this->state->battle['strike']
             ?? ($this->state->battle['turn_instant_stack']['continuation']['combat_origin_strike'] ?? null);
-
-        $activeKey = null;
-        if ($strike && !empty($strike['attacker_id'])) {
-            $attacker  = $this->state->getCard($strike['attacker_id']);
-            $activeKey = $attacker ? $attacker->owner : null;
+        // Combat has its existing effective-closure rules; turn uses the ability's tap contract.
+        if ($type === 'combat' && CardStats::combatClosed($this->state, $card)) return [];
+        $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+        if ($type === 'turn' && $attacker?->owner === $card->owner && in_array($phase, ['before', 'after'], true)) return [];
+        $result = [];
+        foreach ($card->effectiveProp()['instants'] ?? [] as $inst) {
+            if (($inst['trigger'] ?? '') !== $type) continue;
+            if (!$this->combatSourceAvailable($card, $inst, $type, $phase, $strike)) continue;
+            if (!empty($strike['matriarch_order']) && ($inst['effect']['type'] ?? '') === 'redirect_strike') continue;
+            if ($this->instantRequiresTap($inst) && $card->closed
+                && ($type === 'turn' || !empty($strike['matriarch_order']))) continue;
+            $key = (string) ($inst['key'] ?? ($inst['name'] ?? 'instant'));
+            $limit = (int) ($inst['uses_per_turn'] ?? 1);
+            if ($limit > 0 && (int) ($card->flags['instant_uses_this_turn'][$key] ?? 0) >= $limit) continue;
+            if ($card->coins < max(0, (int) ($inst['coins'] ?? 0))) continue;
+            if (!CardStats::checkCondition($inst['condition'] ?? null, $this->state, $card)) continue;
+            if ($type === 'combat' && (!in_array($this->instantCombatPhase($inst), self::COMBAT_PHASE_ORDER, true)
+                || ($phase === 'combat' && !$this->combatInstantAllowedInCurrentWindow($inst)))) continue;
+            if ($type === 'combat' && ($inst['effect']['type'] ?? '') === 'redistribute_wounds'
+                && (empty($strike['damage_applied'])
+                    || !(new WoundTransferProcessor($this->state,$this->engine))->canRedistributeCombatWounds($card))) continue;
+            $result[] = $inst;
         }
+        return $result;
+    }
 
+    private function availableInstants(string $ownerKey, string $phase, string $type, ?string $ownPending = null): array
+    {
         $result = [];
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $ownerKey) continue;
-            if ($card->zone !== CardInstance::ZONE_FIELD
-                && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying) continue;
-            if ($type !== 'turn' && CardStats::combatClosed($this->state, $card)) continue;
-            if (!empty($card->flags['in_stack'])) continue;
-            if (empty($card->effectiveProp()['instants'])) continue;
-
-            // Карта в активном pending — тоже занята: отменить и только потом
-            // играть инстанты. Даже если pending отменяемый.
-            if ($this->isCardInPending($card)) {
-                continue;
-            }
-
-            foreach ($card->effectiveProp()['instants'] as $inst) {
-                if (($inst['trigger'] ?? '') !== $type) continue;
-                if (!$this->combatSourceAvailable($card, $inst, $type, $phase, $strike)) continue;
-                if (!empty($strike['matriarch_order']) && ($inst['effect']['type'] ?? '') === 'redirect_strike') continue;
-                if ($type === 'combat' && !empty($strike['matriarch_order']) && $this->instantRequiresTap($inst) && $card->closed) continue;
-                if ($type === 'turn' && $this->instantRequiresTap($inst) && $card->closed) continue;
-                $key = (string) ($inst['key'] ?? ($inst['name'] ?? 'instant'));
-                $limit = (int) ($inst['uses_per_turn'] ?? 1);
-                if ($limit > 0) {
-                    $used = (int) ($card->flags['instant_uses_this_turn'][$key] ?? 0);
-                    if ($used >= $limit) continue;
-                }
-
-                if ($type === 'combat' && !in_array($this->instantCombatPhase($inst), self::COMBAT_PHASE_ORDER, true)) {
-                    continue;
-                }
-                if ($type === 'combat'
-                    && $phase === 'combat'
-                    && !$this->combatInstantAllowedInCurrentWindow($inst)) {
-                    continue;
-                }
+            foreach ($this->getSourceInstants($card, $phase, $type, $ownPending) as $inst) {
                 if ($type === 'combat'
                     && ($inst['target'] ?? 'self') === 'adjacent_ally'
                     && (($inst['effect']['type'] ?? '') === 'redirect_strike')) {
                     continue;
                 }
-                if ($type === 'combat'
-                    && ($inst['target'] ?? 'self') === 'adjacent_ally'
-                    && empty($this->findAdjacentAllyTargets($ownerKey))) {
-                    continue;
-                }
-
-                // Активный игрок в бою не играет turn-инстанты в before/after окне.
-                if ($type === 'turn'
-                    && $activeKey !== null
-                    && $activeKey === $ownerKey
-                    && in_array($phase, ['before', 'after'], true)) {
-                    continue;
-                }
-
-                // Проверка легальных целей (для turn)
-                if ($type === 'turn') {
-                    $target    = $inst['target'] ?? 'self';
-                    $condition = $inst['effect']['condition'] ?? null;
-
-                    if ($target !== 'self' && !$this->hasAnyTurnTarget($card, (string) $target, $condition)) {
-                        continue;
-                    }
-
-                    // Стоимость инстанта (coins)
-                    $cost = (int) ($inst['coins'] ?? 0);
-                    if ($cost > 0 && $card->coins < $cost) continue;
-                }
+                $target = (string) ($inst['target'] ?? 'self');
+                $condition = $inst['effect']['condition'] ?? null;
+                if ($target === 'self'
+                    ? !$this->isLegalInstantTarget($card, $card, $target, $condition)
+                    : !$this->hasAnyInstantTarget($card, $target, $condition)) continue;
 
                 $result[] = [
                     'card_id' => $card->instanceId,
@@ -231,17 +221,18 @@ final class InstantProcessor
         return $result;
     }
 
-    private function hasAnyTurnTarget(CardInstance $source, string $target, mixed $condition): bool
+    private function hasAnyInstantTarget(CardInstance $source, string $target, mixed $condition): bool
     {
         foreach ($this->state->cards as $candidate) {
-            if ($this->isLegalTurnTarget($source, $candidate, $target, $condition)) {
+            if ($this->isLegalInstantTarget($source, $candidate, $target, $condition)) {
                 return true;
             }
         }
         return false;
     }
 
-    private function isLegalTurnTarget(
+    /** Pure target predicate. Source availability and command priority remain separate checks. */
+    public function isLegalInstantTarget(
         CardInstance $source,
         CardInstance $candidate,
         string $target,
@@ -251,8 +242,11 @@ final class InstantProcessor
             && $candidate->zone !== CardInstance::ZONE_FLYING) return false;
         if ($candidate->dying || $candidate->hp <= 0) return false;
 
+        if ($target === 'self' && $candidate->instanceId !== $source->instanceId) return false;
         if ($target === 'enemy' && $candidate->owner === $source->owner) return false;
         if ($target === 'ally' && $candidate->owner !== $source->owner) return false;
+        if ($target === 'adjacent_ally'
+            && !in_array($candidate->instanceId, $this->findAdjacentAllyTargets($source->owner), true)) return false;
         if ($target === 'enemy_open_creature') {
             if ($candidate->owner === $source->owner) return false;
             if ($candidate->closed) return false;
@@ -333,7 +327,7 @@ final class InstantProcessor
             return $opened;
         }
 
-        $combatWindow = in_array($combatWindow, [self::COMBAT_WINDOW_DICE, self::COMBAT_WINDOW_MAIN], true)
+        $combatWindow = in_array($combatWindow, [self::COMBAT_WINDOW_DICE, self::COMBAT_WINDOW_MAIN, self::COMBAT_WINDOW_WOUNDS], true)
             ? $combatWindow
             : null;
         $hadPreviousWindow = array_key_exists('combat_instant_window', $this->state->battle['strike']);
@@ -410,25 +404,8 @@ final class InstantProcessor
         if (!$card || $card->owner !== $playerKey) {
             return Result::error('Карта не ваша');
         }
-        if (!empty($strike['matriarch_order']) && $card->instanceId === (int) $strike['attacker_id']) return Result::error('Атакующий занят сражением');
-        if (CardStats::combatClosed($this->state, $card)) return Result::error('Карта закрыта');
-        if (!empty($card->flags['in_stack'])) {
-            return Result::error('Карта уже в стеке');
-        }
-
-        $inst = null;
-        foreach ($card->effectiveProp()['instants'] ?? [] as $i) {
-            if (($i['trigger'] ?? '') !== $wantedType) continue;
-            if (($i['key'] ?? '') === $key) { $inst = $i; break; }
-        }
-        if (!$inst) return Result::error('Инстант не найден');
-        if (!$this->combatSourceAvailable($card, $inst, $wantedType, $phase, $strike)) return Result::error('Существо занято сражением');
-        if (!empty($strike['matriarch_order']) && ($inst['effect']['type'] ?? '') === 'redirect_strike') return Result::error('Перенаправление запрещено');
-        if (!empty($strike['matriarch_order']) && $this->instantRequiresTap($inst) && $card->closed) return Result::error('Карта не может оплатить закрытие');
-        if (!empty($strike['matriarch_order'])) {
-            $limit = (int) ($inst['uses_per_turn'] ?? 1);
-            if ($limit > 0 && (int) ($card->flags['instant_uses_this_turn'][$key] ?? 0) >= $limit) return Result::error('Инстант уже использован');
-        }
+        $inst = $this->findAvailableInstant($playerKey, $cardId, $key, $phase, $wantedType);
+        if (!$inst) return Result::error('Инстант недоступен');
 
         $target = $inst['target'] ?? 'self';
         $effect = $inst['effect'] ?? [];
@@ -447,6 +424,7 @@ final class InstantProcessor
 
         // Self — сразу в стек
         if ($target === 'self') {
+            $this->payCombatInstant($card, $inst);
             $card->flags['in_stack'] = true;
             $this->state->battle['strike']['instant_stack'][] = $this->buildStackItem(
                 $card,
@@ -524,8 +502,18 @@ final class InstantProcessor
         if ($choice !== null) {
             $item['choice'] = $choice;
         }
-        if (!empty($strike['matriarch_order'])) $this->markInstantUsed($card, $instantKey);
         return $item;
+    }
+
+    /** Commit only after source and concrete target validation, never at picker opening. */
+    private function payCombatInstant(CardInstance $card, array $inst): void
+    {
+        $cost = max(0, (int) ($inst['coins'] ?? 0));
+        if ($cost > 0) {
+            $card->coins -= $cost;
+            $this->engine->syncCoinBonus($card);
+        }
+        $this->markInstantUsed($card, (string) ($inst['key'] ?? ''));
     }
 
     public function chooseTarget(string $playerKey, Command $cmd): Result
@@ -537,26 +525,6 @@ final class InstantProcessor
         $target = $this->state->getCard((int) $cmd->get('target_id', 0));
         if (!$target) return Result::error('Цель не найдена');
 
-        if ($pc['target'] === 'enemy' && $target->owner === $playerKey) {
-            return Result::error('Только на врага');
-        }
-        if ($pc['target'] === 'ally' && $target->owner !== $playerKey) {
-            return Result::error('Только на союзника');
-        }
-        if ($pc['target'] === 'adjacent_ally'
-            && !in_array($target->instanceId, $this->findAdjacentAllyTargets($playerKey), true)) {
-            return Result::error('Только соседнее союзное существо цели удара');
-        }
-        if ($target->zone !== CardInstance::ZONE_FIELD
-            && $target->zone !== CardInstance::ZONE_FLYING) {
-            return Result::error('Цель не на поле');
-        }
-
-        $cond = $pc['effect']['condition'] ?? null;
-        if ($cond === 'target_not_moved' && !empty($target->flags['moved_this_turn'])) {
-            return Result::error('Цель уже двигалась в этот ход');
-        }
-
         $source = $this->state->getCard($pc['card_id']);
         if (!$source) return Result::error('Источник не найден');
         if (EffectiveFeatures::suppressed($source)) {
@@ -564,10 +532,18 @@ final class InstantProcessor
             $this->state->bumpVersion();
             return Result::ok(['combat_pick_suppressed']);
         }
-        if (!$this->combatSourceAvailable($source, ['effect' => $pc['effect']], 'combat', 'combat', $this->state->battle['strike'] ?? null)) {
-            return Result::error('Существо занято сражением');
+        $strike = $this->state->battle['strike'] ?? [];
+        if (($strike['state'] ?? null) !== 'waiting_instant' || ($strike['instant_priority'] ?? null) !== $playerKey
+            || !in_array($playerKey, $this->combatParticipants($strike), true)) return Result::error('Не ваш приоритет');
+        $phase = (string) ($strike['instant_phase'] ?? 'combat');
+        $type = $phase === 'combat' ? 'combat' : 'turn';
+        $inst = $this->findAvailableInstant($playerKey, $source->instanceId, (string) ($pc['instant_key'] ?? ''), $phase, $type, 'pending_combat_pick');
+        if (!$inst) return Result::error('Инстант недоступен');
+        if (!$this->isLegalInstantTarget($source, $target, (string) ($inst['target'] ?? 'self'), $inst['effect']['condition'] ?? null)) {
+            return Result::error('Цель недоступна');
         }
 
+        $this->payCombatInstant($source, $inst);
         $source->flags['in_stack'] = true;
 
         $this->state->battle['strike']['instant_stack'][] = $this->buildStackItem(
@@ -640,24 +616,32 @@ final class InstantProcessor
     {
         $strike = &$this->state->battle['strike'];
         $phase = $strike['instant_phase'] ?? 'before';
-        $summary = [];
+        $summary = $strike['healing_summary'] ?? [];
+        unset($strike['healing_summary']);
 
         if ($phase === 'combat') {
-            $this->resolveCombatPhases();
+            if (($strike['combat_instant_window'] ?? '') === self::COMBAT_WINDOW_WOUNDS) {
+                $strike['wounds_after_result_ack'] = true;
+                $this->resolveCombatPhases(true);
+            } else $this->resolveCombatPhases();
             return;
         }
 
         $stack = $strike['instant_stack'] ?? [];
         $stack = array_reverse($stack);
 
-        foreach ($stack as $item) {
+        foreach ($stack as $index => $item) {
             $source = $this->state->getCard($item['card_id']);
             $target = $this->state->getCard($item['target_id']);
 
             $effect = (array) ($item['effect'] ?? []);
             $label  = $item['label'] ?? 'Инстант';
 
-            if ($source && EffectiveFeatures::suppressed($source)) {
+            if (isset($item['_card_heal_done'])) {
+                $summary[]=['label'=>$label,'card_ukid'=>$source?->ukid??'', 'player'=>$item['player'],
+                    'applied'=>$item['_card_heal_done']['restored']>0||$item['_card_heal_done']['replaced'],
+                    'reason'=>$item['_card_heal_done']['message']??'','card_heal'=>$item['_card_heal_done']];
+            } elseif ($source && EffectiveFeatures::suppressed($source)) {
                 $summary[] = [
                     'label' => $label, 'card_ukid' => $source->ukid,
                     'player' => $item['player'] ?? null,
@@ -682,11 +666,13 @@ final class InstantProcessor
             } else {
                 $this->engine->applyInstantEffect(
                     $this->state,
-                    $effect,
+                    $effect + ['_heal_return_to'=>['handler'=>'instant','kind'=>'legacy','item'=>$item,
+                        'remaining'=>array_slice($stack,$index+1),'summary'=>$summary]],
                     $source,
                     $target,
                     $item['player']
                 );
+                if (CardHealing::waiting($this->state)) return;
                 $applied = true;
                 $reasonText = '';
 
@@ -923,6 +909,13 @@ final class InstantProcessor
             return ['source' => $source, 'applied' => false, 'reason' => 'цель не найдена', 'result' => []];
         }
 
+        if(in_array($type,['heal','heal_turn_wounds'],true) && $target) {
+            $value=$type==='heal_turn_wounds'?(int)($target->flags['damage_taken_this_turn']??0):(int)($effect['value']??1);
+            $r=(new CardHealing($this->state,$this->engine))->begin($source,$target,$value,$type,['handler'=>'instant','kind'=>'combat']);
+            if($r===null)return 'paused';
+            return ['source'=>$source,'applied'=>$r['restored']>0||$r['replaced'],'reason'=>$r['message']??'','result'=>['card_heal'=>$r]];
+        }
+
         $before = $this->captureCombatSnapshot();
         $effect['_resolution_type'] = (string)(($item['action_type'] ?? '') ?: 'instant');
         $reason = $this->engine->applyCombatEffect(
@@ -934,6 +927,10 @@ final class InstantProcessor
             $effectTarget
         );
         if ($reason === null && !in_array($type, ['damage_cap','damage_on_dice'], true)) ActionResolution::effect($this->state, $source, (string)(($item['action_type'] ?? '') ?: 'instant'), 'instant', ['effect_type'=>$type]);
+        if(CardHealing::waiting($this->state)) {
+            CardHealing::defer($this->state,['handler'=>'instant','kind'=>'combat_after_effect','before'=>$before,'effect'=>$effect,'owner'=>$item['player']]);
+            return 'paused';
+        }
         $after = $this->captureCombatSnapshot();
 
         return [
@@ -1042,6 +1039,8 @@ final class InstantProcessor
             );
             unset($strike['instant_phase']);
             if ($afterResultAck) {
+                $strike['state'] = 'results';
+                unset($strike['combat_instant_window']);
                 (new StrikeResolver($this->state, $this->engine))
                     ->continueAfterStrikeResultAck($strikeForContinuation);
                 return;
@@ -1252,7 +1251,7 @@ final class InstantProcessor
 
         $window = (string) ($strike['combat_instant_window'] ?? '');
         if ($window === '') {
-            return true;
+            return $this->instantCombatPhase($inst) !== 'wounds';
         }
 
         return $this->combatInstantAllowedInWindow($inst, $window);
@@ -1265,8 +1264,10 @@ final class InstantProcessor
             return $combatPhase === 'dice';
         }
         if ($window === self::COMBAT_WINDOW_MAIN) {
-            return $combatPhase !== 'dice';
+            return $combatPhase !== 'dice' && $combatPhase !== 'wounds';
         }
+        if ($window === self::COMBAT_WINDOW_WOUNDS) return $combatPhase === 'wounds';
+        if ($combatPhase === 'wounds') return false;
         return true;
     }
 
@@ -1298,6 +1299,12 @@ final class InstantProcessor
             if ($attackerKey !== '' && $this->openWindow('combat', $attackerKey, null, self::COMBAT_WINDOW_MAIN)) {
                 return true;
             }
+        }
+
+        if ($window === self::COMBAT_WINDOW_WOUNDS) {
+            $this->state->battle['strike']['state'] = 'results';
+            (new StrikeResolver($this->state,$this->engine))->continueAfterStrikeResultAck($this->state->battle['strike']);
+            return true;
         }
 
         $this->continueAfterCombatMainWindow();
@@ -1566,27 +1573,12 @@ final class InstantProcessor
         $pi = $this->state->battle['pending_instant_pick'] ?? null;
         if (!$pi) return Result::error('Нет ожидающего выбора');
         if ($pi['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+        $stack = $this->state->battle['turn_instant_stack'] ?? [];
+        if (($stack['state'] ?? null) !== 'ordering' || ($stack['priority'] ?? null) !== $playerKey
+            || !in_array($playerKey, $this->turnParticipants($stack), true)) return Result::error('Не ваш приоритет');
 
         $target = $this->state->getCard((int) $cmd->get('target_id', 0));
         if (!$target) return Result::error('Цель не найдена');
-
-        if ($pi['target'] === 'enemy' && $target->owner === $playerKey) {
-            return Result::error('Только на врага');
-        }
-        if ($pi['target'] === 'ally' && $target->owner !== $playerKey) {
-            return Result::error('Только на союзника');
-        }
-        if ($target->zone !== CardInstance::ZONE_FIELD
-            && $target->zone !== CardInstance::ZONE_FLYING) {
-            return Result::error('Цель не на поле');
-        }
-        $condition = $pi['effect']['condition'] ?? null;
-        if ($condition === 'target_not_moved' && !empty($target->flags['moved_this_turn'])) {
-            return Result::error('Цель уже двигалась в этот ход');
-        }
-        if ($condition === 'target_closed' && !$target->closed) {
-            return Result::error('Цель должна быть закрыта');
-        }
 
         $source = $this->state->getCard((int) $pi['card_id']);
         if (!$source) return Result::error('Источник не найден');
@@ -1595,11 +1587,14 @@ final class InstantProcessor
             $this->state->bumpVersion();
             return Result::ok(['instant_pick_suppressed']);
         }
-        if (!$this->isLegalTurnTarget($source, $target, (string) ($pi['target'] ?? 'self'), $condition)) {
+        $phase = (string) ($this->state->battle['turn_instant_stack']['phase'] ?? 'turn');
+        $available = $this->findAvailableTurnInstant($playerKey, $source->instanceId, (string) ($pi['list_key'] ?? ''), $phase, 'pending_instant_pick');
+        if (!$available) return Result::error('Инстант недоступен');
+        if (!$this->isLegalInstantTarget($source, $target, (string) $available['target'], $available['effect']['condition'] ?? null)) {
             return Result::error('Цель недоступна');
         }
 
-        $effect = (array) ($pi['effect'] ?? []);
+        $effect = (array) ($available['effect'] ?? []);
         if (($effect['type'] ?? '') === 'forced_strike_adjacent') {
             $candidates = $this->findForcedStrikeAdjacentTargets($target);
             if (empty($candidates)) {
@@ -1635,7 +1630,7 @@ final class InstantProcessor
             ];
         }
 
-        $result = $this->pushTurnInstantEntry($playerKey, $payload, (int) $pi['card_id'], $target->instanceId);
+        $result = $this->pushTurnInstantEntry($playerKey, $payload, (int) $pi['card_id'], $target->instanceId, 'pending_instant_pick');
         if (!$result->success) return $result;
         unset($this->state->battle['pending_instant_pick']);
 
@@ -1685,7 +1680,8 @@ final class InstantProcessor
             $playerKey,
             $payload,
             (int) ($pending['card_id'] ?? 0),
-            $attacker->instanceId
+            $attacker->instanceId,
+            'pending_forced_strike_adjacent'
         );
         if (!$result->success) return $result;
 
@@ -1694,17 +1690,26 @@ final class InstantProcessor
         return Result::ok(['turn_instant_stacked']);
     }
 
-    private function findAvailableTurnInstant(string $playerKey, int $cardId, string $key, string $phase): ?array
+    private function findAvailableInstant(string $playerKey, int $cardId, string $key, string $phase, string $type, ?string $ownPending = null): ?array
     {
-        foreach ($this->getInstants($playerKey, $phase, 'turn') as $inst) {
+        foreach ($this->availableInstants($playerKey, $phase, $type, $ownPending) as $inst) {
             $payload = (array) ($inst['payload'] ?? []);
             if ((int) $inst['card_id'] !== $cardId) continue;
             if ((string) ($payload['key'] ?? '') !== $key) continue;
-            return [
-                'card_id' => $inst['card_id'],
-                'ukid' => $inst['ukid'],
+            return $payload;
+        }
+        return null;
+    }
+
+    private function findAvailableTurnInstant(string $playerKey, int $cardId, string $key, string $phase, ?string $ownPending = null): ?array
+    {
+        $payload = $this->findAvailableInstant($playerKey, $cardId, $key, $phase, 'turn', $ownPending);
+        if ($payload === null) return null;
+        return [
+                'card_id' => $cardId,
+                'ukid' => $this->state->getCard($cardId)->ukid,
                 'key' => $key,
-                'label' => $inst['label'],
+                'label' => $payload['name'] ?? 'Инстант',
                 'target' => $payload['target'] ?? 'self',
                 'effect' => (array) ($payload['effect'] ?? []),
                 'action_type' => (string) ($payload['action_type'] ?? ''),
@@ -1712,8 +1717,6 @@ final class InstantProcessor
                 'uses_per_turn' => (int) ($payload['uses_per_turn'] ?? 1),
                 'close_source' => $this->instantRequiresTap($payload),
             ];
-        }
-        return null;
     }
 
     public function declareTurnInstantFromTask(string $playerKey, array $subTask): Result
@@ -1722,12 +1725,14 @@ final class InstantProcessor
         $cardId = (int) ($subTask['card_id'] ?? 0);
         $key = (string) ($payload['key'] ?? '');
 
+        $found = $this->findAvailableTurnInstant($playerKey, $cardId, $key, 'turn');
+        if (!$found) return Result::error('Инстант недоступен');
         if (empty($this->state->battle['turn_instant_stack'])) {
             $this->openTurnStackWindow($playerKey, ['type' => 'turn_phase'], 'turn');
         }
-
-        $found = $this->findAvailableTurnInstant($playerKey, $cardId, $key, 'turn');
-        if (!$found) return Result::error('Инстант недоступен');
+        $stack = $this->state->battle['turn_instant_stack'] ?? [];
+        if (($stack['state'] ?? null) !== 'ordering' || ($stack['priority'] ?? null) !== $playerKey
+            || !in_array($playerKey, $this->turnParticipants($stack), true)) return Result::error('Не ваш приоритет');
 
         if (($found['target'] ?? 'self') === 'self') {
             return $this->pushTurnInstantEntry($playerKey, $found, $cardId);
@@ -1747,7 +1752,7 @@ final class InstantProcessor
         return Result::ok(['instant_pick_opened']);
     }
 
-    private function pushTurnInstantEntry(string $playerKey, array $inst, int $cardId, ?int $targetId = null): Result
+    private function pushTurnInstantEntry(string $playerKey, array $inst, int $cardId, ?int $targetId = null, ?string $ownPending = null): Result
     {
         $stack = $this->state->battle['turn_instant_stack'] ?? null;
         if (!$stack || ($stack['state'] ?? '') !== 'ordering') {
@@ -1766,14 +1771,16 @@ final class InstantProcessor
         if (!empty($card->flags['in_stack'])) return Result::error('Карта уже в стеке');
 
         $key = (string) ($inst['key'] ?? '');
-        $limit = (int) ($inst['uses_per_turn'] ?? 1);
-        if ($limit > 0 && (int) ($card->flags['instant_uses_this_turn'][$key] ?? 0) >= $limit) {
-            return Result::error('Уже использовано в этот ход');
+        $fresh = $this->findAvailableTurnInstant($playerKey, $cardId, $key, (string) ($stack['phase'] ?? 'turn'), $ownPending);
+        if (!$fresh) return Result::error('Инстант недоступен');
+        $target = $this->state->getCard($targetId ?? $cardId);
+        if (!$target || !$this->isLegalInstantTarget($card, $target, (string) $fresh['target'], $fresh['effect']['condition'] ?? null)) {
+            return Result::error('Цель недоступна');
         }
-
+        // The secondary forced-strike choice is validated by its native handler above.
+        if (isset($inst['effect']['forced_target_id'])) $fresh['effect']['forced_target_id'] = $inst['effect']['forced_target_id'];
+        $inst = $fresh;
         $cost = (int) ($inst['cost'] ?? 0);
-        if ($cost > 0 && $card->coins < $cost) return Result::error('Не хватает монет');
-        if (!empty($inst['close_source']) && $card->closed) return Result::error('Карта закрыта');
         if ($cost > 0) {
             $card->coins -= $cost;
             $this->engine->syncCoinBonus($card);
@@ -1829,7 +1836,13 @@ final class InstantProcessor
             $before = $target ? $this->captureTurnTargetSnapshot($target) : null;
             $effectResult = [];
 
-            if (!$source) {
+            if (isset($item['_card_heal_done'])) {
+                $before=$item['_heal_before'];$after=$target?$this->captureTurnTargetSnapshot($target):null;
+                $effectResult=$target?$this->buildTurnEffectResult((array)$item['effect'],$before,$after,$target):[];
+                $effectResult['card_heal']=$item['_card_heal_done'];
+                $applied=!empty($item['_effect_completed'])?$this->turnEffectChanged($before,$after):($item['_card_heal_done']['restored']>0 || $item['_card_heal_done']['replaced']);
+                $reason=$item['_card_heal_done']['message']??($applied?'':'излечение не восстановило HP');
+            } elseif (!$source) {
                 $reason = 'источник не найден';
             } elseif (EffectiveFeatures::suppressed($source)) {
                 $reason = 'Потеря памяти';
@@ -1849,7 +1862,9 @@ final class InstantProcessor
                 try {
                     $this->engine->applyInstantEffect(
                         $this->state,
-                        (array) $item['effect'],
+                        (array) $item['effect'] + ['_heal_return_to'=>['handler'=>'instant','kind'=>'turn',
+                            'stack'=>$stackState,'summary'=>$summary,'remaining'=>array_slice($items,$index+1),
+                            'item'=>$item,'before'=>$before]],
                         $source,
                         $target,
                         (string) $item['player']
@@ -1857,6 +1872,12 @@ final class InstantProcessor
                 } finally {
                     if ($resolutionScope === null) unset($this->state->battle[ActionResolution::KEY]['scope_id']);
                     else $this->state->battle[ActionResolution::KEY]['scope_id'] = $resolutionScope;
+                }
+                if (CardHealing::waiting($this->state)) {
+                    if(!in_array($item['effect']['type']??'', ['heal','heal_turn_wounds'],true))
+                        CardHealing::defer($this->state,['handler'=>'instant','kind'=>'turn_after_effect',
+                            'stack'=>$stackState,'summary'=>$summary,'remaining'=>array_slice($items,$index+1),'item'=>$item,'before'=>$before]);
+                    return;
                 }
                 $after = $this->captureTurnTargetSnapshot($target);
                 $effectResult = $this->buildTurnEffectResult((array) $item['effect'], $before, $after, $target);
@@ -2124,18 +2145,45 @@ final class InstantProcessor
         return true;
     }
 
-    private function isCardInPending(CardInstance $card): bool
+    private function isCardInPending(CardInstance $card, ?string $ownPending = null): bool
     {
+        $containsSource = static function(array $value) use (&$containsSource, $card): bool {
+            foreach (['attacker_id', 'card_id', 'source_id', 'healer_id'] as $field) {
+                if ((int) ($value[$field] ?? 0) === $card->instanceId) return true;
+            }
+            foreach ($value as $nested) if (is_array($nested) && $containsSource($nested)) return true;
+            return false;
+        };
         foreach ($this->state->battle as $key => $val) {
             if (!is_string($key) || !str_starts_with($key, 'pending_')) continue;
+            if ($key === $ownPending) continue;
             if (!is_array($val)) continue;
-
-            foreach (['attacker_id', 'card_id', 'source_id', 'healer_id'] as $field) {
-                if ((int) ($val[$field] ?? 0) === $card->instanceId) {
-                    return true;
-                }
-            }
+            if ($containsSource($val)) return true;
         }
         return false;
     }
+    public function continueCardHealing(array $to,array $r): Result
+    {
+        if($to['kind']==='combat_after_effect') {
+            $result=$this->buildCombatEffectResult($to['effect'],$to['before'],$this->captureCombatSnapshot(),$to['owner']);
+            $this->completePausedCombatItem(true,'',$result);return Result::ok(['card_heal_combat_instant_continued']);
+        }
+        if($to['kind']==='combat') {
+            $this->completePausedCombatItem($r['restored']>0||$r['replaced'],$r['message']??'',['card_heal'=>$r]);
+            return Result::ok(['card_heal_combat_instant_continued']);
+        }
+        $item=$to['item'];$item['_card_heal_done']=$r;
+        if(in_array($to['kind'],['turn','turn_after_effect'],true)) {
+            if($to['kind']==='turn_after_effect')$item['_effect_completed']=true;
+            $item['_heal_before']=$to['before'];$stack=$to['stack'];
+            $stack['remaining']=array_merge([$item],$to['remaining']);$stack['resolved_summary']=$to['summary'];
+            $this->state->battle['turn_instant_stack']=$stack;
+            $this->resolveTurnStack();
+        } else {
+            $this->state->battle['strike']['instant_stack']=array_reverse(array_merge([$item],$to['remaining']));
+            $this->state->battle['strike']['healing_summary']=$to['summary'];$this->resolveStack();
+        }
+        return Result::ok(['card_heal_instant_continued']);
+    }
+
 }

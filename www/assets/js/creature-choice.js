@@ -10,7 +10,7 @@
         if (!rows.length) return;
         var key = Array.from(form.querySelectorAll('input[type="hidden"]')).map(function (i) { return i.name + ':' + i.value; }).join('|');
         var previous = saved.get(key) || {};
-        var side = requested || previous.side || 'enemy';
+        var side = requested || previous.side || controls.dataset.defaultSide || 'enemy';
         if (!rows.some(function (r) { return r.dataset.creatureOwner === side; })) side = rows[0].dataset.creatureOwner;
         controls.hidden = false;
         controls.querySelectorAll('[data-creature-side]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.creatureSide === side ? 'true' : 'false'); });

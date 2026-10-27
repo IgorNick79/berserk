@@ -33,5 +33,5 @@
         </div></footer>
     </aside>
 </div>
-<script src="/assets/js/battle-ui.js?v=13" defer></script>
+<script src="/assets/js/battle-ui.js?v=14" defer></script>
 <script src="/assets/js/battle-result.js?v=2" defer></script>

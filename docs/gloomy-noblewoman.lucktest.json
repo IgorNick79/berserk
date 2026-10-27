@@ -1,0 +1,60 @@
+{
+  "cards": [
+    {
+      "owner": "host",
+      "ukid": "s1_154",
+      "row": 2,
+      "col": 2,
+      "hp": 6
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_81",
+      "row": 3,
+      "col": 3,
+      "hp": 12
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_94",
+      "row": 1,
+      "col": 2,
+      "hp": 10
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_151",
+      "row": 3,
+      "col": 2,
+      "hp": 3
+    },
+    {
+      "owner": "player",
+      "ukid": "s1_154",
+      "row": 5,
+      "col": 3,
+      "hp": 10
+    },
+    {
+      "owner": "player",
+      "ukid": "s1_81",
+      "row": 4,
+      "col": 3,
+      "hp": 12
+    },
+    {
+      "owner": "player",
+      "ukid": "s1_94",
+      "row": 6,
+      "col": 3,
+      "hp": 10
+    },
+    {
+      "owner": "player",
+      "ukid": "s1_151",
+      "row": 4,
+      "col": 4,
+      "hp": 3
+    }
+  ]
+}
