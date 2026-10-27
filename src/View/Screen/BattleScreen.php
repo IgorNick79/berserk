@@ -158,6 +158,13 @@ final class BattleScreen
             }
         }
         $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml, $pilePanelHtml, $actionChoice, $ui['inspect'] ?? 0);
+        $healingMessages = $state->battle['card_healing']['messages'] ?? [];
+        if ($healingMessages) {
+            $infoPanelHtml = \Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(
+                title: 'Результат первого излечения',
+                text: array_map(static fn(string $message): string => htmlspecialchars($message, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'), $healingMessages)
+            )) . $infoPanelHtml;
+        }
 
         $debugHtml = '';
         if (!\Berserk\Core\MatchPause::blocking($state) && \Berserk\Auth\DebugAccess::forPlayer($state, $playerKey)) {
@@ -1407,7 +1414,7 @@ final class BattleScreen
             return '∞';
         }
 
-        if (!empty($card->flags['stitched_unique_loss'])) {
+        if (!empty($card->flags['stitched_unique_loss']) || !empty($card->prop['first_card_heal'])) {
             return (string) $card->hpMax;
         }
 

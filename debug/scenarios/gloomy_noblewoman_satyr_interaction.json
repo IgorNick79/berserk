@@ -1,0 +1,3142 @@
+{
+  "stage": "battle",
+  "first_player": "host",
+  "host_side": 1,
+  "player_side": 2,
+  "cards": [
+    {
+      "owner": "host",
+      "ukid": "s1_154",
+      "row": 2,
+      "col": 1,
+      "hp": 6
+    },
+    {
+      "owner": "player",
+      "ukid": "s1_154",
+      "row": 5,
+      "col": 5,
+      "hp": 10
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_81",
+      "row": 3,
+      "col": 3,
+      "hp": 12
+    },
+    {
+      "owner": "player",
+      "ukid": "s1_81",
+      "row": 4,
+      "col": 3,
+      "hp": 12
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_94",
+      "row": 2,
+      "col": 2,
+      "hp": 10
+    },
+    {
+      "owner": "player",
+      "ukid": "s1_94",
+      "row": 5,
+      "col": 4,
+      "hp": 10
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_151",
+      "row": 3,
+      "col": 2,
+      "hp": 3
+    },
+    {
+      "owner": "player",
+      "ukid": "s1_151",
+      "row": 4,
+      "col": 4,
+      "hp": 3
+    }
+  ],
+  "cases": [
+    {
+      "name": "hp_6_10_host_host_ordinary",
+      "active": "host",
+      "noble_hp": [
+        6,
+        10
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [],
+        "automatic_conflict": true,
+        "target_hp": 3,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_10_host_host_satyr",
+      "active": "host",
+      "noble_hp": [
+        6,
+        10
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 3,
+            "action_key": "heal"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [],
+        "automatic_conflict": true,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_10_player_player_ordinary",
+      "active": "player",
+      "noble_hp": [
+        6,
+        10
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 8,
+            "action_key": "heal"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 2,
+        "wounds": 0,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 5,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_10_player_player_satyr",
+      "active": "player",
+      "noble_hp": [
+        6,
+        10
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 4,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_heal_instead_wound",
+          "payload": {
+            "target_id": 3,
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 0,
+        "wounds": 2,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_10_host_player_ordinary",
+      "active": "host",
+      "noble_hp": [
+        6,
+        10
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 8,
+        "value": 2
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 2,
+        "wounds": 0,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 5,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_10_host_player_satyr",
+      "active": "host",
+      "noble_hp": [
+        6,
+        10
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 4,
+        "value": 2
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        },
+        {
+          "owner": "player",
+          "command": "choose_heal_instead_wound",
+          "payload": {
+            "target_id": 3,
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 0,
+        "wounds": 2,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_10_6_host_host_ordinary",
+      "active": "host",
+      "noble_hp": [
+        10,
+        6
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 2,
+        "wounds": 0,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 5,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_10_6_host_host_satyr",
+      "active": "host",
+      "noble_hp": [
+        10,
+        6
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 3,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_heal_instead_wound",
+          "payload": {
+            "target_id": 4,
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 0,
+        "wounds": 2,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_10_6_player_player_ordinary",
+      "active": "player",
+      "noble_hp": [
+        10,
+        6
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 8,
+            "action_key": "heal"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [],
+        "automatic_conflict": true,
+        "target_hp": 3,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_10_6_player_player_satyr",
+      "active": "player",
+      "noble_hp": [
+        10,
+        6
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 4,
+            "action_key": "heal"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [],
+        "automatic_conflict": true,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_10_6_host_player_ordinary",
+      "active": "host",
+      "noble_hp": [
+        10,
+        6
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 8,
+        "value": 2
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [],
+        "automatic_conflict": true,
+        "target_hp": 3,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_10_6_host_player_satyr",
+      "active": "host",
+      "noble_hp": [
+        10,
+        6
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 4,
+        "value": 2
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [],
+        "automatic_conflict": true,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_8_10_host_host_ordinary",
+      "active": "host",
+      "noble_hp": [
+        8,
+        10
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [
+          "player"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 3,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_8_10_host_host_satyr",
+      "active": "host",
+      "noble_hp": [
+        8,
+        10
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 3,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [
+          "player"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_8_10_player_player_ordinary",
+      "active": "player",
+      "noble_hp": [
+        8,
+        10
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 8,
+            "action_key": "heal"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 2,
+        "wounds": 0,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 5,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_8_10_player_player_satyr",
+      "active": "player",
+      "noble_hp": [
+        8,
+        10
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 4,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_heal_instead_wound",
+          "payload": {
+            "target_id": 3,
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 0,
+        "wounds": 2,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_8_10_host_player_ordinary",
+      "active": "host",
+      "noble_hp": [
+        8,
+        10
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 8,
+        "value": 2
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 2,
+        "wounds": 0,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 5,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_8_10_host_player_satyr",
+      "active": "host",
+      "noble_hp": [
+        8,
+        10
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 4,
+        "value": 2
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        },
+        {
+          "owner": "player",
+          "command": "choose_heal_instead_wound",
+          "payload": {
+            "target_id": 3,
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 0,
+        "wounds": 2,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_8_host_host_ordinary",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 4,
+        "restored": 4,
+        "wounds": 0,
+        "noble_pending_owners": [
+          "host"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 7,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_8_host_host_satyr",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 3,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_heal_instead_wound",
+          "payload": {
+            "target_id": 4,
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 4,
+        "restored": 0,
+        "wounds": 4,
+        "noble_pending_owners": [
+          "host"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_8_player_player_ordinary",
+      "active": "player",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 8,
+            "action_key": "heal"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 2,
+        "wounds": 0,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 5,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_8_player_player_satyr",
+      "active": "player",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 4,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_heal_instead_wound",
+          "payload": {
+            "target_id": 3,
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 0,
+        "wounds": 2,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_8_host_player_ordinary",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 8,
+        "value": 2
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 2,
+        "wounds": 0,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 5,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_8_host_player_satyr",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 4,
+        "value": 2
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        },
+        {
+          "owner": "player",
+          "command": "choose_heal_instead_wound",
+          "payload": {
+            "target_id": 3,
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 2,
+        "restored": 0,
+        "wounds": 2,
+        "noble_pending_owners": [],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_6_host_host_ordinary",
+      "active": "host",
+      "noble_hp": [
+        6,
+        6
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 4,
+        "restored": 4,
+        "wounds": 0,
+        "noble_pending_owners": [
+          "host"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 7,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_6_host_host_satyr",
+      "active": "host",
+      "noble_hp": [
+        6,
+        6
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 3,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_heal_instead_wound",
+          "payload": {
+            "target_id": 4,
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 4,
+        "restored": 0,
+        "wounds": 4,
+        "noble_pending_owners": [
+          "host"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_6_player_player_ordinary",
+      "active": "player",
+      "noble_hp": [
+        6,
+        6
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 8,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 4,
+        "restored": 4,
+        "wounds": 0,
+        "noble_pending_owners": [
+          "player"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 7,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_6_player_player_satyr",
+      "active": "player",
+      "noble_hp": [
+        6,
+        6
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 4,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_heal_instead_wound",
+          "payload": {
+            "target_id": 3,
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 4,
+        "restored": 0,
+        "wounds": 4,
+        "noble_pending_owners": [
+          "player"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_6_host_player_ordinary",
+      "active": "host",
+      "noble_hp": [
+        6,
+        6
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 8,
+        "value": 2
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        },
+        {
+          "owner": "player",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 4,
+        "restored": 4,
+        "wounds": 0,
+        "noble_pending_owners": [
+          "player"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 7,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_6_6_host_player_satyr",
+      "active": "host",
+      "noble_hp": [
+        6,
+        6
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 4,
+        "value": 2
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        },
+        {
+          "owner": "player",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_heal_instead_wound",
+          "payload": {
+            "target_id": 3,
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 4,
+        "restored": 0,
+        "wounds": 4,
+        "noble_pending_owners": [
+          "player"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_10_10_host_host_ordinary",
+      "active": "host",
+      "noble_hp": [
+        10,
+        10
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [
+          "player"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 3,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_10_10_host_host_satyr",
+      "active": "host",
+      "noble_hp": [
+        10,
+        10
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 3,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [
+          "player"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_10_10_player_player_ordinary",
+      "active": "player",
+      "noble_hp": [
+        10,
+        10
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 8,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [
+          "host"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 3,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_10_10_player_player_satyr",
+      "active": "player",
+      "noble_hp": [
+        10,
+        10
+      ],
+      "instant": null,
+      "steps": [
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 4,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [
+          "host"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_10_10_host_player_ordinary",
+      "active": "host",
+      "noble_hp": [
+        10,
+        10
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 8,
+        "value": 2
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [
+          "host"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 3,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "hp_10_10_host_player_satyr",
+      "active": "host",
+      "noble_hp": [
+        10,
+        10
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 4,
+        "value": 2
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect": {
+        "declared": 2,
+        "modified": 0,
+        "restored": 0,
+        "wounds": 0,
+        "noble_pending_owners": [
+          "host"
+        ],
+        "automatic_conflict": false,
+        "target_hp": 12,
+        "source_closed": true
+      }
+    },
+    {
+      "name": "paid_heal_decline_and_duplicate",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 7,
+            "action_key": "heal"
+          },
+          "expect": {
+            "cards.5.coins": 2,
+            "cards.7.hp": 3
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "wrong",
+            "apply": "yes"
+          },
+          "success": false
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "no"
+          },
+          "expect": {
+            "cards.5.coins": 2,
+            "cards.7.hp": 5
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "wrong",
+            "apply": "yes"
+          },
+          "success": false
+        }
+      ],
+      "expect_paths": {
+        "cards.5.coins": 2,
+        "cards.7.hp": 5,
+        "battle.card_healing.last.modified": 2
+      },
+      "overrides": {
+        "cards": {
+          "5": {
+            "coins": 3,
+            "prop": {
+              "actions": [
+                {
+                  "key": "heal",
+                  "type": "heal",
+                  "value": 2,
+                  "coins": 1
+                }
+              ]
+            }
+          }
+        },
+        "battle": {}
+      }
+    },
+    {
+      "name": "satyr_decline",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 3,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "cancel_pending",
+          "payload": {
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.3.hp": 12,
+        "cards.4.hp": 12,
+        "cards.3.flags.on_heal_wound_used_this_turn": null,
+        "battle.card_healing.last.modified": 4,
+        "battle.card_healing.last.restored": 0
+      }
+    },
+    {
+      "name": "almost_full",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.7.hp": 12,
+        "battle.card_healing.last.modified": 4,
+        "battle.card_healing.last.restored": 1
+      },
+      "overrides": {
+        "cards": {
+          "7": {
+            "hp": 11
+          }
+        },
+        "battle": {}
+      }
+    },
+    {
+      "name": "native_strike_heal_pause_resume",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "strike",
+          "payload": {
+            "card_id": 3,
+            "target_id": 4
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_defender",
+          "payload": {
+            "defender_id": 0
+          },
+          "expect": {
+            "cards.3.hp": 7,
+            "cards.4.hp": 11
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.3.hp": 11,
+        "cards.4.hp": 11,
+        "battle.strike.damage_applied": true
+      },
+      "overrides": {
+        "cards": {
+          "3": {
+            "ukid": "s1_102",
+            "hp": 7,
+            "strike_weak": 1,
+            "strike_medium": 1,
+            "strike_strong": 1,
+            "prop": {
+              "on_strike_self_heal": {
+                "value": 2,
+                "no_close_if_full": true
+              }
+            }
+          },
+          "4": {
+            "closed": true
+          }
+        },
+        "battle": {}
+      }
+    },
+    {
+      "name": "native_death_heal_then_strike_self_heal",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "strike",
+          "payload": {
+            "card_id": 3,
+            "target_id": 6
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_defender",
+          "payload": {
+            "defender_id": 0
+          },
+          "expect": {
+            "cards.3.hp": 7
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.3.hp": 11,
+        "cards.7.hp": 4,
+        "battle.strike.damage_applied": true
+      },
+      "overrides": {
+        "cards": {
+          "3": {
+            "ukid": "s1_102",
+            "hp": 7,
+            "strike_weak": 2,
+            "strike_medium": 2,
+            "strike_strong": 2,
+            "prop": {
+              "on_strike_self_heal": {
+                "value": 2,
+                "no_close_if_full": true
+              }
+            }
+          },
+          "6": {
+            "hp": 1,
+            "closed": true,
+            "row": 4,
+            "col": 2,
+            "prop": {
+              "on_death": [
+                {
+                  "type": "heal",
+                  "value": 1,
+                  "target": "near"
+                }
+              ]
+            }
+          }
+        },
+        "battle": {}
+      }
+    },
+    {
+      "name": "native_turn_end_heal_before_next_effect",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "end_turn",
+          "payload": {},
+          "expect": {
+            "cards.5.coins": 0
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.5.hp": 12,
+        "cards.5.coins": 1,
+        "battle.card_healing.turn_key": "1:host",
+        "battle.turn_phase.pending_ack.source_id": 5
+      },
+      "overrides": {
+        "cards": {
+          "5": {
+            "prop": {
+              "turn_end": [
+                {
+                  "type": "heal",
+                  "value": 2
+                },
+                {
+                  "type": "get_coins",
+                  "coins": 1
+                }
+              ]
+            }
+          }
+        },
+        "battle": {}
+      }
+    },
+    {
+      "name": "native_shaksi_selected_heal",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "choose_shaksi_roll",
+          "payload": {
+            "target_id": 7
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.7.hp": 9,
+        "battle.pending_shaksi_roll": null,
+        "battle.card_healing.last.modified": 6
+      },
+      "overrides": {
+        "cards": {},
+        "battle": {
+          "pending_shaksi_roll": {
+            "owner": "host",
+            "source_id": 5,
+            "effect": {
+              "type": "heal",
+              "value": 3
+            },
+            "candidates": [
+              7
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "native_valhalla_heal_then_coin",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "valhalla_pick",
+          "payload": {
+            "target_id": 7
+          },
+          "expect": {
+            "cards.7.coins": 0
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.7.hp": 7,
+        "cards.7.coins": 1,
+        "battle.pending_valhalla_pick": null
+      },
+      "overrides": {
+        "cards": {
+          "5": {
+            "zone": "graveyard",
+            "hp": 0,
+            "prop": {
+              "valhalla": [
+                {
+                  "type": "heal",
+                  "value": 2,
+                  "target": "own_creature"
+                },
+                {
+                  "type": "get_coins",
+                  "value": 1,
+                  "target": "own_creature"
+                }
+              ]
+            }
+          },
+          "7": {
+            "prop": {
+              "save_coins": true
+            }
+          }
+        },
+        "battle": {
+          "pending_valhalla_pick": {
+            "owner": "host",
+            "card_id": 5,
+            "remaining": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "neutral_first_then_threshold_crossing",
+      "active": "host",
+      "noble_hp": [
+        8,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 1,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "confirm_strike",
+          "payload": {
+            "wait_id": "$wait"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "confirm_strike",
+          "payload": {
+            "wait_id": "$wait"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 3,
+            "target_id": 8,
+            "action_key": "heal"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.1.hp": 10,
+        "cards.8.hp": 5,
+        "battle.pending_card_heal": null,
+        "battle.card_healing.last.modified": 2
+      },
+      "overrides": {
+        "cards": {
+          "3": {
+            "prop": {
+              "on_heal_instead_wound": {
+                "uses_per_turn": 3
+              },
+              "actions": [
+                {
+                  "key": "heal",
+                  "type": "heal",
+                  "value": 2
+                }
+              ]
+            }
+          }
+        },
+        "battle": {}
+      }
+    },
+    {
+      "name": "threshold_7",
+      "active": "host",
+      "noble_hp": [
+        7,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "battle.card_healing.last.modified": 4,
+        "cards.7.hp": 7
+      }
+    },
+    {
+      "name": "threshold_8",
+      "active": "host",
+      "noble_hp": [
+        8,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        }
+      ],
+      "expect_paths": {
+        "battle.card_healing.last.modified": 2,
+        "cards.7.hp": 5
+      }
+    },
+    {
+      "name": "threshold_9",
+      "active": "host",
+      "noble_hp": [
+        9,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 8,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "battle.card_healing.last.modified": 0,
+        "cards.8.hp": 3
+      }
+    },
+    {
+      "name": "threshold_12",
+      "active": "host",
+      "noble_hp": [
+        12,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 8,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "battle.card_healing.last.modified": 0,
+        "cards.8.hp": 3
+      }
+    },
+    {
+      "name": "excluded_vampire_then_first_heal",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "strike",
+          "payload": {
+            "card_id": 5,
+            "target_id": 4
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_defender",
+          "payload": {
+            "defender_id": 0
+          },
+          "expect": {
+            "battle.card_healing.first_used": null
+          }
+        },
+        {
+          "owner": "host",
+          "command": "confirm_strike",
+          "payload": {
+            "wait_id": "$wait"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "confirm_strike",
+          "payload": {
+            "wait_id": "$wait"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 3,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.7.hp": 7,
+        "battle.card_healing.first_used": true
+      },
+      "overrides": {
+        "cards": {
+          "5": {
+            "hp": 5,
+            "row": 3,
+            "col": 4,
+            "strike_weak": 1,
+            "strike_medium": 1,
+            "strike_strong": 1,
+            "prop": {
+              "vampire": true
+            }
+          },
+          "4": {
+            "closed": true,
+            "hp": 12
+          },
+          "3": {
+            "prop": {
+              "on_heal_instead_wound": {
+                "uses_per_turn": 3
+              },
+              "actions": [
+                {
+                  "key": "heal",
+                  "type": "heal",
+                  "value": 2
+                }
+              ]
+            }
+          }
+        },
+        "battle": {}
+      }
+    },
+    {
+      "name": "excluded_deadeat_then_first_heal",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "steps": [
+        {
+          "owner": "host",
+          "command": "strike",
+          "payload": {
+            "card_id": 5,
+            "target_id": 4
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_defender",
+          "payload": {
+            "defender_id": 0
+          },
+          "expect": {
+            "battle.card_healing.first_used": null
+          }
+        },
+        {
+          "owner": "host",
+          "command": "confirm_strike",
+          "payload": {
+            "wait_id": "$wait"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "confirm_strike",
+          "payload": {
+            "wait_id": "$wait"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 3,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.7.hp": 7,
+        "battle.card_healing.first_used": true
+      },
+      "overrides": {
+        "cards": {
+          "5": {
+            "hp": 5,
+            "row": 3,
+            "col": 4,
+            "strike_weak": 1,
+            "strike_medium": 1,
+            "strike_strong": 1,
+            "prop": {
+              "deadeat": true
+            }
+          },
+          "4": {
+            "closed": true,
+            "hp": 1
+          },
+          "3": {
+            "prop": {
+              "on_heal_instead_wound": {
+                "uses_per_turn": 3
+              },
+              "actions": [
+                {
+                  "key": "heal",
+                  "type": "heal",
+                  "value": 2
+                }
+              ]
+            }
+          }
+        },
+        "battle": {}
+      }
+    },
+    {
+      "name": "native_turn_change_new_first",
+      "active": "host",
+      "noble_hp": [
+        8,
+        6
+      ],
+      "overrides": {
+        "cards": {},
+        "battle": {}
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "confirm_strike",
+          "payload": {
+            "wait_id": "$wait"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "confirm_strike",
+          "payload": {
+            "wait_id": "$wait"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "end_turn",
+          "payload": {}
+        },
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 8,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.7.hp": 5,
+        "cards.8.hp": 7,
+        "battle.card_healing.turn_key": "1:player"
+      }
+    },
+    {
+      "name": "suppressed_first_still_consumed",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "overrides": {
+        "cards": {
+          "1": {
+            "flags": {
+              "memory_loss_sources": {
+                "2": true
+              }
+            }
+          }
+        },
+        "battle": {}
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.7.hp": 5,
+        "battle.pending_card_heal": null,
+        "battle.card_healing.first_used": true
+      }
+    },
+    {
+      "name": "noble_off_field",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "overrides": {
+        "cards": {
+          "1": {
+            "zone": "hand"
+          }
+        },
+        "battle": {}
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 7,
+            "action_key": "heal"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.7.hp": 5,
+        "battle.pending_card_heal": null,
+        "battle.card_healing.first_used": true
+      }
+    },
+    {
+      "name": "multiheal_only_first_target_modified",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "overrides": {
+        "cards": {
+          "5": {
+            "prop": {
+              "actions": [
+                {
+                  "key": "multi",
+                  "type": "heal",
+                  "value": 2,
+                  "max_targets": 3
+                }
+              ]
+            }
+          }
+        },
+        "battle": {}
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "action_key": "multi"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_multi_heal",
+          "payload": {
+            "target_ids": [
+              7,
+              5
+            ]
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.7.hp": 7,
+        "cards.5.hp": 12,
+        "battle.strike.kind": "multi_heal",
+        "battle.strike.healed.0.heal": 4,
+        "battle.strike.healed.1.heal": 2
+      }
+    },
+    {
+      "name": "regeneration_does_not_consume_first",
+      "active": "host",
+      "noble_hp": [
+        8,
+        6
+      ],
+      "overrides": {
+        "cards": {
+          "6": {
+            "prop": {
+              "regeneration": 2,
+              "actions": [
+                {
+                  "key": "heal",
+                  "type": "heal",
+                  "value": 2
+                }
+              ]
+            }
+          }
+        },
+        "battle": {}
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "end_turn",
+          "payload": {},
+          "expect": {
+            "cards.6.hp": 12,
+            "battle.card_healing.first_used": false
+          }
+        },
+        {
+          "owner": "player",
+          "command": "turn_ack",
+          "payload": {}
+        },
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 8,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.8.hp": 7,
+        "battle.card_healing.first_used": true
+      }
+    },
+    {
+      "name": "block_preserves_independent_poison_removal",
+      "active": "host",
+      "noble_hp": [
+        9,
+        8
+      ],
+      "overrides": {
+        "cards": {
+          "5": {
+            "coins": 3,
+            "prop": {
+              "actions": [
+                {
+                  "key": "heal",
+                  "type": "heal",
+                  "value": 2,
+                  "coins": 1,
+                  "heal_poison": true
+                }
+              ]
+            }
+          },
+          "8": {
+            "markers": {
+              "poison": 1
+            }
+          }
+        },
+        "battle": {}
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 8,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.8.hp": 3,
+        "cards.8.markers.poison": null,
+        "cards.5.coins": 2,
+        "cards.5.closed": true,
+        "battle.card_healing.last.modified": 0
+      }
+    },
+    {
+      "name": "native_two_paid_instants_pause_before_lower_item",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "overrides": {
+        "cards": {
+          "5": {
+            "coins": 3,
+            "prop": {
+              "instants": [
+                {
+                  "key": "heal2",
+                  "name": "Карточное излечение",
+                  "trigger": "turn",
+                  "target": "self",
+                  "coins": 1,
+                  "uses_per_turn": 1,
+                  "effect": {
+                    "type": "heal",
+                    "value": 2
+                  }
+                }
+              ]
+            }
+          },
+          "7": {
+            "coins": 3,
+            "prop": {
+              "instants": [
+                {
+                  "key": "heal1",
+                  "name": "Карточное излечение",
+                  "trigger": "turn",
+                  "target": "self",
+                  "coins": 1,
+                  "uses_per_turn": 1,
+                  "effect": {
+                    "type": "heal",
+                    "value": 1
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "open_turn_instants",
+          "payload": {}
+        },
+        {
+          "owner": "host",
+          "command": "play_turn_instant",
+          "payload": {
+            "card_id": 5,
+            "instant_key": "heal2"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "play_turn_instant",
+          "payload": {
+            "card_id": 7,
+            "instant_key": "heal1"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {},
+          "expect": {
+            "cards.5.hp": 10,
+            "cards.7.hp": 3,
+            "cards.5.coins": 2,
+            "cards.7.coins": 2
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "heal_token": "$current",
+            "apply": "yes"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.5.hp": 12,
+        "cards.7.hp": 5,
+        "cards.5.coins": 2,
+        "cards.7.coins": 2,
+        "cards.5.closed": true,
+        "cards.7.closed": true,
+        "battle.turn_instant_stack": null,
+        "battle.turn_instant_result.summary.0.card_id": 7,
+        "battle.turn_instant_result.summary.1.card_id": 5
+      }
+    },
+    {
+      "name": "native_bjorn_defender_heal_then_satyr_then_strike",
+      "active": "player",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "overrides": {
+        "cards": {
+          "4": {
+            "strike_weak": 1,
+            "strike_medium": 1,
+            "strike_strong": 1,
+            "prop": {}
+          },
+          "5": {
+            "ukid": "s1_80",
+            "strike_weak": 0,
+            "strike_medium": 0,
+            "strike_strong": 0,
+            "prop": {
+              "on_become_defender": [
+                {
+                  "type": "heal_target",
+                  "value": 2
+                }
+              ]
+            },
+            "row": 3,
+            "col": 2
+          }
+        }
+      },
+      "steps": [
+        {
+          "owner": "player",
+          "command": "strike",
+          "payload": {
+            "card_id": 4,
+            "target_id": 3
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_defender",
+          "payload": {
+            "defender_id": 5
+          },
+          "expect": {
+            "cards.5.hp": 10,
+            "cards.4.hp": 12
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          },
+          "expect": {
+            "cards.5.hp": 10,
+            "cards.4.hp": 12
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_heal_instead_wound",
+          "payload": {
+            "target_id": 4,
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.3.hp": 12,
+        "cards.4.hp": 8,
+        "cards.5.hp": 9,
+        "cards.3.flags.on_heal_wound_used_this_turn": 1,
+        "battle.strike.damage_applied": true,
+        "battle.card_healing.last.modified": 4,
+        "battle.card_healing.last.wounds": 4
+      },
+      "dice": "6,1,4",
+      "expect_dice_remaining": [
+        4
+      ]
+    },
+    {
+      "name": "native_kobold_selected_hit_heal",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "overrides": {
+        "cards": {
+          "7": {
+            "ukid": "s1_92"
+          }
+        },
+        "battle": {
+          "pending_kobold_heal": {
+            "owner": "host",
+            "card_id": 7,
+            "value": 2
+          }
+        }
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "choose_kobold_heal",
+          "payload": {}
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.7.hp": 7,
+        "battle.pending_kobold_heal": null,
+        "battle.card_healing.last.modified": 4
+      }
+    },
+    {
+      "name": "native_life_gift_host",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "overrides": {
+        "cards": {
+          "5": {
+            "ukid": "s1_95",
+            "coins": 3,
+            "prop": {
+              "actions": [
+                {
+                  "key": "gift",
+                  "type": "life_gift",
+                  "min_x": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "action_key": "gift"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_life_gift",
+          "payload": {
+            "amount": 2,
+            "enemy_id": 8,
+            "ally_id": 7
+          },
+          "expect": {
+            "cards.5.coins": 1,
+            "cards.8.hp": 1,
+            "cards.7.hp": 3
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.5.coins": 1,
+        "cards.8.hp": 1,
+        "cards.7.hp": 7,
+        "cards.5.closed": true,
+        "battle.strike.life_gift.damage": 2,
+        "battle.strike.life_gift.heal": 4
+      }
+    },
+    {
+      "name": "native_life_gift_player",
+      "active": "host",
+      "noble_hp": [
+        8,
+        10
+      ],
+      "overrides": {
+        "cards": {
+          "5": {
+            "ukid": "s1_95",
+            "coins": 3,
+            "prop": {
+              "actions": [
+                {
+                  "key": "gift",
+                  "type": "life_gift",
+                  "min_x": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "action_key": "gift"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_life_gift",
+          "payload": {
+            "amount": 2,
+            "enemy_id": 8,
+            "ally_id": 7
+          },
+          "expect": {
+            "cards.5.coins": 1,
+            "cards.8.hp": 1,
+            "cards.7.hp": 3
+          }
+        },
+        {
+          "owner": "player",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.5.coins": 1,
+        "cards.8.hp": 1,
+        "cards.7.hp": 3,
+        "cards.5.closed": true,
+        "battle.strike.life_gift.damage": 2,
+        "battle.strike.life_gift.heal": 0
+      }
+    },
+    {
+      "name": "native_wild_healer_movement_not_repeated",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "overrides": {
+        "cards": {
+          "5": {
+            "ukid": "s1_91",
+            "prop": {
+              "on_move_heal_adjacent": {
+                "value": 1
+              }
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "move",
+          "payload": {
+            "card_id": 5,
+            "row": 2,
+            "col": 3
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_wild_healer_heal",
+          "payload": {
+            "target_id": 7
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.5.row": 2,
+        "cards.5.col": 3,
+        "cards.5.move": 1,
+        "cards.5.closed": false,
+        "cards.7.hp": 5,
+        "battle.pending_wild_healer_move": null,
+        "battle.card_healing.last.modified": 2
+      }
+    },
+    {
+      "name": "satyr_impact_preserves_existing_death_trigger_rules",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "overrides": {
+        "cards": {
+          "4": {
+            "hp": 3,
+            "prop": {
+              "on_death": [
+                {
+                  "type": "heal",
+                  "value": 1,
+                  "target": "near"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "action",
+          "payload": {
+            "card_id": 5,
+            "target_id": 3,
+            "action_key": "heal"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "choose_heal_instead_wound",
+          "payload": {
+            "target_id": 4,
+            "heal_token": "$current"
+          },
+          "expect": {
+            "cards.3.flags.on_heal_wound_used_this_turn": 1
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.3.flags.on_heal_wound_used_this_turn": 1,
+        "cards.3.hp": 12,
+        "cards.7.hp": 3,
+        "battle.pending_heal_instead_wound": null,
+        "battle.strike.kind": "multi_heal",
+        "battle.card_healing.last.modified": 4,
+        "battle.card_healing.last.wounds": 3
+      }
+    },
+    {
+      "name": "native_passive_chronos_heals_turn_wounds",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 7,
+        "value": 0,
+        "type": "heal_turn_wounds"
+      },
+      "overrides": {
+        "cards": {
+          "7": {
+            "flags": {
+              "damage_taken_this_turn": 2
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        },
+        {
+          "owner": "host",
+          "command": "choose_card_heal",
+          "payload": {
+            "apply": "yes",
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.7.hp": 7,
+        "battle.card_healing.last.declared": 2,
+        "battle.card_healing.last.modified": 4,
+        "battle.card_healing.last.restored": 4,
+        "battle.turn_instant_stack": null
+      }
+    },
+    {
+      "name": "zero_turn_wounds_consumes_first_without_pointless_choice",
+      "active": "host",
+      "noble_hp": [
+        6,
+        8
+      ],
+      "instant": {
+        "source_id": 6,
+        "target_id": 7,
+        "value": 0,
+        "type": "heal_turn_wounds"
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "pass_turn_instant",
+          "payload": {}
+        }
+      ],
+      "expect_paths": {
+        "cards.7.hp": 3,
+        "battle.card_healing.first_used": true,
+        "battle.pending_card_heal": null,
+        "battle.card_healing.last.modified": 0
+      }
+    },
+    {
+      "name": "satyr_limit_resets_on_each_players_turn",
+      "active": "host",
+      "noble_hp": [
+        8,
+        8
+      ],
+      "overrides": {
+        "cards": {
+          "3": {
+            "flags": {
+              "on_heal_wound_used_this_turn": 3
+            }
+          }
+        }
+      },
+      "steps": [
+        {
+          "owner": "host",
+          "command": "end_turn",
+          "payload": {}
+        },
+        {
+          "owner": "player",
+          "command": "action",
+          "payload": {
+            "card_id": 6,
+            "target_id": 3,
+            "action_key": "heal"
+          },
+          "expect": {
+            "battle.pending_heal_instead_wound.owner": "host"
+          }
+        },
+        {
+          "owner": "host",
+          "command": "cancel_pending",
+          "payload": {
+            "heal_token": "$current"
+          }
+        }
+      ],
+      "expect_paths": {
+        "cards.3.flags.on_heal_wound_used_this_turn": null,
+        "battle.card_healing.turn_key": "1:player",
+        "cards.3.hp": 12
+      }
+    }
+  ]
+}

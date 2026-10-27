@@ -616,7 +616,8 @@ final class InstantProcessor
     {
         $strike = &$this->state->battle['strike'];
         $phase = $strike['instant_phase'] ?? 'before';
-        $summary = [];
+        $summary = $strike['healing_summary'] ?? [];
+        unset($strike['healing_summary']);
 
         if ($phase === 'combat') {
             if (($strike['combat_instant_window'] ?? '') === self::COMBAT_WINDOW_WOUNDS) {
@@ -629,14 +630,18 @@ final class InstantProcessor
         $stack = $strike['instant_stack'] ?? [];
         $stack = array_reverse($stack);
 
-        foreach ($stack as $item) {
+        foreach ($stack as $index => $item) {
             $source = $this->state->getCard($item['card_id']);
             $target = $this->state->getCard($item['target_id']);
 
             $effect = (array) ($item['effect'] ?? []);
             $label  = $item['label'] ?? 'Инстант';
 
-            if ($source && EffectiveFeatures::suppressed($source)) {
+            if (isset($item['_card_heal_done'])) {
+                $summary[]=['label'=>$label,'card_ukid'=>$source?->ukid??'', 'player'=>$item['player'],
+                    'applied'=>$item['_card_heal_done']['restored']>0||$item['_card_heal_done']['replaced'],
+                    'reason'=>$item['_card_heal_done']['message']??'','card_heal'=>$item['_card_heal_done']];
+            } elseif ($source && EffectiveFeatures::suppressed($source)) {
                 $summary[] = [
                     'label' => $label, 'card_ukid' => $source->ukid,
                     'player' => $item['player'] ?? null,
@@ -661,11 +666,13 @@ final class InstantProcessor
             } else {
                 $this->engine->applyInstantEffect(
                     $this->state,
-                    $effect,
+                    $effect + ['_heal_return_to'=>['handler'=>'instant','kind'=>'legacy','item'=>$item,
+                        'remaining'=>array_slice($stack,$index+1),'summary'=>$summary]],
                     $source,
                     $target,
                     $item['player']
                 );
+                if (CardHealing::waiting($this->state)) return;
                 $applied = true;
                 $reasonText = '';
 
@@ -902,6 +909,13 @@ final class InstantProcessor
             return ['source' => $source, 'applied' => false, 'reason' => 'цель не найдена', 'result' => []];
         }
 
+        if(in_array($type,['heal','heal_turn_wounds'],true) && $target) {
+            $value=$type==='heal_turn_wounds'?(int)($target->flags['damage_taken_this_turn']??0):(int)($effect['value']??1);
+            $r=(new CardHealing($this->state,$this->engine))->begin($source,$target,$value,$type,['handler'=>'instant','kind'=>'combat']);
+            if($r===null)return 'paused';
+            return ['source'=>$source,'applied'=>$r['restored']>0||$r['replaced'],'reason'=>$r['message']??'','result'=>['card_heal'=>$r]];
+        }
+
         $before = $this->captureCombatSnapshot();
         $effect['_resolution_type'] = (string)(($item['action_type'] ?? '') ?: 'instant');
         $reason = $this->engine->applyCombatEffect(
@@ -913,6 +927,10 @@ final class InstantProcessor
             $effectTarget
         );
         if ($reason === null && !in_array($type, ['damage_cap','damage_on_dice'], true)) ActionResolution::effect($this->state, $source, (string)(($item['action_type'] ?? '') ?: 'instant'), 'instant', ['effect_type'=>$type]);
+        if(CardHealing::waiting($this->state)) {
+            CardHealing::defer($this->state,['handler'=>'instant','kind'=>'combat_after_effect','before'=>$before,'effect'=>$effect,'owner'=>$item['player']]);
+            return 'paused';
+        }
         $after = $this->captureCombatSnapshot();
 
         return [
@@ -1818,7 +1836,13 @@ final class InstantProcessor
             $before = $target ? $this->captureTurnTargetSnapshot($target) : null;
             $effectResult = [];
 
-            if (!$source) {
+            if (isset($item['_card_heal_done'])) {
+                $before=$item['_heal_before'];$after=$target?$this->captureTurnTargetSnapshot($target):null;
+                $effectResult=$target?$this->buildTurnEffectResult((array)$item['effect'],$before,$after,$target):[];
+                $effectResult['card_heal']=$item['_card_heal_done'];
+                $applied=!empty($item['_effect_completed'])?$this->turnEffectChanged($before,$after):($item['_card_heal_done']['restored']>0 || $item['_card_heal_done']['replaced']);
+                $reason=$item['_card_heal_done']['message']??($applied?'':'излечение не восстановило HP');
+            } elseif (!$source) {
                 $reason = 'источник не найден';
             } elseif (EffectiveFeatures::suppressed($source)) {
                 $reason = 'Потеря памяти';
@@ -1838,7 +1862,9 @@ final class InstantProcessor
                 try {
                     $this->engine->applyInstantEffect(
                         $this->state,
-                        (array) $item['effect'],
+                        (array) $item['effect'] + ['_heal_return_to'=>['handler'=>'instant','kind'=>'turn',
+                            'stack'=>$stackState,'summary'=>$summary,'remaining'=>array_slice($items,$index+1),
+                            'item'=>$item,'before'=>$before]],
                         $source,
                         $target,
                         (string) $item['player']
@@ -1846,6 +1872,12 @@ final class InstantProcessor
                 } finally {
                     if ($resolutionScope === null) unset($this->state->battle[ActionResolution::KEY]['scope_id']);
                     else $this->state->battle[ActionResolution::KEY]['scope_id'] = $resolutionScope;
+                }
+                if (CardHealing::waiting($this->state)) {
+                    if(!in_array($item['effect']['type']??'', ['heal','heal_turn_wounds'],true))
+                        CardHealing::defer($this->state,['handler'=>'instant','kind'=>'turn_after_effect',
+                            'stack'=>$stackState,'summary'=>$summary,'remaining'=>array_slice($items,$index+1),'item'=>$item,'before'=>$before]);
+                    return;
                 }
                 $after = $this->captureTurnTargetSnapshot($target);
                 $effectResult = $this->buildTurnEffectResult((array) $item['effect'], $before, $after, $target);
@@ -2130,4 +2162,28 @@ final class InstantProcessor
         }
         return false;
     }
+    public function continueCardHealing(array $to,array $r): Result
+    {
+        if($to['kind']==='combat_after_effect') {
+            $result=$this->buildCombatEffectResult($to['effect'],$to['before'],$this->captureCombatSnapshot(),$to['owner']);
+            $this->completePausedCombatItem(true,'',$result);return Result::ok(['card_heal_combat_instant_continued']);
+        }
+        if($to['kind']==='combat') {
+            $this->completePausedCombatItem($r['restored']>0||$r['replaced'],$r['message']??'',['card_heal'=>$r]);
+            return Result::ok(['card_heal_combat_instant_continued']);
+        }
+        $item=$to['item'];$item['_card_heal_done']=$r;
+        if(in_array($to['kind'],['turn','turn_after_effect'],true)) {
+            if($to['kind']==='turn_after_effect')$item['_effect_completed']=true;
+            $item['_heal_before']=$to['before'];$stack=$to['stack'];
+            $stack['remaining']=array_merge([$item],$to['remaining']);$stack['resolved_summary']=$to['summary'];
+            $this->state->battle['turn_instant_stack']=$stack;
+            $this->resolveTurnStack();
+        } else {
+            $this->state->battle['strike']['instant_stack']=array_reverse(array_merge([$item],$to['remaining']));
+            $this->state->battle['strike']['healing_summary']=$to['summary'];$this->resolveStack();
+        }
+        return Result::ok(['card_heal_instant_continued']);
+    }
+
 }

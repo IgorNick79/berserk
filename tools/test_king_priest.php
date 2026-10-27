@@ -150,7 +150,7 @@ foreach ([false, true] as $suppressed) {
     efCheck(kpAction($s, 'heal')->success && isset($s->battle['pending_heal_instead_wound']), 'existing heal reaction pending');
     if ($suppressed) EffectiveFeatures::applyMemoryLoss($s, $s->getCard(1), $s->getCard(3));
     $s = efRoundtrip($s);
-    $r = kpCommand($s, 'choose_heal_instead_wound', ['target_id' => 2], 'player');
+    $r = kpCommand($s, 'choose_heal_instead_wound', ['target_id' => 2, 'heal_token'=>$s->battle['pending_heal_instead_wound']['token']??''], 'player');
     efCheck($r->success && empty($s->battle['pending_heal_instead_wound']), 'reaction continues safely after reload');
     efCheck($s->getCard(2)->hp === ($suppressed ? 20 : 18), 'suppressed reaction cannot execute cached pending');
     efCheck($s->getCard(2)->closed && $s->getCard(2)->coins === 3, 'reaction preserves paid tap without refund or coins');

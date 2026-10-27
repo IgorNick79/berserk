@@ -342,9 +342,45 @@ final class DamageResolver
     {
         if (empty($died->effectiveProp()['on_death'])) return;
 
-        foreach ($died->effectiveProp()['on_death'] as $effect) {
-            $this->applyDeathEffect($died, $effect);
+        $jobs=[];
+        foreach($died->effectiveProp()['on_death'] as $effect) {
+            if(($effect['type']??'')==='heal' && ($effect['target']??'near')!=='choice') {
+                $ids=array_map(fn($c)=>$c->instanceId,$this->findDeathTargets($died,$effect));
+                foreach($ids as $id)$jobs[]=['effect'=>$effect,'target_id'=>$id];
+            } else $jobs[]=['effect'=>$effect,'target_id'=>null];
         }
+        $this->advanceDeathHealing(['handler'=>'death','kind'=>'queue','source_id'=>$died->instanceId,'jobs'=>$jobs]);
+    }
+
+    private function advanceDeathHealing(array $to): void
+    {
+        $source=$this->state->getCard($to['source_id']);
+        while($to['jobs']) {
+            $job=array_shift($to['jobs']);
+            if($job['target_id']===null) {$this->applyDeathEffect($source,$job['effect']);continue;}
+            $target=$this->state->getCard($job['target_id']);if(!CardHealing::live($target))continue;
+            $to['current']=$job;
+            $r=(new CardHealing($this->state,new Engine()))->begin($source,$target,(int)($job['effect']['value']??0),'on_death',$to);
+            if($r===null)return;
+            $this->recordDeathHealing($source,$r);
+        }
+    }
+
+    private function recordDeathHealing(CardInstance $source,array $r): void
+    {
+        if(!empty($this->state->battle['strike']))$this->state->battle['strike']['death_triggers'][]=[
+            'died_ukid'=>$source->ukid,'died_id'=>$source->instanceId,'effect'=>'heal','value'=>$r['modified'],
+            'targets'=>[['target_id'=>$r['target_id'],'damage'=>0,'heal'=>$r['restored']]]];
+    }
+
+    public function continueCardHealing(Engine $engine,array $to,array $r): Result
+    {
+        $source=$this->state->getCard($to['source_id']);$this->recordDeathHealing($source,$r);
+        if($to['kind']==='queue')$this->advanceDeathHealing($to);
+        else {
+            unset($this->state->battle['strike']['pending_choice']);InformationalWaitManager::publish($this->state);
+        }
+        $this->state->bumpVersion();return Result::ok(['card_heal_death_continued']);
     }
 
     private function applyDeathEffect(CardInstance $died, array $effect): void
@@ -382,10 +418,7 @@ final class DamageResolver
                     $this->applyDamage($target, $value, 'tap');
                     break;
                 case 'heal':
-                    $target->hp += $value;
-                    if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
-                    ActionResolution::healed($this->state, $died, $target, $hpBefore, 'on_death');
-                    break;
+                    throw new \LogicException('Death healing must use the card-healing continuation');
                 case 'poison':
                     $this->applyPoison($target, $value, $died->owner);
                     break;
@@ -490,10 +523,10 @@ final class DamageResolver
                 $this->applyDamage($target, $value, 'tap');
                 break;
             case 'heal':
-                $target->hp += $value;
-                if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
-                if ($died) ActionResolution::healed($this->state, $died, $target, $hpBefore, 'on_death');
-                break;
+                $to=['handler'=>'death','kind'=>'choice','source_id'=>$died->instanceId];
+                $r=(new CardHealing($this->state,new Engine()))->begin($died,$target,$value,'on_death',$to);
+                if($r===null)return Result::ok(['card_heal_waiting']);
+                return $this->continueCardHealing(new Engine(),$to,$r);
             case 'poison':
                 $this->applyPoison($target, $value, $died->owner);
                 break;

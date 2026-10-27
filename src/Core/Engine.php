@@ -631,17 +631,11 @@ final class Engine
                 $this->applyDamage($state, $target, $value, 'impact', $source);
                 break;
             case 'heal_turn_wounds':
-                $wounds = (int) ($target->flags['damage_taken_this_turn'] ?? 0);
-                if ($wounds > 0) {
-                    $target->hp += $wounds;
-                    if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
-                }
-                break;
             case 'heal':
-                $value = (int) ($effect['value'] ?? 1);
-                $target->hp += $value;
-                if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
-                break;
+                $value=$type==='heal_turn_wounds'?(int)($target->flags['damage_taken_this_turn']??0):(int)($effect['value']??1);
+                (new CardHealing($state,$this))->begin($source,$target,$value,$type,$effect['_heal_return_to']??[],
+                    ['parent'=>ActionResolution::parent($state)]);
+                return;
             case 'close_target':
                 $target->closed = true;
                 break;

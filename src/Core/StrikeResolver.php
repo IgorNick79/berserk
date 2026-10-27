@@ -476,56 +476,9 @@ final class StrikeResolver
             // Триггер «стал защитником»
             $defender = $this->state->getCard($defenderId);
             if ($defender && !empty($defender->effectiveProp()['on_become_defender'])) {
-                foreach ($defender->effectiveProp()['on_become_defender'] as $m) {
-                    // Спец-эффект: излечить защищаемого (Бьерн)
-                    if (($m['type'] ?? '') === 'heal_target') {
-                        $targetId = (int) ($this->state->battle['strike']['target_id'] ?? 0);
-                        $target = $this->state->getCard($targetId);
-                        if ($target && !$target->dying && $target->hp > 0) {
-                            $healValue = (int) ($m['value'] ?? 0);
-
-                            // Вожак и подобные: вместо излечения — рана
-                            $adjacent = $this->findAdjacentCreatures($target);
-                            if (CardStats::canHealInsteadWound($target) && $adjacent) {
-                                $this->state->battle['pending_heal_instead_wound'] = [
-                                    'owner'      => $target->owner,
-                                    'source_id'  => $defender->instanceId,
-                                    'target_id'  => $target->instanceId,
-                                    'heal_value' => $healValue,
-                                    'candidates' => $adjacent,
-                                ];
-                                $this->state->battle['strike']['waiting_resolve_after_heal'] = true;
-
-                                $this->state->bumpVersion();
-                                return Result::ok(['defender_chosen_waiting_wound']);
-                            }
-
-                            // Обычное излечение
-                            $before = $target->hp;
-                            $resolutionHpBefore = $target->hp;
-                            $target->hp = min($target->hpMax, $target->hp + $healValue);
-                            ActionResolution::healed($this->state, $defender, $target, $resolutionHpBefore, 'defender_heal');
-                            $healed = $target->hp - $before;
-                            if ($healed > 0) {
-                                $this->state->battle['strike']['defender_heal'][] = [
-                                    'card_id' => $target->instanceId,
-                                    'heal'    => $healed,
-                                ];
-                            }
-                        }
-                        continue;
-                    }
-
-                    // Обычный модификатор (Клаэр)
-                    if (empty($m['stat'])) continue;
-                    $defender->modifiers[] = [
-                        'stat'   => $m['stat'],
-                        'value'  => (int) ($m['value'] ?? 1),
-                        'expire' => 1,
-                        'timing' => 'owner_turn',
-                        'source' => $defender->owner,
-                    ];
-                }
+                $this->advanceDefenderHealing(['handler'=>'strike','kind'=>'defender','source_id'=>$defenderId,
+                    'remaining'=>$defender->effectiveProp()['on_become_defender']]);
+                $this->state->bumpVersion();return Result::ok(['defender_chosen']);
             }
         }
 
@@ -824,7 +777,7 @@ final class StrikeResolver
         }
 
         $this->apply($table, false);
-        if (($strike['state'] ?? '') !== 'waiting_auto_target') {
+        if (!CardHealing::waiting($this->state) && ($strike['state'] ?? '') !== 'waiting_auto_target') {
             InformationalWaitManager::publish($this->state);
             $strike['state'] = 'results';
         }
@@ -937,10 +890,42 @@ final class StrikeResolver
 
             $hpBeforeStrikeDamage = $defendCard->hp;
             $this->engine->applyDamage($this->state, $defendCard, $val, 'strike', $attacker);
+            $to=['handler'=>'strike','kind'=>'primary','attackStrike'=>$attackStrike,'defendStrike'=>$defendStrike,
+                'hpBeforeStrikeDamage'=>$hpBeforeStrikeDamage,'val'=>$val,'reduction'=>$reduction,
+                'abilityBonus'=>$abilityBonus,'nextStrikeBonus'=>$nextStrikeBonus,'hitWasBlocked'=>$hitWasBlocked];
+            if(CardHealing::waiting($this->state)){CardHealing::defer($this->state,$to);return;}
+            $this->continueStrikeAfterPrimary($to);return;
+        }
+        $this->continueStrikeAfterPrimary(['handler'=>'strike','kind'=>'primary','attackStrike'=>'','defendStrike'=>$defendStrike]);
+    }
+
+    private function continueStrikeAfterPrimary(array $to): void
+    {
+        $strike=&$this->state->battle['strike'];$attacker=$this->state->getCard($strike['attacker_id']);
+        $defenderId=$strike['defender_id'];$defendCard=$this->state->getCard($defenderId?:$strike['target_id']);
+        $attackStrike=$to['attackStrike'];$defendStrike=$to['defendStrike'];$woundsDealt=0;
+        if($attackStrike!=='') {
+            $hpBeforeStrikeDamage=$to['hpBeforeStrikeDamage'];$val=$to['val'];$reduction=$to['reduction'];
+            $abilityBonus=$to['abilityBonus'];$nextStrikeBonus=$to['nextStrikeBonus'];$hitWasBlocked=$to['hitWasBlocked'];
             $woundsDealt = max(0, $hpBeforeStrikeDamage - $defendCard->hp);
             $this->state->battle['strike']['damage_total'] = $val;
             $this->applyStrongStrikeFollowUpEffects($attacker, $defendCard, $attackStrike, null, $woundsDealt);
 
+            $to['kind']='primary_tail';$to['wounds_dealt']=$woundsDealt;
+            if(CardHealing::waiting($this->state)){CardHealing::defer($this->state,$to);return;}
+            $this->continueStrikeAfterPrimaryTail($to);return;
+        }
+        $to['kind']='primary_tail';$to['wounds_dealt']=0;$this->continueStrikeAfterPrimaryTail($to);
+    }
+
+    private function continueStrikeAfterPrimaryTail(array $to): void
+    {
+        $strike=&$this->state->battle['strike'];$attacker=$this->state->getCard($strike['attacker_id']);
+        $defenderId=$strike['defender_id'];$defendCard=$this->state->getCard($defenderId?:$strike['target_id']);
+        $attackStrike=$to['attackStrike'];$defendStrike=$to['defendStrike'];$woundsDealt=$to['wounds_dealt'];
+        if($attackStrike!=='') {
+            $val=$to['val'];$reduction=$to['reduction'];$abilityBonus=$to['abilityBonus'];
+            $nextStrikeBonus=$to['nextStrikeBonus'];$hitWasBlocked=$to['hitWasBlocked'];
             // Наложение маркера при попадании (Владыка небес)
             if ($val > 0 && !empty($attacker->effectiveProp()['on_hit_marker'])) {
                 $this->engine->applyMarker($defendCard, $attacker->effectiveProp()['on_hit_marker'], $attacker->owner);
@@ -1030,6 +1015,21 @@ final class StrikeResolver
             $hpBeforeAnswerDamage = $attacker->hp;
             $blockedAnswersBefore = count((array) ($this->state->battle['strike']['answer_blocked'] ?? []));
             $this->engine->applyDamage($this->state, $attacker, $val, 'answer', $defendCard);
+            $to=['handler'=>'strike','kind'=>'answer','wounds_dealt'=>$woundsDealt,'val'=>$val,
+                'hp_before'=>$hpBeforeAnswerDamage,'blocked_before'=>$blockedAnswersBefore];
+            if(CardHealing::waiting($this->state)){CardHealing::defer($this->state,$to);return;}
+            $this->continueStrikeAfterAnswer($to);return;
+        }
+        $this->continueStrikeAfterAnswer(['handler'=>'strike','kind'=>'answer','wounds_dealt'=>$woundsDealt,'val'=>null]);
+    }
+
+    private function continueStrikeAfterAnswer(array $to): void
+    {
+        $strike=&$this->state->battle['strike'];$attacker=$this->state->getCard($strike['attacker_id']);
+        $defenderId=$strike['defender_id'];$defendCard=$this->state->getCard($defenderId?:$strike['target_id']);
+        $woundsDealt=$to['wounds_dealt'];
+        if($to['val']!==null) {
+            $val=$to['val'];$hpBeforeAnswerDamage=$to['hp_before'];$blockedAnswersBefore=$to['blocked_before'];
             $blockedAnswersAfter = count((array) ($this->state->battle['strike']['answer_blocked'] ?? []));
             if ($blockedAnswersAfter > $blockedAnswersBefore) {
                 $val = 0;
@@ -1060,26 +1060,24 @@ final class StrikeResolver
             $this->engine->moveToFlyingZone($this->state, $defendCard);
         }
 
-        if (empty($attacker->flags['attack_series_active']) || !empty($strike['matriarch_order'])) {
-            // Келе и подобные: авто-heal при попадании, условное не-закрытие
-            $selfHeal = $attacker->effectiveProp()['on_strike_self_heal'] ?? null;
-            if (is_array($selfHeal)
-                && !empty($strike['strike_hit'])
-                && $attacker->hp > 0) {
-
-                if ($attacker->hp < $attacker->hpMax) {
-                    $healValue = (int) ($selfHeal['value'] ?? 0);
-                    $resolutionHpBefore = $attacker->hp;
-                    $attacker->hp = min($attacker->hpMax, $attacker->hp + $healValue);
-                    ActionResolution::healed($this->state, $attacker, $attacker, $resolutionHpBefore, 'on_strike_self_heal');
-                }
-
-                if (!empty($selfHeal['no_close_if_full']) && $attacker->hp >= $attacker->hpMax) {
-                    $noClose = true;
-                }
-            }
-
+        $to=['handler'=>'strike','kind'=>'self','wounds_dealt'=>$woundsDealt,
+            'answer_wounds'=>$answerWoundsDealt??null,'no_close'=>!empty($noClose)];
+        $selfHeal=$attacker->effectiveProp()['on_strike_self_heal']??null;
+        if ((empty($attacker->flags['attack_series_active'])||!empty($strike['matriarch_order']))
+            && is_array($selfHeal) && !empty($strike['strike_hit']) && $attacker->hp>0) {
+            $to['no_close_if_full']=!empty($selfHeal['no_close_if_full']);
+            $r=(new CardHealing($this->state,$this->engine))->begin($attacker,$attacker,(int)($selfHeal['value']??0),'on_strike_self_heal',$to);
+            if($r===null)return;
         }
+        $this->finishStrikeAfterHealing($to);
+    }
+
+    private function finishStrikeAfterHealing(array $to): void
+    {
+        $strike=&$this->state->battle['strike'];$attacker=$this->state->getCard($strike['attacker_id']);
+        $defenderId=$strike['defender_id'];$defendCard=$this->state->getCard($defenderId?:$strike['target_id']);
+        $woundsDealt=$to['wounds_dealt'];$noClose=$to['no_close']||(!empty($to['no_close_if_full'])&&$attacker->hp>=$attacker->hpMax);
+        if($to['answer_wounds']!==null)$answerWoundsDealt=$to['answer_wounds'];
         if (empty($strike['matriarch_order']) && empty($attacker->flags['attack_series_active'])) {
             $attacker->flags['attacks_used_this_turn'] =
                 ((int) ($attacker->flags['attacks_used_this_turn'] ?? 0)) + 1;
@@ -1434,7 +1432,7 @@ final class StrikeResolver
         }
 
         $this->apply($strike['result'], $mode === 'decrease');
-        if (($this->state->battle['strike']['state'] ?? '') !== 'waiting_auto_target') {
+        if (!CardHealing::waiting($this->state) && ($this->state->battle['strike']['state'] ?? '') !== 'waiting_auto_target') {
             InformationalWaitManager::publish($this->state);
             $this->state->battle['strike']['state'] = 'results';
         }
@@ -2344,4 +2342,48 @@ final class StrikeResolver
 
         return true;
     }
+    private function advanceDefenderHealing(array $to): void
+    {
+        $source=$this->state->getCard($to['source_id']);
+        while($to['remaining']) {
+            $m=array_shift($to['remaining']);
+            if(($m['type']??'')==='heal_target') {
+                $target=$this->state->getCard((int)($this->state->battle['strike']['target_id']??0));
+                if(!CardHealing::live($target))continue;
+                $r=(new CardHealing($this->state,$this->engine))->begin($source,$target,(int)($m['value']??0),'defender_heal',$to);
+                if($r===null)return;
+                $this->recordDefenderHeal($r);continue;
+            }
+            if(empty($m['stat']))continue;
+            $source->modifiers[]=['stat'=>$m['stat'],'value'=>$m['value'],'expire'=>$m['expire']??'end_of_turn','source'=>$source->owner];
+        }
+        $this->resolve();
+    }
+
+    private function recordDefenderHeal(array $r): void
+    {
+        if($r['restored']>0)$this->state->battle['strike']['defender_heal'][]=['card_id'=>$r['target_id'],'heal'=>$r['restored']];
+    }
+
+    public function continueCardHealing(array $to,array $r): Result
+    {
+        if(in_array($to['kind'],['primary','primary_tail','answer'],true)) {
+            if($to['kind']==='primary')$this->continueStrikeAfterPrimary($to);
+            elseif($to['kind']==='primary_tail')$this->continueStrikeAfterPrimaryTail($to);
+            else $this->continueStrikeAfterAnswer($to);
+            if(!CardHealing::waiting($this->state)&&!empty($this->state->battle['strike']['damage_applied'])) {
+                InformationalWaitManager::publish($this->state);$this->state->battle['strike']['state']='results';
+            }
+            return Result::ok(['card_heal_strike_damage_continued']);
+        }
+        if($to['kind']==='defender') {$this->recordDefenderHeal($r);$this->advanceDefenderHealing($to);}
+        else {
+            $this->finishStrikeAfterHealing($to);
+            if(!CardHealing::waiting($this->state)) {
+                InformationalWaitManager::publish($this->state);$this->state->battle['strike']['state']='results';
+            }
+        }
+        $this->state->bumpVersion();return Result::ok(['card_heal_strike_continued']);
+    }
+
 }

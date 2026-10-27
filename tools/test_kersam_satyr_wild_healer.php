@@ -199,7 +199,7 @@ kswAssert(($pending['owner'] ?? null) === GameState::PLAYER_PLAYER, 'Satyr Leade
 
 $result = (new ActionResolver($state, new Engine()))->chooseHealInsteadWound(
     GameState::PLAYER_PLAYER,
-    new Command('cancel_pending', [])
+    new Command('cancel_pending', ['heal_token'=>$state->battle['pending_heal_instead_wound']['token']??''])
 );
 kswAssert($result->success, $result->error ?? 'Satyr Leader cancel should succeed.');
 kswAssert(empty($satyr->flags['on_heal_wound_used_this_turn']), 'Cancelling Satyr Leader choice should not spend a use.');

@@ -71,8 +71,8 @@ final class ValhallaProcessor
         }
 
         if (!$needsChoice) {
-            $this->applyAll($card, $ownerKey, null, $repeat);
-            return false;
+            $this->applyAll($card,$ownerKey,null,$repeat,['kind'=>'begin']);
+            return CardHealing::waiting($this->state);
         }
 
         $this->state->battle['pending_valhalla_pick'] = [
@@ -104,8 +104,20 @@ final class ValhallaProcessor
 
         unset($this->state->battle['pending_valhalla_pick']);
 
-        $this->applyAll($card, $playerKey, $target);
+        $this->applyAll($card,$playerKey,$target,1,['kind'=>'choice','pending'=>$pv,'owner'=>$playerKey]);
+        if(CardHealing::waiting($this->state))return Result::ok(['card_heal_waiting']);
 
+        return $this->finishHealingSelection(['kind'=>'choice','pending'=>$pv,'owner'=>$playerKey]);
+    }
+
+    private function finishHealingSelection(array $after): Result
+    {
+        if(($after['kind']??'')==='begin') {
+            $this->finishPendingSubtask();
+            if($this->engine && !empty($this->state->battle['turn_phase']))(new TurnPhaseProcessor($this->state,$this->engine))->resume();
+            return Result::ok(['valhalla_applied']);
+        }
+        $pv=$after['pending'];$playerKey=$after['owner'];$card=$this->state->getCard($pv['card_id']);
         $remaining = max(1, (int) ($pv['remaining'] ?? $pv['repeat'] ?? 1)) - 1;
         if ($remaining > 0 && !empty($this->collectCandidates($card, $playerKey))) {
             $this->state->battle['pending_valhalla_pick'] = [
@@ -210,17 +222,36 @@ final class ValhallaProcessor
         return $candidates;
     }
 
-    private function applyAll(CardInstance $card, string $ownerKey, ?CardInstance $chosen, int $repeat = 1): void
+    private function applyAll(CardInstance $card,string $ownerKey,?CardInstance $chosen,int $repeat=1,array $after=[]): void
     {
-        $effects = $card->effectiveProp()['valhalla'] ?? [];
-        if (!is_array($effects)) return;
+        $effects=[];
+        for($i=0;$i<max(1,min(2,$repeat));++$i)foreach($card->effectiveProp()['valhalla']??[] as $effect)$effects[]=$effect;
+        $this->advanceHealingEffects(['handler'=>'valhalla','source_id'=>$card->instanceId,'owner'=>$ownerKey,
+            'chosen_id'=>$chosen?->instanceId,'effects'=>$effects,'after'=>$after]);
+    }
 
-        $repeat = max(1, min(2, $repeat));
-        for ($i = 0; $i < $repeat; $i++) {
-            foreach ($effects as $eff) {
-                $this->applyEffect($card, $eff, $ownerKey, $chosen);
+    private function advanceHealingEffects(array $to): void
+    {
+        $source=$this->state->getCard($to['source_id']);$chosen=$this->state->getCard((int)$to['chosen_id']);
+        while($to['effects']) {
+            $eff=array_shift($to['effects']);
+            if(($eff['type']??'')==='heal') {
+                $target=($eff['target']??'self')==='self'?$source:$chosen;
+                if(!CardHealing::live($target))continue;
+                $r=(new CardHealing($this->state,$this->engine??new Engine()))->begin($source,$target,(int)($eff['value']??0),'valhalla',$to);
+                if($r===null)return;
+            } else {
+                $this->applyEffect($source,$eff,$to['owner'],$chosen);
+                if(CardHealing::waiting($this->state)){CardHealing::defer($this->state,$to);return;}
             }
         }
+    }
+
+    public function continueCardHealing(array $to,array $r): Result
+    {
+        $this->advanceHealingEffects($to);
+        if(CardHealing::waiting($this->state))return Result::ok(['card_heal_waiting']);
+        return $this->finishHealingSelection($to['after']);
     }
 
     private function applyEffect(CardInstance $source, array $eff, string $ownerKey, ?CardInstance $chosen): void
@@ -289,11 +320,7 @@ final class ValhallaProcessor
                 break;
 
             case 'heal':
-                if (!$target) return;
-                $target->hp += $value;
-                if ($target->hp > $target->hpMax) $target->hp = $target->hpMax;
-                $this->state->historyRecorder?->healed($this->state,$target,$journalHpBefore,$source,'valhalla');
-                break;
+                throw new \LogicException('Valhalla healing must use the card-healing continuation');
         }
     }
 
