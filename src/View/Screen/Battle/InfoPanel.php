@@ -99,6 +99,7 @@ final class InfoPanel
             : $body;
         return '<header class="info-panel-header">' . $this->renderStatusHeader() . $this->renderTimer() . '</header>'
             . '<div class="info-panel-content" data-panel-priority="' . ($priority ? '1' : '0') . '" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" data-inspected-card="' . $inspectedCardId . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
+            . $this->renderInstantControl()
             . ($priority ? '' : $pileHtml)
             . '<div class="battle-selected-card" data-battle-fragment="panel_html"' . ($exclusive ? ' hidden' : '') . '>' . $selectedCardHtml . '</div>'
             . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/cell_info.svg" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">Информация</h3></div><div class="combat-panel-body">' : '') . $contextBody . ($exclusive ? '</div>' : '') . '</div>'
@@ -181,7 +182,6 @@ final class InfoPanel
                 . '<button type="submit" class="button" data-http-resign>Сдаться</button></form>' : '';
         return '<noscript><style>[data-battle-sync-root] [data-open-pause], [data-battle-sync-root] [data-pause-command], [data-battle-sync-root] a.resign { display: none !important; }</style>'
             . '<p class="pause-noscript-notice">Управление паузой требует JavaScript. Сдаться можно без JavaScript.</p>' . $httpResign . '</noscript>'
-            . $this->renderInstantControl()
             . '<div class="info-actions">' . $end . '<div class="battle-icon-actions">' . $pauseIcon . '<span class="battle-chat-anchor" data-chat-anchor></span>' . $log . $resign . '</div></div>';
     }
     private function renderPauseBody(): string
@@ -2019,6 +2019,12 @@ final class InfoPanel
 
         $result = (array) ($summary['result'] ?? []);
         $type = (string) ($summary['effect_type'] ?? '');
+
+        if ($type === 'strike_value' && isset($result['after'])) {
+            $reduction = (int) ($result['before'] ?? $result['after']) - (int) $result['after'];
+            if ($reduction > 0) return $name . ': урон уменьшен на ' . $reduction;
+            return $name . ': величина урона — ' . (int) $result['after'];
+        }
 
         if ($type === 'damage_on_dice') {
             $dice = (int) ($result['dice_value'] ?? 0);

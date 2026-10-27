@@ -150,9 +150,11 @@ ciuAssert(str_contains($htmlPlayer, 'instant-summary__list--plain'), 'Declared b
 ciuAssert(!str_contains($htmlPlayer, '<ol class="instant-summary__list instant-summary__list--plain">'), 'Declared battle instant stack should not render as an ordered list.');
 ciuAssert(str_contains($htmlPlayer, 'Ты') && str_contains($htmlPlayer, 'Соперник'), 'Player viewer should see self/opponent labels.');
 ciuAssert(str_contains($htmlHost, 'Ты') && str_contains($htmlHost, 'Соперник'), 'Host viewer should see self/opponent labels.');
+// The launcher now precedes context; assert order within the declared stack itself.
+$declaredHtml = substr($htmlPlayer, strpos($htmlPlayer, 'Объявленные боевые инстанты:'));
 ciuAssert(
-    strpos($htmlPlayer, 'Ост') < strpos($htmlPlayer, 'Глорм')
-        && strpos($htmlPlayer, 'Глорм') < strpos($htmlPlayer, 'Взрывная Мэри'),
+    strpos($declaredHtml, 'Ост') < strpos($declaredHtml, 'Глорм')
+        && strpos($declaredHtml, 'Глорм') < strpos($declaredHtml, 'Взрывная Мэри'),
     'Combat instant stack should be displayed in declaration order, not phase resolution order.'
 );
 ciuAssert(str_contains($htmlPlayer, 'Соперник</span> <b>Ост</b>'), 'Player viewer should mark Host instant as opponent.');

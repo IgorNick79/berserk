@@ -90,7 +90,10 @@
     {
       "name": "scream numeric dice 2",
       "combat": {
-        "dice": 2
+        "dice": 2,
+        "strike": {
+          "instant_priority": "player"
+        }
       },
       "commands": [
         {
@@ -99,25 +102,17 @@
             "card_id": 3,
             "instant_key": "krik"
           },
-          "player": "host"
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host"
-        },
-        {
-          "type": "combat_instant_pass",
-          "params": {},
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_pass",
           "params": {},
           "player": "player"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
         }
       ],
       "expect": {
@@ -127,12 +122,23 @@
         "battle.strike.attack_dice": 2,
         "battle.strike.final.attack": "weak",
         "battle.strike.instant_summary.0.applied": true
+      },
+      "cards": {
+        "3": {
+          "owner": "player"
+        },
+        "4": {
+          "owner": "player"
+        }
       }
     },
     {
       "name": "scream numeric dice 4",
       "combat": {
-        "dice": 4
+        "dice": 4,
+        "strike": {
+          "instant_priority": "player"
+        }
       },
       "commands": [
         {
@@ -141,25 +147,17 @@
             "card_id": 3,
             "instant_key": "krik"
           },
-          "player": "host"
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host"
-        },
-        {
-          "type": "combat_instant_pass",
-          "params": {},
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_pass",
           "params": {},
           "player": "player"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
         }
       ],
       "expect": {
@@ -169,12 +167,23 @@
         "battle.strike.attack_dice": 4,
         "battle.strike.final.attack": "medium",
         "battle.strike.instant_summary.0.applied": true
+      },
+      "cards": {
+        "3": {
+          "owner": "player"
+        },
+        "4": {
+          "owner": "player"
+        }
       }
     },
     {
       "name": "scream numeric dice 6",
       "combat": {
-        "dice": 6
+        "dice": 6,
+        "strike": {
+          "instant_priority": "player"
+        }
       },
       "commands": [
         {
@@ -183,25 +192,17 @@
             "card_id": 3,
             "instant_key": "krik"
           },
-          "player": "host"
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host"
-        },
-        {
-          "type": "combat_instant_pass",
-          "params": {},
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_pass",
           "params": {},
           "player": "player"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
         }
       ],
       "expect": {
@@ -211,6 +212,14 @@
         "battle.strike.attack_dice": 6,
         "battle.strike.final.attack": "strong",
         "battle.strike.instant_summary.0.applied": true
+      },
+      "cards": {
+        "3": {
+          "owner": "player"
+        },
+        "4": {
+          "owner": "player"
+        }
       }
     },
     {
@@ -483,7 +492,11 @@
     },
     {
       "name": "wrong chooser stale and duplicate choices",
-      "combat": {},
+      "combat": {
+        "strike": {
+          "instant_priority": "player"
+        }
+      },
       "commands": [
         {
           "type": "combat_instant_play",
@@ -491,7 +504,25 @@
             "card_id": 3,
             "instant_key": "krik"
           },
-          "player": "host"
+          "player": "player"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host",
+          "success": false
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "old"
+          },
+          "player": "player",
+          "success": false
         },
         {
           "type": "choose_combat_pick",
@@ -503,50 +534,36 @@
           "success": false
         },
         {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "old"
-          },
-          "player": "host",
-          "success": false
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host"
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host",
-          "success": false
-        },
-        {
-          "type": "combat_instant_pass",
-          "params": {},
-          "player": "host"
-        },
-        {
           "type": "combat_instant_pass",
           "params": {},
           "player": "player"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
         }
       ],
       "expect": {
         "cards.2.hp": 15,
         "cards.3.coins": 2
+      },
+      "cards": {
+        "3": {
+          "owner": "player"
+        },
+        "4": {
+          "owner": "player"
+        }
       }
     },
     {
       "name": "noncombat hitter rejected",
-      "combat": {},
+      "combat": {
+        "strike": {
+          "instant_priority": "player"
+        }
+      },
       "commands": [
         {
           "type": "combat_instant_play",
@@ -554,7 +571,7 @@
             "card_id": 3,
             "instant_key": "krik"
           },
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "choose_combat_pick",
@@ -562,36 +579,40 @@
             "target_id": 4,
             "pick_token": "$pick"
           },
-          "player": "host",
+          "player": "player",
           "success": false
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host"
-        },
-        {
-          "type": "combat_instant_pass",
-          "params": {},
-          "player": "host"
         },
         {
           "type": "combat_instant_pass",
           "params": {},
           "player": "player"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
         }
       ],
       "expect": {
         "cards.2.hp": 15,
         "cards.4.hp": 20
+      },
+      "cards": {
+        "3": {
+          "owner": "player"
+        },
+        "4": {
+          "owner": "player"
+        }
       }
     },
     {
       "name": "setter after scream",
-      "combat": {},
+      "combat": {
+        "strike": {
+          "instant_priority": "player"
+        }
+      },
       "cards": {
         "4": {
           "prop": {
@@ -607,7 +628,11 @@
                 }
               }
             ]
-          }
+          },
+          "owner": "player"
+        },
+        "3": {
+          "owner": "player"
         }
       },
       "commands": [
@@ -617,15 +642,7 @@
             "card_id": 3,
             "instant_key": "krik"
           },
-          "player": "host"
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_play",
@@ -633,17 +650,17 @@
             "card_id": 4,
             "instant_key": "setter"
           },
-          "player": "host"
-        },
-        {
-          "type": "combat_instant_pass",
-          "params": {},
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_pass",
           "params": {},
           "player": "player"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
         }
       ],
       "expect": {
@@ -655,12 +672,22 @@
     },
     {
       "name": "closed Morok setter after numeric modifier",
-      "combat": {},
+      "combat": {
+        "strike": {
+          "instant_priority": "player"
+        }
+      },
       "cards": {
         "2": {
           "prop": {
             "closed_strike_value": 1
           }
+        },
+        "3": {
+          "owner": "player"
+        },
+        "4": {
+          "owner": "player"
         }
       },
       "commands": [
@@ -670,25 +697,17 @@
             "card_id": 3,
             "instant_key": "krik"
           },
-          "player": "host"
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host"
-        },
-        {
-          "type": "combat_instant_pass",
-          "params": {},
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_pass",
           "params": {},
           "player": "player"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
         }
       ],
       "expect": {
@@ -699,7 +718,10 @@
     {
       "name": "LIFO latest scream noop before older plus",
       "combat": {
-        "dice": 2
+        "dice": 2,
+        "strike": {
+          "instant_priority": "player"
+        }
       },
       "cards": {
         "1": {
@@ -720,7 +742,11 @@
                 "target": "striking_creature"
               }
             ]
-          }
+          },
+          "owner": "player"
+        },
+        "3": {
+          "owner": "player"
         }
       },
       "commands": [
@@ -730,7 +756,7 @@
             "card_id": 4,
             "instant_key": "plus"
           },
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "choose_combat_pick",
@@ -738,7 +764,7 @@
             "target_id": 1,
             "pick_token": "$pick"
           },
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_play",
@@ -746,25 +772,17 @@
             "card_id": 3,
             "instant_key": "krik"
           },
-          "player": "host"
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host"
-        },
-        {
-          "type": "combat_instant_pass",
-          "params": {},
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_pass",
           "params": {},
           "player": "player"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
         }
       ],
       "expect": {
@@ -777,7 +795,10 @@
     {
       "name": "LIFO latest plus enables older scream",
       "combat": {
-        "dice": 2
+        "dice": 2,
+        "strike": {
+          "instant_priority": "player"
+        }
       },
       "cards": {
         "1": {
@@ -798,7 +819,11 @@
                 "target": "striking_creature"
               }
             ]
-          }
+          },
+          "owner": "player"
+        },
+        "3": {
+          "owner": "player"
         }
       },
       "commands": [
@@ -808,15 +833,7 @@
             "card_id": 3,
             "instant_key": "krik"
           },
-          "player": "host"
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_play",
@@ -824,7 +841,7 @@
             "card_id": 4,
             "instant_key": "plus"
           },
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "choose_combat_pick",
@@ -832,17 +849,17 @@
             "target_id": 1,
             "pick_token": "$pick"
           },
-          "player": "host"
-        },
-        {
-          "type": "combat_instant_pass",
-          "params": {},
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_pass",
           "params": {},
           "player": "player"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
         }
       ],
       "expect": {
@@ -854,7 +871,11 @@
     },
     {
       "name": "two screams accumulate",
-      "combat": {},
+      "combat": {
+        "strike": {
+          "instant_priority": "player"
+        }
+      },
       "cards": {
         "4": {
           "prop": {
@@ -891,7 +912,11 @@
                 "no_attack_wounds_this_turn": true
               }
             ]
-          }
+          },
+          "owner": "player"
+        },
+        "3": {
+          "owner": "player"
         }
       },
       "commands": [
@@ -901,15 +926,7 @@
             "card_id": 3,
             "instant_key": "krik"
           },
-          "player": "host"
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_play",
@@ -917,25 +934,17 @@
             "card_id": 4,
             "instant_key": "krik"
           },
-          "player": "host"
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host"
-        },
-        {
-          "type": "combat_instant_pass",
-          "params": {},
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_pass",
           "params": {},
           "player": "player"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
         }
       ],
       "expect": {
@@ -948,7 +957,11 @@
     },
     {
       "name": "numeric setter overrides value reduction",
-      "combat": {},
+      "combat": {
+        "strike": {
+          "instant_priority": "player"
+        }
+      },
       "cards": {
         "4": {
           "prop": {
@@ -965,7 +978,11 @@
                 }
               }
             ]
-          }
+          },
+          "owner": "player"
+        },
+        "3": {
+          "owner": "player"
         }
       },
       "commands": [
@@ -975,7 +992,7 @@
             "card_id": 4,
             "instant_key": "set"
           },
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "choose_combat_pick",
@@ -983,7 +1000,7 @@
             "target_id": 1,
             "pick_token": "$pick"
           },
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_play",
@@ -991,25 +1008,17 @@
             "card_id": 3,
             "instant_key": "krik"
           },
-          "player": "host"
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host"
-        },
-        {
-          "type": "combat_instant_pass",
-          "params": {},
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_pass",
           "params": {},
           "player": "player"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
         }
       ],
       "expect": {
@@ -1636,9 +1645,12 @@
       }
     },
     {
-      "name": "power cancels chosen strike before value noop",
+      "name": "power zeroes chosen strike before value noop",
       "combat": {
-        "dice": 2
+        "dice": 2,
+        "strike": {
+          "instant_priority": "player"
+        }
       },
       "cards": {
         "4": {
@@ -1649,12 +1661,18 @@
                 "trigger": "combat",
                 "phase": "power",
                 "effect": {
-                  "type": "strike_level",
-                  "mode": "reduce_one"
-                }
+                  "type": "strike_value",
+                  "mode": "set",
+                  "value": 0
+                },
+                "target": "striking_creature"
               }
             ]
-          }
+          },
+          "owner": "player"
+        },
+        "3": {
+          "owner": "player"
         }
       },
       "commands": [
@@ -1664,15 +1682,7 @@
             "card_id": 3,
             "instant_key": "krik"
           },
-          "player": "host"
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          },
-          "player": "host"
+          "player": "player"
         },
         {
           "type": "combat_instant_play",
@@ -1680,24 +1690,32 @@
             "card_id": 4,
             "instant_key": "miss"
           },
-          "player": "host"
+          "player": "player"
         },
         {
-          "type": "combat_instant_pass",
-          "params": {},
-          "player": "host"
+          "type": "choose_combat_pick",
+          "player": "player",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          }
         },
         {
           "type": "combat_instant_pass",
           "params": {},
           "player": "player"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
         }
       ],
       "expect": {
         "cards.2.hp": 20,
         "cards.3.coins": 1,
         "battle.strike.instant_summary.1.applied": false,
-        "battle.strike.final.attack": ""
+        "battle.strike.final.attack": "weak"
       }
     },
     {
@@ -1724,14 +1742,6 @@
           "player": "host"
         },
         {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 2,
-            "pick_token": "$pick"
-          },
-          "player": "host"
-        },
-        {
           "type": "combat_instant_pass",
           "params": {},
           "player": "host"
@@ -1754,7 +1764,8 @@
         "cards.2.hp": 14,
         "cards.3.coins": 2,
         "battle.strike.final.defend": "weak"
-      }
+      },
+      "cards": {}
     },
     {
       "name": "armor prevents all actual attack wounds",
@@ -2103,12 +2114,20 @@
     },
     {
       "name": "suppressed scream cannot be declared",
-      "combat": {},
+      "combat": {
+        "strike": {
+          "instant_priority": "player"
+        }
+      },
       "cards": {
         "3": {
           "flags": {
             "stitched_unique_loss": true
-          }
+          },
+          "owner": "player"
+        },
+        "4": {
+          "owner": "player"
         }
       },
       "commands": [
@@ -2118,7 +2137,7 @@
             "card_id": 3,
             "instant_key": "krik"
           },
-          "player": "host",
+          "player": "player",
           "success": false
         }
       ],
@@ -2132,7 +2151,8 @@
       "combat": {
         "dice": 3,
         "strike": {
-          "combat_instant_window": ""
+          "combat_instant_window": "",
+          "instant_priority": "player"
         }
       },
       "cards": {
@@ -2148,7 +2168,11 @@
                 }
               }
             ]
-          }
+          },
+          "owner": "player"
+        },
+        "3": {
+          "owner": "player"
         }
       },
       "commands": [
@@ -2157,45 +2181,43 @@
           "params": {
             "card_id": 3,
             "instant_key": "krik"
-          }
-        },
-        {
-          "type": "choose_combat_pick",
-          "params": {
-            "target_id": 1,
-            "pick_token": "$pick"
-          }
+          },
+          "player": "player"
         },
         {
           "type": "combat_instant_play",
           "params": {
             "card_id": 4,
             "instant_key": "dice"
-          }
-        },
-        {
-          "type": "combat_instant_pass"
+          },
+          "player": "player"
         },
         {
           "type": "combat_instant_pass",
-          "player": "player",
+          "player": "player"
+        },
+        {
+          "type": "combat_instant_pass",
+          "player": "host",
           "expect": {
-            "battle.pending_dice_choice.owner": "host",
+            "battle.pending_dice_choice.owner": "player",
             "cards.2.hp": 20
           }
         },
         {
           "type": "choose_dice_choice",
           "params": {
-            "choice": "plus:own"
-          }
+            "choice": "plus:enemy"
+          },
+          "player": "player"
         },
         {
           "type": "choose_dice_choice",
           "params": {
-            "choice": "plus:own"
+            "choice": "plus:enemy"
           },
-          "success": false
+          "success": false,
+          "player": "player"
         }
       ],
       "expect": {

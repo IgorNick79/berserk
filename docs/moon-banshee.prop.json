@@ -10,7 +10,7 @@
       "name": "Крик баньши",
       "trigger": "combat",
       "phase": "value",
-      "target": "striking_creature",
+      "target": "opposing_strike",
       "tap_source": true,
       "effect": {
         "type": "strike_value",
