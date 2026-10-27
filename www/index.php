@@ -276,6 +276,8 @@ function sendBattleAjaxState(
             'playmats' => \Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey),
             'status' => $state->status,
             'turn_timer' => TurnTimer::snapshot($state, time()),
+            'instant_reservation' => \Berserk\Core\InstantReservation::controls($state, $playerKey, time()),
+            'instant_control' => \Berserk\View\Screen\Battle\InstantControl::project($state, $playerKey, time()),
             'player_settings' => MatchPlayerSettings::snapshot($state, $playerKey),
             'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
         ];
@@ -306,6 +308,8 @@ function sendBattleAjaxState(
         'ui' => $snapshot['ui'],
         'fragments' => $snapshot['fragments'],
         'turn_timer' => $snapshot['turn_timer'],
+        'instant_reservation' => $snapshot['instant_reservation'],
+        'instant_control' => $snapshot['instant_control'],
         'player_settings' => $snapshot['player_settings'],
         'match_pause' => $snapshot['match_pause'],
     ];
@@ -343,6 +347,8 @@ function sendCommandStatus(
     $state = applyAutomaticBattleProgress($db, $state, $viewer, $allowCombat);
     sendCommandStatusPayload($commandId, $record, $ok, $error, $statusCode, $state->persistenceVersion ?? 0,
         ['turn_timer' => TurnTimer::snapshot($state, time()),
+         'instant_reservation' => \Berserk\Core\InstantReservation::controls($state, $viewer, time()),
+         'instant_control' => \Berserk\View\Screen\Battle\InstantControl::project($state, $viewer, time()),
          'player_settings' => MatchPlayerSettings::snapshot($state, $viewer),
          'match_pause' => MatchPause::snapshot($state, $viewer, time())]);
 }
@@ -706,6 +712,8 @@ if ($isBattleSync) {
                 'sync_version' => $syncVersion,
                 'status' => $state->status,
                 'turn_timer' => TurnTimer::snapshot($state, time()),
+                'instant_reservation' => \Berserk\Core\InstantReservation::controls($state, $playerKey, time()),
+                'instant_control' => \Berserk\View\Screen\Battle\InstantControl::project($state, $playerKey, time()),
                 'player_settings' => MatchPlayerSettings::snapshot($state, $playerKey),
                 'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
             ]);
@@ -718,6 +726,8 @@ if ($isBattleSync) {
                 'sync_version' => $syncVersion,
                 'playmats' => \Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey),
                 'turn_timer' => TurnTimer::snapshot($state, time()),
+                'instant_reservation' => \Berserk\Core\InstantReservation::controls($state, $playerKey, time()),
+                'instant_control' => \Berserk\View\Screen\Battle\InstantControl::project($state, $playerKey, time()),
                 'player_settings' => MatchPlayerSettings::snapshot($state, $playerKey),
                 'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
             ]);

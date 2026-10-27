@@ -59,6 +59,8 @@ final class BattleSnapshotRenderer
             'player_settings' => \Berserk\Core\MatchPlayerSettings::snapshot($state, $playerKey),
             'match_pause' => \Berserk\Core\MatchPause::snapshot($state, $playerKey, $serverNow ?? time()),
             'turn_timer' => TurnTimer::snapshot($state, $serverNow ?? time()),
+            'instant_reservation' => \Berserk\Core\InstantReservation::controls($state, $playerKey, $serverNow ?? time()),
+            'instant_control' => \Berserk\View\Screen\Battle\InstantControl::project($state, $playerKey, $serverNow ?? time()),
             'ui' => $data['ui'],
             'fragments' => [
                 'field_html' => (string) ($data['field_html'] ?? ''),

@@ -92,6 +92,7 @@ final class Engine
         }
         $error = ExpiredCommandGuard::error($state, $playerKey, $cmd, $now);
         if ($error !== null) return Result::error($error);
+        if (InstantReservation::blocks($state, $cmd->type)) return Result::error('instant_reservation_priority_held');
         if ($cmd->type === 'confirm_strike') {
             $error = InformationalWaitManager::validateAck($state, $playerKey, $cmd->get('wait_id'));
             if ($error !== null) return Result::error($error);
@@ -112,6 +113,7 @@ final class Engine
         }
         if ($result->success) {
             InformationalWaitManager::reconcile($state, $this->serverNow());
+            InstantReservation::afterCommand($state, $this, $cmd);
             TurnTimer::reconcileWaiting($state, $this->serverNow());
         }
         TurnTimer::settle($state, $this->serverNow());
@@ -124,6 +126,10 @@ final class Engine
         // Сдача завершает матч независимо от активного обязательного выбора.
         if ($cmd->type === 'resign') {
             return $this->resign($state, $playerKey, $cmd);
+        }
+
+        if (in_array($cmd->type, InstantReservation::COMMANDS, true)) {
+            return InstantReservation::apply($state, $this, $playerKey, $cmd);
         }
 
         if (!empty($state->battle['matriarch_order']) && in_array($cmd->type,

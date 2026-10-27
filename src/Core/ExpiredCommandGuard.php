@@ -12,6 +12,7 @@ final class ExpiredCommandGuard
         if($clock===null) return 'Некорректные данные таймера. Обновите состояние боя.';
         if(!$clock['expired']) return null;
         if($cmd->type==='resign') return null;
+        if (in_array($cmd->type, ['cancel_instant_reservation', 'decline_instant_priority'], true)) return null;
         if($cmd->type==='end_turn') {
             return TurnTimeoutEligibility::check($s,$now)['allowed'] && $actor===$clock['owner'] ? null : 'Сначала завершите обязательные действия текущего хода.';
         }

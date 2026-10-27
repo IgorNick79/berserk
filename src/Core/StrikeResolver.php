@@ -599,6 +599,7 @@ final class StrikeResolver
         }
 
         $options = [];
+        $instantProcessor = new InstantProcessor($this->state, $this->engine);
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $playerKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD && $card->zone !== CardInstance::ZONE_FLYING) continue;
@@ -622,24 +623,27 @@ final class StrikeResolver
                 continue;
             }
 
-            foreach ($card->effectiveProp()['instants'] as $inst) {
+            foreach ($instantProcessor->getSourceInstants($card, 'before', 'combat') as $inst) {
                 $effect = (array) ($inst['effect'] ?? []);
                 if (($inst['trigger'] ?? '') !== 'combat') continue;
                 if (($inst['target'] ?? 'self') !== 'adjacent_ally') continue;
                 if (($effect['type'] ?? '') !== 'redirect_strike') continue;
 
                 $key = (string) ($inst['key'] ?? ($inst['name'] ?? 'instant'));
-                $limit = (int) ($inst['uses_per_turn'] ?? 1);
-                if ($limit > 0) {
-                    $used = (int) ($card->flags['instant_uses_this_turn'][$key] ?? 0);
-                    if ($used >= $limit) continue;
-                }
                 $cost = (int) ($inst['coins'] ?? 0);
-                if ($cost > 0 && $card->coins < $cost) continue;
+                // The special redirect geometry was checked against the origin above.
+                // Apply the common living/zone/ally/condition predicate to those candidates.
+                $legalTargetIds = array_values(array_filter($targetIds, function (int $id) use ($instantProcessor, $card, $inst): bool {
+                    $candidate = $this->state->getCard($id);
+                    return $candidate !== null && $instantProcessor->isLegalInstantTarget(
+                        $card, $candidate, 'ally', $inst['effect']['condition'] ?? null
+                    );
+                }));
+                if (!$legalTargetIds) continue;
 
                 $options[] = [
                     'card_id' => (int) $card->instanceId,
-                    'target_ids' => $targetIds,
+                    'target_ids' => $legalTargetIds,
                     'key' => $key,
                     'label' => (string) ($inst['name'] ?? 'Инстант'),
                     'cost' => $cost,
@@ -1499,6 +1503,7 @@ final class StrikeResolver
             }
 
             if (!empty($this->state->battle['strike']['pending_wounds_resolution'])) {
+                $this->state->battle['strike']['wounds_window_done'] = true; // Legacy announced entries retain their resolution.
                 $this->state->battle['strike']['wounds_after_result_ack'] = true;
                 (new InstantProcessor($this->state, $this->engine))->resumeCombatWounds();
                 $this->state->bumpVersion();
@@ -1526,6 +1531,27 @@ final class StrikeResolver
             $this->engine->finalizeDying($this->state);
             $this->state->bumpVersion();
             return Result::ok(['strangulation_result_confirmed']);
+        }
+        if (!empty($strike['damage_applied']) && empty($strike['wounds_window_done'])) {
+            $this->state->battle['strike']['wounds_window_done'] = true;
+            $strike['wounds_window_done'] = true;
+            $ip = new InstantProcessor($this->state,$this->engine);
+            // Battles with no wounds source retain their existing death/follow-up ordering.
+            if ($ip->hasCombatWoundsSource()) {
+                $this->engine->finalizeDying($this->state);
+                if ($this->state->status !== 'battle' || $this->state->winner !== null) {
+                    (new CoinAbilities($this->state,$this->engine))->completeCombat($strike);
+                    CombatContinuation::localDone($this->state,$strike);
+                    $this->state->battle['strike'] = null;
+                    $this->state->bumpVersion();
+                    return Result::ok(['combat_finished']);
+                }
+                $attacker = $this->state->getCard((int)$strike['attacker_id']);
+                if ($attacker && $ip->openWindow('combat',$attacker->owner,null,'wounds')) {
+                    $this->state->bumpVersion();
+                    return Result::ok(['combat_wounds_opened']);
+                }
+            }
         }
         // Auto — только если ещё не сработал
         if (empty($strike['auto_effects']) && empty($strike['continuation_auto_done'])) {

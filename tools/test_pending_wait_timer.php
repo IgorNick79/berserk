@@ -35,7 +35,7 @@ function pwWait(GameState $s, ?string $kind, array $players = [], ?string $sourc
 // The fixtures are an explicit contract for every registered key. Card IDs deliberately
 // disagree with a misleading owner/active field to catch fallback heuristics.
 $owned = [
-    'pending_matriarch_order',
+    'pending_swamp_queen_summon', 'pending_matriarch_order',
     'pending_deal_linked_recruit','pending_deal_scout_recruit','pending_deal_variable_recruit',
     'pending_coin_ability','pending_first_strike_jump','pending_dice_choice','pending_after_strike_execute','pending_cell_marker_pick','pending_cell_effect_direction',
     'pending_instant_pick','pending_combat_pick','pending_forced_strike_adjacent','pending_ranged_attack_redirect',
@@ -237,9 +237,10 @@ $s=pwState();$s->battle['strike']=['state'=>'waiting_instant','attacker_id'=>1,'
     'instant_participants'=>['host','player'],'instant_passed'=>[],'instant_stack'=>[],'instant_phase'=>'combat'];
 $now=1010;pwApply($engine,$s,'host','combat_instant_pass');
 pwAssert($s->battle['strike']['instant_priority']==='player' && $s->battle['turn_timer']['status']==='paused','Combat instant priority pauses');
-$s->getCard(2)->prop['instants']=[['key'=>'enemy_pick','name'=>'pick','trigger'=>'combat','combat_phase'=>'main',
+$instantSource=clone $s->getCard(2);$instantSource->instanceId=3;$instantSource->row=6;$s->addCard($instantSource);
+$s->getCard(3)->prop['instants']=[['key'=>'enemy_pick','name'=>'pick','trigger'=>'combat','combat_phase'=>'setter',
     'target'=>'enemy','effect'=>['type'=>'damage_cap','value'=>1]]];
-$now=1100;pwApply($engine,$s,'player','combat_instant_play',['card_id'=>2,'instant_key'=>'enemy_pick']);
+$now=1100;pwApply($engine,$s,'player','combat_instant_play',['card_id'=>3,'instant_key'=>'enemy_pick']);
 pwWait($s,'decision',['player'],'pending_combat_pick');
 pwAssert($s->battle['turn_timer']['remaining_seconds']===170,'Nested enemy instant pick keeps pause');
 $now=1200;pwApply($engine,$s,'player','choose_combat_pick',['target_id'=>1]);

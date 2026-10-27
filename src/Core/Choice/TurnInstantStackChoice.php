@@ -11,7 +11,6 @@ use Berserk\Core\GameState;
 use Berserk\Core\InstantProcessor;
 use Berserk\Core\Result;
 use Berserk\View\Ui\PanelSpec;
-use Berserk\View\Ui\TaskCard;
 
 final class TurnInstantStackChoice implements ChoiceHandlerInterface
 {
@@ -60,25 +59,7 @@ final class TurnInstantStackChoice implements ChoiceHandlerInterface
         if ($priority !== $playerKey) {
             $text[] = '<p class="wait">Ожидание выбора оппонента...</p>';
         } else {
-            $instantProcessor = new InstantProcessor($state, new Engine());
-            foreach ($instantProcessor->getInstants($playerKey, $phase, 'turn') as $inst) {
-                $payload = (array) ($inst['payload'] ?? []);
-                $url = "{$baseUrl}&cmd=play_turn_instant&card_id={$inst['card_id']}"
-                    . '&instant_key=' . urlencode((string) ($payload['key'] ?? ''));
-                $cards[] = TaskCard::render([
-                    'label' => (string) ($inst['label'] ?? ''),
-                    'card_ukid' => $inst['ukid'] ?? null,
-                    'row' => $inst['row'] ?? null,
-                    'col' => $inst['col'] ?? null,
-                    'hint' => (string) ($inst['label'] ?? ''),
-                    'is_instant' => true,
-                ], $url, $cardsInfo);
-            }
-            $buttons[] = [
-                'label' => 'Пас',
-                'url' => $baseUrl . '&cmd=pass_turn_instant',
-                'class' => 'skip',
-            ];
+            $text[] = '<p>Выберите инстант или пас в нижнем блоке.</p>';
         }
 
         return new PanelSpec(

@@ -96,7 +96,7 @@ $html=uxFixture('impact')['info_panel_html'];
 uxCheck(!str_contains($html,'class="strike-dice"') && !str_contains($html,'class="dice-value"'),'impact result has no dice');
 $html=uxFixture('instant')['info_panel_html'];
 $dom=new DOMDocument();@$dom->loadHTML($html);$x=new DOMXPath($dom);
-uxCheck($x->query('//*[contains(@class,"info-panel-context")]//section[contains(@class,"info-panel-instants")]')->length===1,'instant offer is inside shared information context');
+uxCheck($x->query('//footer//section[@data-instant-control]')->length===1,'instant offer is in the persistent footer');
 $html=uxFixture('stack')['info_panel_html'];
 uxCheck(strpos($html,'Стек инстантов')>strpos($html,'info-panel-instants'),'actual instant stack uses shared context section');
 @$dom->loadHTML($html);uxCheck((new DOMXPath($dom))->query('//*[contains(@class,"info-panel-context")]//section[contains(@class,"info-panel-instants")]')->length===1,'active instant stack is in the same scrollable context');

@@ -34,7 +34,8 @@ final class Recorder
     public function commandStarted(GameState $state,string $actor,Command $cmd): void
     {
         $this->observed=true;$this->actor=$actor;$this->command=$cmd->type;
-        $this->covered=in_array($cmd->type,[\Berserk\Core\MatchPlayerSettings::COMMAND,'set_lucktest_url_roll'],true);$this->gap=false;
+        $this->covered=in_array($cmd->type,[\Berserk\Core\MatchPlayerSettings::COMMAND,'set_lucktest_url_roll',
+            ...\Berserk\Core\InstantReservation::COMMANDS],true);$this->gap=false;
     }
     public function commandFinished(GameState $state,Result $result): void
     {
