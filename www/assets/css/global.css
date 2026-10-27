@@ -1850,14 +1850,17 @@ body.battle-page > .screen {
 .battle-page .info-panel-footer button:disabled { opacity: .5; cursor: default; }
 .battle-page .instant-control { border: 1px solid var(--ip-edge, #aaa); border-radius: 6px; padding: 8px; margin: 0 0 10px; min-width: 0; }
 .battle-page .instant-control h3 { margin: 0 0 6px; font-size: 13px; }
-.battle-page .instant-control-actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; }
+.battle-page .instant-control-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 6px; }
 .battle-page .instant-control-main { white-space: normal; overflow-wrap: normal; word-break: normal; }
 .battle-page .instant-control-actions > .instant-control-main { flex: 1 1 0; min-width: 0; text-align: center; }
-.battle-page .instant-control-picker { flex: 1 1 0; min-width: 0; }
+.battle-page .instant-control-picker { display: contents; }
+.battle-page .instant-control-picker::details-content { display: contents; }
+.battle-page .instant-control-picker:not([open]) > .instant-control-options { display: none; }
 .battle-page .instant-control-actions > [data-instant-pass] { flex: 1 1 0; min-width: 0; text-align: center; }
-.battle-page .instant-control-picker > summary { display: block; text-align: center; cursor: pointer; list-style: none; }
+.battle-page .instant-control-picker > summary { grid-column: 1; grid-row: 2; display: block; text-align: center; cursor: pointer; list-style: none; }
+.battle-page .instant-control-actions:has(.instant-control-picker) > [data-instant-pass] { grid-column: 2; grid-row: 2; }
 .battle-page .instant-control-picker > summary::-webkit-details-marker { display: none; }
-.battle-page .instant-control-options { max-height: min(28vh, 220px); overflow-y: auto; margin-top: 8px; }
+.battle-page .instant-control-options { grid-column: 1 / -1; grid-row: 1; min-width: 0; max-height: min(28vh, 220px); overflow-y: auto; margin-bottom: 2px; }
 .battle-page .instant-control-options .task-card__hint { color: inherit; opacity: .85; }
 .battle-page .instant-control-cost, .battle-page .instant-control-quota { font-size: 12px; white-space: nowrap; }
 .battle-page .instant-control-quota { margin-left: auto; }

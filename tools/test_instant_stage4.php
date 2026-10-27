@@ -74,7 +74,7 @@ foreach(['host','player']as$active){
     // Normal initiative, paid/free projection, cancellation, inspection and no duplicate launchers.
     $s=fState($active);[$a,$p,$h,$caster]=fIds($s);$s->getCard($active==='host'?3:4)->prop['instants']=$s->getCard($caster)->prop['instants'];
     foreach([$a,$p]as$viewer){$html=s4Render($s,$viewer,4);$dom=new DOMDocument();@$dom->loadHTML('<?xml encoding="UTF-8">'.$html);$xp=new DOMXPath($dom);
-        s4Check($xp->query('//*[@data-instant-control]')->length===1 && $xp->query('//div[contains(@class,"info-panel-content")]/*[1][@data-instant-control]')->length===1,'One instant component above context, including inspect');
+        s4Check($xp->query('//*[@data-instant-control]')->length===1 && $xp->query('//footer//*[@data-instant-control]')->length===1,'One instant component in fixed footer, including inspect');
         s4Check($xp->query('//div[contains(@class,"info-panel-content")]//a[contains(@href,"open_turn_instants") and not(ancestor::*[@data-instant-control])]')->length===0,'No old scroll-area launcher');
     }
     s4Check(InstantControl::project($s,$a,1000)['label']==='Сыграть','Active initiative');$ui=InstantControl::project($s,$p,1000);
