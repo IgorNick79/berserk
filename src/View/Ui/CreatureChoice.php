@@ -48,12 +48,13 @@ final class CreatureChoice
             $item = array_replace($item, self::item($card, $name, $viewer, $showHealth));
         }
         unset($item);
+        $spec->form['side_default'] ??= $showHealth ? 'own' : 'enemy';
         $spec->form['side_toggle'] = ($spec->form['type'] ?? 'radio') === 'radio' && count(array_unique(array_column($spec->form['items'], 'side'))) > 1;
     }
 
-    public static function controls(): string
+    public static function controls(string $defaultSide = 'enemy'): string
     {
-        return '<div class="creature-choice-sides" data-creature-sides hidden role="group" aria-label="Сторона существа">'
+        return '<div class="creature-choice-sides" data-creature-sides data-default-side="' . ($defaultSide === 'own' ? 'own' : 'enemy') . '" hidden role="group" aria-label="Сторона существа">'
             . '<button type="button" data-creature-side="own" aria-pressed="false">Свои</button>'
             . '<button type="button" data-creature-side="enemy" aria-pressed="false">Чужие</button></div>';
     }

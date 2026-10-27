@@ -66,7 +66,7 @@ final class Panel
         } else {
             $name = (string) ($form['name'] ?? 'value');
             $items = $form['items'] ?? [];
-            $body = (!empty($form['side_toggle']) ? CreatureChoice::controls() : '') . self::renderChoiceItems($items, $type, $name);
+            $body = (!empty($form['side_toggle']) ? CreatureChoice::controls($form['side_default'] ?? 'enemy') : '') . self::renderChoiceItems($items, $type, $name);
         }
 
         $submit = $form['submit'] ?? 'Подтвердить';
