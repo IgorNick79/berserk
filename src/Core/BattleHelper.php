@@ -314,7 +314,9 @@ final class BattleHelper
                     && $target->zone !== CardInstance::ZONE_FLYING) continue;
                 if ($target->instanceId === $card->instanceId && empty($action['heal_gain_coin'])) continue;
 
-                if ($type === 'tap') {
+                if (TemporaryHealth::isAction($action)) {
+                    if (!TemporaryHealth::legal($state, $card, $target, $action)) continue;
+                } elseif ($type === 'tap') {
                     if (!empty($action['self']) && $target->instanceId !== $card->instanceId) continue;
                     if (!empty($action['own']) && $target->owner !== $playerKey) continue;
                     if (empty($action['own'])

@@ -853,6 +853,7 @@ final class StrikeResolver
             $reduction = CardStats::getDamageReduction($this->state, $attacker, $defendCard, 'strike', $attackStrike);
             $val -= $reduction;
             if ($val < 0) $val = 0;
+            $val = CombatStrikeValue::apply($strike, 'attack', $val);
             $val = CardStats::setIncomingStrikeValue($this->state, $defendCard, $val);
             if (isset($defendCard->effectiveProp()['closed_strike_value']) && CardStats::combatClosed($this->state, $defendCard)) {
                 $strike['strike_value_set']['attack'] = $val;
@@ -997,6 +998,7 @@ final class StrikeResolver
             }
             $val -= $defReduction;
             if ($val < 0) $val = 0;
+            $val = CombatStrikeValue::apply($strike, 'defend', $val);
             if (isset($attacker->effectiveProp()['closed_strike_value'])
                 && CardStats::combatClosed($this->state, $attacker)) {
                 $val = CardStats::setIncomingStrikeValue($this->state, $attacker, $val);

@@ -438,6 +438,21 @@ final class Engine
                 }
                 return null;
 
+            case 'strike_value':
+                if ($source && (!EffectiveFeatures::onBattlefield($source) || $source->dying || $source->hp <= 0)) return 'источник недоступен';
+                $side = $target ? CombatStrikeValue::side($state, $target->instanceId) : null;
+                if ($side === null) return 'выбранный удар недоступен';
+                $current = CombatStrikeValue::current($state, $side);
+                if ($current === null) return 'выбранный удар не наносится';
+                $value = (int) ($effect['value'] ?? 0);
+                $next = ($effect['mode'] ?? 'add') === 'set' ? max(0, $value) : max(0, $current + $value);
+                if ($next === $current) return 'величина удара не изменилась';
+                $strike['strike_value_effects'][] = ['side'=>$side, 'mode'=>$effect['mode'] ?? 'add', 'value'=>$value];
+                if ($source && !empty($effect['gain_coins'])) {
+                    (new CoinAbilities($state, $this))->gain($source, (int) $effect['gain_coins'], $source, true);
+                }
+                return null;
+
             case 'strike_level':
                 $mode  = $effect['mode'] ?? 'set';
                 $value = $effect['value'] ?? null;

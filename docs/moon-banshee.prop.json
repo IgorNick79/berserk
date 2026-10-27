@@ -1,0 +1,35 @@
+{
+  "start": {
+    "type": "get_coins",
+    "coins": 1,
+    "side": 2
+  },
+  "instants": [
+    {
+      "key": "krik",
+      "name": "Крик баньши",
+      "trigger": "combat",
+      "phase": "value",
+      "target": "striking_creature",
+      "tap_source": true,
+      "effect": {
+        "type": "strike_value",
+        "mode": "add",
+        "value": -1,
+        "gain_coins": 1
+      },
+      "uses_per_turn": 0
+    }
+  ],
+  "actions": [
+    {
+      "key": "horror",
+      "name": "Ужас",
+      "type": "cast",
+      "effect": "temporary_health",
+      "coins": 1,
+      "value": -3,
+      "no_attack_wounds_this_turn": true
+    }
+  ]
+}

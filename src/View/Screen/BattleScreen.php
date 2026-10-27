@@ -1014,7 +1014,7 @@ final class BattleScreen
                     $type = $a['type'] ?? '';
                     if ((\Berserk\Core\StitchRevival::isAction($a)
                             && !\Berserk\Core\StitchRevival::available($state, $c, $a))
-                        || (!empty($a['heal_gain_coin'])
+                        || ((!empty($a['heal_gain_coin']) || \Berserk\Core\TemporaryHealth::isAction($a))
                             && !BattleHelper::getAttackTargets($state, $c, 'action:' . ($a['key'] ?? $type), $c->owner))) {
                         $modeButtons .= '<span class="button small disabled">'
                             . htmlspecialchars($a['name'] ?? $type, ENT_QUOTES) . '</span> ';

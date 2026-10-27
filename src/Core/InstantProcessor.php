@@ -242,6 +242,10 @@ final class InstantProcessor
             && $candidate->zone !== CardInstance::ZONE_FLYING) return false;
         if ($candidate->dying || $candidate->hp <= 0) return false;
 
+        if ($target === 'striking_creature') {
+            $side = CombatStrikeValue::side($this->state, $candidate->instanceId);
+            if ($side === null || CombatStrikeValue::current($this->state, $side) === null) return false;
+        }
         if ($target === 'self' && $candidate->instanceId !== $source->instanceId) return false;
         if ($target === 'enemy' && $candidate->owner === $source->owner) return false;
         if ($target === 'ally' && $candidate->owner !== $source->owner) return false;
@@ -460,7 +464,9 @@ final class InstantProcessor
         }
 
         // Нужен выбор цели
+        $pickToken = $target === 'striking_creature' ? bin2hex(random_bytes(12)) : null;
         $this->state->battle['pending_combat_pick'] = [
+            'pick_token' => $pickToken,
             'owner'    => $playerKey,
             'card_id'  => $card->instanceId,
             'target'   => $target,
@@ -521,6 +527,7 @@ final class InstantProcessor
         $pc = $this->state->battle['pending_combat_pick'] ?? null;
         if (!$pc) return Result::error('Нет ожидающего выбора');
         if ($pc['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+        if (isset($pc['pick_token']) && !hash_equals($pc['pick_token'], (string) $cmd->get('pick_token', ''))) return Result::error('Устаревший выбор');
 
         $target = $this->state->getCard((int) $cmd->get('target_id', 0));
         if (!$target) return Result::error('Цель не найдена');
@@ -1236,6 +1243,7 @@ final class InstantProcessor
             'redirect_strike' => 'redirect',
             'dice_choice', 'damage_on_dice' => 'dice',
             'strike_level' => (($effect['mode'] ?? '') === 'reduce_one') ? 'value' : 'power',
+            'strike_value' => (($effect['mode'] ?? 'add') === 'set') ? 'setter' : 'value',
             'damage_cap' => 'setter',
             'redistribute_wounds' => 'wounds',
             default => '',

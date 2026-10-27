@@ -1,0 +1,2211 @@
+{
+  "cards": [
+    {
+      "instance_id": 1,
+      "ukid": "test_1",
+      "owner": "host",
+      "zone": "field",
+      "row": 3,
+      "col": 3,
+      "hp": 20,
+      "hp_max": 20,
+      "move": 1,
+      "move_max": 1,
+      "strike_weak": 2,
+      "strike_medium": 4,
+      "strike_strong": 6,
+      "coins": 1,
+      "prop": {}
+    },
+    {
+      "instance_id": 2,
+      "ukid": "test_2",
+      "owner": "player",
+      "zone": "field",
+      "row": 4,
+      "col": 3,
+      "hp": 20,
+      "hp_max": 20,
+      "move": 1,
+      "move_max": 1,
+      "strike_weak": 2,
+      "strike_medium": 4,
+      "strike_strong": 6,
+      "coins": 1,
+      "prop": {}
+    },
+    {
+      "instance_id": 3,
+      "ukid": "s1_157",
+      "owner": "host",
+      "zone": "field",
+      "row": 2,
+      "col": 2,
+      "hp": 20,
+      "hp_max": 20,
+      "move": 1,
+      "move_max": 1,
+      "strike_weak": 2,
+      "strike_medium": 4,
+      "strike_strong": 6,
+      "coins": 1,
+      "prop": null
+    },
+    {
+      "instance_id": 4,
+      "ukid": "test_4",
+      "owner": "host",
+      "zone": "field",
+      "row": 2,
+      "col": 3,
+      "hp": 20,
+      "hp_max": 20,
+      "move": 1,
+      "move_max": 1,
+      "strike_weak": 2,
+      "strike_medium": 4,
+      "strike_strong": 6,
+      "coins": 1,
+      "prop": {}
+    },
+    {
+      "instance_id": 5,
+      "ukid": "test_5",
+      "owner": "player",
+      "zone": "field",
+      "row": 5,
+      "col": 5,
+      "hp": 20,
+      "hp_max": 20,
+      "move": 1,
+      "move_max": 1,
+      "strike_weak": 2,
+      "strike_medium": 4,
+      "strike_strong": 6,
+      "coins": 1,
+      "prop": {}
+    }
+  ],
+  "cases": [
+    {
+      "name": "scream numeric dice 2",
+      "combat": {
+        "dice": 2
+      },
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "player"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 19,
+        "cards.3.coins": 2,
+        "cards.3.closed": true,
+        "battle.strike.attack_dice": 2,
+        "battle.strike.final.attack": "weak",
+        "battle.strike.instant_summary.0.applied": true
+      }
+    },
+    {
+      "name": "scream numeric dice 4",
+      "combat": {
+        "dice": 4
+      },
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "player"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 17,
+        "cards.3.coins": 2,
+        "cards.3.closed": true,
+        "battle.strike.attack_dice": 4,
+        "battle.strike.final.attack": "medium",
+        "battle.strike.instant_summary.0.applied": true
+      }
+    },
+    {
+      "name": "scream numeric dice 6",
+      "combat": {
+        "dice": 6
+      },
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "player"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 15,
+        "cards.3.coins": 2,
+        "cards.3.closed": true,
+        "battle.strike.attack_dice": 6,
+        "battle.strike.final.attack": "strong",
+        "battle.strike.instant_summary.0.applied": true
+      }
+    },
+    {
+      "name": "horror wounded by nonattack and expires",
+      "cards": {
+        "2": {
+          "hp": 15
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "end_turn",
+          "params": {},
+          "player": "host"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 15,
+        "cards.2.hp_max": 20,
+        "cards.2.modifiers": [],
+        "cards.3.coins": 0,
+        "battle.active": "player"
+      }
+    },
+    {
+      "name": "horror persists and duplicate denied",
+      "cards": {
+        "2": {
+          "hp": 15
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host",
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 12,
+        "cards.2.hp_max": 17,
+        "cards.3.coins": 0,
+        "cards.3.closed": true
+      }
+    },
+    {
+      "name": "no token",
+      "cards": {
+        "3": {
+          "coins": 0
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host",
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 20,
+        "cards.3.closed": false
+      }
+    },
+    {
+      "name": "attacked healed target forbidden",
+      "cards": {
+        "2": {
+          "flags": {
+            "attack_wounds_this_turn": 2
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host",
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 20,
+        "cards.3.coins": 1
+      },
+      "targets": [
+        5
+      ]
+    },
+    {
+      "name": "nonattack wounds allowed",
+      "cards": {
+        "2": {
+          "hp": 15,
+          "flags": {
+            "damage_taken_this_turn": 5
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 12,
+        "cards.2.hp_max": 17
+      }
+    },
+    {
+      "name": "prevented attack eligible",
+      "cards": {
+        "2": {
+          "flags": {
+            "attack_wounds_this_turn": 0
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 17
+      }
+    },
+    {
+      "name": "own target forbidden",
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 1
+          },
+          "player": "host",
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.1.hp": 20,
+        "cards.3.coins": 1
+      }
+    },
+    {
+      "name": "source suppressed",
+      "cards": {
+        "3": {
+          "flags": {
+            "stitched_unique_loss": true
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host",
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 20,
+        "cards.3.coins": 1
+      },
+      "targets": []
+    },
+    {
+      "name": "lethal health reduction restores grave max",
+      "cards": {
+        "2": {
+          "hp": 3
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 0,
+        "cards.2.hp_max": 20,
+        "cards.2.zone": "graveyard",
+        "cards.2.modifiers": [],
+        "cards.3.coins": 0
+      }
+    },
+    {
+      "name": "second player gets start token",
+      "cards": {
+        "3": {
+          "owner": "player",
+          "coins": 0
+        }
+      },
+      "start_effects": true,
+      "commands": [],
+      "expect": {
+        "cards.3.coins": 1
+      }
+    },
+    {
+      "name": "first player gets no start token",
+      "cards": {
+        "3": {
+          "coins": 0
+        }
+      },
+      "start_effects": true,
+      "commands": [],
+      "expect": {
+        "cards.3.coins": 0
+      }
+    },
+    {
+      "name": "wrong chooser stale and duplicate choices",
+      "combat": {},
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "player",
+          "success": false
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "old"
+          },
+          "player": "host",
+          "success": false
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host",
+          "success": false
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "player"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 15,
+        "cards.3.coins": 2
+      }
+    },
+    {
+      "name": "noncombat hitter rejected",
+      "combat": {},
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 4,
+            "pick_token": "$pick"
+          },
+          "player": "host",
+          "success": false
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "player"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 15,
+        "cards.4.hp": 20
+      }
+    },
+    {
+      "name": "setter after scream",
+      "combat": {},
+      "cards": {
+        "4": {
+          "prop": {
+            "instants": [
+              {
+                "key": "setter",
+                "name": "set",
+                "trigger": "combat",
+                "phase": "setter",
+                "effect": {
+                  "type": "damage_cap",
+                  "value": 1
+                }
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 4,
+            "instant_key": "setter"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "player"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 19,
+        "cards.3.coins": 2,
+        "battle.strike.instant_summary.0.effect_type": "strike_value",
+        "battle.strike.instant_summary.1.effect_type": "damage_cap"
+      }
+    },
+    {
+      "name": "closed Morok setter after numeric modifier",
+      "combat": {},
+      "cards": {
+        "2": {
+          "prop": {
+            "closed_strike_value": 1
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "player"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 19,
+        "cards.3.coins": 2
+      }
+    },
+    {
+      "name": "LIFO latest scream noop before older plus",
+      "combat": {
+        "dice": 2
+      },
+      "cards": {
+        "1": {
+          "strike_weak": 0
+        },
+        "4": {
+          "prop": {
+            "instants": [
+              {
+                "key": "plus",
+                "name": "numeric plus",
+                "trigger": "combat",
+                "phase": "value",
+                "effect": {
+                  "type": "strike_value",
+                  "value": 3
+                },
+                "target": "striking_creature"
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 4,
+            "instant_key": "plus"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "player"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 17,
+        "cards.3.coins": 1,
+        "battle.strike.instant_summary.0.applied": false,
+        "battle.strike.instant_summary.1.card_id": 4
+      }
+    },
+    {
+      "name": "LIFO latest plus enables older scream",
+      "combat": {
+        "dice": 2
+      },
+      "cards": {
+        "1": {
+          "strike_weak": 0
+        },
+        "4": {
+          "prop": {
+            "instants": [
+              {
+                "key": "plus",
+                "name": "numeric plus",
+                "trigger": "combat",
+                "phase": "value",
+                "effect": {
+                  "type": "strike_value",
+                  "value": 3
+                },
+                "target": "striking_creature"
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 4,
+            "instant_key": "plus"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "player"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 18,
+        "cards.3.coins": 2,
+        "battle.strike.instant_summary.0.card_id": 4,
+        "battle.strike.instant_summary.1.card_id": 3
+      }
+    },
+    {
+      "name": "two screams accumulate",
+      "combat": {},
+      "cards": {
+        "4": {
+          "prop": {
+            "start": {
+              "type": "get_coins",
+              "coins": 1,
+              "side": 2
+            },
+            "instants": [
+              {
+                "key": "krik",
+                "name": "Крик баньши",
+                "trigger": "combat",
+                "phase": "value",
+                "target": "striking_creature",
+                "tap_source": true,
+                "effect": {
+                  "type": "strike_value",
+                  "mode": "add",
+                  "value": -1,
+                  "gain_coins": 1
+                },
+                "uses_per_turn": 0
+              }
+            ],
+            "actions": [
+              {
+                "key": "horror",
+                "name": "Ужас",
+                "type": "cast",
+                "effect": "temporary_health",
+                "coins": 1,
+                "value": -3,
+                "no_attack_wounds_this_turn": true
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 4,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "player"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 16,
+        "cards.3.coins": 2,
+        "cards.4.coins": 2,
+        "battle.strike.strike_value_effects.0.value": -1,
+        "battle.strike.strike_value_effects.1.value": -1
+      }
+    },
+    {
+      "name": "numeric setter overrides value reduction",
+      "combat": {},
+      "cards": {
+        "4": {
+          "prop": {
+            "instants": [
+              {
+                "key": "set",
+                "trigger": "combat",
+                "phase": "setter",
+                "target": "striking_creature",
+                "effect": {
+                  "type": "strike_value",
+                  "mode": "set",
+                  "value": 4
+                }
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 4,
+            "instant_key": "set"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "player"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 16,
+        "cards.3.coins": 2,
+        "battle.strike.final.attack": "strong"
+      }
+    },
+    {
+      "name": "wrong turn horror rejected",
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "player",
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.3.coins": 1
+      }
+    },
+    {
+      "name": "cast protection horror rejected",
+      "cards": {
+        "2": {
+          "prop": {
+            "zoz": true
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host",
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.3.coins": 1,
+        "cards.2.hp": 20
+      }
+    },
+    {
+      "name": "no eligible targets",
+      "cards": {
+        "2": {
+          "flags": {
+            "attack_wounds_this_turn": 1
+          }
+        },
+        "5": {
+          "flags": {
+            "attack_wounds_this_turn": 1
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host",
+          "success": false
+        }
+      ],
+      "targets": []
+    },
+    {
+      "name": "actual tap wounds then healed",
+      "cards": {
+        "1": {
+          "prop": {
+            "actions": [
+              {
+                "key": "hit",
+                "type": "tap",
+                "value": 2,
+                "range": 6,
+                "near_shot": true
+              }
+            ]
+          }
+        },
+        "4": {
+          "prop": {
+            "actions": [
+              {
+                "key": "heal",
+                "type": "heal",
+                "value": 2
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 1,
+            "action_key": "hit",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 4,
+            "action_key": "heal",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host",
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 20,
+        "cards.3.coins": 1
+      }
+    },
+    {
+      "name": "actual magic wounds then healed",
+      "cards": {
+        "1": {
+          "prop": {
+            "actions": [
+              {
+                "key": "hit",
+                "type": "magic",
+                "value": 2,
+                "range": 6,
+                "near_shot": true
+              }
+            ]
+          }
+        },
+        "4": {
+          "prop": {
+            "actions": [
+              {
+                "key": "heal",
+                "type": "heal",
+                "value": 2
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 1,
+            "action_key": "hit",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 4,
+            "action_key": "heal",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host",
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 20,
+        "cards.3.coins": 1
+      }
+    },
+    {
+      "name": "actual shot wounds then healed",
+      "cards": {
+        "1": {
+          "prop": {
+            "actions": [
+              {
+                "key": "hit",
+                "type": "shot",
+                "value": 2,
+                "range": 6,
+                "near_shot": true
+              }
+            ]
+          }
+        },
+        "4": {
+          "prop": {
+            "actions": [
+              {
+                "key": "heal",
+                "type": "heal",
+                "value": 2
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 1,
+            "action_key": "hit",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 4,
+            "action_key": "heal",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host",
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 20,
+        "cards.3.coins": 1
+      }
+    },
+    {
+      "name": "actual throw wounds then healed",
+      "cards": {
+        "1": {
+          "prop": {
+            "actions": [
+              {
+                "key": "hit",
+                "type": "throw",
+                "value": 2,
+                "range": 6,
+                "near_shot": true
+              }
+            ]
+          }
+        },
+        "4": {
+          "prop": {
+            "actions": [
+              {
+                "key": "heal",
+                "type": "heal",
+                "value": 2
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 1,
+            "action_key": "hit",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 4,
+            "action_key": "heal",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host",
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 20,
+        "cards.3.coins": 1
+      }
+    },
+    {
+      "name": "actual discharge wounds then healed",
+      "cards": {
+        "1": {
+          "prop": {
+            "actions": [
+              {
+                "key": "hit",
+                "type": "discharge",
+                "value": 2,
+                "range": 6,
+                "near_shot": true
+              }
+            ]
+          }
+        },
+        "4": {
+          "prop": {
+            "actions": [
+              {
+                "key": "heal",
+                "type": "heal",
+                "value": 2
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 1,
+            "action_key": "hit",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 4,
+            "action_key": "heal",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host",
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 20,
+        "cards.3.coins": 1
+      }
+    },
+    {
+      "name": "actual cast wounds then healed",
+      "cards": {
+        "1": {
+          "prop": {
+            "actions": [
+              {
+                "key": "hit",
+                "type": "cast",
+                "value": 2,
+                "range": 6,
+                "near_shot": true
+              }
+            ]
+          }
+        },
+        "4": {
+          "prop": {
+            "actions": [
+              {
+                "key": "heal",
+                "type": "heal",
+                "value": 2
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 1,
+            "action_key": "hit",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 4,
+            "action_key": "heal",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 17,
+        "cards.3.coins": 0
+      }
+    },
+    {
+      "name": "power cancels chosen strike before value noop",
+      "combat": {
+        "dice": 2
+      },
+      "cards": {
+        "4": {
+          "prop": {
+            "instants": [
+              {
+                "key": "miss",
+                "trigger": "combat",
+                "phase": "power",
+                "effect": {
+                  "type": "strike_level",
+                  "mode": "reduce_one"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 4,
+            "instant_key": "miss"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "player"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 20,
+        "cards.3.coins": 1,
+        "battle.strike.instant_summary.1.applied": false,
+        "battle.strike.final.attack": ""
+      }
+    },
+    {
+      "name": "numeric modifier selects return strike",
+      "combat": {
+        "target_closed": false,
+        "strike": {
+          "attack_dice": 6,
+          "defend_dice": 2,
+          "result": {
+            "attack": "strong",
+            "defend": "weak",
+            "winner": "attack"
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host"
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 2,
+            "pick_token": "$pick"
+          },
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "combat_instant_pass",
+          "params": {},
+          "player": "player"
+        },
+        {
+          "type": "choose_strike_mode",
+          "params": {
+            "mode": "normal"
+          },
+          "player": "host"
+        }
+      ],
+      "expect": {
+        "cards.1.hp": 19,
+        "cards.2.hp": 14,
+        "cards.3.coins": 2,
+        "battle.strike.final.defend": "weak"
+      }
+    },
+    {
+      "name": "armor prevents all actual attack wounds",
+      "cards": {
+        "1": {
+          "prop": {
+            "actions": [
+              {
+                "key": "hit",
+                "type": "tap",
+                "value": 2
+              }
+            ]
+          }
+        },
+        "2": {
+          "armor": 2,
+          "armor_max": 2
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 1,
+            "action_key": "hit",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 17,
+        "cards.2.flags.attack_wounds_this_turn": null
+      }
+    },
+    {
+      "name": "two horrors expire additive",
+      "cards": {
+        "4": {
+          "prop": {
+            "start": {
+              "type": "get_coins",
+              "coins": 1,
+              "side": 2
+            },
+            "instants": [
+              {
+                "key": "krik",
+                "name": "Крик баньши",
+                "trigger": "combat",
+                "phase": "value",
+                "target": "striking_creature",
+                "tap_source": true,
+                "effect": {
+                  "type": "strike_value",
+                  "mode": "add",
+                  "value": -1,
+                  "gain_coins": 1
+                },
+                "uses_per_turn": 0
+              }
+            ],
+            "actions": [
+              {
+                "key": "horror",
+                "name": "Ужас",
+                "type": "cast",
+                "effect": "temporary_health",
+                "coins": 1,
+                "value": -3,
+                "no_attack_wounds_this_turn": true
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 4,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "end_turn",
+          "params": {},
+          "player": "host"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 20,
+        "cards.2.hp_max": 20,
+        "cards.2.modifiers": [],
+        "cards.4.coins": 0
+      }
+    },
+    {
+      "name": "healing while reduced preserves remaining wounds on expiry",
+      "cards": {
+        "2": {
+          "hp": 15
+        },
+        "4": {
+          "prop": {
+            "actions": [
+              {
+                "key": "heal",
+                "type": "heal",
+                "value": 2
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 4,
+            "action_key": "heal",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "end_turn",
+          "params": {},
+          "player": "host"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 17,
+        "cards.2.hp_max": 20,
+        "cards.2.modifiers": []
+      }
+    },
+    {
+      "name": "parameterized health reduction",
+      "cards": {
+        "3": {
+          "prop": {
+            "start": {
+              "type": "get_coins",
+              "coins": 1,
+              "side": 2
+            },
+            "instants": [
+              {
+                "key": "krik",
+                "name": "Крик баньши",
+                "trigger": "combat",
+                "phase": "value",
+                "target": "striking_creature",
+                "tap_source": true,
+                "effect": {
+                  "type": "strike_value",
+                  "mode": "add",
+                  "value": -1,
+                  "gain_coins": 1
+                },
+                "uses_per_turn": 0
+              }
+            ],
+            "actions": [
+              {
+                "key": "horror",
+                "name": "Ужас",
+                "type": "cast",
+                "effect": "temporary_health",
+                "coins": 1,
+                "value": -2,
+                "no_attack_wounds_this_turn": true
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 18,
+        "cards.2.hp_max": 18
+      }
+    },
+    {
+      "name": "history resets on next turn",
+      "cards": {
+        "2": {
+          "flags": {
+            "attack_wounds_this_turn": 4
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "end_turn",
+          "params": {},
+          "player": "host"
+        },
+        {
+          "type": "end_turn",
+          "params": {},
+          "player": "player"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 17,
+        "cards.3.coins": 0
+      }
+    },
+    {
+      "name": "attack after horror remains wounded after expiry",
+      "cards": {
+        "1": {
+          "prop": {
+            "actions": [
+              {
+                "key": "hit",
+                "type": "tap",
+                "value": 2
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "action",
+          "params": {
+            "card_id": 3,
+            "action_key": "horror",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "action",
+          "params": {
+            "card_id": 1,
+            "action_key": "hit",
+            "target_id": 2
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "host"
+        },
+        {
+          "type": "confirm_strike",
+          "params": {
+            "wait_id": "$wait"
+          },
+          "player": "player"
+        },
+        {
+          "type": "end_turn",
+          "params": {},
+          "player": "host"
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 18,
+        "cards.2.hp_max": 20
+      }
+    },
+    {
+      "name": "suppressed scream cannot be declared",
+      "combat": {},
+      "cards": {
+        "3": {
+          "flags": {
+            "stitched_unique_loss": true
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          },
+          "player": "host",
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.3.coins": 1,
+        "cards.2.hp": 20
+      }
+    },
+    {
+      "name": "dice pending resumes numeric value once",
+      "combat": {
+        "dice": 3,
+        "strike": {
+          "combat_instant_window": ""
+        }
+      },
+      "cards": {
+        "4": {
+          "prop": {
+            "instants": [
+              {
+                "key": "dice",
+                "trigger": "combat",
+                "phase": "dice",
+                "effect": {
+                  "type": "dice_choice"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "commands": [
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 3,
+            "instant_key": "krik"
+          }
+        },
+        {
+          "type": "choose_combat_pick",
+          "params": {
+            "target_id": 1,
+            "pick_token": "$pick"
+          }
+        },
+        {
+          "type": "combat_instant_play",
+          "params": {
+            "card_id": 4,
+            "instant_key": "dice"
+          }
+        },
+        {
+          "type": "combat_instant_pass"
+        },
+        {
+          "type": "combat_instant_pass",
+          "player": "player",
+          "expect": {
+            "battle.pending_dice_choice.owner": "host",
+            "cards.2.hp": 20
+          }
+        },
+        {
+          "type": "choose_dice_choice",
+          "params": {
+            "choice": "plus:own"
+          }
+        },
+        {
+          "type": "choose_dice_choice",
+          "params": {
+            "choice": "plus:own"
+          },
+          "success": false
+        }
+      ],
+      "expect": {
+        "cards.2.hp": 17,
+        "cards.3.coins": 2,
+        "battle.strike.attack_dice": 4,
+        "battle.strike.final.attack": "medium",
+        "battle.strike.instant_summary.0.effect_type": "dice_choice",
+        "battle.strike.instant_summary.1.effect_type": "strike_value"
+      }
+    }
+  ]
+}

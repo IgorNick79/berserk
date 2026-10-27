@@ -69,6 +69,7 @@ final class ActionResolver
         if (Strangulation::blocksAttack($attacker, $type)) return Result::error('Атаки запрещены маркерами удушения');
         if ($type === 'strangle') return Strangulation::start($this->state, $attacker, $actionKey);
         if ($type === 'uchr') return $this->uchr($playerKey, $cmd);
+        if (TemporaryHealth::isAction($action) && ($attacker->dying || $attacker->hp <= 0)) return Result::error('Источник недоступен');
         if (CardStats::hasCannotAttack($attacker) && CardStats::isOffensiveAction($type)) {
             return Result::error(Strangulation::count($attacker) >= 2 ? 'Атаки запрещены маркерами удушения' : 'Карта не может атаковать до конца хода');
         }
@@ -336,6 +337,16 @@ final class ActionResolver
         // Особые пути
         if ($type === 'impact' && ($action['effect'] ?? '') === 'prophecy_wounds') {
             return (new SwampQueenProcessor($this->state, $this->engine))->startProphecy($attacker, $target, $action);
+        }
+        if (TemporaryHealth::isAction($action)) {
+            $attacker->closed = true;
+            $this->engine->syncCoinBonus($attacker);
+            TemporaryHealth::apply($target, (int) ($action['value'] ?? 0), $playerKey);
+            ActionResolution::effect($this->state, $attacker, 'cast', 'ordinary', ['target_id'=>$targetId]);
+            if ($target->hp <= 0) $this->engine->forceDeath($this->state, $target, 'cast', $attacker);
+            $this->engine->finalizeDying($this->state);
+            $this->state->bumpVersion();
+            return Result::ok(['temporary_health_applied']);
         }
         if ($type === 'heal')   return $this->resolveHeal($attacker, $target, $action, $cardId, $targetId, $playerKey);
         if ($type === 'impact') return $this->resolveImpact($attacker, $action, $cardId, $targetId, $playerKey);
@@ -637,6 +648,7 @@ final class ActionResolver
         string $type,
         string $playerKey
     ): ?Result {
+        if (TemporaryHealth::isAction($action)) return TemporaryHealth::legal($this->state, $attacker, $target, $action) ? null : Result::error('Недопустимая цель');
         $isFriendlyFire = $target->owner === $playerKey
             && $target->instanceId !== $attacker->instanceId
             && CardStats::canFriendlyFireAction($action);
