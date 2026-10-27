@@ -139,6 +139,7 @@ final class ZoneManager
         $card->armor     = 0;
         $card->armorMax  = 0;
         $card->coins     = 0;
+        TemporaryHealth::clear($card);
         $card->modifiers = [];
         $this->clearPosition($card);
 
@@ -181,6 +182,7 @@ final class ZoneManager
         $card->armor     = 0;
         $card->armorMax  = 0;
         $card->coins     = 0;
+        TemporaryHealth::clear($card);
         $card->modifiers = [];
         $card->markers   = [];
         $card->flags = MemoryLoss::persistentFlags($card);

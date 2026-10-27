@@ -165,6 +165,7 @@ final class TurnProcessor
         InstantReservation::beginPeriod($this->state, $nextActiveKey);
         OchiKronga::startOwnTurn($this->state, $nextActiveKey);
         CardHealing::startTurn($this->state, $nextActiveKey);
+        foreach ($this->state->cards as $card) unset($card->flags['attack_wounds_this_turn']);
         // Сброс выданных действий в конце хода источника
         foreach ($this->state->cards as $card) {
             foreach (array_keys($card->flags) as $k) {
@@ -221,7 +222,7 @@ final class TurnProcessor
             $kept = [];
             foreach ($card->modifiers as $m) {
                 $exp = $m['expire'] ?? '';
-                if ($exp === 'end_of_turn') continue;
+                if ($exp === 'end_of_turn') { TemporaryHealth::remove($card, $m); continue; }
                 if ($exp === 'end_of_opponent_turn' && $endingKey !== $card->owner) continue;
 
                 if (is_int($exp) || (is_string($exp) && ctype_digit($exp))) {

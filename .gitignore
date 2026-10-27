@@ -44,3 +44,5 @@ www/assets/cards/
 
 !tools/migrations/20261021_lobby_setup.sql
 !tools/migrations/20261024_account_ui_preferences.sql
+
+!debug/scenarios/moon_banshee.json

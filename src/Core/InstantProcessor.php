@@ -171,6 +171,11 @@ final class InstantProcessor
         $result = [];
         foreach ($card->effectiveProp()['instants'] ?? [] as $inst) {
             if (($inst['trigger'] ?? '') !== $type) continue;
+            // Accept the previously supplied Banshee prop without a database migration.
+            if (($inst['target'] ?? '') === 'striking_creature'
+                && ($inst['effect']['type'] ?? '') === 'strike_value'
+                && (int) ($inst['effect']['value'] ?? 0) < 0
+                && !empty($inst['effect']['gain_coins'])) $inst['target'] = 'opposing_strike';
             if (!$this->combatSourceAvailable($card, $inst, $type, $phase, $strike)) continue;
             if (!empty($strike['matriarch_order']) && ($inst['effect']['type'] ?? '') === 'redirect_strike') continue;
             if ($this->instantRequiresTap($inst) && $card->closed
@@ -242,6 +247,16 @@ final class InstantProcessor
             && $candidate->zone !== CardInstance::ZONE_FLYING) return false;
         if ($candidate->dying || $candidate->hp <= 0) return false;
 
+        if ($target === 'striking_creature' || $target === 'opposing_strike') {
+            if ($target === 'opposing_strike' && $candidate->owner === $source->owner) return false;
+            $side = CombatStrikeValue::side($this->state, $candidate->instanceId);
+            if ($side === null || CombatStrikeValue::current($this->state, $side) === null) return false;
+            if ($target === 'opposing_strike') {
+                $strike = $this->state->battle['strike'];
+                $receiverId = $side === 'attack' ? (($strike['defender_id'] ?? 0) ?: $strike['target_id']) : $strike['attacker_id'];
+                if ($this->state->getCard((int) $receiverId)?->owner !== $source->owner) return false;
+            }
+        }
         if ($target === 'self' && $candidate->instanceId !== $source->instanceId) return false;
         if ($target === 'enemy' && $candidate->owner === $source->owner) return false;
         if ($target === 'ally' && $candidate->owner !== $source->owner) return false;
@@ -422,6 +437,21 @@ final class InstantProcessor
             return Result::error('Перенаправление выбирается в окне защитника');
         }
 
+        // The opposing participant is determined by the combat, not a new card choice.
+        if ($target === 'opposing_strike') {
+            $candidates = array_values(array_filter($this->state->cards,
+                fn(CardInstance $candidate): bool => $this->isLegalInstantTarget($card, $candidate, $target, null)));
+            if (count($candidates) !== 1) return Result::error('Нет единственного удара противника');
+            $this->payCombatInstant($card, $inst);
+            $card->flags['in_stack'] = true;
+            $this->state->battle['strike']['instant_stack'][] = $this->buildStackItem(
+                $card, $effect, $candidates[0]->instanceId, $playerKey,
+                $inst['name'] ?? 'Инстант', $combatPhase, null, (string) ($inst['key'] ?? ''));
+            $this->state->battle['strike']['instant_passed'] = [];
+            $this->state->bumpVersion();
+            return Result::ok(['instant_stacked']);
+        }
+
         // Self — сразу в стек
         if ($target === 'self') {
             $this->payCombatInstant($card, $inst);
@@ -460,7 +490,9 @@ final class InstantProcessor
         }
 
         // Нужен выбор цели
+        $pickToken = $target === 'striking_creature' ? bin2hex(random_bytes(12)) : null;
         $this->state->battle['pending_combat_pick'] = [
+            'pick_token' => $pickToken,
             'owner'    => $playerKey,
             'card_id'  => $card->instanceId,
             'target'   => $target,
@@ -521,6 +553,7 @@ final class InstantProcessor
         $pc = $this->state->battle['pending_combat_pick'] ?? null;
         if (!$pc) return Result::error('Нет ожидающего выбора');
         if ($pc['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+        if (isset($pc['pick_token']) && !hash_equals($pc['pick_token'], (string) $cmd->get('pick_token', ''))) return Result::error('Устаревший выбор');
 
         $target = $this->state->getCard((int) $cmd->get('target_id', 0));
         if (!$target) return Result::error('Цель не найдена');
@@ -916,6 +949,8 @@ final class InstantProcessor
             return ['source'=>$source,'applied'=>$r['restored']>0||$r['replaced'],'reason'=>$r['message']??'','result'=>['card_heal'=>$r]];
         }
 
+        $numericSide = $type === 'strike_value' && $target ? CombatStrikeValue::side($this->state, $target->instanceId) : null;
+        $numericBefore = $numericSide !== null ? CombatStrikeValue::current($this->state, $numericSide) : null;
         $before = $this->captureCombatSnapshot();
         $effect['_resolution_type'] = (string)(($item['action_type'] ?? '') ?: 'instant');
         $reason = $this->engine->applyCombatEffect(
@@ -937,7 +972,9 @@ final class InstantProcessor
             'source' => $source,
             'applied' => $reason === null,
             'reason' => $reason ?? '',
-            'result' => $this->buildCombatEffectResult($effect, $before, $after, (string) $item['player']),
+            'result' => $numericSide !== null
+                ? ['side'=>$numericSide, 'before'=>$numericBefore, 'after'=>CombatStrikeValue::current($this->state, $numericSide)]
+                : $this->buildCombatEffectResult($effect, $before, $after, (string) $item['player']),
         ];
     }
 
@@ -1236,6 +1273,7 @@ final class InstantProcessor
             'redirect_strike' => 'redirect',
             'dice_choice', 'damage_on_dice' => 'dice',
             'strike_level' => (($effect['mode'] ?? '') === 'reduce_one') ? 'value' : 'power',
+            'strike_value' => (($effect['mode'] ?? 'add') === 'set') ? 'setter' : 'value',
             'damage_cap' => 'setter',
             'redistribute_wounds' => 'wounds',
             default => '',

@@ -1850,10 +1850,11 @@ body.battle-page > .screen {
 .battle-page .info-panel-footer button:disabled { opacity: .5; cursor: default; }
 .battle-page .instant-control { border: 1px solid var(--ip-edge, #aaa); border-radius: 6px; padding: 8px; margin: 0 0 10px; min-width: 0; }
 .battle-page .instant-control h3 { margin: 0 0 6px; font-size: 13px; }
-.battle-page .instant-control-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.battle-page .instant-control-actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; }
 .battle-page .instant-control-main { white-space: normal; overflow-wrap: normal; word-break: normal; }
-.battle-page .instant-control-actions > .instant-control-main { flex: 1 1 100%; text-align: center; }
-.battle-page .instant-control-picker { flex: 1 1 100%; min-width: 0; }
+.battle-page .instant-control-actions > .instant-control-main { flex: 1 1 0; min-width: 0; text-align: center; }
+.battle-page .instant-control-picker { flex: 1 1 0; min-width: 0; }
+.battle-page .instant-control-actions > [data-instant-pass] { flex: 1 1 0; min-width: 0; text-align: center; }
 .battle-page .instant-control-picker > summary { display: block; text-align: center; cursor: pointer; list-style: none; }
 .battle-page .instant-control-picker > summary::-webkit-details-marker { display: none; }
 .battle-page .instant-control-options { max-height: min(28vh, 220px); overflow-y: auto; margin-top: 8px; }

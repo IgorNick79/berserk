@@ -22,7 +22,7 @@ final class CombatPickChoice implements ChoiceHandlerInterface
 
     public function commandTypes(): array
     {
-        return ['choose_combat_pick'];
+        return ['choose_combat_pick', 'cancel_pending'];
     }
 
     public function spec(
@@ -60,6 +60,8 @@ final class CombatPickChoice implements ChoiceHandlerInterface
             if ($c->zone !== CardInstance::ZONE_FIELD
                 && $c->zone !== CardInstance::ZONE_FLYING) continue;
             if ($c->dying || $c->hp <= 0) continue;
+            if (!(new \Berserk\Core\InstantProcessor($state, new Engine()))->isLegalInstantTarget(
+                $source, $c, (string) ($pc['target'] ?? 'enemy'), $condition)) continue;
 
             if (($pc['target'] ?? 'enemy') === 'enemy' && $c->owner === $playerKey) continue;
             if (($pc['target'] ?? 'enemy') === 'ally'  && $c->owner !== $playerKey) continue;
@@ -72,13 +74,13 @@ final class CombatPickChoice implements ChoiceHandlerInterface
 
             $buttons[] = [
                 'label' => $name . $coords . ' (' . $c->hp . '/' . $c->hpMax . ')',
-                'url'   => "{$baseUrl}&cmd=choose_combat_pick&target_id={$c->instanceId}",
+                'url'   => "{$baseUrl}&cmd=choose_combat_pick&target_id={$c->instanceId}" . (isset($pc['pick_token']) ? '&pick_token=' . rawurlencode($pc['pick_token']) : ''),
             ];
         }
 
         $buttons[] = [
             'label' => 'Отмена',
-            'url'   => $baseUrl . '&cmd=cancel_pending',
+            'url'   => $baseUrl . '&cmd=cancel_pending' . (isset($pc['pick_token']) ? '&pick_token=' . rawurlencode($pc['pick_token']) : ''),
             'class' => 'skip',
         ];
 
@@ -95,6 +97,13 @@ final class CombatPickChoice implements ChoiceHandlerInterface
         Command $cmd
     ): Result {
         $ar = new \Berserk\Core\ActionResolver($state, $engine);
+        if ($cmd->type === 'cancel_pending') {
+            $pending = $state->battle['pending_combat_pick'] ?? null;
+            if (isset($pending['pick_token']) && !hash_equals($pending['pick_token'], (string) $cmd->get('pick_token', ''))) {
+                return Result::error('Устаревший выбор');
+            }
+            return $ar->cancelPending($playerKey, $cmd);
+        }
         return $ar->chooseCombatPick($playerKey, $cmd);
     }
 }

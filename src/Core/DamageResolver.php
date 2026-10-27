@@ -84,6 +84,9 @@ final class DamageResolver
         if ($realDamage > 0 && $attacker) {
             RangedNeighborTeleport::record($this->state, $attacker, $target, $actionType, $realDamage);
         }
+        if ($realDamage > 0 && in_array($actionType, ['strike','answer','uchr','tap','magic','shot','throw','discharge'], true)) {
+            $target->flags['attack_wounds_this_turn'] = (int) ($target->flags['attack_wounds_this_turn'] ?? 0) + $realDamage;
+        }
         if ($realDamage > 0) {
             $target->flags['damage_taken_this_strike'] =
                 ((int) ($target->flags['damage_taken_this_strike'] ?? 0)) + $realDamage;
