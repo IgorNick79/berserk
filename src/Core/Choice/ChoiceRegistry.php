@@ -20,6 +20,7 @@ final class ChoiceRegistry
         static $handlers = null;
         if ($handlers === null) {
             $handlers = [
+                new AbyssMovementChoice(),
                 new TremorChoice(),
                 new CardHealChoice(),
                 new DealLinkedRecruitChoice(),

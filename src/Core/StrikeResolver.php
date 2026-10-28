@@ -714,7 +714,7 @@ final class StrikeResolver
             return;
         }
         $strike['coin_block_checked'] = true;
-        $attackDice = Dice::roll();
+        $attackDice = CardRoll::roll($this->state, $attacker);
 
         $defendWhileClosed = !empty($defendCard->effectiveProp()['defend_while_closed']);
         $isClosed = CardStats::combatClosed($this->state, $defendCard) && !$defendWhileClosed;
@@ -724,7 +724,7 @@ final class StrikeResolver
             || $isClosed
             || $hasUnanswer
             || !empty($strike['ragnar_unanswer']);
-        $defendDice = $noDefendDice ? 0 : Dice::roll();
+        $defendDice = $noDefendDice ? 0 : CardRoll::roll($this->state, $defendCard);
 
         $attackMod = CardStats::getOva($this->state, $attacker, $defendCard) 
              -   CardStats::getClumsyPenalty($attacker);

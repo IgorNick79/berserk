@@ -1246,7 +1246,7 @@ final class TurnPhaseProcessor
             return ['label' => 'Цветущие руны', 'items' => $events];
         }
 
-        $dice = Dice::roll();
+        $dice = CardRoll::roll($this->state, $card);
         $level = BattleHelper::diceToLevel($dice);
         $val = BattleHelper::actionStrikeValue($action, $level);
         $events[] = ['standalone_text' => "Кубик: {$dice}, урон: {$val} на цель"];

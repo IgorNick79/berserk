@@ -119,12 +119,14 @@ final class ZoneManager
      */
     public function toGraveyard(CardInstance $card): void
     {
+        $completedDeath = $card->dying;
         $flyingOwner = $this->flyingOwnerBeforeTransition($card);
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
 
         // Уже инкарнировалась → в изгнание (не удаляем)
         if (!empty($card->flags['incarnated'])) {
             $this->toExile($card);
+            if ($completedDeath) CardRoll::arm($this->state, $card, false);
             return;
         }
 
@@ -167,6 +169,7 @@ final class ZoneManager
         }
 
         $this->normalizeFlyingSlots($flyingOwner);
+        if ($completedDeath) CardRoll::arm($this->state, $card, false);
         Strangulation::refresh($this->state);
     }
 

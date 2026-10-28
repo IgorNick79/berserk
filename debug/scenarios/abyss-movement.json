@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "price": 4,
+      "type": "creature",
+      "wounded": true
+    },
+    {
+      "price": 5,
+      "type": "creature",
+      "wounded": false
+    },
+    {
+      "price": 4,
+      "type": "artifact",
+      "wounded": false
+    }
+  ]
+}

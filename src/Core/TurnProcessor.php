@@ -956,6 +956,7 @@ final class TurnProcessor
         }
 
         $this->applyAlliedIncarnationEffects($card);
+        CardRoll::arm($this->state, $card, true);
 
         // Пересчёт брони (учитывает строй)
         $this->engine->refreshArmor($this->state);
@@ -1044,6 +1045,7 @@ final class TurnProcessor
         }
 
         $this->applyAlliedIncarnationEffects($card);
+        CardRoll::arm($this->state, $card, true);
         $this->engine->refreshArmor($this->state);
     }
 

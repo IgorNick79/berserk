@@ -56,3 +56,5 @@ www/assets/cards/
 !/debug/scenarios/tremor-occupied.json
 
 !/debug/scenarios/tremor-adjacent-wounds.json
+
+!/debug/scenarios/abyss-movement.json

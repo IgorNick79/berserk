@@ -18,6 +18,7 @@ final class MovementEffectResolver
 
     public function apply(MovementContext $context): void
     {
+        \Berserk\Core\AbyssMovement::enqueue($this->state,$context);
         \Berserk\Core\ActionResolution::effect($this->state, $context->card, $context->movementType,
             $context->origin,
             ['from'=>[$context->fromRow,$context->fromCol], 'to'=>[$context->toRow,$context->toCol]], $context->parentId);
@@ -40,6 +41,7 @@ final class MovementEffectResolver
 
     public function applyForcedPositionChange(MovementContext $context): void
     {
+        \Berserk\Core\AbyssMovement::enqueue($this->state,$context);
         \Berserk\Core\ActionResolution::effect($this->state, $context->card, $context->movementType,
             'forced',
             ['from'=>[$context->fromRow,$context->fromCol], 'to'=>[$context->toRow,$context->toCol]], $context->parentId);

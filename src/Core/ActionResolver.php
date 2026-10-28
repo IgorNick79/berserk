@@ -490,7 +490,7 @@ final class ActionResolver
             $this->state->bumpVersion();
             return Result::ok(['coin_block_pending']);
         }
-        $dice   = Dice::roll();
+        $dice   = CardRoll::roll($this->state, $attacker);
         $level  = BattleHelper::diceToLevel($dice);
         $strikeAura = CardStats::hasHorizontalStrikeReduction($this->state, $target);
         if ($strikeAura) $level = 'weak';
@@ -1359,7 +1359,7 @@ final class ActionResolver
             $attacker->flags[$action['_granted_flag_key']]['used'] = true;
         }
 
-        $dice   = Dice::roll();
+        $dice   = CardRoll::roll($this->state, $attacker);
         $level  = BattleHelper::diceToLevel($dice);
         $strikeAura = in_array($type, ['tap', 'magic'], true)
             && CardStats::hasHorizontalStrikeReduction($this->state, $target);
@@ -3855,7 +3855,7 @@ final class ActionResolver
             return Result::error('Не хватает монет');
         }
 
-        $dice  = Dice::roll();
+        $dice  = CardRoll::roll($this->state, $attacker);
         $level = BattleHelper::diceToLevel($dice);
         $limit = (int) ($action['strike'][$level] ?? 0);
 
@@ -4766,7 +4766,7 @@ final class ActionResolver
             ));
 
         // 4. Кубик и урон
-        $dice  = Dice::roll();
+        $dice  = CardRoll::roll($this->state, $attacker);
         $level = BattleHelper::diceToLevel($dice);
         $val   = (int) ($action['strike'][$level] ?? 0);
 

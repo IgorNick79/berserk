@@ -70,7 +70,7 @@ foreach (['host','player'] as $owner) {
     }
 }
 $covered=array_merge($owned,array_keys($cardOwned),$queues,['pending_any_death','pending_degasca_sequence',
-    'pending_incarnation_ack','turn_phase','turn_instant_result','turn_instant_stack']);
+    'abyss_movement','pending_incarnation_ack','turn_phase','turn_instant_result','turn_instant_stack']);
 foreach (ChoiceRegistry::all() as $handler) pwAssert(in_array($handler->pendingKey(),$covered,true),'New handler requires ownership coverage: '.get_class($handler));
 
 // Merge integration: Swamp Children switches decision owner between jump and pull.

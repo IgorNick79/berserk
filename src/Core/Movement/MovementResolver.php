@@ -332,7 +332,7 @@ final class MovementResolver
         if ($card->zone !== CardInstance::ZONE_FIELD) return;
         if ($card->row === null || $card->col === null) return;
 
-        $dice = \Berserk\Core\Dice::roll();
+        $dice = \Berserk\Core\CardRoll::roll($this->state, $card);
 
         $matchedKey = null;
         $effect = null;
