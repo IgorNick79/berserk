@@ -24,5 +24,10 @@ $s->cell_markers=[];check($method->invoke($screen,$s,'3_3',0)==='','removed mark
 $s->battle['pending_tremor']=['owner'=>'host','id'=>'a','mode'=>'move','choice_id'=>'move-1','from'=>'1_1'];
 $t=\Berserk\View\Ui\CellMarkerPicker::targets($s,'host','?game=1');check(count($t)===4,'corner targets');check(isset($t['1_1']),'stay target');check(str_contains($t['2_2']['url'],'choice_id=move-1'),'choice token');check(\Berserk\View\Ui\CellMarkerPicker::targets($s,'player','?game=1')===[],'opponent cannot select');
 check(\Berserk\View\Ui\CellMarkerPicker::identity($s,'host')!=='','picker sync identity');
+$spec=(new \Berserk\Core\Choice\TremorChoice())->spec($s,'host',[],'?game=1','host');
+\Berserk\View\Ui\CellMarkerPicker::decorate($spec,$s,'host','?game=1');
+$last=end($spec->buttons);check($last['label']==='Оставить на месте'&&$last['class']==='tremor-stay','decorator preserves stay last');
+check(empty($last['cell_marker_target']),'stay remains visible outside compact picker');
+check(str_contains($spec->buttons[0]['label'],'ряд'),'standard cell label');
 if(($argv[1]??'')==='--fixture'){echo json_encode(compact('empty','occupied','multi'));exit;}
 echo "PASS $n checks; FAIL 0\n";

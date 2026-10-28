@@ -95,6 +95,7 @@ final class CellMarkerPicker
         // Decorate existing cell actions in place. Preserve URLs, order and other actions
         // (especially cancellation) exactly as supplied by the choice handler.
         foreach ($spec->buttons as &$button) {
+            if (($button['class'] ?? '') === 'tremor-stay') continue;
             $target = $targetsByUrl[$button['url']] ?? null;
             if ($target === null) continue;
             $pos = BattlefieldPosition::display($target['row'], $target['col'], $viewerKey);

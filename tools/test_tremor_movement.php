@@ -26,6 +26,8 @@ foreach($data['owners'] as $owner)foreach($data['cases'] as $case){
  ck(TurnTimer::snapshot($s,1100)['remaining_seconds']===$s->battle['turn_timer']['remaining_seconds'],'waiting consumes no extra time');
  $spec=(new TremorChoice())->spec($s,$owner,[],'?game=1',$owner);
  ck(count($spec->buttons)===($case['from']===[1,1]?4:9),'only legal UI destinations');
+ $last=end($spec->buttons);ck($last['label']==='Оставить на месте'&&$last['class']==='tremor-stay','stay last and distinct');
+ ck(str_contains($spec->buttons[0]['label'],'['),'viewer coordinates');
  $cmd=command($s,$case['to']);ck(!$e->apply($s,$active,$cmd)->success,'foreign owner rejected');
  $bad=clone $cmd;$bad->payload['marker_id']='enemy';ck(!$e->apply($s,$owner,$bad)->success,'foreign marker rejected');
  $s=GameState::fromArray(json_decode(json_encode($s->toArray()),true));

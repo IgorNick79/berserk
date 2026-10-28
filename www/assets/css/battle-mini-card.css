@@ -106,3 +106,6 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 .battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-marker-tremor{background:url('/assets/images/battle/tremor.svg') center/contain no-repeat;border:1px solid #319ae0;border-radius:50%;box-sizing:border-box;pointer-events:none}
 .battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-marker-tremor.tremor-owner-player{border-color:#e44d48}
 .battle-page .cell-marker-tremor + .cell-marker-tremor{margin-left:-3px;transform:translateY(1px)}
+
+.battle-page .button.tremor-stay{background:#d5ad43;color:#241e10;border:1px solid #f0ce72}
+.battle-page .button.tremor-stay:hover{background:#ebc45d}

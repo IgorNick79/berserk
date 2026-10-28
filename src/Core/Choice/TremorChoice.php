@@ -13,16 +13,21 @@ final class TremorChoice implements ChoiceHandlerInterface
         $p = $state->battle[Tremor::PENDING] ?? null;
         if (!$p) return null;
         $moving = ($p['mode'] ?? '') === 'move';
-        $title = $moving ? 'Дрожь ' . $p['id'] . ' на клетке ' . str_replace('_', ', ', $p['from']) : 'Дрожь — выберите клетку';
+        $from = $moving ? array_map('intval', explode('_', $p['from'])) : [null,null];
+        $title = $moving ? 'Дрожь ' . $p['id'] . ' — ' . \Berserk\View\Ui\BattlefieldPosition::label($from[0],$from[1],$playerKey) : 'Дрожь — выберите клетку';
         if ($p['owner'] !== $playerKey) return new PanelSpec(title:$title, isMine:false, waitText:'Ожидание выбора оппонентом');
-        $buttons = [];
+        $buttons = []; $stay = null;
         [$oldRow, $oldCol] = $moving ? array_map('intval', explode('_', $p['from'])) : [0,0];
         for ($r=1; $r<=6; $r++) for ($c=1; $c<=5; $c++) {
             if ($moving && max(abs($r-$oldRow),abs($c-$oldCol)) > 1) continue;
-            $buttons[] = ['label'=>$moving && $r===$oldRow && $c===$oldCol ? 'Оставить на месте' : "($r,$c)",
+            $button = ['label'=>\Berserk\View\Ui\BattlefieldPosition::label($r,$c,$playerKey),
                 'url'=>$baseUrl . '&cmd=choose_tremor_cell&marker_id=' . rawurlencode($p['id'])
                     . ($moving ? '&choice_id=' . rawurlencode($p['choice_id']) : '') . "&row=$r&col=$c"];
+            if ($moving && $r===$oldRow && $c===$oldCol) {
+                $button['label']='Оставить на месте';$button['class']='tremor-stay';$stay=$button;
+            } else $buttons[]=$button;
         }
+        if ($stay !== null) $buttons[]=$stay;
         return new PanelSpec(title:$title, buttons:$buttons);
     }
     public function apply(GameState $state, Engine $engine, string $playerKey, Command $cmd): Result
