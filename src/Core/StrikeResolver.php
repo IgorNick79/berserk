@@ -1522,6 +1522,7 @@ final class StrikeResolver
 
     public function continueAfterStrikeResultAck(array $strike): ?Result
     {
+        if (($strike['kind'] ?? '') === 'worm_incarnation') return Result::error('Сначала завершите инкарнацию');
         if (($strike['kind'] ?? '') === 'strangle') {
             if (!empty($strike['pending_choice'])) return Result::error('Сначала завершите эффект гибели');
             // Ability acknowledgement must not create ordinary strike follow-ups or instant windows.

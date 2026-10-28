@@ -131,6 +131,7 @@ final class ZoneManager
         $valhallaReady = !empty($card->flags['valhalla_pending'])
             && !empty($card->effectiveProp()['valhalla']);
 
+        if ($card->zone !== CardInstance::ZONE_GRAVEYARD) Tremor::enteredGraveyard($this->state, $card);
         $card->zone      = CardInstance::ZONE_GRAVEYARD;
         EffectiveFeatures::leftBattlefield($this->state, $card);
         $card->dying     = false;

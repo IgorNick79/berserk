@@ -9,6 +9,33 @@ final class CellMarkerPicker
 {
     public static function targets(GameState $state, string $viewerKey, string $baseUrl): array
     {
+        $pi = $state->battle['pending_incarnation'] ?? null;
+        if ($pi && !\Berserk\Core\WormIncarnation::operation($state) && $pi['owner'] === $viewerKey
+            && \Berserk\Core\Tremor::incarnationEnabled($state->getCard($pi['current']))
+            && \Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\IncarnationChoice) {
+            $targets = [];
+            foreach (\Berserk\Core\Tremor::incarnationCells($state) as $cell=>$id) {
+                [$row,$col] = array_map('intval',explode('_',$cell));
+                $targets[$cell] = ['row'=>$row,'col'=>$col,'url'=>$baseUrl . '&cmd=choose_incarnation_cell&incarnation_id=' . $pi['current'] . "&row=$row&col=$col"];
+            }
+            return $targets;
+        }
+
+        $tremor = $state->battle[\Berserk\Core\Tremor::PENDING] ?? null;
+        if ($tremor && $tremor['owner'] === $viewerKey
+            && \Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\TremorChoice) {
+            $moving = ($tremor['mode'] ?? '') === 'move';
+            [$r, $c] = $moving ? array_map('intval', explode('_', $tremor['from'])) : [0,0];
+            $targets = [];
+            for ($row=1; $row<=6; $row++) for ($col=1; $col<=5; $col++) {
+                if ($moving && max(abs($row-$r),abs($col-$c))>1) continue;
+                $targets[$row . '_' . $col] = ['row'=>$row, 'col'=>$col, 'url'=>$baseUrl
+                    . '&cmd=choose_tremor_cell&marker_id=' . rawurlencode($tremor['id'])
+                    . ($moving ? '&choice_id=' . rawurlencode($tremor['choice_id']) : '') . "&row=$row&col=$col"];
+            }
+            return $targets;
+        }
+
         $gates = $state->battle['pending_gate_pick'] ?? null;
         if ($gates && $gates['owner'] === $viewerKey
             && \Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\GatePickChoice) {
@@ -88,6 +115,19 @@ final class CellMarkerPicker
     /** Snapshot identity only; no new pending state is written. */
     public static function identity(GameState $state, string $viewerKey): string
     {
+        $pi = $state->battle['pending_incarnation'] ?? null;
+        if ($pi && !\Berserk\Core\WormIncarnation::operation($state) && $pi['owner'] === $viewerKey
+            && \Berserk\Core\Tremor::incarnationEnabled($state->getCard($pi['current']))
+            && \Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\IncarnationChoice) {
+            return hash('sha256', json_encode([$state->gameId,$state->version,$viewerKey,$pi], JSON_THROW_ON_ERROR));
+        }
+
+        $tremor = $state->battle[\Berserk\Core\Tremor::PENDING] ?? null;
+        if ($tremor && $tremor['owner'] === $viewerKey
+            && \Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\TremorChoice) {
+            return hash('sha256', json_encode([$state->gameId, $state->version, $viewerKey, $tremor], JSON_THROW_ON_ERROR));
+        }
+
         $gates = $state->battle['pending_gate_pick'] ?? null;
         if ($gates && $gates['owner'] === $viewerKey
             && \Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\GatePickChoice) {

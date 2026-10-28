@@ -1,0 +1,62 @@
+{
+  "cases": [
+    {
+      "name": "enemy",
+      "owners": [
+        "player"
+      ]
+    },
+    {
+      "name": "own",
+      "owners": [
+        "host"
+      ]
+    },
+    {
+      "name": "mixed",
+      "owners": [
+        "host",
+        "player"
+      ]
+    },
+    {
+      "name": "two-choices",
+      "owners": [
+        "host",
+        "player"
+      ],
+      "choices": true
+    },
+    {
+      "name": "nested",
+      "owners": [
+        "host",
+        "player"
+      ],
+      "choices": true,
+      "nested": true
+    },
+    {
+      "name": "healing",
+      "owners": [
+        "player"
+      ],
+      "heal": true
+    },
+    {
+      "name": "any-death",
+      "owners": [
+        "player"
+      ],
+      "any": true
+    },
+    {
+      "name": "resign",
+      "owners": [
+        "host"
+      ],
+      "choices": true,
+      "resign": true
+    }
+  ]
+}

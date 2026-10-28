@@ -100,3 +100,9 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 .battle-page [data-mini-card-design="v2"] :is(.fly-slot,.battle-side-slot){background:rgba(0,0,0,.55)}
 .battle-page [data-mini-card-design="v2"] .fly-slot .field-cell{background:transparent}
 .battle-page .cell-marker[data-cell-hint]{color:#111}
+
+/* Tremor uses the existing footer/island; its decoration passes clicks through. */
+.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-markers:has(.cell-marker-tremor){pointer-events:none}
+.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-marker-tremor{background:url('/assets/images/battle/tremor.svg') center/contain no-repeat;border:1px solid #319ae0;border-radius:50%;box-sizing:border-box;pointer-events:none}
+.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-marker-tremor.tremor-owner-player{border-color:#e44d48}
+.battle-page .cell-marker-tremor + .cell-marker-tremor{margin-left:-3px;transform:translateY(1px)}

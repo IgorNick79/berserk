@@ -202,6 +202,11 @@ final class TurnPhaseProcessor
 
     public function resume(): void
     {
+        if (WormIncarnation::operation($this->state)) return;
+        if (!empty($this->state->battle[Tremor::PENDING])) {
+            $this->state->battle[Tremor::PENDING]['resume_turn'] = true;
+            return;
+        }
         if (CardHealing::waiting($this->state)) return;
         if (!empty($this->state->battle['pending_cell_effect_direction'])) return;
         $tp = $this->state->battle['turn_phase'] ?? null;
@@ -302,6 +307,9 @@ final class TurnPhaseProcessor
     private function buildPassiveQueue(string $activeKey, string $passiveKey): array
     {
         $queue = [];
+        if (Tremor::hasWorm($this->state, $passiveKey) && Tremor::ownedMarkers($this->state, $passiveKey)) {
+            $queue[] = ['id'=>'tremor_move', 'type'=>'tremor_move', 'label'=>'Перемещение Дрожи'];
+        }
 
         // Яд (bulk)
         if ($this->wouldPoison($activeKey)) {
@@ -549,6 +557,7 @@ final class TurnPhaseProcessor
         [$base, $sub] = explode(':', $task['type'] . ':') + ['', ''];
 
         return match ($base) {
+            'tremor_move' => Tremor::startMoves($this->state, $passiveKey),
             'poison'              => $this->executePoison($activeKey),
             'regen'               => $this->executeRegen($activeKey),
             'get_coins'           => $this->executeGetCoins($activeKey),
@@ -976,6 +985,10 @@ final class TurnPhaseProcessor
 
     private function hasPendingFromTask(string $type): bool
     {
+        if (!empty($this->state->battle[Tremor::PENDING])) {
+            $this->state->battle[Tremor::PENDING]['resume_turn'] = true;
+            return true;
+        }
         if (CardHealing::waiting($this->state)) return true;
         $battle = $this->state->battle;
         [$base] = explode(':', $type . ':') + [''];

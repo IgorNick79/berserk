@@ -46,3 +46,13 @@ www/assets/cards/
 !tools/migrations/20261024_account_ui_preferences.sql
 
 !debug/scenarios/moon_banshee.json
+
+!/debug/scenarios/tremor-creation.json
+
+!/debug/scenarios/tremor-movement.json
+
+!/debug/scenarios/tremor-incarnation.json
+
+!/debug/scenarios/tremor-occupied.json
+
+!/debug/scenarios/tremor-adjacent-wounds.json

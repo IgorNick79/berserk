@@ -1,0 +1,42 @@
+{
+  "first_player": "host",
+  "host_side": 1,
+  "player_side": 2,
+  "cards": [
+    {
+      "owner": "host",
+      "ukid": "tremor_fixture",
+      "row": 2,
+      "col": 2,
+      "prop": {
+        "tremor_on_graveyard": true
+      }
+    },
+    {
+      "owner": "player",
+      "ukid": "tremor_fixture",
+      "row": 3,
+      "col": 3,
+      "prop": {
+        "tremor_on_graveyard": true
+      }
+    }
+  ],
+  "placement_cases": [
+    {
+      "name": "free",
+      "row": 1,
+      "col": 5
+    },
+    {
+      "name": "occupied",
+      "row": 6,
+      "col": 5
+    },
+    {
+      "name": "shared",
+      "row": 3,
+      "col": 3
+    }
+  ]
+}

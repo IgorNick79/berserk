@@ -1,0 +1,8 @@
+{
+  "tremor_on_graveyard": true,
+  "incarnation": {
+    "turns": 4,
+    "open": true,
+    "tremor": true
+  }
+}

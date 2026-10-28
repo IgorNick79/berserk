@@ -1,0 +1,28 @@
+{
+  "cases": [
+    {
+      "marker_owner": "host",
+      "full_back": true
+    },
+    {
+      "marker_owner": "host",
+      "full_back": false
+    },
+    {
+      "marker_owner": "player",
+      "full_back": true
+    },
+    {
+      "marker_owner": "player",
+      "full_back": false
+    }
+  ],
+  "prop": {
+    "tremor_on_graveyard": true,
+    "incarnation": {
+      "turns": 4,
+      "open": true,
+      "tremor": true
+    }
+  }
+}

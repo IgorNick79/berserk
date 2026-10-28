@@ -1810,6 +1810,14 @@ final class BattleScreen
                 $fire = '<span class="cell-bonfire" role="img" aria-label="Костёр">🔥</span>';
                 continue;
             }
+            if ($type === 'tremor') {
+                $owner = ($marker['owner'] ?? '') === 'host' ? 'host' : 'player';
+                $id = htmlspecialchars((string)($marker['id'] ?? ''), ENT_QUOTES, 'UTF-8');
+                $label = htmlspecialchars('Дрожь ' . ($marker['id'] ?? '') . ' — ' . ($owner === 'host' ? 'синяя сторона' : 'красная сторона'), ENT_QUOTES, 'UTF-8');
+                $markers .= '<span class="cell-marker cell-marker-tremor tremor-owner-' . $owner
+                    . '" data-tremor-id="' . $id . '" role="img" aria-label="' . $label . '"></span>';
+                continue;
+            }
             $safe = htmlspecialchars($type, ENT_QUOTES);
             $label = htmlspecialchars($labels[$type] ?? $type, ENT_QUOTES);
             $markers .= '<span class="cell-marker cell-marker-' . $safe . '" data-mini-hint data-cell-hint role="button" tabindex="0" aria-expanded="false" aria-label="'

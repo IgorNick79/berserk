@@ -21,7 +21,12 @@ final class IncarnationChoice implements ChoiceHandlerInterface
 
     public function commandTypes(): array
     {
-        return ['choose_incarnation_cell'];
+        return ['choose_incarnation_cell', 'choose_worm_death'];
+    }
+
+    public function isActive(GameState $state): bool {
+        if (empty($state->battle['pending_incarnation'])) return false;
+        return !\Berserk\Core\WormIncarnation::operation($state) || !empty($state->battle['strike']['pending_choice']);
     }
 
     public function spec(
@@ -33,6 +38,15 @@ final class IncarnationChoice implements ChoiceHandlerInterface
     ): ?PanelSpec {
         $pi = $state->battle['pending_incarnation'] ?? null;
         if (!$pi) return null;
+        if (\Berserk\Core\WormIncarnation::operation($state)) {
+            $pc=$state->battle['strike']['pending_choice']??null;if(!$pc)return null;
+            $source=$state->getCard($pc['died_id']);
+            if($source->owner!==$playerKey)return new PanelSpec(title:'Предсмертная способность',isMine:false);
+            $buttons=[];foreach($pc['candidates'] as $id)$buttons[]=['label'=>($cardsInfo[$state->getCard($id)->ukid]['name']??'Карта').' #'.$id,
+                'url'=>$baseUrl.'&cmd=choose_worm_death&choice_id='.rawurlencode($pc['choice_id']).'&target_id='.$id];
+            return new PanelSpec(title:'Предсмертная способность — выберите цель',buttons:$buttons);
+        }
+
 
         $card = $state->getCard($pi['current']);
         $name = $card ? ($cardsInfo[$card->ukid]['name'] ?? '?') : '?';
@@ -43,6 +57,16 @@ final class IncarnationChoice implements ChoiceHandlerInterface
                 isMine: false,
                 waitText: 'Ожидание выбора клетки оппонентом...',
             );
+        }
+
+        if (\Berserk\Core\Tremor::incarnationEnabled($card)) {
+            $buttons = [];
+            foreach (\Berserk\Core\Tremor::incarnationCells($state) as $cell=>$marker) {
+                [$r,$c] = array_map('intval',explode('_',$cell));
+                $buttons[] = ['label'=>\Berserk\View\Ui\BattlefieldPosition::label($r,$c,$playerKey),
+                    'url'=>$baseUrl . "&cmd=choose_incarnation_cell&incarnation_id={$card->instanceId}&row=$r&col=$c"];
+            }
+            return new PanelSpec(title:$name . ' — инкарнация на клетку с Дрожью', buttons:$buttons);
         }
 
         $backRow = $playerKey === 'host' ? 1 : 6;
@@ -84,6 +108,10 @@ final class IncarnationChoice implements ChoiceHandlerInterface
         string $playerKey,
         Command $cmd
     ): Result {
+        if ($cmd->type === 'choose_worm_death') {
+            if (!\Berserk\Core\WormIncarnation::operation($state)) return Result::error('Нет активной инкарнации Червя');
+            return (new \Berserk\Core\DamageResolver($state))->chooseDeathTarget($playerKey,$cmd);
+        }
         $turn = new \Berserk\Core\TurnProcessor($state, $engine);
         return $turn->chooseIncarnationCell($playerKey, $cmd);
     }

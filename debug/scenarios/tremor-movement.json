@@ -1,0 +1,171 @@
+{
+  "cases": [
+    {
+      "name": "direction--1--1",
+      "from": [
+        3,
+        3
+      ],
+      "to": [
+        2,
+        2
+      ],
+      "ok": true
+    },
+    {
+      "name": "direction--1-0",
+      "from": [
+        3,
+        3
+      ],
+      "to": [
+        2,
+        3
+      ],
+      "ok": true
+    },
+    {
+      "name": "direction--1-1",
+      "from": [
+        3,
+        3
+      ],
+      "to": [
+        2,
+        4
+      ],
+      "ok": true
+    },
+    {
+      "name": "direction-0--1",
+      "from": [
+        3,
+        3
+      ],
+      "to": [
+        3,
+        2
+      ],
+      "ok": true
+    },
+    {
+      "name": "direction-0-0",
+      "from": [
+        3,
+        3
+      ],
+      "to": [
+        3,
+        3
+      ],
+      "ok": true
+    },
+    {
+      "name": "direction-0-1",
+      "from": [
+        3,
+        3
+      ],
+      "to": [
+        3,
+        4
+      ],
+      "ok": true
+    },
+    {
+      "name": "direction-1--1",
+      "from": [
+        3,
+        3
+      ],
+      "to": [
+        4,
+        2
+      ],
+      "ok": true
+    },
+    {
+      "name": "direction-1-0",
+      "from": [
+        3,
+        3
+      ],
+      "to": [
+        4,
+        3
+      ],
+      "ok": true
+    },
+    {
+      "name": "direction-1-1",
+      "from": [
+        3,
+        3
+      ],
+      "to": [
+        4,
+        4
+      ],
+      "ok": true
+    },
+    {
+      "name": "outside",
+      "from": [
+        1,
+        1
+      ],
+      "to": [
+        0,
+        1
+      ],
+      "ok": false
+    },
+    {
+      "name": "too-far",
+      "from": [
+        1,
+        1
+      ],
+      "to": [
+        3,
+        1
+      ],
+      "ok": false
+    },
+    {
+      "name": "corner",
+      "from": [
+        1,
+        1
+      ],
+      "to": [
+        2,
+        2
+      ],
+      "ok": true
+    }
+  ],
+  "owners": [
+    "host",
+    "player"
+  ],
+  "without_worm": {
+    "owner": "host",
+    "from": [
+      3,
+      3
+    ],
+    "worm": false
+  },
+  "worm_leaves_during_pending": {
+    "owner": "host",
+    "from": [
+      3,
+      3
+    ],
+    "rejected_destination": [
+      3,
+      4
+    ]
+  }
+}

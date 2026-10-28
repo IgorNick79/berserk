@@ -105,6 +105,7 @@ final class Engine
             if ($resolutionBefore === null) unset($state->battle[ActionResolution::KEY]);
             else $state->battle[ActionResolution::KEY] = $resolutionBefore;
         }
+        if ($result->success) (new WormIncarnation($state, $this))->advance();
         if ($result->success) (new CoinAbilities($state, $this))->advance();
         if ($result->success) CombatContinuation::settle($state, $this);
         if ($result->success) (new MatriarchOrderProcessor($state, $this))->advance();

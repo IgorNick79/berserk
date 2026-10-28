@@ -554,7 +554,7 @@ final class TurnProcessor
         }
 
         $queue = [];
-        if ($hasFree) {
+        {
             foreach ($this->state->cards as $card) {
                 if ($card->owner !== $activeKey) continue;
                 if ($card->zone !== CardInstance::ZONE_GRAVEYARD) continue;
@@ -564,6 +564,7 @@ final class TurnProcessor
                 $inc     = $card->effectiveProp()['incarnation'] ?? null;
                 $incType = is_array($inc) ? ($inc['type'] ?? null) : null;
                 if ($incType === 'fly') continue;
+                if (Tremor::incarnationEnabled($card) ? !Tremor::incarnationCells($this->state) : !$hasFree) continue;
 
                 $queue[] = $card->instanceId;
             }
@@ -878,13 +879,32 @@ final class TurnProcessor
         $pi = $this->state->battle['pending_incarnation'] ?? null;
         if (!$pi) return Result::error('Нет ожидающего выбора');
         if ($pi['owner'] !== $playerKey) return Result::error('Не ваш выбор');
+        $operation = WormIncarnation::operation($this->state);
+        if ($operation && $operation['stage'] !== 'placing') return Result::error('Инкарнация уже выполняется');
 
         $row = (int) $cmd->get('row', 0);
         $col = (int) $cmd->get('col', 0);
 
+        $card = $this->state->getCard($pi['current']);
+        if (!$card) return Result::error('Карта не найдена');
+        $tremor = Tremor::incarnationEnabled($card);
+        if ($cmd->get('incarnation_id') !== null && (int)$cmd->get('incarnation_id') !== $card->instanceId) return Result::error('Выбор инкарнации устарел');
+        $markerId = null;
+        if ($tremor) {
+            if ((int)$cmd->get('incarnation_id',0) !== $card->instanceId || $card->owner !== $playerKey
+                || $card->zone !== CardInstance::ZONE_GRAVEYARD || empty($card->flags['incarnation_ready'])) return Result::error('Червь не готов к инкарнации');
+            $markerId = Tremor::incarnationCells($this->state)[$row . '_' . $col] ?? null;
+            if ($markerId === null) return Result::error('Нужна клетка с Дрожью');
+            if ($operation) {
+                $present = array_filter(ZoneManager::markersAt($this->state, $row . '_' . $col), static fn($m)=>($m['type']??'')==='tremor' && ($m['id']??null)===$operation['marker_id']);
+                if (!$present) return Result::error('Зарезервированный маркер отсутствует');
+                $markerId = $operation['marker_id'];
+            }
+        }
+
         // Только задний ряд владельца
         $backRow = $playerKey === 'host' ? 1 : 6;
-        if ($row !== $backRow) {
+        if (!$tremor && $row !== $backRow) {
             return Result::error('Только задний ряд');
         }
         if ($col < 1 || $col > 5) {
@@ -892,7 +912,9 @@ final class TurnProcessor
         }
 
         $zone = new ZoneManager($this->state);
+        if ($tremor && !$operation) return (new WormIncarnation($this->state,$this->engine))->start($card,$row,$col,$markerId);
         if ($zone->isFieldOccupied($row, $col)) {
+            if ($tremor && !$operation) return (new WormIncarnation($this->state,$this->engine))->start($card,$row,$col,$markerId);
             return Result::error('Клетка занята');
         }
         if (ZoneManager::hasBlockingMarker($this->state, "{$row}_{$col}")) {
@@ -903,7 +925,7 @@ final class TurnProcessor
         if (!$card) return Result::error('Карта не найдена');
 
         $inc = $card->effectiveProp()['incarnation'] ?? null;
-        $open = is_array($inc) && !empty($inc['open']);
+        $open = $tremor || (is_array($inc) && !empty($inc['open']));
 
         // Возврат: базовые настройки + reset
         $zone->toField($card, $row, $col);
@@ -938,13 +960,38 @@ final class TurnProcessor
         // Пересчёт брони (учитывает строй)
         $this->engine->refreshArmor($this->state);
 
+        if ($markerId !== null) Tremor::consume($this->state, $row . '_' . $col, $markerId);
+        if ($operation) {
+            $op=&$this->state->battle['pending_incarnation']['worm_operation'];
+            $op['placed']=true;$op['consumed']=true;$op['stage']='adjacent_wounds';
+            $op['adjacent_ids']=[];$op['adjacent_index']=0;$op['wound_pending']=false;
+            foreach($this->state->cards as $neighbor) {
+                if($neighbor->instanceId===$card->instanceId || !CardHealing::live($neighbor) || $neighbor->zone!=='field')continue;
+                if(max(abs($neighbor->row-$row),abs($neighbor->col-$col))===1)$op['adjacent_ids'][]=$neighbor->instanceId;
+            }
+            $this->state->bumpVersion();return Result::ok(['worm_placed']);
+        }
+
+        return $this->finishIncarnation($playerKey,$card,$row,$col);
+    }
+
+    public function finishIncarnation(string $playerKey,CardInstance $card,int $row,int $col): Result
+    {
         // Снимаем из очереди
         array_shift($this->state->battle['pending_incarnation']['queue']);
+        // A previous worm can use the last free tunnel. Keep other worms ready for a later turn.
+        $this->state->battle['pending_incarnation']['queue'] = array_values(array_filter(
+            $this->state->battle['pending_incarnation']['queue'], function($id) {
+                $next = $this->state->getCard($id);
+                return !Tremor::incarnationEnabled($next) || (bool)Tremor::incarnationCells($this->state);
+            }));
 
         if (empty($this->state->battle['pending_incarnation']['queue'])) {
             unset($this->state->battle['pending_incarnation']);
 
-            if (!empty($this->state->battle['turn_phase'])) {
+            if ($this->state->status !== 'battle') {
+                // Terminal state is never resumed.
+            } elseif (!empty($this->state->battle['turn_phase'])) {
                 (new TurnPhaseProcessor($this->state, $this->engine))->resume();
             } else {
                 $this->continueStartTurn($playerKey, true);

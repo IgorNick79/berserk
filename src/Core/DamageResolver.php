@@ -240,6 +240,7 @@ final class DamageResolver
 
     private function shouldTriggerOnDeath(string $cause): bool
     {
+        if ($cause==='impact' && (WormIncarnation::operation($this->state)['stage']??null)==='adjacent_wounds') return true;
         return in_array($cause,
             ['strike', 'uchr', 'shot', 'throw', 'tap', 'discharge', 'answer', 'execute', 'self_destroy', 'destroy', 'strangulation'],
             true
@@ -300,6 +301,7 @@ final class DamageResolver
 
     public function checkGameOver(): void
     {
+        if (WormIncarnation::defersElimination($this->state)) return;
         if ($this->state->winner !== null) return;
 
         foreach (['host', 'player'] as $key) {
@@ -344,6 +346,16 @@ final class DamageResolver
     public function triggerOnDeath(CardInstance $died): void
     {
         if (empty($died->effectiveProp()['on_death'])) return;
+        if (WormIncarnation::operation($this->state)) {
+            $jobs=[];
+            foreach($died->effectiveProp()['on_death'] as $effect) {
+                if(($effect['target']??'near')==='choice')$jobs[]=['source_id'=>$died->instanceId,'effect'=>$effect,'target_id'=>null];
+                else foreach($this->findDeathTargets($died,$effect) as $target)$jobs[]=['source_id'=>$died->instanceId,'effect'=>$effect,'target_id'=>$target->instanceId];
+            }
+            $o=&$this->state->battle['pending_incarnation']['worm_operation'];
+            $o['jobs']=array_merge($jobs,$o['jobs']);return;
+        }
+
 
         $jobs=[];
         foreach($died->effectiveProp()['on_death'] as $effect) {
@@ -353,6 +365,36 @@ final class DamageResolver
             } else $jobs[]=['effect'=>$effect,'target_id'=>null];
         }
         $this->advanceDeathHealing(['handler'=>'death','kind'=>'queue','source_id'=>$died->instanceId,'jobs'=>$jobs]);
+    }
+
+    public function executeWormDeathJob(Engine $engine,array $job): void {
+        $o=&$this->state->battle['pending_incarnation']['worm_operation'];
+        $source=$this->state->getCard($job['source_id']);
+        if(!$source||EffectiveFeatures::suppressed($source))return;
+        if($job['target_id']===null) {
+            $targets=array_values(array_filter($this->findDeathTargets($source,$job['effect']),static fn($c)=>!$c->dying&&$c->hp>0));
+            if(!$targets)return;
+            $this->state->battle['strike']['pending_choice']=['source'=>'on_death','died_id'=>$source->instanceId,'died_ukid'=>$source->ukid,
+                'effect'=>$job['effect'],'candidates'=>array_map(static fn($c)=>$c->instanceId,$targets),
+                'operation_id'=>$o['id'],'choice_id'=>$o['id'].':' . ++$o['next_choice']];return;
+        }
+        $target=$this->state->getCard($job['target_id']);if(!CardHealing::live($target))return;
+        if(($job['effect']['type']??'')==='heal') {
+            $to=['handler'=>'death','kind'=>'worm','source_id'=>$source->instanceId,'operation_id'=>$o['id']];
+            $r=(new CardHealing($this->state,$engine))->begin($source,$target,(int)($job['effect']['value']??0),'on_death',$to);
+            if($r!==null)$this->continueCardHealing($engine,$to,$r);
+        } else $this->applyDeathEffect($source,$job['effect'],[$target]);
+    }
+
+    private function chooseWormDeathTarget(string $owner,Command $cmd): Result {
+        $o=WormIncarnation::operation($this->state);$pc=$this->state->battle['strike']['pending_choice']??null;
+        if(!$pc||!in_array($o['stage'],['effects','adjacent_wounds'],true)||($this->state->battle['strike']['worm_operation']??null)!==$o['id']||($pc['operation_id']??null)!==$o['id']||$cmd->get('choice_id')!==$pc['choice_id'])return Result::error('Устаревший выбор смерти');
+        $source=$this->state->getCard($pc['died_id']);$id=(int)$cmd->get('target_id',0);
+        if(!$source||$source->owner!==$owner||!in_array($id,$pc['candidates'],true))return Result::error('Неверный выбор смерти');
+        // Consume this identified choice BEFORE executing effects which may enqueue nested deaths.
+        if(($this->state->battle['strike']['pending_choice']['choice_id']??null)===$pc['choice_id'])unset($this->state->battle['strike']['pending_choice']);
+        $this->executeWormDeathJob(new Engine(),['source_id'=>$source->instanceId,'effect'=>$pc['effect'],'target_id'=>$id]);
+        $this->state->bumpVersion();return Result::ok(['worm_death_choice']);
     }
 
     private function advanceDeathHealing(array $to): void
@@ -379,6 +421,12 @@ final class DamageResolver
     public function continueCardHealing(Engine $engine,array $to,array $r): Result
     {
         $source=$this->state->getCard($to['source_id']);$this->recordDeathHealing($source,$r);
+        if(($to['kind']??'')==='worm') {
+            $o=WormIncarnation::operation($this->state);
+            if(!$o||$o['id']!==$to['operation_id'])return Result::error('Устаревшее продолжение лечения');
+            $this->state->bumpVersion();return Result::ok(['worm_death_heal_completed']);
+        }
+
         if($to['kind']==='queue')$this->advanceDeathHealing($to);
         else {
             unset($this->state->battle['strike']['pending_choice']);InformationalWaitManager::publish($this->state);
@@ -386,11 +434,11 @@ final class DamageResolver
         $this->state->bumpVersion();return Result::ok(['card_heal_death_continued']);
     }
 
-    private function applyDeathEffect(CardInstance $died, array $effect): void
+    private function applyDeathEffect(CardInstance $died, array $effect, ?array $selectedTargets = null): void
     {
         $targetType = $effect['target'] ?? 'near';
 
-        if ($targetType === 'choice') {
+        if ($targetType === 'choice' && $selectedTargets === null) {
             $candidates = $this->findDeathTargets($died, $effect);
             if (empty($candidates)) return;
 
@@ -407,7 +455,7 @@ final class DamageResolver
         $type  = $effect['type'] ?? '';
         $value = (int) ($effect['value'] ?? 0);
 
-        $targets = $this->findDeathTargets($died, $effect);
+        $targets = $selectedTargets ?? $this->findDeathTargets($died, $effect);
         if (empty($targets)) return;
 
         $applied = [];
@@ -487,6 +535,8 @@ final class DamageResolver
 
     public function chooseDeathTarget(string $playerKey, Command $cmd): Result
     {
+        if (WormIncarnation::operation($this->state)) return $this->chooseWormDeathTarget($playerKey,$cmd);
+
         $strike = $this->state->battle['strike'] ?? null;
         if (!$strike || empty($strike['pending_choice'])) {
             return Result::error('Нет ожидающего выбора');

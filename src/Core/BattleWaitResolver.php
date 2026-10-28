@@ -10,6 +10,7 @@ final class BattleWaitResolver
 {
     private const PLAYERS = ['host', 'player'];
     private const OWNER_PENDING = [
+        'pending_tremor',
         'pending_deal_linked_recruit', 'pending_deal_scout_recruit', 'pending_deal_variable_recruit',
         'pending_swamp_queen_summon', 'pending_card_heal', 'pending_matriarch_order', 'pending_coin_ability', 'pending_first_strike_jump', 'pending_dice_choice', 'pending_after_strike_execute',
         'pending_cell_marker_pick','pending_cell_effect_direction', 'pending_instant_pick', 'pending_combat_pick',
@@ -82,6 +83,7 @@ final class BattleWaitResolver
                 return self::decision($key, $pending['owner'] ?? null);
             }
             if (isset(self::CARD_PENDING[$key])) return self::cardDecision($state, $key, $pending[self::CARD_PENDING[$key]] ?? null);
+            if ($key === 'pending_incarnation' && WormIncarnation::operation($state) && !empty($battle['strike']['pending_choice'])) return self::cardDecision($state, 'strike.pending_choice', $battle['strike']['pending_choice']['died_id']);
             if (in_array($key, self::OWNER_PENDING, true)) return self::decision($key, $pending['owner'] ?? null);
             return self::unknown($key, 'unclassified_handler');
         }
