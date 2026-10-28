@@ -37,6 +37,11 @@ final class PlaceScreen
         $isHost   = ($playerKey === 'host');
         $rowOrder = $isHost ? [3, 2, 1] : [4, 5, 6];
         $colOrder = $isHost ? [1, 2, 3, 4, 5] : [5, 4, 3, 2, 1];
+        $pf=\Berserk\Core\PathfinderProcessor::active($state);
+        if ($pf && !empty($pf['revealed_to'][$playerKey])) array_unshift($rowOrder,$isHost?4:3);
+        if ($pf) foreach ($state->cards as $card) {
+            if ($card->owner!==$playerKey && $card->zone===CardInstance::ZONE_FIELD && !empty($card->flags['pathfinder_revealed']) && !in_array($card->row,$rowOrder,true)) array_unshift($rowOrder,$card->row);
+        }
 
         // Выбранная карта из ?card — временное UI-состояние, не GameState.
         $selectedCardId = (int) ($_GET['card'] ?? 0);
@@ -56,6 +61,7 @@ final class PlaceScreen
         $fieldMap = [];
         foreach ($state->cards as $card) {
             if ($card->zone === CardInstance::ZONE_FIELD) {
+                if ($card->owner!==$playerKey && (!$pf || (empty($card->flags['pathfinder_revealed']) && (empty($pf['revealed_to'][$playerKey]) || $card->row!==($isHost?4:3))))) continue;
                 $fieldMap["{$card->row}_{$card->col}"] = $card;
             }
         }
@@ -138,7 +144,7 @@ final class PlaceScreen
                 ]);
             }
             $position = BattlefieldPosition::display($r, $colOrder[0], $playerKey);
-            $fieldHtml .= '<div class="field-row pregame-place-row"><span class="pregame-place-row-number coords--own" aria-label="Свой ' . $position['row'] . '-й ряд">'
+            $fieldHtml .= '<div class="field-row pregame-place-row"><span class="pregame-place-row-number coords--' . $position['side'] . '" aria-label="' . ($position['side']==='own'?'Свой':'Вражеский') . ' ' . $position['row'] . '-й ряд">'
                 . Coords::rowLabel($position['row']) . '</span>' . $rowCells . '</div>';
         }
 
@@ -173,7 +179,12 @@ final class PlaceScreen
 
         $squadCount = count($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD));
 
-        if ($me->isConfirmed('place')) {
+        if ($pf && $pf['owner'] !== $playerKey) {
+            $confirmHtml = '<p>У соперника Следопыт, пожалуйста, подождите</p>';
+        } elseif ($pf && $pf['stage']==='choice') {
+            $url=$baseUrl.'&cmd=pathfinder_choice&step='.$pf['index'];
+            $confirmHtml='<a class="button" href="'.$url.'&choice=start">Начать игру</a> <a class="button" href="'.$url.'&choice=rearrange">Переставить карты</a>';
+        } elseif ($me->isConfirmed('place')) {
             $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
         } elseif ($squadCount === 0) {
             $confirmUrl  = "{$baseUrl}&cmd=confirm_place";

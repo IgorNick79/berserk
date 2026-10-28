@@ -125,6 +125,16 @@ final class Engine
 
     private function doApply(GameState $state, string $playerKey, Command $cmd): Result
     {
+        if ($cmd->type==='pathfinder_choice') {
+            $p=PathfinderProcessor::active($state);
+            if($state->status!=='place'||!$p||$p['owner']!==$playerKey||$p['stage']!=='choice'
+                ||(int)$cmd->get('step',-1)!==$p['index'])return Result::error('Выбор Следопыта устарел');
+            $choice=$cmd->get('choice');
+            if(!in_array($choice,['start','rearrange'],true))return Result::error('Неверный выбор');
+            $state->battle['pathfinder']['stage']='rearranging';$state->getPlayer($playerKey)->confirmed['place']=false;
+            if($choice==='start')return $this->confirmPreparePlace($state,$playerKey,new Prepare\PrepareProcessor($state,$this->db));
+            $state->bumpVersion();return Result::ok(['pathfinder_rearranging']);
+        }
         // Сдача завершает матч независимо от активного обязательного выбора.
         if ($cmd->type === 'resign') {
             return $this->resign($state, $playerKey, $cmd);

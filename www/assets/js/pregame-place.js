@@ -4,7 +4,7 @@
     if (!root || !root.querySelector('[data-place-screen]') || root.dataset.placeReady) return;
     root.dataset.placeReady = 'true';
     var busy = false, poll = null;
-    var commands = ['place_card', 'unplace_card', 'confirm_place'];
+    var commands = ['place_card', 'unplace_card', 'confirm_place', 'pathfinder_choice'];
     function readUrl(value) {
         var url = new URL(value, location.href);
         ['cmd', 'card_id', 'row', 'col', 'ajax'].forEach(function (key) { url.searchParams.delete(key); });

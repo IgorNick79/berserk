@@ -36,6 +36,8 @@ namespace {
         $start = strpos($source, $marker);
         if ($start === false) throw new \RuntimeException('Production rendering block not found');
         $render = str_replace('__DIR__', var_export(dirname(__DIR__) . '/www', true), substr($source, $start));
+        $playerKey=$role;
+        $render=preg_replace('/(?<!\\\\)GameTransport::/', '\\Berserk\\Auth\\GameTransport::', $render);
         ob_start();
         try { eval($render); return (string) ob_get_contents(); }
         finally { ob_end_clean(); }

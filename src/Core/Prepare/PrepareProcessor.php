@@ -1354,6 +1354,7 @@ final class PrepareProcessor
         if ($this->state->status !== 'place') {
             return Result::error('Сейчас не стадия расстановки');
         }
+        if (!\Berserk\Core\PathfinderProcessor::canEdit($this->state,$playerKey)) return Result::error('Ожидание процедуры Следопыта');
         $player = $this->state->getPlayer($playerKey);
         if ($player->isConfirmed('place')) {
             return Result::error('Расстановка уже подтверждена');
@@ -1376,7 +1377,9 @@ final class PrepareProcessor
             return Result::error('Клетка занята');
         }
 
-        (new ZoneManager($this->state))->toField($card, $row, $col);
+        if (\Berserk\Core\PathfinderProcessor::active($this->state)) {
+            $card->zone=CardInstance::ZONE_FIELD;$card->row=$row;$card->col=$col;
+        } else { (new ZoneManager($this->state))->toField($card, $row, $col); }
         $this->state->bumpVersion();
 
         return Result::ok(["card_placed:{$playerKey}:{$cardId}:{$row}_{$col}"]);
@@ -1387,6 +1390,7 @@ final class PrepareProcessor
         if ($this->state->status !== 'place') {
             return Result::error('Сейчас не стадия расстановки');
         }
+        if (!\Berserk\Core\PathfinderProcessor::canEdit($this->state,$playerKey)) return Result::error('Ожидание процедуры Следопыта');
         $player = $this->state->getPlayer($playerKey);
         if ($player->isConfirmed('place')) {
             return Result::error('Расстановка уже подтверждена');
@@ -1399,7 +1403,9 @@ final class PrepareProcessor
             return Result::error('Карта не на поле');
         }
 
-        (new ZoneManager($this->state))->toSquad($card);
+        if (\Berserk\Core\PathfinderProcessor::active($this->state)) {
+            $card->zone=CardInstance::ZONE_SQUAD;$card->row=null;$card->col=null;
+        } else { (new ZoneManager($this->state))->toSquad($card); }
         $this->state->bumpVersion();
 
         return Result::ok(["card_unplaced:{$playerKey}:{$cardId}"]);
@@ -1410,6 +1416,7 @@ final class PrepareProcessor
         if ($this->state->status !== 'place') {
             return Result::error('Сейчас не стадия расстановки');
         }
+        if (!\Berserk\Core\PathfinderProcessor::canEdit($this->state,$playerKey)) return Result::error('Сначала выберите действие Следопыта');
         $player = $this->state->getPlayer($playerKey);
         if ($player->isConfirmed('place')) {
             return Result::error('Уже подтверждено');
@@ -1440,7 +1447,12 @@ final class PrepareProcessor
 
         $events = ["place_confirmed:{$playerKey}"];
 
+        $pf=\Berserk\Core\PathfinderProcessor::active($this->state);
+        if ($pf) {
+            if (!\Berserk\Core\PathfinderProcessor::finish($this->state)) return Result::ok($events);
+        }
         if ($this->bothConfirmed('place')) {
+            if (\Berserk\Core\PathfinderProcessor::begin($this->state)) return Result::ok($events);
             $this->state->status = 'battle';
             $this->state->getPlayer('host')->clearConfirmations();
             $this->state->getPlayer('player')->clearConfirmations();

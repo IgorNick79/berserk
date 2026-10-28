@@ -58,3 +58,5 @@ www/assets/cards/
 !/debug/scenarios/tremor-adjacent-wounds.json
 
 !/debug/scenarios/abyss-movement.json
+
+!/debug/scenarios/pathfinder.json

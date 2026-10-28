@@ -1,0 +1,70 @@
+{
+  "cases": [
+    {
+      "first": "host",
+      "host_count": 0,
+      "player_count": 0
+    },
+    {
+      "first": "host",
+      "host_count": 1,
+      "player_count": 0
+    },
+    {
+      "first": "host",
+      "host_count": 0,
+      "player_count": 1
+    },
+    {
+      "first": "host",
+      "host_count": 1,
+      "player_count": 1
+    },
+    {
+      "first": "host",
+      "host_count": 2,
+      "player_count": 3
+    },
+    {
+      "first": "host",
+      "host_count": 3,
+      "player_count": 0
+    },
+    {
+      "first": "player",
+      "host_count": 0,
+      "player_count": 0
+    },
+    {
+      "first": "player",
+      "host_count": 1,
+      "player_count": 0
+    },
+    {
+      "first": "player",
+      "host_count": 0,
+      "player_count": 1
+    },
+    {
+      "first": "player",
+      "host_count": 1,
+      "player_count": 1
+    },
+    {
+      "first": "player",
+      "host_count": 2,
+      "player_count": 3
+    },
+    {
+      "first": "player",
+      "host_count": 3,
+      "player_count": 0
+    },
+    {
+      "first": "player",
+      "host_count": 2,
+      "player_count": 3,
+      "skip_first": true
+    }
+  ]
+}

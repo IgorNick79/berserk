@@ -1,0 +1,4 @@
+{
+  "pathfinder_rearrange": true,
+  "actions": [{"type": "shot", "value": 1, "tap": true}]
+}

@@ -40,7 +40,7 @@ final class TurnProcessor
             $card->armor    = $armor;
             $card->armorMax = $armor;
 
-            if ($card->owner === $secondKey && $card->row === $hiddenRow) {
+            if ($card->owner === $secondKey && $card->row === $hiddenRow && empty($card->flags['pathfinder_revealed'])) {
                 $card->revealed = false;
                 continue;
             }

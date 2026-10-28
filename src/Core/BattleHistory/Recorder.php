@@ -44,7 +44,7 @@ final class Recorder
         $outsideText=$this->liveJournal && !in_array($state->status,['battle','game_over'],true);
         // Technical continuation is covered only by a known existing root, never by absence of pending.
         if (!$outsideText && !$this->covered && !(in_array($this->command,['choose_defender','choose_strike_mode','confirm_strike','turn_ack'],true) && $this->open)
-            && $this->command!=='confirm_place') $this->unsupported($state,'uncovered_command:'.$this->command);
+            && !in_array($this->command,['confirm_place','pathfinder_choice'],true)) $this->unsupported($state,'uncovered_command:'.$this->command);
         if (isset($this->open['journal_effect'])) $this->close($state,'journal_effect','settled',false);
         if ($state->status==='game_over' && !$this->terminal) {
             foreach (array_keys($this->open) as $type) $this->close($state,$type,'interrupted',false,['reason'=>'match_terminal']);
