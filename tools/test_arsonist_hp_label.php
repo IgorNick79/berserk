@@ -23,4 +23,8 @@ foreach([false,true] as $manual){
  if($manual){$r=$tp->runTask('host',new \Berserk\Core\Command('turn_task',['task_id'=>'fire']));if(!$r->success)throw new RuntimeException($r->error);}else $tp->resume();
  if(!empty($s->battle['turn_phase']))throw new RuntimeException('Empty damage task still requires ACK');
 }
-echo "PASS 5 checks; FAIL 0\n";
+foreach([['Яд',-1,'−1 ❤️ HP'],['Регенерация',1,'+1 ❤️ HP']] as [$label,$delta,$expected]){
+ $s->battle['turn_phase']=['pending_ack'=>['label'=>$label,'items'=>[['instance_id'=>1,'delta'=>$delta,'unit'=>'hp']]]];
+ $p=$c->spec($s,'host',[],'?game=1','host');if(!str_contains($p->title,$expected))throw new RuntimeException('Missing HP for '.$label);
+}
+echo "PASS 7 checks; FAIL 0\n";

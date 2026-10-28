@@ -23,12 +23,23 @@ foreach($d['cases'] as $case)foreach(['host','player'] as $owner)foreach([false,
  }else ck($s->getCard(2)->hp===($lethal?1:5)-($case['wounded']?1:0),'price and type filter');
  if($case['wounded']) {
   $report=end($s->battle['abyss_movement_results']);ck($report['targets'][0]['damage']===1,'actual wound recorded');
-  $screen=new \Berserk\View\Screen\BattleScreen(new \Berserk\View\Template(__DIR__.'/../templates'));
-  $render=new ReflectionMethod($screen,'buildAbyssMovementResults');$render->setAccessible(true);
-  foreach(['host','player'] as $viewer){
-   $html=$render->invoke($screen,$s,$viewer,['abyss'=>['name'=>'Повелитель бездны'],'neighbor'=>['name'=>'Гном']]);
+
+  foreach(!empty($s->battle['abyss_movement']['result'])?['host','player']:[] as $viewer){
+   $panel=(new \Berserk\Core\Choice\AbyssMovementChoice())->spec($s,$viewer,['abyss'=>['name'=>'Повелитель бездны'],'neighbor'=>['name'=>'Гном']],'?game=1',$viewer);
+   $html=\Berserk\View\Ui\Panel::render($panel);
    ck(str_contains($html,($owner===$viewer?'Своя карта':'Карта противника').' — Гном #2: −1 ❤️ HP'),'visible ownership and wounds');
   }
+ }
+ if(!empty($s->battle['abyss_movement']['result'])){
+  $r=$s->battle['abyss_movement']['result'];
+  $spec=(new \Berserk\Core\Choice\AbyssMovementChoice())->spec($s,'host',[],'?game=1','host');
+  ck($spec->buttons[0]['label']==='Продолжить','result requires confirmation');
+  $s=GameState::fromArray($s->toArray());
+  $ack=new Command('ack_abyss_movement',['operation_id'=>$r['operation_id']]);
+  ck(!$e->apply($s,'player',$ack)->success,'opponent cannot acknowledge owner result');
+  ck($e->apply($s,'host',$ack)->success,'result acknowledged');
+  ck(!$e->apply($s,'host',$ack)->success,'ack replay rejected');
+  ck(empty($s->battle['abyss_movement_results'][$r['operation_id']]),'message removed after ACK');
  }
  ck(empty($s->battle['abyss_movement']),'continuation completed');ck(empty($s->battle['strike']),'no combat window');
 }

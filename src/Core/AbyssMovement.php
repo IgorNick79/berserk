@@ -15,7 +15,7 @@ final class AbyssMovement {
  }
  public function advance():void {
   if($this->s->status!=='battle'||$this->s->winner!==null)return;
-  if(empty($this->s->battle['abyss_movement']))return;
+  if(empty($this->s->battle['abyss_movement']) || !empty($this->s->battle['abyss_movement']['result']))return;
   $b=&$this->s->battle['abyss_movement'];
   if(empty($b['current'])) {
    if(empty($b['queue'])){unset($this->s->battle['abyss_movement']);return;}
@@ -35,9 +35,12 @@ final class AbyssMovement {
     $this->e->finalizeDying($this->s);$o['wound_pending']=false;continue;
    }
    if($o['index']>=count($o['targets'])) {
+    $result=$this->s->battle['abyss_movement_results'][$o['id']]??null;
+    $resultId=$o['id'];
     $saved=$b['saved'];unset($b['current'],$b['saved']);
     foreach($saved as $key=>$value)$this->s->battle[$key]=$value;
     $this->e->checkGameOver($this->s);
+    if($result && $this->s->status==='battle') { $b['result']=$result+['operation_id'=>$resultId]; return; }
     if(empty($b['queue']))unset($this->s->battle['abyss_movement']);
     else $this->advance();
     return;

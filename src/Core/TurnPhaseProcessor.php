@@ -649,7 +649,7 @@ final class TurnPhaseProcessor
             $hpBefore = $card->hp;
             $this->engine->applyDamage($this->state, $card, $poison, 'poison');
 
-            $affected[] = ['instance_id' => $card->instanceId, 'delta' => -($hpBefore - $card->hp)];
+            $affected[] = ['instance_id' => $card->instanceId, 'delta' => -($hpBefore - $card->hp), 'unit'=>'hp'];
         }
 
         return ['label' => 'Яд', 'items' => $affected];
@@ -673,7 +673,7 @@ final class TurnPhaseProcessor
             if ($card->hp > $card->hpMax) $card->hp = $card->hpMax;
 
             ActionResolution::healed($this->state, $card, $card, $hpBefore, 'regeneration');
-            $affected[] = ['instance_id' => $card->instanceId, 'delta' => $card->hp - $hpBefore];
+            $affected[] = ['instance_id' => $card->instanceId, 'delta' => $card->hp - $hpBefore, 'unit'=>'hp'];
         }
 
         return ['label' => 'Регенерация', 'items' => $affected];
