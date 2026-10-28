@@ -9,6 +9,10 @@ final class ActiveCardEffects
     public static function forCard(CardInstance $card, GameState $state): array
     {
         $rows = []; $groups = [];
+        if ($card->zone === CardInstance::ZONE_FIELD && !$card->dying && $card->hp > 0
+            && count(CardStats::getLineGroup($state, $card)) > 1) {
+            $rows[] = 'Строй';
+        }
         if (in_array($card->zone, ['field', 'flying'], true) && !empty($card->flags['stitched_unique_loss'])) {
             $rows[] = 'Модифицировано Сшивателем плоти';
         }
