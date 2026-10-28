@@ -37,4 +37,7 @@ foreach(['host','player'] as $viewer)foreach(['action','pending','prophecy','com
 }
 $d=inspectionFixture('hidden','host',2);
 battleSnapshotAssert(!isset($d['ui']['inspect'])&&!str_contains($d['panel_html'],'data-panel-card-id="2"'),'Hidden opponent cannot be inspected');
+$s=battleSnapshotState();$s->getCard(1)->prop=['actions'=>[['type'=>'discharge','value'=>1]]];$s->battle['active']='host';
+$d=(new BattleScreen(new Template(__DIR__.'/../templates')))->prepare($s,'host','host',null,$cardsInfo,['sel'=>1,'mode'=>'action:discharge'])['data'];
+battleSnapshotAssert(str_contains($d['info_panel_html'],'Разряд: выберите цель'),'Localized unnamed discharge action');
 echo "Pending inspection: both viewers, action/prophecy/combat/instant, source preservation, read-only cards and hidden data passed\n";

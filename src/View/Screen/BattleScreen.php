@@ -158,16 +158,6 @@ final class BattleScreen
             }
         }
         $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml, $pilePanelHtml, $actionChoice, $ui['inspect'] ?? 0);
-        if (!empty($strike['temple_rolls']) && empty($state->battle['pending_temple_dice'])) {
-            $history='<div class="temple-dice">';
-            foreach($strike['temple_rolls'] as $side=>$rolls){
-                $active=(int)$strike[$side==='attack'?'attack_dice':'defend_dice'];
-                $history.='<span>Воин храма — исходные броски: ';
-                foreach($rolls['values'] as $die)$history.='<span class="'.($die===($rolls['chosen']??null)&&$die===$active?'temple-chosen':'temple-discarded').'">'.\Berserk\View\Ui\DiceValue::render($die).'</span>';
-                $history.='; действующий: '.\Berserk\View\Ui\DiceValue::render($active).'</span>';
-            }
-            $infoPanelHtml=$history.'</div>'.$infoPanelHtml;
-        }
         foreach($state->battle['worm_results']??[] as $result) {
             if(($result['turn']??null)!==($state->battle['turn']??null))continue;
             $nameOf=static function($id)use($state,$cardsInfo){$card=$state->getCard((int)$id);return ($card?($cardsInfo[$card->ukid]['name']??$card->ukid):'Карта').' #'.$id;};
@@ -887,7 +877,8 @@ final class BattleScreen
             foreach ($c->effectiveProp()['actions'] ?? [] as $action) {
                 if (($action['key'] ?? $action['type'] ?? '') !== substr($mode, 7)) continue;
                 $showHealth = ($action['type'] ?? '') === 'heal';
-                $abilityName = (string) ($action['name'] ?? $action['label'] ?? $abilityName);
+                $typeNames=['discharge'=>'Разряд','shot'=>'Выстрел','throw'=>'Метание','uchr'=>'Удар через ряд','magic'=>'Магический удар','tap'=>'Простой удар','heal'=>'Излечение'];
+                $abilityName = (string) ($action['name'] ?? $action['label'] ?? $typeNames[$action['type']??''] ?? $abilityName);
                 break;
             }
             $sourceName = (string) ($cardsInfo[$c->ukid]['name'] ?? $c->ukid);

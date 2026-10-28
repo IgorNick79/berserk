@@ -783,16 +783,13 @@ final class InfoPanel
             $dm = $strike['defend_mod'] ?? 0;
 
             $adText = \Berserk\View\Ui\DiceValue::render((int) $ad, (int) $am);
-            if (!empty($strike['temple_defense'])) {
-                $adText .= '<span class="temple-block-die" title="Кубик блокирования Воина храма">'
-                    . \Berserk\View\Ui\DiceValue::render((int)$strike['temple_defense']['die']) . '</span>';
-            }
             $ddText = \Berserk\View\Ui\DiceValue::render((int) $dd, (int) $dm);
+            if (!empty($strike['temple_defense'])) $ddText = \Berserk\View\Ui\DiceValue::render((int)$strike['temple_defense']['die']);
 
             $fin = $strike['final'] ?? $strike['result'];
 
             $defendDiceHtml = '';
-            if ($kind === 'strike') {
+            if ($kind === 'strike' || !empty($strike['temple_defense'])) {
                 $defendDiceHtml = $this->tpl->parse('includes/battle/dice_column.tpl', [
                     'label' => 'Защитник',
                     'value' => $ddText ?: '—',

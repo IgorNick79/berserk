@@ -17,7 +17,7 @@ foreach($d['types']as$type)foreach($d['defense']as$die){
  foreach(['host','player'] as $viewer){
   $_GET=[];
   $html=(new \Berserk\View\Screen\Battle\InfoPanel(new \Berserk\View\Template(__DIR__.'/../templates')))->render($s,$viewer,$viewer,['attacker'=>['name'=>'Атакующий'],'temple'=>['name'=>'Воин храма']], '?game=1');
-  tc(str_contains($html,'class="dice">') && str_contains($html,'temple-block-die'),'block die in native dice result');
+  tc(str_contains($html,'class="dice">') && str_contains($html,'Защитник'),'block die in native dice result');
   tc(str_contains($html,'Атака заблокирована')===($die>=5),'block result in native result');
  }
  $s=GameState::fromArray($s->toArray());$before=Dice::remaining();tc(!$e->apply($s,'host',$cmd)->success,'replay rejected');tc(Dice::remaining()===$before,'no extra roll');
