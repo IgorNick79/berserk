@@ -109,3 +109,7 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 
 .battle-page .button.tremor-stay{background:#d5ad43;color:#241e10;border:1px solid #f0ce72}
 .battle-page .button.tremor-stay:hover{background:#ebc45d}
+
+.battle-page .temple-dice{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.battle-page .temple-dice>span{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap}
+
+.battle-page .temple-discarded{opacity:.35}.battle-page .temple-chosen{outline:2px solid #d5ad43;border-radius:4px}

@@ -726,6 +726,29 @@ final class StrikeResolver
             || !empty($strike['ragnar_unanswer']);
         $defendDice = $noDefendDice ? 0 : CardRoll::roll($this->state, $defendCard);
 
+        $strike['attack_dice']=$attackDice;$strike['defend_dice']=$defendDice;
+        $strike['temple_no_defend']=$noDefendDice;
+        $choices=[];
+        foreach([['attack',$attacker,$attackDice],['defend',$defendCard,$defendDice]] as [$side,$card,$first]) {
+            if(!$first||empty($card->effectiveProp()['combat_choose_two']))continue;
+            $second=Dice::roll();$strike['temple_rolls'][$side]=['card_id'=>$card->instanceId,'values'=>[$first,$second]];
+            if($first!==$second)$choices[]=['side'=>$side,'owner'=>$card->owner,'values'=>[$first,$second]];
+            else $strike['temple_rolls'][$side]['chosen']=$first;
+        }
+        if($choices){
+            $entry=array_shift($choices);$entry['queue']=$choices;
+            $entry['id']='temple-'.($this->state->battle['temple_sequence']=(int)($this->state->battle['temple_sequence']??0)+1);
+            $this->state->battle['pending_temple_dice']=$entry;$strike['state']='waiting_temple_dice';return;
+        }
+        $this->continueTempleDice();
+    }
+
+    public function continueTempleDice(): void
+    {
+        $strike=&$this->state->battle['strike'];
+        $attackerId=$strike['attacker_id'];$attacker=$this->state->getCard($attackerId);
+        $defendCard=$this->state->getCard($strike['defender_id']?:$strike['target_id']);
+        $attackDice=$strike['attack_dice'];$defendDice=$strike['defend_dice'];$noDefendDice=$strike['temple_no_defend'];
         $attackMod = CardStats::getOva($this->state, $attacker, $defendCard) 
              -   CardStats::getClumsyPenalty($attacker);
 

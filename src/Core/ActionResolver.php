@@ -518,6 +518,12 @@ final class ActionResolver
         ];
         if ($strikeAura) $this->state->battle['strike']['strike_aura']['attack'] = true;
 
+        if (TempleWarrior::rangedBlock($this->state,$target,'uchr')) {
+            $attacker->closed=true;$this->state->bumpVersion();
+            ActionResolution::performed($this->state,$attacker,$uchrAction);
+            return Result::ok(['temple_attack_blocked']);
+        }
+
         $val += CardStats::getAbilityBonus($this->state, $attacker, $target, 'uchr');
         $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, 'uchr');
         $val -= $reduction;
@@ -1470,6 +1476,13 @@ final class ActionResolver
         if ($strikeAura) $this->state->battle['strike']['strike_aura']['attack'] = true;
 
         $this->state->battle['strike'][ActionResolution::ID] = $action[ActionResolution::ID];
+        if (TempleWarrior::rangedBlock($this->state,$target,$type)) {
+            if (empty($action['no_close'])) $attacker->closed=true;
+            $this->consumeNextActionBonuses($attacker,$type);
+            ActionResolution::resolve($this->state,$action,'blocked',['hit'=>false]);
+            ActionResolution::performed($this->state,$attacker,$action);
+            $this->state->bumpVersion();return Result::ok(['temple_attack_blocked']);
+        }
         // Эффекты действия (strike_effects) — например, яд при среднем/сильном разряде
         if (!empty($action['strike_effects'])) {
             $this->engine->applyStrikeEffects($attacker, $target, $level, $action['strike_effects']);

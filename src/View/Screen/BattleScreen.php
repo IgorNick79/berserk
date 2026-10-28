@@ -158,6 +158,21 @@ final class BattleScreen
             }
         }
         $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml, $pilePanelHtml, $actionChoice, $ui['inspect'] ?? 0);
+        if (!empty($strike['temple_rolls']) && empty($state->battle['pending_temple_dice'])) {
+            $history='<div class="temple-dice">';
+            foreach($strike['temple_rolls'] as $side=>$rolls){
+                $active=(int)$strike[$side==='attack'?'attack_dice':'defend_dice'];
+                $history.='<span>Воин храма — исходные броски: ';
+                foreach($rolls['values'] as $die)$history.='<span class="'.($die===($rolls['chosen']??null)&&$die===$active?'temple-chosen':'temple-discarded').'">'.\Berserk\View\Ui\DiceValue::render($die).'</span>';
+                $history.='; действующий: '.\Berserk\View\Ui\DiceValue::render($active).'</span>';
+            }
+            $infoPanelHtml=$history.'</div>'.$infoPanelHtml;
+        }
+        if (!empty($strike['temple_defense'])) {
+            $block=$strike['temple_defense'];
+            $diceHtml='<div class="temple-dice"><span>Атака '.\Berserk\View\Ui\DiceValue::render((int)$strike['attack_dice']).'</span><span>Защита Воина храма '.\Berserk\View\Ui\DiceValue::render($block['die']).'</span></div>';
+            $infoPanelHtml=$diceHtml.($block['blocked']?'<p>Атака заблокирована</p>':'').$infoPanelHtml;
+        }
         foreach($state->battle['worm_results']??[] as $result) {
             if(($result['turn']??null)!==($state->battle['turn']??null))continue;
             $nameOf=static function($id)use($state,$cardsInfo){$card=$state->getCard((int)$id);return ($card?($cardsInfo[$card->ukid]['name']??$card->ukid):'Карта').' #'.$id;};

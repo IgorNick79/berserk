@@ -60,3 +60,7 @@ www/assets/cards/
 !/debug/scenarios/abyss-movement.json
 
 !/debug/scenarios/pathfinder.json
+
+!/debug/scenarios/temple-ranged.json
+
+!/debug/scenarios/temple-combat.json

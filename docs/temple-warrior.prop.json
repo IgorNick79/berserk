@@ -1,0 +1,4 @@
+{
+  "ranged_block_roll": {"types": ["uchr", "throw", "shot"], "block_on": [5, 6]},
+  "combat_choose_two": true
+}

@@ -1,0 +1,44 @@
+{
+  "cases": [
+    {
+      "side": "attack",
+      "values": [
+        1,
+        5
+      ],
+      "choice": 1
+    },
+    {
+      "side": "attack",
+      "values": [
+        1,
+        5
+      ],
+      "choice": 5
+    },
+    {
+      "side": "defend",
+      "values": [
+        1,
+        5
+      ],
+      "choice": 1
+    },
+    {
+      "side": "defend",
+      "values": [
+        1,
+        5
+      ],
+      "choice": 5
+    },
+    {
+      "side": "attack",
+      "values": [
+        4,
+        4
+      ],
+      "choice": 4
+    }
+  ]
+}

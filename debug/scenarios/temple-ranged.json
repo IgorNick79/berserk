@@ -1,0 +1,13 @@
+{
+  "types": [
+    "shot",
+    "throw",
+    "uchr"
+  ],
+  "defense": [
+    1,
+    4,
+    5,
+    6
+  ]
+}

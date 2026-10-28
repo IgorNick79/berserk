@@ -1,0 +1,10 @@
+const fs=require('fs'),{execFileSync}=require('child_process');
+const {chromium}=require('C:/Users/mi/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const f=JSON.parse(execFileSync('C:/OSPanel/modules/php/PHP_8.1/php.exe',['tools/test_temple_combat.php','--fixture'],{encoding:'utf8'}));
+(async()=>{const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});let n=0;
+try{for(const width of [375,1600]){const p=await browser.newPage({viewport:{width,height:800}});
+await p.setContent('<style>'+fs.readFileSync('www/assets/css/global.css','utf8')+fs.readFileSync('www/assets/css/battle-mini-card.css','utf8')+'</style><div class="battle-page">'+f.html+'</div>');
+if(await p.locator('.temple-dice img.panel-dice-face').count()!==3)throw Error('three graphical dice');n++;
+if(await p.locator('a.button').count()!==2)throw Error('choice buttons');n++;
+if(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('horizontal overflow');n++;
+await p.close();}console.log(`PASS ${n} browser checks; FAIL 0`);}finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

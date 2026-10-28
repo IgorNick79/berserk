@@ -10,6 +10,7 @@ final class BattleWaitResolver
 {
     private const PLAYERS = ['host', 'player'];
     private const OWNER_PENDING = [
+        'pending_temple_dice',
         'pending_tremor',
         'pending_deal_linked_recruit', 'pending_deal_scout_recruit', 'pending_deal_variable_recruit',
         'pending_swamp_queen_summon', 'pending_card_heal', 'pending_matriarch_order', 'pending_coin_ability', 'pending_first_strike_jump', 'pending_dice_choice', 'pending_after_strike_execute',
