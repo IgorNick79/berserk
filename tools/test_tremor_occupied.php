@@ -44,6 +44,7 @@ foreach($d['cases'] as $case){
   ck($e->apply($s,$owner,$cmd)->success,'child command');
   if($pc)ck(!$e->apply($s,$owner,$cmd)->success,'death replay rejected');
  }
+ $report=end($s->battle['worm_results']);ck(count($report['destroyed'])===count($case['owners']),'summary destroyed list');
  ck(!WormIncarnation::operation($s),'operation complete');ck($s->getCard(1)->zone==='field'&&!$s->getCard(1)->closed,'worm arrived');
  foreach($case['owners'] as $i=>$o)ck($s->getCard(2+$i)->zone==='graveyard','victim buried');
  ck(array_column(ZoneManager::markersAt($s,'3_3'),'id')===['b'],'one deterministic marker consumed');

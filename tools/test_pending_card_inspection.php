@@ -30,8 +30,8 @@ foreach(['host','player'] as $viewer)foreach(['action','pending','prophecy','com
             battleSnapshotAssert(isset($q['inspect'])&&$q['sel']==1&&!isset($q['cmd']),'Field and flying links inspect without executing pending');}
     }
     if($stage==='action'){
-        battleSnapshotAssert(str_contains($d['info_panel_html'],'Выберите цель способности'),'Target list in information context');
-        battleSnapshotAssert(!str_contains($d['panel_html'],'Выберите цель способности'),'Target list separate from large card');
+        battleSnapshotAssert(str_contains($d['info_panel_html'],'Пророчество 1: выберите цель'),'Target list in information context');
+        battleSnapshotAssert(!str_contains($d['panel_html'],'Пророчество 1: выберите цель'),'Target list separate from large card');
         battleSnapshotAssert($d['ui']['mode']==='action:test','Inspection preserves action mode');
     }
 }

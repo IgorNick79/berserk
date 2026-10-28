@@ -72,6 +72,7 @@ foreach([[3,3],[1,1],[1,3]] as [$row,$col]) {
  $cmd=new Command('choose_incarnation_cell',['incarnation_id'=>1,'row'=>$row,'col'=>$col]);
  ck($e->apply($s,'host',$cmd)->success,'geometry incarnation');
  foreach($ids as $id)ck($s->getCard($id)->hp===(in_array($id,[$ids[0],$ids[1]],true)?5:4),'native prevention or one wound each neighbor');
+ $report=end($s->battle['worm_results']);ck(count($report['wounded'])===count($ids)-2,'summary excludes prevented wounds');ck($report['row']===$row&&$report['col']===$col,'summary cell');
  ck($s->getCard(1)->hp===5,'worm not wounded');ck($s->getCard(50)->hp===10,'outside not wounded');
  ck(!$e->apply($s,'host',$cmd)->success,'completed request replay');
 }

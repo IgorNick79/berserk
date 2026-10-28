@@ -17,7 +17,7 @@ final class WormIncarnation
         $ids=[];foreach($this->state->cards as $c)if($c->zone==='field'&&$c->row===$row&&$c->col===$col)$ids[]=$c->instanceId;
         $id='worm-' . ($this->state->battle['worm_sequence']=(int)($this->state->battle['worm_sequence']??0)+1);
         $this->state->battle['pending_incarnation']['worm_operation']=['id'=>$id,'worm_id'=>$worm->instanceId,'row'=>$row,'col'=>$col,
-            'marker_id'=>$marker,'targets'=>$ids,'index'=>0,'stage'=>'destroy','jobs'=>[],'next_choice'=>0,'placed'=>false,'consumed'=>false];
+            'marker_id'=>$marker,'targets'=>$ids,'index'=>0,'stage'=>'destroy','jobs'=>[],'next_choice'=>0,'placed'=>false,'consumed'=>false,'destroyed'=>[],'wounded'=>[]];
         $this->advance();$this->state->bumpVersion();return Result::ok(['worm_incarnation_started']);
     }
     public function advance(): void {
@@ -38,6 +38,8 @@ final class WormIncarnation
                     continue;
                 }
                 if($o['adjacent_index']>=count($o['adjacent_ids'])) {
+                    $this->state->battle['worm_results'][]=['operation_id'=>$o['id'],'turn'=>$this->state->battle['turn']??0,'worm_id'=>$o['worm_id'],'row'=>$o['row'],'col'=>$o['col'],'destroyed'=>$o['destroyed']??[],'wounded'=>$o['wounded']??[]];
+                    $this->state->battle['worm_results']=array_slice($this->state->battle['worm_results'],-10);
                     $o['stage']='complete';$this->engine->checkGameOver($this->state);
                     $worm=$this->state->getCard($o['worm_id']);$row=$o['row'];$col=$o['col'];
                     unset($this->state->battle['pending_incarnation']['worm_operation']);
@@ -51,7 +53,10 @@ final class WormIncarnation
                     'attacker_id'=>$o['worm_id'],'target_id'=>$id,'defender_id'=>null,'confirmed'=>[],
                     'result'=>['attack'=>'','defend'=>'','winner'=>''],'final'=>['attack'=>'','defend'=>'','decreased'=>false],
                     'attack_dice'=>0,'defend_dice'=>0,'damage'=>0];
-                $this->engine->applyDamage($this->state,$target,1,'impact',$this->state->getCard($o['worm_id']));continue;
+                $hpBefore=$target->hp;
+                $this->engine->applyDamage($this->state,$target,1,'impact',$this->state->getCard($o['worm_id']));
+                if($target->hp<$hpBefore)$o['wounded'][]=$target->instanceId;
+                continue;
             }
             if($o['stage']==='effects') {
                 $this->engine->flushDeadeatQueue($this->state);
@@ -67,6 +72,7 @@ final class WormIncarnation
                     'attacker_id'=>$o['worm_id'],'target_id'=>$target->instanceId,'defender_id'=>null,'confirmed'=>[],
                     'result'=>['attack'=>'','defend'=>'','winner'=>''],'final'=>['attack'=>'','defend'=>'','decreased'=>false],
                     'attack_dice'=>0,'defend_dice'=>0,'damage'=>0];
+                $o['destroyed'][]=$target->instanceId;
                 $this->engine->forceDeath($this->state,$target,'destroy',$this->state->getCard($o['worm_id']));continue;
             }
             // Re-entrant effects may have populated the cell. Never overlap an occupant.
