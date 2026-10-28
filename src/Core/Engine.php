@@ -549,8 +549,15 @@ final class Engine
                 $sr = new StrikeResolver($state, $this);
 
                 if ($op === 'reroll') {
+                    $beforeDice = ['attack'=>$strike['attack_dice'], 'defend'=>$strike['defend_dice']];
+                    $debugQueueActive = Dice::isInfiniteMode() || !empty(Dice::remaining());
                     $strike['attack_dice'] = Dice::roll();
                     $strike['defend_dice'] = Dice::roll();
+                    $strike['reroll_trace'][] = ['source_id'=>$source?->instanceId,'before'=>$beforeDice,
+                        'after'=>['attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice']],
+                        'attacker_six_ready'=>!empty($attacker->flags[CardRoll::READY]),
+                        'debug_queue_active'=>$debugQueueActive,
+                        'debug_infinite'=>Dice::isInfiniteMode()];
                     $sr->recalcTable();
                     $state->historyRecorder?->liveEvent($state,'combat.dice_changed',[
                         'attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice'],'operation'=>$op],

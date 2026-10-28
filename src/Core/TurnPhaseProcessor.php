@@ -109,7 +109,11 @@ final class TurnPhaseProcessor
             return Result::ok(['task_pending']);
         }
 
-        $this->state->battle['turn_phase']['pending_ack'] = $desc;
+        if (!empty($desc['skip_ack'])) {
+            $this->advance();
+        } else {
+            $this->state->battle['turn_phase']['pending_ack'] = $desc;
+        }
         $this->state->bumpVersion();
         return Result::ok(['task_done']);
     }
@@ -263,6 +267,7 @@ final class TurnPhaseProcessor
                         return;
                     }
 
+                    if (!empty($desc['skip_ack'])) continue;
                     $tp['pending_ack'] = $desc;
                     return;
                 }
@@ -776,6 +781,7 @@ final class TurnPhaseProcessor
                             'source_id' => $card->instanceId,
                             'items'     => [],
                             'note'      => 'не нанес урона (нет цели напротив)',
+                            'skip_ack'  => true,
                         ];
                     }
 
@@ -787,8 +793,9 @@ final class TurnPhaseProcessor
                         $value = (int) $eff['value_if_not_moved'];
                     }
 
+                    $hpBefore = $opp->hp;
                     $this->engine->applyDamage($this->state, $opp, $value, 'impact');
-                    $items[] = ['instance_id' => $opp->instanceId, 'delta' => -$value];
+                    $items[] = ['instance_id' => $opp->instanceId, 'delta' => -max(0, $hpBefore - $opp->hp), 'unit'=>'hp'];
 
                     return [
                         'label'     => 'Свойство',

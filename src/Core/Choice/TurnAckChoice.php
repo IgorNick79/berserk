@@ -80,7 +80,9 @@ final class TurnAckChoice implements ChoiceHandlerInterface
                 if (isset($it['delta'])) {
                     $delta   = (int) $it['delta'];
                     $sign    = $delta >= 0 ? '+' . $delta : '−' . abs($delta);
-                    $parts[] = $name . ' ' . $sign;
+                    $parts[] = ($it['unit'] ?? '') === 'hp' && $delta === 0
+                        ? $name . ' — урон предотвращён'
+                        : $name . ' ' . $sign . (($it['unit'] ?? '') === 'hp' ? ' ❤️ HP' : '');
                 } elseif (isset($it['text'])) {
                     $parts[] = $name . ' — ' . $it['text'];
                 } else {

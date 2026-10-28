@@ -49,7 +49,12 @@ final class AbyssMovement {
     'attacker_id'=>$o['source_id'],'target_id'=>$id,'defender_id'=>null,'confirmed'=>[],
     'attack_dice'=>0,'defend_dice'=>0,'damage'=>0,'result'=>['attack'=>'','defend'=>'','winner'=>''],
     'final'=>['attack'=>'','defend'=>'','decreased'=>false]];
+   $hpBefore=$target->hp;
    $this->e->applyDamage($this->s,$target,1,'impact',$this->s->getCard($o['source_id']));
+   $this->s->battle['abyss_movement_results'][$o['id']] ??= ['source_id'=>$o['source_id'],'turn'=>$this->s->battle['turn']??0,'targets'=>[]];
+   $this->s->battle['abyss_movement_results'][$o['id']]['targets'][]=['id'=>$id,'owner'=>$target->owner,'row'=>$target->row,'col'=>$target->col,'damage'=>max(0,$hpBefore-$target->hp)];
+   $this->s->battle['abyss_movement_results']=array_slice($this->s->battle['abyss_movement_results'],-10,null,true);
+
   }
  }
 }

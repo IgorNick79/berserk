@@ -14,4 +14,11 @@ ck(!$s->getCard(1)->flags[CardRoll::READY],'consumed');ck($s->getCard(2)->flags[
 ck(Dice::roll()===2,'instant reroll is ordinary');ck(!$s->getCard(1)->flags[CardRoll::READY],'reroll does not restore');
 $s=GameState::fromArray($s->toArray());ck(CardRoll::roll($s,$s->getCard(1))===3,'next ordinary primary roll');
 ck(CardRoll::roll($s,$s->getCard(4))===4,'other card uses normal queue');ck($s->getCard(1)->prop['zoz']===true,'zoz retained');
+foreach([5,6] as $id){$s->addCard(new CardInstance(instanceId:$id,ukid:'victim',owner:'player',zone:'field',row:5,col:$id-2,hp:1,hpMax:1));$e->forceDeath($s,$s->getCard($id),'destroy');}
+$_SESSION=['debug_roll'=>'1,2,3'];Dice::init();
+ck(CardRoll::roll($s,$s->getCard(1))===6,'several deaths grant one six');
+$e->finalizeDying($s);
+ck(CardRoll::roll($s,$s->getCard(1))===1,'old graveyard does not rearm');
+$s=GameState::fromArray($s->toArray());
+ck(CardRoll::roll($s,$s->getCard(1))===2,'another primary remains ordinary after reload');
 echo "PASS $n checks; FAIL 0\n";

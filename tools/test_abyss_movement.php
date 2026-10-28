@@ -21,6 +21,15 @@ foreach($d['cases'] as $case)foreach(['host','player'] as $owner)foreach([false,
   ck($s->getCard(2)->zone==='graveyard','death finalized');
   if($owner==='player')ck(!empty($s->getCard(1)->flags[CardRoll::READY]),'movement death arms six');
  }else ck($s->getCard(2)->hp===($lethal?1:5)-($case['wounded']?1:0),'price and type filter');
+ if($case['wounded']) {
+  $report=end($s->battle['abyss_movement_results']);ck($report['targets'][0]['damage']===1,'actual wound recorded');
+  $screen=new \Berserk\View\Screen\BattleScreen(new \Berserk\View\Template(__DIR__.'/../templates'));
+  $render=new ReflectionMethod($screen,'buildAbyssMovementResults');$render->setAccessible(true);
+  foreach(['host','player'] as $viewer){
+   $html=$render->invoke($screen,$s,$viewer,['abyss'=>['name'=>'Повелитель бездны'],'neighbor'=>['name'=>'Гном']]);
+   ck(str_contains($html,($owner===$viewer?'Своя карта':'Карта противника').' — Гном #2: −1 ❤️ HP'),'visible ownership and wounds');
+  }
+ }
  ck(empty($s->battle['abyss_movement']),'continuation completed');ck(empty($s->battle['strike']),'no combat window');
 }
 // Native movement-effect entry point used by forced moves and teleports.

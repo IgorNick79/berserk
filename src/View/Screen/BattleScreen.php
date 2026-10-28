@@ -158,6 +158,7 @@ final class BattleScreen
             }
         }
         $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml, $pilePanelHtml, $actionChoice, $ui['inspect'] ?? 0);
+        $infoPanelHtml .= $this->buildAbyssMovementResults($state,$playerKey,$cardsInfo);
         foreach($state->battle['worm_results']??[] as $result) {
             if(($result['turn']??null)!==($state->battle['turn']??null))continue;
             $nameOf=static function($id)use($state,$cardsInfo){$card=$state->getCard((int)$id);return ($card?($cardsInfo[$card->ukid]['name']??$card->ukid):'Карта').' #'.$id;};
@@ -1656,6 +1657,27 @@ final class BattleScreen
         return $html;
     }
 
+    private function buildAbyssMovementResults(GameState $state,string $viewer,array $cardsInfo):string
+    {
+        $html='';
+        foreach($state->battle['abyss_movement_results']??[] as $result){
+            if(($result['turn']??null)!==($state->battle['turn']??null))continue;
+            $source=$state->getCard($result['source_id']);
+            $name=$source?($cardsInfo[$source->ukid]['name']??$source->ukid):'Повелитель бездны';
+            $parts=[];
+            foreach($result['targets'] as $hit){
+                $target=$state->getCard($hit['id']);
+                $targetName=$target?($cardsInfo[$target->ukid]['name']??$target->ukid):'Карта';
+                $side=$hit['owner']===$viewer?'Своя карта':'Карта противника';
+                $parts[]=$side.' — '.$targetName.' #'.$hit['id'].': '.($hit['damage']>0?'−'.$hit['damage'].' ❤️ HP':'урон предотвращён');
+            }
+            $html.=\Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(
+                title:$name.' — ранения после перемещения',
+                text:[htmlspecialchars(implode(', ',$parts),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8')]));
+        }
+        return $html;
+    }
+
     private function buildDebug(GameState $state, string $playerKey, ?array $strike, array $ui = [], array $cardsInfo = []): string
     {
         $lines = [];
@@ -1677,6 +1699,7 @@ final class BattleScreen
         $lines[] = 'status: ' . $state->status;
         $lines[] = 'winner: ' . ($state->winner ?? '—');
         $lines[] = 'first_player: ' . ($state->getFirstPlayerKey() ?? '?');
+        $lines[] = 'abyss_roll_trace: ' . json_encode($state->battle['abyss_roll_trace']??[],JSON_UNESCAPED_UNICODE);
 
         // ─── Все карты на поле / в полёте ────────────────────
         $lines[] = '';
@@ -1769,6 +1792,9 @@ final class BattleScreen
                 'attack_dice' => $strike['attack_dice'] ?? null,
                 'defend_dice' => $strike['defend_dice'] ?? null,
                 'final'       => $strike['final']       ?? null,
+                'primary_rolls' => $strike['primary_rolls'] ?? [],
+                'reroll_trace' => $strike['reroll_trace'] ?? [],
+                'instant_result_stage' => $strike['instant_result_stage'] ?? null,
             ], JSON_UNESCAPED_UNICODE);
         }
 
