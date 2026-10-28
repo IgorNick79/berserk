@@ -14,6 +14,12 @@ foreach($d['types']as$type)foreach($d['defense']as$die){
  $cmd=new Command($type==='uchr'?'uchr':'action',['card_id'=>1,'target_id'=>2,'action_key'=>'attack']);
  $r=$e->apply($s,'host',$cmd);tc($r->success,$r->error??'attack');tc($s->battle['strike']['temple_defense']['die']===$die,'defense stored');
  tc($s->getCard(2)->hp===($die>=5?10:8),'damage');if($die>=5)tc(empty($s->getCard(2)->markers['poison']),'no poison');
+ foreach(['host','player'] as $viewer){
+  $_GET=[];
+  $html=(new \Berserk\View\Screen\Battle\InfoPanel(new \Berserk\View\Template(__DIR__.'/../templates')))->render($s,$viewer,$viewer,['attacker'=>['name'=>'Атакующий'],'temple'=>['name'=>'Воин храма']], '?game=1');
+  tc(str_contains($html,'class="dice">') && str_contains($html,'temple-block-die'),'block die in native dice result');
+  tc(str_contains($html,'Атака заблокирована')===($die>=5),'block result in native result');
+ }
  $s=GameState::fromArray($s->toArray());$before=Dice::remaining();tc(!$e->apply($s,'host',$cmd)->success,'replay rejected');tc(Dice::remaining()===$before,'no extra roll');
 }
 // Only configured types roll; changing successful values is data-driven too.

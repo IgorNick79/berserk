@@ -113,3 +113,5 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 .battle-page .temple-dice{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.battle-page .temple-dice>span{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap}
 
 .battle-page .temple-discarded{opacity:.35}.battle-page .temple-chosen{outline:2px solid #d5ad43;border-radius:4px}
+
+.battle-page .temple-block-die{display:inline-flex;margin-left:8px;padding-left:8px;border-left:1px solid #9d8054}

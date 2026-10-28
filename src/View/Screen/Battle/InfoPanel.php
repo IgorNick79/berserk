@@ -783,6 +783,10 @@ final class InfoPanel
             $dm = $strike['defend_mod'] ?? 0;
 
             $adText = \Berserk\View\Ui\DiceValue::render((int) $ad, (int) $am);
+            if (!empty($strike['temple_defense'])) {
+                $adText .= '<span class="temple-block-die" title="Кубик блокирования Воина храма">'
+                    . \Berserk\View\Ui\DiceValue::render((int)$strike['temple_defense']['die']) . '</span>';
+            }
             $ddText = \Berserk\View\Ui\DiceValue::render((int) $dd, (int) $dm);
 
             $fin = $strike['final'] ?? $strike['result'];
@@ -1676,6 +1680,8 @@ final class InfoPanel
                 . $nextStrikeBonusHtml . $rowsBonusHtml . $clumsyHtml
                 . $abilityBonusHtml . $coinBonusHtml . $reductionHtml
                 . $spiderWebHtml . $answerHtml . $vampireHtml . $deadeatHtml . $deathHtml;
+
+            if (!empty($strike['temple_defense']['blocked'])) $resultText = 'Атака заблокирована';
 
             $noDiceKinds = ['impact', 'strangle', 'heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'become_fly', 'bomb_shot', 'apply_delayed_marker', 'particle', 'life_gift', 'poison_boost', 'damage_ranged', 'teleport_target', 'blood_storm', 'row_spell'];
             if (!in_array($kind, $noDiceKinds, true)) {
