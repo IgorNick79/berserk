@@ -1850,6 +1850,12 @@ body.battle-page > .screen {
 .battle-page .info-panel-footer button:disabled { opacity: .5; cursor: default; }
 .battle-page .instant-control { border: 1px solid var(--ip-edge, #aaa); border-radius: 6px; padding: 8px; margin: 0 0 10px; min-width: 0; }
 .battle-page .instant-control h3 { margin: 0 0 6px; font-size: 13px; }
+.battle-page .instant-control h3 { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.battle-page .button.reserve-paid, .battle-page .button.catcher-reroll { background: linear-gradient(#edcb62,#af801f) !important; color: #241b08 !important; }
+.battle-page .button.reserve-free, .battle-page .button.catcher-own { background: linear-gradient(#65bb79,#237339) !important; color: #fff !important; }
+.battle-page .button.catcher-enemy { background: linear-gradient(#d66c64,#932f2a) !important; color: #fff !important; }
+.battle-page .button.catcher-dice { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.battle-page .catcher-dice .panel-dice-value { flex: 0 0 auto; }
 .battle-page .instant-control-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 6px; }
 .battle-page .instant-control-main { white-space: normal; overflow-wrap: normal; word-break: normal; }
 .battle-page .instant-control-actions > .instant-control-main { flex: 1 1 0; min-width: 0; text-align: center; }

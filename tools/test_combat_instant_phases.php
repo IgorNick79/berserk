@@ -874,4 +874,26 @@ cipAssert(($state->battle['pending_wound_transfer']['source_id'] ?? null) === $h
 cipAssert(($state->battle['pending_wound_transfer']['source_id'] ?? null) === $hermitA->instanceId, 'Next wounds entry should open without another result confirmation.');
 cipAssert(count($state->battle['strike']['instant_summary'] ?? []) === 1, 'First wounds entry should be summarized once before the second resolves.');
 
+// Mary tests the effective opponent die, including OVA/OVZ, not its raw face.
+foreach (['attack','defend'] as $side) {
+    foreach ([[1,1,false],[1,0,true],[2,-1,true],[1,-1,false]] as [$die,$modifier,$hit]) {
+        [$state,$attacker,$target,$mary] = cipBaseState();
+        $opponent=$side==='attack'?$attacker:$target;
+        $mary->owner=$side==='attack'?GameState::PLAYER_PLAYER:GameState::PLAYER_HOST;
+        $opponent->prop[$side==='attack'?'ova':'ovz']=['value'=>$modifier];
+        $state->battle['strike'][$side.'_dice']=$die;
+        $state->battle['strike'][$side.'_mod']=$side==='attack'
+            ? \Berserk\Core\CardStats::getOva($state,$attacker,$target)
+            : \Berserk\Core\CardStats::getOvz($state,$target);
+        $state->battle['strike']['combat_instant_window']='dice';
+        $item=cipMaryItem($mary,0);$item['player']=$mary->owner;
+        $state->battle['strike']['instant_stack']=[$item];
+        (new InstantProcessor($state,new Engine()))->resolveStack();
+        cipAssert($opponent->hp===($hit?3:5),"Mary $side die $die modifier $modifier respects effective value");
+        cipAssert($mary->closed,'Mary closes even when the effective die causes a miss');
+        $summary=$state->battle['strike']['instant_summary'][0];
+        cipAssert(($summary['result']['damage_delta']??null)===($hit?2:0),'Mary summary reports only actual damage');
+        if(!$hit)cipAssert(str_contains($summary['reason'],'промах'),'Mary explains the miss');
+    }
+}
 echo "Combat instant phase tests passed.\n";

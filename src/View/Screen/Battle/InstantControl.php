@@ -61,6 +61,7 @@ final class InstantControl
         }
         if($r['can_decline'])$out['decline']=['command'=>'decline_instant_priority','payload'=>['request_id'=>$r['request_id']]];
         $out['visible']=!empty($potential)||$out['pass']!==null||$out['decline']!==null||$out['cancel']!==null;
+        $out['label']='Инстант';
         $out['enabled']=$priority&&!empty($out['options']);
         return$out;
     }

@@ -32,9 +32,9 @@ if(!http.created_at||Date.now()/1000-http.created_at>120)throw Error('Fresh runn
    await page.getByRole('link',{name:'Резерв',exact:true}).click();await page.getByRole('link',{name:'Отменить резерв',exact:true}).waitFor();check(await page.locator('.instant-control-cost').count()===0,'Waiting reserve has no false price');
    await page.reload();await page.getByRole('link',{name:'Отменить резерв',exact:true}).waitFor();await footer(page);
    await page.getByRole('link',{name:'Отменить резерв',exact:true}).click();await page.getByRole('link',{name:'Резерв',exact:true}).waitFor();
-   check(await page.locator('.instant-control-cost').innerText()==='−1','Paid cost is server rendered');
+   check(await page.locator('.instant-control-main.reserve-paid').count()===1,'Paid reserve uses the yellow button');
    await page.screenshot({path:path.join(root,`ui-${width}-paid.png`),fullPage:true});await ctx.close();
-   const free=await open('player',fixtures.free,width);await footer(free.page);check(await free.page.locator('.instant-control-main .instant-control-cost').innerText()==='Бесплатно','Free pending cost appears on the primary button');
+   const free=await open('player',fixtures.free,width);await footer(free.page);check(await free.page.locator('.instant-control-main.reserve-free').count()===1,'Free reserve uses the green button');
    await free.page.screenshot({path:path.join(root,`ui-${width}-free.png`),fullPage:true});await free.ctx.close();
    const combat=await open('player',fixtures.combat,width,true);await footer(combat.page);
    check(await combat.page.locator('.instant-control-cost').count()===0,'Combat has no reservation cost');

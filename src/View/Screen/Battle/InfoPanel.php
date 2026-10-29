@@ -101,7 +101,7 @@ final class InfoPanel
             . '<div class="info-panel-content" data-panel-priority="' . ($priority ? '1' : '0') . '" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" data-inspected-card="' . $inspectedCardId . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
             . ($priority ? '' : $pileHtml)
             . '<div class="battle-selected-card" data-battle-fragment="panel_html"' . ($exclusive ? ' hidden' : '') . '>' . $selectedCardHtml . '</div>'
-            . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/cell_info.svg" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">Информация</h3></div><div class="combat-panel-body">' : '') . $contextBody . ($exclusive ? '</div>' : '') . '</div>'
+            . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/combat.png" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">Сражение</h3></div><div class="combat-panel-body">' : '') . $contextBody . ($exclusive ? '</div>' : '') . '</div>'
             . '</div>'
             . '<footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
     }
@@ -122,7 +122,7 @@ final class InfoPanel
                 . ' — срабатываний за ход: ' . $uses . '/2.</p>';
         }
         return $html === '' ? '' : '<details open class="info-box ochi-kronga-notice" data-ochi-notice="'
-            . $this->state->gameId . ':' . $this->playerKey . '"><summary><h3>Информация</h3></summary>'
+            . $this->state->gameId . ':' . $this->playerKey . '"><summary><h3>Сражение</h3></summary>'
             . $html . '<button type="button" class="button" data-dismiss-ochi>Продолжить</button></details>';
     }
 
@@ -356,23 +356,22 @@ final class InfoPanel
         if(!$p['visible'])return '';
         $esc=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
         $url=fn($cmd,$payload=[])=>$esc($this->baseUrl.'&'.http_build_query(['cmd'=>$cmd]+$payload));
-        $label=$esc($p['label']).($p['cost']===null?'':' <span class="instant-control-cost">'.$esc($p['cost']).'</span>');
-        if($p['command']!==null)$action='<a class="button instant-control-main" aria-label="'.$esc($p['label']).'" href="'.$url($p['command'],$p['payload']).'">'.$label.'</a>';
+        $label=$esc($p['label']);
+        $color=$p['cost']===null?'':($p['cost']==='Бесплатно'?' reserve-free':' reserve-paid');
+        if($p['command']!==null)$action='<a class="button instant-control-main'.$color.'" aria-label="'.$esc($p['label']).'" href="'.$url($p['command'],$p['payload']).'">'.$label.'</a>';
         elseif($p['enabled']){
             $cards='';foreach($p['options']as$option){
                 $card=$this->state->getCard((int)$option['card_id']);if(!$card)continue;
                 $hint=$option['label'];$target=$this->state->getCard((int)($option['target_id']??0));
                 if($target)$hint.=' → '.($this->cardsInfo[$target->ukid]['name']??$target->ukid);
-                $cards.=TaskCard::render(['label'=>$hint,'hint'=>$hint,'card_ukid'=>$card->ukid,'row'=>$card->row,'col'=>$card->col,'is_instant'=>true],
-                    html_entity_decode($url($option['command'],$option['payload']),ENT_QUOTES,'UTF-8'),$this->cardsInfo);
+                $cards.=TaskCard::render(['label'=>$hint,'hint'=>$hint,'card_ukid'=>$card->ukid,'row'=>$card->row,'col'=>$card->col,'is_instant'=>true,'owner'=>$card->owner],
+                    html_entity_decode($url($option['command'],$option['payload']),ENT_QUOTES,'UTF-8'),$this->cardsInfo,true,$this->playerKey);
             }
             $action='<details class="instant-control-picker"><summary class="button instant-control-main">'.$label.'</summary><div class="task-list instant-control-options">'.$cards.'</div></details>';
         }else $action='<button type="button" class="button instant-control-main" disabled>'.$label.'</button>';
         $meta=$p['cost']===null?'':'<span class="instant-control-quota" aria-label="Остаток платных резервирований">'.$esc($p['quota']).'</span>';
         $pass=$p['pass']===null?'':'<a class="button skip" data-instant-pass href="'.$url($p['pass']).'">Пас</a>';
-        $decline=$p['decline']===null?'':'<a class="button skip" href="'.$url($p['decline']['command'],$p['decline']['payload']).'">Отказаться</a>';
-        $cancel=$p['cancel']===null?'':'<a class="button skip" href="'.$url($p['cancel']['command'],$p['cancel']['payload']).'">Отменить резерв</a>';
-        return '<section class="instant-control" data-instant-control data-instant-phase="'.$esc($p['phase']).'" aria-label="Инстант"><h3>Инстант</h3><div class="instant-control-actions">'.$action.$meta.$pass.$decline.$cancel.'</div></section>';
+        return '<section class="instant-control" data-instant-control data-instant-phase="'.$esc($p['phase']).'" aria-label="Инстант"><h3>Инстант '.$meta.'</h3><div class="instant-control-actions">'.$action.$pass.'</div></section>';
     }
 
     private function cancelUrl(): string

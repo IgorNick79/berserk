@@ -29,7 +29,7 @@
         </div>
         <div class="battle-pause-mask" data-match-pause-mask {{pause_mask_hidden}}><div><span class="battle-pause-symbol" aria-hidden="true"><img src="/assets/images/battle/pause_160.png" width="70" height="70" alt=""></span><h2>Матч приостановлен</h2><p>Управление паузой — в панели матча.</p></div></div>
     </div>
-    <aside class="info-panel" data-battle-fragment="info_panel_html" aria-label="Информация о бое и действия">{{info_panel_html}}</aside>
+    <aside class="info-panel" data-battle-fragment="info_panel_html" aria-label="Сражение и действия">{{info_panel_html}}</aside>
 </div>
 <script src="/assets/js/cell-marker-picker.js?v=1" defer></script>
 <script src="/assets/js/creature-choice.js?v=1" defer></script>

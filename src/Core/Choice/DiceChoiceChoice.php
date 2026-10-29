@@ -45,17 +45,19 @@ final class DiceChoiceChoice implements ChoiceHandlerInterface
 
         $url = $baseUrl . '&cmd=choose_dice_choice&choice=';
 
-        return new PanelSpec(
-            title: $cardName . ' — Удача: выбери действие',
-            buttons: [
-                ['label' => '+1 к своему кубику',  'url' => $url . 'plus:own'],
-                ['label' => '−1 от своего кубика', 'url' => $url . 'minus:own'],
-                ['label' => '+1 к чужому кубику',  'url' => $url . 'plus:enemy'],
-                ['label' => '−1 от чужого кубика', 'url' => $url . 'minus:enemy'],
-                ['label' => 'Переброс обоих',      'url' => $url . 'reroll:any'],
-                ['label' => 'Отмена',              'url' => $baseUrl . '&cmd=cancel_pending', 'class' => 'skip'],
-            ],
-        );
+        $strike=$state->battle['strike']??[];
+        $attacker=$state->getCard((int)($strike['attacker_id']??0));
+        $ownAttack=$attacker?->owner===$playerKey;
+        $own=\Berserk\View\Ui\DiceValue::render((int)($strike[$ownAttack?'attack_dice':'defend_dice']??0));
+        $enemy=\Berserk\View\Ui\DiceValue::render((int)($strike[$ownAttack?'defend_dice':'attack_dice']??0));
+        $buttons=[];
+        foreach(['plus:own'=>'+1 к своему кубику','minus:own'=>'−1 от своего кубика','plus:enemy'=>'+1 к чужому кубику','minus:enemy'=>'−1 от чужого кубика']as$key=>$label){
+            $mine=str_ends_with($key,':own');
+            $buttons[]=['label'=>$label,'label_html'=>($mine?$own:$enemy).'<span>'.$label.'</span>','url'=>$url.$key,'class'=>'catcher-dice '.($mine?'catcher-own':'catcher-enemy')];
+        }
+        $buttons[]=['label'=>'Переброс обоих','url'=>$url.'reroll:any','class'=>'catcher-reroll'];
+        $buttons[]=['label'=>'Отмена','url'=>$baseUrl.'&cmd=cancel_pending','class'=>'skip'];
+        return new PanelSpec(title:$cardName.' — Удача: выбери действие',buttons:$buttons);
     }
 
     public function apply(

@@ -618,17 +618,19 @@ final class Engine
                 $hits = [];
 
                 // Кубик атакующего — противник владельца Мэри?
-                if (!$isAttackerMine && (int) $strike['attack_dice'] === $diceVal) {
+                if (!$isAttackerMine && (int) $strike['attack_dice'] > 0
+                    && (int) $strike['attack_dice'] + (int) ($strike['attack_mod'] ?? 0) === $diceVal) {
                     $hits[] = $attacker;
                 }
 
                 // Кубик защитника — противник владельца Мэри?
-                if ($isAttackerMine && $defender && (int) $strike['defend_dice'] === $diceVal) {
+                if ($isAttackerMine && $defender && (int) $strike['defend_dice'] > 0
+                    && (int) $strike['defend_dice'] + (int) ($strike['defend_mod'] ?? 0) === $diceVal) {
                     $hits[] = $defender;
                 }
 
                 if (empty($hits)) {
-                    return 'кубик противника ≠ ' . $diceVal;
+                    return 'промах: итог кубика противника ≠ ' . $diceVal;
                 }
 
                 if ($source) ActionResolution::effect($state, $source, (string)($effect['_resolution_type'] ?? 'instant'), 'instant', ['effect_type'=>$type]);

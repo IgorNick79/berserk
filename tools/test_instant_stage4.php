@@ -96,7 +96,7 @@ foreach(['host','player']as$active){
     $s->getCard($caster)->prop['instants']=[['key'=>'dice','trigger'=>'combat','phase'=>'dice','target'=>'self','effect'=>['type'=>'damage_on_dice','value'=>1,'damage'=>2]]];
     (new InstantProcessor($s,irEngine()))->openWindow('combat',$p,null,'dice');
     $ui=InstantControl::project($s,$p,1000);s4Check($ui['label']==='Инстант'&&$ui['enabled']&&$ui['pass']==='combat_instant_pass'&&$ui['cancel']!==null,'Pre-existing paid reserve cannot replace combat choice or mandatory pass');
-    $html=s4Render($s,$p);s4Check(substr_count($html,'cmd=combat_instant_pass')===1&&substr_count($html,'cmd=cancel_instant_reservation')===1,'Combat keeps one pass and cancellation of earlier request');
+    $html=s4Render($s,$p);s4Check(substr_count($html,'cmd=combat_instant_pass')===1&&substr_count($html,'cmd=cancel_instant_reservation')===0,'Combat keeps one pass without redundant cancellation');
     $s->battle['strike']['state']='waiting_defender';unset($s->battle['strike']['instant_phase'],$s->battle['strike']['combat_instant_window']);
     $s->getCard($caster)->prop['instants']=[['key'=>'magic_trick','trigger'=>'combat','phase'=>'redirect','target'=>'adjacent_ally','effect'=>['type'=>'redirect_strike']]];
     $s->addCard(new CardInstance(instanceId:7,ukid:'mage-ally',owner:$p,zone:'field',row:3,col:4,hp:30,hpMax:30));
