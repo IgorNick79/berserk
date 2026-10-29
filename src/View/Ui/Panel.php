@@ -14,7 +14,7 @@ final class Panel
     {
         if (!$spec->isMine) {
             return '<div class="card-choice">'
-                . '<h3>' . htmlspecialchars($spec->title, ENT_QUOTES) . '</h3>'
+                . '<h3>' . Coords::text($spec->title) . '</h3>'
                 . '<p class="wait">' . htmlspecialchars($spec->waitText, ENT_QUOTES) . '</p>'
                 . '</div>';
         }
@@ -49,7 +49,7 @@ final class Panel
         $pickerAttr = $spec->cellPicker !== null
             ? ' data-cell-marker-picker="' . htmlspecialchars($spec->cellPicker['id'], ENT_QUOTES) . '"' : '';
         return '<div class="card-choice"' . $pickerAttr . '>'
-            . '<h3>' . htmlspecialchars($spec->title, ENT_QUOTES) . '</h3>'
+            . '<h3>' . Coords::text($spec->title) . '</h3>'
             . $body
             . '</div>';
     }

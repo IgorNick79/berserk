@@ -27,7 +27,7 @@ foreach($data['owners'] as $owner)foreach($data['cases'] as $case){
  $spec=(new TremorChoice())->spec($s,$owner,[],'?game=1',$owner);
  ck(count($spec->buttons)===($case['from']===[1,1]?4:9),'only legal UI destinations');
  $last=end($spec->buttons);ck($last['label']==='Оставить на месте'&&$last['class']==='tremor-stay','stay last and distinct');
- ck((bool)preg_match('/^I{1,3}:[1-5]$/u',$spec->buttons[0]['label']),'Roman row and Arabic column');ck(in_array($spec->buttons[0]['class'],['tremor-move-own','tremor-move-enemy'],true),'side-colored movement');
+ ck((bool)preg_match('/^I{1,3}:[1-5]$/u',$spec->buttons[0]['label']),'Roman row and Arabic column');ck(in_array($spec->buttons[0]['class'],['tremor-move-own','tremor-move-enemy'],true),'side-colored movement');ck(str_contains($spec->buttons[0]['label_html'],'coordinate.svg'),'shared coordinate icon');$html=\Berserk\View\Ui\Panel::render($spec);ck((bool)preg_match('~<h3>.*coordinate.svg.*</h3>~',$html),'header coordinate icon');
  $cmd=command($s,$case['to']);ck(!$e->apply($s,$active,$cmd)->success,'foreign owner rejected');
  $bad=clone $cmd;$bad->payload['marker_id']='enemy';ck(!$e->apply($s,$owner,$bad)->success,'foreign marker rejected');
  $s=GameState::fromArray(json_decode(json_encode($s->toArray()),true));

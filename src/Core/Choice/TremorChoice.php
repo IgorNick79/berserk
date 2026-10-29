@@ -14,7 +14,7 @@ final class TremorChoice implements ChoiceHandlerInterface
         if (!$p) return null;
         $moving = ($p['mode'] ?? '') === 'move';
         $from = $moving ? array_map('intval', explode('_', $p['from'])) : [null,null];
-        $title = $moving ? 'Дрожь ' . $p['id'] . ' — ' . \Berserk\View\Ui\BattlefieldPosition::label($from[0],$from[1],$playerKey) : 'Дрожь — выберите клетку';
+        $title = $moving ? 'Перемещение «Дрожи» — ' . \Berserk\View\Ui\BattlefieldPosition::label($from[0],$from[1],$playerKey) : 'Дрожь — выберите клетку';
         if ($p['owner'] !== $playerKey) return new PanelSpec(title:$title, isMine:false, waitText:'Ожидание выбора оппонентом');
         $buttons = []; $stay = null;
         [$oldRow, $oldCol] = $moving ? array_map('intval', explode('_', $p['from'])) : [0,0];
@@ -26,7 +26,7 @@ final class TremorChoice implements ChoiceHandlerInterface
             if ($moving && $r===$oldRow && $c===$oldCol) {
                 $button['label']='Оставить на месте';$button['class']='tremor-stay';$stay=$button;
             } else {
-                if($moving){$pos=\Berserk\View\Ui\BattlefieldPosition::display($r,$c,$playerKey);$button['label']=\Berserk\View\Ui\Coords::rowLabel($pos['row']).':'.$pos['col'];$button['class']='tremor-move-'.$pos['side'];}
+                if($moving){$pos=\Berserk\View\Ui\BattlefieldPosition::display($r,$c,$playerKey);$button['label']=\Berserk\View\Ui\Coords::rowLabel($pos['row']).':'.$pos['col'];$button['class']='tremor-move-'.$pos['side'];$button['label_html']=\Berserk\View\Ui\Coords::render($r,$c,$playerKey);}
                 $buttons[]=$button;
             }
         }
