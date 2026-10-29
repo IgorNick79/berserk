@@ -202,7 +202,7 @@ final class CardStats
             }
         }
 
-        return $val;
+        return $val+GraveRitual::bonus($state,$card,'ova');
     }
 
     public static function getOvz(GameState $state, CardInstance $card): int
@@ -441,6 +441,7 @@ final class CardStats
         }
 
         if ($actionType === 'strike') {
+            if($level==='strong')$result+=GraveRitual::bonus($state,$attacker,'strong');
             $result += self::getLineStrikeAuraBonus($state, $attacker);
         }
 
@@ -761,7 +762,7 @@ final class CardStats
 
     public static function isOffensiveAction(string $type): bool
     {
-        return in_array($type, ['strike', 'uchr', 'shot', 'throw', 'discharge', 'magic', 'cast', 'tap', 'impact', 'execute', 'dissonance', 'sand_claws', 'bomb_shot', 'particle', 'life_gift'], true);
+        return in_array($type, ['paired_ranged', 'strike', 'uchr', 'shot', 'throw', 'discharge', 'magic', 'cast', 'tap', 'impact', 'execute', 'dissonance', 'sand_claws', 'bomb_shot', 'particle', 'life_gift'], true);
     }
 
     public static function canFriendlyFireMode(CardInstance $card, string $mode): bool

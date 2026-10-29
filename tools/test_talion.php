@@ -300,7 +300,7 @@ $state = talionState(
 );
 talionApplyStrike($state, 'strong');
 talionAssert(($state->getCard(5)->markers['incarnation']['value'] ?? null) === 1, 'No-incarnation creature can receive a Talion token.');
-talionAssert(($state->getCard(5)->markers['incarnation']['threshold'] ?? null) === 0, 'No-incarnation token marker should have no threshold.');
+talionAssert(!array_key_exists('threshold',$state->getCard(5)->markers['incarnation']), 'No-incarnation token marker should have no threshold.');
 $events = (new TurnProcessor($state, new Engine()))->processIncarnation(GameState::PLAYER_HOST);
 talionAssert(($state->getCard(5)->markers['incarnation']['value'] ?? null) === 1, 'Start-turn incarnation should ignore no-incarnation Talion token markers.');
 talionAssert(empty($state->getCard(5)->flags['incarnation_ready']), 'No-incarnation card should not become incarnation-ready.');

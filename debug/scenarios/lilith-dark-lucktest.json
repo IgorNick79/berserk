@@ -1,0 +1,74 @@
+{
+  "cards": [
+    {
+      "owner": "host",
+      "ukid": "s1_160"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_173"
+    }
+  ],
+  "deck": [
+    {
+      "owner": "host",
+      "ukid": "s1_160"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_168"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_137"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_149"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_141"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_151"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_157"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_159"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_161"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_164"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_165"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_167"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_144"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_155"
+    },
+    {
+      "owner": "host",
+      "ukid": "s1_170"
+    }
+  ]
+}

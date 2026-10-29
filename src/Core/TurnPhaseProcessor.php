@@ -211,6 +211,7 @@ final class TurnPhaseProcessor
             $this->state->battle[Tremor::PENDING]['resume_turn'] = true;
             return;
         }
+        if (!empty($this->state->battle['grave_ritual'])) return;
         if (CardHealing::waiting($this->state)) return;
         if (!empty($this->state->battle['pending_cell_effect_direction'])) return;
         $tp = $this->state->battle['turn_phase'] ?? null;
@@ -454,6 +455,7 @@ final class TurnPhaseProcessor
             ];
         }
 
+        foreach($this->state->cards as $source)if($source->owner===$activeKey&&CardHealing::live($source)&&!CardStats::isDisabled($source))foreach($source->effectiveProp()['turn_start']??[] as $cfg)if(($cfg['type']??'')==='grave_ritual')$queue[]=['id'=>'grave_ritual:'.$source->instanceId,'type'=>'grave_ritual','label'=>'Свойство','card_id'=>$source->instanceId,'payload'=>$cfg];
         // 7. turn_start-абилки (кроме get_coins)
         $tsCards = [];
         foreach ($this->state->cards as $card) {
@@ -465,7 +467,7 @@ final class TurnPhaseProcessor
 
             $hasNonCoin = false;
             foreach ($card->effectiveProp()['turn_start'] as $eff) {
-                if (($eff['type'] ?? '') !== 'get_coins') { $hasNonCoin = true; break; }
+                if (!in_array($eff['type']??'',['get_coins','grave_ritual'],true)) { $hasNonCoin = true; break; }
             }
             if ($hasNonCoin) $tsCards[] = $card;
         }
@@ -507,7 +509,7 @@ final class TurnPhaseProcessor
             if (!is_array($effects)) continue;
 
             foreach ($effects as $eff) {
-                if (($eff['type'] ?? '') === 'get_coins') continue;
+                if (in_array($eff['type']??'',['get_coins','grave_ritual'],true)) continue;
 
                 if ($propKey === 'opponent_turn_start' && CardStats::isDisabled($card)) {
                     $passiveLight = ($eff['type'] ?? '') === 'cell_effect'
@@ -562,6 +564,7 @@ final class TurnPhaseProcessor
         [$base, $sub] = explode(':', $task['type'] . ':') + ['', ''];
 
         return match ($base) {
+            'grave_ritual' => (new GraveRitual($this->state,$this->engine))->start($this->state->getCard($task['card_id']),$task['payload']),
             'deck_reorder' => ['skip_ack'=>!(new DeckReorderProcessor($this->state,$this->engine))->start($this->state->getCard($task['card_id']),$task['count'])],
             'tremor_move' => Tremor::startMoves($this->state, $passiveKey),
             'poison'              => $this->executePoison($activeKey),
@@ -998,6 +1001,7 @@ final class TurnPhaseProcessor
             return true;
         }
         if (!empty($this->state->battle[DeckReorderProcessor::PENDING])) return true;
+        if (!empty($this->state->battle['grave_ritual'])) return true;
         if (CardHealing::waiting($this->state)) return true;
         $battle = $this->state->battle;
         [$base] = explode(':', $type . ':') + [''];

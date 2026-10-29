@@ -304,6 +304,7 @@ final class DamageResolver
 
     public function checkGameOver(): void
     {
+        if (!empty($this->state->battle['paired_ranged'])) return;
         if (WormIncarnation::defersElimination($this->state) || !empty($this->state->battle['abyss_movement']['current']) || !empty($this->state->battle['alvalind_recoil']) || (($this->state->battle['alvalind_end']['stage']??'')==='resolving')) return;
         if ($this->state->winner !== null) return;
 

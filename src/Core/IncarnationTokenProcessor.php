@@ -17,6 +17,22 @@ final class IncarnationTokenProcessor
         private Engine $engine,
     ) {}
 
+    /** Tokens alone never grant the Incarnation ability. */
+    public function grant(CardInstance $card): void
+    {
+        if (!isset($card->markers['incarnation'])) {
+            $inc=$card->effectiveProp()['incarnation']??null;
+            $marker=['value'=>0];
+            if ($inc!==null) {
+                $marker['threshold']=is_array($inc)?(int)($inc['turns']??3):(int)$inc;
+                $marker['open']=is_array($inc)&&!empty($inc['open']);
+            }
+            $card->markers['incarnation']=$marker;
+        }
+        $value=++$card->markers['incarnation']['value'];
+        $this->onTokenGranted($card,$value);
+    }
+
     public function onTokenGranted(CardInstance $card, int $newValue): void
     {
         $config = $card->effectiveProp()['on_incarnation_token'] ?? null;

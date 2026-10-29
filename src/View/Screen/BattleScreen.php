@@ -1418,6 +1418,7 @@ final class BattleScreen
             || $type === 'destroy_self_and_target'
             || $type === 'freeze_moves'
             || $type === 'multi_discharge'
+            || $type === 'paired_ranged'
             || $type === 'particle'
             || $type === 'damage_ranged'
             || $type === 'life_gift'

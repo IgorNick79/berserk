@@ -74,6 +74,7 @@ final class ActionResolver
             return Result::error(Strangulation::count($attacker) >= 2 ? 'Атаки запрещены маркерами удушения' : 'Карта не может атаковать до конца хода');
         }
 
+        if ($type==='paired_ranged')return (new PairedRanged($this->state,$this->engine))->start($attacker,$action);
         if ($type === 'place_cell_marker') {
             return $this->startPlaceCellMarker($attacker, $action, $cardId, $playerKey);
         }
@@ -1323,6 +1324,11 @@ final class ActionResolver
         }
         return $this->resolveDamage($attacker, $target, $context['action'], $context['type'],
             $attacker->instanceId, $target->instanceId, $context['player'], $context['forced_coin_spend'], true, true);
+    }
+
+    public function triggeredRanged(CardInstance $source,CardInstance $target,array $action):Result {
+        $this->engine->revealCard($this->state,$target);$action['no_close']=true;$action['_coin_post_combat']=true;
+        return $this->resolveDamage($source,$target,$action,$action['type'],$source->instanceId,$target->instanceId,$source->owner);
     }
 
     public function triggeredDischarge(CardInstance $source, CardInstance $target, array $action): Result
@@ -2583,31 +2589,7 @@ final class ActionResolver
 
     private function addIncarnationToken(CardInstance $card): void
     {
-        if (!isset($card->markers['incarnation'])) {
-            $inc = $card->effectiveProp()['incarnation'] ?? null;
-            $threshold = 0;
-            $open = false;
-
-            if (is_array($inc)) {
-                $threshold = (int) ($inc['turns'] ?? 0);
-                $open = !empty($inc['open']);
-            } elseif ($inc !== null) {
-                $threshold = (int) $inc;
-            }
-
-            $card->markers['incarnation'] = [
-                'value' => 0,
-                'threshold' => $threshold,
-                'open' => $open,
-            ];
-        }
-
-        $card->markers['incarnation']['value'] =
-            (int) ($card->markers['incarnation']['value'] ?? 0) + 1;
-
-        $newValue = (int) $card->markers['incarnation']['value'];
-        (new IncarnationTokenProcessor($this->state, $this->engine))
-            ->onTokenGranted($card, $newValue);
+        (new IncarnationTokenProcessor($this->state,$this->engine))->grant($card);
     }
 
     private function recordTalionIncarnationToken(CardInstance $source, CardInstance $target): void

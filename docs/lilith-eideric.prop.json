@@ -1,0 +1,32 @@
+{
+  "zot": true,
+  "turn_start": [
+    {
+      "type": "grave_ritual",
+      "demon_class": "Демон",
+      "undead_class": "Нежить",
+      "strong": 1,
+      "ova": 1
+    }
+  ],
+  "actions": [
+    {
+      "key": "paired_ranged",
+      "name": "Разряд на 1, метание на 1",
+      "type": "paired_ranged",
+      "tap": true,
+      "effects": [
+        {
+          "type": "discharge",
+          "value": 1,
+          "name": "Разряд на 1"
+        },
+        {
+          "type": "throw",
+          "value": 1,
+          "name": "Метание на 1"
+        }
+      ]
+    }
+  ]
+}

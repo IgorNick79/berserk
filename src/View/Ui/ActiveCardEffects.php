@@ -9,6 +9,8 @@ final class ActiveCardEffects
     public static function forCard(CardInstance $card, GameState $state): array
     {
         $rows = []; $groups = [];
+        if($bonus=\Berserk\Core\GraveRitual::bonus($state,$card,'ova'))$rows[]='ОВА +'.$bonus;
+        if($bonus=\Berserk\Core\GraveRitual::bonus($state,$card,'strong'))$rows[]='Сильный удар +'.$bonus;
         if ($card->zone === CardInstance::ZONE_FIELD && !$card->dying && $card->hp > 0
             && count(CardStats::getLineGroup($state, $card)) > 1) {
             $rows[] = 'Строй';

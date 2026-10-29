@@ -68,3 +68,8 @@ www/assets/cards/
 !/debug/scenarios/alvalind.json
 
 !/debug/scenarios/deck_reorder.json
+
+!/debug/scenarios/lilith.json
+
+!/debug/scenarios/lilith-dark-manual.json
+!/debug/scenarios/lilith-dark-lucktest.json

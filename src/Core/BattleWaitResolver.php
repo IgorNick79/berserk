@@ -84,6 +84,8 @@ final class BattleWaitResolver
                 return self::decision($key, $pending['owner'] ?? null);
             }
             if (isset(self::CARD_PENDING[$key])) return self::cardDecision($state, $key, $pending[self::CARD_PENDING[$key]] ?? null);
+            if ($key==='pending_paired_ranged') {if(!empty($battle[$key]))return self::decision($key,$pending['owner']);return self::cardDecision($state,'strike.pending_choice',$battle['strike']['pending_choice']['died_id']);}
+            if ($key==='pending_grave_ritual') return self::decision($key,$pending['owner']);
             if ($key==='pending_deck_reorder') return self::decision($key,$pending['owner']);
             if ($key==='pending_alvalind_end') {
                 if (!empty($battle['pending_alvalind_end'])) return self::decision($key,$battle[$key]['owner']);
