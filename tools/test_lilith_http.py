@@ -23,6 +23,7 @@ with tempfile.TemporaryDirectory(prefix='lilith-http-') as temp:
   assert not request('player','choose_grave_ritual',payload)['ok']
   assert request('host','choose_grave_ritual',payload)['ok']
   assert not request('host','choose_grave_ritual',payload)['ok']
+  p=state()['battle']['pending_grave_ritual'];assert p['result'];assert request('host','choose_grave_ritual',{'operation_id':p['id'],'ack':1})['ok']
   assert not state()['battle'].get('grave_ritual')
   assert request('host','action',{'card_id':1,'action_key':'paired_ranged'})['ok']
   for target in [2,3]:

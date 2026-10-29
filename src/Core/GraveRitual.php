@@ -13,7 +13,7 @@ final class GraveRitual {
   $this->s->battle['grave_ritual_done'][]=$id;
   $peek=(new ProphecyProcessor($this->s,$this->e))->peek($source->owner,1);if(!$peek)return ['skip_ack'=>true];
   $card=$peek['cards'][0];$demon=CardStats::hasClass($card,$cfg['demon_class']);$undead=CardStats::hasClass($card,$cfg['undead_class']);
-  $this->s->battle['grave_ritual']=['id'=>$id,'owner'=>$source->owner,'source_id'=>$source->instanceId,'stage'=>'milled','demon'=>$demon,'undead'=>$undead,'cfg'=>$cfg];
+  $this->s->battle['grave_ritual']=['id'=>$id,'owner'=>$source->owner,'source_id'=>$source->instanceId,'milled_id'=>$card->instanceId,'stage'=>'milled','demon'=>$demon,'undead'=>$undead,'cfg'=>$cfg];
   (new ZoneManager($this->s))->toGraveyard($card);
   $this->advance();if(!empty($this->s->battle['grave_ritual']))$this->s->battle['grave_ritual_waiting']=true;return ['skip_ack'=>true];
  }
@@ -27,16 +27,25 @@ final class GraveRitual {
    if($p['demon']){
     $ids=[];foreach($this->s->cards as $c)if($c->owner===$p['owner']&&$c->zone==='graveyard'&&CardStats::hasClass($c,$cfg['undead_class']))$ids[]=$c->instanceId;
     if(count($ids)>1){$this->s->battle[self::PENDING]=['id'=>$p['id'],'owner'=>$p['owner'],'candidates'=>$ids];return;}
-    if($ids)(new IncarnationTokenProcessor($this->s,$this->e))->grant($this->s->getCard($ids[0]));
+    if($ids){$this->s->battle['grave_ritual']['token_id']=$ids[0];(new IncarnationTokenProcessor($this->s,$this->e))->grant($this->s->getCard($ids[0]));}
    }
   }
   foreach($this->s->battle as $k=>$v)if(str_starts_with($k,'pending_')&&!empty($v))return;
+  if($p['stage']!=='acknowledged'){
+   $this->s->battle[self::PENDING]=['id'=>$p['id'],'owner'=>$p['owner'],'token_id'=>$this->s->battle['grave_ritual']['token_id']??null,'result'=>true,'source_id'=>$p['source_id'],'milled_id'=>$p['milled_id'],'undead'=>$p['undead'],'demon'=>$p['demon'],'cfg'=>$cfg];
+   return;
+  }
   unset($this->s->battle['grave_ritual']);
   if(!empty($this->s->battle['grave_ritual_waiting'])){unset($this->s->battle['grave_ritual_waiting']);(new TurnPhaseProcessor($this->s,$this->e))->resume();}
  }
  public function choose(string $owner,Command $cmd):Result {
-  $p=$this->s->battle[self::PENDING]??null;$c=$this->s->getCard((int)$cmd->get('target_id'));
+  $p=$this->s->battle[self::PENDING]??null;
+  if($p&&!empty($p['result'])){
+   if($p['owner']!==$owner||$cmd->get('operation_id')!==$p['id']||!$cmd->get('ack'))return Result::error('Устаревшее подтверждение');
+   unset($this->s->battle[self::PENDING]);$this->s->battle['grave_ritual']['stage']='acknowledged';$this->advance();$this->s->bumpVersion();return Result::ok();
+  }
+  $c=$this->s->getCard((int)$cmd->get('target_id'));
   if(!$p||$p['owner']!==$owner||$cmd->get('operation_id')!==$p['id']||!$c||!in_array($c->instanceId,$p['candidates'],true)||$c->zone!=='graveyard'||$c->owner!==$owner)return Result::error('Устаревший выбор нежити');
-  unset($this->s->battle[self::PENDING]);(new IncarnationTokenProcessor($this->s,$this->e))->grant($c);$this->advance();$this->s->bumpVersion();return Result::ok();
+  unset($this->s->battle[self::PENDING]);$this->s->battle['grave_ritual']['token_id']=$c->instanceId;(new IncarnationTokenProcessor($this->s,$this->e))->grant($c);$this->advance();$this->s->bumpVersion();return Result::ok();
  }
 }

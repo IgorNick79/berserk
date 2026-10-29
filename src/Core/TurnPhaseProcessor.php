@@ -455,7 +455,7 @@ final class TurnPhaseProcessor
             ];
         }
 
-        foreach($this->state->cards as $source)if($source->owner===$activeKey&&CardHealing::live($source)&&!CardStats::isDisabled($source))foreach($source->effectiveProp()['turn_start']??[] as $cfg)if(($cfg['type']??'')==='grave_ritual')$queue[]=['id'=>'grave_ritual:'.$source->instanceId,'type'=>'grave_ritual','label'=>'Свойство','card_id'=>$source->instanceId,'payload'=>$cfg];
+        foreach($this->state->cards as $source)if($source->owner===$activeKey&&CardHealing::live($source)&&!CardStats::isDisabled($source))foreach($source->effectiveProp()['turn_start']??[] as $cfg)if(($cfg['type']??'')==='grave_ritual')$queue[]=['id'=>'grave_ritual:'.$source->instanceId,'type'=>'grave_ritual','label'=>($this->engine->cardNames([$source->ukid])[$source->ukid]??($cfg['label']??'Лилит и Эйдерик')),'card_id'=>$source->instanceId,'payload'=>$cfg];
         // 7. turn_start-абилки (кроме get_coins)
         $tsCards = [];
         foreach ($this->state->cards as $card) {

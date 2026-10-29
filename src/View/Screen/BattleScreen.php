@@ -1577,11 +1577,12 @@ final class BattleScreen
             if (!empty($card->flags['incarnation_ready'])) $labels[] = 'Инкарнация: готов';
             elseif (isset($card->markers['incarnation'])) {
                 $marker = $card->markers['incarnation'];
-                $labels[] = 'Инкарнация: ' . ($marker['value'] ?? 0) . '/' . ($marker['threshold'] ?? '?');
+                $labels[] = 'Инкарнация: ' . ($marker['value'] ?? 0) . (!empty($marker['threshold']) ? '/' . $marker['threshold'] : '');
             }
             if (!empty($card->flags['valhalla_active']) || isset($card->markers['valhalla'])) $labels[] = 'Вальхалла';
+            $html .= '<div class="battle-pile-markers">';
             foreach ($labels as $label) $html .= '<span class="pile-marker">' . htmlspecialchars($label, ENT_QUOTES) . '</span>';
-            $html .= '</div>';
+            $html .= '</div></div>';
         }
         $html .= '</div>';
         if ($cards === []) $html .= '<p class="wait">Пусто</p>';

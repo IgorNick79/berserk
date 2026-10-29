@@ -2362,3 +2362,9 @@ body.battle-page {
 .battle-page .panel-information-icon{display:block;flex:0 0 24px;width:24px;height:24px}
 @media(hover:none){.battle-page .panel-card-close{opacity:1}}
 @media(prefers-reduced-motion:reduce){.battle-page .panel-card-close{transition:none}}
+
+/* Reserve the same marker line for every graveyard/exile entry. */
+.battle-pile-entry{align-self:stretch}
+.battle-pile-entry>.battle-pile-card{flex:1 0 auto}
+.battle-pile-markers{display:flex;flex-wrap:wrap;align-items:flex-start;gap:4px;min-height:22px;flex:0 0 auto}
+.battle-pile-markers .pile-marker{margin:0;line-height:18px}
