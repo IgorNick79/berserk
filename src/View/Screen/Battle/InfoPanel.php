@@ -1233,6 +1233,8 @@ final class InfoPanel
                     } else {
                         $resultText .= '<br>По цели: <b>' . $targetTotal . '</b> урона';
                     }
+                } else {
+                    $resultText .= '<br>По цели: <b>0</b> урона';
                 }
 
                 if (!empty($strike['defend_blocked_by_weak'])) {
@@ -2023,7 +2025,7 @@ final class InfoPanel
 
         if ($type === 'strike_value' && isset($result['after'])) {
             $reduction = (int) ($result['before'] ?? $result['after']) - (int) $result['after'];
-            if ($reduction > 0) return $name . ': урон уменьшен на ' . $reduction;
+            if ($reduction > 0) return $name . ': величина удара ' . (int)$result['before'] . ' → ' . (int)$result['after'] . ' (−' . $reduction . ')';
             return $name . ': величина урона — ' . (int) $result['after'];
         }
 
@@ -2067,7 +2069,7 @@ final class InfoPanel
 
         if ($type === 'damage_cap') {
             $cap = (int) ($result['after_cap'] ?? ($result['cap'] ?? 0));
-            return $name . ': лимит урона -> ' . $cap;
+            return $name . ': максимальный урон удара — ' . $cap;
         }
 
         if ($type === 'redistribute_wounds') {

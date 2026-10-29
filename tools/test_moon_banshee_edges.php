@@ -63,5 +63,16 @@ mbCheck(mbCmd($s,'end_turn')->success&&$s->getCard(2)->hp===19&&$s->getCard(2)->
 $s=mbState();TemporaryHealth::apply($s->getCard(2),-3,'host');(new ZoneManager($s))->toExile($s->getCard(2));
 mbCheck($s->getCard(2)->hpMax===20&&$s->getCard(2)->modifiers===[],'exile restores maximum');
 $s=mbState(true);$s->battle['strike']['attack_dice']=2;$s->battle['strike']['result']['attack']='weak';mbStack($s);mbResolve($s);
-foreach(['host','player']as$viewer){$_GET=$_SESSION=[];$html=(new BattleScreen(new Template(__DIR__.'/../templates')))->prepare($s,$viewer,$viewer,null,[],[])['data']['info_panel_html'];mbCheck(str_contains($html,'Крик баньши: урон уменьшен на 1'),'numeric result wording '.$viewer);}
+foreach(['host','player']as$viewer){$_GET=$_SESSION=[];$html=(new BattleScreen(new Template(__DIR__.'/../templates')))->prepare($s,$viewer,$viewer,null,[],[])['data']['info_panel_html'];mbCheck(str_contains($html,'Крик баньши: величина удара'),'numeric result wording '.$viewer);}
+// Glorm + Banshee: a cap of one is not one inflicted wound when the strike value became zero.
+$s=mbState(true);$s->getCard(1)->strikeWeak=1;$s->battle['strike']['attack_dice']=2;$s->battle['strike']['result']['attack']='weak';
+$s->getCard(4)->owner='player';$s->getCard(4)->prop=['instants'=>[['key'=>'flash','name'=>'Отвлекающая вспышка','trigger'=>'combat','phase'=>'setter','effect'=>['type'=>'damage_cap','value'=>1,'self_wound'=>1]]]];
+mbStack($s);mbCheck(mbCmd($s,'combat_instant_play',['card_id'=>4,'instant_key'=>'flash'],'player')->success,'Glorm stacks with Banshee');mbResolve($s);
+mbCheck($s->getCard(2)->hp===20,'Banshee zero strike remains zero under Glorm cap');
+foreach(['host','player']as$viewer){$_GET=$_SESSION=[];$html=(new BattleScreen(new Template(__DIR__.'/../templates')))->prepare($s,$viewer,$viewer,null,[],[])['data']['info_panel_html'];
+ mbCheck(str_contains($html,'По цели: <b>0</b> урона'),'zero final damage is explicit '.$viewer);
+ mbCheck(str_contains($html,'Крик баньши: величина удара 1 → 0'),'Banshee before/after values '.$viewer);
+ mbCheck(str_contains($html,'максимальный урон удара — 1'),'Glorm cap is described as a maximum '.$viewer);
+}
+
 echo 'Moon Banshee edges: '.($count-$edgeStart)." additional checks passed\n";

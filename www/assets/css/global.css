@@ -1862,9 +1862,9 @@ body.battle-page > .screen {
 .battle-page .instant-control-picker { display: contents; }
 .battle-page .instant-control-picker::details-content { display: contents; }
 .battle-page .instant-control-picker:not([open]) > .instant-control-options { display: none; }
-.battle-page .instant-control-actions > [data-instant-pass] { flex: 1 1 0; min-width: 0; text-align: center; }
+.battle-page .instant-control-actions > [data-instant-pass], .battle-page .instant-control-actions > [data-instant-local-pass] { flex: 1 1 0; min-width: 0; text-align: center; }
 .battle-page .instant-control-picker > summary { grid-column: 1; grid-row: 2; display: block; text-align: center; cursor: pointer; list-style: none; }
-.battle-page .instant-control-actions:has(.instant-control-picker) > [data-instant-pass] { grid-column: 2; grid-row: 2; }
+.battle-page .instant-control-actions:has(.instant-control-picker) > [data-instant-pass], .battle-page .instant-control-actions:has(.instant-control-picker) > [data-instant-local-pass] { grid-column: 2; grid-row: 2; }
 .battle-page .instant-control-picker > summary::-webkit-details-marker { display: none; }
 .battle-page .instant-control-options { grid-column: 1 / -1; grid-row: 1; min-width: 0; max-height: min(28vh, 220px); overflow-y: auto; margin-bottom: 2px; }
 .battle-page .instant-control-options .task-card__hint { color: inherit; opacity: .85; }
@@ -2380,3 +2380,5 @@ body.battle-page {
 .battle-page .death-choice-buttons .button.catcher-dice { display: inline-flex !important; width: auto !important; min-width: 0; flex: 0 0 auto !important; padding: 6px 12px; }
 .battle-page [data-instant-local-pass] { background: linear-gradient(#68add4,#276389) !important; color: #fff !important; }
 .battle-page .match-pause-countdown { color: #fff; }
+.battle-page .death-choice-buttons:has(.catcher-dice) > .button { height: 40px; min-height: 40px; box-sizing: border-box; vertical-align: middle; display: inline-flex; align-items: center; justify-content: center; line-height: 1.2; }
+.battle-page .catcher-dice .panel-dice-face { width: 24px; height: 24px; }
