@@ -1427,6 +1427,13 @@ final class InstantProcessor
             ? (new StrikeResolver($this->state, $this->engine))->getMageRedirectOptions($defenderKey)
             : [];
 
+        $target=$this->state->getCard((int)$strike['target_id']);
+        $validDefenders=$attacker&&$target&&$defenderKey!==null
+            ?(new StrikeResolver($this->state,$this->engine))->findDefenders($attacker,$target,$defenderKey):[];
+        $strike['defenders'] = array_values(array_filter($strike['defenders']??[],function($id)use($validDefenders){
+            $card=$this->state->getCard((int)$id);
+            return in_array((int)$id,$validDefenders,true)&&$card&&$card->hp>0&&!$card->dying;
+        }));
         if (!empty($strike['defenders']) || !empty($mageOptions)) {
             $strike['state'] = 'waiting_defender';
             return;

@@ -53,9 +53,9 @@ final class DiceChoiceChoice implements ChoiceHandlerInterface
         $buttons=[];
         foreach(['plus:own'=>'+1 к своему кубику','minus:own'=>'−1 от своего кубика','plus:enemy'=>'+1 к чужому кубику','minus:enemy'=>'−1 от чужого кубика']as$key=>$label){
             $mine=str_ends_with($key,':own');
-            $buttons[]=['label'=>$label,'label_html'=>($mine?$own:$enemy).'<span>'.$label.'</span>','url'=>$url.$key,'class'=>'catcher-dice '.($mine?'catcher-own':'catcher-enemy')];
+            $buttons[]=['label'=>$label,'label_html'=>($mine?$own:$enemy).'<span>'.(str_starts_with($key,'plus:')?'+1':'−1').'</span>','url'=>$url.$key,'class'=>'catcher-dice '.($mine?'catcher-own':'catcher-enemy')];
         }
-        $buttons[]=['label'=>'Переброс обоих','url'=>$url.'reroll:any','class'=>'catcher-reroll'];
+        $buttons[]=['label'=>'Переброс','url'=>$url.'reroll:any','class'=>'catcher-reroll'];
         $buttons[]=['label'=>'Отмена','url'=>$baseUrl.'&cmd=cancel_pending','class'=>'skip'];
         return new PanelSpec(title:$cardName.' — Удача: выбери действие',buttons:$buttons);
     }

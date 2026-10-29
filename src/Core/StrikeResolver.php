@@ -317,6 +317,7 @@ final class StrikeResolver
             'result'      => null,
             'confirmed'   => [],
             'defenders'   => $defenders,
+            'wounds_received' => [],
             'redirect_candidates' => $redirectCandidates,
             'friendly_fire' => $friendlyFire,
         ];
@@ -418,6 +419,7 @@ final class StrikeResolver
             'result'      => null,
             'confirmed'   => [],
             'defenders'   => $defenders,
+            'wounds_received' => [],
             'redirect_candidates' => [],
             'friendly_fire' => $friendlyFire,
             'forced_strike_adjacent' => true,

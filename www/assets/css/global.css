@@ -1851,7 +1851,7 @@ body.battle-page > .screen {
 .battle-page .instant-control { border: 1px solid var(--ip-edge, #aaa); border-radius: 6px; padding: 8px; margin: 0 0 10px; min-width: 0; }
 .battle-page .instant-control h3 { margin: 0 0 6px; font-size: 13px; }
 .battle-page .instant-control h3 { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.battle-page .button.reserve-paid, .battle-page .button.catcher-reroll { background: linear-gradient(#edcb62,#af801f) !important; color: #241b08 !important; }
+.battle-page .button.reserve-paid, .battle-page .button.catcher-reroll { background: linear-gradient(#edcb62,#af801f) !important; color: #fff !important; }
 .battle-page .button.reserve-free, .battle-page .button.catcher-own { background: linear-gradient(#65bb79,#237339) !important; color: #fff !important; }
 .battle-page .button.catcher-enemy { background: linear-gradient(#d66c64,#932f2a) !important; color: #fff !important; }
 .battle-page .button.catcher-dice { display: flex; align-items: center; justify-content: center; gap: 8px; }
@@ -2374,3 +2374,5 @@ body.battle-page {
 .battle-pile-entry>.battle-pile-card{flex:1 0 auto}
 .battle-pile-markers{position:absolute;right:4px;bottom:4px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px;max-width:calc(100% - 8px);pointer-events:none}
 .battle-pile-markers .pile-marker{margin:0;line-height:16px;padding:1px 4px;font-size:10px}
+
+.battle-page [data-instant-pass] { background: linear-gradient(#68add4,#276389) !important; color: #fff !important; }

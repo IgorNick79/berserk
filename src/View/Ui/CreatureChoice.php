@@ -31,8 +31,13 @@ final class CreatureChoice
                 unset($query['target_id']); $hidden ??= $query;
             }
             if ($items) {
-                $spec->buttons = $remaining;
+                $spec->buttons = [];
+                foreach ($remaining as $button) {
+                    if (str_contains($button['url'],'cmd=cancel_pending')) $cancel=$button['url'];
+                    else $spec->buttons[]=$button;
+                }
                 $spec->form = ['type' => 'radio', 'name' => 'target_id', 'items' => $items, 'hidden' => $hidden, 'submit' => 'Выбрать'];
+                if (isset($cancel)) $spec->form['cancel']=$cancel;
             }
         }
         if ($spec->form === null || !in_array($spec->form['name'] ?? '', ['target_id', 'target_ids[]', 'card_id'], true)) return;

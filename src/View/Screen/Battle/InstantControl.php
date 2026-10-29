@@ -22,7 +22,7 @@ final class InstantControl
             ?(new StrikeResolver($s,new Engine()))->getMageRedirectOptions($actor):[];
         $nativeWindow=(($stack['state']??'')==='ordering'&&($wait['source']??null)==='turn_instant_stack')
             ||(($strike['state']??'')==='waiting_instant'&&($wait['source']??null)==='strike.waiting_instant'&&empty($strike['instant_resolution']))||!empty($mageOptions);
-        if($r['can_cancel']&&!$nativeWindow)return array_replace($out,['visible'=>true,'enabled'=>true,'label'=>'Отменить резерв',
+        if($r['can_cancel']&&!$combat&&empty($s->battle['turn_instant_result'])&&!$nativeWindow&&!$out['stack_open']&&empty($s->battle['pending_instant_pick'])&&empty($s->battle['pending_combat_pick'])&&empty($s->battle['pending_forced_strike_adjacent']))return array_replace($out,['visible'=>true,'enabled'=>true,'label'=>'Отменить резерв',
             'command'=>'cancel_instant_reservation','payload'=>['request_id'=>$r['request_id']]]);
         if($r['can_cancel'])$out['cancel']=['command'=>'cancel_instant_reservation','payload'=>['request_id'=>$r['request_id']]];
         $ip=new InstantProcessor($s,new Engine());$potential=[];$command=null;$priority=false;

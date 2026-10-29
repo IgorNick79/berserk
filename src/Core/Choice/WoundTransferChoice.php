@@ -74,6 +74,7 @@ final class WoundTransferChoice implements ChoiceHandlerInterface
 
             $buttons[] = [
                 'label' => $name . $hint,
+                'label_html' => \Berserk\View\Ui\CreatureChoice::item($c,$name,$pw['owner'],true)['label_html'],
                 'url'   => "{$baseUrl}&cmd=wt_source&donor_id={$id}",
             ];
         }
@@ -99,7 +100,7 @@ final class WoundTransferChoice implements ChoiceHandlerInterface
         for ($i = 1; $i <= $max; $i++) {
             $items[] = [
                 'value'   => $i,
-                'label'   => $i . ' HP',
+                'label'   => '❤ ' . $i,
                 'checked' => ($i === $max),
             ];
         }
@@ -141,6 +142,7 @@ final class WoundTransferChoice implements ChoiceHandlerInterface
             $name = $cardsInfo[$c->ukid]['name'] ?? '?';
             $buttons[] = [
                 'label' => $name . ' (' . $c->hp . '/' . $c->hpMax . ')',
+                'label_html' => \Berserk\View\Ui\CreatureChoice::item($c,$name,$pw['owner'],true)['label_html'],
                 'url'   => "{$baseUrl}&cmd=wt_target&target_id={$c->instanceId}",
             ];
         }
@@ -172,7 +174,7 @@ final class WoundTransferChoice implements ChoiceHandlerInterface
         for ($i = 1; $i <= $remaining; $i++) {
             $items[] = [
                 'value'   => $i,
-                'label'   => $i . ' HP',
+                'label'   => '❤ ' . $i,
                 'checked' => ($i === $remaining),
             ];
         }

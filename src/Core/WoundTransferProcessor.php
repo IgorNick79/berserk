@@ -81,6 +81,12 @@ final class WoundTransferProcessor
             'target_id' => null,
         ];
 
+        if ($kind==='hermit' && count($donors)===1) {
+            $id=(int)array_key_first($donors);
+            $this->state->battle['pending_wound_transfer']['donor_id']=$id;
+            $this->state->battle['pending_wound_transfer']['amount']=$donors[$id];
+            $this->state->battle['pending_wound_transfer']['step']='amount';
+        }
         $this->state->bumpVersion();
         return Result::ok(['wt_started:' . $kind]);
     }
@@ -125,10 +131,13 @@ final class WoundTransferProcessor
             }
 
             $max = match ($filter) {
-                'damaged_this_strike' => (int) ($c->flags['damage_taken_this_strike'] ?? 0),
+                'damaged_this_strike' => isset($this->state->battle['strike']['wounds_received'])
+                    ? (int)($this->state->battle['strike']['wounds_received'][$c->instanceId]??0)
+                    : (!empty($this->state->battle['strike'])?(int)($c->flags['damage_taken_this_strike']??0):0),
                 'wounded'             => $c->hpMax - $c->hp,
                 default               => 0,
             };
+            if ($filter==='damaged_this_strike') $max=min($max,max(0,$c->hpMax-$c->hp));
             if ($max <= 0) continue;
 
             if ($maxTransfer > 0 && $max > $maxTransfer) {
@@ -143,6 +152,7 @@ final class WoundTransferProcessor
     {
         if ($skipped = $this->finishSuppressed($playerKey)) return $skipped;
         $pw = $this->state->battle['pending_wound_transfer'] ?? null;
+        if ($pw && $pw['owner']===$playerKey && $pw['step']==='amount' && (int)$pw['donor_id']===(int)$cmd->get('donor_id',0)) return Result::ok(['wt_source_already_chosen']);
         if (!$pw || $pw['step'] !== 'source') return Result::error('Не тот шаг');
         if ($pw['owner'] !== $playerKey)     return Result::error('Не ваш выбор');
 
