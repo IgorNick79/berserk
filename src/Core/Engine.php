@@ -109,6 +109,7 @@ final class Engine
         if ($result->success) (new WormIncarnation($state, $this))->advance();
         if ($result->success) (new CoinAbilities($state, $this))->advance();
         if ($result->success) CombatContinuation::settle($state, $this);
+        if ($result->success) { (new AlvalindProcessor($state,$this))->advanceRecoil(); (new AlvalindProcessor($state,$this))->advanceEnd(); }
         if ($result->success) (new MatriarchOrderProcessor($state, $this))->advance();
         if ($result->success && ($state->battle['turn_timer']['pause_reason'] ?? null) === 'start_resolution') {
             (new TurnProcessor($state, $this))->afterStartPhase($state->battle['turn_timer']['owner']);

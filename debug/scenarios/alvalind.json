@@ -1,0 +1,80 @@
+{
+  "config": {
+    "threshold": 3,
+    "recoil": 2,
+    "base": 1,
+    "per_counter": 2
+  },
+  "end_counts": [
+    0,
+    1,
+    2
+  ],
+  "strike_cases": [
+    {
+      "rolls": "1,6",
+      "armor": false,
+      "expected": 1
+    },
+    {
+      "rolls": "6,1",
+      "armor": false,
+      "expected": 0
+    },
+    {
+      "rolls": "6,1",
+      "armor": true,
+      "expected": 1
+    },
+    {
+      "rolls": "2,1",
+      "armor": false,
+      "expected": 0
+    },
+    {
+      "rolls": "1,6",
+      "armor": false,
+      "initial": 1,
+      "expected": 2
+    }
+  ],
+  "instant_cases": [
+    {
+      "rolls": "6,1,1,6",
+      "expected": 1
+    },
+    {
+      "rolls": "1,6,6,1",
+      "expected": 0
+    }
+  ],
+  "recoil_hp": [
+    10,
+    1
+  ],
+  "prop": {
+    "on_ally_strike_miss": {
+      "own_turn_only": true,
+      "gain_counter": "coins"
+    },
+    "on_counter_threshold": {
+      "counter": "coins",
+      "value": 3,
+      "reset": true,
+      "self_damage": {
+        "type": "impact",
+        "value": 2,
+        "name": "Всё пропало"
+      }
+    },
+    "turn_end_discharge": {
+      "value": 1,
+      "bonus_per_counter": {
+        "counter": "coins",
+        "value": 2
+      },
+      "exclude_adjacent": true,
+      "reset_counter": "coins"
+    }
+  }
+}

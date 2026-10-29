@@ -991,7 +991,7 @@ final class InfoPanel
                     foreach ($dn['targets'] as $t) {
                         $tc = $state->getCard($t['target_id']);
                         $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
-                        $parts[] = $tn . ' −' . $t['damage'];
+                        $parts[] = '<div class="row-spell-wound">' . htmlspecialchars($tn, ENT_QUOTES) . ' <strong>−' . (int)$t['damage'] . ' ❤ HP</strong></div>';
                     }
                     $resultText = $name . ': ' . implode(', ', $parts);
                 } else {
@@ -1133,7 +1133,7 @@ final class InfoPanel
                     foreach ($pt['targets'] as $t) {
                         $tc = $state->getCard((int) $t['target_id']);
                         $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
-                        $parts[] = $tn . ' −' . $t['damage'];
+                        $parts[] = '<div class="row-spell-wound">' . htmlspecialchars($tn, ENT_QUOTES) . ' <strong>−' . (int)$t['damage'] . ' ❤ HP</strong></div>';
                     }
                     $resultText = 'Частица души: ' . implode(', ', $parts);
                 } else {
@@ -1170,11 +1170,9 @@ final class InfoPanel
                     foreach ($rs['targets'] as $t) {
                         $tc = $state->getCard($t['target_id']);
                         $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
-                        $parts[] = $tn . ' −' . $t['damage'];
+                        $parts[] = '<div class="row-spell-wound">' . htmlspecialchars($tn, ENT_QUOTES) . ' <strong>−' . (int)$t['damage'] . ' ❤ HP</strong></div>';
                     }
-                    $resultText = $name
-                        . ': ' . $rs['damage_per_target'] . ' урона на цель: '
-                        . implode(', ', $parts);
+                    $resultText = htmlspecialchars($name, ENT_QUOTES) . ':<br>' . implode('', $parts);
                 } else {
                     $resultText = $name;
                 }

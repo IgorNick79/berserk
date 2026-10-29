@@ -77,6 +77,9 @@ final class DamageResolver
         $target->hp -= $val;
 
         $realDamage = $hpBefore - $target->hp;
+        if ($attacker && in_array($actionType,['strike','answer'],true) && ($this->state->battle['strike']['kind']??'strike')==='strike') {
+            $this->state->battle['strike']['actual_strike_wounds'][$attacker->instanceId]=(int)($this->state->battle['strike']['actual_strike_wounds'][$attacker->instanceId]??0)+max(0,$realDamage);
+        }
         $this->state->historyRecorder?->combatEvent($this->state,'combat.wounds',[
             'target_id'=>$target->instanceId,'source_id'=>$attacker?->instanceId,'type'=>$actionType,
             'wounds'=>$realDamage,'hp_before'=>$hpBefore,'hp_after'=>$target->hp,'armor_before'=>$historyArmorBefore,'armor_after'=>$target->armor,
@@ -301,7 +304,7 @@ final class DamageResolver
 
     public function checkGameOver(): void
     {
-        if (WormIncarnation::defersElimination($this->state) || !empty($this->state->battle['abyss_movement']['current'])) return;
+        if (WormIncarnation::defersElimination($this->state) || !empty($this->state->battle['abyss_movement']['current']) || !empty($this->state->battle['alvalind_recoil']) || (($this->state->battle['alvalind_end']['stage']??'')==='resolving')) return;
         if ($this->state->winner !== null) return;
 
         foreach (['host', 'player'] as $key) {
@@ -353,6 +356,7 @@ final class DamageResolver
                 else foreach($this->findDeathTargets($died,$effect) as $target)$jobs[]=['source_id'=>$died->instanceId,'effect'=>$effect,'target_id'=>$target->instanceId];
             }
             $o=&DeathEffectContext::current($this->state);
+            $this->state->battle['strike']['worm_operation']=$o['id'];
             $o['jobs']=array_merge($jobs,$o['jobs']);return;
         }
 
@@ -388,7 +392,7 @@ final class DamageResolver
 
     private function chooseWormDeathTarget(string $owner,Command $cmd): Result {
         $o=DeathEffectContext::operation($this->state);$pc=$this->state->battle['strike']['pending_choice']??null;
-        if(!$pc||!in_array($o['stage'],['effects','adjacent_wounds'],true)||($this->state->battle['strike']['worm_operation']??null)!==$o['id']||($pc['operation_id']??null)!==$o['id']||$cmd->get('choice_id')!==$pc['choice_id'])return Result::error('Устаревший выбор смерти');
+        if(!$pc||!in_array($o['stage'],['effects','adjacent_wounds','resolving'],true)||($this->state->battle['strike']['worm_operation']??null)!==$o['id']||($pc['operation_id']??null)!==$o['id']||$cmd->get('choice_id')!==$pc['choice_id'])return Result::error('Устаревший выбор смерти');
         $source=$this->state->getCard($pc['died_id']);$id=(int)$cmd->get('target_id',0);
         if(!$source||$source->owner!==$owner||!in_array($id,$pc['candidates'],true))return Result::error('Неверный выбор смерти');
         // Consume this identified choice BEFORE executing effects which may enqueue nested deaths.

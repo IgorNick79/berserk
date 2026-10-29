@@ -1,0 +1,13 @@
+{
+  "directions": [
+    "top",
+    "bottom"
+  ],
+  "deck_sizes": [
+    0,
+    1,
+    2,
+    3,
+    5
+  ]
+}

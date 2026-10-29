@@ -1816,6 +1816,7 @@ final class BattleScreen
             if (!str_starts_with((string) $key, 'pending_')) continue;
             if (empty($val)) continue;
             $anyPending = true;
+            if($key==='pending_deck_reorder'&&($val['owner']??null)!==$playerKey)$val=['owner'=>$val['owner']];
             $lines[] = "{$key}: " . json_encode($val, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         }
         if (!$anyPending) {

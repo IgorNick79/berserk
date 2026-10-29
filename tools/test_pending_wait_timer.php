@@ -35,6 +35,7 @@ function pwWait(GameState $s, ?string $kind, array $players = [], ?string $sourc
 // The fixtures are an explicit contract for every registered key. Card IDs deliberately
 // disagree with a misleading owner/active field to catch fallback heuristics.
 $owned = [
+    'pending_alvalind_end','pending_deck_reorder',
     'pending_temple_dice',
     'pending_tremor', 'pending_card_heal',
     'pending_swamp_queen_summon', 'pending_matriarch_order',
