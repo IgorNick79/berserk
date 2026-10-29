@@ -1,0 +1,18 @@
+{
+  "zov": true,
+  "opponent_turn_end": [
+    {
+      "type": "deck_reorder",
+      "count": 3
+    }
+  ],
+  "actions": [
+    {
+      "key": "discharge",
+      "type": "discharge",
+      "tap": true,
+      "value": 1,
+      "range": 4
+    }
+  ]
+}

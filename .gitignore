@@ -66,3 +66,5 @@ www/assets/cards/
 !/debug/scenarios/temple-combat.json
 
 !/debug/scenarios/alvalind.json
+
+!/debug/scenarios/deck_reorder.json

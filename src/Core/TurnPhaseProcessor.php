@@ -562,6 +562,7 @@ final class TurnPhaseProcessor
         [$base, $sub] = explode(':', $task['type'] . ':') + ['', ''];
 
         return match ($base) {
+            'deck_reorder' => ['skip_ack'=>!(new DeckReorderProcessor($this->state,$this->engine))->start($this->state->getCard($task['card_id']),$task['count'])],
             'tremor_move' => Tremor::startMoves($this->state, $passiveKey),
             'poison'              => $this->executePoison($activeKey),
             'regen'               => $this->executeRegen($activeKey),
@@ -996,6 +997,7 @@ final class TurnPhaseProcessor
             $this->state->battle[Tremor::PENDING]['resume_turn'] = true;
             return true;
         }
+        if (!empty($this->state->battle[DeckReorderProcessor::PENDING])) return true;
         if (CardHealing::waiting($this->state)) return true;
         $battle = $this->state->battle;
         [$base] = explode(':', $type . ':') + [''];
@@ -1109,6 +1111,10 @@ final class TurnPhaseProcessor
         foreach ($this->state->cards as $card) {
             if ($card->owner !== $passiveKey || !SwampQueenProcessor::live($card)) continue;
             foreach ($card->effectiveProp()['opponent_turn_end'] ?? [] as $index => $effect) {
+                if (($effect['type']??'')==='deck_reorder') {
+                    if(!CardStats::isDisabled($card)&&(new ProphecyProcessor($this->state,$this->engine))->peek($passiveKey,(int)($effect['count']??3)))$queue[]=['id'=>'deck_reorder:'.$card->instanceId.':'.$index,'type'=>'deck_reorder','card_id'=>$card->instanceId,'count'=>(int)($effect['count']??3),'label'=>'Просмотр колоды'];
+                    continue;
+                }
                 if (($effect['type'] ?? '') !== 'deck_summon') continue;
                 $processor = new SwampQueenProcessor($this->state, $this->engine);
                 if (!$processor->cells($card,$effect) || !$processor->candidates($card,$effect)) continue;
@@ -1124,7 +1130,7 @@ final class TurnPhaseProcessor
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
             if ($card->dying || CardStats::isDisabled($card)) continue;
             if (empty($card->effectiveProp()['opponent_turn_end'])) continue;
-            if (!array_filter($card->effectiveProp()['opponent_turn_end'], static fn($e) => ($e['type'] ?? '') !== 'deck_summon')) continue;
+            if (!array_filter($card->effectiveProp()['opponent_turn_end'], static fn($e) => !in_array($e['type']??'',['deck_summon','deck_reorder'],true))) continue;
 
             $queue[] = [
                 'id'      => 'ote:' . $card->instanceId,
