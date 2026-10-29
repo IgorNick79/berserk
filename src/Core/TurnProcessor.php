@@ -111,6 +111,9 @@ final class TurnProcessor
             }
         }
 
+        if ((new AlvalindProcessor($this->state,$this->engine))->beforeEnd($playerKey)) {
+            $this->state->bumpVersion();return Result::ok(['alvalind_end_pending']);
+        }
         $journalEndingTurn=(int)($this->state->battle['turn']??0);
         InstantReservation::endPeriod($this->state);
         $oppKey = $this->state->getOpponentKey($playerKey);

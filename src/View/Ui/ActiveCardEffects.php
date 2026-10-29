@@ -9,6 +9,12 @@ final class ActiveCardEffects
     public static function forCard(CardInstance $card, GameState $state): array
     {
         $rows = []; $groups = [];
+        if ($cfg=\Berserk\Core\AlvalindProcessor::config($card)) {
+            $count=\Berserk\Core\AlvalindProcessor::count($card);
+            $bonus=$count*(int)($cfg['per_counter']??2);
+            $rows[]='Счётчики: '.$count;
+            $rows[]='Разряд на '.(int)($cfg['base']??1).($bonus?' (+'.$bonus.')':'');
+        }
         if ($card->zone === CardInstance::ZONE_FIELD && !$card->dying && $card->hp > 0
             && count(CardStats::getLineGroup($state, $card)) > 1) {
             $rows[] = 'Строй';

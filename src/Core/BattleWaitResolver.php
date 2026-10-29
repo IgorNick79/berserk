@@ -84,6 +84,10 @@ final class BattleWaitResolver
                 return self::decision($key, $pending['owner'] ?? null);
             }
             if (isset(self::CARD_PENDING[$key])) return self::cardDecision($state, $key, $pending[self::CARD_PENDING[$key]] ?? null);
+            if ($key==='pending_alvalind_end') {
+                if (!empty($battle['pending_alvalind_end'])) return self::decision($key,$battle[$key]['owner']);
+                return self::cardDecision($state,'strike.pending_choice',$battle['strike']['pending_choice']['died_id']);
+            }
             if ($key === 'abyss_movement') return self::cardDecision($state,'abyss_movement', $battle['abyss_movement']['result']['source_id'] ?? $battle['strike']['pending_choice']['died_id']);
             if ($key === 'pending_incarnation' && WormIncarnation::operation($state) && !empty($battle['strike']['pending_choice'])) return self::cardDecision($state, 'strike.pending_choice', $battle['strike']['pending_choice']['died_id']);
             if (in_array($key, self::OWNER_PENDING, true)) return self::decision($key, $pending['owner'] ?? null);

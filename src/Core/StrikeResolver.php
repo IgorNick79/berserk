@@ -1675,6 +1675,9 @@ final class StrikeResolver
             }
         }
 
+        if ((new AlvalindProcessor($this->state,$this->engine))->completedStrike($strike)) {
+            $this->state->bumpVersion();return Result::ok(['alvalind_recoil']);
+        }
         // Release only after result ACK, wounds, after-instant window and local continuations.
         (new CoinAbilities($this->state, $this->engine))->completeCombat($strike);
         // Закрываем сражение перед возможным обязательным добиванием после удара.
