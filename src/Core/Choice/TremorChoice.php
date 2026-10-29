@@ -26,7 +26,7 @@ final class TremorChoice implements ChoiceHandlerInterface
             if ($moving && $r===$oldRow && $c===$oldCol) {
                 $button['label']='Оставить на месте';$button['class']='tremor-stay';$stay=$button;
             } else {
-                if($moving){$pos=\Berserk\View\Ui\BattlefieldPosition::display($r,$c,$playerKey);$button['label']=($pos['side']==='own'?'Свой':'Вражеский').' '.\Berserk\View\Ui\Coords::rowLabel($pos['row']).':'.$pos['col'];$button['class']='tremor-move-'.$pos['side'];}
+                if($moving){$pos=\Berserk\View\Ui\BattlefieldPosition::display($r,$c,$playerKey);$button['label']=\Berserk\View\Ui\Coords::rowLabel($pos['row']).':'.$pos['col'];$button['class']='tremor-move-'.$pos['side'];}
                 $buttons[]=$button;
             }
         }

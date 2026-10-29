@@ -174,4 +174,4 @@
 
 .battle-page [data-panel-theme] .info-panel .button.tremor-move-own:not(.green-btn){--btn-top:#50ad62;--btn-bottom:#26773b;--btn-edge:#91c78b}
 .battle-page [data-panel-theme] .info-panel .button.tremor-move-enemy:not(.green-btn){--btn-top:#c66a63;--btn-bottom:#913a38;--btn-edge:#df9a8b}
-.battle-page [data-panel-theme] .info-panel .button.tremor-stay:not(.green-btn){--btn-top:#dfbd54;--btn-bottom:#aa7e20;--btn-edge:#f1d680;color:#261d07;text-shadow:none}
+.battle-page [data-panel-theme] .info-panel .button.tremor-stay:not(.green-btn){--btn-top:#dfbd54;--btn-bottom:#aa7e20;--btn-edge:#f1d680;color:#fff;text-shadow:0 1px 1px #0008}
