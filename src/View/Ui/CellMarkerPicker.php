@@ -86,6 +86,7 @@ final class CellMarkerPicker
     public static function decorate(PanelSpec $spec, GameState $state, string $viewerKey, string $baseUrl): void
     {
         if (!$spec->isMine) return;
+        if(($state->battle[\Berserk\Core\Tremor::PENDING]['mode']??null)==='move'&&\Berserk\Core\Choice\ChoiceRegistry::current($state) instanceof \Berserk\Core\Choice\TremorChoice)return;
         $pickerKey = self::identity($state, $viewerKey);
         $pickerTargets = [];
         $targetsByUrl = [];
