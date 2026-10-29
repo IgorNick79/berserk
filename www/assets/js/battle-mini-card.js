@@ -5,6 +5,7 @@
 
     var tip = null, trigger = null, describedNode = null, kind = '', pinned = false;
     var hoverCard = null, zoom = null, timer = 0, hoverReady = false;
+    var hintTimer = 0, hintCandidate = null;
     var nameTimer = 0, fadeTimer = 0, dismissedName = null;
     var pointerX = -1, pointerY = -1, reconcileFrame = 0;
     var lastMoveX = -1, lastMoveY = -1;
@@ -71,6 +72,7 @@
         describedNode = null;
     }
     function closeHint() {
+        clearTimeout(hintTimer); hintCandidate = null;
         clearTimeout(nameTimer);
         clearTimeout(fadeTimer);
         if (tip) tip.classList.remove('is-fading', 'is-entering');
@@ -138,13 +140,21 @@
             }, 1500);
         }
     }
+    function delayedHint(node) {
+        if (hintCandidate === node) return;
+        clearTimeout(hintTimer);
+        hintCandidate = node;
+        hintTimer = setTimeout(function () {
+            if (hintCandidate === node && node.isConnected && !pinned) show(node, 'indicator');
+        }, 250);
+    }
     function contextHint(node) {
         if (document.documentElement.hasAttribute('data-battle-dragging')) return;
         if (pinned || !hoverReady) return;
         if (tip && tip.contains(node)) return;
         var indicator = node.closest ? node.closest('[data-mini-hint]') : null;
         var card = cardAt(node);
-        if (indicator) show(indicator, 'indicator');
+        if (indicator) delayedHint(indicator);
         else if (card && !card.classList.contains('mini-hidden')) { if (dismissedName !== card && (reduced.matches || !hover.matches || card.classList.contains('mini-closed') || zoom && hoverCard === card)) show(card, 'name'); }
         else closeHint();
     }

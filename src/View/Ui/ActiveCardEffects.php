@@ -39,7 +39,9 @@ final class ActiveCardEffects
         }
         foreach ($groups as [$stat, $value, $q]) {
             // Preserve zero/net-zero records: a conditional effect may still carry meaning.
-            $rows[] = CardStats::statLabel($stat) . ' ' . ($value > 0 ? '+' : '') . $value . self::details($q);
+            $label=$stat==='execute'?'Добивание':CardStats::statLabel($stat);
+            if($stat==='execute')unset($q['expire'],$q['timing']);
+            $rows[] = $label . ' ' . ($value > 0 ? '+' : '') . $value . self::details($q);
         }
         $names = ['stun'=>'Оглушение', 'spider_web'=>'Сеть', 'fire'=>'Огонь', 'hunt'=>'Охота',
             'tremor'=>'Дрожь', 'strangulation'=>'Удушение', 'rooted'=>'Обездвижен',

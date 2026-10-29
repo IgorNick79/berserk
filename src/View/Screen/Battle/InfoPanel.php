@@ -266,7 +266,8 @@ final class InfoPanel
         if ($handler !== null) {
             $spec = $handler->spec($state, $playerKey, $cardsInfo, $baseUrl, $role);
             if ($spec !== null) {
-                if ($handler instanceof \Berserk\Core\Choice\CellMarkerChoice
+                if ($handler instanceof \Berserk\Core\Choice\TremorChoice
+                    || $handler instanceof \Berserk\Core\Choice\CellMarkerChoice
                     || $handler instanceof \Berserk\Core\Choice\RangedNeighborTeleportChoice
                     || $handler instanceof \Berserk\Core\Choice\TeleportTargetChoice
                     || $handler instanceof \Berserk\Core\Choice\GatePickChoice) {
