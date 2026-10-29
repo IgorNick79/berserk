@@ -77,7 +77,7 @@ foreach(['host','player']as$active){
         s4Check($xp->query('//*[@data-instant-control]')->length===1 && $xp->query('//footer//*[@data-instant-control]')->length===1,'One instant component in fixed footer, including inspect');
         s4Check($xp->query('//div[contains(@class,"info-panel-content")]//a[contains(@href,"open_turn_instants") and not(ancestor::*[@data-instant-control])]')->length===0,'No old scroll-area launcher');
     }
-    s4Check(InstantControl::project($s,$a,1000)['label']==='Сыграть','Active initiative');$ui=InstantControl::project($s,$p,1000);
+    s4Check(InstantControl::project($s,$a,1000)['label']==='Инстант','Active initiative');$ui=InstantControl::project($s,$p,1000);
     s4Check($ui['label']==='Резерв'&&$ui['cost']==='−1'&&$ui['quota']==='2/2','Paid mode comes from server reservation projection');
     $s->battle[IR::KEY]['used']=2;s4Check(!InstantControl::project($s,$p,1000)['visible'],'Exhausted paid quota hides unavailable offer');
     fRevive($s);$ui=InstantControl::project($s,$p,1000);s4Check($ui['cost']==='Бесплатно'&&$ui['enabled'],'Mandatory free mode survives exhausted paid quota');

@@ -23,7 +23,7 @@ final class InstantControl
         $nativeWindow=(($stack['state']??'')==='ordering'&&($wait['source']??null)==='turn_instant_stack')
             ||(($strike['state']??'')==='waiting_instant'&&($wait['source']??null)==='strike.waiting_instant'&&empty($strike['instant_resolution']))||!empty($mageOptions);
         if($r['can_cancel']&&!$combat&&empty($s->battle['turn_instant_result'])&&!$nativeWindow&&!$out['stack_open']&&empty($s->battle['pending_instant_pick'])&&empty($s->battle['pending_combat_pick'])&&empty($s->battle['pending_forced_strike_adjacent']))return array_replace($out,['visible'=>true,'enabled'=>true,'label'=>'Отменить резерв',
-            'command'=>'cancel_instant_reservation','payload'=>['request_id'=>$r['request_id']]]);
+            'command'=>'cancel_instant_reservation','payload'=>['request_id'=>$r['request_id']],'quota'=>$r['remaining'].'/'.$r['limit']]);
         if($r['can_cancel'])$out['cancel']=['command'=>'cancel_instant_reservation','payload'=>['request_id'=>$r['request_id']]];
         $ip=new InstantProcessor($s,new Engine());$potential=[];$command=null;$priority=false;
         if(($stack['state']??'')==='ordering'){
@@ -48,7 +48,10 @@ final class InstantControl
         }elseif(($s->battle['active']??null)===$actor){
             if ((\Berserk\Core\TurnTimer::snapshot($s,$now)['status']??null)==='expired') return$out;
             if(ChoiceRegistry::current($s)===null&&InstantReservation::safeBoundary($s)&&!InstantReservation::blocks($s,'open_turn_instants')
-                &&$ip->getInstants($actor,'turn','turn'))return array_replace($out,['visible'=>true,'enabled'=>true,'command'=>'open_turn_instants']);
+                &&($available=$ip->getInstants($actor,'turn','turn'))){
+                $options=[];foreach($available as$inst)$options[]=['card_id'=>$inst['card_id'],'label'=>$inst['label'],'command'=>'open_turn_instants','payload'=>['card_id'=>$inst['card_id'],'instant_key'=>$inst['payload']['key']??'']];
+                return array_replace($out,['visible'=>true,'enabled'=>true,'label'=>'Инстант','options'=>$options,'pass'=>'local']);
+            }
             return$out;
         }else{
             return array_replace($out,['visible'=>$r['can_reserve'],'enabled'=>$r['can_reserve'],'label'=>'Резерв',

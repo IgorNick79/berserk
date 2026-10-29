@@ -25,4 +25,15 @@ foreach(['host','player']as$active){
     polishCheck(!str_contains($html,'('.$s->getCard($caster)->row.','.$s->getCard($caster)->col.')'),'Modern instant coordinates');
     polishCheck(str_contains($html,'>Сражение</h3>')&&str_contains($html,'/battle/combat.png'),'Battle heading and icon');
 }
+foreach(['host','player']as$active){
+    $s=fState($active);$source=$active==='host'?3:4;$enemyCaster=$active==='host'?4:3;
+    $s->getCard($source)->prop['instants']=$s->getCard($enemyCaster)->prop['instants'];
+    $before=$s->toArray();$ui=InstantControl::project($s,$active,1000);
+    polishCheck($ui['label']==='Инстант'&&$ui['command']===null&&$ui['pass']==='local'&&!empty($ui['options']),'Active player sees direct choices and local pass');
+    polishCheck($before===$s->toArray(),'Merely offering abilities never opens a stack');
+    $r=irEngine()->apply($s,$active,new \Berserk\Core\Command('open_turn_instants',['card_id'=>999,'instant_key'=>'free']));
+    polishCheck(!$r->success&&empty($s->battle['turn_instant_stack']),'Invalid direct ability cannot leave a new stack');
+    $r=irEngine()->apply($s,$active,new \Berserk\Core\Command('open_turn_instants',['card_id'=>$source,'instant_key'=>'free']));
+    polishCheck($r->success&&($s->battle['pending_instant_pick']['card_id']??null)===$source,'Direct choice atomically opens native stack and chosen target picker');
+}
 echo "Instant UI polish: $checks checks passed\n";

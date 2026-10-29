@@ -2376,3 +2376,7 @@ body.battle-page {
 .battle-pile-markers .pile-marker{margin:0;line-height:16px;padding:1px 4px;font-size:10px}
 
 .battle-page [data-instant-pass] { background: linear-gradient(#68add4,#276389) !important; color: #fff !important; }
+
+.battle-page .death-choice-buttons .button.catcher-dice { display: inline-flex !important; width: auto !important; min-width: 0; flex: 0 0 auto !important; padding: 6px 12px; }
+.battle-page [data-instant-local-pass] { background: linear-gradient(#68add4,#276389) !important; color: #fff !important; }
+.battle-page .match-pause-countdown { color: #fff; }

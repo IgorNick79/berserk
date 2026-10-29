@@ -193,7 +193,7 @@ final class InfoPanel
         $message = $p['mode'] === 'active'
             ? ($p['ready_self'] ? 'Вы готовы, ожидаем соперника' : 'Когда вернётесь, нажмите «Вернулся / Готов».')
             : ($p['initiator'] === $this->playerKey ? 'Ожидаем ответа соперника.' : 'Соперник просит паузу на ' . intdiv($p['duration_seconds'], 60) . ' мин.');
-        $html = '<section class="match-pause-content" data-match-pause-content><h2>' . $heading . '</h2>'
+        $html = '<section class="match-pause-content" data-match-pause-content><div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/pause_160.png" width="24" height="24" alt=""><h2 class="panel-card-title">' . $heading . '</h2></div>'
             . '<div class="match-pause-countdown" data-pause-countdown role="timer">' . sprintf('%02d:%02d', intdiv($seconds, 60), $seconds % 60) . '</div>'
             . '<p data-pause-description>' . $message . '</p><div class="match-pause-decisions">';
         foreach (['accept_pause'=>'Принять', 'reject_pause'=>'Отклонить', 'cancel_pause_request'=>'Отменить запрос'] as $cmd=>$label) {
@@ -369,9 +369,9 @@ final class InfoPanel
             }
             $action='<details class="instant-control-picker"><summary class="button instant-control-main">'.$label.'</summary><div class="task-list instant-control-options">'.$cards.'</div></details>';
         }else $action='<button type="button" class="button instant-control-main" disabled>'.$label.'</button>';
-        $meta=$p['cost']===null?'':'<span class="instant-control-quota" aria-label="Остаток платных резервирований">'.$esc($p['quota']).'</span>';
-        $pass=$p['pass']===null?'':'<a class="button skip" data-instant-pass href="'.$url($p['pass']).'">Пас</a>';
-        return '<section class="instant-control" data-instant-control data-instant-phase="'.$esc($p['phase']).'" aria-label="Инстант"><h3>Инстант '.$meta.'</h3><div class="instant-control-actions">'.$action.$pass.'</div></section>';
+        $meta=$p['quota']===null?'':'<span class="instant-control-quota" aria-label="Остаток платных резервирований">'.$esc($p['quota']).'</span>';
+        $pass=$p['pass']===null?'':($p['pass']==='local'?'<button type="button" class="button skip" data-instant-local-pass>Пас</button>':'<a class="button skip" data-instant-pass href="'.$url($p['pass']).'">Пас</a>');
+        return '<section class="instant-control" data-instant-control data-instant-phase="'.$esc($p['phase']).'" aria-label="Мгновенное действие"><h3>Мгновенное действие '.$meta.'</h3><div class="instant-control-actions">'.$action.$pass.'</div></section>';
     }
 
     private function cancelUrl(): string

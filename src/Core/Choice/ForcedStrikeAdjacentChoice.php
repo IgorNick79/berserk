@@ -45,6 +45,7 @@ final class ForcedStrikeAdjacentChoice implements ChoiceHandlerInterface
                 : '';
             $buttons[] = [
                 'label' => $name . $coords . ' (' . $target->hp . '/' . $target->hpMax . ')',
+                'label_html' => \Berserk\View\Ui\CreatureChoice::item($target,$name,$playerKey,true)['label_html'],
                 'url'   => "{$baseUrl}&cmd=choose_forced_strike_adjacent&target_id={$target->instanceId}",
             ];
         }

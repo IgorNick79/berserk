@@ -272,3 +272,5 @@
     window.addEventListener('resize', function () { paintPile(); });
     root.dataset.battleUiReady = "true";
 }());
+
+document.addEventListener("click",function(event){var button=event.target.closest("[data-instant-local-pass]");if(!button)return;var picker=button.closest("[data-instant-control]").querySelector("details");if(picker)picker.open=false;});

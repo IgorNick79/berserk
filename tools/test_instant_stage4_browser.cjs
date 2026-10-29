@@ -47,9 +47,9 @@ if(!http.created_at||Date.now()/1000-http.created_at>120)throw Error('Fresh runn
    await combat.page.reload();check(await combat.page.locator('.instant-control-main').innerText()==='Инстант','F5 recovers granted combat priority');await combat.ctx.close();
    results.push({width,result:'passed'});
   }
-  const active=await open('host',fixtures.normal);await footer(active.page);await active.page.getByRole('link',{name:'Сыграть',exact:true}).click();
-  await active.page.locator('.instant-control-picker').waitFor();await active.page.locator('.instant-control-main').click();check(await active.page.locator('.instant-control-options .task-card').count()>0,'Active stack uses native ability options');
-  await active.page.reload();check(await active.page.locator('[data-instant-pass]').isVisible(),'F5 recovers open stack and pass');await active.ctx.close();
+  const active=await open('host',fixtures.normal);await footer(active.page);await active.page.locator('.instant-control-main').click();
+  await active.page.locator('.instant-control-picker').waitFor();check(await active.page.locator('.instant-control-options .task-card').count()>0,'Active stack uses native ability options');
+  await active.page.locator('.instant-control-options .task-card').first().click();await active.page.locator('a[href*="cmd=cancel_pending"]').first().click();await active.page.locator('[data-instant-pass]').waitFor();await active.page.reload();check(await active.page.locator('[data-instant-pass]').isVisible(),'F5 recovers open stack and pass');await active.ctx.close();
   check(errors.length===0,'No browser JavaScript errors: '+errors.join(';'));
   fs.writeFileSync(path.join(root,'browser-evidence.json'),JSON.stringify({checks,results,errors},null,2));console.log(`Stage4 browser: ${checks} checks passed`);
  }finally{await browser.close()}

@@ -1521,12 +1521,16 @@ final class InstantProcessor
             return Result::error('Идёт сражение');
         }
 
+        $selected=(int)$cmd->get('card_id',0);
+        $key=(string)$cmd->get('instant_key','');
+        if ($selected && !$this->findAvailableTurnInstant($playerKey,$selected,$key,'turn')) return Result::error('Инстант недоступен');
         if (empty($this->getInstants($playerKey, 'turn', 'turn'))) {
             return Result::error('Нет доступных инстантов');
         }
         $this->openTurnStackWindow($playerKey, ['type' => 'manual'], 'turn');
 
         $this->state->bumpVersion();
+        if ($selected) return $this->playTurnInstant($playerKey,new Command('play_turn_instant',['card_id'=>$selected,'instant_key'=>$key]));
         return Result::ok(['turn_instants_opened']);
     }
 
