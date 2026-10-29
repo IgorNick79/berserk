@@ -12,9 +12,11 @@ final class AlvalindChoice implements ChoiceHandlerInterface {
   if(!$p){$p=$s->battle['strike']['pending_choice']??null;if(!$p)return null;$death=true;$p['owner']=$s->getCard($p['died_id'])->owner;}
   $source=$s->getCard($death?$p['died_id']:$p['source_id']);$title=($info[$source->ukid]['name']??$source->ukid).($death?' — предсмертная способность':' — разряд на '.$p['value']);
   if($p['owner']!==$viewer)return new PanelSpec(title:$title,isMine:false);
-  $buttons=[];foreach($death?$p['candidates']:$p['targets'] as $id){$t=$s->getCard($id);$buttons[]=['label'=>($info[$t->ukid]['name']??$t->ukid).' #'.$id,
-   'url'=>$base.'&cmd='.($death?'choose_alvalind_death&choice_id='.rawurlencode($p['choice_id']):'choose_alvalind_target&operation_id='.rawurlencode($p['id'])).'&target_id='.$id];}
-  return new PanelSpec(title:$title,buttons:$buttons);
+  parse_str((string)parse_url($base,PHP_URL_QUERY),$hidden);
+  $hidden['cmd']=$death?'choose_alvalind_death':'choose_alvalind_target';
+  $hidden[$death?'choice_id':'operation_id']=$death?$p['choice_id']:$p['id'];
+  $items=[];foreach($death?$p['candidates']:$p['targets'] as $id){$t=$s->getCard($id);$items[]=\Berserk\View\Ui\CreatureChoice::item($t,$info[$t->ukid]['name']??$t->ukid,$viewer);}
+  return new PanelSpec(title:$title,form:['type'=>'radio','name'=>'target_id','items'=>$items,'hidden'=>$hidden,'submit'=>'Выбрать','side_toggle'=>true,'side_default'=>'enemy']);
  }
  public function apply(GameState $s,Engine $e,string $viewer,Command $cmd):Result {
   if($cmd->type==='choose_alvalind_death'){

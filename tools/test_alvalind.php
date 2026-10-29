@@ -29,30 +29,31 @@ function settleA(GameState $s,Engine $e):void{
  throw new RuntimeException('Continuation did not settle');
 }
 foreach($d['end_counts']as$count){
- $s=stateA($d['config']);$s->getCard(1)->markers['alvalind']=['value'=>$count];$now=1000;$e=new Engine(clock:static function()use(&$now){return $now;});
+ $s=stateA($d['config']);$s->getCard(1)->coins=$count;$now=1000;$e=new Engine(clock:static function()use(&$now){return $now;});
  TurnTimer::prepare($s,'host');TurnTimer::resume($s,1,'start_phase',1000);
  $s->addCard(new CardInstance(instanceId:5,ukid:'orthogonal',owner:'player',zone:'field',row:3,col:4,hp:10,hpMax:10));
  $r=$e->apply($s,'host',new Command('end_turn'));ac($r->success,'end opens choice');$p=$s->battle['pending_alvalind_end'];
  ac($p['value']===1+2*$count,'discharge strength');ac(!in_array(5,$p['targets'],true),'orthogonal neighbor forbidden');
  ac(!$e->apply($s,'host',new Command('choose_alvalind_target',['operation_id'=>$p['id'],'target_id'=>5]))->success,'server rejects adjacent target');ac(!in_array(3,$p['targets'],true),'diagonal neighbor forbidden');ac(in_array(4,$p['targets'],true),'distant target allowed');
- ac($s->battle['active']==='host','owner not changed');ac($s->battle['turn_timer']['status']==='running','timer continues');
- $effects=\Berserk\View\Ui\ActiveCardEffects::forCard($s->getCard(1),$s);ac(in_array('Разряд на 1'.($count?' (+'.(2*$count).')':''),$effects,true),'UI bonus');
+ ac($s->battle['active']==='host','owner not changed');
+ $spec=(new \Berserk\Core\Choice\AlvalindChoice())->spec($s,'host',[],'/?game=1','host');ac($spec->form['side_default']==='enemy'&&$spec->form['side_toggle']&&$spec->buttons===[],'standard creature radio selector');ac($s->battle['turn_timer']['status']==='running','timer continues');
+ $effects=\Berserk\View\Ui\ActiveCardEffects::forCard($s->getCard(1),$s);ac(!array_filter($effects,static fn($v)=>str_contains($v,'Разряд')||str_contains($v,'Счётчики')),'no discharge or counters in buffs');
  ac(!$e->apply($s,'host',new Command('end_turn'))->success,'repeat end blocked');
  $s=GameState::fromArray(json_decode(json_encode($s->toArray()),true));$now=2000;
  $_SESSION=['debug_roll'=>'4'];Dice::init();$cmd=new Command('choose_alvalind_target',['operation_id'=>$p['id'],'target_id'=>4]);
  ac($e->apply($s,'host',$cmd)->success,'expired timer still allows mandatory choice');ac($s->battle['active']==='host','still own turn during discharge');
- ac($s->getCard(4)->hp===10-(1+2*$count),'native discharge damage');ac(!$e->apply($s,'host',$cmd)->success,'replayed discharge denied');
+ ac($s->getCard(4)->hp===10-(1+2*$count),'native discharge damage');ac(str_contains($s->battle['strike']['action_name'],'Разряд на 1'.($count?' (+'.(2*$count).')':'')),'bonus on resolved ability');ac(!$e->apply($s,'host',$cmd)->success,'replayed discharge denied');
  settleA($s,$e);ac($s->battle['active']==='player','turn transferred');$turn=$s->battle['turn'];(new AlvalindProcessor($s,$e))->advanceEnd();ac($s->battle['turn']===$turn&&$s->battle['active']==='player','completed continuation cannot transfer twice');ac(AlvalindProcessor::count($s->getCard(1))===0,'counters consumed');
 }
 foreach($d['strike_cases']as$case){
- $s=stateA($d['config']);$e=new Engine();$s->getCard(1)->markers['alvalind']=['value'=>$case['initial']??0];if($case['armor']){$s->getCard(3)->armor=10;$s->getCard(3)->armorMax=10;}
+ $s=stateA($d['config']);$e=new Engine();$s->getCard(1)->coins=$case['initial']??0;if($case['armor']){$s->getCard(3)->armor=10;$s->getCard(3)->armorMax=10;}
  $_SESSION=['debug_roll'=>$case['rolls']];Dice::init();ac($e->apply($s,'host',new Command('strike',['card_id'=>2,'target_id'=>3]))->success,'native strike');
  if(($s->battle['strike']['state']??'')==='waiting_defender')ac($e->apply($s,'player',new Command('choose_defender',['defender_id'=>0]))->success,'defender');
  settleA($s,$e);ac(AlvalindProcessor::count($s->getCard(1))===$case['expected'],'counter from actual wounds');
 }
 // Third counter, lethal recoil and nested death choices remain in the original strike continuation.
 foreach($d['recoil_hp'] as $hp){
- $s=stateA($d['config']);$e=new Engine();$s->getCard(1)->hp=$hp;$s->getCard(1)->markers['alvalind']=['value'=>2];
+ $s=stateA($d['config']);$e=new Engine();$s->getCard(1)->hp=$hp;$s->getCard(1)->coins=2;
  if($hp===1){$s->getCard(1)->prop['on_death']=[['type'=>'damage','target'=>'choice','value'=>2]];$s->getCard(3)->hp=1;$s->getCard(3)->prop=['on_death'=>[['type'=>'damage','target'=>'choice','value'=>1]]];}
  $_SESSION=['debug_roll'=>'1,6'];Dice::init();ac($e->apply($s,'host',new Command('strike',['card_id'=>2,'target_id'=>3]))->success,'third counter strike');
  if(($s->battle['strike']['state']??'')==='waiting_defender')ac($e->apply($s,'player',new Command('choose_defender',['defender_id'=>0]))->success,'third defender');

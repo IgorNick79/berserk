@@ -159,3 +159,15 @@
 .battle-page .info-panel-context .info-panel-instants{max-height:none;overflow:visible;padding:0;border:0}
 .battle-page .creature-choice-health{flex:0 0 auto;white-space:nowrap;font-size:12px}
 .battle-page .choice-radio>span:has(.creature-choice-health){flex-wrap:wrap;row-gap:3px}
+
+/* Order Seer: local choice layout and action hierarchy. */
+.battle-page .seer-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:420px;margin:0 auto 12px}
+.battle-page .seer-card-grid .prophecy-card{min-width:0;width:auto;padding:4px;font-size:11px}
+.battle-page .seer-card-grid img{display:block;width:100%;border-radius:4px}
+.battle-page .seer-card-grid .prophecy-card__price,.battle-page .seer-card-grid .prophecy-card__stats{display:none}
+.battle-page .seer-directions{display:flex;gap:20px;justify-content:center;margin:10px 0}
+.battle-page .seer-directions label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.battle-page .seer-directions input[type=radio]{appearance:auto;width:16px;height:16px;margin:0;accent-color:#4c9a55}
+.battle-page .seer-actions{display:flex;justify-content:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+.battle-page [data-panel-theme] .info-panel .button.seer-finish:not(.green-btn){--btn-top:#dfbd54;--btn-bottom:#aa7e20;--btn-edge:#f1d680;color:#261d07;text-shadow:none}
+.battle-page [data-panel-theme] .info-panel .button.seer-cancel:not(.green-btn){--btn-top:#85898e;--btn-bottom:#565b61;--btn-edge:#a7adb4}

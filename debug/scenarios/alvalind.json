@@ -55,10 +55,10 @@
   "prop": {
     "on_ally_strike_miss": {
       "own_turn_only": true,
-      "gain_counter": "miss"
+      "gain_counter": "coins"
     },
     "on_counter_threshold": {
-      "counter": "miss",
+      "counter": "coins",
       "value": 3,
       "reset": true,
       "self_damage": {
@@ -70,11 +70,11 @@
     "turn_end_discharge": {
       "value": 1,
       "bonus_per_counter": {
-        "counter": "miss",
+        "counter": "coins",
         "value": 2
       },
       "exclude_adjacent": true,
-      "reset_counter": "miss"
+      "reset_counter": "coins"
     }
   }
 }

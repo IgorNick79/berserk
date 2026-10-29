@@ -33,7 +33,6 @@ final class Badge
     ];
 
     private const MARKER_NAMES = [
-        'alvalind' => 'Счётчики Алвалинд',
         'hunt'       => 'Охота',
         'stun'       => 'Оглушение',
         'poison'     => 'Яд',

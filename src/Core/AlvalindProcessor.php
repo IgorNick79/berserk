@@ -4,7 +4,7 @@ namespace Berserk\Core;
 final class AlvalindProcessor {
  public const MARKER='alvalind';
  public function __construct(private GameState $s,private Engine $e){}
- public static function count(CardInstance $c):int{return (int)($c->markers[self::MARKER]['value']??0);}
+ public static function count(CardInstance $c):int{return $c->coins;}
  public static function config(CardInstance $c):?array {
   $p=$c->effectiveProp();$miss=$p['on_ally_strike_miss']??null;$threshold=$p['on_counter_threshold']??null;$end=$p['turn_end_discharge']??null;
   if(!is_array($miss)&&!is_array($end))return null;
@@ -34,7 +34,7 @@ final class AlvalindProcessor {
   $source=$this->s->getCard($p['source_id']);
   if(!CardHealing::live($source)||!isset($this->targets($source)[$id]))return Result::error('Недопустимая цель');
   unset($this->s->battle['pending_alvalind_end']);$this->s->battle['alvalind_end']['stage']='resolving';
-  $r=(new ActionResolver($this->s,$this->e))->triggeredDischarge($source,$this->s->getCard($id),['type'=>'discharge','name'=>'Разряд Алвалинд','value'=>$p['value']]);
+  $r=(new ActionResolver($this->s,$this->e))->triggeredDischarge($source,$this->s->getCard($id),['type'=>'discharge','name'=>'Разряд на 1'.($p['value']>1?' (+'.($p['value']-1).')':''),'value'=>$p['value']]);
   if(!$r->success){$this->s->battle['pending_alvalind_end']=$p;$this->s->battle['alvalind_end']['stage']='choice';return $r;}
   $this->s->bumpVersion();return $r;
  }
@@ -49,7 +49,7 @@ final class AlvalindProcessor {
    foreach($this->s->battle as $k=>$v)if(str_starts_with($k,'pending_')&&!empty($v))return;
   }
   if(CombatContinuation::busy($this->s))return;
-  $source=$this->s->getCard($p['source_id']);unset($source->markers[self::MARKER]);
+  $source=$this->s->getCard($p['source_id']);$source->coins=0;
   $this->s->battle['alvalind_end_done'][$p['owner']]=$p['turn_key'];unset($this->s->battle['alvalind_end']);
   $this->e->checkGameOver($this->s);
   if($this->s->status==='battle')(new TurnProcessor($this->s,$this->e))->endTurn($p['owner'],new Command('end_turn'));
@@ -65,9 +65,9 @@ final class AlvalindProcessor {
    if((int)($strike['actual_strike_wounds'][$actor->instanceId]??0)>0)continue;
    foreach($this->s->cards as $source){
     $cfg=self::config($source);if(!$cfg||empty($cfg['miss'])||$source->owner!==$actor->owner||!CardHealing::live($source))continue;
-    $value=self::count($source)+1;$source->markers[self::MARKER]=['value'=>$value];
+    $value=self::count($source)+1;$source->coins=$value;
     if($value<(int)($cfg['threshold']??3))continue;
-    unset($source->markers[self::MARKER]);
+    $source->coins=0;
     $this->s->battle['alvalind_recoil']=['id'=>'recoil-'.($this->s->battle['alvalind_recoil_sequence']=(int)($this->s->battle['alvalind_recoil_sequence']??0)+1),
      'source_id'=>$source->instanceId,'stage'=>'adjacent_wounds','jobs'=>[],'next_choice'=>0,'saved_strike'=>$this->s->battle['strike']];
     $this->s->battle['strike']=['kind'=>'alvalind_recoil','action_name'=>'Всё пропало','state'=>'results','worm_operation'=>$this->s->battle['alvalind_recoil']['id'],'attacker_id'=>$source->instanceId,'target_id'=>$source->instanceId,'defender_id'=>null,
