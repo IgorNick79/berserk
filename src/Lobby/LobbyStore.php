@@ -71,6 +71,7 @@ final class LobbyStore
             'status'=>$row['game_status'] === 'game_over' ? 'Завершена' : match($row['state']) {
                 'open'=>'Открытая','awaiting_confirmation'=>'Ожидает подтверждения','started'=>'Игра идёт',
             },
+            'is_mine'=>$member,
             'can_open'=>$member || $row['state'] === 'open',
             'can_decide'=>$actor === (int)$row['creator_account_id'] && $row['state'] === 'awaiting_confirmation',
         ];

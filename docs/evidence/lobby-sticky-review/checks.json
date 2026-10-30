@@ -1,0 +1,16 @@
+{
+  "fixture": true,
+  "checks": [
+    "expansion without navigation",
+    "menu Escape",
+    "mine/open/history tabs",
+    "1600/1366/390/360 widths",
+    "sticky position stable after actual scroll",
+    "opaque sticky hit test",
+    "first and last expansion without navigation",
+    "menu viewport bounds and stacking",
+    "burger outside panel",
+    "no JavaScript errors"
+  ],
+  "errors": []
+}

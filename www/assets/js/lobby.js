@@ -2,13 +2,14 @@
     'use strict';
     const root = document.getElementById('lobby');
     if (!root) return;
-    const profile=document.querySelector('.profile-menu');
+    const profile=document.querySelector('.lobby-menu');
     document.addEventListener('click',event=>{if(profile && !profile.contains(event.target)) profile.open=false;});
     document.addEventListener('keydown',event=>{if(profile?.open && event.key==='Escape'){profile.open=false;profile.querySelector('summary').focus();}});
     let state = JSON.parse(root.dataset.state || 'null');
     if (!state || root.dataset.wizard === '1') return;
     const content = document.getElementById('content'), notice = document.getElementById('notice');
     const roomId = new URL(location.href).searchParams.get('room');
+    let filter='all'; const expanded=new Set();
     let busy = false, polling = false, epoch = 0, delay = 1500, timer;
     const versions = new Map();
     const node = (tag, text) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; return el; };
@@ -22,24 +23,38 @@
     }
     function button(text, action) { const b = node('button', text); b.type = 'button'; b.disabled = busy; b.addEventListener('click', action); return b; }
     function render() {
+        const scroll=content.scrollTop;
+        const focused=document.activeElement;
+        const focusRoom=focused?.closest('[data-room-id]')?.dataset.roomId;
+        const focusTag=focused?.tagName;
         content.replaceChildren();
         if (state.rooms) {
-            content.append(node('h1', 'Игры'), button('Создать игру', () => location.assign(root.dataset.authenticated === '1' ? 'lobby.php?new=1' : 'auth.php?page=login')));
-            const table = node('table'), head = node('thead'), header = node('tr');
-            ['Игра', 'Вид игры', 'Создана', 'Создатель', 'Второй игрок', 'Статус'].forEach(t => header.append(node('th', t)));
-            head.append(header); table.append(head); const body = node('tbody');
-            state.rooms.forEach(r => {
-                const row = node('tr'); row.dataset.roomId = r.id;
-                ['#' + r.id, r.kind, new Date(r.created_at).toLocaleString('ru-RU'), r.creator, r.second || '—', r.status].forEach(t => row.append(node('td', t)));
-                if (r.can_open) {
-                    row.tabIndex = 0; row.setAttribute('aria-label', 'Открыть комнату ' + r.id);
-                    row.addEventListener('click', () => open(r));
-                    row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(r); } });
-                } else row.setAttribute('aria-disabled', 'true');
-                body.append(row);
+            const actions=node('div'); actions.className='lobby-actions';
+            actions.append(button('⚔ Создать игру',()=>location.assign(root.dataset.authenticated==='1'?'lobby.php?new=1':'auth.php?page=login')));
+            const bot=node('button','♟ Играть с ботом · Скоро');bot.disabled=true;actions.append(bot);
+            const tabs=node('div');tabs.className='lobby-tabs';tabs.setAttribute('aria-label','Фильтр партий');
+            [['all','Все'],['mine','Мои'],['open','Открытые'],['history','История']].forEach(([key,label])=>{
+                const tab=button(label,()=>{filter=key;render();});tab.setAttribute('aria-pressed',String(filter===key));tabs.append(tab);
             });
-            table.append(body); content.append(table);
-            if (!state.rooms.length) content.append(node('p', 'Открытых и активных игр пока нет.'));
+            const list=node('div');list.className='lobby-list';list.tabIndex=0;list.setAttribute('aria-label','Партии');
+            const rooms=state.rooms.filter(r=>filter==='all'||filter==='mine'&&r.is_mine||filter==='open'&&r.state==='open');
+            if(filter==='history')list.append(node('p','История партий пока недоступна'));
+            else rooms.forEach(r=>{
+                const card=node('details');card.className='room-card'+(r.is_mine?' mine':'');card.dataset.roomId=r.id;card.open=expanded.has(r.id);
+                card.addEventListener('toggle',()=>{if(card.isConnected){if(card.open)expanded.add(r.id);else expanded.delete(r.id);}});
+                const summary=node('summary'),title=node('strong','#'+r.id+' · '+r.kind),status=node('span',r.status),players=node('span',r.creator+'  ×  '+(r.second||'Ожидается соперник'));
+                status.className='room-status';players.className='room-players';
+                const date=node('time',new Date(r.created_at).toLocaleDateString('ru-RU'));date.title=new Date(r.created_at).toLocaleString('ru-RU');date.dateTime=r.created_at;
+                summary.append(title,status,players,date);card.append(summary);
+                const panel=node('div');panel.className='room-actions';
+                if(r.can_open)panel.append(button(r.is_mine?'Продолжить':'Присоединиться',()=>open(r)));
+                else panel.append(node('span','Доступных действий пока нет.'));card.append(panel);list.append(card);
+            });
+            if(filter!=='history'&&!rooms.length)list.append(node('p','Пока нет доступных партий. Создайте новую игру.'));
+            const sticky=node('div');sticky.className='lobby-sticky';sticky.append(actions,tabs);
+            content.append(sticky,list);content.scrollTop=scroll;
+            if(focusRoom){const card=[...list.children].find(c=>c.dataset.roomId===focusRoom);card?.querySelector(focusTag==='BUTTON'?'button':'summary')?.focus({preventScroll:true});}
+
         } else {
             const r = state.room; content.append(node('h1', 'Комната #' + r.id), node('p', r.kind + ' · ' + new Date(r.created_at).toLocaleString('ru-RU')));
             if (r.state === 'started') {
