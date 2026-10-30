@@ -207,6 +207,28 @@ body=r'''
             code,created=a.lobby(data={'action':'create','setup_mode':chosen,'csrf':token,'creation_key':os.urandom(16).hex(),'turn_seconds':'0',**fields});check('create mode '+chosen,code==200)
             room=created['room'];check('request mode '+chosen,b.act(room)[0]==200);waiting=a.lobby(room['id'])[1]['room'];check('accept mode '+chosen,a.act(waiting,'accept')[0]==200)
             created_game=a.lobby(room['id'])[1]['room']['game_id'];saved=state(created_game);check('mode reaches existing preparation '+chosen,saved['status'] not in ['mode','settings'] and saved['settings']['battle']['turn_seconds']==0)
+        _,created=create_room(timer='0');wr=created['room'];wid=wr['id'];b.act(wr);pending=a.lobby(wid)[1]['room'];own=b.lobby(wid)[1]['room'];games_before=sql('USE LAB_DB;SELECT COUNT(*) FROM games;')
+        check('candidate receives only own withdrawal identity',own['candidate_request_id']==pending['candidate_request_id'] and own['role']=='candidate')
+        check('outsider cannot withdraw another request',c.act(pending,'withdraw')[0]==403)
+        check('creator cannot withdraw candidate request',a.act(pending,'withdraw')[0]==403)
+        check('withdrawal requires CSRF',b.act(own,'withdraw',csrf='invalid')[0]==403)
+        code,withdrawn=b.act(own,'withdraw');reopened=a.lobby(wid)[1]['room'];check('candidate withdraws without room-read access',code==200 and withdrawn.get('withdrawn') is True and withdrawn['url']=='lobby.php' and reopened['state']=='open' and reopened['second'] is None)
+        check('withdraw first prevents stale acceptance',a.act(pending,'accept')[0]==409 and sql('USE LAB_DB;SELECT COUNT(*) FROM games;')==games_before)
+        before_repeat=sql('USE LAB_DB;SELECT * FROM lobby_rooms WHERE id='+str(wid)+';');check('repeated withdrawal cannot mutate',b.act(own,'withdraw')[0] in [403,409] and before_repeat==sql('USE LAB_DB;SELECT * FROM lobby_rooms WHERE id='+str(wid)+';'))
+        b.act(reopened);new_request=b.lobby(wid)[1]['room'];check('old identity cannot withdraw replacement request',b.act(new_request,'withdraw',request=own['candidate_request_id'])[0]==409)
+        a.act(a.lobby(wid)[1]['room'],'accept');started=a.lobby(wid)[1]['room'];after_accept=sql('USE LAB_DB;SELECT json,version FROM games WHERE ind='+str(started['game_id'])+';')
+        check('accept first makes withdrawal conflict',b.act(new_request,'withdraw')[0]==409 and after_accept==sql('USE LAB_DB;SELECT json,version FROM games WHERE ind='+str(started['game_id'])+';'))
+        _,created=create_room(timer='180',access='closed',login='Candidate');private=created['room'];b.act(private);b.act(b.lobby(private['id'])[1]['room'],'withdraw');again=a.lobby(private['id'])[1]['room']
+        check('private withdrawal retains invitation',b.lobby(private['id'])[1]['room']['role']=='invited' and again['access']=='closed' and c.lobby(private['id'])[0]==403)
+        check('withdrawn private invitee may request again',b.act(again)[0]==200)
+        from threading import Barrier
+        for race_index in range(4):
+            _,created=create_room(timer='0');race=created['room'];b.act(race);waiting=a.lobby(race['id'])[1]['room'];race_count=int(sql('USE LAB_DB;SELECT COUNT(*) FROM games;'));barrier=Barrier(2);csrf_pair=[a.token('account'),b.token('account')]
+            def race_action(index):
+                barrier.wait();return [a,b][index].act(waiting,['accept','withdraw'][index],csrf=csrf_pair[index])[0]
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:codes=list(pool.map(race_action,[0,1]))
+            final=a.lobby(race['id'])[1]['room'];delta=int(sql('USE LAB_DB;SELECT COUNT(*) FROM games;'))-race_count
+            check('accept/withdraw concurrent single winner '+str(race_index),sorted(codes)==[200,409] and final['state'] in ['open','started'] and delta==(1 if final['state']=='started' else 0) and (final['game_id'] is not None)==(final['state']=='started'))
         def room_chat(client,rid,action='chat_messages',fields=None,query=None,port=None):
             url=client.base.replace('auth.php','lobby-chat.php')+'?'+urllib.parse.urlencode({'room':rid,'ajax':action,**(query or {})})
             if port is not None:url=url.replace(':33572',':'+str(port))

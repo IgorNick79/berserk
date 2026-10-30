@@ -2,19 +2,36 @@
     'use strict';
     const root = document.getElementById('lobby');
     if (!root) return;
+    document.addEventListener('contextmenu', event => {
+        if (event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), .debug-panel, [data-allow-copy]')) return;
+        event.preventDefault();
+    });
     let state = JSON.parse(root.dataset.state || 'null');
     if (!state || root.dataset.wizard === '1') return;
     const content = document.getElementById('content'), notice = document.getElementById('notice');
     const roomId = new URL(location.href).searchParams.get('room');
     let filter='all'; const expanded=new Set();
-    let busy = false, polling = false, epoch = 0, delay = 1500, timer;
+    let busy = false, polling = false, epoch = 0, delay = 1500, timer, withdrawing = false;
     const versions = new Map();
     const node = (tag, text) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; return el; };
     const url = () => 'lobby.php?api=1' + (roomId ? '&room=' + encodeURIComponent(roomId) : '');
+    function signal(key, navigate = false) {
+        if (window.BerserkRoomSound) window.BerserkRoomSound.notify(key, navigate);
+        else document.addEventListener('DOMContentLoaded', () => window.BerserkRoomSound?.notify(key, navigate), {once: true});
+    }
     function adopt(next) {
-        if (next.room && next.room.state === 'started') { location.assign('index.php?game=' + next.room.game_id); return; }
         const rows = next.room ? [next.room] : next.rooms;
         if (rows.some(r => r.version < (versions.get(r.id) || 0))) return;
+        if (next.room) {
+            const r = next.room, previous = versions.has(r.id) ? state.room : null;
+            if (withdrawing && r.state === 'open') { location.assign('lobby.php'); return; }
+            withdrawing = false;
+            if (r.can_decide && (!previous || r.candidate_request_id !== previous.candidate_request_id))
+                signal('request:' + r.id + ':' + r.candidate_request_id);
+            if (previous?.role === 'candidate' && previous.state === 'awaiting_confirmation' && r.state !== previous.state)
+                signal('decision:' + r.id + ':' + previous.version, r.state === 'started');
+            if (r.state === 'started') { location.assign('index.php?game=' + r.game_id); return; }
+        }
         rows.forEach(r => versions.set(r.id, r.version));
         state = next; render();
     }
@@ -60,6 +77,7 @@
     async function mutate(action, room) {
         if (busy) return;
         busy = true; ++epoch; clearTimeout(timer); render(); notice.textContent = '';
+        withdrawing = action === 'withdraw';
         const params = new URLSearchParams({action, csrf: root.dataset.csrf});
         const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10000);
         if (room) { params.set('version', room.version); if (room.candidate_request_id) params.set('candidate_request_id', room.candidate_request_id); }
@@ -69,7 +87,7 @@
             if (response.status === 401) { location.assign('auth.php?page=login'); return; }
             if (!response.ok) throw new Error(data.error || 'Действие не выполнено. Обновляю состояние.');
             // No legacy game URL is ever used, including after accept.
-            if (action === 'create' || action === 'open') { location.assign(data.url); return; }
+            if (action === 'create' || action === 'open' || action === 'withdraw') { location.assign(data.url); return; }
             adopt(data); notice.textContent = '';
         } catch (error) {
             // Lost responses are recovered by READ; never automatically repeat the mutation.
@@ -86,7 +104,10 @@
             const data = await response.json();
             if (generation !== epoch) return;
             if (response.status === 401) { location.assign('auth.php?page=login'); return; }
-            if (roomId && (response.status === 403 || response.status === 404)) { location.assign('lobby.php'); return; }
+            if (roomId && (response.status === 403 || response.status === 404)) {
+                if (!withdrawing && response.status === 403 && state.room?.role === 'candidate') signal('decision:' + roomId + ':' + state.room.version, true);
+                location.assign('lobby.php'); return;
+            }
             if (!response.ok) throw new Error(data.error || 'Не удалось обновить состояние.');
             adopt(data); delay = 1500; notice.textContent = '';
         } catch (error) { if (generation === epoch) { notice.textContent = 'Связь прервана. Повторное обновление…'; delay = Math.min(delay * 2, 15000); } }

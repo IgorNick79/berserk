@@ -11,14 +11,14 @@
 .battle-page [data-panel-theme] .info-panel :is(.choice-radio,.task-card){box-shadow:inset 0 1px #ffffff10}
 .battle-page [data-panel-theme] .info-panel a:not(.button):not(.panel-card-preview):not(.panel-stat-hint):not(.battle-icon-control){color:var(--ip-title)}
 /* Shared semantic button palette is independent of the selected material. */
-.battle-page [data-panel-theme] .info-panel .button:not(.green-btn){--btn-top:#50ad62;--btn-bottom:#26773b;--btn-edge:#91c78b;box-sizing:border-box;max-width:100%;min-height:40px;padding:10px 14px;border-radius:6px;border:1px solid var(--btn-edge);background:linear-gradient(180deg,#ffffff26,transparent 45%),linear-gradient(180deg,var(--btn-top),var(--btn-bottom));box-shadow:inset 0 1px #ffffff50,0 3px 0 #0005,0 4px 9px #0004;color:#fff;font-weight:700;text-shadow:0 1px 1px #0009;cursor:pointer;transition:filter .15s,transform .15s,box-shadow .15s}
+:is(.battle-page [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle) .button:not(.green-btn){--btn-top:#50ad62;--btn-bottom:#26773b;--btn-edge:#91c78b;box-sizing:border-box;max-width:100%;min-height:40px;padding:10px 14px;border-radius:6px;border:1px solid var(--btn-edge);background:linear-gradient(180deg,#ffffff26,transparent 45%),linear-gradient(180deg,var(--btn-top),var(--btn-bottom));box-shadow:inset 0 1px #ffffff50,0 3px 0 #0005,0 4px 9px #0004;color:#fff;font-weight:700;text-shadow:0 1px 1px #0009;cursor:pointer;transition:filter .15s,transform .15s,box-shadow .15s}
 .battle-page [data-panel-theme] .info-panel .battle-mode-buttons .button:not(.green-btn){--btn-top:#c39b4c;--btn-bottom:#8e6025;--btn-edge:#ebc780}
 .battle-page [data-panel-theme] .info-panel .button.skip:not(.green-btn){--btn-top:#5e98c7;--btn-bottom:#30608c;--btn-edge:#94b5d2}
-.battle-page [data-panel-theme] .info-panel .button.cancel:not(.green-btn),.battle-page [data-panel-theme] .info-panel .button.red:not(.green-btn){--btn-top:#c66a63;--btn-bottom:#913a38;--btn-edge:#df9a8b}
-.battle-page [data-panel-theme] .info-panel .button:not(.green-btn):hover:not(:disabled):not(.disabled){filter:brightness(1.17)}
-.battle-page [data-panel-theme] .info-panel .button:not(.green-btn):active:not(:disabled):not(.disabled){transform:translateY(2px);box-shadow:inset 0 2px 5px #0006}
-.battle-page [data-panel-theme] .info-panel .button:not(.green-btn):focus-visible{outline:3px solid #f9df8a;outline-offset:3px}
-.battle-page [data-panel-theme] .info-panel .button:not(.green-btn):disabled,.battle-page [data-panel-theme] .info-panel .button.disabled:not(.green-btn){--btn-top:#777b7c;--btn-bottom:#4d5355;--btn-edge:#9a9d9b;cursor:not-allowed;filter:saturate(.3);opacity:.52;box-shadow:none}
+:is(.battle-page [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle) .button.cancel:not(.green-btn),:is(.battle-page [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle) .button.red:not(.green-btn){--btn-top:#c66a63;--btn-bottom:#913a38;--btn-edge:#df9a8b}
+:is(.battle-page [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle) .button:not(.green-btn):hover:not(:disabled):not(.disabled){filter:brightness(1.17)}
+:is(.battle-page [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle) .button:not(.green-btn):active:not(:disabled):not(.disabled){transform:translateY(2px);box-shadow:inset 0 2px 5px #0006}
+:is(.battle-page [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle) .button:not(.green-btn):focus-visible{outline:3px solid #f9df8a;outline-offset:3px}
+:is(.battle-page [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle) .button:not(.green-btn):disabled,:is(.battle-page [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle) .button.disabled:not(.green-btn){--btn-top:#777b7c;--btn-bottom:#4d5355;--btn-edge:#9a9d9b;cursor:not-allowed;filter:saturate(.3);opacity:.52;box-shadow:none}
 /* Bronze menu remains identical across InfoPanel themes. Existing bar animation is retained. */
 .battle-page [data-panel-theme] .info-panel .dice{width:auto;min-width:40px;height:auto;min-height:38px;padding:5px;background:transparent;border:0;box-shadow:none;font-size:18px;line-height:1.3}
 .panel-dice-value{display:inline-flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;vertical-align:middle;line-height:1.3;white-space:normal;font-variant-numeric:tabular-nums}.panel-dice-face{display:block;flex:0 0 32px;width:32px;height:32px;object-fit:contain}.panel-dice-modifier{font-size:16px;color:inherit}.panel-dice-total{font-size:17px;font-weight:700;color:inherit}
@@ -43,22 +43,22 @@
 .battle-page [data-panel-theme] .battle-pile-card .prepare-card{background:var(--ip-surface);color:var(--ip-text);border-color:var(--ip-edge)}
 .battle-page [data-panel-theme] .battle-pile-pagination button span{background:var(--ip-base);border-color:var(--ip-edge)}
 .battle-page [data-panel-theme] .battle-pile-pagination button[aria-current="page"] span{background:var(--ip-title);box-shadow:0 0 0 2px var(--ip-edge)}
-.battle-page .info-panel .battle-secondary-view{display:flex;flex-direction:column;min-height:0;height:100%;color:var(--ip-text)}
-.battle-page .info-panel .battle-secondary-view[hidden]{display:none!important}
-.battle-page .info-panel .battle-secondary-view :is(.game-chat-panel,.battle-journal){position:static!important;inset:auto!important;display:flex;flex:1 1 0;flex-direction:column;width:100%;height:100%;max-height:none;min-height:0;box-sizing:border-box;border:0;border-radius:0;background:transparent;color:var(--ip-text);box-shadow:none;font:14px/1.4 system-ui}
-.battle-page .info-panel .battle-secondary-view [hidden]{display:none!important}
-.battle-page .info-panel .battle-secondary-view :is(.game-chat-header,.battle-journal header){display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;margin:0;background:var(--ip-surface);border-bottom:1px solid var(--ip-edge);color:var(--ip-title);font-size:16px;font-weight:600}
-.battle-page .info-panel .battle-secondary-view :is(.game-chat-history,.battle-journal-scroll){flex:1 1 0;min-height:0;max-height:none!important;overflow:auto;padding:8px}
-.battle-page .info-panel .battle-secondary-view :is(form,[data-chat-older]){margin:8px}
-.battle-page .info-panel .battle-secondary-view textarea{box-sizing:border-box;width:100%;background:var(--ip-base);color:var(--ip-text);border:1px solid var(--ip-edge);border-radius:4px;padding:7px}
-.battle-page .info-panel .battle-secondary-view .game-chat-message{background:var(--ip-surface);color:var(--ip-text)}
-.battle-page .info-panel .battle-secondary-view :is(p,.game-chat-message small){color:var(--ip-muted)}
+:is(.battle-page,.room-page) .info-panel .battle-secondary-view{display:flex;flex-direction:column;min-height:0;height:100%;color:var(--ip-text)}
+:is(.battle-page,.room-page) .info-panel .battle-secondary-view[hidden]{display:none!important}
+:is(.battle-page,.room-page) .info-panel .battle-secondary-view :is(.game-chat-panel,.battle-journal){position:static!important;inset:auto!important;display:flex;flex:1 1 0;flex-direction:column;width:100%;height:100%;max-height:none;min-height:0;box-sizing:border-box;border:0;border-radius:0;background:transparent;color:var(--ip-text);box-shadow:none;font:14px/1.4 system-ui}
+:is(.battle-page,.room-page) .info-panel .battle-secondary-view [hidden]{display:none!important}
+:is(.battle-page,.room-page) .info-panel .battle-secondary-view :is(.game-chat-header,.battle-journal header){display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;margin:0;background:var(--ip-surface);border-bottom:1px solid var(--ip-edge);color:var(--ip-title);font-size:16px;font-weight:600}
+:is(.battle-page,.room-page) .info-panel .battle-secondary-view :is(.game-chat-history,.battle-journal-scroll){flex:1 1 0;min-height:0;max-height:none!important;overflow:auto;padding:8px}
+:is(.battle-page,.room-page) .info-panel .battle-secondary-view :is(form,[data-chat-older]){margin:8px}
+:is(.battle-page,.room-page) .info-panel .battle-secondary-view textarea{box-sizing:border-box;width:100%;background:var(--ip-base);color:var(--ip-text);border:1px solid var(--ip-edge);border-radius:4px;padding:7px}
+:is(.battle-page,.room-page) .info-panel .battle-secondary-view .game-chat-message{background:var(--ip-surface);color:var(--ip-text)}
+:is(.battle-page,.room-page) .info-panel .battle-secondary-view :is(p,.game-chat-message small){color:var(--ip-muted)}
 
-.battle-page .info-panel-content:has(> .battle-secondary-view:not([hidden])){display:flex;flex-direction:column;overflow:hidden}
-.battle-page .info-panel .battle-secondary-view{flex:1 1 0}
+:is(.battle-page,.room-page) .info-panel-content:has(> .battle-secondary-view:not([hidden])){display:flex;flex-direction:column;overflow:hidden}
+:is(.battle-page,.room-page) .info-panel .battle-secondary-view{flex:1 1 0}
 
-.battle-page [data-match-paused="1"] .info-panel-content > .battle-secondary-view:not([hidden]){display:flex!important}
-.battle-page .info-panel .battle-secondary-view .panel-card-title{margin:0;min-width:0;font-size:16px}
+:is(.battle-page,.room-page) [data-match-paused="1"] .info-panel-content > .battle-secondary-view:not([hidden]){display:flex!important}
+:is(.battle-page,.room-page) .info-panel .battle-secondary-view .panel-card-title{margin:0;min-width:0;font-size:16px}
 .battle-page [data-panel-theme] .battle-pile-card .prepare-card :is(.prepare-card__name,.prepare-card__stats){color:var(--ip-text)}
 
 .battle-page [data-panel-theme] .battle-side-slot .pile-open{background:var(--ip-surface);color:var(--ip-title);border:1px solid var(--ip-edge);border-radius:4px}
@@ -153,6 +153,6 @@
 .battle-page [data-panel-theme] .info-panel .button.seer-finish:not(.green-btn){--btn-top:#dfbd54;--btn-bottom:#aa7e20;--btn-edge:#f1d680;color:#261d07;text-shadow:none}
 .battle-page [data-panel-theme] .info-panel .button.seer-cancel:not(.green-btn){--btn-top:#85898e;--btn-bottom:#565b61;--btn-edge:#a7adb4}
 
-.battle-page [data-panel-theme] .info-panel .button.tremor-move-own:not(.green-btn){--btn-top:#50ad62;--btn-bottom:#26773b;--btn-edge:#91c78b}
-.battle-page [data-panel-theme] .info-panel .button.tremor-move-enemy:not(.green-btn){--btn-top:#c66a63;--btn-bottom:#913a38;--btn-edge:#df9a8b}
+:is(.battle-page [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle) .button.tremor-move-own:not(.green-btn){--btn-top:#50ad62;--btn-bottom:#26773b;--btn-edge:#91c78b}
+:is(.battle-page [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle) .button.tremor-move-enemy:not(.green-btn){--btn-top:#c66a63;--btn-bottom:#913a38;--btn-edge:#df9a8b}
 .battle-page [data-panel-theme] .info-panel .button.tremor-stay:not(.green-btn){--btn-top:#dfbd54;--btn-bottom:#aa7e20;--btn-edge:#f1d680;color:#fff;text-shadow:0 1px 1px #0008}

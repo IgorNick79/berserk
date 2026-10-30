@@ -99,7 +99,8 @@ final class LobbyStore
             $room['turn_seconds']=$setup['settings']['battle']['turn_seconds']??180;
             $room['game_id'] = $row['game_id'] === null ? null : (int)$row['game_id'];
             $room['role'] = $actor === (int)$row['creator_account_id'] ? 'creator' : ($row['state'] === 'started' ? 'accepted' : ($actor===(int)($row['invited_account_id']??0) && $row['state']==='open'?'invited':'candidate'));
-            $room['candidate_request_id'] = $room['can_decide'] ? $row['candidate_request_id'] : null;
+            $ownRequest=$row['state']==='awaiting_confirmation' && $actor===(int)$row['candidate_account_id'];
+            $room['candidate_request_id'] = ($room['can_decide'] || $ownRequest) ? $row['candidate_request_id'] : null;
         }
         return $room;
     }
@@ -153,7 +154,12 @@ final class LobbyStore
             $room = $this->row($id,true);
             if (!$this->visible($room,$actor)) throw new \DomainException('Доступ к комнате закрыт.',403);
             // Check permission under lock before revealing version/request state.
-            if ($action !== 'open' && $actor !== (int)$room['creator_account_id']) throw new \DomainException('Только создатель принимает решение.',403);
+            if ($action === 'withdraw') {
+                // Accepted participant may observe a stale-version conflict, never undo a started game.
+                if ($actor !== (int)$room['candidate_account_id']
+                    && !($room['state']==='started' && $actor===(int)$room['accepted_account_id']))
+                    throw new \DomainException('Можно отменить только свою текущую заявку.',403);
+            } elseif ($action !== 'open' && $actor !== (int)$room['creator_account_id']) throw new \DomainException('Только создатель принимает решение.',403);
             if ($action === 'open' && $room['state'] !== 'open' && !$this->member($room,$actor)) throw new \DomainException('Место уже занято.',403);
             if ((int)$room['version'] !== $version || $version >= 4294967295) throw new \DomainException('Состояние изменилось. Обновите комнату.',409);
             if ($action === 'open') {
@@ -162,7 +168,7 @@ final class LobbyStore
                 }
             } else {
                 if ($room['state'] !== 'awaiting_confirmation' || !is_string($request) || !hash_equals($room['candidate_request_id'] ?? '',$request)) throw new \DomainException('Заявка устарела.',409);
-                if ($action === 'reject') {
+                if ($action === 'reject' || $action === 'withdraw') {
                     $this->query("UPDATE lobby_rooms SET candidate_account_id=NULL,candidate_request_id=NULL,state='open',version=version+1,updated_at=UTC_TIMESTAMP(6) WHERE id=?",[$id]);
                 } elseif ($action === 'accept') {
                     $game = MatchCreator::create($transaction,$id,(int)$room['creator_account_id'],(int)$room['candidate_account_id'],$this->catalogFactory);

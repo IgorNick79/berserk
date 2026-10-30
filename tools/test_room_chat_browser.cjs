@@ -31,9 +31,14 @@ const fs=require('fs'),path=require('path'),assert=require('assert/strict');
   await send(b,'Ответ до заявки 🐉');await open(a);await seen(a,'Ответ до заявки 🐉');
   ok('two way chat before application',true);ok('shared renderer uses safe text',await a.locator('.game-chat-message b,.game-chat-message img,.game-chat-message script').count()===0);
   await a.reload();await open(a);await seen(a,'Привет мир 😀');await seen(a,'Ответ до заявки 🐉');ok('history survives reload',true);
+  ok('chat fully docked in right column',await a.locator('.room-info .battle-secondary-view #game-chat-panel').count()===1);
+  ok('chat has header and close',await a.locator('.room-info .game-chat-header h3').textContent()==='Сообщения'&&await a.locator('.room-info [data-chat-close]').isVisible());
+  ok('chat textarea remains selectable',await a.locator('[data-chat-input]').evaluate(e=>getComputedStyle(e).userSelect==='text'));
+  ok('chat textarea context menu retained',await a.locator('[data-chat-input]').evaluate(e=>e.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true}))));
+  const panelBox=await a.locator('#game-chat-panel').boundingBox(),columnBox=await a.locator('.room-info').boundingBox();ok('docked chat contained by column',panelBox.x>=columnBox.x&&panelBox.x+panelBox.width<=columnBox.x+columnBox.width+1);
   await a.screenshot({path:path.join(out,'desktop-chat.png')});
   for(const width of [390,360]){
-   await a.setViewportSize({width,height:844});await open(a);const box=await a.locator('#game-chat-panel').boundingBox();
+   await a.setViewportSize({width,height:844});await open(a);await a.locator('.room-info').scrollIntoViewIfNeeded();const box=await a.locator('#game-chat-panel').boundingBox();
    ok('chat fits mobile '+width,box.x>=0&&box.x+box.width<=width&&box.y>=0&&box.y+box.height<=844);
    ok('chat no horizontal scroll '+width,await a.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    await a.screenshot({path:path.join(out,'mobile-chat-'+width+'.png')});await a.keyboard.press('Escape');ok('chat Escape closes '+width,await a.locator('#game-chat-panel').isHidden());

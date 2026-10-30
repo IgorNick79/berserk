@@ -7,3 +7,6 @@ body.lobby-page{margin:0;padding:24px;min-height:100dvh;background:#252b26 url('
 
 @media(max-width:1190px){body.lobby-page{padding-top:76px}.lobby{height:calc(100dvh - 100px)}}
 @media(max-width:600px){body.lobby-page{padding-top:68px}.lobby{height:calc(100dvh - 76px)}}
+
+/* Same selection exceptions as the battle UI. */
+body.lobby-page{-webkit-user-select:none;user-select:none}.lobby-page :is(input,textarea,select,[contenteditable]:not([contenteditable="false"]),.debug-panel,[data-allow-copy]),.lobby-page :is([contenteditable]:not([contenteditable="false"]),.debug-panel,[data-allow-copy]) *{-webkit-user-select:text;user-select:text}

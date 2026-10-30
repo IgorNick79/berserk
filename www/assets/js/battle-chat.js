@@ -130,7 +130,7 @@
             .finally(function(){loadingOlder=false;older.disabled=false;});
     });
     function open(value) {
-        var battle=document.querySelector('[data-battle-sync-root]');
+        var battle=document.querySelector(isRoom?'#lobby':'[data-battle-sync-root]');
         if(battle && battle.secondaryPanel) battle.secondaryPanel(value?panel:null);
         panel.hidden=!value; toggle.setAttribute('aria-expanded',String(value));
         if(value) {history.scrollTop=history.scrollHeight; if(writable) input.focus(); else history.focus(); markRead();}

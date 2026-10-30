@@ -1440,7 +1440,7 @@ if (in_array($screenName, ['battle','game_over'], true)) {
         'chat_sender_id'=>$userId,
         'chat_csrf'=>htmlspecialchars($_SESSION['chat_csrf'],ENT_QUOTES),
     ]);
-    $scriptsHtml .= '<script src="/assets/js/battle-chat.js?v=6" defer></script>';
+    $scriptsHtml .= '<script src="/assets/js/battle-chat.js?v=7" defer></script>';
 }
 // Resolve the URL before passing the HTML slot to the single-pass template parser.
 $preGameResourceKey = $isPreGame

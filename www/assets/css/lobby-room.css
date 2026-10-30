@@ -11,7 +11,7 @@ body.room-page{padding:24px 24px 24px 76px;overflow:hidden}
 .room-eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:var(--ip-muted);margin:0 0 12px}
 .room-header h1{font:28px/1.2 Georgia,serif;color:var(--ip-title);margin:0 0 10px}
 .room-kind{margin:0;color:var(--ip-muted);font-size:14px}
-.room-info-scroll{flex:1;overflow:auto;min-height:0;padding:20px 24px;scrollbar-width:thin;scrollbar-color:var(--ip-edge) var(--ip-base)}
+.room-info-scroll{flex:1;overflow:auto;min-height:0;padding:20px 24px;scrollbar-width:none}
 .room-state{color:var(--ip-title);font:19px/1.35 Georgia,serif;margin:0 0 22px}
 .room-participants{display:grid;gap:12px}
 .room-seat{padding:16px;border:1px solid var(--ip-edge);border-radius:6px;background:linear-gradient(140deg,#ffffff08,transparent 65%),var(--ip-surface);overflow-wrap:anywhere}
@@ -31,3 +31,10 @@ body.room-page{padding:24px 24px 24px 76px;overflow:hidden}
 @media(max-width:760px){body.room-page{padding:68px 8px 12px;overflow:auto}.lobby--room{height:auto;min-height:calc(100dvh - 80px)}.lobby--room #content{flex:auto}.room-shell{display:flex;flex-direction:column;gap:12px}.room-illustration{height:clamp(165px,26vh,245px);flex:none}.room-illustration img{object-position:50% 60%}.room-page .room-info{flex:none;overflow:visible}.room-header{padding:18px}.room-header h1{font-size:25px}.room-info-scroll{overflow:visible;padding:18px}.room-participants{gap:9px}.room-seat{padding:12px}.room-state{font-size:18px;margin-bottom:16px}.room-settings{margin-top:20px}.room-footer{position:sticky;bottom:0;padding:14px 18px 18px;border-radius:0 0 7px 7px;z-index:2}.room-controls .room-action{font-size:13px}.room-settings dl>div{font-size:12px}}
 
 .room-footer-bar{display:flex;align-items:flex-end;gap:10px;margin-top:14px}.room-footer-bar .room-controls{flex:1;margin-top:0}.room-footer .battle-chat-anchor{flex:0 0 44px}.room-footer .game-chat-toggle{position:relative;display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--ip-edge);border-radius:6px;background:var(--ip-surface);color:var(--ip-text);cursor:pointer}.room-footer .battle-icon-tooltip{display:none}.room-page .game-chat-panel{background:var(--ip-base);color:var(--ip-text);border-color:var(--ip-edge)}.room-controls .button.room-action--reject{background:linear-gradient(#63423b,#442c28);border-color:#9c7564}
+
+/* Battle-style presentation; the original bronze room-action rules above are retained. */
+.room-panel-content{display:flex;flex:1;min-height:0;overflow:hidden}.room-info-scroll{width:100%;box-sizing:border-box}.room-info-scroll[hidden]{display:none!important}.room-info-scroll::-webkit-scrollbar,.room-panel-content .game-chat-history::-webkit-scrollbar{display:none}.room-panel-content .game-chat-history{scrollbar-width:none}
+.room-action-status{text-align:center}.room-footer:not(.has-room-actions){display:flex;align-items:center;gap:10px}.room-footer:not(.has-room-actions) .room-action-status{flex:1}.room-footer:not(.has-room-actions) .room-footer-bar{margin:0;flex:none}
+.room-controls--battle{justify-content:center}.room-page [data-panel-theme] .room-controls--battle .button.room-action{flex:0 1 auto;min-height:36px;padding:8px 12px;font-size:13px;font-weight:600}
+.room-footer .battle-icon-tooltip{display:block;left:auto;right:0;transform:translateY(4px)}.room-footer .battle-icon-control:hover .battle-icon-tooltip,.room-footer .battle-icon-control:focus-visible .battle-icon-tooltip{transform:translateY(0)}
+@media(max-width:760px){.room-page .room-info.has-secondary{height:min(640px,calc(100dvh - 92px));overflow:hidden}.room-info:not(.has-secondary) .room-panel-content{overflow:visible}.room-info.has-secondary .room-panel-content{min-height:0;overflow:hidden}}

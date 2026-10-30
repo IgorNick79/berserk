@@ -75,6 +75,6 @@ final class GameMenu
             $html.='<section class="unified-menu-group'.($bottom?' unified-menu-account':'').'" data-menu-group="'.$e($group['id']).'">'
                 .($bottom&&$account?'<strong>♙ '.$e($account->login).'</strong>':'').$items.'</section>';
         }
-        return $html.'<p data-menu-notice role="status"></p></nav></aside><script src="/assets/js/unified-menu.js?v=1" defer></script>';
+        return $html.'<p data-menu-notice role="status"></p></nav></aside><script src="/assets/js/room-sound.js?v=1" defer></script><script src="/assets/js/unified-menu.js?v=1" defer></script>';
     }
 }
