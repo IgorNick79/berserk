@@ -2,9 +2,6 @@
     'use strict';
     const root = document.getElementById('lobby');
     if (!root) return;
-    const profile=document.querySelector('.lobby-menu');
-    document.addEventListener('click',event=>{if(profile && !profile.contains(event.target)) profile.open=false;});
-    document.addEventListener('keydown',event=>{if(profile?.open && event.key==='Escape'){profile.open=false;profile.querySelector('summary').focus();}});
     let state = JSON.parse(root.dataset.state || 'null');
     if (!state || root.dataset.wizard === '1') return;
     const content = document.getElementById('content'), notice = document.getElementById('notice');

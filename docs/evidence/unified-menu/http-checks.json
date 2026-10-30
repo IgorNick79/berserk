@@ -1,0 +1,198 @@
+[
+  {
+    "test": "exact isolated database identity",
+    "pass": true
+  },
+  {
+    "test": "runtime no TRIGGER or DDL privileges",
+    "pass": true
+  },
+  {
+    "test": "migration retains selected theme",
+    "pass": true
+  },
+  {
+    "test": "first read preserves theme and initializes mat",
+    "pass": true
+  },
+  {
+    "test": "initial mat stable",
+    "pass": true
+  },
+  {
+    "test": "guest preference read denied",
+    "pass": true
+  },
+  {
+    "test": "CSRF save denied",
+    "pass": true
+  },
+  {
+    "test": "invalid sound_enabled denied",
+    "pass": true
+  },
+  {
+    "test": "invalid playmat_id denied",
+    "pass": true
+  },
+  {
+    "test": "invalid theme denied",
+    "pass": true
+  },
+  {
+    "test": "sound saved in account",
+    "pass": true
+  },
+  {
+    "test": "own mat saved",
+    "pass": true
+  },
+  {
+    "test": "second player independent mat",
+    "pass": true
+  },
+  {
+    "test": "existing theme endpoint saves same row",
+    "pass": true
+  },
+  {
+    "test": "existing theme grimoire saved",
+    "pass": true
+  },
+  {
+    "test": "existing theme stone saved",
+    "pass": true
+  },
+  {
+    "test": "existing theme parchment saved",
+    "pass": true
+  },
+  {
+    "test": "existing theme leather saved",
+    "pass": true
+  },
+  {
+    "test": "no alternate theme mutation route",
+    "pass": true
+  },
+  {
+    "test": "concurrent patches preserve both fields",
+    "pass": true
+  },
+  {
+    "test": "concurrent first reads retain one mat",
+    "pass": true
+  },
+  {
+    "test": "participant sees peer mat only",
+    "pass": true
+  },
+  {
+    "test": "outsider denied peer projection",
+    "pass": true
+  },
+  {
+    "test": "game-scoped save updates account",
+    "pass": true
+  },
+  {
+    "test": "preference saves leave GameState/version unchanged",
+    "pass": true
+  },
+  {
+    "test": "new games omit preferences",
+    "pass": true
+  },
+  {
+    "test": "retired playmat endpoint denied",
+    "pass": true
+  },
+  {
+    "test": "retired preparation_preference endpoint denied",
+    "pass": true
+  },
+  {
+    "test": "historical processing recovery pure",
+    "pass": true
+  },
+  {
+    "test": "historical processing preserves journal and account",
+    "pass": true
+  },
+  {
+    "test": "historical committed recovery pure",
+    "pass": true
+  },
+  {
+    "test": "historical committed preserves journal and account",
+    "pass": true
+  },
+  {
+    "test": "historical rejected recovery pure",
+    "pass": true
+  },
+  {
+    "test": "historical rejected preserves journal and account",
+    "pass": true
+  },
+  {
+    "test": "new sound command rejected without journal",
+    "pass": true
+  },
+  {
+    "test": "preparation single common menu",
+    "pass": true
+  },
+  {
+    "test": "preparation no fake postpone",
+    "pass": true
+  },
+  {
+    "test": "battle single common menu",
+    "pass": true
+  },
+  {
+    "test": "old match uses account mats in first paint",
+    "pass": true
+  },
+  {
+    "test": "old match uses account theme",
+    "pass": true
+  },
+  {
+    "test": "old fields retained",
+    "pass": true
+  },
+  {
+    "test": "guest common menu and no preferences",
+    "pass": true
+  },
+  {
+    "test": "lobby no Debug",
+    "pass": true
+  },
+  {
+    "test": "preparation Debug keeps command CSRF and version",
+    "pass": true
+  },
+  {
+    "test": "existing preparation Debug command works",
+    "pass": true
+  },
+  {
+    "test": "preparation Debug stale version denied",
+    "pass": true
+  },
+  {
+    "test": "outsider cannot access preparation Debug",
+    "pass": true
+  },
+  {
+    "test": "ordinary preparation has no Debug",
+    "pass": true
+  },
+  {
+    "test": "real two-account browser suite",
+    "pass": true
+  }
+]

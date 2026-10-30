@@ -32,6 +32,7 @@ try {
         $account = (new AuthStore($config['db']))->account($actor);
         if ($account === null) throw new DomainException('Требуется вход.',401);
         \Berserk\Auth\DebugAccess::bind($account);
+        \Berserk\Auth\AccountUiPreferences::bindPresentation(new \Berserk\Auth\AccountUiPreferences($config['db']));
     }
     $csrf = AuthSession::csrf();
     if ($method === 'POST') AuthSession::requireCsrf($_POST['csrf'] ?? null);
@@ -92,10 +93,8 @@ if ($api) {
 }
 header('Content-Type: text/html; charset=utf-8');
 ?>
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css?v=4"><link rel="stylesheet" href="assets/css/pregame.css?v=2"><script src="assets/js/settings.js" defer></script><script src="assets/js/lobby.js?v=4" defer></script></head><body class="lobby-page">
-<details class="lobby-menu"><summary aria-label="Меню">☰</summary><nav aria-label="Меню игры"><div class="lobby-menu-settings"><span class="menu-caption">МЕНЮ ИГРЫ</span>
-<?php if ($account): ?><button disabled title="Настраивается внутри партии">Звук <small>В партии</small></button><button disabled title="Настраивается внутри партии">Коврик <small>В партии</small></button><button disabled title="Настраивается внутри партии">Тема InfoPanel <small>В партии</small></button><button disabled title="Доступность определяется внутри партии">Debug <small>В партии</small></button><?php endif; ?></div><div class="lobby-account">
-<?php if ($account): ?><strong>♙ <?= $escape($account->login) ?></strong><a href="auth.php?page=account">Мой профиль</a><form method="post" action="auth.php?page=logout"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><button type="submit">Выйти из аккаунта</button></form><?php else: ?><a href="auth.php?page=login">Войти</a><a href="auth.php?page=register">Регистрация</a><?php endif; ?></div></nav></details>
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css?v=5"><link rel="stylesheet" href="assets/css/pregame.css?v=2"><script src="assets/js/settings.js" defer></script><script src="assets/js/lobby.js?v=5" defer></script></head><body class="lobby-page">
+<?= \Berserk\View\Ui\GameMenu::render('lobby',$account,$csrf) ?>
 <main id="lobby" class="screen lobby" data-state="<?= $escape(json_encode($data,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)) ?>" data-csrf="<?= $escape($csrf) ?>" data-authenticated="<?= $account ? '1' : '0' ?>" data-wizard="<?= $wizard !== '' ? '1' : '0' ?>">
 <p id="notice" role="status"><?= $escape($error ?? '') ?></p>
 <?php if ($data !== null): ?>

@@ -1,7 +1,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&amp;family=Golos+Text:wght@400;500;600;700&amp;display=swap">
-<link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=6">
+<link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=7">
 <link rel="stylesheet" href="/assets/css/battle-result.css?v=2">
 <div class="battle-shell battle-result" data-battle-sync-root data-panel-theme="grimoire" data-result="{{outcome}}">
     <main class="battle-main result-media" aria-label="{{text}}">

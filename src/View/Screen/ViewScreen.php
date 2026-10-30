@@ -62,7 +62,7 @@ final class ViewScreen
             return [
                 'screen' => 'view',
                 'data'   => [
-                'playmat_url' => \Berserk\Core\PlaymatCatalog::url($state->getPlayer($playerKey)->playmatId),
+                'playmat_url' => \Berserk\Core\PlaymatCatalog::playerUrl($state->getPlayer($playerKey)),
                     'deck_name'     => '—',
                     'total'         => 0,
                     'elite'         => 0,
@@ -195,7 +195,7 @@ final class ViewScreen
         return [
             'screen' => 'view',
             'data'   => [
-                'playmat_url' => \Berserk\Core\PlaymatCatalog::url($state->getPlayer($playerKey)->playmatId),
+                'playmat_url' => \Berserk\Core\PlaymatCatalog::playerUrl($state->getPlayer($playerKey)),
                 'deck_name'     => $deckInfo['name'],
                 'total'         => $deckInfo['total'],
                 'elite'         => $deckInfo['elite'],

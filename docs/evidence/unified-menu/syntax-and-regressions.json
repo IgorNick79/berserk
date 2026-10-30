@@ -1,0 +1,196 @@
+[
+  {
+    "file": "src/Auth/AccountUiPreferences.php",
+    "pass": true,
+    "output": "No syntax errors detected in src/Auth/AccountUiPreferences.php\n"
+  },
+  {
+    "file": "src/Core/BattleHistory/Recorder.php",
+    "pass": true,
+    "output": "No syntax errors detected in src/Core/BattleHistory/Recorder.php\n"
+  },
+  {
+    "file": "src/Core/Engine.php",
+    "pass": true,
+    "output": "No syntax errors detected in src/Core/Engine.php\n"
+  },
+  {
+    "file": "src/Core/GameRepository.php",
+    "pass": true,
+    "output": "No syntax errors detected in src/Core/GameRepository.php\n"
+  },
+  {
+    "file": "src/Core/PlayerState.php",
+    "pass": true,
+    "output": "No syntax errors detected in src/Core/PlayerState.php\n"
+  },
+  {
+    "file": "src/Core/PlaymatCatalog.php",
+    "pass": true,
+    "output": "No syntax errors detected in src/Core/PlaymatCatalog.php\n"
+  },
+  {
+    "file": "src/Lobby/MatchCreator.php",
+    "pass": true,
+    "output": "No syntax errors detected in src/Lobby/MatchCreator.php\n"
+  },
+  {
+    "file": "src/View/Screen/BattleScreen.php",
+    "pass": true,
+    "output": "No syntax errors detected in src/View/Screen/BattleScreen.php\n"
+  },
+  {
+    "file": "src/View/Screen/BattleSnapshotRenderer.php",
+    "pass": true,
+    "output": "No syntax errors detected in src/View/Screen/BattleSnapshotRenderer.php\n"
+  },
+  {
+    "file": "src/View/Screen/DraftScreen.php",
+    "pass": true,
+    "output": "No syntax errors detected in src/View/Screen/DraftScreen.php\n"
+  },
+  {
+    "file": "src/View/Screen/ViewScreen.php",
+    "pass": true,
+    "output": "No syntax errors detected in src/View/Screen/ViewScreen.php\n"
+  },
+  {
+    "file": "src/View/Ui/GameMenu.php",
+    "pass": true,
+    "output": "No syntax errors detected in src/View/Ui/GameMenu.php\n"
+  },
+  {
+    "file": "tools/test_battle_recorder.php",
+    "pass": true,
+    "output": "No syntax errors detected in tools/test_battle_recorder.php\n"
+  },
+  {
+    "file": "tools/test_battle_result_screen.php",
+    "pass": true,
+    "output": "No syntax errors detected in tools/test_battle_result_screen.php\n"
+  },
+  {
+    "file": "tools/test_integration_http.py",
+    "pass": true
+  },
+  {
+    "file": "tools/test_live_journal_restoration_http.py",
+    "pass": true
+  },
+  {
+    "file": "tools/test_lucktest_debug.php",
+    "pass": true,
+    "output": "No syntax errors detected in tools/test_lucktest_debug.php\n"
+  },
+  {
+    "file": "tools/test_lucktest_debug_menu.cjs",
+    "pass": true,
+    "output": ""
+  },
+  {
+    "file": "tools/test_match_pause_fault.php",
+    "pass": true,
+    "output": "No syntax errors detected in tools/test_match_pause_fault.php\n"
+  },
+  {
+    "file": "tools/test_ui_skins_browser.cjs",
+    "pass": true,
+    "output": ""
+  },
+  {
+    "file": "www/assets/js/battle-sync.js",
+    "pass": true,
+    "output": ""
+  },
+  {
+    "file": "www/assets/js/battle-turn-timer.js",
+    "pass": true,
+    "output": ""
+  },
+  {
+    "file": "www/assets/js/lobby.js",
+    "pass": true,
+    "output": ""
+  },
+  {
+    "file": "www/index.php",
+    "pass": true,
+    "output": "No syntax errors detected in www/index.php\n"
+  },
+  {
+    "file": "www/lobby.php",
+    "pass": true,
+    "output": "No syntax errors detected in www/lobby.php\n"
+  },
+  {
+    "file": "tools/test_menu_finalization.php",
+    "pass": true,
+    "output": "No syntax errors detected in tools/test_menu_finalization.php\n"
+  },
+  {
+    "file": "tools/test_unified_menu_http.py",
+    "pass": true
+  },
+  {
+    "file": "tools/test_unified_menu_browser.cjs",
+    "pass": true,
+    "output": ""
+  },
+  {
+    "file": "www/ui-preferences.php",
+    "pass": true,
+    "output": "No syntax errors detected in www/ui-preferences.php\n"
+  },
+  {
+    "file": "www/assets/js/unified-menu.js",
+    "pass": true,
+    "output": ""
+  },
+  {
+    "file": "www/assets/js/battle-debug.js",
+    "pass": true,
+    "output": ""
+  },
+  {
+    "file": "tools/render_game_menu_fixture.php",
+    "pass": true,
+    "output": "No syntax errors detected in tools/render_game_menu_fixture.php\n"
+  },
+  {
+    "test": "tools/test_menu_finalization.php",
+    "pass": true,
+    "output": "Menu filters, old saves, rejected command and historical Recorder: 39 checks passed\n"
+  },
+  {
+    "test": "tools/test_battle_result_screen.php",
+    "pass": true,
+    "output": "PASS: result statistics, reasons, history permissions, legacy data, terminal persistence\n"
+  },
+  {
+    "test": "tools/test_lucktest_debug.php",
+    "pass": true,
+    "output": "LuckTest: 186 checks passed (in-memory adapter; no live database).\nLuckTest manual: 1014 checks passed (no live database).\nLuckTest Debug: 218 checks passed (isolated catalog, no live DB).\n"
+  },
+  {
+    "test": "tools/test_lucktest_debug_menu.cjs",
+    "pass": true,
+    "output": "Battle Debug adapter: 6 checks passed\n"
+  },
+  {
+    "test": "test_ui_skins.php",
+    "source": "working",
+    "pass": false,
+    "output": "\nFatal error: Uncaught RuntimeException: Combat heading exists in C:\\Users\\mi\\Documents\\Codex\\berserk\\tools\\test_battle_snapshot_renderer.php:20\nStack trace:\n#0 C:\\Users\\mi\\Documents\\Codex\\berserk\\tools\\test_combat_panel_ui.php(30): battleSnapshotAssert()\n#1 C:\\Users\\mi\\Documents\\Codex\\berserk\\tools\\test_ui_skins.php(3): require('C:\\\\Users\\\\mi\\\\Doc...')\n#2 {main}\n  thrown in C:\\Users\\mi\\Documents\\Codex\\berserk\\tools\\test_battle_snapshot_renderer.php on line 20\n"
+  },
+  {
+    "test": "test_ui_skins.php",
+    "source": "baseline HEAD",
+    "pass": false,
+    "output": "\nFatal error: Uncaught RuntimeException: Combat heading exists in C:\\Users\\mi\\Documents\\Codex\\berserk\\tmp\\unified-menu-baseline\\tools\\test_battle_snapshot_renderer.php:20\nStack trace:\n#0 C:\\Users\\mi\\Documents\\Codex\\berserk\\tmp\\unified-menu-baseline\\tools\\test_combat_panel_ui.php(30): battleSnapshotAssert()\n#1 C:\\Users\\mi\\Documents\\Codex\\berserk\\tmp\\unified-menu-baseline\\tools\\test_ui_skins.php(3): require('C:\\\\Users\\\\mi\\\\Doc...')\n#2 {main}\n  thrown in C:\\Users\\mi\\Documents\\Codex\\berserk\\tmp\\unified-menu-baseline\\tools\\test_battle_snapshot_renderer.php on line 20\n"
+  },
+  {
+    "check": "git diff --check",
+    "pass": true,
+    "output": "warning: in the working copy of 'tools/test_lucktest_debug_menu.cjs', LF will be replaced by CRLF the next time Git touches it\n"
+  }
+]

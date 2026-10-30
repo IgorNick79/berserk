@@ -80,7 +80,6 @@ final class Engine
 
     private function applyCommand(GameState $state, string $playerKey, Command $cmd): Result
     {
-        if ($cmd->type === MatchPlayerSettings::COMMAND) return MatchPlayerSettings::apply($state, $playerKey, $cmd);
         $now = $this->serverNow();
         if (MatchPause::isCommand($cmd->type)) return MatchPause::apply($state, $playerKey, $cmd, $now);
         if (MatchPause::blocking($state)) {

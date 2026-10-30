@@ -1,9 +1,5 @@
 @import url('/assets/css/battle-coordinates.css?v=1');
 /* Panel themes affect presentation only; battlefield geometry and actions are unchanged. */
-[data-panel-theme="grimoire"],.panel-theme-option[data-theme-choice="grimoire"]{--ip-base:#29231f;--ip-surface:#3a3028;--ip-edge:#92724c;--ip-title:#efd7aa;--ip-text:#f4eee4;--ip-muted:#c8bbab;--ip-glow:#59422c}
-[data-panel-theme="stone"],.panel-theme-option[data-theme-choice="stone"]{--ip-base:#242a29;--ip-surface:#333d3b;--ip-edge:#77867d;--ip-title:#e1e7db;--ip-text:#f0f3ed;--ip-muted:#c4d0c8;--ip-glow:#45534d}
-[data-panel-theme="leather"],.panel-theme-option[data-theme-choice="leather"]{--ip-base:#463126;--ip-surface:#614737;--ip-edge:#b58c57;--ip-title:#ffe5b6;--ip-text:#fff0d9;--ip-muted:#e3cbb0;--ip-glow:#77513b}
-[data-panel-theme="parchment"],.panel-theme-option[data-theme-choice="parchment"]{--ip-base:#343029;--ip-surface:#484034;--ip-edge:#a69a78;--ip-title:#f4e5be;--ip-text:#f4eedf;--ip-muted:#d7cbb2;--ip-glow:#665b47}
 .battle-page [data-panel-theme] .info-panel{container-type:inline-size;box-sizing:border-box;border:2px solid var(--ip-edge);border-radius:9px;background:radial-gradient(ellipse at 30% 0%,var(--ip-glow),transparent 55%),repeating-linear-gradient(112deg,transparent 0 6px,#ffffff06 7px 8px,transparent 9px 20px),var(--ip-base);box-shadow:0 12px 35px #0009,inset 0 0 0 3px #0006;color:var(--ip-text)}
 .battle-page [data-panel-theme] .info-panel-header,.battle-page [data-panel-theme] .info-panel-footer{background:#0003;border-color:var(--ip-edge);color:var(--ip-text)}
 .battle-page [data-panel-theme] .info-status,.battle-page [data-panel-theme] .info-panel h2,.battle-page [data-panel-theme] .info-panel h3{color:var(--ip-title)}
@@ -24,20 +20,6 @@
 .battle-page [data-panel-theme] .info-panel .button:not(.green-btn):focus-visible{outline:3px solid #f9df8a;outline-offset:3px}
 .battle-page [data-panel-theme] .info-panel .button:not(.green-btn):disabled,.battle-page [data-panel-theme] .info-panel .button.disabled:not(.green-btn){--btn-top:#777b7c;--btn-bottom:#4d5355;--btn-edge:#9a9d9b;cursor:not-allowed;filter:saturate(.3);opacity:.52;box-shadow:none}
 /* Bronze menu remains identical across InfoPanel themes. Existing bar animation is retained. */
-.battle-page .battle-menu{width:44px;height:44px;border-radius:8px;color:#e5c48d;background:linear-gradient(145deg,#6e5133 0%,#3a2b21 35%,#211e1a 66%,#59412b 100%);border:1px solid #ad8350;box-shadow:inset 0 1px #e7bb7777,inset 0 -2px 3px #0009,0 3px 9px #0009;transition:box-shadow .2s,filter .2s}
-.battle-page .battle-menu::before{content:"";position:absolute;inset:4px;border:1px solid #b48b4c55;border-radius:4px;pointer-events:none}
-.battle-page .battle-menu:hover{filter:brightness(1.16);box-shadow:0 0 14px #c08a394d,inset 0 1px #e7bb7777}
-.battle-page .battle-menu:focus-visible{outline:2px solid #efcf8d;outline-offset:3px}
-.battle-page .battle-menu-panel{top:56px;background:linear-gradient(135deg,#30281f,#191d19);border:1px solid #ad8350;color:#e9dec9;box-shadow:0 12px 35px #0009,inset 0 1px #e7bb7733}
-.battle-page .battle-menu-panel [role^="menuitem"]:hover:not(:disabled):not([aria-disabled="true"]){background:#70533255}
-.battle-page .battle-menu-panel [role^="menuitem"]:disabled,.battle-page .battle-menu-panel [aria-disabled="true"]{color:#a59d8e;background:#ffffff06}
-.battle-page .battle-menu-panel small,.battle-page .battle-menu-saving{color:#bfb09a}
-.battle-page .battle-menu-panel [data-sound-check]{color:#d7bd81}
-.panel-theme-picker{position:fixed;z-index:1200;top:70px;left:20px;box-sizing:border-box;width:min(430px,calc(100vw - 40px));max-height:calc(100dvh - 100px);overflow:auto;padding:20px;background:#211e19;border:1px solid #ad8350;border-radius:8px;color:#e9dec9;box-shadow:0 12px 35px #0009}
-.panel-theme-picker[hidden]{display:none!important}.panel-theme-picker h2{font:700 20px Georgia,serif;margin:0 30px 16px 0;color:#e5c48d}
-.panel-theme-options{display:grid;grid-template-columns:1fr 1fr;gap:12px}.panel-theme-option{position:relative;min-height:95px;padding:16px;border:2px solid var(--ip-edge);border-radius:6px;background:radial-gradient(ellipse at top,var(--ip-glow),transparent 65%),var(--ip-base);color:var(--ip-title);font:600 14px/1.4 system-ui;cursor:pointer}
-.panel-theme-option[aria-pressed="true"]{outline:2px solid #f4dfb5;outline-offset:2px}.panel-theme-option:focus-visible{outline:3px solid white;outline-offset:2px}.panel-theme-option:disabled{opacity:.55;cursor:wait}
-.panel-theme-picker p{font:13px/1.4 system-ui;color:#d4c2a8}
 .battle-page [data-panel-theme] .info-panel .dice{width:auto;min-width:40px;height:auto;min-height:38px;padding:5px;background:transparent;border:0;box-shadow:none;font-size:18px;line-height:1.3}
 .panel-dice-value{display:inline-flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;vertical-align:middle;line-height:1.3;white-space:normal;font-variant-numeric:tabular-nums}.panel-dice-face{display:block;flex:0 0 32px;width:32px;height:32px;object-fit:contain}.panel-dice-modifier{font-size:16px;color:inherit}.panel-dice-total{font-size:17px;font-weight:700;color:inherit}
 @media(prefers-reduced-motion:reduce){.battle-page .battle-menu,.battle-page [data-panel-theme] .info-panel .button{transition:none}}
@@ -61,7 +43,6 @@
 .battle-page [data-panel-theme] .battle-pile-card .prepare-card{background:var(--ip-surface);color:var(--ip-text);border-color:var(--ip-edge)}
 .battle-page [data-panel-theme] .battle-pile-pagination button span{background:var(--ip-base);border-color:var(--ip-edge)}
 .battle-page [data-panel-theme] .battle-pile-pagination button[aria-current="page"] span{background:var(--ip-title);box-shadow:0 0 0 2px var(--ip-edge)}
-.panel-theme-picker > .battle-window-close{position:absolute;right:12px;top:12px}
 .battle-page .info-panel .battle-secondary-view{display:flex;flex-direction:column;min-height:0;height:100%;color:var(--ip-text)}
 .battle-page .info-panel .battle-secondary-view[hidden]{display:none!important}
 .battle-page .info-panel .battle-secondary-view :is(.game-chat-panel,.battle-journal){position:static!important;inset:auto!important;display:flex;flex:1 1 0;flex-direction:column;width:100%;height:100%;max-height:none;min-height:0;box-sizing:border-box;border:0;border-radius:0;background:transparent;color:var(--ip-text);box-shadow:none;font:14px/1.4 system-ui}
@@ -96,7 +77,7 @@
 
 /* Typography from the supplied Philosopher / Golos Text specimen. */
 .battle-page{--battle-body-font:'Golos Text',Arial,sans-serif;--battle-heading-font:'Philosopher',Georgia,serif;font-family:var(--battle-body-font)}
-.battle-page :is(button,input,textarea,select,.battle-mini-card,.battle-mini-tooltip,.battle-stat-tooltip,.panel-card-class,.battle-icon-tooltip,.panel-theme-option,.panel-theme-picker p,.game-chat,.battle-journal,.coords,.turn-timer-value,.match-pause-countdown,.battle-pause-picker output){font-family:var(--battle-body-font)}
+.battle-page :is(button,input,textarea,select,.battle-mini-card,.battle-mini-tooltip,.battle-stat-tooltip,.panel-card-class,.battle-icon-tooltip,.game-chat,.battle-journal,.coords,.turn-timer-value,.match-pause-countdown,.battle-pause-picker output){font-family:var(--battle-body-font)}
 .battle-page .info-panel .battle-secondary-view :is(.game-chat-panel,.battle-journal){font-family:var(--battle-body-font)}
 .battle-page :is(h1,h2,h3,h4,.info-status,.instant-summary__title,.mini-nameplate__text){font-family:var(--battle-heading-font)}
 .battle-page [data-panel-theme] .info-panel .button.green-btn{font-family:var(--battle-heading-font)}

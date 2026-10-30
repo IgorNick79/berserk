@@ -1,0 +1,93 @@
+{
+  "groups": [
+    {
+      "id": "navigation",
+      "items": [
+        {
+          "id": "lobby",
+          "label": "В лобби",
+          "type": "link"
+        }
+      ],
+      "deny": [
+        "lobby"
+      ]
+    },
+    {
+      "id": "preferences",
+      "items": [
+        {
+          "id": "sound",
+          "label": "Звук",
+          "type": "toggle",
+          "requires": "authenticated"
+        },
+        {
+          "id": "playmat",
+          "label": "Коврик",
+          "type": "select",
+          "requires": "authenticated"
+        },
+        {
+          "id": "battle_theme",
+          "label": "Тема боя",
+          "type": "select",
+          "requires": "authenticated"
+        }
+      ]
+    },
+    {
+      "id": "developer",
+      "items": [
+        {
+          "id": "debug_preparation",
+          "label": "Debug подготовки",
+          "type": "action",
+          "requires": "preparation_debug",
+          "allow": [
+            "preparation"
+          ]
+        },
+        {
+          "id": "debug",
+          "label": "Debug",
+          "type": "action",
+          "requires": "battle_debug",
+          "allow": [
+            "battle"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "account",
+      "position": "bottom",
+      "items": [
+        {
+          "id": "profile",
+          "label": "Мой профиль",
+          "type": "link",
+          "requires": "authenticated"
+        },
+        {
+          "id": "logout",
+          "label": "Выйти",
+          "type": "action",
+          "requires": "authenticated"
+        },
+        {
+          "id": "login",
+          "label": "Войти",
+          "type": "link",
+          "requires": "guest"
+        },
+        {
+          "id": "register",
+          "label": "Регистрация",
+          "type": "link",
+          "requires": "guest"
+        }
+      ]
+    }
+  ]
+}

@@ -26,24 +26,14 @@ final class PlaymatCatalog
         'mat-018' => '/assets/images/playmat/018.webp',
     ];
     public static function url(?string $id): string { return self::ITEMS[$id ?? ''] ?? self::DEFAULT_URL; }
-    /** Separate assignment policy so a profile preference can replace random selection later. */
-    public static function assign(PlayerState $player): void {
-        if ($player->userId > 0 && $player->playmatId === null) {
-            $ids = array_keys(self::ITEMS);
-            $player->playmatId = $ids[random_int(0, count($ids) - 1)];
-        }
+    public static function playerId(PlayerState $player): ?string {
+        $preferences=\Berserk\Auth\AccountUiPreferences::forPlayer($player);
+        return $preferences['playmat_id'] ?? null;
     }
-    public static function snapshot(GameState $state, string $viewer): array {
-        return ['version' => $state->persistenceVersion ?? 0,
-            'own' => $state->getPlayer($viewer)->playmatId,
-            'own_url' => self::url($state->getPlayer($viewer)->playmatId),
-            'opponent_url' => self::url($state->getPlayer($state->getOpponentKey($viewer))->playmatId)];
-    }
-    /** All persisted non-playmat data: cosmetic saves never masquerade as a gameplay snapshot. */
+    public static function playerUrl(PlayerState $player): string { return self::url(self::playerId($player)); }
+    /** Gameplay render token; account preferences are not serialized in GameState. */
     public static function renderToken(GameState $state): string {
         $data = $state->toArray();
-        foreach ($data['players'] as &$player) unset($player['playmat_id']);
-        unset($player);
         return hash('sha256', json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     }
 }

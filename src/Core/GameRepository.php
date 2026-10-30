@@ -46,7 +46,6 @@ final class GameRepository
         return $state;
     }
 
-    private bool $presentationSave = false;
     private bool $creationSave = false;
     private bool $commandSave = false;
 
@@ -57,7 +56,7 @@ final class GameRepository
 
     public function save(GameState $state): void
     {
-        if ($this->requiresHistory($state) && !$this->presentationSave && !$this->creationSave && !($this->commandSave && $state->historyRecorder !== null && $this->db->inTransaction())) {
+        if ($this->requiresHistory($state) && !$this->creationSave && !($this->commandSave && $state->historyRecorder !== null && $this->db->inTransaction())) {
             throw new \LogicException('Journal matches require locked command execution');
         }
         $json = json_encode(
@@ -207,7 +206,6 @@ final class GameRepository
             $state = new GameState($gameId, $hostId, $playerId);
             $state->status = 'mode';
             $state->journalSchema = 1;
-            foreach ($state->players as $participant) PlaymatCatalog::assign($participant);
             $state->persistenceVersion = 0;
 
             $this->creationSave=true;
@@ -219,52 +217,6 @@ final class GameRepository
         } catch (\Throwable $error) {
             if (!$borrowed && $this->db->inTransaction()) $this->db->rollback();
             throw $error;
-        }
-    }
-
-    /** Lock the latest JSON, alter only the identified participant, retain CAS protection. */
-    public function setPlaymat(int $gameId, int $userId, string $id): GameState
-    {
-        if (!isset(PlaymatCatalog::ITEMS[$id])) throw new \InvalidArgumentException('invalid_playmat');
-        $this->db->beginTransaction();
-        try {
-            $state = $this->findById($gameId, true);
-            $actor = $state?->getPlayerKeyByUserId($userId);
-            if ($state === null || $actor === null || !in_array($userId, [$state->hostId, $state->playerId], true))
-                throw new \InvalidArgumentException('not_participant');
-            if (!in_array($state->status,['mode','settings','draft','deck','view','turn','side','deal','place','battle'],true) || $state->winner !== null) throw new \InvalidArgumentException('match_finished');
-            if ($state->getPlayer($actor)->playmatId !== $id) {
-                $state->getPlayer($actor)->playmatId = $id;
-                $this->presentationSave=true;
-                try { $this->save($state); } finally { $this->presentationSave=false; }
-            }
-            $this->db->commit();
-            return $state;
-        } catch (\Throwable $error) {
-            if ($this->db->inTransaction()) $this->db->rollback();
-            throw $error;
-        }
-    }
-
-    /** Cosmetic preparation preference: no Engine, clocks, Draft or battle command bypass. */
-    public function setPreparationSound(int $gameId, int $userId, bool $enabled): GameState
-    {
-        $this->db->beginTransaction();
-        try {
-            $state=$this->findById($gameId,true);
-            $actor=$state?->getPlayerKeyByUserId($userId);
-            if (!$state || !$actor || !in_array($userId,[$state->hostId,$state->playerId],true)) throw new \InvalidArgumentException('not_participant');
-            if (!in_array($state->status,['mode','settings','draft','deck','view','turn','side','deal','place'],true) || $state->winner!==null) throw new \InvalidArgumentException('not_preparation');
-            if ($state->getPlayer($actor)->soundEnabled!==$enabled) {
-                $state->getPlayer($actor)->soundEnabled=$enabled;
-                $this->presentationSave=true;
-                try { $this->save($state); } finally { $this->presentationSave=false; }
-            }
-            $this->db->commit();
-            return $state;
-        } catch (\Throwable $e) {
-            if ($this->db->inTransaction()) $this->db->rollback();
-            throw $e;
         }
     }
 

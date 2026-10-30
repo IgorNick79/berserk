@@ -331,10 +331,9 @@ def main():
         # Presentation remains cosmetic; it cannot bypass recording for a battle action.
         before=state(arbitrary_game);count_events=sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id={arbitrary_game};')
         code,_,_=http(c,arbitrary_game,{'csrf':c.token('account'),'playmat_id':'mat-003'},'&ajax=playmat')
-        expected=json.loads(json.dumps(before));expected['players']['host']['playmat_id']='mat-003'
-        check('mandatory match playmat saves only presentation',code==200 and state(arbitrary_game)==expected and sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id={arbitrary_game};')==count_events)
+        check('retired playmat cannot bypass recording',code==400 and state(arbitrary_game)==before and sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id={arbitrary_game};')==count_events)
         code,_,_=http(c,arbitrary_game,{'csrf':c.token('account'),'sound_enabled':'0'},'&ajax=preparation_preference')
-        check('mandatory preparation sound remains available',code==200 and state(arbitrary_game)['players']['host']['sound_enabled'] is False)
+        check('retired preparation preference cannot mutate game',code==400 and state(arbitrary_game)==before)
         # Real configured grid and Solomon rooms, manual timeout through the locked persistence adapter.
         for draft_type in ['grid','solomon']:
             code,data=a.lobby(data={'action':'create','csrf':a.token('account'),'setup_mode':'draft' if draft_type=='grid' else 'solomon'})

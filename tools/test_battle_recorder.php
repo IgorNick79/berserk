@@ -124,7 +124,7 @@ bt('rejected and technical no-op commands have no new Replay Step',function(){
     $s=bnew();$before=bsteps($s->gameId);bcmd($s,'player','move',['card_id'=>2,'row'=>2,'col'=>4],true,null,false);bcheck(bsteps($s->gameId)===$before,'rejected move no step');
     bcmd($s,'host','confirm_strike',[],true,null,false);bcheck(bsteps($s->gameId)===$before,'rejected stale ACK no step');
     bcmd($s,'host','set_sound',['enabled'=>true],true,null,false);bcheck(bsteps($s->gameId)===$before,'unknown command no step');
-    bcmd($s,'host','set_sound_enabled',['sound_enabled'=>true]);bcheck(bsteps($s->gameId)===$before,'successful presentation no-op has no step');
+    bcmd($s,'host','set_sound_enabled',['sound_enabled'=>true],true,null,false);bcheck(bsteps($s->gameId)===$before,'retired preference command rejected without step');
 });
 foreach(['events','steps']as$table)bt('actual repository rolls back state events captures and journal on '.$table.' INSERT failure',function()use($db,$journal,$table){
     $s=bnew();$g=$s->gameId;$c=$journal->registerProcessing($g,'host','fault-'.$g,'move',['card_id'=>1,'row'=>3,'col'=>2],$s->persistenceVersion);$before=bcounts($g);

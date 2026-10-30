@@ -153,23 +153,9 @@ body.pregame-page {
 .screen-draft--solomon .solomon-stack .prepare-card-link { display: flex; }
 .screen-draft--solomon .solomon-stack .prepare-card { min-height: 128px; }
 
-/* Same menu treatment as origin/main; PreGame has no debug panel yet. */
+/* Reserve the existing gutter; the shared menu is rendered outside this layout. */
 .pregame-layout { position: relative; padding-left: 44px; }
-.pregame-menu {
-    position: absolute;
-    top: 8px;
-    left: 4px;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    border: 1px solid #aaa;
-    border-radius: 6px;
-    background: #fff;
-    color: #555;
-    font-size: 24px;
-    z-index: 110;
-    cursor: pointer;
-}
+
 
 /* View uses bounded pages rather than scrolling the deck list. */
 .pregame-main:has(.screen-prepare-view) { display: flex; overflow: hidden; background: transparent; }

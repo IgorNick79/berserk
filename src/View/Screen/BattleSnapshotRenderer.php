@@ -23,7 +23,6 @@ final class BattleSnapshotRenderer
      * @return array{
      *     turn_timer: ?array,
      *     match_pause: array,
-     *     player_settings: array{sound_enabled:bool},
      *     ui: array{sel:int,mode:string,pile:string,mode_explicit:bool},
      *     fragments: array{
      *         field_html:string,
@@ -56,7 +55,6 @@ final class BattleSnapshotRenderer
         $data = $result['data'];
 
         return [
-            'player_settings' => \Berserk\Core\MatchPlayerSettings::snapshot($state, $playerKey),
             'match_pause' => \Berserk\Core\MatchPause::snapshot($state, $playerKey, $serverNow ?? time()),
             'turn_timer' => TurnTimer::snapshot($state, $serverNow ?? time()),
             'instant_reservation' => \Berserk\Core\InstantReservation::controls($state, $playerKey, $serverNow ?? time()),

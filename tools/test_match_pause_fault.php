@@ -21,7 +21,7 @@ if(!in_array($mode,['crash-after-register','hold-executor'],true)) {
     $needle="        \$this->transactionActive = false;\n    }\n\n    public function ".$next;
     $source=str_replace($needle,"        \$this->transactionActive = false;\n        if (empty(\$GLOBALS['mpLostAck'])) { \$GLOBALS['mpLostAck']=true; throw new ".$fault."('Injected lost acknowledgement'); }\n    }\n\n    public function ".$next,$source,$count);
     if($count!==1)throw new RuntimeException('Db transaction boundary changed');
-    if(in_array($mode,['html-resign-commit-unknown','sound-commit-unknown'],true)) {
+    if($mode==='html-resign-commit-unknown') {
         $source=str_replace('$result = $this->connection->query($sql);',
             'if (!empty($GLOBALS["mpLostAck"]) && empty($GLOBALS["mpLostRecoveryRead"])) { $GLOBALS["mpLostRecoveryRead"]=true; throw new DbQueryException("Injected recovery read failure"); } $result = $this->connection->query($sql);',$source,$count);
         if($count!==1)throw new RuntimeException('Db recovery boundary changed');
@@ -56,10 +56,6 @@ if($mode==='html-resign-commit-unknown') {
     $_SERVER['REQUEST_METHOD']='POST';
     register_shutdown_function(static function():void {echo "\n__RESIGN_STATUS__".(http_response_code()?:200);});
 }
-if($mode==='sound-commit-unknown') {
-    $_GET=['first'=>'','game'=>$game,'ajax'=>'battle_command'];
-    $_POST=['cmd'=>'set_sound_enabled','sound_enabled'=>'0','command_id'=>$argv[3],'expected_version'=>(string)$s->persistenceVersion];
-    $_SERVER['REQUEST_METHOD']='POST';
-}
+
 $_REQUEST=array_merge($_GET,$_POST);$_SERVER['REQUEST_URI']='/index.php?'.http_build_query($_GET);
 require __DIR__.'/../www/index.php';

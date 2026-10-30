@@ -1,0 +1,29 @@
+{
+  "checks": [
+    "one menu on PREPARATION",
+    "Escape closes PREPARATION",
+    "one menu on FINISHED",
+    "Escape closes FINISHED",
+    "reload restores account values",
+    "sticky after real scroll",
+    "last card expands",
+    "both clients see independent mats",
+    "timer consumes account sound",
+    "battle sound toggles timer",
+    "battle Debug opens existing overlay",
+    "battle Debug closes existing overlay",
+    "same icon animation across screens",
+    "menu refreshes cross-tab preference",
+    "battle to lobby retains values",
+    "menu inside viewport 390",
+    "no horizontal overflow 390",
+    "menu inside viewport 360",
+    "no horizontal overflow 360",
+    "history unchanged",
+    "profile route",
+    "logout works",
+    "guest only account links",
+    "no JavaScript errors"
+  ],
+  "errors": []
+}

@@ -73,3 +73,5 @@ www/assets/cards/
 
 !/debug/scenarios/lilith-dark-manual.json
 !/debug/scenarios/lilith-dark-lucktest.json
+
+!tools/migrations/20261030_account_ui_preferences.sql

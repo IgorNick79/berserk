@@ -1724,7 +1724,7 @@ body.battle-page > .screen {
 .battle-page .battle-left,
 .battle-page .battle-panel-side,
 .battle-page .info-panel,
-.battle-page .battle-menu { box-sizing: border-box; }
+
 .battle-page .battle-shell {
     --battle-info-width: min(440px, 45%);
     position: relative;
@@ -1737,19 +1737,7 @@ body.battle-page > .screen {
     min-height: 0;
     padding: 8px 8px 8px 48px;
 }
-.battle-page .battle-menu {
-    position: absolute;
-    top: 8px;
-    left: 4px;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    border: 1px solid #aaa;
-    border-radius: 6px;
-    background: #fff;
-    color: #555;
-    font-size: 24px;
-}
+
 .battle-page .battle-main {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -1871,8 +1859,8 @@ body.battle-page > .screen {
 .battle-page .instant-control-cost, .battle-page .instant-control-quota { font-size: 12px; white-space: nowrap; }
 .battle-page .instant-control-quota { margin-left: auto; }
 .battle-page .battle-selected-card h3 { margin: 0 0 10px; }
-.battle-page .battle-menu { z-index: 110; cursor: pointer; }
-.battle-page .battle-menu:disabled { opacity: .5; cursor: default; }
+
+
 .battle-page .battle-debug-overlay {
     position: absolute;
     top: 8px;
@@ -2265,19 +2253,6 @@ body.battle-page {
 
 .battle-page .info-panel-footer .battle-icon-actions { flex: 0 1 auto; max-width: 100%; flex-wrap: wrap; }
 
-/* Permanent match menu, outside replaceable battle fragments. */
-.battle-page .battle-menu { z-index: 115; }
-.battle-menu-panel { position: absolute; top: 48px; left: 8px; z-index: 116; width: min(264px, calc(100vw - 24px)); max-height: calc(100dvh - 64px); overflow: auto; box-sizing: border-box; padding: 6px; border: 1px solid #9b8c76; border-radius: 8px; background: #f8f5ee; color: #332c23; box-shadow: 0 8px 28px #0005; }
-.battle-menu-panel[hidden] { display: none !important; }
-.battle-menu-panel [role^="menuitem"] { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; box-sizing: border-box; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 4px; font: inherit; font-size: 14px; text-decoration: none; text-align: left; background: transparent; color: inherit; cursor: pointer; }
-.battle-menu-panel [role^="menuitem"]:hover:not(:disabled):not([aria-disabled="true"]) { background: #e7dfd0; }
-.battle-menu-panel [role^="menuitem"]:focus-visible { outline: 2px solid #886332; outline-offset: -2px; }
-.battle-menu-panel [role^="menuitem"]:disabled, .battle-menu-panel [aria-disabled="true"] { color: #888; cursor: default; background: #eeece7; }
-.battle-menu-panel small { color: #888; font-size: 11px; }
-.battle-menu-panel [data-sound-check] { color: #36513a; font-weight: bold; }
-.battle-menu-panel [data-sound-check][hidden], .battle-menu-saving[hidden] { display: none; }
-.battle-menu-saving { display: block; padding: 6px 12px; color: #777; font-size: 12px; }
-
 .battle-page .panel-card-stats .panel-stat-icon,
 .battle-page .panel-card-stats .panel-info-icon { width: 28px; height: 28px; flex-basis: 28px; }
 
@@ -2287,33 +2262,10 @@ body.battle-page {
 .battle-playmat-half.opponent { top: 0; background-image: var(--playmat-opponent); border-radius: 11px 11px 0 0; }
 .battle-playmat-half.own { bottom: 0; background-image: var(--playmat-own); border-radius: 0 0 11px 11px; }
 .battle-playmat-half.own::before { content: ''; position: absolute; top: -1px; left: 0; right: 0; height: 2px; background: #624322; box-shadow: 0 0 2px #ffe1a9, 0 1px 3px #000; pointer-events: none; }
-.playmat-picker { position: absolute; z-index: 260; top: 48px; left: 4px; box-sizing: border-box; width: min(576px, calc(100vw - 16px)); max-height: calc(100dvh - 64px); overflow-y: auto; padding: 12px; border: 1px solid #766848; border-radius: 10px; background: #eee5d5; color: #332819; box-shadow: 0 6px 24px #0008; }
-.playmat-picker[hidden], .playmat-options button[hidden] { display: none !important; }
-.playmat-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.playmat-options button { width: 100%; aspect-ratio: 1214 / 520; padding: 0; background-position: center; background-size: contain; background-repeat: no-repeat; background-color: #28251e; border: 2px solid #766848; border-radius: 5px; cursor: pointer; }
-.playmat-options button[aria-pressed="true"] { outline: 3px solid #267553; outline-offset: -5px; border-color: #f6ffdb; }
-.playmat-options button:focus-visible { outline: 3px solid #344f78; }
-.playmat-options button:disabled { cursor: wait; }
-.playmat-pagination { display: flex; justify-content: center; gap: 6px; margin-top: 14px; }
-.playmat-pagination button { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; background: transparent; cursor: pointer; }
-.playmat-pagination button span { display: block; width: 16px; height: 16px; box-sizing: border-box; border-radius: 50%; background: #d8d0c3; border: 1px solid #766848; box-shadow: 0 1px 3px #0006; }
-.playmat-pagination button[aria-current="page"] span { background: #917137; border-color: #fff4d6; box-shadow: 0 0 0 2px #fff4d6; }
-.playmat-pagination button:hover span { transform: scale(1.15); }
-.playmat-picker [data-mat-close] { float: right; }
-
-.battle-menu-icon { display: block; position: relative; width: 20px; height: 16px; margin: auto; }
-.battle-menu-icon i { position: absolute; left: 0; width: 20px; height: 2px; background: currentColor; border-radius: 2px; transition: transform 160ms ease, opacity 120ms ease; }
-.battle-menu-icon i:nth-child(1) { top: 0; }
-.battle-menu-icon i:nth-child(2) { top: 7px; }
-.battle-menu-icon i:nth-child(3) { top: 14px; }
-.battle-menu.is-open .battle-menu-icon i:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.battle-menu.is-open .battle-menu-icon i:nth-child(2) { transform: scaleX(.5); opacity: 0; }
-.battle-menu.is-open .battle-menu-icon i:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 .battle-window-close { display: inline-grid; place-items: center; flex: 0 0 auto; width: 34px; height: 34px; padding: 0; border: 1px solid #766848; border-radius: 4px; background: #f8f5ee; color: #332c23; font-size: 20px; line-height: 1; cursor: pointer; }
 .battle-window-close:hover { background: #e7dfd0; }
 .battle-window-close:focus-visible { outline: 2px solid #886332; outline-offset: 2px; }
 .battle-debug-toolbar { position: sticky; top: 0; z-index: 1; display: flex; justify-content: flex-end; padding: 6px; background: #171717; }
-@media (prefers-reduced-motion: reduce) { .battle-menu-icon i { transition: none; } }
 
 /* Pile browsing uses the same compact cards as Draft history, inside InfoPanel. */
 .battle-pile-panel[hidden], .battle-pile-entry[hidden] { display: none !important; }
@@ -2346,16 +2298,6 @@ body.battle-page {
 }
 
 /* Shared match navigation on preparation and completed-game screens. */
-.game-menu { position: absolute; left: 4px; top: 8px; z-index: 120; }
-.game-menu > summary { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid #aaa; border-radius: 6px; background: #f8f5ee; cursor: pointer; list-style: none; }
-.game-menu > summary::-webkit-details-marker { display: none; }
-.game-menu-panel { position: absolute; top: 42px; left: 0; width: 250px; padding: 6px; border: 1px solid #9b8c76; border-radius: 8px; background: #f8f5ee; box-shadow: 0 8px 28px #0005; }
-.game-menu-panel [role^="menuitem"] { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; box-sizing: border-box; padding: 10px 12px; border: 0; background: transparent; color: #332c23; text-decoration: none; text-align: left; font: inherit; cursor: pointer; }
-.game-menu-panel [role^="menuitem"]:hover:not(:disabled) { background: #e7dfd0; }
-.game-menu-panel button:disabled { color: #888; cursor: default; }
-.game-menu-panel form, .battle-menu-panel form { margin: 0; }
-.game-menu-panel [role^="menuitem"]:focus-visible, .game-menu > summary:focus-visible { outline: 2px solid #886332; }
-.game-menu-panel [role="status"] { margin: 0; padding: 0 10px; color: #8b2929; }
 
 .cell-marker-lantern_light { background-image: url("/assets/images/lantern.png"); background-size: cover; border: 1px solid #916314; box-sizing: border-box; }
 

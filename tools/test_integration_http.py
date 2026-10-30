@@ -381,13 +381,9 @@ def main():
             check('configured '+kind+' SQL JSON participants match',saved['host_id']==1 and saved['player_id']==2 and saved['players']['host']['user_id']==1 and saved['players']['player']['user_id']==2 and sql(f'USE LAB_DB;SELECT status FROM games WHERE ind={g};')==stage)
             check('configured '+kind+' repeated accept denied',a.act(waiting,'accept')[0]==409)
             before=state(g)
-            pref,_,_=http(a,g,{'csrf':a.token('account'),'sound_enabled':'0'},'&ajax=preparation_preference')
-            after=state(g);expected=json.loads(json.dumps(before));expected['players']['host']['sound_enabled']=False
-            check('configured '+kind+' sound is cosmetic only',pref==200 and after==expected)
-            check('configured '+kind+' preference outsider denied',http(c,g,{'csrf':c.token('account'),'sound_enabled':'1'},'&ajax=preparation_preference')[0]==403)
-            check('configured '+kind+' preference CSRF denied',http(a,g,{'csrf':'bad','sound_enabled':'1'},'&ajax=preparation_preference')[0]==403)
-            before=state(g);mat,_,_=http(a,g,{'csrf':a.token('account'),'playmat_id':'mat-003'},'&ajax=playmat');after=state(g);before['players']['host']['playmat_id']='mat-003'
-            check('configured '+kind+' playmat is cosmetic only',mat==200 and before==after)
+            for retired in ['playmat','preparation_preference']:
+                code,_,_=http(a,g,{'csrf':a.token('account')},'&ajax='+retired)
+                check('retired '+retired+' cannot mutate game',code==400 and state(g)==before)
             if kind in ['draft','solomon']:check('configured '+kind+' correct draft subtype',saved['settings']['draft']['type']==('solomon' if kind=='solomon' else 'grid'))
         check('public guest list exposes types and dates',Client().lobby()[0]==200 and any(r['game_type']=='sealed' and r['created_at'] for r in Client().lobby()[1]['rooms']))
         check('guest still cannot create',Client().lobby(data={'action':'create','setup_mode':'system','csrf':'invalid'})[0]==401)

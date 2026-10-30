@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace Berserk\Lobby;
 
-use Berserk\Core\{GameState,PlaymatCatalog};
+use Berserk\Core\{GameState};
 
 /** Minimal initial-state adapter. Caller owns the SINGLE room/game transaction. */
 final class MatchCreator
@@ -16,7 +16,6 @@ final class MatchCreator
         $id = (int)$db->insert_id;
         $state = new GameState($id,$creator,$accepted);
         $state->journalSchema = 1;
-        foreach ($state->players as $participant) PlaymatCatalog::assign($participant);
         $setup=$transaction->setup();
         $history = \Berserk\Core\BattleHistory\HistoryRuntime::load();
         \Berserk\Core\Db::withTransaction($db, static function (\Berserk\Core\Db $connection) use ($id): void {

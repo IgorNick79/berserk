@@ -163,6 +163,7 @@
                     if (destroyed) return;
                     destroyed = true;
                     suspend();
+                    document.removeEventListener('berserk:preferences', preferenceChanged);
                     document.removeEventListener("pointerdown", armAudio);
                     document.removeEventListener("keydown", armAudio);
                     if (audioContext) audioContext.close().catch(function () {});
@@ -172,8 +173,12 @@
             root.berserkTurnTimer = controller;
             document.addEventListener("pointerdown", armAudio);
             document.addEventListener("keydown", armAudio);
-            var settingsBoot = document.querySelector("#battle-player-settings");
-            if (settingsBoot) { try { updateSettings(JSON.parse(settingsBoot.textContent), initialVersion); } catch (e) {} }
+            // Account preference revision is independent of gameplay version.
+            function preferenceChanged(event) { updateSettings(event.detail, event.detail.revision); }
+            document.addEventListener('berserk:preferences', preferenceChanged);
+            if (window.BerserkPreferences?.current) updateSettings(window.BerserkPreferences.current, window.BerserkPreferences.current.revision);
+            else if (document.querySelector('[data-unified-menu]')) soundEnabled=false;
+
             var boot = root.querySelector("[data-turn-timer]");
             if (boot && boot.dataset.turnTimerState) {
                 try { update(JSON.parse(boot.dataset.turnTimerState), initialVersion); } catch (e) {}

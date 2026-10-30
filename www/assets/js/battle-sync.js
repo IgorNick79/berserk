@@ -26,23 +26,16 @@
     }
 
     var renderToken = script.dataset.renderToken || "";
-    var playmats = window.BerserkPlaymats ? window.BerserkPlaymats.create(root, syncUrl, function (data) {
-        // Advance CAS only when the acknowledged JSON has the gameplay already on screen.
-        // Otherwise keep the cursor so the next poll retrieves intervening game actions.
-        if (data.render_token === renderToken) syncVersion = Math.max(syncVersion, data.playmats.version);
-    }) : null;
     var syncVersion = parseInt(script.dataset.version || "-1", 10);
     if (!Number.isFinite(syncVersion)) syncVersion = -1;
     var turnTimer = window.BerserkTurnTimer
         ? window.BerserkTurnTimer.create(root, script.dataset.viewerKey, syncVersion, script.dataset.turnSoundUrl || "")
         : null;
 
-    var matchPause = null, battleMenu = null, drag = null;
+    var matchPause = null, battleDebug = null, drag = null;
 
     function updateTurnTimer(data) {
         document.dispatchEvent(new Event("berserk:battle-updated"));
-        if (playmats && data && data.playmats) playmats.update(data.playmats);
-        if (turnTimer && data && data.player_settings) turnTimer.updateSettings(data.player_settings, data.sync_version);
         if (pendingCommand && data && data.command_id === pendingCommand.id && data.command_status === "conflict"
             && pendingCommand.type === "pause_ready") pendingCommand.readyConflict = true;
         var resumeEvent = matchPause && data && data.match_pause
@@ -51,7 +44,7 @@
             turnTimer.update(data.turn_timer, data.sync_version, !!resumeEvent);
         }
         if (resumeEvent && turnTimer) turnTimer.notify();
-        if (battleMenu) battleMenu.render();
+        if (battleDebug) battleDebug.render();
         if (drag) drag.observe(data);
     }
 
@@ -92,8 +85,8 @@
         ? window.BerserkMatchPause.create(root, syncVersion, submitCommand, commandInFlight, function () { requestSnapshot(true); })
         : null;
 
-    battleMenu = window.BerserkBattleMenu
-        ? window.BerserkBattleMenu.create(root, submitCommand, commandInFlight, function () { return !turnTimer || turnTimer.isSoundEnabled(); })
+    battleDebug = window.BerserkBattleDebug
+        ? window.BerserkBattleDebug.create(root)
         : null;
 
     function commandInFlight() {
@@ -207,7 +200,7 @@
     }
 
     function showMessage(text, tone) {
-        if (battleMenu) battleMenu.render();
+        if (battleDebug) battleDebug.render();
         if (!messageNode) return;
 
         messageNode.textContent = (window.BerserkMatchPause ? window.BerserkMatchPause.message(text) : text) || "";
@@ -325,7 +318,7 @@
     }
 
     function navigateToCurrentPage() {
-        if (battleMenu) battleMenu.destroy();
+        if (battleDebug) battleDebug.destroy();
         if (matchPause) matchPause.destroy();
         if (turnTimer) turnTimer.destroy();
         stopped = true;
@@ -926,7 +919,7 @@
     });
 
     window.addEventListener("beforeunload", function () {
-        if (battleMenu) battleMenu.destroy();
+        if (battleDebug) battleDebug.destroy();
         if (matchPause) matchPause.destroy();
         if (turnTimer) turnTimer.destroy();
         stopped = true;

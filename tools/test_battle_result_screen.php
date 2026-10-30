@@ -43,9 +43,7 @@ if (in_array('--fixture', $argv, true)) {
     $data = $screen->prepare($s, 'host', true);
     $html = file_get_contents(__DIR__ . '/../templates/screen/game_over.tpl');
     foreach ($data as $key=>$value) $html = str_replace('{{'.$key.'}}', $value, $html);
-    $menu = \Berserk\View\Ui\GameMenu::preparation('test', true, true, $s, 'host');
-    $menu = str_replace(['<summary aria-label=', '>☰</summary>', 'class="game-menu-panel"'],
-        ['<summary class="battle-menu" aria-label=', '><span class="battle-menu-icon"><i></i><i></i><i></i></span></summary>', 'class="game-menu-panel battle-menu-panel"'], $menu);
+    $menu = \Berserk\View\Ui\GameMenu::render('finished',new \Berserk\Auth\Account(1,'Fixture'),'test',$s,'host');
     check(!str_contains($menu, 'Отложить игру'), 'Finished menu omits postpone');
     $html .= '<link rel="stylesheet" href="/assets/css/battle-journal.css"><aside id="battle-journal" class="battle-journal" hidden aria-label="Журнал боя"><header class="panel-card-heading"><h3 class="panel-card-title">Журнал боя</h3><button type="button" data-journal-close aria-label="Закрыть журнал">×</button></header><p data-journal-notice></p><div class="battle-journal-scroll" data-journal-scroll tabindex="0"><ol data-journal-entries></ol></div><p data-journal-state role="status"></p></aside><script src="/assets/js/battle-journal.js" data-journal-url="/battle-journal.php" defer></script>';
     $html .= $tpl->parse('includes/game_chat.tpl', ['chat_game_id'=>42,'chat_sender_id'=>1,'chat_csrf'=>'test']);

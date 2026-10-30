@@ -17,7 +17,6 @@ use Berserk\Core\GameState;
 use Berserk\Core\TurnTimer;
 use Berserk\Core\AutomaticBattleProgress;
 use Berserk\Core\MatchPause;
-use Berserk\Core\MatchPlayerSettings;
 use Berserk\Core\AutomaticMatchPause;
 use Berserk\Core\View;
 use Berserk\Core\DeckView;
@@ -273,12 +272,10 @@ function sendBattleAjaxState(
             'type' => $type === 'conflict' ? 'conflict' : 'status',
             'sync_version' => $syncVersion,
             'render_token' => \Berserk\Core\PlaymatCatalog::renderToken($state),
-            'playmats' => \Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey),
             'status' => $state->status,
             'turn_timer' => TurnTimer::snapshot($state, time()),
             'instant_reservation' => \Berserk\Core\InstantReservation::controls($state, $playerKey, time()),
             'instant_control' => \Berserk\View\Screen\Battle\InstantControl::project($state, $playerKey, time()),
-            'player_settings' => MatchPlayerSettings::snapshot($state, $playerKey),
             'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
         ];
         if ($error !== null) {
@@ -303,7 +300,6 @@ function sendBattleAjaxState(
         'type' => $type,
         'sync_version' => $syncVersion,
         'render_token' => \Berserk\Core\PlaymatCatalog::renderToken($state),
-        'playmats' => \Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey),
         'status' => $state->status,
         'ui' => $snapshot['ui'],
         'fragments' => $snapshot['fragments'],
@@ -341,7 +337,7 @@ function sendCommandStatus(
     int $statusCode = 200
 ): never {
     global $db, $playerKey, $settingsOnlyRequest;
-    if (($record['command_type'] ?? null) === MatchPlayerSettings::COMMAND) $settingsOnlyRequest = true;
+    if (($record['command_type'] ?? null) === 'set_sound_enabled') $settingsOnlyRequest = true;
     $viewer = (string) ($record['player_key'] ?? $playerKey);
     $allowCombat = $record !== null && ($record['status'] ?? 'processing') !== CommandJournalRepository::STATUS_PROCESSING;
     $state = applyAutomaticBattleProgress($db, $state, $viewer, $allowCombat);
@@ -349,7 +345,6 @@ function sendCommandStatus(
         ['turn_timer' => TurnTimer::snapshot($state, time()),
          'instant_reservation' => \Berserk\Core\InstantReservation::controls($state, $viewer, time()),
          'instant_control' => \Berserk\View\Screen\Battle\InstantControl::project($state, $viewer, time()),
-         'player_settings' => MatchPlayerSettings::snapshot($state, $viewer),
          'match_pause' => MatchPause::snapshot($state, $viewer, time())]);
 }
 
@@ -548,17 +543,15 @@ function buildRenderCardInfo(Db $db, GameState $state): array
 
 $ajax = ajaxParamString('ajax', 32);
 $isChat = in_array($ajax, ['chat_messages', 'chat_send', 'chat_read'], true);
-$isPlaymat = $ajax === 'playmat';
-$isPreparationPreference = $ajax === 'preparation_preference';
 $isBattleSync = $ajax === 'battle_sync';
 $isBattleCommand = $ajax === 'battle_command';
 $isBattleCommandStatus = $ajax === 'battle_command_status';
-$settingsOnlyRequest = $isBattleCommand && ajaxPostParamString('cmd', 64) === MatchPlayerSettings::COMMAND;
+$settingsOnlyRequest = false;
 
 // Authenticate and resolve membership BEFORE repositories, chat, Dice or progress.
 try {
     $account = AuthContext::start();
-    if ($ajax !== null && !in_array($ajax,['prepare_sync','battle_sync','battle_command','battle_command_status','playmat','preparation_preference','chat_messages','chat_send','chat_read'],true)) throw new DomainException('unknown_endpoint',400);
+    if ($ajax !== null && !in_array($ajax,['prepare_sync','battle_sync','battle_command','battle_command_status','chat_messages','chat_send','chat_read'],true)) throw new DomainException('unknown_endpoint',400);
     $gameId = ajaxParamInt('game') ?? 0;
     if ($gameId <= 0) {
         if ($ajax !== null || isset($_GET['cmd']) || isset($_GET['first']) || isset($_GET['second'])) throw new DomainException('invalid_game',400);
@@ -567,6 +560,8 @@ try {
     if (isset($_GET['first']) || isset($_GET['second']) || isset($_GET['debug'])) throw new DomainException('prototype_parameter_disabled',400);
     $db = \Berserk\Auth\AuthContext::gameDb();
     $role = GameAccess::resolve($db,$gameId,$account->id);
+    $uiConfig=require __DIR__.'/../config/auth.local.php';
+    \Berserk\Auth\AccountUiPreferences::bindPresentation(new \Berserk\Auth\AccountUiPreferences($uiConfig['db']));
     $userId = $account->id;
     $playerKey = $role;
     $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -576,7 +571,7 @@ try {
         AuthSession::requireCsrf($_POST['csrf'] ?? null);
     }
     if (isset($_GET['cmd'])) throw new DomainException('commands_require_post',405);
-    if ($ajax !== null && $ajax !== 'battle_command' && !$isChat && !$isPlaymat && !$isPreparationPreference && $requestMethod !== 'GET') throw new DomainException('method_not_allowed',405);
+    if ($ajax !== null && $ajax !== 'battle_command' && !$isChat && $requestMethod !== 'GET') throw new DomainException('method_not_allowed',405);
     GameTransport::$game = $gameId;
     GameTransport::$csrf = AuthSession::csrf();
     unset($_SESSION['debug'],$_SESSION['debug_roll'],$_SESSION['debug_roll_state'],$_SESSION['user_id'],$_SESSION['role']);
@@ -670,33 +665,10 @@ if (isset($_POST['debug_roll']) || isset($_POST['lucktest_url_roll']) || isset($
     if (isset($_POST['lucktest_scenario']) && $playerKey !== 'host') { http_response_code(403); exit('scenario_host_only'); }
 }
 
-if (in_array($state->status,['battle','game_over'],true) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && !$isBattleCommand && !$isPlaymat) {
+if (in_array($state->status,['battle','game_over'],true) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && !$isBattleCommand) {
     http_response_code(405); exit('battle_commands_require_journal_endpoint');
 }
 $oppKey    = $state->getOpponentKey($playerKey);
-
-if ($isPreparationPreference) {
-    if (($_SERVER['REQUEST_METHOD'] ?? '')!=='POST') sendAjaxJson(['ok'=>false,'error'=>'method'],405);
-    $enabled=ajaxPostParamString('sound_enabled',1);
-    if (!in_array($enabled,['0','1'],true)) sendAjaxJson(['ok'=>false,'error'=>'invalid_preference'],400);
-    try {
-        $fresh=$repo->setPreparationSound($state->gameId,$userId,$enabled==='1');
-        sendAjaxJson(['ok'=>true,'sound_enabled'=>$fresh->getPlayer($playerKey)->soundEnabled]);
-    } catch (\InvalidArgumentException) { sendAjaxJson(['ok'=>false,'error'=>'not_preparation'],409); }
-    catch (Throwable) { sendAjaxJson(['ok'=>false,'error'=>'save_failed'],503); }
-}
-
-if ($isPlaymat) {
-    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') sendAjaxJson(['ok'=>false,'error'=>'method'],405);
-    $token = ajaxPostParamString('csrf',64);
-    if (!$token || !hash_equals(GameTransport::$csrf, $token)) sendAjaxJson(['ok'=>false,'error'=>'csrf'],403);
-    try {
-        $fresh = $repo->setPlaymat($state->gameId, $userId, ajaxPostParamString('playmat_id',64) ?? '');
-        sendAjaxJson(['ok'=>true,'render_token'=>\Berserk\Core\PlaymatCatalog::renderToken($fresh),'playmats'=>\Berserk\Core\PlaymatCatalog::snapshot($fresh,$playerKey)]);
-    } catch (\InvalidArgumentException $error) {
-        sendAjaxJson(['ok'=>false,'error'=>$error->getMessage()],400);
-    } catch (Throwable) { sendAjaxJson(['ok'=>false,'error'=>'save_failed'],500); }
-}
 
 if ($isBattleSync) {
     try {
@@ -714,7 +686,6 @@ if ($isBattleSync) {
                 'turn_timer' => TurnTimer::snapshot($state, time()),
                 'instant_reservation' => \Berserk\Core\InstantReservation::controls($state, $playerKey, time()),
                 'instant_control' => \Berserk\View\Screen\Battle\InstantControl::project($state, $playerKey, time()),
-                'player_settings' => MatchPlayerSettings::snapshot($state, $playerKey),
                 'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
             ]);
         }
@@ -724,11 +695,9 @@ if ($isBattleSync) {
                 'ok' => true,
                 'type' => 'no_change',
                 'sync_version' => $syncVersion,
-                'playmats' => \Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey),
                 'turn_timer' => TurnTimer::snapshot($state, time()),
                 'instant_reservation' => \Berserk\Core\InstantReservation::controls($state, $playerKey, time()),
                 'instant_control' => \Berserk\View\Screen\Battle\InstantControl::project($state, $playerKey, time()),
-                'player_settings' => MatchPlayerSettings::snapshot($state, $playerKey),
                 'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
             ]);
         }
@@ -825,6 +794,7 @@ if ($isBattleCommand) {
             sendPreRegistrationRejection($db, $state, $playerKey, 'invalid_command_request');
         }
 
+        if ($commandType === 'set_sound_enabled') sendAjaxJson(['ok'=>false,'error'=>'unknown_command'],400);
         $journal = new CommandJournalRepository($db);
         try {
             $journalRecord = $journal->registerProcessing(
@@ -1395,11 +1365,8 @@ switch ($state->status) {
                 break;
             }
         }
-        $_SESSION['playmat_csrf'] = GameTransport::$csrf;
-        $scriptsHtml = '<script type="application/json" id="battle-playmats">' . json_encode(['catalog'=>\Berserk\Core\PlaymatCatalog::ITEMS, 'csrf'=>$_SESSION['playmat_csrf'], 'state'=>\Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey)], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . '</script>'
-            . '<script src="/assets/js/battle-playmats.js?v={{rkey}}"></script>'
-            . '<script src="/assets/js/battle-turn-timer.js?v={{rkey}}"></script>'
-            . '<script src="/assets/js/battle-menu.js?v={{rkey}}"></script>'
+        $scriptsHtml = '<script src="/assets/js/battle-turn-timer.js?v={{rkey}}"></script>'
+            . '<script src="/assets/js/battle-debug.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-match-pause.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-sync.js?v={{rkey}}"'
             . ' data-viewer-key="' . htmlspecialchars($playerKey, ENT_QUOTES) . '"'
@@ -1440,9 +1407,7 @@ switch ($state->status) {
 // ─── Рендерим ────────────────────────────────────────────────
 // Data only: Stage 1 supplies the same contract on full pages, including game_over.
 if ($state->status === 'battle' || isset($state->battle['match_pause'])) {
-    $scriptsHtml = '<script type="application/json" id="battle-player-settings">'
-        . json_encode(MatchPlayerSettings::snapshot($state, $playerKey), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)
-        . '</script>' . '<script type="application/json" id="match-pause-state">'
+    $scriptsHtml = '<script type="application/json" id="match-pause-state">'
         . json_encode(MatchPause::snapshot($state, $playerKey, time()), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)
         . '</script>' . $scriptsHtml;
 }
@@ -1451,23 +1416,10 @@ $screenHtml = $isPreGame
     ? (new \Berserk\View\Ui\PreGameLayout($tpl))->renderScreen($screenName, $screenData)
     : $tpl->parse("screen/{$screenName}.tpl", $screenData);
 
-$menuAccount=\Berserk\View\Ui\GameMenu::account(GameTransport::$csrf);
-if ($screenName==='battle') {
-    $screenHtml=preg_replace('/(<div id="battle-menu-panel"[^>]*>)/','$1<a role="menuitem" href="/lobby.php">В лобби</a>',$screenHtml,1);
-    $screenHtml=str_replace('<span class="battle-menu-saving"',$menuAccount.'<span class="battle-menu-saving"',$screenHtml);
-} else {
-    $menu=\Berserk\View\Ui\GameMenu::preparation(GameTransport::$csrf,$state->getPlayer($playerKey)->soundEnabled,$screenName==='game_over',$state,$playerKey);
-    if ($isPreGame) $screenHtml=preg_replace('/<button class="pregame-menu".*?<\/button>/s',$menu,$screenHtml,1);
-    elseif ($screenName === 'game_over') {
-        $menu = str_replace('<summary aria-label=', '<summary class="battle-menu" aria-label=', $menu);
-        $menu = str_replace('>☰</summary>', '><span class="battle-menu-icon" aria-hidden="true"><i></i><i></i><i></i></span></summary>', $menu);
-        $menu = str_replace('class="game-menu-panel"', 'class="game-menu-panel battle-menu-panel"', $menu);
-        $screenHtml = $menu . $screenHtml;
-    } else $screenHtml=$menu.$screenHtml;
-    $scriptsHtml.='<script type="application/json" id="preparation-menu-config">'.json_encode(['game'=>$state->gameId,'csrf'=>GameTransport::$csrf],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>'
-        .'<script type="application/json" id="battle-playmats">'.json_encode(['catalog'=>\Berserk\Core\PlaymatCatalog::ITEMS,'csrf'=>GameTransport::$csrf,'state'=>\Berserk\Core\PlaymatCatalog::snapshot($state,$playerKey)],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>'
-        .'<script src="/assets/js/battle-playmats.js?v=2"></script><script src="/assets/js/game-menu.js?v=1"></script>';
-}
+$accountPresentation=\Berserk\Auth\AccountUiPreferences::forPlayer($state->getPlayer($playerKey));
+if ($accountPresentation) $screenHtml=str_replace('data-panel-theme="grimoire"','data-panel-theme="'.$accountPresentation['theme'].'"',$screenHtml);
+$menuScreen=$screenName==='battle'?'battle':($screenName==='game_over'?'finished':'preparation');
+$screenHtml=\Berserk\View\Ui\GameMenu::render($menuScreen,$account,GameTransport::$csrf,$state,$playerKey,$screenData['debug_menu_html']??'').$screenHtml;
 
 if (in_array($screenName,['battle','game_over'],true)
     && $historyRuntime->journals($state->gameId) && $historyRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION)===$playerKey) {

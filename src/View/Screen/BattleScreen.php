@@ -203,9 +203,8 @@ final class BattleScreen
                     ? '<button type="button" role="menuitem" data-menu-debug>Debug</button>' : '',
                 'debug_disabled' => $debugHtml === '' ? 'disabled' : '',
                 'debug_menu_url' => htmlspecialchars('#battle-debug', ENT_QUOTES),
-                'own_playmat' => \Berserk\Core\PlaymatCatalog::url($state->getPlayer($playerKey)->playmatId),
-                'opponent_playmat' => \Berserk\Core\PlaymatCatalog::url($state->getPlayer($oppKey)->playmatId),
-                'sound_checked' => $state->getPlayer($playerKey)->soundEnabled ? 'true' : 'false',
+                'own_playmat' => \Berserk\Core\PlaymatCatalog::playerUrl($state->getPlayer($playerKey)),
+                'opponent_playmat' => \Berserk\Core\PlaymatCatalog::playerUrl($state->getPlayer($oppKey)),
                 'debug_menu_attr' => \Berserk\Core\MatchPause::blocking($state)
                     ? 'aria-disabled="true" tabindex="-1"'
                     : 'href="#battle-debug"',
