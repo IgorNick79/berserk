@@ -11,7 +11,7 @@
     const content = document.getElementById('content'), notice = document.getElementById('notice');
     const roomId = new URL(location.href).searchParams.get('room');
     let filter='all'; const expanded=new Set();
-    let busy = false, polling = false, epoch = 0, delay = 1500, timer, withdrawing = false;
+    let busy = false, polling = false, epoch = 0, delay = 1500, timer, withdrawing = false, ownRejection = null;
     const versions = new Map();
     const node = (tag, text) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; return el; };
     const url = () => 'lobby.php?api=1' + (roomId ? '&room=' + encodeURIComponent(roomId) : '');
@@ -26,6 +26,8 @@
             const r = next.room, previous = versions.has(r.id) ? state.room : null;
             if (withdrawing && r.state === 'open') { location.assign('lobby.php'); return; }
             withdrawing = false;
+            if (previous?.can_decide && r.state === 'open' && ownRejection !== previous.candidate_request_id)
+                signal('withdrawal:' + r.id + ':' + previous.candidate_request_id);
             if (r.can_decide && (!previous || r.candidate_request_id !== previous.candidate_request_id))
                 signal('request:' + r.id + ':' + r.candidate_request_id);
             if (previous?.role === 'candidate' && previous.state === 'awaiting_confirmation' && r.state !== previous.state)
@@ -78,6 +80,7 @@
         if (busy) return;
         busy = true; ++epoch; clearTimeout(timer); render(); notice.textContent = '';
         withdrawing = action === 'withdraw';
+        if (action === 'reject') ownRejection = room.candidate_request_id;
         const params = new URLSearchParams({action, csrf: root.dataset.csrf});
         const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10000);
         if (room) { params.set('version', room.version); if (room.candidate_request_id) params.set('candidate_request_id', room.candidate_request_id); }
@@ -85,7 +88,10 @@
             const response = await fetch('lobby.php?api=1' + (room ? '&room=' + room.id : ''), {method:'POST', body:params, credentials:'same-origin', cache:'no-store', signal:controller.signal});
             const data = await response.json();
             if (response.status === 401) { location.assign('auth.php?page=login'); return; }
-            if (!response.ok) throw new Error(data.error || 'Действие не выполнено. Обновляю состояние.');
+            if (!response.ok) {
+                if (action === 'reject' && response.status < 500) ownRejection = null;
+                throw new Error(data.error || 'Действие не выполнено. Обновляю состояние.');
+            }
             // No legacy game URL is ever used, including after accept.
             if (action === 'create' || action === 'open' || action === 'withdraw') { location.assign(data.url); return; }
             adopt(data); notice.textContent = '';

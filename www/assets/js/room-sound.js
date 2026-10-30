@@ -1,6 +1,7 @@
 /* UI notifications only; no match timer, commands or separate preference storage. */
 (() => {
     'use strict';
+    if (window.BerserkRoomSound) return;
     let context, pending = null, navigating = false, generation = 0;
     const seen = new Set(), tones = new Set();
     const enabled = () => window.BerserkPreferences?.current?.sound_enabled === true;
@@ -25,7 +26,7 @@
         const expectedGeneration = generation;
         const play = () => {
             if (generation !== expectedGeneration || !enabled() || context?.state !== 'running' || Date.now() - event.at > 5000) return;
-            [660, 880].forEach((frequency, index) => {
+            [880].forEach((frequency, index) => {
                 const oscillator = context.createOscillator(), gain = context.createGain();
                 const at = context.currentTime + index * 0.14;
                 oscillator.type = 'sine'; oscillator.frequency.value = frequency;
