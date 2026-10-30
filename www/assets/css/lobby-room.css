@@ -1,0 +1,33 @@
+/* One scrollport on desktop, one document scroll on mobile. No battle geometry changes. */
+body.room-page{padding:24px 24px 24px 76px;overflow:hidden}
+.lobby--room{max-width:1600px;padding:0;background:none;border:0;border-radius:0}
+.lobby--room #content{overflow:visible;display:flex;min-width:0}
+.room-shell{display:grid;grid-template-columns:minmax(0,1fr) min(440px,45%);gap:18px;width:100%;min-height:0;min-width:0}
+.room-illustration{position:relative;min-width:0;min-height:0;margin:0;border:1px solid #786147;border-radius:9px;overflow:hidden;background:#1c1915;box-shadow:0 12px 35px #0007}
+.room-illustration img{display:block;width:100%;height:100%;object-fit:cover;object-position:52% center}
+.room-illustration:after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 60px #0007}
+.room-page .room-info{position:static;inset:auto;max-height:none;display:flex;flex-direction:column;padding:0;overflow:hidden;min-width:0;min-height:0;z-index:auto}
+.room-header{padding:24px 24px 20px;border-bottom:1px solid var(--ip-edge)}
+.room-eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:var(--ip-muted);margin:0 0 12px}
+.room-header h1{font:28px/1.2 Georgia,serif;color:var(--ip-title);margin:0 0 10px}
+.room-kind{margin:0;color:var(--ip-muted);font-size:14px}
+.room-info-scroll{flex:1;overflow:auto;min-height:0;padding:20px 24px;scrollbar-width:thin;scrollbar-color:var(--ip-edge) var(--ip-base)}
+.room-state{color:var(--ip-title);font:19px/1.35 Georgia,serif;margin:0 0 22px}
+.room-participants{display:grid;gap:12px}
+.room-seat{padding:16px;border:1px solid var(--ip-edge);border-radius:6px;background:linear-gradient(140deg,#ffffff08,transparent 65%),var(--ip-surface);overflow-wrap:anywhere}
+.room-seat-label{display:block;font-size:11px;color:var(--ip-muted);margin-bottom:7px}
+.room-seat strong{display:block;font-size:16px;color:var(--ip-title)}
+.room-seat-status{font-size:12px;margin:7px 0 0;color:var(--ip-muted)}
+.room-settings{margin-top:26px}.room-settings h2{font:17px Georgia,serif;margin:0 0 12px}
+.room-settings dl{margin:0}.room-settings dl>div{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px solid #ffffff12;font-size:13px}
+.room-settings dt{color:var(--ip-muted)}.room-settings dd{margin:0;text-align:right;max-width:65%;overflow-wrap:anywhere;color:var(--ip-text)}
+.room-page [data-panel-theme] .room-footer{padding:18px 24px 24px;border-top:1px solid var(--ip-edge);flex:none;background:var(--ip-base)}
+.room-action-status{margin:0;font-size:13px;line-height:1.5;color:var(--ip-muted)}
+.room-controls{display:flex;flex-direction:row;padding:0;gap:10px;margin:0;flex-wrap:wrap}.room-controls:not(:empty){margin-top:16px}
+.room-controls .button.room-action{box-sizing:border-box;flex:1;width:auto;min-width:0;min-height:44px;text-align:center;border:1px solid #ba975c;border-radius:6px;background:linear-gradient(#806140,#5a4029);color:#fff0d6;padding:12px 14px;font:600 14px/1.3 system-ui;text-decoration:none}
+.room-controls .room-action--reject{background:linear-gradient(#63423b,#442c28);border-color:#9c7564}
+.room-controls .room-action:disabled{cursor:wait}.room-controls .room-action:focus-visible{outline:2px solid #efc37e;outline-offset:3px}
+@media(max-width:1100px){body.room-page{padding:76px 16px 20px}.lobby--room{height:calc(100dvh - 96px)}.room-shell{gap:12px}.room-header,.room-info-scroll,.room-footer{padding-left:18px;padding-right:18px}}
+@media(max-width:760px){body.room-page{padding:68px 8px 12px;overflow:auto}.lobby--room{height:auto;min-height:calc(100dvh - 80px)}.lobby--room #content{flex:auto}.room-shell{display:flex;flex-direction:column;gap:12px}.room-illustration{height:clamp(165px,26vh,245px);flex:none}.room-illustration img{object-position:50% 60%}.room-page .room-info{flex:none;overflow:visible}.room-header{padding:18px}.room-header h1{font-size:25px}.room-info-scroll{overflow:visible;padding:18px}.room-participants{gap:9px}.room-seat{padding:12px}.room-state{font-size:18px;margin-bottom:16px}.room-settings{margin-top:20px}.room-footer{position:sticky;bottom:0;padding:14px 18px 18px;border-radius:0 0 7px 7px;z-index:2}.room-controls .room-action{font-size:13px}.room-settings dl>div{font-size:12px}}
+
+.room-footer-bar{display:flex;align-items:flex-end;gap:10px;margin-top:14px}.room-footer-bar .room-controls{flex:1;margin-top:0}.room-footer .battle-chat-anchor{flex:0 0 44px}.room-footer .game-chat-toggle{position:relative;display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--ip-edge);border-radius:6px;background:var(--ip-surface);color:var(--ip-text);cursor:pointer}.room-footer .battle-icon-tooltip{display:none}.room-page .game-chat-panel{background:var(--ip-base);color:var(--ip-text);border-color:var(--ip-edge)}.room-controls .button.room-action--reject{background:linear-gradient(#63423b,#442c28);border-color:#9c7564}

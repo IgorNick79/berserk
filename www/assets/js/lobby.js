@@ -24,8 +24,8 @@
         const focused=document.activeElement;
         const focusRoom=focused?.closest('[data-room-id]')?.dataset.roomId;
         const focusTag=focused?.tagName;
-        content.replaceChildren();
         if (state.rooms) {
+            content.replaceChildren();
             const actions=node('div'); actions.className='lobby-actions';
             actions.append(button('⚔ Создать игру',()=>location.assign(root.dataset.authenticated==='1'?'lobby.php?new=1':'auth.php?page=login')));
             const bot=node('button','♟ Играть с ботом · Скоро');bot.disabled=true;actions.append(bot);
@@ -53,17 +53,7 @@
             if(focusRoom){const card=[...list.children].find(c=>c.dataset.roomId===focusRoom);card?.querySelector(focusTag==='BUTTON'?'button':'summary')?.focus({preventScroll:true});}
 
         } else {
-            const r = state.room; content.append(node('h1', 'Комната #' + r.id), node('p', r.kind + ' · ' + new Date(r.created_at).toLocaleString('ru-RU')));
-            if (r.state === 'started') {
-                content.append(node('p', 'Игра создана. Игровой процесс будет подключён на следующем этапе.'), node('p', 'Номер игры: ' + r.game_id));
-            } else if (r.role === 'candidate') content.append(node('p', 'Ожидание подтверждения создателя'));
-            else if (r.state === 'open') { content.append(node('p', 'Ожидание второго игрока'));if(r.role==='invited')content.append(button('Присоединиться',()=>open(r))); }
-            else {
-                content.append(node('p', 'Игрок ' + r.second + ' хочет присоединиться'));
-                const decisions = node('div'); decisions.className = 'decisions';
-                decisions.append(button('Подтвердить', () => mutate('accept', r)), button('Отказать', () => mutate('reject', r))); content.append(decisions);
-            }
-            const back = node('a', 'В лобби'); back.href = 'lobby.php'; content.append(back);
+            window.BerserkRoom.render(content, state.room, {busy, open, mutate});
         }
     }
     function open(room) { if (root.dataset.authenticated !== '1') location.assign('auth.php?page=login'); else mutate('open', room); }

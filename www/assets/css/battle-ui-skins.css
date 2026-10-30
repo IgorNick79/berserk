@@ -1,9 +1,9 @@
 @import url('/assets/css/battle-coordinates.css?v=1');
 /* Panel themes affect presentation only; battlefield geometry and actions are unchanged. */
-.battle-page [data-panel-theme] .info-panel{container-type:inline-size;box-sizing:border-box;border:2px solid var(--ip-edge);border-radius:9px;background:radial-gradient(ellipse at 30% 0%,var(--ip-glow),transparent 55%),repeating-linear-gradient(112deg,transparent 0 6px,#ffffff06 7px 8px,transparent 9px 20px),var(--ip-base);box-shadow:0 12px 35px #0009,inset 0 0 0 3px #0006;color:var(--ip-text)}
-.battle-page [data-panel-theme] .info-panel-header,.battle-page [data-panel-theme] .info-panel-footer{background:#0003;border-color:var(--ip-edge);color:var(--ip-text)}
-.battle-page [data-panel-theme] .info-status,.battle-page [data-panel-theme] .info-panel h2,.battle-page [data-panel-theme] .info-panel h3{color:var(--ip-title)}
-.battle-page [data-panel-theme] .info-phase,.battle-page [data-panel-theme] .turn-timer-label,.battle-page [data-panel-theme] .info-panel .wait{color:var(--ip-muted)}
+:is(.battle-page,.room-page) [data-panel-theme] .info-panel{container-type:inline-size;box-sizing:border-box;border:2px solid var(--ip-edge);border-radius:9px;background:radial-gradient(ellipse at 30% 0%,var(--ip-glow),transparent 55%),repeating-linear-gradient(112deg,transparent 0 6px,#ffffff06 7px 8px,transparent 9px 20px),var(--ip-base);box-shadow:0 12px 35px #0009,inset 0 0 0 3px #0006;color:var(--ip-text)}
+:is(.battle-page,.room-page) [data-panel-theme] .info-panel-header,:is(.battle-page,.room-page) [data-panel-theme] .info-panel-footer{background:#0003;border-color:var(--ip-edge);color:var(--ip-text)}
+:is(.battle-page,.room-page) [data-panel-theme] .info-status,:is(.battle-page,.room-page) [data-panel-theme] .info-panel h2,:is(.battle-page,.room-page) [data-panel-theme] .info-panel h3{color:var(--ip-title)}
+:is(.battle-page,.room-page) [data-panel-theme] .info-phase,:is(.battle-page,.room-page) [data-panel-theme] .turn-timer-label,:is(.battle-page,.room-page) [data-panel-theme] .info-panel .wait{color:var(--ip-muted)}
 .battle-page [data-panel-theme] .panel-card-heading,.battle-page [data-panel-theme] .panel-card-stats,.battle-page [data-panel-theme] .combat-panel-heading{background:var(--ip-surface);color:var(--ip-text);border-color:var(--ip-edge)}
 .battle-page [data-panel-theme] .panel-card-cost,.battle-page [data-panel-theme] .panel-stat-hint{color:var(--ip-text)}
 .battle-page [data-panel-theme] .info-panel :is(.card-choice,.strike-box,.info-box,.choice-radio,.task-card,.instant-summary){background:linear-gradient(140deg,#ffffff0b,transparent 65%),var(--ip-surface);color:var(--ip-text);border-color:var(--ip-edge);border-radius:7px}

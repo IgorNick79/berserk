@@ -93,6 +93,10 @@ final class LobbyStore
             'can_decide'=>$actor === (int)$row['creator_account_id'] && $row['state'] === 'awaiting_confirmation',
         ];
         if ($private) {
+            // Room presentation reads saved setup only; no transition or default form values.
+            $setup=json_decode($row['setup_json']??'null',true,512,JSON_THROW_ON_ERROR);
+            $room['access']=($row['invited_account_id']??null)===null?'open':'closed';
+            $room['turn_seconds']=$setup['settings']['battle']['turn_seconds']??180;
             $room['game_id'] = $row['game_id'] === null ? null : (int)$row['game_id'];
             $room['role'] = $actor === (int)$row['creator_account_id'] ? 'creator' : ($row['state'] === 'started' ? 'accepted' : ($actor===(int)($row['invited_account_id']??0) && $row['state']==='open'?'invited':'candidate'));
             $room['candidate_request_id'] = $room['can_decide'] ? $row['candidate_request_id'] : null;

@@ -8,7 +8,14 @@
     var cursor=null, oldest=null, baseline=null, lastRead='0', latest='0', unread=false;
     var polling=false, sending=false, reading=false, loadingOlder=false, timer=0, stopped=false;
     var messages=new Map(), pending=null, writable=false, initialized=false;
-    var storageKey='berserk-chat:'+root.dataset.gameId+':'+root.dataset.senderId;
+    var isRoom=!!root.dataset.roomId, context=null, contextEpoch=0;
+    var storageKey='berserk-chat:'+(isRoom?'room:'+root.dataset.roomId:root.dataset.gameId)+':'+root.dataset.senderId;
+    function resetRoom() {
+        context=null; contextEpoch++; messages.clear(); history.replaceChildren();
+        cursor=oldest=baseline=null; lastRead=latest='0'; initialized=false; writable=false;
+        pending=null; persist(); input.value=''; input.disabled=send.disabled=true; badge(false);
+        status.textContent='Состав комнаты изменился. Предыдущая переписка закрыта.';
+    }
     function compare(a,b) { a=String(a); b=String(b); return a.length-b.length || (a<b?-1:a>b?1:0); }
     function max(a,b) { return compare(a,b)>0?a:b; }
     function atBottom() { return history.scrollHeight-history.scrollTop-history.clientHeight < 24; }
@@ -38,16 +45,28 @@
     var footerObserver=null, infoPanel=document.querySelector('[data-battle-fragment="info_panel_html"]');
     if(infoPanel) { footerObserver=new MutationObserver(mountToggle); footerObserver.observe(infoPanel,{childList:true}); }
     function api(action, params, post) {
-        var url=new URL(window.location.href);
+        var url=new URL(isRoom?root.dataset.chatEndpoint:window.location.href,window.location.href);
         url.search='';
-        url.searchParams.set('game',root.dataset.gameId); url.searchParams.set('ajax',action);
+        url.searchParams.set(isRoom?'room':'game',isRoom?root.dataset.roomId:root.dataset.gameId); url.searchParams.set('ajax',action);
+        var epoch=contextEpoch;
+        params=Object.assign({},params);
+        if(isRoom && context!==null) params.context=context;
         var options={headers:{Accept:'application/json'},cache:'no-store',credentials:'same-origin'};
         if(post) { options.method='POST'; options.body=new URLSearchParams(Object.assign({csrf:root.dataset.csrf},params)); }
         else Object.keys(params).forEach(function(k){url.searchParams.set(k,params[k]);});
         var controller=new AbortController(), timeout=setTimeout(function(){controller.abort();},10000);
         options.signal=controller.signal;
         return fetch(url,options).then(function(response){return response.json().then(function(data){
-            if(!response.ok || !data.ok) { var e=new Error(data.error || 'network'); e.code=data.error; throw e; }
+            if(!response.ok || !data.ok) {
+                if(isRoom && data.error==='chat_context_changed' && epoch===contextEpoch) resetRoom();
+                var e=new Error(data.error || 'network'); e.code=data.error; throw e;
+            }
+            if(isRoom) {
+                if(epoch!==contextEpoch) {var stale=new Error('stale_chat_response');stale.code='stale_chat_response';throw stale;}
+                if(context!==null && context!==data.context) {resetRoom();var changed=new Error('chat_context_changed');changed.code='chat_context_changed';throw changed;}
+                context=data.context;
+                if(pending && pending.context!==context) {pending=null;persist();input.value='';status.textContent='Состав комнаты изменился. Предыдущий черновик не отправлен.';}
+            }
             return data;
         });}).finally(function(){clearTimeout(timeout);});
     }
@@ -59,7 +78,7 @@
             var node=document.createElement('div'); node.className='game-chat-message';
             if(String(row.sender_id)===root.dataset.senderId) node.classList.add('is-own');
             var meta=document.createElement('small');
-            meta.textContent=(String(row.sender_id)===root.dataset.senderId?'Вы':'Соперник')+' · ход '+row.turn_number;
+            meta.textContent=isRoom?(String(row.sender_id)===root.dataset.senderId?'Вы':'Собеседник'):(String(row.sender_id)===root.dataset.senderId?'Вы':'Соперник')+' · ход '+row.turn_number;
             var text=document.createElement('span'); text.textContent=row.message;
             node.appendChild(meta); node.appendChild(text); fragment.appendChild(node);
             if(oldest===null || compare(row.id,oldest)<0) oldest=row.id;
@@ -96,11 +115,11 @@
                 if(battleRoot && battleRoot.berserkTurnTimer) battleRoot.berserkTurnTimer.notify();
             }
             markRead();
-            if(!writable) status.textContent='Бой завершён. Чат доступен для чтения.';
+            if(!writable) status.textContent=isRoom?(data.read_only_reason==='awaiting_participant'?'Переписка станет доступна, когда появится второй участник.':'Партия создана. Переписка комнаты доступна для чтения.'):'Бой завершён. Чат доступен для чтения.';
             else if(status.dataset.offline) {status.textContent=''; delete status.dataset.offline;}
             // Drain ascending pages before waiting. Initial latest-page has_more means older history.
             if(!first && data.has_more) delay=0;
-        }).catch(function(){status.textContent='Нет связи с чатом. Повторяем подключение…'; status.dataset.offline='1'; delay=5000;})
+        }).catch(function(error){if(isRoom && ['chat_context_changed','stale_chat_response'].includes(error.code)){delay=0;return;}status.textContent='Нет связи с чатом. Повторяем подключение…'; status.dataset.offline='1'; delay=5000;})
           .finally(function(){polling=false; schedule(delay);});
     }
     older.addEventListener('click',function(){
@@ -146,14 +165,17 @@
         if(pending && pending.text!==text) {status.textContent='Сначала повторите неподтверждённое сообщение или восстановите его текст.';input.value=pending.text;return;}
         if(!pending) {
             var bytes=new Uint8Array(16); crypto.getRandomValues(bytes);
-            pending={id:Array.from(bytes,function(x){return x.toString(16).padStart(2,'0');}).join(''),text:text}; persist();
+            pending={id:Array.from(bytes,function(x){return x.toString(16).padStart(2,'0');}).join(''),text:text};
+            if(isRoom)pending.context=context;
+            persist();
         }
         sending=true; send.disabled=true; input.readOnly=true; status.textContent='Отправляем…';
         api('chat_send',{message:pending.text,request_id:pending.id},true).then(function(){
             pending=null;persist();input.value='';status.textContent='';schedule(0);
         }).catch(function(error){
+            if(isRoom && ['chat_context_changed','stale_chat_response'].includes(error.code)) {status.textContent='Состав комнаты изменился. Сообщение не отправлено новому участнику.';schedule(0);return;}
             if(['empty_message','invalid_message','message_too_long','rate_limited','chat_read_only'].includes(error.code)) {pending=null;persist();}
-            if(error.code==='chat_read_only') {writable=false;status.textContent='Бой завершён. Чат доступен для чтения.';}
+            if(error.code==='chat_read_only') {writable=false;status.textContent=isRoom?'Переписка комнаты доступна для чтения.':'Бой завершён. Чат доступен для чтения.';}
             else if(error.code==='rate_limited') status.textContent='Подождите секунду перед следующим сообщением.';
             else if(error.code==='message_too_long') status.textContent='Не более 1000 символов.';
             else if(error.code==='empty_message' || error.code==='invalid_message') status.textContent='Введите непустое текстовое сообщение.';

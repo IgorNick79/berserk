@@ -77,3 +77,5 @@ www/assets/cards/
 !tools/migrations/20261030_account_ui_preferences.sql
 
 !tools/migrations/20261030_lobby_wizard.sql
+
+!tools/migrations/20261030_lobby_chat.sql

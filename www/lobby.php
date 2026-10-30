@@ -79,10 +79,15 @@ if ($api) {
 }
 header('Content-Type: text/html; charset=utf-8');
 ?>
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css?v=6"><link rel="stylesheet" href="assets/css/lobby-wizard.css?v=1"><link rel="stylesheet" href="assets/css/pregame.css?v=2"><script src="assets/js/settings.js?v=2" defer></script><script src="assets/js/lobby.js?v=6" defer></script><script src="assets/js/lobby-wizard.js?v=1" defer></script></head><body class="lobby-page">
-<?= \Berserk\View\Ui\GameMenu::render(isset($_GET['new'])?'preparation':'lobby',$account,$csrf) ?>
-<main id="lobby" class="screen lobby<?= isset($_GET['new']) ? ' lobby--wizard' : '' ?>" data-state="<?= $escape(json_encode($data,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)) ?>" data-csrf="<?= $escape($csrf) ?>" data-authenticated="<?= $account ? '1' : '0' ?>" data-wizard="<?= $wizard !== '' ? '1' : '0' ?>">
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css?v=6"><link rel="stylesheet" href="assets/css/lobby-wizard.css?v=1"><link rel="stylesheet" href="assets/css/pregame.css?v=2"><script src="assets/js/settings.js?v=2" defer></script><script src="assets/js/lobby-room.js?v=2" defer></script><script src="assets/js/lobby.js?v=7" defer></script><script src="assets/js/lobby-wizard.js?v=1" defer></script><?php if (isset($_GET['room'])): ?><link rel="stylesheet" href="assets/css/battle-ui-skins.css?v=2"><link rel="stylesheet" href="assets/css/lobby-room.css?v=2"><link rel="stylesheet" href="assets/css/battle-chat.css?v=2"><?php endif; ?></head><body class="lobby-page<?= isset($_GET['room']) ? ' room-page' : '' ?>">
+<?= \Berserk\View\Ui\GameMenu::render((isset($_GET['new'])||isset($_GET['room']))?'preparation':'lobby',$account,$csrf) ?>
+<main id="lobby" class="screen lobby<?= isset($_GET['new']) ? ' lobby--wizard' : (isset($_GET['room']) ? ' lobby--room' : '') ?>" data-state="<?= $escape(json_encode($data,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)) ?>" data-csrf="<?= $escape($csrf) ?>" data-authenticated="<?= $account ? '1' : '0' ?>" data-wizard="<?= $wizard !== '' ? '1' : '0' ?>">
 <p id="notice" role="status"><?= $escape($error ?? '') ?></p>
 <?php if ($data !== null): ?>
 <?php if ($wizard !== ''): ?><section class="lobby-wizard"><?= $wizard ?></section><?php else: ?><section id="content"></section><?php endif; ?><noscript>Для автоматического обновления лобби включите JavaScript.</noscript>
-<?php else: ?><p><a href="lobby.php">Вернуться в лобби</a></p><?php endif; ?></main><script src="/assets/js/lucktest-debug.js?v=2" defer></script></body></html>
+<?php else: ?><p><a href="lobby.php">Вернуться в лобби</a></p><?php endif; ?></main><?php if ($data!==null && isset($data['room']) && $account!==null):
+$chat=(new \Berserk\View\Template(__DIR__.'/../templates'))->parse('includes/game_chat.tpl',[
+    'chat_game_id'=>'','chat_sender_id'=>$account->id,'chat_csrf'=>$escape($csrf),
+]);
+echo str_replace(['data-game-id=""','aria-label="Чат боя"'],['data-room-id="'.(int)$data['room']['id'].'" data-chat-endpoint="/lobby-chat.php" data-panel-theme="grimoire"','aria-label="Чат комнаты"'],$chat);
+?><script src="/assets/js/battle-chat.js?v=6" defer></script><?php endif; ?><script src="/assets/js/lucktest-debug.js?v=2" defer></script></body></html>
