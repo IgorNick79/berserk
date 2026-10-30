@@ -121,7 +121,7 @@ final class WoundTransferProcessor
             if ($c->dying || $c->hp <= 0) continue;
             if ($c->zone !== CardInstance::ZONE_FIELD
                 && $c->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($c->instanceId === $sourceId) continue;
+            if ($c->instanceId === $sourceId && ($options['kind'] ?? 'hermit') !== 'volkhv') continue;
             if ($element !== null && $c->element !== $element) continue;
 
             if ($nearOnly && $source !== null) {

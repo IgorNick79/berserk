@@ -181,4 +181,20 @@ $html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render(
 );
 vwAssert(str_contains($html, 'нет раненых союзников'), 'Volkhv without donors should be explained in InfoPanel.');
 
+// The Volkhv is also a creature in its owner's squad and can donate its own wounds.
+$self = vwCard(['instanceId'=>21,'ukid'=>'s1_3','hp'=>5,'hpMax'=>8,'coins'=>1,'prop'=>vwVolkhvProp()]);
+$enemy = vwCard(['instanceId'=>22,'owner'=>GameState::PLAYER_PLAYER,'row'=>4,'hp'=>8,'hpMax'=>8]);
+$state = vwState($self,$enemy);$engine=new Engine();
+vwAssert($engine->apply($state,'host',new Command('action',['card_id'=>21,'action_key'=>'volkhvovanie']))->success,'Wounded Volkhv can start with no other wounded ally');
+vwAssert(($state->battle['pending_wound_transfer']['donors'][21]??0)===2,'Self wounds retain the two-wound limit');
+foreach ([['wt_source',['donor_id'=>21]],['wt_amount',['amount'=>2]],['wt_target',['target_id'=>22]],['wt_target_amount',['amount'=>2]]] as [$type,$payload]) {
+    vwAssert($engine->apply($state,'host',new Command($type,$payload))->success,'Self transfer step '.$type);
+}
+vwAssert($self->hp===7 && $enemy->hp===6,'Self wounds are healed and transferred to enemy');
+vwAssert($self->coins===0 && $self->closed,'Self transfer keeps coin cost and closing');
+vwAssert(empty($state->battle['pending_wound_transfer']),'Self transfer completes');
+// The shared processor must not broaden the Hermit donor rule.
+$hermit=vwCard(['instanceId'=>31,'hp'=>5,'hpMax'=>8]);$state=vwState($hermit);
+vwAssert(!(new WoundTransferProcessor($state,new Engine()))->start('host',$hermit,['kind'=>'hermit','donor_filter'=>'wounded'])->success,'Hermit self exclusion unchanged');
+
 echo "Volkhv wound transfer tests passed\n";
