@@ -114,6 +114,11 @@ final class Engine
         if ($result->success) (new MatriarchOrderProcessor($state, $this))->advance();
         if ($result->success && ($state->battle['turn_timer']['pause_reason'] ?? null) === 'start_resolution') {
             (new TurnProcessor($state, $this))->afterStartPhase($state->battle['turn_timer']['owner']);
+        } elseif ($result->success && !TurnTimer::enabled($state)
+            && isset($state->battle['untimed_start_pending'])
+            && ($state->battle['untimed_start_pending']['owner']??null)===($state->battle['active']??null)
+            && ($state->battle['untimed_start_pending']['identity']??null)===($state->battle['turn']??0).':'.($state->battle['active']??'')) {
+            (new TurnProcessor($state,$this))->afterStartPhase($state->battle['untimed_start_pending']['owner']);
         }
         if ($result->success) {
             InformationalWaitManager::reconcile($state, $this->serverNow());

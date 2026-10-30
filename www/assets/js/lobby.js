@@ -57,7 +57,7 @@
             if (r.state === 'started') {
                 content.append(node('p', 'Игра создана. Игровой процесс будет подключён на следующем этапе.'), node('p', 'Номер игры: ' + r.game_id));
             } else if (r.role === 'candidate') content.append(node('p', 'Ожидание подтверждения создателя'));
-            else if (r.state === 'open') content.append(node('p', 'Ожидание второго игрока'));
+            else if (r.state === 'open') { content.append(node('p', 'Ожидание второго игрока'));if(r.role==='invited')content.append(button('Присоединиться',()=>open(r))); }
             else {
                 content.append(node('p', 'Игрок ' + r.second + ' хочет присоединиться'));
                 const decisions = node('div'); decisions.className = 'decisions';

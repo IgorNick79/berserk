@@ -31,6 +31,18 @@ final class InformationalWaitManager
             && in_array($timer['status'] ?? null, ['running', 'paused', 'expired'], true) ? $timer : null;
     }
 
+    /** Untimed games bind waits to the saved turn, never to an invented clock. */
+    private static function untimedTurn(GameState $state): ?array
+    {
+        // During end-phase resolution active already points to the next player.
+        // The existing instant period still identifies the turn being resolved.
+        $owner = $state->battle[InstantReservation::KEY]['turn_owner'] ?? $state->battle['active'] ?? null;
+        $turn = $state->battle['turn'] ?? null;
+        return !TurnTimer::enabled($state) && $state->status === 'battle' && $state->winner === null
+            && in_array($owner, ['host', 'player'], true) && is_int($turn) && $turn >= 0
+            ? ['turn_number' => $turn, 'turn_owner' => $owner] : null;
+    }
+
     /** Read-only record validation, including its current lifecycle/period binding. */
     public static function record(GameState $state): ?array
     {
@@ -43,15 +55,23 @@ final class InformationalWaitManager
     {
         $record = $state->battle['informational_wait'] ?? null;
         $timer = self::timer($state);
-        if (!is_array($record) || $timer === null) return null;
-        foreach (['wait_id', 'period_id', 'started_at', 'deadline_at'] as $field) {
+        $turn = self::untimedTurn($state);
+        if (!is_array($record) || ($timer === null && $turn === null)) return null;
+        if ($turn !== null) {
+            if (($record['turn_number'] ?? null) !== $turn['turn_number']
+                || ($record['turn_owner'] ?? null) !== $turn['turn_owner']) return null;
+            $owner = $turn['turn_owner'];
+        } else {
+            if (($record['period_id'] ?? null) !== $timer['period_id']) return null;
+            $owner = $timer['owner'];
+        }
+        foreach (['wait_id', 'started_at', 'deadline_at'] as $field) {
             if (!is_int($record[$field] ?? null) || $record[$field] < 1) return null;
         }
         $generation = $state->battle['informational_wait_generation'] ?? null;
         if (!is_int($generation) || $record['wait_id'] !== $generation
-            || $record['period_id'] !== $timer['period_id']
             || !in_array($record['source'] ?? null, self::SOURCES, true)
-            || ($record['required_player'] ?? null) !== $state->getOpponentKey($timer['owner'])
+            || ($record['required_player'] ?? null) !== $state->getOpponentKey($owner)
             || $record['deadline_at'] - $record['started_at'] !== self::LIMIT_SECONDS) return null;
         return $record;
     }
@@ -60,7 +80,7 @@ final class InformationalWaitManager
     public static function reconcile(GameState $state, int $now): void
     {
         if (MatchPause::blocking($state)) return;
-        if (self::timer($state) === null || empty($state->battle['strike'])) {
+        if ((self::timer($state) === null && self::untimedTurn($state) === null) || empty($state->battle['strike'])) {
             unset($state->battle['informational_wait'], $state->battle['informational_wait_pending']);
             return;
         }
@@ -84,11 +104,13 @@ final class InformationalWaitManager
         $generation = $state->battle['informational_wait_generation'] ?? 0;
         if (!is_int($generation) || $generation < 0 || $generation === PHP_INT_MAX || $now < 1 || $now > PHP_INT_MAX - 10) return;
         $timer = self::timer($state);
+        $turn = self::untimedTurn($state);
         $projection = self::projection($state);
         $state->battle['informational_wait_generation'] = ++$generation;
         $state->battle['informational_wait'] = [
             'wait_id' => $generation, 'source' => $projection['source'],
-            'required_player' => $state->getOpponentKey($timer['owner']), 'period_id' => $timer['period_id'],
+            'required_player' => $state->getOpponentKey($turn['turn_owner'] ?? $timer['owner']),
+        ] + ($turn ?? ['period_id' => $timer['period_id']]) + [
             'started_at' => $now, 'deadline_at' => $now + self::LIMIT_SECONDS,
         ];
         unset($state->battle['informational_wait_pending']);

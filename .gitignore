@@ -75,3 +75,5 @@ www/assets/cards/
 !/debug/scenarios/lilith-dark-lucktest.json
 
 !tools/migrations/20261030_account_ui_preferences.sql
+
+!tools/migrations/20261030_lobby_wizard.sql

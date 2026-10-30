@@ -26,7 +26,7 @@ class Client(Browser):
         except urllib.error.HTTPError as e:r=e
         text=r.read().decode('utf-8');return r.code,json.loads(text) if api else text
     def create(self):
-        code,data=self.lobby(data={'action':'create','csrf':self.token('account'),'setup_mode':'system'});assert code==200,(code,data);return data['room']
+        code,data=self.lobby(data={'action':'create','csrf':self.token('account'),'setup_mode':'system','creation_key':os.urandom(16).hex()});assert code==200,(code,data);return data['room']
     def act(self,room,action='open',version=None,request=None,csrf=None):
         data={'action':action,'csrf':csrf or self.token('account'),'version':version or room['version']}
         if request is not None:data['candidate_request_id']=request
@@ -67,7 +67,7 @@ def main():
         spawn([str(pathlib.Path(args.db_bin)/'mysqld.exe'),'--no-defaults',f'--datadir={LAB / "data"}','--bind-address=127.0.0.1','--port=33571','--skip-log-bin','--console'],'db');ready(33571)
         port,directory=sql('SELECT @@port,@@datadir;').split('\t')
         check('exact isolated database identity',port=='33571' and directory.replace('\\','/').rstrip('/').lower()==str((LAB/'data').resolve()).replace('\\','/').lower())
-        sql("CREATE DATABASE LAB_DB;USE LAB_DB;CREATE TABLE games(ind INT NOT NULL AUTO_INCREMENT PRIMARY KEY,host_id INT NOT NULL,player_id INT NOT NULL,status VARCHAR(32) NOT NULL,json LONGTEXT NOT NULL,version INT NOT NULL DEFAULT 0,date DATETIME NOT NULL,active INT NOT NULL) ENGINE=InnoDB;INSERT INTO games VALUES(1,1,2,'battle','{}',0,UTC_TIMESTAMP(),1);")
+        sql("CREATE DATABASE LAB_DB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;USE LAB_DB;CREATE TABLE games(ind INT NOT NULL AUTO_INCREMENT PRIMARY KEY,host_id INT NOT NULL,player_id INT NOT NULL,status VARCHAR(32) NOT NULL,json LONGTEXT NOT NULL,version INT NOT NULL DEFAULT 0,date DATETIME NOT NULL,active INT NOT NULL) ENGINE=InnoDB;INSERT INTO games VALUES(1,1,2,'battle','{}',0,UTC_TIMESTAMP(),1);")
         for name in ['20261021_auth.sql','20261021_lobby_preflight.sql','20261021_lobby.sql','20261021_lobby_setup.sql','20261021_command_journal.sql','20261019_game_chat.sql','20261020_battle_history.sql']:
             sql('USE LAB_DB;'+(ROOT/'tools/migrations'/name).read_text())
         (LAB/'postchecks.txt').write_text(sql('USE LAB_DB;'+(ROOT/'tools/migrations/20261021_lobby_postchecks.sql').read_text()),encoding='utf-8')
@@ -358,12 +358,12 @@ def main():
         suites=['test_repository_optimistic_locking.php','test_command_journal_repository.php','test_turn_timer.php','test_pending_wait_timer.php','test_informational_wait.php','test_turn_timeout.php','test_match_pause.php','test_settings_flow.php','test_sealed_flow.php','test_solomon_draft.php','test_live_battle_journal.php']
         # New room setup: configuration is persisted before visibility; gameplay starts only on accept.
         before_rooms=sql('USE LAB_DB;SELECT COUNT(*) FROM lobby_rooms;')
-        check('new room requires explicit type',a.lobby(data={'action':'create','csrf':a.token('account')})[0]==400)
-        code,_=a.lobby(data={'action':'create','csrf':a.token('account'),'setup_mode':'solomon','stack_size':'7'})
+        check('new room requires explicit type',a.lobby(data={'action':'create','creation_key':os.urandom(16).hex(),'csrf':a.token('account')})[0]==400)
+        code,_=a.lobby(data={'action':'create','creation_key':os.urandom(16).hex(),'csrf':a.token('account'),'setup_mode':'solomon','stack_size':'7'})
         check('invalid room settings rejected before publication',code==400 and sql('USE LAB_DB;SELECT COUNT(*) FROM lobby_rooms;')==before_rooms)
         for kind,stage in [('system','deck'),('draft','draft'),('solomon','draft'),('sealed','view')]:
             count=sql('USE LAB_DB;SELECT COUNT(*) FROM games;')
-            code,data=a.lobby(data={'action':'create','csrf':a.token('account'),'setup_mode':kind})
+            code,data=a.lobby(data={'action':'create','creation_key':os.urandom(16).hex(),'csrf':a.token('account'),'setup_mode':kind})
             assert code==200,(kind,code,data)
             room=data['room'];rid=room['id']
             check('configured '+kind+' publication without GameState',room['state']=='open' and room['game_type']==kind and room['created_at'].endswith('Z') and sql('USE LAB_DB;SELECT COUNT(*) FROM games;')==count)
@@ -386,7 +386,7 @@ def main():
                 check('retired '+retired+' cannot mutate game',code==400 and state(g)==before)
             if kind in ['draft','solomon']:check('configured '+kind+' correct draft subtype',saved['settings']['draft']['type']==('solomon' if kind=='solomon' else 'grid'))
         check('public guest list exposes types and dates',Client().lobby()[0]==200 and any(r['game_type']=='sealed' and r['created_at'] for r in Client().lobby()[1]['rooms']))
-        check('guest still cannot create',Client().lobby(data={'action':'create','setup_mode':'system','csrf':'invalid'})[0]==401)
+        check('guest still cannot create',Client().lobby(data={'action':'create','creation_key':os.urandom(16).hex(),'setup_mode':'system','csrf':'invalid'})[0]==401)
         regressions=[]
         for test in suites:
             result=subprocess.run(php+[str(regression/'tools'/test)],cwd=regression,env=env,capture_output=True,text=True,encoding='utf-8',errors='replace')

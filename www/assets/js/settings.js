@@ -1,8 +1,9 @@
 (function () {
     "use strict";
 
-    var form = document.querySelector("[data-settings-form='draft']");
-    if (!form) return;
+    document.querySelectorAll("[data-settings-form='draft']").forEach(function (form) {
+    if (form.dataset.settingsReady) return;
+    form.dataset.settingsReady="1";
     form.classList.add("settings-form--enhanced");
 
     function setVisible(selector, visible) {
@@ -133,4 +134,5 @@
     });
 
     syncDependentSections();
+    });
 })();

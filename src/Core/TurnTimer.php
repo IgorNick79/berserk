@@ -8,9 +8,15 @@ final class TurnTimer
 {
     public const LIMIT_SECONDS = 180;
 
+    public static function enabled(GameState $state): bool
+    {
+        return ($state->settings->battle['turn_seconds'] ?? self::LIMIT_SECONDS) !== 0;
+    }
+
     /** Called only by the turn lifecycle, never by load/snapshot. */
     public static function prepare(GameState $state, string $owner): void
     {
+        if (!self::enabled($state)) return;
         if ($state->status !== 'battle' || $state->winner !== null) return;
         if (!in_array($owner, [GameState::PLAYER_HOST, GameState::PLAYER_PLAYER], true)) {
             throw new \InvalidArgumentException('Unknown timer owner');
@@ -30,7 +36,7 @@ final class TurnTimer
 
     public static function settle(GameState $state, int $now): void
     {
-        if (!isset($state->battle['turn_timer'])) return;
+        if (!self::enabled($state) || !isset($state->battle['turn_timer'])) return;
         $timer = &$state->battle['turn_timer'];
         if ($timer['status'] === 'running') {
             // A backwards wall-clock adjustment cannot refund consumed time.
@@ -51,7 +57,7 @@ final class TurnTimer
 
     public static function pause(GameState $state, int $periodId, string $reason, int $now): void
     {
-        if (($state->battle['turn_timer']['period_id'] ?? null) !== $periodId) return;
+        if (!self::enabled($state) || ($state->battle['turn_timer']['period_id'] ?? null) !== $periodId) return;
         self::settle($state, $now);
         $timer = &$state->battle['turn_timer'];
         if ($timer['status'] !== 'running') return;
@@ -62,7 +68,7 @@ final class TurnTimer
 
     public static function resume(GameState $state, int $periodId, string $reason, int $now): void
     {
-        if (($state->battle['turn_timer']['period_id'] ?? null) !== $periodId) return;
+        if (!self::enabled($state) || ($state->battle['turn_timer']['period_id'] ?? null) !== $periodId) return;
         self::settle($state, $now);
         $timer = &$state->battle['turn_timer'];
         if ($state->status !== 'battle' || $state->winner !== null
@@ -75,7 +81,7 @@ final class TurnTimer
     /** Reconcile only the pause owned by P1; unknown waits preserve the current mode. */
     public static function reconcileWaiting(GameState $state, int $now): void
     {
-        if (MatchPause::blocking($state)) return;
+        if (!self::enabled($state) || MatchPause::blocking($state)) return;
         $timer = $state->battle['turn_timer'] ?? null;
         if ($timer === null || $state->status !== 'battle' || $state->winner !== null
             || $timer['status'] === 'expired'
@@ -93,6 +99,7 @@ final class TurnTimer
     /** Read-only projection for a future AJAX snapshot; does not allocate or persist. */
     public static function snapshot(GameState $state, int $now): ?array
     {
+        if (!self::enabled($state)) return null;
         $timer = $state->battle['turn_timer'] ?? null;
         if (!is_array($timer) || !self::validMetadata($timer)) return null;
         $copy = clone $state;

@@ -472,6 +472,19 @@ final class TurnProcessor
         if (!empty($this->state->battle['turn_phase'])) return;
         if ($this->state->winner !== null) return;
 
+        if (!TurnTimer::enabled($this->state)) {
+            $identity=($this->state->battle['turn']??0).':'.$activeKey;
+            if (($this->state->battle['untimed_start_recorded']??null)===$identity) { unset($this->state->battle['untimed_start_pending']);return; }
+            $this->state->battle['untimed_start_pending']=['identity'=>$identity,'owner'=>$activeKey];
+            // Persist only an event identity, never a fake clock/period/deadline.
+            if (!empty($this->state->battle['strike']) || !empty($this->state->battle['pending_prophecy'])
+                || Choice\ChoiceRegistry::current($this->state)!==null) return;
+            $this->state->battle['untimed_start_recorded']=$identity;
+            unset($this->state->battle['untimed_start_pending']);
+            $this->state->historyRecorder?->startTurnFinished($this->state);
+            return;
+        }
+
         if (!isset($this->state->battle['turn_timer'])) {
             TurnTimer::prepare($this->state, $activeKey);
         }

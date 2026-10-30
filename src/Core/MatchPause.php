@@ -74,7 +74,7 @@ final class MatchPause
         if ($p['used'][$actor]>=self::ACCEPTED_LIMIT) return Result::error('pause_limit');
         if ($now<$p['cooldown_until'][$actor]) return Result::error('pause_cooldown');
         $timer=TurnTimer::snapshot($s,$now);
-        if ($timer===null) return Result::error('pause_invalid_timer');
+        if ($timer===null && TurnTimer::enabled($s)) return Result::error('pause_invalid_timer');
         if (TurnTimeoutEligibility::check($s,$now)['allowed']) return Result::error('pause_turn_expired');
         $wait=BattleWaitResolver::current($s);
         if (($wait['kind']??null)==='unknown') return Result::error('pause_unsafe_wait');
@@ -82,8 +82,8 @@ final class MatchPause
         if ($info!==null && InformationalWaitManager::record($s)===null) return Result::error('pause_unsafe_informational_wait');
         // All validation precedes any mutation, including settlement.
         TurnTimer::settle($s,$now);
-        $original=$s->battle['turn_timer'];
-        TurnTimer::pause($s,$original['period_id'],'match_pause',$now);
+        $original=TurnTimer::enabled($s)?$s->battle['turn_timer']:null;
+        if ($original!==null) TurnTimer::pause($s,$original['period_id'],'match_pause',$now);
         $generation=$p['generation']+1;
         $s->battle['match_pause']=[
             'mode'=>'requested','generation'=>$generation,'request_id'=>'mp:'.$s->gameId.':'.$generation,
@@ -119,9 +119,9 @@ final class MatchPause
         $p=$s->battle['match_pause'];
         $timer=$p['suspended_timer'];
         // No battle command may change the period while suspended.
-        if (($s->battle['turn_timer']['period_id']??null)!==$timer['period_id']) throw new \LogicException('Pause timer period changed');
-        if ($timer['status']==='running') TurnTimer::resume($s,$timer['period_id'],'match_pause',$at);
-        else $s->battle['turn_timer']=$timer;
+        if ($timer!==null && ($s->battle['turn_timer']['period_id']??null)!==$timer['period_id']) throw new \LogicException('Pause timer period changed');
+        if ($timer!==null && $timer['status']==='running') TurnTimer::resume($s,$timer['period_id'],'match_pause',$at);
+        elseif ($timer!==null) $s->battle['turn_timer']=$timer;
         if ($p['suspended_wait']!==null) {
             $record=$p['suspended_wait']['record'];
             $record['deadline_at']=$at+$p['suspended_wait']['remaining_seconds'];

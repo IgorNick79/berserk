@@ -21,12 +21,13 @@ source=(ROOT/'tools/test_integration_http.py').read_text(encoding='utf-8')
 source=source.replace('from http.cookiejar import Cookie','from http.cookiejar import Cookie\nurllib.request.getproxies=lambda: {}')
 source=source.replace("LAB = ROOT/'tmp/integration-lab'","LAB = ROOT/'tmp/unified-menu-lab'")
 source=source.replace("assert not (ROOT/'config/auth.local.php')", "assert not (ROOT/'tmp/unified-menu-lab').exists(), 'Fresh isolated lab required'\n    assert not (ROOT/'config/auth.local.php')")
+source=source.replace("'20261021_lobby_setup.sql'","'20261021_lobby_setup.sql','20261030_lobby_wizard.sql'")
 source=source.replace("'20261020_battle_history.sql']", "'20261020_battle_history.sql','20261024_account_ui_preferences.sql']")
 source=source.replace("        check('runtime no TRIGGER", "        sql(\"GRANT SELECT,INSERT,UPDATE ON LAB_DB.account_ui_preferences TO 'AUTH_USER'@'127.0.0.1';\")\n        check('runtime no TRIGGER")
 source=source.replace("'/journal-access.php'", "'/journal-access.php','/ui-preferences.php','/panel-theme.php'")
 a=source.index('        game=match()');b=source.index('    finally:',a)
 body=r'''
-        out=pathlib.Path(PROJECT_ROOT)/'docs/evidence/unified-menu';out.mkdir(parents=True,exist_ok=True)
+        out=pathlib.Path(PROJECT_ROOT)/'docs/evidence/lobby-wizard';out.mkdir(parents=True,exist_ok=True)
         sql("USE LAB_DB;INSERT INTO account_ui_preferences(account_id,panel_theme) VALUES(1,'stone');")
         sql('USE LAB_DB;'+(ROOT/'tools/migrations/20261030_account_ui_preferences.sql').read_text())
         check('migration retains selected theme',sql('USE LAB_DB;SELECT panel_theme FROM account_ui_preferences WHERE account_id=1;')=='stone')
@@ -109,9 +110,109 @@ body=r'''
         finished_game=match();finished=state(finished_game);finished['status']='game_over';finished['winner']='host';finished['battle']={'active':'host','turn':1,'result_reason':'resign'};set_fixture(finished_game,finished)
         sql("USE LAB_DB;UPDATE games SET status='game_over' WHERE ind="+str(finished_game)+';')
         for i in range(24):sql("USE LAB_DB;INSERT INTO lobby_rooms(creator_account_id,state,version,created_at,updated_at)VALUES(1,'open',1,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6));")
+        room_count=sql('USE LAB_DB;SELECT COUNT(*) FROM lobby_rooms;');game_count=sql('USE LAB_DB;SELECT COUNT(*) FROM games;')
+        for unused in range(2):
+            code,page=endpoint(a,'lobby.php',suffix='?new=1');check('wizard GET is readonly '+str(unused),code==200 and 'id="create-wizard"' in page and sql('USE LAB_DB;SELECT COUNT(*) FROM lobby_rooms;')==room_count and sql('USE LAB_DB;SELECT COUNT(*) FROM games;')==game_count)
+        def create_room(mode='system',timer='0',access='open',login='',key=None):
+            return a.lobby(data={'action':'create','setup_mode':mode,'csrf':token,'creation_key':key or os.urandom(16).hex(),'turn_seconds':timer,'access':access,'invited_login':login})
+        for login in ['Nobody123','Creator']:
+            check('bad invitation '+login+' rejected before insert',create_room(access='closed',login=login)[0]==400 and sql('USE LAB_DB;SELECT COUNT(*) FROM lobby_rooms;')==room_count)
+        check('invalid turn timer denied',create_room(timer='60')[0]==400)
+        new_games={}
+        for seconds in ['0','180']:
+            key=os.urandom(16).hex();code,created=create_room(timer=seconds,access='closed',login='CANDIDATE',key=key);check('private create '+seconds,code==200);room=created['room']
+            check('repeat create same room '+seconds,create_room(timer=seconds,access='closed',login='Candidate',key=key)[1]['room']['id']==room['id'])
+            check('different setup same key denied '+seconds,create_room(timer='180' if seconds=='0' else '0',access='closed',login='Candidate',key=key)[0]==409)
+            check('private hidden from outsider and guest '+seconds,all(r['id']!=room['id'] for r in c.lobby()[1]['rooms']) and all(r['id']!=room['id'] for r in Client().lobby()[1]['rooms']))
+            check('private visible to invitee '+seconds,any(r['id']==room['id'] for r in b.lobby()[1]['rooms']) and b.lobby(room['id'])[1]['room']['role']=='invited')
+            check('private direct outsider denied '+seconds,c.lobby(room['id'])[0]==403 and c.act(room)[0]==403)
+            check('invitee requests '+seconds,b.act(room)[0]==200);waiting=a.lobby(room['id'])[1]['room']
+            check('private rejection '+seconds,a.act(waiting,'reject')[0]==200);reopened=a.lobby(room['id'])[1]['room']
+            check('private repeat request '+seconds,b.act(reopened)[0]==200);again=a.lobby(room['id'])[1]['room']
+            check('private stale approval denied '+seconds,a.act(waiting,'accept')[0]==409)
+            check('private remains hidden after rejection '+seconds,all(r['id']!=room['id'] for r in c.lobby()[1]['rooms']))
+            check('creator confirms '+seconds,a.act(again,'accept')[0]==200)
+            started=a.lobby(room['id'])[1]['room'];new_games[seconds]=started['game_id'];check('battle setting attached '+seconds,state(started['game_id'])['settings']['battle']['turn_seconds']==int(seconds))
+        for seconds,g in new_games.items():
+            fixture=state(g);fixture['status']='battle';fixture['battle']={'turn':1,'active':'host','hidden_row_revealed':True}
+            if seconds=='0':fixture['battle']['untimed_start_recorded']='1:host'
+            else:fixture['battle']['turn_timer']={'period_id':1,'owner':'host','status':'running','remaining_seconds':180,'anchor_at':int(time.time()),'pause_reason':None}
+            set_fixture(g,fixture);sql("USE LAB_DB;UPDATE games SET status='battle' WHERE ind="+str(g)+';')
+            raw=sql('USE LAB_DB;SELECT json,version FROM games WHERE ind='+str(g)+';');events=sql('USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id='+str(g)+';')
+            for repeat in range(3):
+                code,body,_=http(a,g,query='&ajax=battle_sync&force_snapshot=1');response=json.loads(body)
+                check('read-only battle status '+seconds+' '+str(repeat),code==200 and (response['turn_timer'] is None)==(seconds=='0') and raw==sql('USE LAB_DB;SELECT json,version FROM games WHERE ind='+str(g)+';') and events==sql('USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id='+str(g)+';'))
+            def pause_cmd(client,name,fields):
+                code,body,_=http(client,g,{'csrf':client.token('account'),'expected_version':version(g),'command_id':'wizard-'+name+'-'+os.urandom(4).hex(),'cmd':name,**fields},'&ajax=battle_command')
+                return code,json.loads(body)
+            code,response=pause_cmd(a,'request_pause',{'duration_seconds':'60'});check('HTTP pause request '+seconds,code==200 and response.get('command_status')=='committed');request_id=state(g)['battle']['match_pause']['request_id']
+            check('HTTP pause accept '+seconds,pause_cmd(b,'accept_pause',{'request_id':request_id})[1].get('command_status')=='committed')
+            for client in [a,b]:check('HTTP pause ready '+seconds,pause_cmd(client,'pause_ready',{'request_id':request_id})[1].get('command_status')=='committed')
+            resumed=state(g);check('HTTP pause resumes correct clock '+seconds,resumed['battle']['match_pause']['mode']=='idle' and ('turn_timer' not in resumed['battle'] if seconds=='0' else resumed['battle']['turn_timer']['status']=='running'))
+        # Real Engine publication, followed by the real HTTP automatic-command producer.
+        fixture_php=r"""
+        require 'src/Core/Autoloader.php';
+        Berserk\Core\Autoloader::register();Berserk\Core\Autoloader::addNamespace('Berserk\\','src/');
+        $s=Berserk\Core\GameState::fromArray(json_decode(stream_get_contents(STDIN),true));
+        $s->status='battle';$s->cards=[];$s->cell_markers=[];$s->players['host']->side=1;
+        $s->battle=['active'=>'host','turn'=>1,'hidden_row_revealed'=>true];
+        foreach([1=>'host',2=>'player'] as $id=>$owner)$s->addCard(new Berserk\Core\CardInstance(
+          instanceId:$id,ukid:'card_'.$id,owner:$owner,zone:'field',row:$id===1?3:4,col:3,hp:20,hpMax:20,
+          move:1,moveMax:1,strikeWeak:1,strikeMedium:2,strikeStrong:3,
+          prop:$id===1?['actions'=>[['key'=>'marker','type'=>'place_cell_marker','marker'=>'bonfire']]]:[]));
+        $now=time()+300;$e=new Berserk\Core\Engine(null,static fn():int=>$now);
+        Berserk\Core\TurnTimer::prepare($s,'host');Berserk\Core\TurnTimer::resume($s,1,'start_phase',$now);
+        echo json_encode($s->toArray(),JSON_THROW_ON_ERROR);
+        """
+        for timing in ['0','180','historical']:
+            g=new_games['0' if timing=='0' else '180'];fixture=state(g)
+            if timing=='historical':fixture['settings'].pop('battle',None)
+            opened=json.loads(subprocess.check_output([args.php,'-r',fixture_php],input=json.dumps(fixture).encode(),cwd=ROOT))
+            for method in ['manual','auto']:
+                current=json.loads(json.dumps(opened))
+                set_fixture(g,current)
+                def ack(client,token):
+                    data={'csrf':client.token('account'),'expected_version':version(g),'command_id':'wait-'+os.urandom(8).hex(),'cmd':'confirm_strike','wait_id':token}
+                    return json.loads(http(client,g,data,'&ajax=battle_command')[1])
+                def open_wait():
+                    for name,fields in [('action',{'card_id':'1','action_key':'marker'}),('choose_cell_marker',{'row':'3','col':'2'})]:
+                        data={'csrf':a.token('account'),'expected_version':version(g),'command_id':'open-'+os.urandom(8).hex(),'cmd':name,**fields}
+                        reply=json.loads(http(a,g,data,'&ajax=battle_command')[1]);check('HTTP publishes '+timing+name,reply.get('command_status')=='committed')
+                open_wait()
+                if method=='auto':
+                    current=state(g);current['battle']['informational_wait']['started_at']=int(time.time())-11;current['battle']['informational_wait']['deadline_at']=current['battle']['informational_wait']['started_at']+10;set_fixture(g,current)
+                count_before=int(sql("USE LAB_DB;SELECT COUNT(*) FROM battle_command_journal WHERE game_id="+str(g)+" AND command_id LIKE 'p2a:%';"))
+                if method=='manual':
+                    reply=ack(b,'1');check('HTTP manual ACK '+timing,reply.get('command_status')=='committed')
+                else:
+                    from concurrent.futures import ThreadPoolExecutor
+                    with ThreadPoolExecutor(max_workers=2) as pool:
+                        replies=list(pool.map(lambda client:http(client,g,query='&ajax=battle_sync&force_snapshot=1')[0],[a,b]))
+                    check('HTTP concurrent auto ACK '+timing,all(code==200 for code in replies))
+                saved=sql('USE LAB_DB;SELECT json,version FROM games WHERE ind='+str(g)+';')
+                for repeat in range(3):
+                    http(a,g,query='&ajax=battle_sync&force_snapshot=1')
+                    check('HTTP ACK repeated status '+timing+method+str(repeat),saved==sql('USE LAB_DB;SELECT json,version FROM games WHERE ind='+str(g)+';'))
+                count_after=int(sql("USE LAB_DB;SELECT COUNT(*) FROM battle_command_journal WHERE game_id="+str(g)+" AND command_id LIKE 'p2a:%';"))
+                check('HTTP exactly one automatic command '+timing+method,count_after-count_before==(1 if method=='auto' else 0))
+                before=version(g);check('HTTP repeated participant rejected '+timing+method,ack(b,'1').get('command_status')!='committed' and version(g)==before)
+                check('HTTP owner finishes once '+timing+method,ack(a,'1').get('command_status')=='committed' and not state(g)['battle'].get('strike'))
+            set_fixture(g,opened);open_wait();current=state(g);current['battle']['informational_wait']['wait_id']=2;current['battle']['informational_wait_generation']=2;set_fixture(g,current)
+            before=version(g);check('HTTP stale wait rejected '+timing,ack(b,'1').get('command_status')!='committed' and version(g)==before)
+            ack(b,'2');ack(a,'2')
+        mode_cases=[('sealed',{'sealed_boosters':'3'}),('draft',{'boosters':'5','draft_timer_mode':'unlimited'}),('solomon',{'boosters':'5','stack_size':'8'}),('lucktest',{'lucktest_average_cost':'5','lucktest_balanced':'0','lucktest_card_count':'5','lucktest_quick_game':'1'})]
+        for chosen,fields in mode_cases:
+            if chosen=='lucktest':sql('USE LAB_DB;UPDATE cards SET price=5;') # Valid synthetic LuckTest cost catalog.
+            code,created=a.lobby(data={'action':'create','setup_mode':chosen,'csrf':token,'creation_key':os.urandom(16).hex(),'turn_seconds':'0',**fields});check('create mode '+chosen,code==200)
+            room=created['room'];check('request mode '+chosen,b.act(room)[0]==200);waiting=a.lobby(room['id'])[1]['room'];check('accept mode '+chosen,a.act(waiting,'accept')[0]==200)
+            created_game=a.lobby(room['id'])[1]['room']['game_id'];saved=state(created_game);check('mode reaches existing preparation '+chosen,saved['status'] not in ['mode','settings'] and saved['settings']['battle']['turn_seconds']==0)
+        sql('USE LAB_DB;DELETE FROM auth_login_attempts;')
         env=dict(os.environ,UNIFIED_MENU_URL='http://127.0.0.1:33572',UNIFIED_MENU_GAME=str(game),UNIFIED_MENU_PREPARATION=str(debug_game),UNIFIED_MENU_FINISHED=str(finished_game),UNIFIED_MENU_EVIDENCE=str(out),PLAYWRIGHT_MODULE=args.playwright,BROWSER_EXECUTABLE=args.browser)
         ui=subprocess.run([args.node,str(ROOT/'tools/test_unified_menu_browser.cjs')],env=env,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=180)
         (out/'browser-output.txt').write_text(ui.stdout+ui.stderr,encoding='utf-8');check('real two-account browser suite',ui.returncode==0)
+        sql('USE LAB_DB;DELETE FROM auth_login_attempts;')
+        wizard_ui=subprocess.run([args.node,str(ROOT/'tools/test_wizard_browser.cjs')],env=env,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=180)
+        (out/'wizard-browser-output.txt').write_text(wizard_ui.stdout+wizard_ui.stderr,encoding='utf-8');check('wizard real browser suite',wizard_ui.returncode==0)
         (out/'http-checks.json').write_text(json.dumps(RESULTS,ensure_ascii=False,indent=2),encoding='utf-8')
         print(json.dumps(RESULTS,ensure_ascii=False,indent=2))
 '''

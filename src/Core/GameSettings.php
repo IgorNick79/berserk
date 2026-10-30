@@ -77,6 +77,7 @@ final class GameSettings
             'balanced' => true,
             'quick_game' => true,
         ],
+        public array $battle = ['turn_seconds' => 180],
     ) {}
 
     public static function defaults(): self
@@ -89,6 +90,7 @@ final class GameSettings
         $defaults = self::defaults();
 
         return new self(
+            battle: array_merge($defaults->battle, (array) ($data['battle'] ?? [])),
             system: array_merge($defaults->system, (array) ($data['system'] ?? [])),
             draft: array_merge($defaults->draft, (array) ($data['draft'] ?? [])),
             sealed: array_merge($defaults->sealed, (array) ($data['sealed'] ?? [])),
@@ -100,6 +102,7 @@ final class GameSettings
     public function toArray(): array
     {
         return [
+            'battle' => $this->battle,
             'system' => $this->system,
             'draft'  => $this->draft,
             'sealed' => $this->sealed,

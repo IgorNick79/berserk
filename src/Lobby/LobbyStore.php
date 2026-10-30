@@ -52,6 +52,23 @@ final class LobbyStore
         return $row;
     }
 
+    private function visible(array $room, int $actor): bool
+    {
+        return ($room['invited_account_id']??null)===null || $actor===(int)$room['creator_account_id'] || $actor===(int)$room['invited_account_id'];
+    }
+
+    public function invitee(int $actor, mixed $access, mixed $login): ?int
+    {
+        if (!in_array($access,['open','closed'],true)) throw new \DomainException('Выберите доступ к партии.',400);
+        if ($access==='open') return null;
+        try {$key=\Berserk\Auth\Account::loginKey(is_string($login)?$login:'');}
+        catch (\InvalidArgumentException) {throw new \DomainException('Укажите корректный никнейм приглашённого игрока.',400);}
+        $row=$this->query('SELECT id FROM accounts WHERE login_key=?',[$key])->fetch_assoc();
+        if (!$row) throw new \DomainException('Игрок с таким никнеймом не найден.',400);
+        if ((int)$row['id']===$actor) throw new \DomainException('Нельзя пригласить самого себя.',400);
+        return (int)$row['id'];
+    }
+
     private function member(array $room, int $actor): bool
     {
         return $actor === (int)$room['creator_account_id']
@@ -77,7 +94,7 @@ final class LobbyStore
         ];
         if ($private) {
             $room['game_id'] = $row['game_id'] === null ? null : (int)$row['game_id'];
-            $room['role'] = $actor === (int)$row['creator_account_id'] ? 'creator' : ($row['state'] === 'started' ? 'accepted' : 'candidate');
+            $room['role'] = $actor === (int)$row['creator_account_id'] ? 'creator' : ($row['state'] === 'started' ? 'accepted' : ($actor===(int)($row['invited_account_id']??0) && $row['state']==='open'?'invited':'candidate'));
             $room['candidate_request_id'] = $room['can_decide'] ? $row['candidate_request_id'] : null;
         }
         return $room;
@@ -87,7 +104,7 @@ final class LobbyStore
 
     public function listing(int $actor): array
     {
-        $rows = $this->query(self::SELECT_VIEW." WHERE r.state<>'started' OR g.status<>'game_over' ORDER BY r.id DESC")->fetch_all(MYSQLI_ASSOC);
+        $rows = $this->query(self::SELECT_VIEW." WHERE (r.state<>'started' OR g.status<>'game_over') AND (r.invited_account_id IS NULL OR r.creator_account_id=? OR r.invited_account_id=?) ORDER BY r.id DESC",[$actor,$actor])->fetch_all(MYSQLI_ASSOC);
         return array_map(fn(array $r): array=>$this->projection($r,$actor,false),$rows);
     }
 
@@ -95,15 +112,26 @@ final class LobbyStore
     {
         // One SELECT gives permissions and projection from the SAME database snapshot.
         $row = $this->query(self::SELECT_VIEW.' WHERE r.id=?',[$id])->fetch_assoc();
-        if (!$row || !$this->member($row,$actor)) throw new \DomainException('Доступ к комнате закрыт.',403);
+        if (!$row || !$this->visible($row,$actor) || (!$this->member($row,$actor) && $actor !== (int)($row['invited_account_id']??0))) throw new \DomainException('Доступ к комнате закрыт.',403);
         return $this->projection($row,$actor,true);
     }
 
-    public function create(int $actor, ?array $setup = null): int
+    public function create(int $actor, ?array $setup = null, ?int $invited = null, ?string $creationKey = null): int
     {
+        $setup=$setup===null?null:RoomSetup::validate($setup);
         if (isset($setup['debug']) && (($setup['debug']['account_id'] ?? null) !== $actor || !\Berserk\Auth\DebugAccess::allowsId($actor))) throw new \DomainException('Debug недоступен для создателя',403);
-        RoomTransaction::run($this->db, function (RoomTransaction $transaction) use ($actor, $setup, &$id): void {
-            $this->query("INSERT INTO lobby_rooms(creator_account_id,state,version,created_at,updated_at) VALUES(?,'open',1,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))",[$actor]);
+        if ($creationKey!==null && !preg_match('/\A[a-f0-9]{32}\z/D',$creationKey)) throw new \DomainException('Некорректный ключ создания.',400);
+        if ($invited!==null && ($invited===$actor || !$this->query('SELECT id FROM accounts WHERE id=?',[$invited])->fetch_assoc())) throw new \DomainException('Некорректное приглашение.',400);
+        $existing=function() use($actor,$creationKey,$setup,$invited): ?int {
+            if ($creationKey===null) return null;
+            $row=$this->query('SELECT id,setup_json,invited_account_id FROM lobby_rooms WHERE creator_account_id=? AND creation_key=?',[$actor,$creationKey])->fetch_assoc();
+            if (!$row) return null;
+            if ($row['setup_json']!==($setup===null?null:json_encode($setup,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)) || ($row['invited_account_id']===null?null:(int)$row['invited_account_id'])!==$invited) throw new \DomainException('Ключ создания уже использован с другими настройками.',409);
+            return (int)$row['id'];
+        };
+        if (($prior=$existing())!==null) return $prior;
+        try { RoomTransaction::run($this->db, function (RoomTransaction $transaction) use ($actor, $setup, $invited, $creationKey, &$id): void {
+            $this->query("INSERT INTO lobby_rooms(creator_account_id,invited_account_id,creation_key,state,version,created_at,updated_at) VALUES(?,?,?,'open',1,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))",[$actor,$invited,$creationKey]);
             $id = (int)$this->db->insert_id;
             if ($setup !== null) {
                 $json=json_encode(RoomSetup::validate($setup),JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
@@ -111,6 +139,7 @@ final class LobbyStore
             }
             $this->row($id,true);
         });
+        } catch (\mysqli_sql_exception $e) { if ($e->getCode()!==1062 || ($prior=$existing())===null) throw $e;return $prior; }
         return $id;
     }
 
@@ -118,6 +147,7 @@ final class LobbyStore
     {
         RoomTransaction::run($this->db, function (RoomTransaction $transaction) use ($id, $actor, $version, $request, $action): void {
             $room = $this->row($id,true);
+            if (!$this->visible($room,$actor)) throw new \DomainException('Доступ к комнате закрыт.',403);
             // Check permission under lock before revealing version/request state.
             if ($action !== 'open' && $actor !== (int)$room['creator_account_id']) throw new \DomainException('Только создатель принимает решение.',403);
             if ($action === 'open' && $room['state'] !== 'open' && !$this->member($room,$actor)) throw new \DomainException('Место уже занято.',403);

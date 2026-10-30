@@ -12,6 +12,9 @@ final class RoomSetup
     {
         if (!in_array($mode,['system','draft','solomon','sealed','lucktest'],true)) throw new \DomainException('Выберите вид игры.',400);
         $settings=GameSettings::defaults()->toArray();
+        $timer=$input['turn_seconds']??'0';
+        if (!in_array($timer,['0','180'],true)) throw new \DomainException('Допустимо: без таймера или 180 секунд на ход.',400);
+        $settings['battle']['turn_seconds']=(int)$timer;
         $settings['draft']['type']=$mode==='solomon'?'solomon':'grid';
         $fields=[
             'draft'=>['draft_pick_mode'=>'pick_mode','draft_grid_mode'=>'grid_mode','draft_auto_side'=>'auto_side','boosters'=>'boosters','stack_size'=>'stack_size','draft_timer_mode'=>'timer_mode','draft_timer_total'=>'timer_total','draft_timer_action'=>'timer_action'],
@@ -52,6 +55,7 @@ final class RoomSetup
         $mode=$setup['mode']??null;
         if (!in_array($mode,['system','draft','solomon','sealed','lucktest'],true) || !is_array($setup['settings']??null)) throw new \DomainException('Некорректные настройки комнаты.',400);
         $s=GameSettings::fromArray($setup['settings']);
+        if (!in_array($s->battle['turn_seconds'],[0,180],true)) throw new \DomainException('Некорректный таймер хода.',400);
         if ($s->draftType()!==($mode==='solomon'?'solomon':'grid')) throw new \DomainException('Несовместимый вид драфта.',400);
         if (!in_array($s->draft['pick_mode'],['manual','random'],true) || !in_array($s->draft['auto_side'],['both','host','player'],true)) throw new \DomainException('Некорректный автовыбор.',400);
         $error = match ($mode) {

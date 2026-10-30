@@ -79,6 +79,7 @@ final class RoomTransaction
             || !is_string($room['candidate_request_id']) || !preg_match('/\A[0-9a-f]{64}\z/D', $room['candidate_request_id'])) {
             throw new \LogicException('Invalid pending room');
         }
+        if (($room['invited_account_id']??null)!==null && (int)$room['invited_account_id']!==$accepted) throw new \DomainException('Приглашён другой игрок.',403);
         $this->setup=isset($room['setup_json']) ? RoomSetup::validate(json_decode($room['setup_json'],true,512,JSON_THROW_ON_ERROR)) : null;
         if (($this->setup===null && ($room['game_type']??null)!==null) || ($this->setup!==null && ($room['game_type']??null)!==$this->setup['mode'])) throw new \LogicException('Room type mismatch');
         $this->roomId = $roomId;
