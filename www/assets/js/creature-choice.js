@@ -19,8 +19,9 @@
             var input = row.querySelector('input');
             if (input) {
                 if (input.dataset.choiceDisabled === undefined) input.dataset.choiceDisabled = input.disabled ? '1' : '0';
-                input.disabled = row.hidden || input.dataset.choiceDisabled === '1';
-                if (row.hidden) input.checked = false;
+                // Checked multi-target choices remain submitted across side changes.
+                input.disabled = (row.hidden && !(input.type === 'checkbox' && input.checked)) || input.dataset.choiceDisabled === '1';
+                if (row.hidden && input.type !== 'checkbox') input.checked = false;
             }
         });
         var visible = rows.filter(function (r) { return !r.hidden; }).map(function (r) { return r.querySelector('input'); }).filter(function (i) { return i && !i.disabled; });

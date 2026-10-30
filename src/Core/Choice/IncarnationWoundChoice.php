@@ -41,10 +41,6 @@ final class IncarnationWoundChoice implements ChoiceHandlerInterface
             );
         }
 
-        // Дефолт — чужие, кнопка переключает на "Все"
-        $side = (string) ($_GET['iw_side'] ?? 'enemy');
-        if (!in_array($side, ['enemy', 'all'], true)) $side = 'enemy';
-
         $count = (int) $item['count'];
         $value = (int) $item['value'];
 
@@ -54,7 +50,6 @@ final class IncarnationWoundChoice implements ChoiceHandlerInterface
             if (!$tc) continue;
             if ($tc->dying || $tc->hp <= 0) continue;
             $isOwn = ($tc->owner === $playerKey);
-            if ($side === 'enemy' && $isOwn) continue;
 
             $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
             $label = $tn . ' (' . $tc->row . ';' . $tc->col . ') — '
@@ -69,36 +64,25 @@ final class IncarnationWoundChoice implements ChoiceHandlerInterface
 
         $roleParam = $role === 'host' ? 'first' : 'second';
 
-        $toggleLabel = ($side === 'enemy') ? 'Все существа' : 'Только чужие';
-        $toggleSide  = ($side === 'enemy') ? 'all' : 'enemy';
-
-        $buttons = [
-            [
-                'label' => $toggleLabel,
-                'url'   => $baseUrl . '&iw_side=' . $toggleSide,
-            ],
-        ];
-
         if (empty($items)) {
             return new PanelSpec(
                 title: $srcName . ': могильная хватка — нет целей на этой стороне',
-                buttons: $buttons,
             );
         }
 
         return new PanelSpec(
             title: $srcName . ': могильная хватка — выбери ' . $count
                 . ' цел' . ($count === 1 ? 'ь' : 'и') . ' (по ' . $value . ' урона)',
-            buttons: $buttons,
             form: [
                 'type'   => 'checkbox',
+                'side_toggle' => true,
+                'side_default' => 'enemy',
                 'name'   => 'target_ids[]',
                 'items'  => $items,
                 'hidden' => [
                     $roleParam => '',
                     'game'     => $state->gameId,
                     'cmd'      => 'choose_incarnation_wound',
-                    'iw_side'  => $side,
                 ],
                 'submit' => 'Ранить',
             ],

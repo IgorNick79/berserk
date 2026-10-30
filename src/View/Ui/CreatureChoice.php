@@ -11,7 +11,7 @@ final class CreatureChoice
         return ['value' => $card->instanceId, 'label' => $name, 'side' => $card->owner === $viewer ? 'own' : 'enemy',
             'label_html' => '<span class="creature-choice-name">' . htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>'
                 . ($showHealth && ($card->owner === $viewer || $card->revealed)
-                    ? '<span class="creature-choice-health">❤ ' . $card->hp . '/' . $card->hpMax . ' HP</span>' : '')
+                    ? '<span class="creature-choice-health">❤️ ' . $card->hp . '/' . $card->hpMax . ' HP</span>' : '')
                 . Coords::renderResult($card->row, $card->col, $viewer, $card->owner)];
     }
 
@@ -22,7 +22,7 @@ final class CreatureChoice
             $items = []; $remaining = []; $hidden = null;
             foreach ($spec->buttons as $button) {
                 parse_str((string) parse_url($button['url'], PHP_URL_QUERY), $query);
-                if (!in_array($query['cmd'] ?? '', ['choose_instant_pick', 'choose_combat_pick', 'choose_revive_target', 'choose_death_target'], true)
+                if (!in_array($query['cmd'] ?? '', ['choose_instant_pick', 'choose_combat_pick', 'choose_revive_target', 'choose_death_target', 'attack_series_next'], true)
                     || !isset($query['target_id']) || !$state->getCard((int) $query['target_id'])) {
                     $remaining[] = $button; continue;
                 }
@@ -41,7 +41,7 @@ final class CreatureChoice
             }
         }
         if ($spec->form === null || !in_array($spec->form['name'] ?? '', ['target_id', 'target_ids[]', 'card_id'], true)) return;
-        $showHealth = in_array($spec->form['hidden']['cmd'] ?? '', ['choose_multi_heal', 'choose_wild_healer_heal'], true)
+        $showHealth = in_array($spec->form['hidden']['cmd'] ?? '', ['choose_multi_heal', 'choose_wild_healer_heal', 'wt_target'], true)
             || (($spec->form['hidden']['cmd'] ?? '') === 'choose_instant_pick'
                 && ($state->battle['pending_instant_pick']['effect']['type'] ?? '') === 'heal');
         foreach ($spec->form['items'] as &$item) {
@@ -54,7 +54,7 @@ final class CreatureChoice
         }
         unset($item);
         $spec->form['side_default'] ??= $showHealth ? 'own' : 'enemy';
-        $spec->form['side_toggle'] = ($spec->form['type'] ?? 'radio') === 'radio' && count(array_unique(array_column($spec->form['items'], 'side'))) > 1;
+        $spec->form['side_toggle'] = !empty($spec->form['side_toggle']) || ($spec->form['type'] ?? 'radio') === 'radio' && count(array_unique(array_column($spec->form['items'], 'side'))) > 1;
     }
 
     public static function controls(string $defaultSide = 'enemy'): string

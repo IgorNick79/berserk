@@ -94,6 +94,10 @@ final class InfoPanel
         $body = $actionChoiceHtml !== '' ? $actionChoiceHtml : $this->renderOchiKrongaNotice() . $this->renderBody();
         $instantWindow = $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
+        $turnInstant = !$inCombat && ($instantWindow
+            || ($state->battle['turn_phase']['sub']['parent_type'] ?? '') === 'instants');
+        $contextTitle = $turnInstant ? 'Инстант' : 'Сражение';
+        $contextIcon = $turnInstant ? 'cell_info.svg' : 'combat.png';
         $contextBody = $instantWindow
             ? '<section class="info-panel-instants" aria-label="Инстанты">' . $body . '</section>'
             : $body;
@@ -101,7 +105,7 @@ final class InfoPanel
             . '<div class="info-panel-content" data-panel-priority="' . ($priority ? '1' : '0') . '" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" data-inspected-card="' . $inspectedCardId . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
             . ($priority ? '' : $pileHtml)
             . '<div class="battle-selected-card" data-battle-fragment="panel_html"' . ($exclusive ? ' hidden' : '') . '>' . $selectedCardHtml . '</div>'
-            . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/combat.png" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">Сражение</h3></div><div class="combat-panel-body">' : '') . $contextBody . ($exclusive ? '</div>' : '') . '</div>'
+            . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/' . $contextIcon . '" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">' . $contextTitle . '</h3></div><div class="combat-panel-body">' : '') . $contextBody . ($exclusive ? '</div>' : '') . '</div>'
             . '</div>'
             . '<footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
     }

@@ -78,15 +78,18 @@ final class WoundTransferChoice implements ChoiceHandlerInterface
                 'url'   => "{$baseUrl}&cmd=wt_source&donor_id={$id}",
             ];
         }
-        $buttons[] = [
-            'label' => 'Отмена',
-            'url'   => $baseUrl . '&cmd=cancel_pending',
-            'class' => 'skip',
-        ];
-
+        $items = [];
+        foreach ($buttons as $button) {
+            parse_str((string) parse_url($button['url'], PHP_URL_QUERY), $query);
+            $items[] = ['value' => $query['donor_id'], 'label' => $button['label'], 'label_html' => $button['label_html']];
+        }
         return new PanelSpec(
             title: $title . ' — с кого снять раны?',
-            buttons: $buttons,
+            form: [
+                'type' => 'radio', 'name' => 'donor_id', 'items' => $items,
+                'hidden' => [($role === 'host' ? 'first' : 'second') => '', 'game' => $state->gameId, 'cmd' => 'wt_source'],
+                'submit' => 'Выбрать', 'cancel' => $baseUrl . '&cmd=cancel_pending',
+            ],
         );
     }
 
@@ -100,7 +103,7 @@ final class WoundTransferChoice implements ChoiceHandlerInterface
         for ($i = 1; $i <= $max; $i++) {
             $items[] = [
                 'value'   => $i,
-                'label'   => '❤ ' . $i,
+                'label'   => '❤️ ' . $i,
                 'checked' => ($i === $max),
             ];
         }
@@ -147,6 +150,12 @@ final class WoundTransferChoice implements ChoiceHandlerInterface
             ];
         }
 
+        $items = [];
+        foreach ($buttons as $button) {
+            parse_str((string) parse_url($button['url'], PHP_URL_QUERY), $query);
+            $items[] = ['value' => $query['target_id'], 'label' => $button['label'], 'label_html' => $button['label_html']];
+        }
+        $buttons = [];
         if ($remaining > 0) {
             $buttons[] = [
                 'label' => 'Готово (осталось ' . $remaining . ')',
@@ -159,6 +168,11 @@ final class WoundTransferChoice implements ChoiceHandlerInterface
             title: $title . ' — переложи ' . $remaining . ' HP с ' . $donorName,
             text: [
                 'Распределить осталось: <b>' . $remaining . ' HP</b>',
+            ],
+            form: [
+                'type' => 'radio', 'name' => 'target_id', 'items' => $items,
+                'hidden' => [($role === 'host' ? 'first' : 'second') => '', 'game' => $state->gameId, 'cmd' => 'wt_target'],
+                'submit' => 'Выбрать',
             ],
             buttons: $buttons,
         );
@@ -174,7 +188,7 @@ final class WoundTransferChoice implements ChoiceHandlerInterface
         for ($i = 1; $i <= $remaining; $i++) {
             $items[] = [
                 'value'   => $i,
-                'label'   => '❤ ' . $i,
+                'label'   => '❤️ ' . $i,
                 'checked' => ($i === $remaining),
             ];
         }
