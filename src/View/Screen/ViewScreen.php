@@ -248,7 +248,6 @@ final class ViewScreen
         $cost = (!empty($info['elite']) ? 'elite' : 'ordinary') . (!empty($info['single']) ? '-unique' : '');
         return '<a aria-label="'.$e($info['name']??$ukid).'" class="prepare-card-link '.$e($data['class']).'" href="'.$e($data['link']).'" data-ukid="'.$e($ukid).'">'
             . '<div data-mini-art-only data-mini-card="view:'.$e($data['link']).'" data-mini-name="'.$e($info['name']??$ukid).'" class="prepare-card view-thumbnail'.($data['selected']?' prepare-card--selected':'').'">'.$art
-            . '<img class="view-frame" src="/assets/images/battle/mini/frame_friendly_102x92_'.(!empty($info['elite'])?'plain':'silver').'.svg" alt="">'
             . '<span class="view-element" data-mini-hint data-view-element tabindex="0" role="button" aria-label="'.$e($info['element_label']??$info['element']??$element).'"><img src="/assets/images/element/'.$e($element).'.png" alt=""><span class="mini-hint-text" hidden>'.$e($info['element_label']??$info['element']??$element).'</span></span>'
             . '<span class="view-cost"><img src="/assets/images/card/'.$cost.'.png" alt="'.(!empty($info['elite'])?'Золотой':'Серебряный').(!empty($info['single'])?', уникальный':'').' кристалл">'.$e($info['price']??$data['info']['price']??0)
             . '<span class="prepare-card__count">×'.(int)$data['count'].'</span></span></div></a>';

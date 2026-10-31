@@ -120,6 +120,7 @@
                 pages.push({group: group, number: number, count: count, cards: filtered.slice(number * size, (number + 1) * size)});
             }
         });
+        if (document.body.classList.contains("view-deck-page")) navigation.dataset.singlePage=String(pages.length <= 1);
         navigation.replaceChildren();
         pages.forEach(function (page, index) {
             var button = document.createElement('button');

@@ -4,6 +4,8 @@
     window.berserkViewReady = true;
     const config = window.berserkViewTransport;
     if (!config) return;
+    // Keep loaded styles connected while snapshots replace the stage markup.
+    document.querySelectorAll('.pregame-layout link[rel="stylesheet"]').forEach(node=>document.head.append(node));
     let version = Number(config.version), busy = false, refreshing = false, selection = 0, pause = null, forceNext = false;
     const key = 'berserk-view-command:' + config.game;
     let pending = null;
@@ -34,6 +36,7 @@
             const nextVersion = Number(script.dataset.version);
             if (force || nextVersion !== version) {
                 const next = doc.querySelector('.pregame-layout'), current = document.querySelector('.pregame-layout');
+                next.querySelectorAll('link[rel="stylesheet"],script[src]').forEach(node=>node.remove());
                 const oldSelected=current.querySelector('.prepare-card--selected')?.closest('.prepare-card-link');
                 if (address.searchParams.has('card') && oldSelected && !next.querySelector('.prepare-card--selected')) {
                     const zone=oldSelected.closest('[data-view-group]').dataset.viewGroup;
@@ -59,7 +62,7 @@
     root.dataset.cardPopupRoot='';root.dataset.panelDockRoot='';root.dataset.pauseContext='preparation';
     const dock=document.createElement('div');dock.className='battle-secondary-view game-chat';dock.hidden=true;
     let secondary=null;
-    root.secondaryPanel=function(panel){secondary=window.BerserkPanelDock.open(root,dock,secondary,panel);window.BerserkPanelDock.mount(root.querySelector('.info-panel-content'),dock,secondary);root.querySelectorAll('[data-view-card-actions]').forEach(node=>node.hidden=!!secondary);};
+    root.secondaryPanel=function(panel){secondary=window.BerserkPanelDock.open(root,dock,secondary,panel);root.toggleAttribute("data-view-secondary",!!secondary);window.BerserkPanelDock.mount(root.querySelector('.info-panel-content'),dock,secondary);root.querySelectorAll('[data-view-card-actions]').forEach(node=>node.hidden=!!secondary);};
     const pauseUi=window.BerserkMatchPause.create(root,version,params=>{const type=params.get('cmd');params.delete('cmd');command(type,Object.fromEntries(params));},()=>busy||!!pending,()=>refresh(true).catch(error=>notice(error.message)));
     function renderPause() {
         document.querySelector('.pregame-layout').dataset.viewVersion=String(version);
@@ -96,7 +99,6 @@
             event.preventDefault(); const address=new URL(card ? card.href : location.href);address.searchParams.set('view_page',new URL(location.href).searchParams.get('view_page')||'0');
             address.searchParams.delete('cmd');if(close)address.searchParams.delete('card');
             history.replaceState(null,'',address); selection++;
-            document.querySelector('.pregame-panel-content').textContent='Загрузка карты…';
             try { await refresh(true); } catch (error) { notice(error.message); } return;
         }
         if (action) { event.preventDefault();const params=new URL(action.href).searchParams;command(params.get('cmd'),{card_id:params.get('card_id')||''}); }
