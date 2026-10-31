@@ -24,4 +24,4 @@
 <script src="/assets/js/view-deck.js?v=5" defer></script>
 
 <script src="/assets/js/card-image-popup.js?v=2" defer></script>
-<script src="/assets/js/battle-mini-card.js?v=11" defer></script>
+<script src="/assets/js/battle-mini-card.js?v=12" defer></script>

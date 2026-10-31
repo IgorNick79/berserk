@@ -6,6 +6,19 @@
     var tip = null, trigger = null, describedNode = null, kind = '', pinned = false;
     var hoverCard = null, zoom = null, timer = 0, hoverReady = false;
     var hintTimer = 0, hintCandidate = null;
+    var suppressedViewKey = null;
+    function viewKey(card) {
+        var link = card && card.hasAttribute("data-mini-art-only") && card.closest("[data-ukid]");
+        return link ? link.dataset.ukid : null;
+    }
+    function suppressViewHover(target) {
+        var link = target.closest(".prepare-card-link");
+        var card = link && link.querySelector("[data-mini-art-only]");
+        if (!card) return;
+        suppressedViewKey = viewKey(card);
+        closeHint();
+        stopZoom(true);
+    }
     var nameTimer = 0, fadeTimer = 0, dismissedName = null;
     var pointerX = -1, pointerY = -1, reconcileFrame = 0;
     var lastMoveX = -1, lastMoveY = -1;
@@ -196,6 +209,7 @@
             card.classList.add('mini-zoom-source');
     }
     function startZoom(card) {
+        if (suppressedViewKey && viewKey(card) === suppressedViewKey) return;
         if (card.classList.contains('mini-closed')) { stopZoom(true); return; }
         if (document.documentElement.hasAttribute('data-battle-dragging') || !hover.matches || reduced.matches || card.classList.contains('mini-hidden')) return;
         if (hoverCard === card) return;
@@ -213,8 +227,11 @@
             void z.offsetWidth;
             z.classList.add('is-open');
             if (!pinned && hoverReady) contextHint(document.elementFromPoint(pointerX, pointerY) || card);
-        }, 200);
+        }, card.hasAttribute("data-mini-art-only") ? 300 : 200);
     }
+    document.addEventListener('pointerdown', function (e) {
+        if (e.button === 0 && !e.target.closest('[data-mini-hint]')) suppressViewHover(e.target);
+    }, true);
     // Capture before battle-sync: only indicator/tooltip clicks are consumed.
     document.addEventListener('click', function (e) {
         var node = e.target.closest('[data-mini-hint]');
@@ -236,6 +253,7 @@
             e.stopImmediatePropagation();
             return;
         }
+        suppressViewHover(e.target);
         closeHint();
     }, true);
     document.addEventListener('keydown', function (e) {
@@ -263,6 +281,7 @@
         if (e.clientX !== lastMoveX || e.clientY !== lastMoveY) hoverReady = true;
         lastMoveX = e.clientX; lastMoveY = e.clientY;
         if (hoverCard && !hoverCard.isConnected) { queueReconcile(); return; }
+        if (suppressedViewKey && viewKey(cardAt(e.target)) !== suppressedViewKey) suppressedViewKey = null;
         contextHint(e.target);
     });
     document.addEventListener('pointerout', function (e) {
