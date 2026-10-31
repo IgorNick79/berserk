@@ -96,8 +96,8 @@ final class InfoPanel
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
         $turnInstant = !$inCombat && ($instantWindow
             || ($state->battle['turn_phase']['sub']['parent_type'] ?? '') === 'instants');
-        $contextTitle = $turnInstant ? 'Инстант' : 'Сражение';
-        $contextIcon = $turnInstant ? 'cell_info.svg' : 'combat.png';
+        $contextTitle = $inCombat ? 'Сражение' : ($turnInstant ? 'Инстант' : 'Информация');
+        $contextIcon = $inCombat ? 'combat.png' : 'cell_info.svg';
         $contextBody = $instantWindow
             ? '<section class="info-panel-instants" aria-label="Инстанты">' . $body . '</section>'
             : $body;
@@ -126,7 +126,7 @@ final class InfoPanel
                 . ' — срабатываний за ход: ' . $uses . '/2.</p>';
         }
         return $html === '' ? '' : '<details open class="info-box ochi-kronga-notice" data-ochi-notice="'
-            . $this->state->gameId . ':' . $this->playerKey . '"><summary><h3>Сражение</h3></summary>'
+            . $this->state->gameId . ':' . $this->playerKey . '"><summary><h3>Информация</h3></summary>'
             . $html . '<button type="button" class="button" data-dismiss-ochi>Продолжить</button></details>';
     }
 

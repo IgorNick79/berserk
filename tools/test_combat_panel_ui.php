@@ -14,6 +14,7 @@ function combatPanelFixture(string $stage, string $viewer, int $selection): arra
     if ($stage === 'instant') $s->battle['turn_instant_stack'] = ['state'=>'ordering','priority'=>'host','phase'=>'turn','stack'=>[],'participants'=>['host','player']];
     if ($stage === 'instant_result') $s->battle['turn_instant_result'] = ['summary'=>[]];
     if ($stage === 'message') $s->battle['any_death_messages'] = [['message'=>'Важная информация о результате']];
+    if ($stage === 'ochi') $s->getCard(1)->flags[\Berserk\Core\OchiKronga::STATE]=['uses'=>1,'period'=>'test','last_open_sequence'=>1];
     if ($stage === 'closed') { $s->getCard(1)->closed=true; $s->getCard(3)->closed=true; }
     if ($stage === 'friendly_targets') $s->battle['strike'] = ['kind'=>'strike','state'=>'waiting_defender','attacker_id'=>2,'target_id'=>1,'defenders'=>[5]];
     $before=serialize($s->toArray());
@@ -27,7 +28,7 @@ if (in_array('--fixture',$argv??[],true)) {
     foreach(['host','player'] as $viewer) foreach([0,1,2] as $sel) {
         $d=combatPanelFixture('combat',$viewer,$sel);
         battleSnapshotAssert(str_contains($d['info_panel_html'],'Фаза сражения')&&!str_contains($d['info_panel_html'],'Основная фаза'), 'Both viewers see combat phase');
-        battleSnapshotAssert(str_contains($d['info_panel_html'],'>Информация</h3>') && str_contains($d['info_panel_html'],'data-panel-priority="1"'), 'Combat heading exists');
+        battleSnapshotAssert(str_contains($d['info_panel_html'],'>Сражение</h3>') && str_contains($d['info_panel_html'],'combat.png') && str_contains($d['info_panel_html'],'data-panel-priority="1"'), 'Actual combat has combat heading');
         battleSnapshotAssert(str_contains($d['info_panel_html'],'data-battle-fragment="panel_html" hidden'), 'Existing selection starts hidden');
         battleSnapshotAssert(str_contains($d['info_panel_html'],'cmd=confirm_strike'), 'Combat confirmation preserved');
         if($sel) {
@@ -45,8 +46,18 @@ if (in_array('--fixture',$argv??[],true)) {
         battleSnapshotAssert(in_array($stage,['instant','instant_result'],true)
             ? str_contains($d['info_panel_html'],'info-panel-instants')
             : str_contains($d['info_panel_html'],'>Информация</h3>') && str_contains($d['info_panel_html'],'cell_info.svg'), 'Priority heading or bottom instant section');
+        if (in_array($stage,['instant','instant_result'],true)) battleSnapshotAssert(str_contains($d['info_panel_html'],'>Инстант</h3>')&&!str_contains($d['info_panel_html'],'>Сражение</h3>'),'Turn instant is not a combat');
         if ($stage==='instant_result') battleSnapshotAssert(str_contains($d['info_panel_html'],'cmd=turn_instant_result_ok'), 'Instant OK survives selected creature');
     }
+    foreach(['host','player'] as $viewer) {
+        $throw=battleSnapshotState();$throw->battle['strike']=['kind'=>'throw','state'=>'waiting_instant','attacker_id'=>1,'target_id'=>2];
+        $before=serialize($throw->toArray());
+        $html=(new \Berserk\View\Screen\Battle\InfoPanel(new Template(__DIR__.'/../templates')))->render($throw,$viewer,$viewer,$cardsInfo,'?game='.$throw->gameId,'','','<p>Метание</p>');
+        battleSnapshotAssert(str_contains($html,'>Сражение</h3>')&&str_contains($html,'combat.png'),'An actual throw keeps combat heading');
+        battleSnapshotAssert($before===serialize($throw->toArray()),'Throw heading is read-only');
+    }
+    $notice=combatPanelFixture('ochi','host',0);
+    battleSnapshotAssert(str_contains($notice['info_panel_html'],'<summary><h3>Информация</h3></summary>')&&!str_contains($notice['info_panel_html'],'>Сражение</h3>'),'Opening notice is information');
     $closed=combatPanelFixture('closed','host',1);
     $dom=new DOMDocument();@$dom->loadHTML($closed['field_html'].$closed['fly_zones_html']);$x=new DOMXPath($dom);
     battleSnapshotAssert($x->query('//*[contains(concat(" ",normalize-space(@class)," ")," closed ")]')->length===0,'Live cells have no closed class');

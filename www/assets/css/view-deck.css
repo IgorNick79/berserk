@@ -1,5 +1,5 @@
 /* View only: reuse account theme variables and the existing battle assets. */
-.view-deck-page .pregame-main{background:#171b18df;border:1px solid #766047;overflow:auto}
+.view-deck-page .pregame-main{background:transparent;border:0;overflow:auto}
 .view-deck-page .pregame-info-panel{background:radial-gradient(ellipse at top,var(--ip-glow),transparent 65%),var(--ip-base);color:var(--ip-text);border:2px solid var(--ip-edge);position:relative}
 .view-deck-page .pregame-panel-header,.view-deck-page .pregame-panel-footer{border-color:var(--ip-edge);background:#0003;color:var(--ip-title)}
 .view-deck-page .pregame-panel-content,.view-deck-page .pregame-pool-stats,.view-deck-page .pregame-card-heading,.view-deck-page .pregame-card-stats{background:transparent;color:var(--ip-text)}
@@ -9,7 +9,7 @@
 .view-deck-page .pregame-view-group .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;padding:10px}
 .view-deck-page .prepare-card-link{min-width:0;height:auto!important;text-decoration:none;color:#fff}
 .view-deck-page .view-thumbnail{position:relative;width:100%;height:auto!important;aspect-ratio:8/5;padding:0;background:#292824;border:0;border-radius:5px;isolation:isolate;overflow:hidden}
-.view-art{display:block;width:100%;height:100%;object-fit:contain;aspect-ratio:8/5}.view-art-missing{display:grid;place-items:center;font-size:12px}
+.view-art{border-radius:6px;display:block;width:100%;height:100%;object-fit:contain;aspect-ratio:8/5}.view-art-missing{display:grid;place-items:center;font-size:12px}
 .view-frame{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.view-element{position:absolute;top:7px;left:7px;width:24px;height:24px;filter:drop-shadow(0 1px 2px #000)}
 .view-cost{position:absolute;bottom:3px;left:5px;right:5px;display:flex;gap:5px;align-items:center;background:#141410df;border-radius:3px;padding:2px 5px;font-size:16px;line-height:26px}.view-cost img{width:24px;height:24px;object-fit:contain}
 .view-deck-page .prepare-card__count{position:static;background:none;margin-left:auto;padding:0;font-size:15px;color:#fff}
@@ -59,3 +59,10 @@
 .view-deck-page .info-panel .battle-icon-control:hover .battle-icon-tooltip,.view-deck-page .info-panel .battle-icon-control:focus-visible .battle-icon-tooltip{transform:translateY(0)}
 
 .view-deck-page :is(.view-cost,.pregame-card-cost) img[src$="-unique.png"]{filter:drop-shadow(0 0 1px var(--ip-title,#efd7aa))}
+
+/* Review variant: the catalog rests directly on the existing screen background. */
+.view-deck-page .pregame-main .screen-prepare-view{background:none}
+.view-deck-page .battle-mini-zoom:has(>.view-art){border-radius:6px;box-shadow:0 12px 30px #000b}
+.view-deck-page .info-panel [data-open-pause] .battle-icon-tooltip{left:50%;right:auto;transform:translate(-50%,4px)}
+.view-deck-page .info-panel [data-open-pause]:hover .battle-icon-tooltip,.view-deck-page .info-panel [data-open-pause]:focus-visible .battle-icon-tooltip{transform:translate(-50%,0)}
+.view-deck-page .info-panel .pregame-card-heading{background:color-mix(in srgb,var(--ip-surface) 78%,var(--ip-title) 22%)}
