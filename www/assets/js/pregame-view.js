@@ -90,6 +90,7 @@
     }
     function show(index, focusPage) {
         current = index;
+        if(document.body.classList.contains('view-deck-page')) {var address=new URL(location.href);address.searchParams.set('view_page',index);history.replaceState(null,'',address);}
         var page = pages[index];
         groups.forEach(function (group) {
             group.node.hidden = !page || group !== page.group;
@@ -133,12 +134,9 @@
     }
     function layout() {
         if (!isDeal && document.body.classList.contains('view-deck-page')) {
-            navigation.remove();
-            var address=new URL(location.href);address.searchParams.delete('view_page');history.replaceState(null,'',address);
-            pages=[];
-            var group=groups.find(function(entry){return entry.node.dataset.viewGroup===activeZone;});
-            if(group){var visible=group.cards.filter(matches);if(visible.length)pages=[{group:group,cards:visible}];}
-            show(0,false);syncControls();return;
+            build(9);
+            show(Math.min(Math.max(0, Number(new URL(location.href).searchParams.get('view_page')) || 0), Math.max(0,pages.length-1)),false);
+            syncControls();return;
         }
         groups.forEach(function (group) {
             group.node.hidden = false;

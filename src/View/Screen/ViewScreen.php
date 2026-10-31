@@ -188,6 +188,9 @@ final class ViewScreen
             $panelHtml=str_replace('<div class="pregame-card-media">', '<div class="pregame-card-media panel-card-media"><button type="button" class="panel-card-preview" data-card-original="'.$original.'" aria-label="Увеличить изображение">', $panelHtml);
             $panelHtml=preg_replace('~(</div>\s*<div class="pregame-card-stats")~', '</button><button type="button" class="panel-card-close" data-view-close aria-label="Закрыть карту"><img src="/assets/images/battle/close.png" width="28" height="28" alt=""></button>$1', $panelHtml, 1);
         }
+        if (!$readOnly) $panelHtml=str_replace(
+            ['pregame-card-heading"','pregame-card-cost"','pregame-card-heading-icons"','pregame-card-stats"'],
+            ['pregame-card-heading panel-card-heading"','pregame-card-cost panel-card-cost"','pregame-card-heading-icons panel-card-heading-icons"','pregame-card-stats panel-card-stats"'], $panelHtml);
         if ($panelHtml !== '' && $actions !== []) {
             $panelHtml .= '<div class="pregame-card-actions" data-view-card-actions>' . $ui->actions($actions) . '</div>';
         }
@@ -214,7 +217,7 @@ final class ViewScreen
                 'sideboard_html'=> $sideboardHtml,
                 'bottom_panel_html' => '',
                 'panel_summary_html' => $panelSummary,
-                'panel_actions_html' => '<div class="pregame-view-confirm info-actions">' . $confirmHtml . '<div class="battle-icon-actions"><button type="button" class="battle-icon-control" data-open-pause aria-label="Пауза игры" title="Пауза игры"><img src="/assets/images/battle/pause_160.png" width="28" height="28" alt=""></button><span class="battle-chat-anchor" data-chat-anchor></span></div></div><div data-view-notice role="status"></div>',
+                'panel_actions_html' => '<div class="pregame-view-confirm info-actions">' . $confirmHtml . '<div class="battle-icon-actions"><button type="button" class="battle-icon-control" data-open-pause aria-label="Пауза игры" title="Пауза игры"><img src="/assets/images/battle/pause_160.png" width="28" height="28" alt=""><span class="battle-icon-tooltip" aria-hidden="true">Пауза игры</span></button><span class="battle-chat-anchor" data-chat-anchor></span></div></div><div data-view-notice role="status"></div>',
                 'preview_html'  => '',
                 'panel_html'    => $panelHtml,
                 'confirm_html'  => $confirmHtml,
@@ -246,7 +249,7 @@ final class ViewScreen
         return '<a aria-label="'.$e($info['name']??$ukid).'" class="prepare-card-link '.$e($data['class']).'" href="'.$e($data['link']).'" data-ukid="'.$e($ukid).'">'
             . '<div data-mini-art-only data-mini-card="view:'.$e($data['link']).'" data-mini-name="'.$e($info['name']??$ukid).'" class="prepare-card view-thumbnail'.($data['selected']?' prepare-card--selected':'').'">'.$art
             . '<img class="view-frame" src="/assets/images/battle/mini/frame_friendly_102x92_'.(!empty($info['elite'])?'plain':'silver').'.svg" alt="">'
-            . '<span class="view-element" data-mini-hint data-view-element tabindex="0" role="button" aria-label="Стихия: '.$e($info['element_label']??$info['element']??$element).'"><img src="/assets/images/element/'.$e($element).'.png" alt=""><span class="mini-hint-text" hidden>Стихия: '.$e($info['element_label']??$info['element']??$element).'</span></span>'
+            . '<span class="view-element" data-mini-hint data-view-element tabindex="0" role="button" aria-label="'.$e($info['element_label']??$info['element']??$element).'"><img src="/assets/images/element/'.$e($element).'.png" alt=""><span class="mini-hint-text" hidden>'.$e($info['element_label']??$info['element']??$element).'</span></span>'
             . '<span class="view-cost"><img src="/assets/images/card/'.$cost.'.png" alt="'.(!empty($info['elite'])?'Золотой':'Серебряный').(!empty($info['single'])?', уникальный':'').' кристалл">'.$e($info['price']??$data['info']['price']??0)
             . '<span class="prepare-card__count">×'.(int)$data['count'].'</span></span></div></a>';
     }

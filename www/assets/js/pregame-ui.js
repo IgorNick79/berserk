@@ -1,12 +1,13 @@
 (function () {
     "use strict";
-    var root = document.querySelector('.pregame-layout');
+    var layout = document.querySelector('.pregame-layout');
+    var root = document.body.classList.contains('view-deck-page') && layout ? layout.closest('.screen') : layout;
     if (!root || root.dataset.hintsReady) return;
     root.dataset.hintsReady = 'true';
     // A single viewport tooltip avoids clipping inside the scrolling InfoPanel.
     var hintNode = document.createElement('div');
     hintNode.id = 'pregame-stat-tooltip';
-    hintNode.className = 'pregame-stat-tooltip';
+    hintNode.className = document.body.classList.contains('view-deck-page') ? 'battle-stat-tooltip' : 'pregame-stat-tooltip';
     hintNode.setAttribute('role', 'tooltip');
     hintNode.hidden = true;
     document.body.appendChild(hintNode);

@@ -14,6 +14,7 @@ body=r'''
         ids=list(dict.fromkeys(card['ukid'] for card in cards))
         for i,ukid in enumerate(ids):
             sql("USE LAB_DB;INSERT INTO cards(ind,ukid,name,health,move,strike_weak,strike_medium,strike_strong,prop,price,elite,single) VALUES("+str(200+i)+",'"+ukid+"','Card "+str(i)+" — длинное название карты',5,1,1,2,3,'{}',3,"+str(i%2)+","+str(i%3==0).lower().replace('true','1').replace('false','0')+");")
+        sql("USE LAB_DB;UPDATE cards SET rarity='common',class='Воин',descr='Описание карты для проверки хинта' WHERE ind>=200;")
         import uuid
         def command(client,kind,payload=None,expected=None,identity=None):
             data={'cmd':kind,'csrf':client.token('account'),'expected_version':version(game) if expected is None else expected,'command_id':identity or str(uuid.uuid4()),**(payload or {})}

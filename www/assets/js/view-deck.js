@@ -93,7 +93,7 @@
         const close = event.target.closest('[data-view-close]');
         const action = event.target.closest('[data-view-card-actions] a,.pregame-view-confirm a');
         if (card || close) {
-            event.preventDefault(); const address=new URL(card ? card.href : location.href);
+            event.preventDefault(); const address=new URL(card ? card.href : location.href);address.searchParams.set('view_page',new URL(location.href).searchParams.get('view_page')||'0');
             address.searchParams.delete('cmd');if(close)address.searchParams.delete('card');
             history.replaceState(null,'',address); selection++;
             document.querySelector('.pregame-panel-content').textContent='Загрузка карты…';

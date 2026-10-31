@@ -86,7 +86,7 @@
         var card = cardAt(node) || node;
         var r = card.getBoundingClientRect();
         tip.style.left = Math.max(8, Math.min(r.left + r.width / 2 - tip.offsetWidth / 2, innerWidth - tip.offsetWidth - 8)) + 'px';
-        var top = hintKind === 'name' || node.hasAttribute('data-cell-hint') ? r.bottom + 8 : r.top + r.height / 2 - tip.offsetHeight / 2;
+        var top = hintKind === 'name' || node.hasAttribute('data-cell-hint') || node.hasAttribute('data-view-element') ? r.bottom + 8 : r.top + r.height / 2 - tip.offsetHeight / 2;
         var indicators = card.querySelector('.mini-indicators');
         if (hintKind === 'indicator' && indicators) top = Math.max(top, indicators.getBoundingClientRect().bottom + 4);
         tip.style.top = Math.max(8, Math.min(top, innerHeight - tip.offsetHeight - 8)) + 'px';
@@ -173,10 +173,11 @@
         else setTimeout(function () { old.remove(); }, 250);
     }
     function paintZoom(z, card) {
-            var r = card.getBoundingClientRect();
-            var clone = card.cloneNode(true);
+            var visual=card.hasAttribute('data-mini-art-only') ? card.querySelector('.view-art') : card;
+            var r = visual.getBoundingClientRect();
+            var clone = visual.cloneNode(true);
             clone.classList.remove('mini-zoom-source');
-            var appearance = getComputedStyle(card);
+            var appearance = getComputedStyle(visual);
             clone.style.zoom = appearance.zoom;
             clone.style.outline = appearance.outline;
             clone.style.outlineOffset = appearance.outlineOffset;
