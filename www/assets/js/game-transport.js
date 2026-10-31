@@ -6,6 +6,7 @@
     // Shared CSRF for the existing battle POST API, not a second command transport.
     window.berserkGameCsrf = csrf;
     if (script.dataset.stage === 'battle' || script.dataset.stage === 'game_over') return;
+    if (script.dataset.stage === 'view') { window.berserkViewTransport = {...script.dataset}; return; }
     let sending = false;
     const confirmations={confirm_deal:'Подтвердить отряд?',reshuffle:'Пересдать карты?',finish_draft:'Закончить драфт?'};
     function confirmed(params, message) { const text=message || confirmations[params.get('cmd')]; return !text || window.confirm(text); }

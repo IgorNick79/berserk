@@ -1886,9 +1886,9 @@ body.battle-page > .screen {
 }
 
 .battle-page .info-panel-context:not(:empty) { padding: 12px; }
-.battle-page .panel-card-preview { display: block; width: 100%; margin: 0; padding: 0; border: 0; background: #171717; cursor: pointer; }
-.battle-page .panel-card-preview img { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: contain; }
-.battle-page .panel-card-preview:focus-visible { outline: 3px solid #b88746; outline-offset: -3px; }
+:is(.battle-page,.view-deck-page) .panel-card-preview { display: block; width: 100%; margin: 0; padding: 0; border: 0; background: #171717; cursor: pointer; }
+:is(.battle-page,.view-deck-page) .panel-card-preview img { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: contain; }
+:is(.battle-page,.view-deck-page) .panel-card-preview:focus-visible { outline: 3px solid #b88746; outline-offset: -3px; }
 .battle-page .panel-card-stats { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px; background: #f1eee8; border-bottom: 1px solid #d8d0c3; color: #322c24; font-size: 13px; font-variant-numeric: tabular-nums; }
 .battle-page .panel-card-stats span { white-space: nowrap; }
 .battle-page .panel-card-details { padding: 12px; }
@@ -2150,7 +2150,7 @@ body.battle-page {
 .battle-page .panel-card-stats { align-items: center; position: relative; }
 .panel-stat-icon { display: block; flex: 0 0 24px; width: 24px; height: 24px; object-fit: contain; }
 .panel-stat-icon[hidden] { display: none; }
-.battle-page .panel-card-preview { position: relative; }
+:is(.battle-page,.view-deck-page) .panel-card-preview { position: relative; }
 .battle-page .panel-card-class { flex: 0 1 auto; min-width: 0; max-width: 40%; font: 400 12px/1.35 system-ui, sans-serif; color: #666; text-align: right; overflow-wrap: anywhere; }
 
 .battle-page .panel-card-heading { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: #f1eee8; border-top: 1px solid #d8d0c3; }
@@ -2179,9 +2179,9 @@ body.battle-page {
 .battle-stat-tooltip .panel-card-description { margin: 0; font-size: inherit; line-height: inherit; }
 .battle-icon-tooltip { font-size: 13px; line-height: 1.3em; }
 
-.battle-page .panel-card-media { width: 100%; aspect-ratio: 8 / 5; background: #f1eee8; }
-.battle-page .panel-card-media .panel-card-preview { height: 100%; }
-.battle-page .panel-card-media .panel-card-preview img { height: 100%; object-fit: contain; }
+:is(.battle-page,.view-deck-page) .panel-card-media { width: 100%; aspect-ratio: 8 / 5; background: #f1eee8; }
+:is(.battle-page,.view-deck-page) .panel-card-media .panel-card-preview { height: 100%; }
+:is(.battle-page,.view-deck-page) .panel-card-media .panel-card-preview img { height: 100%; object-fit: contain; }
 .panel-card-heading-icons { display: flex; flex: 0 1 auto; max-width: 55%; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
 .panel-ability { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
 .panel-ability[hidden] { display: none; }
@@ -2302,10 +2302,10 @@ body.battle-page {
 .cell-marker-lantern_light { background-image: url("/assets/images/lantern.png"); background-size: cover; border: 1px solid #916314; box-sizing: border-box; }
 
 /* Close the selected creature without covering its illustration at rest. */
-.battle-page .panel-card-media{position:relative}
+:is(.battle-page,.view-deck-page) .panel-card-media{position:relative}
 .battle-page .panel-card-close{position:absolute;top:8px;right:8px;z-index:8;display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:4px;border:0;background:rgba(30,25,20,.65);border-radius:4px;cursor:pointer;opacity:0;transition:opacity 180ms ease-out}
 .battle-page .panel-card-close img{display:block;width:28px;height:28px}
-.battle-page .panel-card-media:hover .panel-card-close,.battle-page .panel-card-media:focus-within .panel-card-close,.battle-page .panel-card-close:focus-visible{opacity:1}
+:is(.battle-page,.view-deck-page) .panel-card-media:hover .panel-card-close,:is(.battle-page,.view-deck-page) .panel-card-media:focus-within .panel-card-close,.battle-page .panel-card-close:focus-visible{opacity:1}
 .battle-page .panel-card-close:focus-visible{outline:2px solid #b18d56;outline-offset:2px}
 .battle-page .panel-information-icon{display:block;flex:0 0 24px;width:24px;height:24px}
 @media(hover:none){.battle-page .panel-card-close{opacity:1}}
@@ -2321,6 +2321,6 @@ body.battle-page {
 
 .battle-page .death-choice-buttons .button.catcher-dice { display: inline-flex !important; width: auto !important; min-width: 0; flex: 0 0 auto !important; padding: 6px 12px; }
 .battle-page [data-instant-local-pass] { background: linear-gradient(#68add4,#276389) !important; color: #fff !important; }
-.battle-page .match-pause-countdown { color: #fff; }
+:is(.battle-page,.view-deck-page) .match-pause-countdown { color: #fff; }
 .battle-page .death-choice-buttons:has(.catcher-dice) > .button { height: 40px; min-height: 40px; box-sizing: border-box; vertical-align: middle; display: inline-flex; align-items: center; justify-content: center; line-height: 1.2; }
 .battle-page .catcher-dice .panel-dice-face { width: 24px; height: 24px; }

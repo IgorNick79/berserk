@@ -889,7 +889,8 @@ if ($isBattleCommand) {
             );
         }
 
-        if ($state->status !== 'battle') {
+        $viewCommand = $state->status === 'view' && (in_array($commandType, ['confirm_view','view_to_sideboard','view_to_deck'], true) || MatchPause::isCommand($commandType));
+        if ($state->status !== 'battle' && !$viewCommand) {
             $journalRecord = $journal->markRejected($journalId, $currentVersion, 'battle_not_active', 'Battle is not active');
             sendBattleAjaxState(
                 $db,
@@ -909,6 +910,7 @@ if ($isBattleCommand) {
         try {
             $repo->executeLockedCommand($state, $journal, $journalId,
                 function (GameState $locked) use ($engine, $playerKey, $commandType, $payload): \Berserk\Core\Result {
+                    if ($locked->status !== 'battle' && !($locked->status === 'view' && (in_array($commandType, ['confirm_view','view_to_sideboard','view_to_deck'], true) || MatchPause::isCommand($commandType)))) return \Berserk\Core\Result::error('stage_changed');
                     return $engine->apply($locked, $playerKey, new Command($commandType, $payload));
                 }, 'command_rejected');
         } catch (StaleStateException) {
@@ -1406,7 +1408,7 @@ switch ($state->status) {
 
 // ─── Рендерим ────────────────────────────────────────────────
 // Data only: Stage 1 supplies the same contract on full pages, including game_over.
-if ($state->status === 'battle' || isset($state->battle['match_pause'])) {
+if (in_array($state->status, ['battle','view'], true) || isset($state->battle['match_pause'])) {
     $scriptsHtml = '<script type="application/json" id="match-pause-state">'
         . json_encode(MatchPause::snapshot($state, $playerKey, time()), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)
         . '</script>' . $scriptsHtml;
@@ -1433,14 +1435,14 @@ if (in_array($screenName,['battle','game_over'],true)
         .$state->gameId.'" defer></script>';
 }
 
-if (in_array($screenName, ['battle','game_over'], true)) {
+if (in_array($screenName, ['battle','game_over','view'], true)) {
     $_SESSION['chat_csrf'] = GameTransport::$csrf;
     $screenHtml .= $tpl->parse('includes/game_chat.tpl', [
         'chat_game_id'=>$state->gameId,
         'chat_sender_id'=>$userId,
         'chat_csrf'=>htmlspecialchars($_SESSION['chat_csrf'],ENT_QUOTES),
     ]);
-    $scriptsHtml .= '<script src="/assets/js/battle-chat.js?v=7" defer></script>';
+    $scriptsHtml .= '<script src="/assets/js/battle-chat.js?v=8" defer></script>';
 }
 // Resolve the URL before passing the HTML slot to the single-pass template parser.
 $preGameResourceKey = $isPreGame
@@ -1453,7 +1455,7 @@ $page = $tpl->parse('page.tpl', [
     'role'    => $role,
     'screen'  => $screenHtml,
     'scripts' => $scriptsHtml,
-    'page_class' => $screenName === 'battle' ? 'battle-page' : ($screenName === 'game_over' ? 'battle-page result-page' : ($isPreGame ? 'pregame-page' : '')),
+    'page_class' => $screenName === 'view' ? 'pregame-page view-deck-page' : ($screenName === 'battle' ? 'battle-page' : ($screenName === 'game_over' ? 'battle-page result-page' : ($isPreGame ? 'pregame-page' : ''))),
     'page_styles' => in_array($screenName, ['battle','game_over'], true) ? '<link rel="stylesheet" href="/assets/css/battle-chat.css?v=6">' : ($isPreGame ? '<link rel="stylesheet" href="/assets/css/pregame.css?v=' . $preGameResourceKey . '">' : ''),
     // PreGame opts into a stable CSS version; battle keeps its existing rkey policy.
     'rkey' => $preGameResourceKey,
@@ -1462,5 +1464,5 @@ $page = $tpl->parse('page.tpl', [
 \Berserk\Auth\GameTransport::$version = $state->persistenceVersion ?? 0;
 \Berserk\Auth\GameTransport::$stage = $state->status;
 
-$transportScript = '<script src="/assets/js/game-transport.js?v=2" data-game="'.$state->gameId.'" data-stage="'.htmlspecialchars($state->status,ENT_QUOTES).'" data-version="'.\Berserk\Auth\GameTransport::$version.'" data-csrf="'.htmlspecialchars(\Berserk\Auth\GameTransport::$csrf,ENT_QUOTES).'"></script>';
+$transportScript = '<script src="/assets/js/game-transport.js?v=3" data-game="'.$state->gameId.'" data-stage="'.htmlspecialchars($state->status,ENT_QUOTES).'" data-version="'.\Berserk\Auth\GameTransport::$version.'" data-csrf="'.htmlspecialchars(\Berserk\Auth\GameTransport::$csrf,ENT_QUOTES).'"></script>';
 echo \Berserk\Auth\GameTransport::html(str_replace('</head>',$transportScript.'</head>',$page));

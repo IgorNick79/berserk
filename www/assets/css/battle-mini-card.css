@@ -46,7 +46,7 @@
 
 .battle-mini-tooltip.is-entering{opacity:0}
 
-.battle-page .battle-mini-card.mini-zoom-source{opacity:0!important}
+.battle-page .battle-mini-card.mini-zoom-source,.view-deck-page .view-thumbnail.mini-zoom-source{opacity:0!important}
 /* Drag is a visual overlay; the original card and field remain server-owned. */
 .battle-page [data-battle-drag-ready] [data-drag-source="1"]{cursor:grab}
 html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!important;user-select:none!important}

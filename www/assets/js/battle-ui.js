@@ -140,9 +140,7 @@
     var secondaryDock=document.createElement('div'), secondary=null, prioritySignature='';
     secondaryDock.className='battle-secondary-view game-chat'; secondaryDock.hidden=true;
     root.secondaryPanel=function(panel){
-        if(secondary && secondary!==panel) secondary.hidden=true;
-        secondary=panel; secondaryDock.hidden=!panel;
-        if(panel){secondaryDock.appendChild(panel);panel.hidden=false;}
+        secondary=window.BerserkPanelDock.open(root,secondaryDock,secondary,panel);
         syncCombatPanel();
     };
     function syncCombatPanel() {
@@ -184,11 +182,7 @@
         if (instants) instants.hidden = inspect;
         var footer = combatHost.querySelector('.info-panel-footer');
         if (footer) footer.hidden = false;
-        Array.from(content.children).forEach(function(child){
-            if(child===secondaryDock)return;
-            if(secondary){if(!child.hasAttribute('data-secondary-hidden'))child.dataset.secondaryHidden=String(child.hidden);child.hidden=true;}
-            else if(child.hasAttribute('data-secondary-hidden')){child.hidden=child.dataset.secondaryHidden==='true';delete child.dataset.secondaryHidden;}
-        });
+        window.BerserkPanelDock.mount(content,secondaryDock,secondary);
         if(!secondary){
             if(selected)selected.hidden=manuallyClosed || waitingForCard || (!!key && !inspect);
             if(context)context.hidden=inspect;

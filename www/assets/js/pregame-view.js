@@ -1,7 +1,8 @@
-(function () {
+(window.berserkInitViewPager = function () {
     "use strict";
     var view = document.querySelector('[data-view-pager]');
-    if (!view) return;
+    if (!view || view.dataset.pagerReady) return;
+    view.dataset.pagerReady = "1";
     var isDeal = view.hasAttribute('data-deal-pager');
     var main = view.closest('.pregame-main');
     var navigation = view.querySelector('[data-view-pagination]');
@@ -20,12 +21,18 @@
     ['element', 'crystal'].forEach(function (type) {
         if (!root.querySelector('[data-view-filter="' + type + ':' + filters[type].replace(/[^a-z]/g, '') + '"]')) filters[type] = '';
     });
+    if (document.body.classList.contains('view-deck-page') && !groups.some(function (g) { return g.node.dataset.viewGroup === activeZone && g.cards.length; })) activeZone='deck';
     var pages = [], current = 0;
     function matches(card) {
         return (!squadOnly || card.classList.contains('deal-in-squad')) && (!filters.element || card.classList.contains('view-element-' + filters.element))
             && (!filters.crystal || card.classList.contains('view-crystal-' + filters.crystal));
     }
     function syncControls() {
+        if (document.body.classList.contains('view-deck-page')) {
+            var address=new URL(location.href);address.searchParams.set('view_zone',activeZone);
+            ['element','crystal'].forEach(function(type){if(filters[type])address.searchParams.set('view_'+type,filters[type]);else address.searchParams.delete('view_'+type);});
+            history.replaceState(null,'',address);
+        }
         var group = groups.find(function (entry) { return entry.node.dataset.viewGroup === activeZone; });
         var cards = group ? group.cards : [];
         root.querySelectorAll('[data-view-zone]').forEach(function (button) {
@@ -83,6 +90,11 @@
     }
     function show(index, focusPage) {
         current = index;
+        if (!isDeal && document.body.classList.contains('view-deck-page')) {
+            var label = navigation.querySelector('[data-page-label]');
+            if (label) label.textContent = 'Страница ' + (pages.length ? index + 1 : 0) + ' из ' + pages.length;
+            var address = new URL(location.href); address.searchParams.set('view_page', index); history.replaceState(null, '', address);
+        }
         var page = pages[index];
         groups.forEach(function (group) {
             group.node.hidden = !page || group !== page.group;
@@ -154,6 +166,11 @@
         }
         view.style.setProperty('--view-rows', rows);
         view.style.setProperty('--view-card-height', cardHeight + 'px');
+        if (!isDeal && document.body.classList.contains('view-deck-page')) {
+            build(9); var label = document.createElement('span'); label.dataset.pageLabel = ''; navigation.appendChild(label);
+            show(Math.min(Math.max(0, Number(new URL(location.href).searchParams.get('view_page')) || 0), Math.max(0, pages.length - 1)), false);
+            syncControls(); return;
+        }
         var selectedPage = pages.findIndex(function (page) { return page.cards.indexOf(anchor) !== -1; });
         show(Math.max(0, selectedPage), false);
         syncControls();
@@ -186,10 +203,12 @@
         layout();
     });
     var scheduled = false;
-    new ResizeObserver(function () {
+    var observer = new ResizeObserver(function () {
+        if (!main.isConnected) { observer.disconnect(); return; }
         if (scheduled) return;
         scheduled = true;
         requestAnimationFrame(function () { scheduled = false; layout(); });
-    }).observe(main);
+    });
+    observer.observe(main);
     layout();
 })();

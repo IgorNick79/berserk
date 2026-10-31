@@ -91,7 +91,8 @@ final class ViewScreen
                 $selectedZone = CardInstance::ZONE_DECK;
             }
 
-            $cardsHtml .= $ui->card([
+            $cardsHtml .= $this->thumbnail($ui, $cardsInfo, [
+                'legacy'   => $readOnly,
                 'class'    => $this->filterClass($c, $cardsInfo[$ukid] ?? []),
                 'ukid'     => $ukid,
                 'info'     => $c,
@@ -112,8 +113,9 @@ final class ViewScreen
                     $selectedZone = CardInstance::ZONE_SIDEBOARD;
                 }
 
-                $sideboardHtml .= $ui->card([
-                    'class'    => $this->filterClass($c, $cardsInfo[$ukid] ?? []),
+                $sideboardHtml .= $this->thumbnail($ui, $cardsInfo, [
+                    'legacy'   => $readOnly,
+                'class'    => $this->filterClass($c, $cardsInfo[$ukid] ?? []),
                     'ukid'     => $ukid,
                     'info'     => $c,
                     'count'    => (int) ($c['count'] ?? 1),
@@ -161,11 +163,13 @@ final class ViewScreen
             if ($selectedZone === CardInstance::ZONE_DECK && $canSideboard) {
                 $actions[] = [
                     'label' => 'В сайдборд',
+                    'class' => 'yellow',
                     'url' => "{$baseUrl}&cmd=view_to_sideboard&card_id={$selectedInstanceId}&card=" . urlencode($selectedToken),
                 ];
             } elseif ($selectedZone === CardInstance::ZONE_SIDEBOARD) {
                 $actions[] = [
                     'label' => 'В колоду',
+                    'class' => 'yellow',
                     'url' => "{$baseUrl}&cmd=view_to_deck&card_id={$selectedInstanceId}&card=" . urlencode($selectedToken),
                 ];
             }
@@ -179,6 +183,11 @@ final class ViewScreen
             }
         }
         $panelHtml = $ui->information($selectedCard, $panelCatalog);
+        if (!$readOnly && $panelHtml !== '' && $selectedCard !== null) {
+            $original='/assets/cards/s1/'.rawurlencode($selectedCard['ukid']).'.webp';
+            $panelHtml=str_replace('<div class="pregame-card-media">', '<div class="pregame-card-media panel-card-media"><button type="button" class="panel-card-preview" data-card-original="'.$original.'" aria-label="Увеличить изображение">', $panelHtml);
+            $panelHtml=preg_replace('~(</div>\s*<div class="pregame-card-stats")~', '</button>$1', $panelHtml, 1);
+        }
         if ($panelHtml !== '' && $actions !== []) {
             $panelHtml .= '<div class="pregame-card-actions" data-view-card-actions>' . $ui->actions($actions) . '</div>';
         }
@@ -205,7 +214,7 @@ final class ViewScreen
                 'sideboard_html'=> $sideboardHtml,
                 'bottom_panel_html' => '',
                 'panel_summary_html' => $panelSummary,
-                'panel_actions_html' => '<div class="pregame-view-confirm">' . $confirmHtml . '</div>',
+                'panel_actions_html' => '<div class="pregame-view-confirm info-actions">' . $confirmHtml . '<div class="battle-icon-actions"><button type="button" class="battle-icon-control" data-open-pause aria-label="Пауза игры" title="Пауза игры"><img src="/assets/images/battle/pause_160.png" width="28" height="28" alt=""></button><span class="battle-chat-anchor" data-chat-anchor></span></div></div><div data-view-notice role="status"></div>',
                 'preview_html'  => '',
                 'panel_html'    => $panelHtml,
                 'confirm_html'  => $confirmHtml,
@@ -221,6 +230,25 @@ final class ViewScreen
         $data = $this->prepare($state, $playerKey, $role, $message, $cardsInfo, $elementLabels, true)['data'];
         return ['deck_html' => (string) $this->tpl->parse('screen/view.tpl', $data),
             'panel_summary_html' => $data['panel_summary_html'] ?? ''];
+    }
+
+    private function thumbnail(PrepareUi $ui, array $catalog, array $data): string
+    {
+        if (!empty($data['legacy'])) return $ui->card($data);
+        $info = $catalog[$data['ukid']] ?? $data['info'];
+        $e = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $ukid = $data['ukid'];
+        $path = '/assets/cards/s1/' . rawurlencode($ukid) . '.webp';
+        $art = '<img class="view-art" src="'.$e($path).'" width="400" height="250" alt="">';
+        $element = explode(' ', $data['class'])[0];
+        $element = substr($element, strlen('view-element-'));
+        $cost = (!empty($info['elite']) ? 'elite' : 'ordinary') . (!empty($info['single']) ? '-unique' : '');
+        return '<a aria-label="'.$e($info['name']??$ukid).'" class="prepare-card-link '.$e($data['class']).'" href="'.$e($data['link']).'" data-ukid="'.$e($ukid).'">'
+            . '<div data-mini-card="view:'.$e($data['link']).'" data-mini-name="'.$e($info['name']??$ukid).'" class="prepare-card view-thumbnail'.($data['selected']?' prepare-card--selected':'').'">'.$art
+            . '<img class="view-frame" src="/assets/images/battle/mini/frame_friendly_102x92_'.(!empty($info['elite'])?'plain':'silver').'.svg" alt="">'
+            . '<img class="view-element" src="/assets/images/element/'.$e($element).'.png" alt="'.$e($info['element']??$element).'">'
+            . '<span class="view-cost"><img src="/assets/images/card/'.$cost.'.png" alt="Стоимость">'.$e($info['price']??$data['info']['price']??0)
+            . '<span class="prepare-card__count">×'.(int)$data['count'].'</span></span></div></a>';
     }
 
     private function elementBadgesHtml(array $elements, array $elementLabels): string

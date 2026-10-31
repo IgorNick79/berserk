@@ -41,7 +41,7 @@ final class GameChat
                 $this->db->commit();
                 return $this->message($previous);
             }
-            if ($game['status'] !== 'battle') throw new \DomainException('chat_read_only');
+            if (!in_array($game['status'], ['battle','view'], true)) throw new \DomainException('chat_read_only');
             $recent = $this->db->fetchOne("SELECT id FROM game_chat_messages WHERE game_id=$gameId AND sender_id=$sender AND created_at > DATE_SUB(NOW(6), INTERVAL 1 SECOND) LIMIT 1");
             if ($recent) throw new \OverflowException('rate_limited');
             $data = json_decode($game['json'], true, 512, JSON_THROW_ON_ERROR);
@@ -74,7 +74,7 @@ final class GameChat
     public function history(int $gameId, int $sender, ?string $after, ?string $before): array
     {
         $game = $this->game($gameId, $sender);
-        if (!in_array($game['status'], ['battle','game_over'], true)) throw new \DomainException('chat_unavailable');
+        if (!in_array($game['status'], ['battle','game_over','view'], true)) throw new \DomainException('chat_unavailable');
         if ($after !== null && $before !== null) throw new \InvalidArgumentException('invalid_cursor');
         // A consistent projection keeps the notification baseline and fetched page in agreement.
         $this->db->beginTransaction();
@@ -94,7 +94,7 @@ final class GameChat
             $this->db->commit();
             return ['messages'=>array_map($this->message(...),$rows), 'has_more'=>$more,
                 'latest_id'=>(string)($latest['id'] ?? '0'), 'last_read_id'=>$readId,
-                'unread'=>$unread !== null, 'can_send'=>$game['status']==='battle'];
+                'unread'=>$unread !== null, 'can_send'=>in_array($game['status'], ['battle','view'], true)];
         } catch (\Throwable $e) {
             if ($this->db->inTransaction()) $this->db->rollback();
             throw $e;

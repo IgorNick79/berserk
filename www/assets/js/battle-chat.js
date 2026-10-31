@@ -113,6 +113,7 @@
             if(incoming) {
                 var battleRoot=document.querySelector('[data-battle-sync-root]');
                 if(battleRoot && battleRoot.berserkTurnTimer) battleRoot.berserkTurnTimer.notify();
+                else if(document.querySelector('[data-panel-dock-root]') && window.BerserkRoomSound) window.BerserkRoomSound.notify('game-chat:'+root.dataset.gameId+':'+latest);
             }
             markRead();
             if(!writable) status.textContent=isRoom?(data.read_only_reason==='awaiting_participant'?'Переписка станет доступна, когда появится второй участник.':'Партия создана. Переписка комнаты доступна для чтения.'):'Бой завершён. Чат доступен для чтения.';
@@ -130,7 +131,7 @@
             .finally(function(){loadingOlder=false;older.disabled=false;});
     });
     function open(value) {
-        var battle=document.querySelector(isRoom?'#lobby':'[data-battle-sync-root]');
+        var battle=document.querySelector(isRoom?'#lobby':'[data-battle-sync-root], [data-panel-dock-root]');
         if(battle && battle.secondaryPanel) battle.secondaryPanel(value?panel:null);
         panel.hidden=!value; toggle.setAttribute('aria-expanded',String(value));
         if(value) {history.scrollTop=history.scrollHeight; if(writable) input.focus(); else history.focus(); markRead();}

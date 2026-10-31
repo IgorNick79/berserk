@@ -27,7 +27,7 @@ final class MatchPause
     {
         if (!self::blocking($s)) return false;
         $p=$s->battle['match_pause'];
-        return $s->status !== 'battle' || $s->winner !== null
+        return !in_array($s->status, ['battle', 'view'], true) || $s->winner !== null
             || $now >= ($p['mode']==='requested' ? $p['request_deadline_at'] : $p['pause_deadline_at']);
     }
 
@@ -35,7 +35,7 @@ final class MatchPause
     public static function apply(GameState $s, string $actor, Command $cmd, int $now): Result
     {
         if (!in_array($actor,['host','player'],true)) return Result::error('pause_not_participant');
-        if ($s->status!=='battle' || $s->winner!==null) return Result::error('pause_battle_not_active');
+        if (!in_array($s->status, ['battle', 'view'], true) || $s->winner!==null) return Result::error('pause_battle_not_active');
         // Deadlines are committed separately, even if the late user command is rejected.
         if (self::due($s,$now)) return Result::error('pause_deadline_due');
         if ($cmd->type==='request_pause') return self::request($s,$actor,$cmd,$now);
@@ -74,7 +74,7 @@ final class MatchPause
         if ($p['used'][$actor]>=self::ACCEPTED_LIMIT) return Result::error('pause_limit');
         if ($now<$p['cooldown_until'][$actor]) return Result::error('pause_cooldown');
         $timer=TurnTimer::snapshot($s,$now);
-        if ($timer===null && TurnTimer::enabled($s)) return Result::error('pause_invalid_timer');
+        if ($s->status==='battle' && $timer===null && TurnTimer::enabled($s)) return Result::error('pause_invalid_timer');
         if (TurnTimeoutEligibility::check($s,$now)['allowed']) return Result::error('pause_turn_expired');
         $wait=BattleWaitResolver::current($s);
         if (($wait['kind']??null)==='unknown') return Result::error('pause_unsafe_wait');
@@ -82,7 +82,7 @@ final class MatchPause
         if ($info!==null && InformationalWaitManager::record($s)===null) return Result::error('pause_unsafe_informational_wait');
         // All validation precedes any mutation, including settlement.
         TurnTimer::settle($s,$now);
-        $original=TurnTimer::enabled($s)?$s->battle['turn_timer']:null;
+        $original=$timer===null?null:$s->battle['turn_timer'];
         if ($original!==null) TurnTimer::pause($s,$original['period_id'],'match_pause',$now);
         $generation=$p['generation']+1;
         $s->battle['match_pause']=[
@@ -102,7 +102,7 @@ final class MatchPause
     public static function expire(GameState $s, int $now): Result
     {
         if (!self::due($s,$now)) return Result::error('pause_not_due');
-        if ($s->status!=='battle' || $s->winner!==null) self::terminate($s,$now);
+        if (!in_array($s->status, ['battle', 'view'], true) || $s->winner!==null) self::terminate($s,$now);
         else {
             $p=$s->battle['match_pause'];
             self::finish($s,$p['mode']==='requested'?$p['request_deadline_at']:$p['pause_deadline_at'],
@@ -157,7 +157,7 @@ final class MatchPause
     {
         $p=$s->battle['match_pause'] ?? self::initial();
         $participant=in_array($viewer,['host','player'],true);
-        $live=$participant && $s->status==='battle' && $s->winner===null && !self::due($s,$now);
+        $live=$participant && in_array($s->status, ['battle', 'view'], true) && $s->winner===null && !self::due($s,$now);
         $requested=$live && $p['mode']==='requested';
         $active=$live && $p['mode']==='active';
         $commands=[];

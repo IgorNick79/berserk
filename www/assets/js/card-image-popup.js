@@ -1,6 +1,6 @@
 (function () {
     'use strict';
-    var root = document.querySelector('[data-battle-sync-root]');
+    var root = document.querySelector('[data-battle-sync-root], [data-card-popup-root]');
     if (!root || root.dataset.cardPopupReady) return;
     root.dataset.cardPopupReady = 'true';
     var dialog = document.createElement('dialog');

@@ -1,7 +1,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&amp;family=Golos+Text:wght@400;500;600;700&amp;display=swap">
-<link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=11">
+<link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=12">
 <link rel="stylesheet" href="/assets/css/battle-result.css?v=2">
 <div class="battle-shell battle-result" data-battle-sync-root data-panel-theme="grimoire" data-result="{{outcome}}">
     <main class="battle-main result-media" aria-label="{{text}}">
@@ -33,5 +33,6 @@
         </div></footer>
     </aside>
 </div>
-<script src="/assets/js/battle-ui.js?v=14" defer></script>
+<script src="/assets/js/panel-secondary-view.js?v=1" defer></script>
+<script src="/assets/js/battle-ui.js?v=18" defer></script>
 <script src="/assets/js/battle-result.js?v=2" defer></script>

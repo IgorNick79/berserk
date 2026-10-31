@@ -31,9 +31,11 @@ final class PreGameLayout
             default => self::TITLES[$screen],
         };
         $content = (string) ($data['panel_html'] ?? '');
-        return $this->render((string) $this->tpl->parse('screen/' . $screen . '.tpl', $data),
+        $html = $this->render((string) $this->tpl->parse('screen/' . $screen . '.tpl', $data),
             $title, $content, (string) ($data['timer_html'] ?? ''), (string) ($data['panel_actions_html'] ?? ''),
             $content === '' ? 'statistics' : 'card', (string) ($data['panel_phase'] ?? ''), (string) ($data['panel_summary_html'] ?? ''));
+        if ($screen === 'view') $html=str_replace(['pregame-info-panel','pregame-panel-content','pregame-panel-footer'], ['pregame-info-panel info-panel','pregame-panel-content info-panel-content','pregame-panel-footer info-panel-footer'], $html);
+        return $screen === 'view' ? str_replace('class="pregame-layout"', 'class="pregame-layout" data-panel-theme="grimoire"', $html) : $html;
     }
 
     public function render(string $mainHtml, string $title, string $contentHtml = '', string $timerHtml = '', string $footerHtml = '', string $contentKind = 'statistics', string $phase = '', string $summaryHtml = ''): string

@@ -24,6 +24,7 @@
                 + '<p>До двух принятых пауз на игрока. На ответ — 20 секунд.</p>'
                 + '<div class="pause-picker-actions"><button type="button" class="button" data-picker-cancel>Отмена</button>'
                 + '<button type="button" class="button" data-picker-send>Отправить запрос</button></div>';
+            if(root.dataset.pauseContext==='preparation')picker.querySelector('p').textContent='Соперник получит запрос. Пока он отвечает, действия подготовки приостановлены.';
             document.body.appendChild(picker);
             var slider = picker.querySelector("input");
             slider.addEventListener("input", function () { picker.querySelector("output").textContent = slider.value + " мин"; });

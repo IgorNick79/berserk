@@ -89,20 +89,35 @@ final class Engine
             GameLog::append($state, $playerKey, $cmd, $result);
             return $result; // Never advance combat continuations on pause or terminal commands.
         }
-        $error = ExpiredCommandGuard::error($state, $playerKey, $cmd, $now);
-        if ($error !== null) return Result::error($error);
-        if (InstantReservation::blocks($state, $cmd->type)) return Result::error('instant_reservation_priority_held');
-        if ($cmd->type === 'confirm_strike') {
-            $error = InformationalWaitManager::validateAck($state, $playerKey, $cmd->get('wait_id'));
-            if ($error !== null) return Result::error($error);
+        // Preparation is identified by its source stage, not by a second command list.
+        $preparing = !in_array($state->status, ['battle', 'game_over'], true);
+        if ($preparing) {
+            $sourceStage = $state->status;
+            $result = $this->doApply($state, $playerKey, $cmd);
+            $startedBattle = $result->success && $sourceStage !== 'battle' && $state->status === 'battle';
+            if (!$startedBattle) {
+                GameLog::append($state, $playerKey, $cmd, $result);
+                return $result;
+            }
+            // startBattle already ran inside the existing preparation boundary.
+            // Continue with the original post-command hooks exactly once.
         }
-        $resolutionBefore = $state->battle[ActionResolution::KEY] ?? null;
-        ActionResolution::beginCommand($state);
-        TurnTimer::settle($state, $this->serverNow());
-        $result = $this->doApply($state, $playerKey, $cmd);
-        if (!$result->success) {
-            if ($resolutionBefore === null) unset($state->battle[ActionResolution::KEY]);
-            else $state->battle[ActionResolution::KEY] = $resolutionBefore;
+        if (!$preparing) {
+            $error = ExpiredCommandGuard::error($state, $playerKey, $cmd, $now);
+            if ($error !== null) return Result::error($error);
+            if (InstantReservation::blocks($state, $cmd->type)) return Result::error('instant_reservation_priority_held');
+            if ($cmd->type === 'confirm_strike') {
+                $error = InformationalWaitManager::validateAck($state, $playerKey, $cmd->get('wait_id'));
+                if ($error !== null) return Result::error($error);
+            }
+            $resolutionBefore = $state->battle[ActionResolution::KEY] ?? null;
+            ActionResolution::beginCommand($state);
+            TurnTimer::settle($state, $this->serverNow());
+            $result = $this->doApply($state, $playerKey, $cmd);
+            if (!$result->success) {
+                if ($resolutionBefore === null) unset($state->battle[ActionResolution::KEY]);
+                else $state->battle[ActionResolution::KEY] = $resolutionBefore;
+            }
         }
         if ($result->success) (new AbyssMovement($state, $this))->advance();
         if ($result->success) (new WormIncarnation($state, $this))->advance();
@@ -181,30 +196,10 @@ final class Engine
         $zone   = new ZoneManager($state);
         $turnPhase = new TurnPhaseProcessor($state, $this);
         $valhalla = new ValhallaProcessor($state, $this);
-        $prepare = new PrepareProcessor($state, $this->db);
+        $preparation = $this->applyPreparation($state, $playerKey, $cmd);
+        if ($preparation !== null) return $preparation;
 
         return match ($cmd->type) {
-            'set_lucktest_debug' => $this->debugConfigured($state),
-            'choose_mode'  => $prepare->chooseMode($playerKey, $cmd),
-            'confirm_settings' => $this->confirmPrepareSettings($state, $playerKey, $cmd, $prepare),
-            'draft_row'    => $prepare->draftRow($playerKey, $cmd),
-            'draft_col'    => $prepare->draftCol($playerKey, $cmd),
-            'draft_pass'   => $prepare->draftPass($playerKey, $cmd),
-            'draft_confirm' => $prepare->draftConfirm($playerKey, $cmd),
-            'finish_draft' => $prepare->finishDraft($playerKey),
-            'select_deck'  => $prepare->selectDeck($playerKey, $cmd),
-            'confirm_view' => $prepare->confirmView($playerKey),
-            'view_to_sideboard' => $prepare->moveViewCardToSideboard($playerKey, $cmd),
-            'view_to_deck' => $prepare->moveViewCardToDeck($playerKey, $cmd),
-            'confirm_turn' => $prepare->confirmTurn($playerKey),
-            'choose_side'  => $prepare->chooseSide($playerKey, $cmd),
-            'pick_card'    => $prepare->pickCard($playerKey, $cmd),
-            'unpick_card'  => $prepare->unpickCard($playerKey, $cmd),
-            'confirm_deal' => $prepare->confirmDeal($playerKey),
-            'reshuffle'    => $prepare->reshuffle($playerKey),
-            'place_card'   => $prepare->placeCard($playerKey, $cmd),
-            'unplace_card' => $prepare->unplaceCard($playerKey, $cmd),
-            'confirm_place'       => $this->confirmPreparePlace($state, $playerKey, $prepare),
             'move'                => $movement->move($playerKey, $cmd),
             'jump'                => $movement->jump($playerKey, $cmd),
             'strike'              => $strike->declare($playerKey, $cmd),
@@ -285,6 +280,36 @@ final class Engine
             'summon_cancel'   => (new ProphecyProcessor($state, $this))->summonCancel($playerKey),
 
             default                   => Result::error("Unknown command: {$cmd->type}"),
+        };
+    }
+
+    /** The existing preparation command table; null means this is not a preparation command. */
+    private function applyPreparation(GameState $state, string $playerKey, Command $cmd): ?Result
+    {
+        $prepare = new PrepareProcessor($state, $this->db);
+        return match ($cmd->type) {
+            'set_lucktest_debug' => $this->debugConfigured($state),
+            'choose_mode'  => $prepare->chooseMode($playerKey, $cmd),
+            'confirm_settings' => $this->confirmPrepareSettings($state, $playerKey, $cmd, $prepare),
+            'draft_row'    => $prepare->draftRow($playerKey, $cmd),
+            'draft_col'    => $prepare->draftCol($playerKey, $cmd),
+            'draft_pass'   => $prepare->draftPass($playerKey, $cmd),
+            'draft_confirm' => $prepare->draftConfirm($playerKey, $cmd),
+            'finish_draft' => $prepare->finishDraft($playerKey),
+            'select_deck'  => $prepare->selectDeck($playerKey, $cmd),
+            'confirm_view' => $prepare->confirmView($playerKey),
+            'view_to_sideboard' => $prepare->moveViewCardToSideboard($playerKey, $cmd),
+            'view_to_deck' => $prepare->moveViewCardToDeck($playerKey, $cmd),
+            'confirm_turn' => $prepare->confirmTurn($playerKey),
+            'choose_side'  => $prepare->chooseSide($playerKey, $cmd),
+            'pick_card'    => $prepare->pickCard($playerKey, $cmd),
+            'unpick_card'  => $prepare->unpickCard($playerKey, $cmd),
+            'confirm_deal' => $prepare->confirmDeal($playerKey),
+            'reshuffle'    => $prepare->reshuffle($playerKey),
+            'place_card'   => $prepare->placeCard($playerKey, $cmd),
+            'unplace_card' => $prepare->unplaceCard($playerKey, $cmd),
+            'confirm_place'       => $this->confirmPreparePlace($state, $playerKey, $prepare),
+            default => null,
         };
     }
 
