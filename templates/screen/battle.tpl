@@ -1,7 +1,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&amp;family=Golos+Text:wght@400;500;600;700&amp;display=swap">
-<link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=12">
+<link rel="stylesheet" href="/assets/css/battle-fonts.css?v=1">
+<link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=13">
 <link rel="stylesheet" href="/assets/css/battle-mini-nameplate.css?v=2">
 <link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=15">
 <div class="battle-sync-root battle-shell" data-battle-sync-root data-panel-theme="grimoire" data-mini-card-design="{{mini_card_design}}" {{pause_root_attr}}>
@@ -26,7 +26,7 @@
 <script src="/assets/js/battle-ui.js?v=18" defer></script>
 <script src="/assets/js/card-image-popup.js?v=2" defer></script>
 
-<script src="/assets/js/battle-mini-card.js?v=9" defer></script>
+<script src="/assets/js/battle-mini-card.js?v=10" defer></script>
 <script src="/assets/js/battle-drag.js?v=1" defer></script>
 
 <script src="/assets/js/battle-notices.js?v=1" defer></script>

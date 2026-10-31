@@ -2303,13 +2303,13 @@ body.battle-page {
 
 /* Close the selected creature without covering its illustration at rest. */
 :is(.battle-page,.view-deck-page) .panel-card-media{position:relative}
-.battle-page .panel-card-close{position:absolute;top:8px;right:8px;z-index:8;display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:4px;border:0;background:rgba(30,25,20,.65);border-radius:4px;cursor:pointer;opacity:0;transition:opacity 180ms ease-out}
-.battle-page .panel-card-close img{display:block;width:28px;height:28px}
-:is(.battle-page,.view-deck-page) .panel-card-media:hover .panel-card-close,:is(.battle-page,.view-deck-page) .panel-card-media:focus-within .panel-card-close,.battle-page .panel-card-close:focus-visible{opacity:1}
-.battle-page .panel-card-close:focus-visible{outline:2px solid #b18d56;outline-offset:2px}
+:is(.battle-page,.view-deck-page) .panel-card-close{position:absolute;top:8px;right:8px;z-index:8;display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:4px;border:0;background:rgba(30,25,20,.65);border-radius:4px;cursor:pointer;opacity:0;transition:opacity 180ms ease-out}
+:is(.battle-page,.view-deck-page) .panel-card-close img{display:block;width:28px;height:28px}
+:is(.battle-page,.view-deck-page) .panel-card-media:hover .panel-card-close,:is(.battle-page,.view-deck-page) .panel-card-media:focus-within .panel-card-close,:is(.battle-page,.view-deck-page) .panel-card-close:focus-visible{opacity:1}
+:is(.battle-page,.view-deck-page) .panel-card-close:focus-visible{outline:2px solid #b18d56;outline-offset:2px}
 .battle-page .panel-information-icon{display:block;flex:0 0 24px;width:24px;height:24px}
-@media(hover:none){.battle-page .panel-card-close{opacity:1}}
-@media(prefers-reduced-motion:reduce){.battle-page .panel-card-close{transition:none}}
+@media(hover:none){:is(.battle-page,.view-deck-page) .panel-card-close{opacity:1}}
+@media(prefers-reduced-motion:reduce){:is(.battle-page,.view-deck-page) .panel-card-close{transition:none}}
 
 /* Reserve the same marker line for every graveyard/exile entry. */
 .battle-pile-entry{align-self:stretch;position:relative}

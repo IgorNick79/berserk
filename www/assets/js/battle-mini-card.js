@@ -50,8 +50,8 @@
 
     function cardAt(node) {
         if (!node || !node.closest) return null;
-        return node.closest('[data-mini-card]') ||
-            (node.matches('.card-link') ? node.querySelector('[data-mini-card]') : null);
+        var card=node.closest('[data-mini-card]') || (node.matches('.card-link') ? node.querySelector('[data-mini-card]') : null);
+        return card && card.hasAttribute('data-mini-art-only') && !node.closest('.view-art') ? null : card;
     }
     function tooltip() {
         if (tip) return tip;
@@ -252,6 +252,7 @@
         var card = cardAt(e.target);
         if (hoverCard && !hoverCard.isConnected) { queueReconcile(); return; }
         if (card) startZoom(card);
+        else if (hoverCard && hoverCard.hasAttribute('data-mini-art-only')) stopZoom(true);
         if (e.target.closest('[data-cell-hint]')) hoverReady = true;
         contextHint(e.target);
     });
@@ -264,6 +265,8 @@
         contextHint(e.target);
     });
     document.addEventListener('pointerout', function (e) {
+        var leaving=e.target.closest('[data-mini-hint]');
+        if(leaving && !leaving.contains(e.relatedTarget)){clearTimeout(hintTimer);hintCandidate=null;}
         if (e.pointerType === 'touch' || !hover.matches) return;
         var marker = e.target.closest('[data-cell-hint]');
         if (marker && !marker.contains(e.relatedTarget) && !(tip && tip.contains(e.relatedTarget)) && !pinned) closeHint();

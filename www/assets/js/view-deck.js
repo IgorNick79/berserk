@@ -59,13 +59,13 @@
     root.dataset.cardPopupRoot='';root.dataset.panelDockRoot='';root.dataset.pauseContext='preparation';
     const dock=document.createElement('div');dock.className='battle-secondary-view game-chat';dock.hidden=true;
     let secondary=null;
-    root.secondaryPanel=function(panel){secondary=window.BerserkPanelDock.open(root,dock,secondary,panel);window.BerserkPanelDock.mount(root.querySelector('.info-panel-content'),dock,secondary);};
+    root.secondaryPanel=function(panel){secondary=window.BerserkPanelDock.open(root,dock,secondary,panel);window.BerserkPanelDock.mount(root.querySelector('.info-panel-content'),dock,secondary);root.querySelectorAll('[data-view-card-actions]').forEach(node=>node.hidden=!!secondary);};
     const pauseUi=window.BerserkMatchPause.create(root,version,params=>{const type=params.get('cmd');params.delete('cmd');command(type,Object.fromEntries(params));},()=>busy||!!pending,()=>refresh(true).catch(error=>notice(error.message)));
     function renderPause() {
         document.querySelector('.pregame-layout').dataset.viewVersion=String(version);
         if(pause)pauseUi.update(pause,version);
         pauseUi.render();
-        window.BerserkPanelDock.mount(root.querySelector('.info-panel-content'),dock,secondary);
+        window.BerserkPanelDock.mount(root.querySelector('.info-panel-content'),dock,secondary);root.querySelectorAll('[data-view-card-actions]').forEach(node=>node.hidden=!!secondary);
     }
     async function settle() {
         if (!pending || busy) return;
@@ -90,10 +90,11 @@
     }
     document.addEventListener('click', async event => {
         const card = event.target.closest('.view-deck-page .prepare-card-link');
+        const close = event.target.closest('[data-view-close]');
         const action = event.target.closest('[data-view-card-actions] a,.pregame-view-confirm a');
-        if (card) {
-            event.preventDefault(); const address=new URL(card.href); address.searchParams.set('view_page',new URL(location.href).searchParams.get('view_page') || '0');
-            address.searchParams.delete('cmd');
+        if (card || close) {
+            event.preventDefault(); const address=new URL(card ? card.href : location.href);
+            address.searchParams.delete('cmd');if(close)address.searchParams.delete('card');
             history.replaceState(null,'',address); selection++;
             document.querySelector('.pregame-panel-content').textContent='Загрузка карты…';
             try { await refresh(true); } catch (error) { notice(error.message); } return;

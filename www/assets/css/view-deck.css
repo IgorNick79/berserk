@@ -42,3 +42,9 @@
 
 /* Neutralise only the legacy fixed InfoPanel geometry on this grid-based screen. */
 .view-deck-page .pregame-info-panel{position:relative;inset:auto;max-height:none;padding:0;overflow:hidden;align-self:stretch}
+
+.view-deck-page .pregame-panel-summary,.view-deck-page .pregame-panel-header,.view-deck-page .pregame-panel-footer,.view-deck-page .pregame-card-heading{border-color:var(--ip-edge)}
+.view-deck-page .view-element img{display:block;width:100%;height:100%;object-fit:contain}
+.view-deck-page .pregame-card-actions .button{display:inline-flex;align-items:center;justify-content:center;text-align:center;font-size:14px;line-height:1.2;font-family:var(--battle-body-font)}
+
+.view-deck-page .pregame-main{scrollbar-width:none}.view-deck-page .pregame-main::-webkit-scrollbar{display:none}

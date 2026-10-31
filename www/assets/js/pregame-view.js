@@ -90,11 +90,6 @@
     }
     function show(index, focusPage) {
         current = index;
-        if (!isDeal && document.body.classList.contains('view-deck-page')) {
-            var label = navigation.querySelector('[data-page-label]');
-            if (label) label.textContent = 'Страница ' + (pages.length ? index + 1 : 0) + ' из ' + pages.length;
-            var address = new URL(location.href); address.searchParams.set('view_page', index); history.replaceState(null, '', address);
-        }
         var page = pages[index];
         groups.forEach(function (group) {
             group.node.hidden = !page || group !== page.group;
@@ -137,6 +132,14 @@
         });
     }
     function layout() {
+        if (!isDeal && document.body.classList.contains('view-deck-page')) {
+            navigation.remove();
+            var address=new URL(location.href);address.searchParams.delete('view_page');history.replaceState(null,'',address);
+            pages=[];
+            var group=groups.find(function(entry){return entry.node.dataset.viewGroup===activeZone;});
+            if(group){var visible=group.cards.filter(matches);if(visible.length)pages=[{group:group,cards:visible}];}
+            show(0,false);syncControls();return;
+        }
         groups.forEach(function (group) {
             group.node.hidden = false;
             group.cards.forEach(function (card) {
@@ -166,11 +169,6 @@
         }
         view.style.setProperty('--view-rows', rows);
         view.style.setProperty('--view-card-height', cardHeight + 'px');
-        if (!isDeal && document.body.classList.contains('view-deck-page')) {
-            build(9); var label = document.createElement('span'); label.dataset.pageLabel = ''; navigation.appendChild(label);
-            show(Math.min(Math.max(0, Number(new URL(location.href).searchParams.get('view_page')) || 0), Math.max(0, pages.length - 1)), false);
-            syncControls(); return;
-        }
         var selectedPage = pages.findIndex(function (page) { return page.cards.indexOf(anchor) !== -1; });
         show(Math.max(0, selectedPage), false);
         syncControls();

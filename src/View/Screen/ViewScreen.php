@@ -186,7 +186,7 @@ final class ViewScreen
         if (!$readOnly && $panelHtml !== '' && $selectedCard !== null) {
             $original='/assets/cards/s1/'.rawurlencode($selectedCard['ukid']).'.webp';
             $panelHtml=str_replace('<div class="pregame-card-media">', '<div class="pregame-card-media panel-card-media"><button type="button" class="panel-card-preview" data-card-original="'.$original.'" aria-label="Увеличить изображение">', $panelHtml);
-            $panelHtml=preg_replace('~(</div>\s*<div class="pregame-card-stats")~', '</button>$1', $panelHtml, 1);
+            $panelHtml=preg_replace('~(</div>\s*<div class="pregame-card-stats")~', '</button><button type="button" class="panel-card-close" data-view-close aria-label="Закрыть карту"><img src="/assets/images/battle/close.png" width="28" height="28" alt=""></button>$1', $panelHtml, 1);
         }
         if ($panelHtml !== '' && $actions !== []) {
             $panelHtml .= '<div class="pregame-card-actions" data-view-card-actions>' . $ui->actions($actions) . '</div>';
@@ -235,7 +235,7 @@ final class ViewScreen
     private function thumbnail(PrepareUi $ui, array $catalog, array $data): string
     {
         if (!empty($data['legacy'])) return $ui->card($data);
-        $info = $catalog[$data['ukid']] ?? $data['info'];
+        $info = array_replace($data['info'], $catalog[$data['ukid']] ?? []);
         $e = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $ukid = $data['ukid'];
         $path = '/assets/cards/s1/' . rawurlencode($ukid) . '.webp';
@@ -244,10 +244,10 @@ final class ViewScreen
         $element = substr($element, strlen('view-element-'));
         $cost = (!empty($info['elite']) ? 'elite' : 'ordinary') . (!empty($info['single']) ? '-unique' : '');
         return '<a aria-label="'.$e($info['name']??$ukid).'" class="prepare-card-link '.$e($data['class']).'" href="'.$e($data['link']).'" data-ukid="'.$e($ukid).'">'
-            . '<div data-mini-card="view:'.$e($data['link']).'" data-mini-name="'.$e($info['name']??$ukid).'" class="prepare-card view-thumbnail'.($data['selected']?' prepare-card--selected':'').'">'.$art
+            . '<div data-mini-art-only data-mini-card="view:'.$e($data['link']).'" data-mini-name="'.$e($info['name']??$ukid).'" class="prepare-card view-thumbnail'.($data['selected']?' prepare-card--selected':'').'">'.$art
             . '<img class="view-frame" src="/assets/images/battle/mini/frame_friendly_102x92_'.(!empty($info['elite'])?'plain':'silver').'.svg" alt="">'
-            . '<img class="view-element" src="/assets/images/element/'.$e($element).'.png" alt="'.$e($info['element']??$element).'">'
-            . '<span class="view-cost"><img src="/assets/images/card/'.$cost.'.png" alt="Стоимость">'.$e($info['price']??$data['info']['price']??0)
+            . '<span class="view-element" data-mini-hint data-view-element tabindex="0" role="button" aria-label="Стихия: '.$e($info['element_label']??$info['element']??$element).'"><img src="/assets/images/element/'.$e($element).'.png" alt=""><span class="mini-hint-text" hidden>Стихия: '.$e($info['element_label']??$info['element']??$element).'</span></span>'
+            . '<span class="view-cost"><img src="/assets/images/card/'.$cost.'.png" alt="'.(!empty($info['elite'])?'Золотой':'Серебряный').(!empty($info['single'])?', уникальный':'').' кристалл">'.$e($info['price']??$data['info']['price']??0)
             . '<span class="prepare-card__count">×'.(int)$data['count'].'</span></span></div></a>';
     }
 
@@ -316,6 +316,7 @@ final class ViewScreen
                         'strong' => $card->strikeStrong,
                     ],
                     'elite' => $card->elite,
+                    'single' => $card->single,
                     'element' => $info['element'] ?? $card->element,
                 ];
             }
@@ -393,6 +394,7 @@ final class ViewScreen
                     'strong' => (int) ($c['strike_strong'] ?? $info['strike']['strong'] ?? 0),
                 ],
                 'elite'  => $isElite,
+                'single' => (bool) ($c['single'] ?? $info['single'] ?? false),
             ];
 
             $total += $count;
