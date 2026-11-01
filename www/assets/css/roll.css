@@ -17,7 +17,7 @@
 @media(max-width:600px){body.roll-page{height:auto;min-height:100dvh;padding:8px}.roll-page .pregame-layout{grid-template-columns:minmax(0,1fr)}.roll-page .pregame-panel-content{max-height:none;overflow:visible}}
 
 .roll-page,.roll-page *{-webkit-user-select:none;user-select:none}
-.roll-page .pregame-side-choice fieldset{border:0;padding:0;margin:0;min-width:0}
+.roll-page .pregame-side-choice fieldset{border:0;padding:0;margin:0;min-width:0;gap:0}
 .roll-page .pregame-side-choice legend{padding:0;margin-bottom:10px;color:var(--ip-title)}
 .roll-page .pregame-side-choice .choice-radio{display:flex;align-items:center;gap:10px;box-sizing:border-box;width:100%;min-height:48px;padding:12px;margin:8px 0}
 .roll-page .pregame-side-choice .choice-radio input{flex:0 0 auto;margin:0}
