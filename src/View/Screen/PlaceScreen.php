@@ -68,11 +68,11 @@ final class PlaceScreen
 
         // Разрешённые клетки
         $allowedCells = [];
-        if ($selectedCard && $selectedCard->zone === CardInstance::ZONE_SQUAD && !$me->isConfirmed('place') && \Berserk\Core\PathfinderProcessor::canEdit($state,$playerKey)) {
+        if ($selectedCard && !$me->isConfirmed('place') && \Berserk\Core\PathfinderProcessor::canEdit($state,$playerKey)) {
             $levels   = ZoneManager::cellLevels($playerKey);
             $occupied = [];
             foreach ($state->cards as $card) {
-                if ($card->owner === $playerKey && $card->zone === CardInstance::ZONE_FIELD) {
+                if ($card->owner === $playerKey && $card->zone === CardInstance::ZONE_FIELD && $card->instanceId !== $selectedCardId) {
                     $occupied["{$card->row}_{$card->col}"] = true;
                 }
             }

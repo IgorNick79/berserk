@@ -1365,11 +1365,23 @@ final class PrepareProcessor
         $col    = (int) $cmd->get('col', 0);
 
         $card = $this->state->getCard($cardId);
-        if (!$card || $card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_SQUAD) {
+        if (!$card || $card->owner !== $playerKey || !in_array($card->zone, [CardInstance::ZONE_SQUAD, CardInstance::ZONE_FIELD], true)) {
             return Result::error('Карта не в отряде');
         }
 
-        $zone = new ZoneManager($this->state);
+        $reposition = $card->zone === CardInstance::ZONE_FIELD;
+        if ($reposition && $card->row === $row && $card->col === $col) {
+            return Result::error('Карта уже в этой клетке');
+        }
+        // Validate exactly as after removing this card, without mutating live state
+        // or invoking zone-transition hooks before the destination is accepted.
+        $placementState = $this->state;
+        if ($reposition) {
+            $placementState = clone $this->state;
+            $placementState->cards[$cardId] = clone $card;
+            $placementState->cards[$cardId]->zone = CardInstance::ZONE_SQUAD;
+        }
+        $zone = new ZoneManager($placementState);
         if (!$zone->isCellAllowed($playerKey, $row, $col)) {
             return Result::error('Клетка недоступна');
         }
@@ -1377,7 +1389,7 @@ final class PrepareProcessor
             return Result::error('Клетка занята');
         }
 
-        if (\Berserk\Core\PathfinderProcessor::active($this->state)) {
+        if ($reposition || \Berserk\Core\PathfinderProcessor::active($this->state)) {
             $card->zone=CardInstance::ZONE_FIELD;$card->row=$row;$card->col=$col;
         } else { (new ZoneManager($this->state))->toField($card, $row, $col); }
         $this->state->bumpVersion();

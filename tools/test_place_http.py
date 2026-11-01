@@ -47,6 +47,13 @@ body=r'''
         before=version(game)
         check('real POST places own card',action(a,'place_card',{'card_id':host_ids[0],'row':1,'col':2})[0] in [200,303] and zone(host_ids[0])=='field')
         check('duplicate old POST conflicts without another placement',action(a,'place_card',{'card_id':host_ids[0],'row':1,'col':2},before)[0]>=400 and version(game)==before+1)
+        code,html,_=http(a,game,query='&card='+str(host_ids[0]))
+        check('field selection highlights eight empty valid cells',code==200 and html.count('allowed move-target')==8)
+        before=version(game)
+        check('one POST repositions field card',action(a,'place_card',{'card_id':host_ids[0],'row':2,'col':3})[0] in [200,303] and version(game)==before+1 and zone(host_ids[0])=='field' and state(game)['cards'][str(host_ids[0])]['row']==2)
+        check('replayed reposition cannot execute twice',action(a,'place_card',{'card_id':host_ids[0],'row':2,'col':3},before)[0]>=400 and version(game)==before+1)
+        before=version(game)
+        check('invalid reposition leaves origin and version intact',action(a,'place_card',{'card_id':host_ids[0],'row':1,'col':1})[0]>=400 and version(game)==before and state(game)['cards'][str(host_ids[0])]['col']==3)
         check('unplace via real POST',action(a,'unplace_card',{'card_id':host_ids[0]})[0] in [200,303] and zone(host_ids[0])=='squad')
         check('re-place through existing sequence',action(a,'place_card',{'card_id':host_ids[0],'row':2,'col':2})[0] in [200,303] and state(game)['cards'][str(host_ids[0])]['row']==2)
         check('foreign card forbidden',action(a,'place_card',{'card_id':player_ids[0],'row':1,'col':3})[0]>=400)
@@ -55,6 +62,8 @@ body=r'''
         check('pause replay restores committed result once',command(a,'request_pause',{'duration_seconds':'60'},v,identity)[1]['command_status']=='committed' and version(game)==v+1)
         rid=state(game)['battle']['match_pause']['request_id']
         check('Place pause accepted',command(b,'accept_pause',{'request_id':rid})[1]['command_status']=='committed')
+        v=version(game)
+        check('pause blocks field reposition',action(a,'place_card',{'card_id':host_ids[0],'row':1,'col':3})[0]>=400 and version(game)==v and state(game)['cards'][str(host_ids[0])]['row']==2)
         for kind,payload in [('place_card',{'card_id':host_ids[1],'row':1,'col':2}),('unplace_card',{'card_id':host_ids[0]}),('confirm_place',{}),('pathfinder_choice',{'step':0,'choice':'start'})]:
             v=version(game);check('pause blocks '+kind,action(a,kind,payload)[0]>=400 and version(game)==v and state(game)['status']=='place')
         check('host ready',command(a,'pause_ready',{'request_id':rid})[1]['command_status']=='committed')
@@ -95,6 +104,7 @@ body=r'''
         command(a,'pause_ready',{'request_id':rid});command(b,'pause_ready',{'request_id':rid})
 
         check('choose rearrangement',action(a,'pathfinder_choice',{'step':0,'choice':'rearrange'})[0] in [200,303])
+        check('Pathfinder field reposition',action(a,'place_card',{'card_id':host_ids[0],'row':2,'col':3})[0] in [200,303] and state(game)['status']=='place')
         code,html,_=http(a,game);check('Pathfinder extra enemy row displayed',code==200 and 'coords--enemy' in html)
         check('Pathfinder unplace',action(a,'unplace_card',{'card_id':host_ids[0]})[0] in [200,303])
         check('Pathfinder re-place',action(a,'place_card',{'card_id':host_ids[0],'row':2,'col':2})[0] in [200,303])

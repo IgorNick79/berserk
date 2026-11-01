@@ -1,6 +1,9 @@
 /* Placement composition; cells, coordinates, art, frames and highlights remain battle CSS. */
 .place-page,.place-page *{user-select:none;-webkit-user-select:none}
 .place-page .pregame-layout{padding:8px 8px 8px 48px}
+.place-page .pregame-layout,.place-page .battle-main,.place-page .battle-left{box-sizing:border-box}
+.place-page .battle-left{overscroll-behavior:contain;scrollbar-width:none}
+.place-page .battle-left::-webkit-scrollbar{display:none}
 .place-page .pregame-info-panel{gap:0}
 .place-page .place-undisclosed-row{display:none}
 .place-page .battle-playmat-half.opponent{display:none}
@@ -40,4 +43,4 @@
 
 .place-page .squad-cards > .card-link{flex:0 0 auto;width:max-content;height:max-content}
 body.place-page{padding:0}
-.place-page .pregame-main{background:none;border:0}
+.place-page .pregame-main{background:none;border:0;overflow:hidden}
