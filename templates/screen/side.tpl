@@ -7,4 +7,4 @@
 <figure class="room-illustration"><img src="/assets/images/battle/waiting-war-table.png" width="1536" height="1024" alt="Военный стол с картой, свечой и двумя свободными местами"></figure>
 <script src="/assets/js/panel-secondary-view.js?v=1" defer></script>
 <script src="/assets/js/battle-match-pause.js?v=1" defer></script>
-<script src="/assets/js/view-deck.js?v=8" defer></script>
+<script src="/assets/js/view-deck.js?v=9" defer></script>

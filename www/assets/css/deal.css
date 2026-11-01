@@ -8,3 +8,5 @@
 .deal-page .view-thumbnail.prepare-card--selected{border-color:transparent!important}
 .deal-page .pregame-deal-resources .penalty{display:inline-flex;align-items:center;gap:4px;margin-left:auto;white-space:nowrap}
 .deal-page .penalty img{display:block;width:24px;height:24px}
+
+.deal-page .penalty > span{color:#fff;font-weight:400}

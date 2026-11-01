@@ -138,7 +138,9 @@ final class DealScreen
                     . ($notesHtml !== '' ? '<div class="pregame-deal-notes">' . $notesHtml . '</div>' : '') . '</section>';
             }
         }
-        $panelHtml = $pendingHtml !== '' ? $pendingHtml : $ui->information($selectedCard, $cardsInfo) . $previewHtml;
+        $cardHtml = $ui->information($selectedCard, $cardsInfo);
+        if ($selectedCard !== null && $cardHtml !== '') $cardHtml = $ui->withCardControls($cardHtml, $selectedCard['ukid']);
+        $panelHtml = $pendingHtml !== '' ? $pendingHtml : $cardHtml . $previewHtml;
         $footerHtml = '<div class="pregame-deal-footer">';
         if ($pendingHtml === '') {
             $footerHtml .= !$me->isConfirmed('deal')

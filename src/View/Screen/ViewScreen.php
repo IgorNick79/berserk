@@ -184,9 +184,7 @@ final class ViewScreen
         }
         $panelHtml = $ui->information($selectedCard, $panelCatalog);
         if (!$readOnly && $panelHtml !== '' && $selectedCard !== null) {
-            $original='/assets/cards/s1/'.rawurlencode($selectedCard['ukid']).'.webp';
-            $panelHtml=str_replace('<div class="pregame-card-media">', '<div class="pregame-card-media panel-card-media"><button type="button" class="panel-card-preview" data-card-original="'.$original.'" aria-label="Увеличить изображение">', $panelHtml);
-            $panelHtml=preg_replace('~(</div>\s*<div class="pregame-card-stats")~', '</button><button type="button" class="panel-card-close" data-view-close aria-label="Закрыть карту"><img src="/assets/images/battle/close.png" width="28" height="28" alt=""></button>$1', $panelHtml, 1);
+            $panelHtml = $ui->withCardControls($panelHtml, $selectedCard['ukid']);
         }
         if (!$readOnly) $panelHtml=str_replace(
             ['pregame-card-heading"','pregame-card-cost"','pregame-card-heading-icons"','pregame-card-stats"'],

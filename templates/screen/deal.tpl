@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="/assets/css/deal.css?v=2">
+<link rel="stylesheet" href="/assets/css/deal.css?v=3">
 <link rel="stylesheet" href="/assets/css/battle-fonts.css?v=1">
 <link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=16">
 <link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=16">
@@ -22,7 +22,7 @@
 <script src="/assets/js/pregame-view.js?v=9" defer></script>
 <script src="/assets/js/panel-secondary-view.js?v=1" defer></script>
 <script src="/assets/js/battle-match-pause.js?v=1" defer></script>
-<script src="/assets/js/view-deck.js?v=8" defer></script>
+<script src="/assets/js/view-deck.js?v=9" defer></script>
 
 <script src="/assets/js/card-image-popup.js?v=2" defer></script>
 <script src="/assets/js/battle-mini-card.js?v=12" defer></script>

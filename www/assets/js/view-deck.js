@@ -76,7 +76,7 @@
     }
     async function settle() {
         if (!pending || busy) return;
-        busy=true; renderPause(); notice('Проверяем результат…');
+        busy=true; renderPause(); if (!isDeal) notice('Проверяем результат…');
         try {
             let data = await request(url('battle_command_status') + '&command_id=' + encodeURIComponent(pending.command_id));
             if (!data.command_status || data.command_status === 'unknown') data = await request(url('battle_command'), {method:'POST',body:new URLSearchParams(pending)});
