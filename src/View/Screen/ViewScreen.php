@@ -231,7 +231,7 @@ final class ViewScreen
         array $cardsInfo = [], array $elementLabels = []): array
     {
         $data = $this->prepare($state, $playerKey, $role, $message, $cardsInfo, $elementLabels, true)['data'];
-        return ['deck_html' => (string) $this->tpl->parse('screen/view.tpl', $data),
+        return ['deck_name' => $data['deck_name'] ?? '—', 'deck_html' => (string) $this->tpl->parse('screen/view.tpl', $data),
             'panel_summary_html' => $data['panel_summary_html'] ?? ''];
     }
 

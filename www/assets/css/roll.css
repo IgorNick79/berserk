@@ -6,9 +6,9 @@
 .roll-page .pregame-panel-title{font-family:var(--battle-heading-font)}
 .roll-page .pregame-panel-content>section:not([data-match-pause-content]){padding:12px}
 .roll-page .pregame-pool-stats{padding:10px 12px}
-.roll-page .pregame-pool-totals{margin-bottom:8px}
 .roll-page .pregame-pool-currencies,.roll-page .pregame-pool-elements,.roll-page .pregame-pool-icons{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.roll-page .pregame-pool-stat{display:inline-flex;gap:4px;align-items:center}
+.roll-page .pregame-pool-stat{display:inline-flex;gap:4px;align-items:center;cursor:default}
+.roll-page .pregame-pool-stat img{display:block;flex:0 0 24px}
 .roll-page .pregame-pool-stat img{width:24px;height:24px}
 .roll-page [data-match-paused="1"] .pregame-side-choice{pointer-events:none}
 .roll-page [data-view-secondary] .pregame-panel-summary{display:none!important}

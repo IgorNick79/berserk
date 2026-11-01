@@ -32,10 +32,17 @@ final class PreGameLayout
         };
         $roll = in_array($screen, ['turn','side'], true);
         if ($roll) {
-            $data['panel_summary_html'] = preg_replace(['/<button\b[^>]*>/', '/<\/button>/'], ['<span>', '</span>'], $data['panel_summary_html'] ?? '');
+            $title = 'Твоя дека: ' . (string) ($data['deck_name'] ?? '—');
+            $summary = preg_replace('/<div class="pregame-pool-totals">.*?<\/div>/s', '', $data['panel_summary_html'] ?? '');
+            $summary = preg_replace_callback('/<button\b([^>]*)>/', static function ($match) {
+                preg_match_all('/(?:class|aria-label)="[^"]*"/', $match[1], $attributes);
+                return '<span ' . implode(' ', $attributes[0]) . '>';
+            }, $summary);
+            $data['panel_summary_html'] = str_replace('</button>', '</span>', $summary);
             $data['panel_actions_html'] = self::actionsFooter($data['panel_actions_html'] ?? '');
         }
         $content = (string) ($data['panel_html'] ?? '');
+        if ($roll) $content = '<header class="pregame-card-heading panel-card-heading"><h3 class="pregame-card-title panel-card-title">Бросок кубиков</h3></header>' . $content;
         $html = $this->render((string) $this->tpl->parse('screen/' . $screen . '.tpl', $data),
             $title, $content, (string) ($data['timer_html'] ?? ''), (string) ($data['panel_actions_html'] ?? ''),
             $content === '' ? 'statistics' : 'card', (string) ($data['panel_phase'] ?? ''), (string) ($data['panel_summary_html'] ?? ''));
