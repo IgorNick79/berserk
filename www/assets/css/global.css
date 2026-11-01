@@ -2321,6 +2321,6 @@ body.battle-page {
 
 .battle-page .death-choice-buttons .button.catcher-dice { display: inline-flex !important; width: auto !important; min-width: 0; flex: 0 0 auto !important; padding: 6px 12px; }
 .battle-page [data-instant-local-pass] { background: linear-gradient(#68add4,#276389) !important; color: #fff !important; }
-:is(.battle-page,.view-deck-page) .match-pause-countdown { color: #fff; }
+:is(.battle-page,.view-deck-page,.roll-page) .match-pause-countdown { color: #fff; }
 .battle-page .death-choice-buttons:has(.catcher-dice) > .button { height: 40px; min-height: 40px; box-sizing: border-box; vertical-align: middle; display: inline-flex; align-items: center; justify-content: center; line-height: 1.2; }
 .battle-page .catcher-dice .panel-dice-face { width: 24px; height: 24px; }

@@ -13,6 +13,11 @@ final class MatchPause
     public const COOLDOWN_SECONDS = 300;
     public const COMMANDS = ['request_pause', 'accept_pause', 'reject_pause', 'cancel_pause_request', 'pause_ready'];
 
+    public static function supportsStage(string $stage): bool
+    {
+        return in_array($stage, ['battle', 'view', 'turn', 'side'], true);
+    }
+
     public static function isCommand(string $type): bool { return in_array($type, self::COMMANDS, true); }
     public static function blocking(GameState $s): bool
     {
@@ -27,7 +32,7 @@ final class MatchPause
     {
         if (!self::blocking($s)) return false;
         $p=$s->battle['match_pause'];
-        return !in_array($s->status, ['battle', 'view'], true) || $s->winner !== null
+        return !self::supportsStage($s->status) || $s->winner !== null
             || $now >= ($p['mode']==='requested' ? $p['request_deadline_at'] : $p['pause_deadline_at']);
     }
 
@@ -35,7 +40,7 @@ final class MatchPause
     public static function apply(GameState $s, string $actor, Command $cmd, int $now): Result
     {
         if (!in_array($actor,['host','player'],true)) return Result::error('pause_not_participant');
-        if (!in_array($s->status, ['battle', 'view'], true) || $s->winner!==null) return Result::error('pause_battle_not_active');
+        if (!self::supportsStage($s->status) || $s->winner!==null) return Result::error('pause_battle_not_active');
         // Deadlines are committed separately, even if the late user command is rejected.
         if (self::due($s,$now)) return Result::error('pause_deadline_due');
         if ($cmd->type==='request_pause') return self::request($s,$actor,$cmd,$now);
@@ -102,7 +107,7 @@ final class MatchPause
     public static function expire(GameState $s, int $now): Result
     {
         if (!self::due($s,$now)) return Result::error('pause_not_due');
-        if (!in_array($s->status, ['battle', 'view'], true) || $s->winner!==null) self::terminate($s,$now);
+        if (!self::supportsStage($s->status) || $s->winner!==null) self::terminate($s,$now);
         else {
             $p=$s->battle['match_pause'];
             self::finish($s,$p['mode']==='requested'?$p['request_deadline_at']:$p['pause_deadline_at'],
@@ -157,7 +162,7 @@ final class MatchPause
     {
         $p=$s->battle['match_pause'] ?? self::initial();
         $participant=in_array($viewer,['host','player'],true);
-        $live=$participant && in_array($s->status, ['battle', 'view'], true) && $s->winner===null && !self::due($s,$now);
+        $live=$participant && self::supportsStage($s->status) && $s->winner===null && !self::due($s,$now);
         $requested=$live && $p['mode']==='requested';
         $active=$live && $p['mode']==='active';
         $commands=[];

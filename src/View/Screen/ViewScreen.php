@@ -217,7 +217,7 @@ final class ViewScreen
                 'sideboard_html'=> $sideboardHtml,
                 'bottom_panel_html' => '',
                 'panel_summary_html' => $panelSummary,
-                'panel_actions_html' => '<div class="pregame-view-confirm info-actions">' . $confirmHtml . '<div class="battle-icon-actions"><button type="button" class="battle-icon-control" data-open-pause aria-label="Пауза игры" title="Пауза игры"><img src="/assets/images/battle/pause_160.png" width="28" height="28" alt=""><span class="battle-icon-tooltip" aria-hidden="true">Пауза игры</span></button><span class="battle-chat-anchor" data-chat-anchor></span></div></div><div data-view-notice role="status"></div>',
+                'panel_actions_html' => \Berserk\View\Ui\PreGameLayout::actionsFooter($confirmHtml),
                 'preview_html'  => '',
                 'panel_html'    => $panelHtml,
                 'confirm_html'  => $confirmHtml,

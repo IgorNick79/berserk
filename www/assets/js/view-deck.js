@@ -1,13 +1,14 @@
 (function () {
     'use strict';
-    if (!document.body.classList.contains('view-deck-page') || window.berserkViewReady) return;
+    if (!document.body.matches('.view-deck-page,.roll-page') || window.berserkViewReady) return;
     window.berserkViewReady = true;
-    const config = window.berserkViewTransport;
+    const isRoll = document.body.classList.contains('roll-page');
+    const config = isRoll ? window.berserkRollTransport : window.berserkViewTransport;
     if (!config) return;
     // Keep loaded styles connected while snapshots replace the stage markup.
     document.querySelectorAll('.pregame-layout link[rel="stylesheet"]').forEach(node=>document.head.append(node));
     let version = Number(config.version), busy = false, refreshing = false, selection = 0, pause = null, forceNext = false;
-    const key = 'berserk-view-command:' + config.game;
+    const key = (isRoll ? 'berserk-roll-pause:' : 'berserk-view-command:') + config.game;
     let pending = null;
     try { pending = JSON.parse(sessionStorage.getItem(key)); } catch (_) {}
     const url = action => 'index.php?game=' + encodeURIComponent(config.game) + '&ajax=' + action;
@@ -31,7 +32,7 @@
             const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
             const script = doc.querySelector('script[data-stage][data-version][data-csrf]');
             if (!script) throw Error('Не удалось загрузить состояние');
-            if (script.dataset.stage !== 'view') { location.assign(address); return; }
+            if (isRoll ? !['turn','side'].includes(script.dataset.stage) : script.dataset.stage !== 'view') { location.assign(address); return; }
             if (epoch !== selection) return;
             const nextVersion = Number(script.dataset.version);
             if (force || nextVersion !== version) {
@@ -51,7 +52,8 @@
                 if(secondary)dock.remove();
                 current.replaceWith(next); version = nextVersion;
                 const anchor = next.querySelector('[data-chat-anchor]'); if (anchor && toggle) anchor.append(toggle);
-                window.berserkInitViewPager();
+                if (isRoll) config.setVersion(version,script.dataset.stage);
+                else window.berserkInitViewPager();
                 next.querySelector('.pregame-main').scrollTop=mainScroll;next.querySelector('.pregame-panel-content').scrollTop=panelScroll;window.scrollTo(0,scrollY);
             }
             const state = doc.querySelector('#match-pause-state'); pause = state ? JSON.parse(state.textContent) : null;

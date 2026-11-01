@@ -12,7 +12,7 @@ final class PreGameLayout
     private const TITLES = [
         'mode' => 'Режим игры', 'settings' => 'Настройки', 'draft' => 'Grid Draft',
         'deck_host' => 'Выбор колод', 'deck_wait' => 'Выбор колод', 'view' => 'Просмотр колоды',
-        'turn' => 'Бросок кубика', 'side' => 'Выбор первого игрока', 'deal' => 'Выбор отряда', 'place' => 'Расстановка',
+        'turn' => 'Бросок кубиков', 'side' => 'Бросок кубиков', 'deal' => 'Выбор отряда', 'place' => 'Расстановка',
     ];
 
     public static function supports(string $screen): bool
@@ -30,12 +30,22 @@ final class PreGameLayout
             'draft' => (string) ($data['panel_title'] ?? self::TITLES[$screen]),
             default => self::TITLES[$screen],
         };
+        $roll = in_array($screen, ['turn','side'], true);
+        if ($roll) {
+            $data['panel_summary_html'] = preg_replace(['/<button\b[^>]*>/', '/<\/button>/'], ['<span>', '</span>'], $data['panel_summary_html'] ?? '');
+            $data['panel_actions_html'] = self::actionsFooter($data['panel_actions_html'] ?? '');
+        }
         $content = (string) ($data['panel_html'] ?? '');
         $html = $this->render((string) $this->tpl->parse('screen/' . $screen . '.tpl', $data),
             $title, $content, (string) ($data['timer_html'] ?? ''), (string) ($data['panel_actions_html'] ?? ''),
             $content === '' ? 'statistics' : 'card', (string) ($data['panel_phase'] ?? ''), (string) ($data['panel_summary_html'] ?? ''));
-        if ($screen === 'view') $html=str_replace(['pregame-info-panel','pregame-panel-content','pregame-panel-footer'], ['pregame-info-panel info-panel','pregame-panel-content info-panel-content','pregame-panel-footer info-panel-footer'], $html);
-        return $screen === 'view' ? str_replace('class="pregame-layout"', 'class="pregame-layout" data-panel-theme="grimoire"', $html) : $html;
+        if ($screen === 'view' || $roll) $html=str_replace(['pregame-info-panel','pregame-panel-content','pregame-panel-footer'], ['pregame-info-panel info-panel','pregame-panel-content info-panel-content','pregame-panel-footer info-panel-footer'], $html);
+        return $screen === 'view' || $roll ? str_replace('class="pregame-layout"', 'class="pregame-layout" data-panel-theme="grimoire"', $html) : $html;
+    }
+
+    public static function actionsFooter(string $confirmHtml): string
+    {
+        return '<div class="pregame-view-confirm info-actions">' . $confirmHtml . '<div class="battle-icon-actions"><button type="button" class="battle-icon-control" data-open-pause aria-label="Пауза игры" title="Пауза игры"><img src="/assets/images/battle/pause_160.png" width="28" height="28" alt=""><span class="battle-icon-tooltip" aria-hidden="true">Пауза игры</span></button><span class="battle-chat-anchor" data-chat-anchor></span></div></div><div data-view-notice role="status"></div>';
     }
 
     public function render(string $mainHtml, string $title, string $contentHtml = '', string $timerHtml = '', string $footerHtml = '', string $contentKind = 'statistics', string $phase = '', string $summaryHtml = ''): string

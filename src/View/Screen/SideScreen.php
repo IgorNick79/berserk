@@ -40,7 +40,7 @@ final class SideScreen
         return [
             'screen' => 'side',
             'data'   => array_merge($deckData, [
-                'panel_html' => '<section class="pregame-side-info">' . $contentHtml . '</section>',
+                'panel_html' => '<section class="pregame-side-info">' . \Berserk\View\Ui\RollResults::render($state, $playerKey) . $contentHtml . '</section>',
                 'panel_actions_html' => $footerHtml,
                 'content_html' => $contentHtml,
                 'message'      => $message ?? '',

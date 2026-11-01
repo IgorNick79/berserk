@@ -1,9 +1,9 @@
 <link rel="stylesheet" href="/assets/css/battle-fonts.css?v=1">
-<link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=14">
+<link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=15">
 <link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=16">
 <link rel="stylesheet" href="/assets/css/battle-mini-nameplate.css?v=1">
 <link rel="stylesheet" href="/assets/css/battle-chat.css?v=1">
-<link rel="stylesheet" href="/assets/css/view-deck.css?v=6">
+<link rel="stylesheet" href="/assets/css/view-deck.css?v=7">
 <div style="--player-playmat: url('{{playmat_url}}')" class="screen-prepare screen-prepare-view" data-view-pager>
     <p class="flash">{{message}}</p>
     <div class="pregame-stage-content">
@@ -21,7 +21,7 @@
 
 <script src="/assets/js/panel-secondary-view.js?v=1" defer></script>
 <script src="/assets/js/battle-match-pause.js?v=1" defer></script>
-<script src="/assets/js/view-deck.js?v=5" defer></script>
+<script src="/assets/js/view-deck.js?v=6" defer></script>
 
 <script src="/assets/js/card-image-popup.js?v=2" defer></script>
 <script src="/assets/js/battle-mini-card.js?v=12" defer></script>

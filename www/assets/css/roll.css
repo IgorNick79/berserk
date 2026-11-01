@@ -1,0 +1,17 @@
+/* Roll geometry; room art, themed panel, controls, chat and pause are shared. */
+.roll-page .pregame-main{display:flex;padding:0;overflow:hidden}
+.roll-page .room-illustration{flex:1;max-height:100%;height:100%}
+.roll-page .pregame-layout{padding-left:56px}
+.roll-page .pregame-panel-header{color:var(--ip-title)}
+.roll-page .pregame-panel-title{font-family:var(--battle-heading-font)}
+.roll-page .pregame-panel-content>section:not([data-match-pause-content]){padding:12px}
+.roll-page .pregame-pool-stats{padding:10px 12px}
+.roll-page .pregame-pool-totals{margin-bottom:8px}
+.roll-page .pregame-pool-currencies,.roll-page .pregame-pool-elements,.roll-page .pregame-pool-icons{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.roll-page .pregame-pool-stat{display:inline-flex;gap:4px;align-items:center}
+.roll-page .pregame-pool-stat img{width:24px;height:24px}
+.roll-page [data-match-paused="1"] .pregame-side-choice{pointer-events:none}
+.roll-page [data-view-secondary] .pregame-panel-summary{display:none!important}
+@media(max-width:600px){.roll-page .pregame-layout{padding:48px 0 0}.roll-page .room-illustration{height:230px}.roll-page .pregame-main{display:block}.roll-page .pregame-layout{height:auto}.roll-page .pregame-info-panel{min-height:500px}}
+
+@media(max-width:600px){body.roll-page{height:auto;min-height:100dvh;padding:8px}.roll-page .pregame-layout{grid-template-columns:minmax(0,1fr)}.roll-page .pregame-panel-content{max-height:none;overflow:visible}}

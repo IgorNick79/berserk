@@ -35,10 +35,8 @@ final class TurnScreen
             $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
         }
 
-        $panelHtml = '<section class="pregame-turn-info"><div class="dice-block">'
-            . '<div class="dice-column"><div class="label">Ты</div><div class="dice dice-' . (int) $myDice . '">' . (int) $myDice . '</div></div>'
-            . '<div class="dice-column"><div class="label">Оппонент</div><div class="dice dice-' . (int) $oppDice . '">' . (int) $oppDice . '</div></div>'
-            . '</div><p><b>' . ($youFirst ? 'Ты выбираешь, кто ходит первым' : 'Оппонент выбирает, кто ходит первым') . '</b></p></section>';
+        $panelHtml = '<section class="pregame-turn-info">' . \Berserk\View\Ui\RollResults::render($state, $playerKey)
+            . '<p><b>' . ($youFirst ? 'Ты выбираешь, кто ходит первым' : 'Оппонент выбирает, кто ходит первым') . '</b></p></section>';
 
         return [
             'screen' => 'turn',

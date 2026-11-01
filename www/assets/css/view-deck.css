@@ -1,73 +1,73 @@
 /* View only: reuse account theme variables and the existing battle assets. */
-.view-deck-page .pregame-main{background:transparent;border:0;overflow:auto}
-.view-deck-page .pregame-info-panel{background:radial-gradient(ellipse at top,var(--ip-glow),transparent 65%),var(--ip-base);color:var(--ip-text);border:2px solid var(--ip-edge);position:relative}
-.view-deck-page .pregame-panel-header,.view-deck-page .pregame-panel-footer{border-color:var(--ip-edge);background:#0003;color:var(--ip-title)}
-.view-deck-page .pregame-panel-content,.view-deck-page .pregame-pool-stats,.view-deck-page .pregame-card-heading,.view-deck-page .pregame-card-stats{background:transparent;color:var(--ip-text)}
-.view-deck-page .pregame-panel-summary{color:var(--ip-text)}
-.view-deck-page .pregame-info-panel button,.view-deck-page .pregame-info-panel .wait{color:inherit}
-.view-deck-page .pregame-info-panel .pregame-empty{color:var(--ip-muted)}
-.view-deck-page .pregame-view-group .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;padding:10px}
-.view-deck-page .prepare-card-link{min-width:0;height:auto!important;text-decoration:none;color:#fff}
-.view-deck-page .view-thumbnail{position:relative;width:100%;height:auto!important;aspect-ratio:8/5;padding:0;background:#292824;border:1px solid transparent;border-radius:6px;isolation:isolate;overflow:hidden}
+:is(.view-deck-page,.roll-page) .pregame-main{background:transparent;border:0;overflow:auto}
+:is(.view-deck-page,.roll-page) .pregame-info-panel{background:radial-gradient(ellipse at top,var(--ip-glow),transparent 65%),var(--ip-base);color:var(--ip-text);border:2px solid var(--ip-edge);position:relative}
+:is(.view-deck-page,.roll-page) .pregame-panel-header,:is(.view-deck-page,.roll-page) .pregame-panel-footer{border-color:var(--ip-edge);background:#0003;color:var(--ip-title)}
+:is(.view-deck-page,.roll-page) .pregame-panel-content,:is(.view-deck-page,.roll-page) .pregame-pool-stats,:is(.view-deck-page,.roll-page) .pregame-card-heading,:is(.view-deck-page,.roll-page) .pregame-card-stats{background:transparent;color:var(--ip-text)}
+:is(.view-deck-page,.roll-page) .pregame-panel-summary{color:var(--ip-text)}
+:is(.view-deck-page,.roll-page) .pregame-info-panel button,:is(.view-deck-page,.roll-page) .pregame-info-panel .wait{color:inherit}
+:is(.view-deck-page,.roll-page) .pregame-info-panel .pregame-empty{color:var(--ip-muted)}
+:is(.view-deck-page,.roll-page) .pregame-view-group .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;padding:10px}
+:is(.view-deck-page,.roll-page) .prepare-card-link{min-width:0;height:auto!important;text-decoration:none;color:#fff}
+:is(.view-deck-page,.roll-page) .view-thumbnail{position:relative;width:100%;height:auto!important;aspect-ratio:8/5;padding:0;background:#292824;border:1px solid transparent;border-radius:6px;isolation:isolate;overflow:hidden}
 .view-art{border-radius:6px;display:block;width:100%;height:100%;object-fit:contain;aspect-ratio:8/5}.view-art-missing{display:grid;place-items:center;font-size:12px}
 .view-element{position:absolute;top:7px;left:7px;width:24px;height:24px;filter:drop-shadow(0 1px 2px #000)}
 .view-cost{position:absolute;bottom:3px;left:5px;right:5px;display:flex;gap:5px;align-items:center;background:#141410df;border-radius:3px;padding:2px 5px;font-size:16px;line-height:26px}.view-cost img{width:24px;height:24px;object-fit:contain}
-.view-deck-page .prepare-card__count{position:static;background:none;margin-left:auto;padding:0;font-size:15px;color:#fff}
-.view-deck-page .prepare-card--selected{outline:2px solid #e6ca85;outline-offset:2px;filter:brightness(1.08)}
-.view-deck-page .pregame-view-pagination{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:7px;height:auto;color:#e4d7bb;padding:12px}
-.view-deck-page [data-view-notice]{font-size:13px;color:var(--ip-muted);overflow-wrap:anywhere}
-@media(max-width:600px){.view-deck-page{height:auto;min-height:100dvh;padding:8px}.view-deck-page .pregame-layout{height:auto;grid-template-columns:minmax(0,1fr)}.view-deck-page .pregame-main{overflow:visible;padding:5px}.view-deck-page .pregame-view-group .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:5px}.view-deck-page .pregame-info-panel{min-height:400px}.view-deck-page .pregame-panel-content{max-height:none;overflow:visible}.view-cost{font-size:14px}.view-element{width:20px;height:20px}}
+:is(.view-deck-page,.roll-page) .prepare-card__count{position:static;background:none;margin-left:auto;padding:0;font-size:15px;color:#fff}
+:is(.view-deck-page,.roll-page) .prepare-card--selected{outline:2px solid #e6ca85;outline-offset:2px;filter:brightness(1.08)}
+:is(.view-deck-page,.roll-page) .pregame-view-pagination{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:7px;height:auto;color:#e4d7bb;padding:12px}
+:is(.view-deck-page,.roll-page) [data-view-notice]{font-size:13px;color:var(--ip-muted);overflow-wrap:anywhere}
+@media(max-width:600px){.view-deck-page{height:auto;min-height:100dvh;padding:8px}:is(.view-deck-page,.roll-page) .pregame-layout{height:auto;grid-template-columns:minmax(0,1fr)}:is(.view-deck-page,.roll-page) .pregame-main{overflow:visible;padding:5px}:is(.view-deck-page,.roll-page) .pregame-view-group .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:5px}:is(.view-deck-page,.roll-page) .pregame-info-panel{min-height:400px}:is(.view-deck-page,.roll-page) .pregame-panel-content{max-height:none;overflow:visible}.view-cost{font-size:14px}.view-element{width:20px;height:20px}}
 
-.view-deck-page .pregame-view-pages{min-height:0}.view-deck-page .pregame-view-zone[aria-pressed="true"]{color:var(--ip-title)}
-.view-deck-page .prepare-card-link[hidden],.view-deck-page [data-view-group][hidden]{display:none!important}
+:is(.view-deck-page,.roll-page) .pregame-view-pages{min-height:0}:is(.view-deck-page,.roll-page) .pregame-view-zone[aria-pressed="true"]{color:var(--ip-title)}
+:is(.view-deck-page,.roll-page) .prepare-card-link[hidden],:is(.view-deck-page,.roll-page) [data-view-group][hidden]{display:none!important}
 
-.view-deck-page .view-thumbnail{min-height:0!important}.view-deck-page .pregame-pool-totals{color:var(--ip-text)}
-.view-deck-page .pregame-main:has(.screen-prepare-view){overflow:auto}
-@media(max-width:600px){.view-deck-page .pregame-main:has(.screen-prepare-view){overflow:visible;display:block}.view-deck-page .pregame-main .screen-prepare-view{padding:8px}.view-deck-page .pregame-layout{padding-left:0;padding-top:48px}.view-deck-page .pregame-info-panel{width:100%}}
+:is(.view-deck-page,.roll-page) .view-thumbnail{min-height:0!important}:is(.view-deck-page,.roll-page) .pregame-pool-totals{color:var(--ip-text)}
+:is(.view-deck-page,.roll-page) .pregame-main:has(.screen-prepare-view){overflow:auto}
+@media(max-width:600px){:is(.view-deck-page,.roll-page) .pregame-main:has(.screen-prepare-view){overflow:visible;display:block}:is(.view-deck-page,.roll-page) .pregame-main .screen-prepare-view{padding:8px}:is(.view-deck-page,.roll-page) .pregame-layout{padding-left:0;padding-top:48px}:is(.view-deck-page,.roll-page) .pregame-info-panel{width:100%}}
 
-.view-deck-page .pregame-pool-icons,.view-deck-page .pregame-pool-elements{flex-wrap:wrap}.view-deck-page .pregame-pool-stat{flex-shrink:0}
-.view-deck-page .pregame-main .pregame-view-pages .cards{grid-template-rows:none;grid-auto-rows:auto}
+:is(.view-deck-page,.roll-page) .pregame-pool-icons,:is(.view-deck-page,.roll-page) .pregame-pool-elements{flex-wrap:wrap}:is(.view-deck-page,.roll-page) .pregame-pool-stat{flex-shrink:0}
+:is(.view-deck-page,.roll-page) .pregame-main .pregame-view-pages .cards{grid-template-rows:none;grid-auto-rows:auto}
 @media(max-width:600px){
-.view-deck-page .pregame-panel-content{flex:0 0 auto;position:relative;overflow:visible}
-.view-deck-page .pregame-info-panel{height:auto;max-height:none}
-.view-deck-page .pregame-card-heading{display:grid;grid-template-columns:auto minmax(0,1fr);padding-right:38px;gap:8px}
-.view-deck-page .pregame-card-title{font-size:16px}
-.view-deck-page .pregame-card-heading-icons{grid-column:1/-1;flex-wrap:wrap}
+:is(.view-deck-page,.roll-page) .pregame-panel-content{flex:0 0 auto;position:relative;overflow:visible}
+:is(.view-deck-page,.roll-page) .pregame-info-panel{height:auto;max-height:none}
+:is(.view-deck-page,.roll-page) .pregame-card-heading{display:grid;grid-template-columns:auto minmax(0,1fr);padding-right:38px;gap:8px}
+:is(.view-deck-page,.roll-page) .pregame-card-title{font-size:16px}
+:is(.view-deck-page,.roll-page) .pregame-card-heading-icons{grid-column:1/-1;flex-wrap:wrap}
 }
 
 /* View geometry only; button, hover, popup, chat and pause decoration is shared. */
-.view-deck-page .pregame-view-confirm.info-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.view-deck-page [data-match-paused="1"] .info-panel-content>:not([data-match-pause-content]):not(.battle-secondary-view){display:none!important}
-.view-deck-page .info-panel .battle-secondary-view{min-height:300px}
+:is(.view-deck-page,.roll-page) .pregame-view-confirm.info-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}
+:is(.view-deck-page,.roll-page) [data-match-paused="1"] .info-panel-content>:not([data-match-pause-content]):not(.battle-secondary-view){display:none!important}
+:is(.view-deck-page,.roll-page) .info-panel .battle-secondary-view{min-height:300px}
 
 /* Neutralise only the legacy fixed InfoPanel geometry on this grid-based screen. */
-.view-deck-page .pregame-info-panel{position:relative;inset:auto;max-height:none;padding:0;overflow:hidden;align-self:stretch}
+:is(.view-deck-page,.roll-page) .pregame-info-panel{position:relative;inset:auto;max-height:none;padding:0;overflow:hidden;align-self:stretch}
 
-.view-deck-page .pregame-panel-summary,.view-deck-page .pregame-panel-header,.view-deck-page .pregame-panel-footer,.view-deck-page .pregame-card-heading{border-color:var(--ip-edge)}
-.view-deck-page .view-element img{display:block;width:100%;height:100%;object-fit:contain}
-.view-deck-page .pregame-card-actions .button{display:inline-flex;align-items:center;justify-content:center;text-align:center;font-size:14px;line-height:1.2;font-family:var(--battle-body-font)}
+:is(.view-deck-page,.roll-page) .pregame-panel-summary,:is(.view-deck-page,.roll-page) .pregame-panel-header,:is(.view-deck-page,.roll-page) .pregame-panel-footer,:is(.view-deck-page,.roll-page) .pregame-card-heading{border-color:var(--ip-edge)}
+:is(.view-deck-page,.roll-page) .view-element img{display:block;width:100%;height:100%;object-fit:contain}
+:is(.view-deck-page,.roll-page) .pregame-card-actions .button{display:inline-flex;align-items:center;justify-content:center;text-align:center;font-size:14px;line-height:1.2;font-family:var(--battle-body-font)}
 
-.view-deck-page .pregame-main{scrollbar-width:none}.view-deck-page .pregame-main::-webkit-scrollbar{display:none}
+:is(.view-deck-page,.roll-page) .pregame-main{scrollbar-width:none}:is(.view-deck-page,.roll-page) .pregame-main::-webkit-scrollbar{display:none}
 
 /* Fixed decorations: only the illustration is cloned by the shared zoom module. */
-.view-deck-page .view-cost{left:0;right:0;bottom:0;border-radius:0 0 5px 5px}
-.view-deck-page .view-cost img[src$="-unique.png"]{width:32px;height:32px}
-.view-deck-page .pregame-card-cost img[src$="-unique.png"]{width:32px;height:32px}
-.view-deck-page .pregame-card-info{background:var(--ip-surface);border-bottom:1px solid var(--ip-edge)}
-.view-deck-page .info-panel .pregame-card-heading,.view-deck-page .info-panel .pregame-card-stats{background:var(--ip-surface);border-color:var(--ip-edge)}
-.view-deck-page .info-panel .battle-icon-tooltip{left:auto;right:0;transform:translateY(4px)}
-.view-deck-page .info-panel .battle-icon-control:hover .battle-icon-tooltip,.view-deck-page .info-panel .battle-icon-control:focus-visible .battle-icon-tooltip{transform:translateY(0)}
+:is(.view-deck-page,.roll-page) .view-cost{left:0;right:0;bottom:0;border-radius:0 0 5px 5px}
+:is(.view-deck-page,.roll-page) .view-cost img[src$="-unique.png"]{width:32px;height:32px}
+:is(.view-deck-page,.roll-page) .pregame-card-cost img[src$="-unique.png"]{width:32px;height:32px}
+:is(.view-deck-page,.roll-page) .pregame-card-info{background:var(--ip-surface);border-bottom:1px solid var(--ip-edge)}
+:is(.view-deck-page,.roll-page) .info-panel .pregame-card-heading,:is(.view-deck-page,.roll-page) .info-panel .pregame-card-stats{background:var(--ip-surface);border-color:var(--ip-edge)}
+:is(.view-deck-page,.roll-page) .info-panel .battle-icon-tooltip{left:auto;right:0;transform:translateY(4px)}
+:is(.view-deck-page,.roll-page) .info-panel .battle-icon-control:hover .battle-icon-tooltip,:is(.view-deck-page,.roll-page) .info-panel .battle-icon-control:focus-visible .battle-icon-tooltip{transform:translateY(0)}
 
-.view-deck-page :is(.view-cost,.pregame-card-cost) img[src$="-unique.png"]{filter:drop-shadow(0 0 1px var(--ip-title,#efd7aa))}
+:is(.view-deck-page,.roll-page) :is(.view-cost,.pregame-card-cost) img[src$="-unique.png"]{filter:drop-shadow(0 0 1px var(--ip-title,#efd7aa))}
 
 /* Review variant: the catalog rests directly on the existing screen background. */
-.view-deck-page .pregame-main .screen-prepare-view{background:none;border:0;box-shadow:none}
-.view-deck-page .battle-mini-zoom:has(>.view-art){border-radius:6px;box-shadow:0 12px 30px #000b}
-.view-deck-page .info-panel [data-open-pause] .battle-icon-tooltip{left:50%;right:auto;transform:translate(-50%,4px)}
-.view-deck-page .info-panel [data-open-pause]:hover .battle-icon-tooltip,.view-deck-page .info-panel [data-open-pause]:focus-visible .battle-icon-tooltip{transform:translate(-50%,0)}
-.view-deck-page .info-panel .pregame-card-heading{background:color-mix(in srgb,var(--ip-surface) 78%,var(--ip-title) 22%)}
+:is(.view-deck-page,.roll-page) .pregame-main .screen-prepare-view{background:none;border:0;box-shadow:none}
+:is(.view-deck-page,.roll-page) .battle-mini-zoom:has(>.view-art){border-radius:6px;box-shadow:0 12px 30px #000b}
+:is(.view-deck-page,.roll-page) .info-panel [data-open-pause] .battle-icon-tooltip{left:50%;right:auto;transform:translate(-50%,4px)}
+:is(.view-deck-page,.roll-page) .info-panel [data-open-pause]:hover .battle-icon-tooltip,:is(.view-deck-page,.roll-page) .info-panel [data-open-pause]:focus-visible .battle-icon-tooltip{transform:translate(-50%,0)}
+:is(.view-deck-page,.roll-page) .info-panel .pregame-card-heading{background:color-mix(in srgb,var(--ip-surface) 78%,var(--ip-title) 22%)}
 
-.view-deck-page .view-thumbnail:not(.prepare-card--selected){border-color:#607b69}
-.view-deck-page .pregame-view-pagination[data-single-page="true"]{visibility:hidden}
-.view-deck-page [data-view-card-actions][hidden],.view-deck-page [data-view-secondary] :is([data-view-card-actions],.pregame-panel-summary){display:none!important}
-.view-deck-page .info-panel .battle-secondary-view .game-chat-panel{padding:0;gap:0}
+:is(.view-deck-page,.roll-page) .view-thumbnail:not(.prepare-card--selected){border-color:#607b69}
+:is(.view-deck-page,.roll-page) .pregame-view-pagination[data-single-page="true"]{visibility:hidden}
+:is(.view-deck-page,.roll-page) [data-view-card-actions][hidden],:is(.view-deck-page,.roll-page) [data-view-secondary] :is([data-view-card-actions],.pregame-panel-summary){display:none!important}
+:is(.view-deck-page,.roll-page) .info-panel .battle-secondary-view .game-chat-panel{padding:0;gap:0}
