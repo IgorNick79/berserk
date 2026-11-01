@@ -21,7 +21,7 @@
 
 <script src="/assets/js/panel-secondary-view.js?v=1" defer></script>
 <script src="/assets/js/battle-match-pause.js?v=1" defer></script>
-<script src="/assets/js/view-deck.js?v=6" defer></script>
+<script src="/assets/js/view-deck.js?v=7" defer></script>
 
 <script src="/assets/js/card-image-popup.js?v=2" defer></script>
 <script src="/assets/js/battle-mini-card.js?v=12" defer></script>

@@ -3,6 +3,7 @@
     if (!document.body.matches('.view-deck-page,.roll-page') || window.berserkViewReady) return;
     window.berserkViewReady = true;
     const isRoll = document.body.classList.contains('roll-page');
+    if (isRoll) document.addEventListener('contextmenu', event=>event.preventDefault());
     const config = isRoll ? window.berserkRollTransport : window.berserkViewTransport;
     if (!config) return;
     // Keep loaded styles connected while snapshots replace the stage markup.

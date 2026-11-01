@@ -28,8 +28,8 @@ final class SideScreen
                 . '<input type="hidden" name="game" value="' . (int) $state->gameId . '">'
                 . '<input type="hidden" name="cmd" value="choose_side">'
                 . '<fieldset><legend>Выбери, кто ходит первым:</legend>'
-                . '<label><input type="radio" name="side" value="1" checked> Ходить первым (сторона I)</label>'
-                . '<label><input type="radio" name="side" value="2"> Ходить вторым (сторона II)</label>'
+                . '<label class="choice-radio"><input type="radio" name="side" value="1" checked> Ходить первым (сторона I)</label>'
+                . '<label class="choice-radio"><input type="radio" name="side" value="2"> Ходить вторым (сторона II)</label>'
                 . '</fieldset></form>';
             $footerHtml = '<button type="submit" class="button" form="pregame-side-choice">Продолжить</button>';
         } else {
