@@ -8,6 +8,26 @@
     var model = {version:Number(transport.dataset.version),revision:0,selected:Number(root.querySelector('[data-battle-drag-state]')?.dataset.dragSelected || 0),mode:'place',busy:false};
     var drag = null, last = null, queuedSelection = null, commandQueued = false;
     var commands = ['place_card', 'unplace_card', 'confirm_place', 'pathfinder_choice'];
+    var reservePage = 0;
+    function renderReserve() {
+        var cards = Array.from(root.querySelectorAll('[data-place-reserve] > .card-link'));
+        var navigation = root.querySelector('[data-place-pagination]');
+        if (!navigation) return;
+        var pages = Math.max(1, Math.ceil(cards.length / 3));
+        reservePage = Math.min(reservePage, pages - 1);
+        cards.forEach(function (card, index) { card.hidden = Math.floor(index / 3) !== reservePage; });
+        navigation.replaceChildren();
+        navigation.dataset.singlePage = String(pages === 1);
+        for (var page = 0; page < pages; page++) {
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.dataset.placePage = String(page);
+            button.setAttribute('aria-label', 'Страница ' + (page + 1));
+            if (page === reservePage) button.setAttribute('aria-current', 'page');
+            var chip = document.createElement('span'); chip.setAttribute('aria-hidden', 'true'); button.append(chip);
+            navigation.append(button);
+        }
+    }
     function readUrl(value) {
         var url = new URL(value, location.href);
         ['cmd', 'card_id', 'row', 'col', 'ajax', 'prepare_version', 'prepare_token', 'csrf', 'first', 'second'].forEach(function (key) { url.searchParams.delete(key); });
@@ -90,6 +110,7 @@
             next.querySelectorAll('link[rel="stylesheet"],script[src]').forEach(function(n){n.remove();});
             root.replaceChildren.apply(root, Array.from(next.childNodes).map(function (node) { return node.cloneNode(true); }));
             model.version=version;model.selected=selected;
+            renderReserve();
             transport.dataset.version=String(version);
             if(window.BerserkPlaceScreen.afterSwap)window.BerserkPlaceScreen.afterSwap(last);
             if(drag)drag.afterSnapshot();
@@ -134,6 +155,8 @@
     });
     root.addEventListener('click', function (event) {
         if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        var page = event.target.closest('[data-place-page]');
+        if (page) { event.preventDefault(); reservePage = Number(page.dataset.placePage); renderReserve(); return; }
         if(event.target.closest('[data-view-close]')){event.preventDefault();model.selected=0;model.revision++;var closeUrl=readUrl(location.href);closeUrl.searchParams.set('card','0');load(closeUrl,false);return;}
         var link = event.target.closest('a[href]');
         if (!link || !root.contains(link) || link.target || link.hasAttribute('download')) return;
@@ -151,5 +174,6 @@
         if (event.persisted && !busy && isWaiting()) load(readUrl(location.href), false);
     });
     history.replaceState(null, '', readUrl(location.href).href);
+    renderReserve();
     schedule();
 })();

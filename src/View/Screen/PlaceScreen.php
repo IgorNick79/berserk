@@ -166,7 +166,7 @@ final class PlaceScreen
             $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
         } elseif ($squadCount === 0) {
             $confirmUrl  = "{$baseUrl}&cmd=confirm_place";
-            $confirmHtml = '<a class="button" href="' . $confirmUrl . '">Подтвердить расстановку</a>';
+            $confirmHtml = '<a class="button" href="' . $confirmUrl . '">Подтвердить</a>';
         } else {
             $confirmHtml = '<p class="wait">Осталось расставить: ' . $squadCount . '</p>';
         }
@@ -194,11 +194,9 @@ final class PlaceScreen
         $cardActionsHtml = $ui->actions($cardActions);
         if ($cardActionsHtml !== '') $cardActionsHtml = '<div data-place-return>' . str_replace('<a ', '<a data-place-return-link ', $cardActionsHtml) . '</div>';
         $showCard = $previewHtml !== '';
-        $panelHtml = $showCard
-            ? $previewHtml . '<div class="pregame-card-actions pregame-place-actions">' . $cardActionsHtml
-                . '<a class="button pregame-place-close" data-place-close href="' . $baseUrl . '&card=0">Закрыть</a></div>'
-            : '<section class="pregame-place-list"><h3 class="pregame-card-heading panel-card-heading">Нерасставленные карты</h3><div class="squad-cards" data-place-reserve>' . $squadHtml . '</div>'
-                . ($squadCount === 0 ? '<p class="pregame-empty">Все карты расставлены.</p>' : '') . '</section>';
+        $panelHtml = $previewHtml . ($cardActionsHtml !== '' ? '<div class="pregame-card-actions pregame-place-actions">' . $cardActionsHtml . '</div>' : '');
+        $reserveHtml = '<section class="pregame-place-list"><h3 class="pregame-card-heading panel-card-heading">Нерасставленные карты</h3><div class="squad-cards" data-place-reserve>' . $squadHtml . '</div><nav class="pregame-view-pagination" data-place-pagination aria-label="Страницы нерасставленных карт"></nav></section>';
+
 
         return [
             'screen' => 'place',
@@ -207,7 +205,8 @@ final class PlaceScreen
                 'squad_html'   => $squadHtml,
                 'squad_count'  => $squadCount,
                 'preview_html' => '',
-                'panel_html'   => $panelHtml . ($showCard ? '<section class="pregame-place-list"><h3 class="pregame-card-heading panel-card-heading">Нерасставленные карты</h3><div class="squad-cards" data-place-reserve>' . $squadHtml . '</div></section>' : ''),
+                'panel_html'   => $panelHtml !== '' ? $panelHtml : '<div class="place-preview"></div>',
+                'panel_summary_html' => $reserveHtml,
                 'panel_actions_html' => \Berserk\View\Ui\PreGameLayout::actionsFooter($confirmHtml),
                 'own_playmat' => \Berserk\Core\PlaymatCatalog::playerUrl($me),
                 'place_selected' => $selectedCardId,

@@ -100,7 +100,12 @@ body=r'''
         check('Pathfinder re-place',action(a,'place_card',{'card_id':host_ids[0],'row':2,'col':2})[0] in [200,303])
         check('finish Pathfinder via existing confirmation',action(a,'confirm_place')[0] in [200,303] and state(game)['status']=='battle')
 
-        browser_game=match();browser_fixture=copy.deepcopy(fixture);browser_fixture['game_id']=browser_game;set_fixture(browser_game,browser_fixture);sql(f"USE LAB_DB;UPDATE games SET status='place' WHERE ind={browser_game};")
+        browser_game=match();browser_fixture=copy.deepcopy(fixture);browser_fixture['game_id']=browser_game
+        browser_fixture['cards']={}
+        for owner in ['host','player']:
+            for card in [c for c in cards if c['owner']==owner][::2][:6]:
+                card=copy.deepcopy(card);card['zone']='squad';browser_fixture['cards'][str(card['instance_id'])]=card
+        set_fixture(browser_game,browser_fixture);sql(f"USE LAB_DB;UPDATE games SET status='place' WHERE ind={browser_game};")
         pf_game=match();pf_choice['game_id']=pf_game;set_fixture(pf_game,pf_choice);sql(f"USE LAB_DB;UPDATE games SET status='place' WHERE ind={pf_game};")
         env=dict(os.environ,UNIFIED_MENU_URL='http://127.0.0.1:33572',UNIFIED_MENU_GAME=str(browser_game),PLACE_PATHFINDER_GAME=str(pf_game),UNIFIED_MENU_EVIDENCE=str(out),PLAYWRIGHT_MODULE=args.playwright,BROWSER_EXECUTABLE=args.browser)
         run=subprocess.run([args.node,str(ROOT/'tools/test_place_http_browser.cjs')],env=env,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=300)
