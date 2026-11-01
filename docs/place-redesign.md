@@ -1,0 +1,59 @@
+# Place: интеграция боевого интерфейса
+
+Статус: визуальные правки приняты, публикация в `codex/view-deck-ui` разрешена пользователем. Deploy и миграции рабочей БД не выполнялись.
+
+## Компоненты и границы изменения
+
+- Поле использует `battle-shell`, `battle-main`, `battle-left`, `battle-layout`, `battle-field`, боевые строки/координаты, коврик из `PlaymatCatalog`, миниатюры `LiveBattleCard` и их существующие CSS/hover/popup.
+- Неизвестные ряды не содержат данных карт и исключены из компоновки через `display:none`. Обычный Place показывает только 5×3, с прежним автоматическим вертикальным центрированием боевого контейнера. Раскрытые ряды Следопыта остаются в той же боевой сетке с прежними проверками видимости.
+- `battle-drag.js` получает явный `bridge.context = place`; обработчики жестов общие. В Place допустимы только существующие ссылки `place_card`/`unplace_card`. Боевой контекст по умолчанию остаётся `strike`.
+- POST выполняется прежним маршрутом `index.php?game=…` с CSRF и `prepare_version`. Перестановка сохраняет порядок «снять, затем поставить». До ответа сервера карта остаётся в исходной зоне. При потере ответа выполняется чтение состояния без повторной отправки команды.
+- Chat и MatchPause используют общий UI. Для Place разрешён существующий серверный контракт MatchPause; журналируемый транспорт расширен только для управления паузой. При отсутствии основной кнопки общий компонент паузы показывает разрешённую сервером кнопку готовности в блоке решений.
+- Маска паузы вынесена из Battle в общий шаблон без изменения содержимого. Engine, PrepareProcessor, правила расстановки, Следопыт и формат команд не изменены.
+- Мобильное поле сохраняет размеры боевых клеток и доступно через горизонтальную прокрутку внутри поля; панель располагается ниже.
+- Подзаголовок нерасставленных карт идёт на всю ширину InfoPanel без внешних отступов; отступы самих миниатюр сохранены.
+
+## Файлы реализации
+
+- `src/Core/MatchPause.php`
+- `src/View/Screen/PlaceScreen.php`, `src/View/Screen/BattleScreen.php`
+- `src/View/Ui/PreGameLayout.php`
+- `templates/screen/place.tpl`, `templates/includes/match_pause_mask.tpl`, `templates/screen/battle.tpl`
+- `www/assets/css/place.css`, `www/assets/css/pregame.css`
+- `www/assets/js/battle-drag.js`, `www/assets/js/pregame-place.js`
+- `www/assets/js/battle-match-pause.js`, `www/assets/js/view-deck.js`, `www/assets/js/game-transport.js`
+- `www/index.php`
+- Обновления версий общих JS в `templates/screen/{view,deal,turn,side}.tpl`.
+
+## Проверки
+
+Изолированный стенд создаёт отдельную MariaDB и PHP HTTP-серверы; рабочая БД не используется. Браузер — настоящий Yandex/Chromium, тестовые аккаунты стенда. Локально доступны два предоставленных изображения карт; тестовые карточки используют их для проверки миниатюр.
+
+- `tools/test_place_http.py` и `tools/test_place_http_browser.cjs`: 46 HTTP/БД + 27 браузерных проверок — пройдены после финального удаления пустых рядов. Реальные POST, запреты чужой/занятой/недопустимой клетки, уровни разрешённых клеток, снятие и повторная установка, устаревшая версия, гонка паузы с размещением, повтор и восстановление команды паузы, запрет действий во время паузы, Следопыт, переход в Battle. Дополнительно проверено отсутствие пустой верхней области и вертикальное центрирование обычного Place.
+- Браузер дополнительно проверяет отмену drag, отсутствие оптимистического перемещения при задержанном ответе, потерю ответа POST без повторения, четыре темы, общий чат во время паузы и сохранение истории в Battle, обе перспективы игроков, размеры и абсолютные координаты миниатюр до/после перехода, мобильные 390/360 px.
+- `tools/test_battle_drag_browser.cjs`: 31 сценарий — пройден.
+- `tools/test_place_drag_bridge.cjs`: 4 клиентских сценария — пройдены; это отдельные DOM-проверки, не замена HTTP/БД.
+- PHP: Pathfinder — 381; MatchPause — 119; preparation Engine boundary, combat continuation, prepare dice, Roll presentation, drag contracts, TurnTimer, wizard continuation/Recorder — пройдены.
+- View: 19 HTTP/БД + 64 браузерных проверки — пройдены.
+- Roll: 29 HTTP/БД + 24 браузерных проверки — пройдены.
+- Deal: 20 HTTP/БД + 11 браузерных проверок — пройдены.
+- Battle snapshot renderer — пройден. PHP lint изменённых PHP, JS syntax, Python syntax и `git diff --check` — пройдены.
+
+- Общий `BERSERK_ROOM_REVIEW=1 python tools/test_unified_menu_http.py`: 227 проверок — пройдены, включая общий контур настроек/меню, комнаты, мастера, боевого чата и паузы; exit code 0.
+
+Все указанные успешные прогоны выполнены 2026-11-01. Измерение 1600×900: клетки 110×100, миниатюры 102×92. После финального удаления пустых рядов абсолютная вертикальная позиция закономерно меняется при переходе к полному полю Battle; проверяются неизменность размеров клеток/миниатюр, горизонтальных координат относительно поля и взаимного расположения карт.
+
+## Ограничения и обязательные незавершённые регрессии
+
+- Полная HTTP-регрессия боевого таймера остаётся обязательной: `TURN_TIMER_TEST_URL` для её специального стенда не настроен. Обычный unit-тест таймера не заменяет эту проверку.
+- `tools/test_match_pause_ui.php` падает на прежней проверке `Surrender accessible, log disabled`; точно такой же сбой воспроизведён на чистом HEAD в отдельной копии `tmp/place-head-check`. Тест ожидает старое расположение действий в панели. В рамках Place этот тест и архитектура меню не изменялись.
+- `test_match_pause_countdown.cjs` и `test_match_pause_sound.cjs` также не проходят на чистом HEAD: старый DOM-harness не предоставляет `root.dataset`, используемый общим компонентом. Эти проверки не объявляются пройденными. `test_match_pause_html_resign.cjs` требует отдельный disposable loopback-контекст и отдельно не пройден.
+- `test_battle_coordinates_ui.php` (`Card selection link lost`) и `test_mini_card_stage4.php` (`Only active effects have a tooltip trigger`) дают те же ошибки на чистом HEAD. Они перечислены отдельно от успешно пройденного нового измерения геометрии и реальных browser drag-сценариев; их результаты не объявляются успешными.
+- Guarded `test_match_pause_fault.php` отдельно не запускался успешно: без disposable-контекста он штатно запрещает выполнение. Не считать его отдельным пройденным прогоном.
+- Визуальная приёмка пользователем обязательна; production не проверялся.
+
+## Скриншоты
+
+Реальные снимки изолированного HTTP-стенда: `docs/evidence/place/` — `partial.png`, `full.png`, `allowed-cells.png`, `drag-target.png`, `pause-picker.png`, `pause-active.png`, `chat.png`, `battle-after.png`, `battle-chat.png`, `pathfinder-extra-rows.png`, `pathfinder-rearranging.png`, `mobile-390.png`, `mobile-360.png`, `mobile-chat-390.png`, `mobile-chat-360.png`.
+
+Измерения геометрии: `geometry-before.json`, `geometry-after.json`; результаты сценариев: `http-checks.json`, `browser-checks.json`.

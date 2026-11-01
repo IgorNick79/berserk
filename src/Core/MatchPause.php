@@ -15,7 +15,7 @@ final class MatchPause
 
     public static function supportsStage(string $stage): bool
     {
-        return in_array($stage, ['battle', 'view', 'turn', 'side', 'deal'], true);
+        return in_array($stage, ['battle', 'view', 'turn', 'side', 'deal', 'place'], true);
     }
 
     public static function isCommand(string $type): bool { return in_array($type, self::COMMANDS, true); }

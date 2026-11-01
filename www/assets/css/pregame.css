@@ -11,7 +11,7 @@ body.pregame-page {
 }
 .pregame-page > .toolbar { flex: 0 0 auto; }
 .pregame-page > .screen { flex: 1 1 0; min-height: 0; min-width: 0; max-width: none; margin: 0; }
-.pregame-layout, .pregame-layout * { box-sizing: border-box; }
+.pregame-layout:where(:not(.battle-shell)), .pregame-layout:where(:not(.battle-shell)) * { box-sizing: border-box; }
 .pregame-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 440px;
@@ -223,8 +223,8 @@ body.pregame-page {
 .pregame-deal-tile > .prepare-card-link { min-height: 0; }
 
 /* Placement uses the battle playmat and viewer-relative coordinate convention. */
-.pregame-main:has([data-place-screen]) { display: flex; background: transparent; }
-.pregame-main .screen-prepare-place { display: flex; flex-direction: column; align-items: safe center; justify-content: safe center; width: 100%; min-width: 0; min-height: 0; }
+.pregame-main:has([data-place-screen]):where(:not(.battle-main)) { display: flex; background: transparent; }
+.pregame-main .screen-prepare-place:where(:not(.battle-left)) { display: flex; flex-direction: column; align-items: safe center; justify-content: safe center; width: 100%; min-width: 0; min-height: 0; }
 .screen-prepare-place .flash:empty { display: none; }
 .pregame-place-field.place-field { --battle-cell-size: 112px; width: max-content; max-width: none; flex: 0 0 auto; margin: 0; padding: 28px 26px; background: url("/assets/images/battle/playmat_default.webp") center / cover no-repeat; border: 1px solid #607b69; border-radius: 12px; box-shadow: 0 10px 36px #0009; }
 .pregame-place-grid { padding: 14px 14px 14px 48px; background: rgba(11, 25, 20, .32); border-radius: 8px; }

@@ -2,15 +2,16 @@
     'use strict';
     if (!document.body.matches('.view-deck-page,.roll-page') || window.berserkViewReady) return;
     window.berserkViewReady = true;
+    const isPlace = document.body.classList.contains('place-page');
     const isDeal = document.body.classList.contains('deal-page');
-    const isRoll = document.body.classList.contains('roll-page');
-    if (isRoll || isDeal) document.addEventListener('contextmenu', event=>event.preventDefault());
-    const config = (isRoll || isDeal) ? window.berserkRollTransport : window.berserkViewTransport;
+    const isRoll = !isPlace && document.body.classList.contains('roll-page');
+    if (isRoll || isDeal || isPlace) document.addEventListener('contextmenu', event=>event.preventDefault());
+    const config = (isRoll || isDeal || isPlace) ? window.berserkRollTransport : window.berserkViewTransport;
     if (!config) return;
     // Keep loaded styles connected while snapshots replace the stage markup.
     document.querySelectorAll('.pregame-layout link[rel="stylesheet"]').forEach(node=>document.head.append(node));
     let version = Number(config.version), busy = false, refreshing = false, selection = 0, pause = null, forceNext = false;
-    const key = ((isRoll || isDeal) ? 'berserk-roll-pause:' : 'berserk-view-command:') + config.game;
+    const key = ((isRoll || isDeal || isPlace) ? 'berserk-roll-pause:' : 'berserk-view-command:') + config.game;
     let pending = null;
     try { pending = JSON.parse(sessionStorage.getItem(key)); } catch (_) {}
     const url = action => 'index.php?game=' + encodeURIComponent(config.game) + '&ajax=' + action;
@@ -24,6 +25,8 @@
         } finally { clearTimeout(timer); }
     }
     async function refresh(force) {
+        if(isPlace){const state=await window.BerserkPlaceScreen.read();if(state){version=state.version;pause=state.pause;renderPause();}return;}
+
         if (refreshing) { forceNext = forceNext || force; return; }
         refreshing = true;
         const refreshAbort=new AbortController(),refreshTimeout=setTimeout(()=>refreshAbort.abort(),10000);
@@ -34,7 +37,7 @@
             const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
             const script = doc.querySelector('script[data-stage][data-version][data-csrf]');
             if (!script) throw Error('Не удалось загрузить состояние');
-            if ((isRoll || isDeal) ? !(isDeal ? ['deal'] : ['turn','side']).includes(script.dataset.stage) : script.dataset.stage !== 'view') { location.assign(address); return; }
+            if ((isRoll || isDeal || isPlace) ? !(isDeal ? ['deal'] : ['turn','side']).includes(script.dataset.stage) : script.dataset.stage !== 'view') { location.assign(address); return; }
             if (epoch !== selection) return;
             const nextVersion = Number(script.dataset.version);
             if (force || nextVersion !== version) {
@@ -54,7 +57,7 @@
                 if(secondary)dock.remove();
                 current.replaceWith(next); version = nextVersion;
                 const anchor = next.querySelector('[data-chat-anchor]'); if (anchor && toggle) anchor.append(toggle);
-                if (isRoll || isDeal) config.setVersion(version,script.dataset.stage);
+                if (isRoll || isDeal || isPlace) config.setVersion(version,script.dataset.stage);
                 if (!isRoll) window.berserkInitViewPager();
                 next.querySelector('.pregame-main').scrollTop=mainScroll;next.querySelector('.pregame-panel-content').scrollTop=panelScroll;window.scrollTo(0,scrollY);
             }
@@ -66,6 +69,11 @@
     root.dataset.cardPopupRoot='';root.dataset.panelDockRoot='';root.dataset.pauseContext='preparation';
     const dock=document.createElement('div');dock.className='battle-secondary-view game-chat';dock.hidden=true;
     let secondary=null;
+    if(isPlace){
+        window.BerserkPlaceScreen.beforeSwap=function(){const t=document.querySelector('[data-chat-toggle]');if(t)document.querySelector('[data-game-chat]').append(t);dock.remove();};
+        window.BerserkPlaceScreen.afterSwap=function(state){version=state.version;pause=state.pause;config.setVersion(version,'place');const t=document.querySelector('[data-chat-toggle]'),a=root.querySelector('[data-chat-anchor]');if(a&&t)a.append(t);renderPause();};
+    }
+
     root.secondaryPanel=function(panel){secondary=window.BerserkPanelDock.open(root,dock,secondary,panel);root.toggleAttribute("data-view-secondary",!!secondary);window.BerserkPanelDock.mount(root.querySelector('.info-panel-content'),dock,secondary);root.querySelectorAll('[data-view-card-actions]').forEach(node=>node.hidden=!!secondary);};
     const pauseUi=window.BerserkMatchPause.create(root,version,params=>{const type=params.get('cmd');params.delete('cmd');command(type,Object.fromEntries(params));},()=>busy||!!pending,()=>refresh(true).catch(error=>notice(error.message)));
     function renderPause() {
@@ -76,7 +84,7 @@
     }
     async function settle() {
         if (!pending || busy) return;
-        busy=true; renderPause(); if (!isDeal) notice('Проверяем результат…');
+        busy=true; renderPause(); if (!isDeal && !isPlace) notice('Проверяем результат…');
         try {
             let data = await request(url('battle_command_status') + '&command_id=' + encodeURIComponent(pending.command_id));
             if (!data.command_status || data.command_status === 'unknown') data = await request(url('battle_command'), {method:'POST',body:new URLSearchParams(pending)});
@@ -101,6 +109,7 @@
         command(type,{ukid:params.get('ukid')||''});return true;
     };
     document.addEventListener('click', async event => {
+        if(isPlace)return;
         const card = event.target.closest('.view-deck-page .prepare-card-link');
         const close = event.target.closest('[data-view-close]');
         const action = event.target.closest('[data-view-card-actions] a,.pregame-view-confirm a');

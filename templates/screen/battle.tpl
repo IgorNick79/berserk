@@ -16,7 +16,7 @@
             </div>
             <div data-battle-fragment="pile_reveal_html">{{pile_reveal_html}}</div>
         </div>
-        <div class="battle-pause-mask" data-match-pause-mask {{pause_mask_hidden}}><div><span class="battle-pause-symbol" aria-hidden="true"><img src="/assets/images/battle/pause_160.png" width="70" height="70" alt=""></span><h2>Матч приостановлен</h2><p>Управление паузой — в панели матча.</p></div></div>
+        {{match_pause_mask_html}}
     </div>
     <aside class="info-panel" data-battle-fragment="info_panel_html" aria-label="Сражение и действия">{{info_panel_html}}</aside>
 </div>
@@ -27,6 +27,6 @@
 <script src="/assets/js/card-image-popup.js?v=2" defer></script>
 
 <script src="/assets/js/battle-mini-card.js?v=12" defer></script>
-<script src="/assets/js/battle-drag.js?v=1" defer></script>
+<script src="/assets/js/battle-drag.js?v=2" defer></script>
 
 <script src="/assets/js/battle-notices.js?v=1" defer></script>

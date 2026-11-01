@@ -1467,7 +1467,7 @@ $page = $tpl->parse('page.tpl', [
     'role'    => $role,
     'screen'  => $screenHtml,
     'scripts' => $scriptsHtml,
-    'page_class' => $screenName === 'deal' ? 'pregame-page view-deck-page deal-page' : (in_array($screenName,['turn','side'],true) ? 'pregame-page roll-page' : ($screenName === 'view' ? 'pregame-page view-deck-page' : ($screenName === 'battle' ? 'battle-page' : ($screenName === 'game_over' ? 'battle-page result-page' : ($isPreGame ? 'pregame-page' : ''))))),
+    'page_class' => $screenName === 'place' ? 'pregame-page battle-page place-page roll-page' : ($screenName === 'deal' ? 'pregame-page view-deck-page deal-page' : (in_array($screenName,['turn','side'],true) ? 'pregame-page roll-page' : ($screenName === 'view' ? 'pregame-page view-deck-page' : ($screenName === 'battle' ? 'battle-page' : ($screenName === 'game_over' ? 'battle-page result-page' : ($isPreGame ? 'pregame-page' : '')))))),
     'page_styles' => in_array($screenName, ['battle','game_over'], true) ? '<link rel="stylesheet" href="/assets/css/battle-chat.css?v=6">' : ($isPreGame ? '<link rel="stylesheet" href="/assets/css/pregame.css?v=' . $preGameResourceKey . '">' : ''),
     // PreGame opts into a stable CSS version; battle keeps its existing rkey policy.
     'rkey' => $preGameResourceKey,
@@ -1476,5 +1476,5 @@ $page = $tpl->parse('page.tpl', [
 \Berserk\Auth\GameTransport::$version = $state->persistenceVersion ?? 0;
 \Berserk\Auth\GameTransport::$stage = $state->status;
 
-$transportScript = '<script src="/assets/js/game-transport.js?v=5" data-game="'.$state->gameId.'" data-stage="'.htmlspecialchars($state->status,ENT_QUOTES).'" data-version="'.\Berserk\Auth\GameTransport::$version.'" data-csrf="'.htmlspecialchars(\Berserk\Auth\GameTransport::$csrf,ENT_QUOTES).'"></script>';
+$transportScript = '<script src="/assets/js/game-transport.js?v=6" data-game="'.$state->gameId.'" data-stage="'.htmlspecialchars($state->status,ENT_QUOTES).'" data-version="'.\Berserk\Auth\GameTransport::$version.'" data-csrf="'.htmlspecialchars(\Berserk\Auth\GameTransport::$csrf,ENT_QUOTES).'"></script>';
 echo \Berserk\Auth\GameTransport::html(str_replace('</head>',$transportScript.'</head>',$page));

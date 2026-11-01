@@ -5,11 +5,12 @@
         var gesture = null, ghost = null, target = null, suppression = null, swallow = false;
         var blocked = false, barrier = false, accepting = false;
         var renderedVersion = bridge.state().version;
+        var context = bridge.context || 'strike';
         var cardSelector = '[data-drag-card]';
         function metadata() { return root.querySelector('[data-battle-drag-state]'); }
         function available() {
             var s = bridge.state(), m = metadata();
-            return !blocked && !barrier && !s.busy && s.version === renderedVersion && s.mode === 'strike'
+            return !blocked && !barrier && !s.busy && s.version === renderedVersion && s.mode === context && (context === 'strike' || context === 'place')
                 && !root.hasAttribute('data-match-paused') && m && m.dataset.dragEnabled === '1';
         }
         function refresh() { root.toggleAttribute('data-battle-drag-ready', !!available()); }
@@ -38,6 +39,18 @@
             if (!gesture || !gesture.ready || !validGesture()) return null;
             var node = document.elementFromPoint(x, y);
             if (!node || !root.contains(node)) return null;
+            if (context === 'place') {
+                var placeArea = node.closest('.field-cell,[data-place-return]');
+                if (!placeArea || placeArea.querySelector(cardSelector)) return null;
+                var placeLink = placeArea.querySelector('a.cell-link[href],a[data-place-return-link][href]');
+                if (!placeLink) return null;
+                var placeUrl = new URL(placeLink.href, location.href), params = placeUrl.searchParams;
+                if (placeUrl.origin !== location.origin || placeUrl.pathname !== location.pathname
+                    || params.has('ajax') || params.get('card_id') !== String(gesture.id)) return null;
+                var expected = placeArea.hasAttribute('data-place-return') ? 'unplace_card' : 'place_card';
+                if (params.get('cmd') !== expected) return null;
+                return {url:placeUrl, area:placeArea};
+            }
             var card = cardAt(node), area, link;
             if (card) {
                 if (card.dataset.dragOwner !== 'enemy') return null;
@@ -80,7 +93,7 @@
             if (e.target.closest('.mini-indicator,[data-mini-hint],button,input,select,textarea,[role="button"]')) return;
             var card = cardAt(e.target);
             if (!card || card.dataset.dragSource !== '1' || card.dataset.dragOwner !== 'own'
-                || !card.closest('.battle-field,.fly-zone-side')) return;
+                || !card.closest(context === 'place' ? '.battle-field,.fly-zone-side,[data-place-reserve]' : '.battle-field,.fly-zone-side')) return;
             gesture = { id: Number(card.dataset.dragCard), card: card, pointer: e.pointerId,
                 x: e.clientX, y: e.clientY, active: false };
         });
@@ -189,7 +202,7 @@
                 if (!gesture) return;
                 accepting = !!(gesture.active && gesture.waiting && revision === gesture.revision
                     && Number(data.sync_version) === gesture.version && data.ui
-                    && Number(data.ui.sel) === gesture.id && data.ui.mode === 'strike');
+                    && Number(data.ui.sel) === gesture.id && data.ui.mode === context);
                 if (!accepting) cancel();
             },
             afterSnapshot: function () {

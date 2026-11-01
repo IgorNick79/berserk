@@ -68,7 +68,7 @@ final class PlaceScreen
 
         // Разрешённые клетки
         $allowedCells = [];
-        if ($selectedCard && $selectedCard->zone === CardInstance::ZONE_SQUAD && !$me->isConfirmed('place')) {
+        if ($selectedCard && $selectedCard->zone === CardInstance::ZONE_SQUAD && !$me->isConfirmed('place') && \Berserk\Core\PathfinderProcessor::canEdit($state,$playerKey)) {
             $levels   = ZoneManager::cellLevels($playerKey);
             $occupied = [];
             foreach ($state->cards as $card) {
@@ -88,49 +88,34 @@ final class PlaceScreen
         }
 
         // Рендер поля
-        $columnsHtml = '<div class="pregame-place-columns" aria-label="Столбцы">';
+        $columnsHtml = '<div class="battle-columns" aria-label="Столбцы">';
         foreach ($colOrder as $col) $columnsHtml .= '<span>' . BattlefieldPosition::display($rowOrder[0], $col, $playerKey)['col'] . '</span>';
         $columnsHtml .= '</div>';
         $fieldHtml = $columnsHtml;
-        foreach ($rowOrder as $r) {
+
+        foreach ($isHost ? range(6,1) : range(1,6) as $r) {
+            if (!in_array($r,$rowOrder,true)) {
+                $fieldHtml .= '<div class="field-row battle-numbered-row place-undisclosed-row" aria-hidden="true">' . str_repeat('<div class="field-cell"></div>',5) . '</div>';
+                continue;
+            }
             $rowCells = '';
             foreach ($colOrder as $c) {
                 $key         = "{$r}_{$c}";
                 $cellOwner   = ($r <= 3) ? 'host' : 'player';
                 $isMine      = ($cellOwner === $playerKey);
-                $cellClass   = $isMine ? 'own' : 'opp';
+                $cellClass   = '';
                 $cellContent = '';
 
                 if (isset($fieldMap[$key])) {
                     $card = $fieldMap[$key];
-                    $info = $cardsInfo[$card->ukid] ?? null;
-                    if ($info) {
-                        if ($card->owner === $playerKey) {
-                            $cellContent = $ui->card([
-                                'ukid'        => $card->ukid,
-                                'instance_id' => $card->instanceId,
-                                'info'        => $info,
-                                'link'        => "{$baseUrl}&card={$card->instanceId}",
-                                'selected'    => $selectedCardId === $card->instanceId,
-                                'class'       => 'prepare-card-link--field',
-                            ]);
-                            $cellClass  .= ' placed';
-                        } else {
-                            $cellContent = $ui->card([
-                                'ukid'        => $card->ukid,
-                                'instance_id' => $card->instanceId,
-                                'info'        => $info,
-                                'link'        => '#',
-                                'disabled'    => true,
-                                'class'       => 'prepare-card-link--field',
-                            ]);
-                            $cellClass  .= ' enemy';
-                        }
+                    if (isset($cardsInfo[$card->ukid])) {
+                        $cellContent = $this->miniature($state, $card, $playerKey, $cardsInfo[$card->ukid], $baseUrl, $selectedCardId);
+
                     }
                 } elseif ($selectedCardId > 0 && $isMine && isset($allowedCells[$key])) {
                     $placeUrl    = "{$baseUrl}&cmd=place_card&card_id={$selectedCardId}&row={$r}&col={$c}&card={$selectedCardId}";
                     $cellContent = '<a class="cell-link" aria-label="Поставить карту: ' . BattlefieldPosition::label($r, $c, $playerKey) . '" href="' . $placeUrl . '"></a>';
-                    $cellClass  .= ' allowed';
+                    $cellClass  .= ' allowed move-target';
                 } elseif ($isMine) {
                     $cellClass .= ' own-empty';
                 } else {
@@ -144,11 +129,11 @@ final class PlaceScreen
                 ]);
             }
             $position = BattlefieldPosition::display($r, $colOrder[0], $playerKey);
-            $fieldHtml .= '<div class="field-row pregame-place-row"><span class="pregame-place-row-number coords--' . $position['side'] . '" aria-label="' . ($position['side']==='own'?'Свой':'Вражеский') . ' ' . $position['row'] . '-й ряд">'
+            $fieldHtml .= '<div class="field-row battle-numbered-row"><span class="battle-row-number coords--' . $position['side'] . '" aria-label="' . ($position['side']==='own'?'Свой':'Вражеский') . ' ' . $position['row'] . '-й ряд">'
                 . Coords::rowLabel($position['row']) . '</span>' . $rowCells . '</div>';
         }
 
-        $fieldHtml .= $columnsHtml;
+        $fieldHtml .= str_replace('class="battle-columns"', 'class="battle-columns battle-columns-bottom"', $columnsHtml);
 
         // Отряд
         $squadCards = [];
@@ -167,14 +152,7 @@ final class PlaceScreen
             $selUrl = "{$baseUrl}&card={$card->instanceId}";
             $isSel  = ($selectedCardId === $card->instanceId);
 
-            $squadHtml .= $ui->card([
-                'ukid'        => $card->ukid,
-                'instance_id' => $card->instanceId,
-                'info'        => $info,
-                'link'        => $selUrl,
-                'selected'    => $isSel,
-                'class'       => 'prepare-card-link--squad',
-            ]);
+            $squadHtml .= $this->miniature($state, $card, $playerKey, $info, $baseUrl, $selectedCardId);
         }
 
         $squadCount = count($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD));
@@ -212,12 +190,14 @@ final class PlaceScreen
             }
         }
         $previewHtml = $ui->information($previewCard, $cardsInfo);
+        if ($previewCard !== null && $previewHtml !== '') $previewHtml = $ui->withCardControls($previewHtml, $previewCard['ukid']);
         $cardActionsHtml = $ui->actions($cardActions);
+        if ($cardActionsHtml !== '') $cardActionsHtml = '<div data-place-return>' . str_replace('<a ', '<a data-place-return-link ', $cardActionsHtml) . '</div>';
         $showCard = $previewHtml !== '';
         $panelHtml = $showCard
             ? $previewHtml . '<div class="pregame-card-actions pregame-place-actions">' . $cardActionsHtml
                 . '<a class="button pregame-place-close" data-place-close href="' . $baseUrl . '&card=0">Закрыть</a></div>'
-            : '<section class="pregame-place-list"><h3>Нерасставленные карты</h3><div class="squad-cards">' . $squadHtml . '</div>'
+            : '<section class="pregame-place-list"><h3 class="pregame-card-heading panel-card-heading">Нерасставленные карты</h3><div class="squad-cards" data-place-reserve>' . $squadHtml . '</div>'
                 . ($squadCount === 0 ? '<p class="pregame-empty">Все карты расставлены.</p>' : '') . '</section>';
 
         return [
@@ -227,8 +207,11 @@ final class PlaceScreen
                 'squad_html'   => $squadHtml,
                 'squad_count'  => $squadCount,
                 'preview_html' => '',
-                'panel_html'   => $panelHtml,
-                'panel_actions_html' => $confirmHtml,
+                'panel_html'   => $panelHtml . ($showCard ? '<section class="pregame-place-list"><h3 class="pregame-card-heading panel-card-heading">Нерасставленные карты</h3><div class="squad-cards" data-place-reserve>' . $squadHtml . '</div></section>' : ''),
+                'panel_actions_html' => \Berserk\View\Ui\PreGameLayout::actionsFooter($confirmHtml),
+                'own_playmat' => \Berserk\Core\PlaymatCatalog::playerUrl($me),
+                'place_selected' => $selectedCardId,
+                'place_editable' => !$me->isConfirmed('place') && \Berserk\Core\PathfinderProcessor::canEdit($state,$playerKey) ? '1' : '0',
                 'place_view' => $showCard ? 'card' : 'list',
                 'place_waiting' => $me->isConfirmed('place') ? '1' : '0',
                 'card_actions_html' => $cardActionsHtml,
@@ -236,5 +219,15 @@ final class PlaceScreen
                 'message'      => $message ?? '',
             ],
         ];
+    }
+    private function miniature(GameState $state, CardInstance $card, string $viewer, array $info, string $baseUrl, int $selected): string
+    {
+        $own = $card->owner === $viewer;
+        $source = $own && !$state->getPlayer($viewer)->isConfirmed('place') && \Berserk\Core\PathfinderProcessor::canEdit($state,$viewer);
+        $name = htmlspecialchars((string)($info['name'] ?? $card->ukid),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+        $html = \Berserk\View\Ui\LiveBattleCard::render($card,$state,$viewer,false,$name,$card->hp.'/'.$card->hpMax);
+        $html = preg_replace('/^(<\w+)/', '$1 data-drag-card="'.$card->instanceId.'" data-drag-owner="'.($own?'own':'enemy').'" data-drag-source="'.($source?'1':'0').'"', $html,1);
+        if (!$own) return '<span class="card-link">'.$html.'</span>';
+        return '<a class="card-link'.($selected===$card->instanceId?' selected':'').'" data-place-card="'.$card->instanceId.'" href="'.htmlspecialchars($baseUrl.'&card='.$card->instanceId,ENT_QUOTES).'">'.$html.'</a>';
     }
 }

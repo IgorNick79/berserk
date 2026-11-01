@@ -41,13 +41,16 @@ final class PreGameLayout
             $data['panel_summary_html'] = str_replace('</button>', '</span>', $summary);
             $data['panel_actions_html'] = self::actionsFooter($data['panel_actions_html'] ?? '');
         }
+        if ($screen === 'place') $data['match_pause_mask_html'] = $this->tpl->parse('includes/match_pause_mask.tpl', ['pause_mask_hidden'=>'hidden']);
         $content = (string) ($data['panel_html'] ?? '');
         if ($roll) $content = '<header class="pregame-card-heading panel-card-heading"><h3 class="pregame-card-title panel-card-title">Бросок кубиков</h3></header>' . $content;
         $html = $this->render((string) $this->tpl->parse('screen/' . $screen . '.tpl', $data),
             $title, $content, (string) ($data['timer_html'] ?? ''), (string) ($data['panel_actions_html'] ?? ''),
             $content === '' ? 'statistics' : 'card', (string) ($data['panel_phase'] ?? ''), (string) ($data['panel_summary_html'] ?? ''));
-        if (in_array($screen, ['view','deal'], true) || $roll) $html=str_replace(['pregame-info-panel','pregame-panel-content','pregame-panel-footer'], ['pregame-info-panel info-panel','pregame-panel-content info-panel-content','pregame-panel-footer info-panel-footer'], $html);
-        return in_array($screen, ['view','deal'], true) || $roll ? str_replace('class="pregame-layout"', 'class="pregame-layout" data-panel-theme="grimoire"', $html) : $html;
+        if (in_array($screen, ['view','deal','place'], true) || $roll) $html=str_replace(['pregame-info-panel','pregame-panel-content','pregame-panel-footer'], ['pregame-info-panel info-panel','pregame-panel-content info-panel-content','pregame-panel-footer info-panel-footer'], $html);
+        if (in_array($screen, ['view','deal','place'], true) || $roll) $html = str_replace('class="pregame-layout"', 'class="pregame-layout" data-panel-theme="grimoire"', $html);
+        if ($screen === 'place') $html = str_replace(['class="pregame-layout"','class="pregame-main"'], ['class="pregame-layout battle-shell" data-mini-card-design="v2"','class="pregame-main battle-main"'], $html);
+        return $html;
     }
 
     public static function actionsFooter(string $confirmHtml): string

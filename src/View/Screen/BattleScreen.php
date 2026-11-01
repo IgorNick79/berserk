@@ -198,6 +198,7 @@ final class BattleScreen
                 'mini_card_design' => \Berserk\View\Ui\LiveBattleCard::enabled() ? 'v2' : 'legacy',
                 'pause_root_attr' => \Berserk\Core\MatchPause::blocking($state) ? 'data-match-paused="1"' : '',
                 'pause_field_attr' => \Berserk\Core\MatchPause::blocking($state) ? 'inert aria-hidden="true"' : '',
+                'match_pause_mask_html' => $this->tpl->parse('includes/match_pause_mask.tpl', ['pause_mask_hidden'=>\Berserk\Core\MatchPause::blocking($state)?'':'hidden']),
                 'pause_mask_hidden' => \Berserk\Core\MatchPause::blocking($state) ? '' : 'hidden',
                 'debug_menu_html' => \Berserk\Auth\DebugAccess::forPlayer($state, $playerKey)
                     ? '<button type="button" role="menuitem" data-menu-debug>Debug</button>' : '',

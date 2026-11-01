@@ -78,16 +78,18 @@
                     if (remaining === 0) text = "Проверяем завершение паузы на сервере…";
                     section.querySelector("[data-pause-description]").textContent = text;
                     var decisions = section.querySelector(".match-pause-decisions");
-                    var identity = model.mode + ":" + model.request_id + ":" + model.allowed_commands.join(",");
+                    var identity = model.mode + ":" + model.request_id + ":" + model.allowed_commands.join(",") + ":" + model.ready_self + ":" + !!root.querySelector(".info-actions > .button");
                     if (decisions.dataset.identity !== identity) {
                         decisions.replaceChildren(); decisions.dataset.identity = identity;
-                        Object.entries({accept_pause: "Принять", reject_pause: "Отклонить", cancel_pause_request: "Отменить запрос"}).forEach(function (entry) {
+                        var actions={accept_pause: "Принять", reject_pause: "Отклонить", cancel_pause_request: "Отменить запрос"};
+                        if(model.mode === "active" && !root.querySelector(".info-actions > .button")) actions.pause_ready=model.ready_self?"Вы готовы":"Вернулся / Готов";
+                        Object.entries(actions).forEach(function (entry) {
                             if (model.allowed_commands.indexOf(entry[0]) < 0) return;
                             var button = document.createElement("button"); button.type = "button"; button.className = "button";
                             button.dataset.pauseCommand = entry[0]; button.textContent = entry[1]; decisions.appendChild(button);
                         });
                     }
-                    decisions.querySelectorAll("button").forEach(function (node) { node.disabled = busy() || remaining === 0; });
+                    decisions.querySelectorAll("button").forEach(function (node) { node.disabled = busy() || remaining === 0 || (node.dataset.pauseCommand === "pause_ready" && model.ready_self); });
                 }
                 var phase = root.querySelector(".info-phase");
                 if (phase) phase.textContent = model.mode === "active" ? "Пауза" : "Запрос паузы";
