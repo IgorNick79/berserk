@@ -250,6 +250,17 @@ function sendAjaxJson(array $payload, int $statusCode = 200): never
     exit;
 }
 
+/** Bounded AJAX access; actual preparation routing remains in Engine/PrepareProcessor. */
+function preparationAjaxAllowed(GameState $state, string $type): bool
+{
+    if (MatchPause::supportsStage($state->status) && MatchPause::isCommand($type)) return true;
+    return match ($state->status) {
+        'view' => in_array($type, ['confirm_view','view_to_sideboard','view_to_deck'], true),
+        'deal' => in_array($type, ['pick_card','unpick_card','reshuffle','confirm_deal'], true),
+        default => false,
+    };
+}
+
 function sendBattleAjaxState(
     Db $db,
     Template $tpl,
@@ -889,7 +900,7 @@ if ($isBattleCommand) {
             );
         }
 
-        $viewCommand = ($state->status === 'view' && in_array($commandType, ['confirm_view','view_to_sideboard','view_to_deck'], true)) || (MatchPause::supportsStage($state->status) && MatchPause::isCommand($commandType));
+        $viewCommand = preparationAjaxAllowed($state, $commandType);
         if ($state->status !== 'battle' && !$viewCommand) {
             $journalRecord = $journal->markRejected($journalId, $currentVersion, 'battle_not_active', 'Battle is not active');
             sendBattleAjaxState(
@@ -910,7 +921,7 @@ if ($isBattleCommand) {
         try {
             $repo->executeLockedCommand($state, $journal, $journalId,
                 function (GameState $locked) use ($engine, $playerKey, $commandType, $payload): \Berserk\Core\Result {
-                    if ($locked->status !== 'battle' && !(($locked->status === 'view' && in_array($commandType, ['confirm_view','view_to_sideboard','view_to_deck'], true)) || (MatchPause::supportsStage($locked->status) && MatchPause::isCommand($commandType)))) return \Berserk\Core\Result::error('stage_changed');
+                    if ($locked->status !== 'battle' && !preparationAjaxAllowed($locked, $commandType)) return \Berserk\Core\Result::error('stage_changed');
                     return $engine->apply($locked, $playerKey, new Command($commandType, $payload));
                 }, 'command_rejected');
         } catch (StaleStateException) {
@@ -1465,5 +1476,5 @@ $page = $tpl->parse('page.tpl', [
 \Berserk\Auth\GameTransport::$version = $state->persistenceVersion ?? 0;
 \Berserk\Auth\GameTransport::$stage = $state->status;
 
-$transportScript = '<script src="/assets/js/game-transport.js?v=4" data-game="'.$state->gameId.'" data-stage="'.htmlspecialchars($state->status,ENT_QUOTES).'" data-version="'.\Berserk\Auth\GameTransport::$version.'" data-csrf="'.htmlspecialchars(\Berserk\Auth\GameTransport::$csrf,ENT_QUOTES).'"></script>';
+$transportScript = '<script src="/assets/js/game-transport.js?v=5" data-game="'.$state->gameId.'" data-stage="'.htmlspecialchars($state->status,ENT_QUOTES).'" data-version="'.\Berserk\Auth\GameTransport::$version.'" data-csrf="'.htmlspecialchars(\Berserk\Auth\GameTransport::$csrf,ENT_QUOTES).'"></script>';
 echo \Berserk\Auth\GameTransport::html(str_replace('</head>',$transportScript.'</head>',$page));

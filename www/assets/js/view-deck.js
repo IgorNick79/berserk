@@ -89,12 +89,17 @@
     }
     function command(type, payload) {
         if (busy || pending) return;
-        if (pause && ['requested','active'].includes(pause.mode) && ['confirm_view','view_to_sideboard','view_to_deck'].includes(type)) {notice('Игра на паузе. Дождитесь возобновления.');return;}
+        if (pause && ['requested','active'].includes(pause.mode) && ['confirm_view','view_to_sideboard','view_to_deck','pick_card','unpick_card','reshuffle','confirm_deal'].includes(type)) {notice('Игра на паузе. Дождитесь возобновления.');return;}
         const id = crypto.randomUUID();
         pending={...payload,cmd:type,command_id:id,expected_version:String(version),csrf:config.csrf};
         try {persist();} catch (_) {pending=null;notice('Не удалось сохранить команду для безопасного восстановления.');return;}
         settle();
     }
+    if (isDeal) window.berserkPreparationCommand = params => {
+        const type=params.get('cmd');
+        if (!['pick_card','unpick_card','reshuffle','confirm_deal'].includes(type)) return false;
+        command(type,{ukid:params.get('ukid')||''});return true;
+    };
     document.addEventListener('click', async event => {
         const card = event.target.closest('.view-deck-page .prepare-card-link');
         const close = event.target.closest('[data-view-close]');

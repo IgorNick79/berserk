@@ -4,3 +4,7 @@
 .deal-page .pregame-deal-notes .bonus,.deal-page .pregame-card-details .bonus{color:#9fdfa4;font:600 14px/1.5 var(--battle-body-font)}
 .deal-page .pregame-deal-tile{height:auto;grid-template-rows:40px auto}
 .deal-page .pregame-deal-footer{display:flex;align-items:center;flex-wrap:wrap}
+
+.deal-page .view-thumbnail.prepare-card--selected{border-color:transparent!important}
+.deal-page .pregame-deal-resources .penalty{display:inline-flex;align-items:center;gap:4px;margin-left:auto;white-space:nowrap}
+.deal-page .penalty img{display:block;width:24px;height:24px}

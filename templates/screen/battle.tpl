@@ -1,7 +1,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="/assets/css/battle-fonts.css?v=1">
-<link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=15">
+<link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=16">
 <link rel="stylesheet" href="/assets/css/battle-mini-nameplate.css?v=2">
 <link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=16">
 <div class="battle-sync-root battle-shell" data-battle-sync-root data-panel-theme="grimoire" data-mini-card-design="{{mini_card_design}}" {{pause_root_attr}}>

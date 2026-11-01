@@ -34,6 +34,7 @@
     }
     function submit(params) {
         if (sending) return;
+        if (script.dataset.stage==='deal' && window.berserkPreparationCommand && window.berserkPreparationCommand(params)) return;
         sending = true;
         const form = document.createElement('form'); form.method = 'post'; form.action = 'index.php?game=' + game;
         ['first','second','game','ajax'].forEach(k => params.delete(k));
