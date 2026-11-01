@@ -115,4 +115,22 @@ final class PrepareUi
 
         return $html === '' ? '' : '<div class="prepare-actions">' . $html . '</div>';
     }
+    public function thumbnail( array $catalog, array $data): string
+    {
+        if (!empty($data['legacy'])) return $this->card($data);
+        $info = array_replace($data['info'], $catalog[$data['ukid']] ?? []);
+        $e = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $ukid = $data['ukid'];
+        $path = '/assets/cards/s1/' . rawurlencode($ukid) . '.webp';
+        $art = '<img class="view-art" src="'.$e($path).'" width="400" height="250" alt="">';
+        $element = explode(' ', $data['class'])[0];
+        $element = substr($element, strlen('view-element-'));
+        $cost = (!empty($info['elite']) ? 'elite' : 'ordinary') . (!empty($info['single']) ? '-unique' : '');
+        return '<a aria-label="'.$e($info['name']??$ukid).'" class="prepare-card-link '.$e($data['class']).'" href="'.$e($data['link']).'" data-ukid="'.$e($ukid).'">'
+            . '<div data-mini-art-only data-mini-card="view:'.$e($data['link']).'" data-mini-name="'.$e($info['name']??$ukid).'" class="prepare-card view-thumbnail'.($data['selected']?' prepare-card--selected':'').'">'.$art
+            . '<span class="view-element" data-mini-hint data-view-element tabindex="0" role="button" aria-label="'.$e($info['element_label']??$info['element']??$element).'"><img src="/assets/images/element/'.$e($element).'.png" alt=""><span class="mini-hint-text" hidden>'.$e($info['element_label']??$info['element']??$element).'</span></span>'
+            . '<span class="view-cost"><img src="/assets/images/card/'.$cost.'.png" alt="'.(!empty($info['elite'])?'Золотой':'Серебряный').(!empty($info['single'])?', уникальный':'').' кристалл">'.$e($info['price']??$data['info']['price']??0)
+            . '<span class="prepare-card__count">×'.(int)$data['count'].'</span></span></div></a>';
+    }
+
 }

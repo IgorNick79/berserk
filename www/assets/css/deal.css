@@ -1,0 +1,6 @@
+.deal-page,.deal-page *{user-select:none;-webkit-user-select:none}
+.deal-page .screen-prepare-deal{background:none!important;border:0!important;box-shadow:none!important}
+.deal-page .pregame-deal-resources .penalty{color:#ff8989;font:600 14px/1.5 var(--battle-body-font);white-space:normal}
+.deal-page .pregame-deal-notes .bonus,.deal-page .pregame-card-details .bonus{color:#9fdfa4;font:600 14px/1.5 var(--battle-body-font)}
+.deal-page .pregame-deal-tile{height:auto;grid-template-rows:40px auto}
+.deal-page .pregame-deal-footer{display:flex;align-items:center;flex-wrap:wrap}

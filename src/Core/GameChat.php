@@ -9,7 +9,7 @@ final class GameChat
 
     public static function canSend(string $stage): bool
     {
-        return in_array($stage, ['battle', 'view', 'turn', 'side'], true);
+        return in_array($stage, ['battle', 'mode', 'settings', 'deck', 'draft', 'view', 'turn', 'side', 'deal', 'place'], true);
     }
 
     public static function canRead(string $stage): bool

@@ -14,7 +14,7 @@ foreach(['host','player'] as $winner)foreach(['host','player'] as $viewer){
  $s->getPlayer($viewer)->confirm('turn');$d=(new TurnScreen())->prepare($s,$viewer,$viewer,null)['data'];rollAssert(str_contains($d['panel_actions_html'],'Ожидание оппонента')&&!str_contains($d['panel_actions_html'],'confirm_turn'),'Confirmed viewer waits');
  $s->status='side';$before=serialize($s->toArray());$d=(new SideScreen())->prepare($s,$viewer,$viewer,null)['data'];rollAssert(str_contains($d['panel_html'],'pregame-side-choice')===($viewer===$winner),'Only winner gets side choice');rollAssert(str_contains($d['panel_html'],'panel-dice-face'),'Side retains real dice results');rollAssert($before===serialize($s->toArray()),'Side renderer does not mutate game');
 }
-foreach(['battle','view','turn','side'] as $stage)rollAssert(GameChat::canRead($stage)&&GameChat::canSend($stage)&&MatchPause::supportsStage($stage),'Allowed stage '.$stage);
-foreach(['deck','place','deal','settings','draft'] as $stage)rollAssert(!GameChat::canSend($stage)&&!MatchPause::supportsStage($stage),'Unchanged unsupported stage '.$stage);
+foreach(['battle','view','turn','side','deal'] as $stage)rollAssert(GameChat::canRead($stage)&&GameChat::canSend($stage)&&MatchPause::supportsStage($stage),'Allowed stage '.$stage);
+foreach(['deck','place','settings','draft'] as $stage)rollAssert(GameChat::canSend($stage)&&!MatchPause::supportsStage($stage),'Unchanged unsupported stage '.$stage);
 rollAssert(GameChat::canRead('game_over')&&!GameChat::canSend('game_over')&&!MatchPause::supportsStage('game_over'),'Finished stage remains read only');
 echo "Roll presentation and stage contracts passed.\n";

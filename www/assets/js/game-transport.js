@@ -7,7 +7,7 @@
     window.berserkGameCsrf = csrf;
     if (script.dataset.stage === 'battle' || script.dataset.stage === 'game_over') return;
     if (script.dataset.stage === 'view') { window.berserkViewTransport = {...script.dataset}; return; }
-    const roll = ['turn','side'].includes(script.dataset.stage);
+    const roll = ['turn','side','deal'].includes(script.dataset.stage);
     if (roll) window.berserkRollTransport = {...script.dataset, setVersion:(v,stage)=>{script.dataset.version=String(v);script.dataset.stage=stage;}};
     let sending = false;
     const confirmations={confirm_deal:'Подтвердить отряд?',reshuffle:'Пересдать карты?',finish_draft:'Закончить драфт?'};

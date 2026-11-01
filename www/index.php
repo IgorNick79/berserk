@@ -1436,6 +1436,7 @@ if (in_array($screenName,['battle','game_over'],true)
 }
 
 if (\Berserk\Core\GameChat::canRead($state->status)) {
+    $screenHtml .= '<link rel="stylesheet" href="/assets/css/battle-chat.css?v=6">';
     $_SESSION['chat_csrf'] = GameTransport::$csrf;
     $screenHtml .= $tpl->parse('includes/game_chat.tpl', [
         'chat_game_id'=>$state->gameId,
@@ -1455,7 +1456,7 @@ $page = $tpl->parse('page.tpl', [
     'role'    => $role,
     'screen'  => $screenHtml,
     'scripts' => $scriptsHtml,
-    'page_class' => in_array($screenName,['turn','side'],true) ? 'pregame-page roll-page' : ($screenName === 'view' ? 'pregame-page view-deck-page' : ($screenName === 'battle' ? 'battle-page' : ($screenName === 'game_over' ? 'battle-page result-page' : ($isPreGame ? 'pregame-page' : '')))),
+    'page_class' => $screenName === 'deal' ? 'pregame-page view-deck-page deal-page' : (in_array($screenName,['turn','side'],true) ? 'pregame-page roll-page' : ($screenName === 'view' ? 'pregame-page view-deck-page' : ($screenName === 'battle' ? 'battle-page' : ($screenName === 'game_over' ? 'battle-page result-page' : ($isPreGame ? 'pregame-page' : ''))))),
     'page_styles' => in_array($screenName, ['battle','game_over'], true) ? '<link rel="stylesheet" href="/assets/css/battle-chat.css?v=6">' : ($isPreGame ? '<link rel="stylesheet" href="/assets/css/pregame.css?v=' . $preGameResourceKey . '">' : ''),
     // PreGame opts into a stable CSS version; battle keeps its existing rkey policy.
     'rkey' => $preGameResourceKey,

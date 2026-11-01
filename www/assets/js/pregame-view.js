@@ -134,7 +134,7 @@
         });
     }
     function layout() {
-        if (!isDeal && document.body.classList.contains('view-deck-page')) {
+        if (document.body.classList.contains('view-deck-page')) {
             build(9);
             show(Math.min(Math.max(0, Number(new URL(location.href).searchParams.get('view_page')) || 0), Math.max(0,pages.length-1)),false);
             syncControls();return;

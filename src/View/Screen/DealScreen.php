@@ -62,16 +62,16 @@ final class DealScreen
                     $candidate = $this->selectedCardInstance($state, $playerKey, 'hand', (string) $ukid);
                     $error = $candidate ? SquadRules::validate($state, $playerKey, [$candidate]) : null;
                     $quickHtml = $error === null
-                        ? '<a class="pregame-deal-choose" data-deal-quick href="' . $baseUrl . '&cmd=pick_card&ukid=' . rawurlencode((string) $ukid)
+                        ? '<a class="button pregame-deal-choose" data-deal-quick href="' . $baseUrl . '&cmd=pick_card&ukid=' . rawurlencode((string) $ukid)
                             . '&card=hand:' . rawurlencode((string) $ukid) . '">Выбрать</a>'
-                        : '<span class="pregame-deal-choose" aria-disabled="true" title="' . htmlspecialchars($error, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">Выбрать</span>';
+                        : '<span class="button pregame-deal-choose" aria-disabled="true" title="' . htmlspecialchars($error, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">Выбрать</span>';
                 } else {
-                    $quickHtml = '<span class="pregame-deal-choose" aria-disabled="true">Выбрано</span>';
+                    $quickHtml = '<span class="button pregame-deal-choose" aria-disabled="true">Выбрано</span>';
                 }
             }
-            $cardsHtml .= '<div class="pregame-deal-tile"><div class="pregame-deal-quick-slot">' . $quickHtml . '</div>' . $ui->card([
+            $cardsHtml .= '<div class="pregame-deal-tile"><div class="pregame-deal-quick-slot">' . $quickHtml . '</div>' . $ui->thumbnail($cardsInfo, [
                 'ukid' => $ukid, 'info' => $info, 'count' => $group['hand'] + $group['squad'],
-                'count_note' => $group['squad'] > 0 ? 'В отряде: ' . $group['squad'] : '',
+                'count_note' => '',
                 'class' => 'view-element-' . $code . ' view-crystal-' . ($group['card']->elite ? 'gold' : 'silver')
                     . ($group['squad'] > 0 ? ' deal-in-squad' : ''),
                 'link' => $baseUrl . '&card=' . $zone . ':' . rawurlencode((string) $ukid),
@@ -154,6 +154,7 @@ final class DealScreen
                 . '<template data-pregame-hint>' . $hint . '</template></a>';
         }
         $footerHtml .= '</div>';
+        $footerHtml = \Berserk\View\Ui\PreGameLayout::actionsFooter($footerHtml);
         return ['screen' => 'deal', 'data' => [
             'cards_html' => $cardsHtml, 'hand_html' => $cardsHtml, 'squad_html' => '',
             'preview_html' => $previewHtml, 'panel_html' => $panelHtml,

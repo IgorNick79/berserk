@@ -91,7 +91,7 @@ final class ViewScreen
                 $selectedZone = CardInstance::ZONE_DECK;
             }
 
-            $cardsHtml .= $this->thumbnail($ui, $cardsInfo, [
+            $cardsHtml .= $ui->thumbnail($cardsInfo, [
                 'legacy'   => $readOnly,
                 'class'    => $this->filterClass($c, $cardsInfo[$ukid] ?? []),
                 'ukid'     => $ukid,
@@ -113,7 +113,7 @@ final class ViewScreen
                     $selectedZone = CardInstance::ZONE_SIDEBOARD;
                 }
 
-                $sideboardHtml .= $this->thumbnail($ui, $cardsInfo, [
+                $sideboardHtml .= $ui->thumbnail($cardsInfo, [
                     'legacy'   => $readOnly,
                 'class'    => $this->filterClass($c, $cardsInfo[$ukid] ?? []),
                     'ukid'     => $ukid,
@@ -233,24 +233,6 @@ final class ViewScreen
         $data = $this->prepare($state, $playerKey, $role, $message, $cardsInfo, $elementLabels, true)['data'];
         return ['deck_name' => $data['deck_name'] ?? '—', 'deck_html' => (string) $this->tpl->parse('screen/view.tpl', $data),
             'panel_summary_html' => $data['panel_summary_html'] ?? ''];
-    }
-
-    private function thumbnail(PrepareUi $ui, array $catalog, array $data): string
-    {
-        if (!empty($data['legacy'])) return $ui->card($data);
-        $info = array_replace($data['info'], $catalog[$data['ukid']] ?? []);
-        $e = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $ukid = $data['ukid'];
-        $path = '/assets/cards/s1/' . rawurlencode($ukid) . '.webp';
-        $art = '<img class="view-art" src="'.$e($path).'" width="400" height="250" alt="">';
-        $element = explode(' ', $data['class'])[0];
-        $element = substr($element, strlen('view-element-'));
-        $cost = (!empty($info['elite']) ? 'elite' : 'ordinary') . (!empty($info['single']) ? '-unique' : '');
-        return '<a aria-label="'.$e($info['name']??$ukid).'" class="prepare-card-link '.$e($data['class']).'" href="'.$e($data['link']).'" data-ukid="'.$e($ukid).'">'
-            . '<div data-mini-art-only data-mini-card="view:'.$e($data['link']).'" data-mini-name="'.$e($info['name']??$ukid).'" class="prepare-card view-thumbnail'.($data['selected']?' prepare-card--selected':'').'">'.$art
-            . '<span class="view-element" data-mini-hint data-view-element tabindex="0" role="button" aria-label="'.$e($info['element_label']??$info['element']??$element).'"><img src="/assets/images/element/'.$e($element).'.png" alt=""><span class="mini-hint-text" hidden>'.$e($info['element_label']??$info['element']??$element).'</span></span>'
-            . '<span class="view-cost"><img src="/assets/images/card/'.$cost.'.png" alt="'.(!empty($info['elite'])?'Золотой':'Серебряный').(!empty($info['single'])?', уникальный':'').' кристалл">'.$e($info['price']??$data['info']['price']??0)
-            . '<span class="prepare-card__count">×'.(int)$data['count'].'</span></span></div></a>';
     }
 
     private function elementBadgesHtml(array $elements, array $elementLabels): string
