@@ -1,4 +1,4 @@
-(function () {
+(window.berserkInitGridSelection = function () {
     "use strict";
     var grid = document.querySelector('[data-grid-selection-key]');
     if (!grid) return;
@@ -69,6 +69,7 @@
 
     }
     root.addEventListener('click', function (event) {
+        if(event.target.closest('[data-draft-history-close]')){event.preventDefault();root.querySelector('[data-grid-history]').click();return;}
         if (event.target.closest('[data-grid-close],[data-view-close]')) {
             var content = root.querySelector('.pregame-panel-content');
             var history = !!previewReturn;
@@ -106,6 +107,7 @@
         }
         var historyControl = event.target.closest('[data-grid-history]');
         if (!historyControl) return;
+        var screen=root.closest('.screen');if(screen.secondaryPanel)screen.secondaryPanel(null);
         var content = root.querySelector('.pregame-panel-content');
         if (historyControl.getAttribute('aria-pressed') === 'true' && historyReturn) {
             restore(content, historyReturn);

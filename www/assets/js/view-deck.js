@@ -38,15 +38,16 @@
             const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
             const script = doc.querySelector('script[data-stage][data-version][data-csrf]');
             if (!script) throw Error('Не удалось загрузить состояние');
-            if (!isDraft && ((isRoll || isDeal || isPlace || isDraft) ? !(isDeal ? ['deal'] : ['turn','side']).includes(script.dataset.stage) : script.dataset.stage !== 'view')) { location.assign(address); return; }
+            if (isDraft ? script.dataset.stage !== 'draft' : ((isRoll || isDeal || isPlace) ? !(isDeal ? ['deal'] : ['turn','side']).includes(script.dataset.stage) : script.dataset.stage !== 'view')) { location.assign(address); return; }
             if (epoch !== selection) return;
             const nextVersion = Number(script.dataset.version);
-            if(isDraft){if(script.dataset.stage!=='draft'||nextVersion!==version){location.assign(address);return;}const state=doc.querySelector('#match-pause-state');pause=state?JSON.parse(state.textContent):null;renderPause();return;}
+
             if (force || nextVersion !== version) {
                 const next = doc.querySelector('.pregame-layout'), current = document.querySelector('.pregame-layout');
+                const draftTimer=isDraft?next.querySelector('script[data-sync-url]'):null;
                 next.querySelectorAll('link[rel="stylesheet"],script[src]').forEach(node=>node.remove());
                 const oldSelected=current.querySelector('.prepare-card--selected')?.closest('.prepare-card-link');
-                if (address.searchParams.has('card') && oldSelected && !next.querySelector('.prepare-card--selected')) {
+                if (!isDraft && address.searchParams.has('card') && oldSelected && !next.querySelector('.prepare-card--selected')) {
                     const zone=oldSelected.closest('[data-view-group]').dataset.viewGroup;
                     const replacement=Array.from(next.querySelectorAll('.prepare-card-link')).find(n=>n.dataset.ukid===oldSelected.dataset.ukid && n.closest('[data-view-group]').dataset.viewGroup===zone);
                     if (replacement) {
@@ -57,10 +58,11 @@
                 const scrollY=window.scrollY, mainScroll=current.querySelector('.pregame-main').scrollTop, panelScroll=current.querySelector('.pregame-panel-content').scrollTop;
                 const toggle = document.querySelector('[data-chat-toggle]'); if (toggle) document.querySelector('[data-game-chat]').append(toggle);
                 if(secondary)dock.remove();
-                current.replaceWith(next); version = nextVersion;
+                const theme=current.dataset.panelTheme;current.replaceWith(next);if(isDraft)next.dataset.panelTheme=theme; version = nextVersion;
                 const anchor = next.querySelector('[data-chat-anchor]'); if (anchor && toggle) anchor.append(toggle);
                 if (isRoll || isDeal || isPlace || isDraft) config.setVersion(version,script.dataset.stage);
-                if (!isRoll) window.berserkInitViewPager();
+                if(isDraft){window.berserkInitGridSelection?.();window.berserkInitSolomonSelection?.();window.berserkDraftTimer?.update(draftTimer);}
+                else if (!isRoll) window.berserkInitViewPager();
                 next.querySelector('.pregame-main').scrollTop=mainScroll;next.querySelector('.pregame-panel-content').scrollTop=panelScroll;window.scrollTo(0,scrollY);
             }
             const state = doc.querySelector('#match-pause-state'); pause = state ? JSON.parse(state.textContent) : null;
@@ -84,12 +86,13 @@
         pauseUi.render();
         window.BerserkPanelDock.mount(root.querySelector('.info-panel-content'),dock,secondary);root.querySelectorAll('[data-view-card-actions]').forEach(node=>node.hidden=!!secondary);
     }
+    function encodeCommand(value){const result=new URLSearchParams();for(const [key,item] of Object.entries(value)){if(Array.isArray(item))item.forEach(v=>result.append(key+'[]',v));else result.set(key,item);}return result;}
     async function settle() {
         if (!pending || busy) return;
-        busy=true; renderPause(); if (!isDeal && !isPlace) notice('Проверяем результат…');
+        busy=true; renderPause(); if (!isDeal && !isPlace && !isDraft) notice('Проверяем результат…');
         try {
             let data = await request(url('battle_command_status') + '&command_id=' + encodeURIComponent(pending.command_id));
-            if (!data.command_status || data.command_status === 'unknown') data = await request(url('battle_command'), {method:'POST',body:new URLSearchParams(pending)});
+            if (!data.command_status || data.command_status === 'unknown') data = await request(url('battle_command'), {method:'POST',body:encodeCommand(pending)});
             if (['committed','conflict','rejected','failed'].includes(data.command_status)) {
                 const result=data.command_status; pending=null;persist(); await refresh(true);
                 notice(result==='committed' ? '' : result==='conflict' ? 'Состояние изменилось. Данные обновлены; повторите действие.' : 'Действие не выполнено. Данные обновлены.');
@@ -99,11 +102,19 @@
     }
     function command(type, payload) {
         if (busy || pending) return;
-        if (pause && ['requested','active'].includes(pause.mode) && ['confirm_view','view_to_sideboard','view_to_deck','pick_card','unpick_card','reshuffle','confirm_deal'].includes(type)) {notice('Игра на паузе. Дождитесь возобновления.');return;}
+        if (pause && ['requested','active'].includes(pause.mode) && ['confirm_view','view_to_sideboard','view_to_deck','pick_card','unpick_card','reshuffle','confirm_deal','draft_row','draft_col','draft_pass','draft_confirm','finish_draft'].includes(type)) {notice('Игра на паузе. Дождитесь возобновления.');return;}
         const id = crypto.randomUUID();
         pending={...payload,cmd:type,command_id:id,expected_version:String(version),csrf:config.csrf};
         try {persist();} catch (_) {pending=null;notice('Не удалось сохранить команду для безопасного восстановления.');return;}
         settle();
+    }
+    if(isDraft){
+        window.berserkRefreshDraft = () => refresh(true);
+        window.berserkDraftCommand = params => {
+            const type=params.get('cmd');if(!['draft_row','draft_col','draft_confirm','draft_pass','finish_draft'].includes(type))return false;
+            const payload={};for(const [key,value] of params){if(['cmd','game','first','second','csrf','prepare_version'].includes(key))continue;if(key==='positions[]'){(payload.positions??=[]).push(value);}else if(key==='expected_version')payload.draft_version=value;else payload[key]=value;}
+            command(type,payload);return true;
+        };
     }
     if (isDeal) window.berserkPreparationCommand = params => {
         const type=params.get('cmd');

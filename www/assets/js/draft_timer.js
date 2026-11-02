@@ -56,7 +56,7 @@
                     return;
                 }
                 if (data.version !== loadedVersion || data.changed || data.status !== "draft") {
-                    window.location.reload();
+                    if(window.berserkRefreshDraft)window.berserkRefreshDraft().catch(function(){});else window.location.reload();
                     return;
                 }
 
@@ -74,6 +74,7 @@
             .catch(function () {});
     }
 
+    window.berserkDraftTimer={update:function(next){if(!next)return;script=next;syncUrl=next.dataset.syncUrl||syncUrl;loadedVersion=Number(next.dataset.version);serverNow=Number(next.dataset.serverNow);deadlineAt=Number(next.dataset.deadlineAt||0);hostTotal=Number(next.dataset.hostTotal||0);playerTotal=Number(next.dataset.playerTotal||0);loadedAt=Math.floor(Date.now()/1000);render();}};
     render();
     window.setInterval(render, 1000);
     window.setInterval(sync, 2000);

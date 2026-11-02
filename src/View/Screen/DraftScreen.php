@@ -107,7 +107,7 @@ final class DraftScreen
         if (!$isSolomon) $gridHtml .= $columnsHtml;
 
         if ($isSolomon) {
-            $gridHtml = '<div class="solomon-stack" data-solomon-stack data-selection-key="'
+            $gridHtml = '<div class="solomon-stack" data-solomon-stack data-preparation-actions data-selection-key="'
                 . (int) $state->gameId . '-' . $playerKey . '" data-preview-position="' . $selectedIdx . '" data-decision="' . (int) ($draft['decision_id'] ?? 1) . '">';
             foreach ($draft['grid'] as $position => $ukid) {
                 $info = $cardsInfo[$ukid] ?? ['name' => $ukid, 'strike' => []];
@@ -140,11 +140,11 @@ final class DraftScreen
         $isDiscrete = ($draft['grid_mode'] ?? $state->settings->draftGridMode()) === GameSettings::DRAFT_GRID_MODE_DISCRETE;
 
         $finishHtml = '';
-        $gridControls = $isSolomon ? '' : '<div class="pregame-grid-controls" aria-hidden="true"></div>';
+        $gridControls = $isSolomon ? '' : '<div class="pregame-grid-controls" data-preparation-actions aria-hidden="true"></div>';
         $actionsHtml = '';
         $passButton = '';
         if ($isMyTurn && !$isSolomon) {
-            $gridControls = '<div class="pregame-grid-controls" aria-label="Выбор строки или колонки">';
+            $gridControls = '<div class="pregame-grid-controls" data-preparation-actions aria-label="Выбор строки или колонки">';
             foreach (['row' => 'Строка', 'col' => 'Колонка'] as $axis => $label) {
                 $gridControls .= '<div class="pregame-grid-control-row">';
                 foreach ([1 => 'I', 2 => 'II', 3 => 'III'] as $number => $roman) {
@@ -184,8 +184,8 @@ final class DraftScreen
         $timerHtml = $this->timerHtml($state, $playerKey, $now);
         $historyHtml = $this->historyHtml($state, $playerKey, $cardsInfo, $ui);
         $scriptHtml = $this->scriptHtml($state, $syncUrl, $now);
-        $scriptHtml .= $isSolomon ? '<script src="/assets/js/solomon_selection.js?v=6" defer></script>'
-            : '<script src="/assets/js/grid_selection.js?v=3" defer></script>';
+        $scriptHtml .= $isSolomon ? '<script src="/assets/js/solomon_selection.js?v=7" defer></script>'
+            : '<script src="/assets/js/grid_selection.js?v=4" defer></script>';
 
         // ─── Статистика набранного пула ──────────────────
         $myPicked = $draft['picked'][$playerKey] ?? [];
@@ -330,7 +330,7 @@ final class DraftScreen
     /** Only historical allocations already visible in the existing Draft history. */
     private function panelHistoryHtml(GameState $state, array $history, string $playerKey, array $cardsInfo, PrepareUi $ui): string
     {
-        $html = '<section class="pregame-draft-history"><h3 class="pregame-card-heading panel-card-heading">История выбора</h3>';
+        $html = '<section class="pregame-draft-history"><h3 class="pregame-card-heading panel-card-heading">История выбора<button type="button" class="battle-window-close" data-draft-history-close aria-label="Закрыть историю"><img src="/assets/images/battle/close.png" width="28" height="28" alt=""></button></h3>';
         if ($history === []) $html .= '<p class="wait">Пока нет выбранных карт.</p>';
         foreach ($history as $event) {
             $owner = (string) ($event['player'] ?? '');
@@ -350,7 +350,7 @@ final class DraftScreen
     {
         $snapshot = DraftTimer::snapshot($state, (string) ($state->draft['turn'] ?? 'host'), $now);
 
-        return '<script src="/assets/js/draft_timer.js?v=2" defer'
+        return '<script src="/assets/js/draft_timer.js?v=3" defer'
             . ' data-paused="' . (\Berserk\Core\MatchPause::blocking($state) ? '1' : '0') . '"'
             . ' data-sync-url="' . htmlspecialchars($syncUrl, ENT_QUOTES) . '"'
             . ' data-version="' . (int) $state->version . '"'

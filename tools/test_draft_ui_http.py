@@ -19,6 +19,7 @@ body=r'''
             fixture['game_id']=game;fixture['status']='draft';fixture['cards']={};fixture['mode']='draft';fixture['settings']['mode']='draft'
             fixture['settings']['draft'].update(type=kind,timer_mode='unlimited',stack_size=count,grid_mode='continuous')
             fixture['draft']={'grid':[ukids[i%2] for i in range(count)],'pool':[ukids[i%2] for i in range(80)],'recycle':[],'turn':'host','picked':{'host':[],'player':[]},'history':[],'grid_mode':'continuous','decision_id':1,'consecutive_passes':0,'round_first_player':'host','round_picks':0}
+            if kind=='solomon':fixture['draft']['pool']=['card_'+str(i) for i in range(1,81)]
             set_fixture(game,fixture);sql(f"USE LAB_DB;UPDATE games SET status='draft' WHERE ind={game};");games.append(game)
             code,html,_=http(a,game)
             check(kind+' real page loads',code==200 and 'view-thumbnail' in html and 'draft-page' in html)
@@ -70,6 +71,18 @@ body=r'''
             pr=pause_result.result();rr=row_result.result()
         check('pause and native row cannot both commit',not(pr['command_status']=='committed' and rr[0] in [200,303]))
         check('race preserves either original or complete row allocation',len(state(game)['draft']['picked']['host']) in [0,3])
+
+        game=match();ajax=copy.deepcopy(timed);ajax['game_id']=game;ajax['settings']['draft']['timer_mode']='unlimited';ajax['draft'].pop('timer',None)
+        set_fixture(game,ajax);sql(f"USE LAB_DB;UPDATE games SET status='draft' WHERE ind={game};")
+        v=version(game);identity=str(uuid.uuid4())
+        check('AJAX row commits through existing journal',pause_cmd(a,'draft_row',{'row':1},identity,v)['command_status']=='committed' and len(state(game)['draft']['picked']['host'])==3)
+        check('AJAX row replay restores once',pause_cmd(a,'draft_row',{'row':1},identity,v)['command_status']=='committed' and len(state(game)['draft']['picked']['host'])==3)
+        check('AJAX stale column conflicts',pause_cmd(b,'draft_col',{'col':1},expected=v)['command_status']=='conflict')
+        game=match();sol=copy.deepcopy(fixture);sol['game_id']=game;set_fixture(game,sol);sql(f"USE LAB_DB;UPDATE games SET status='draft' WHERE ind={game};")
+        decision=state(game)['version'];v=version(game);identity=str(uuid.uuid4())
+        check('AJAX Solomon preserves zero-based selection and decision version',pause_cmd(a,'draft_confirm',{'positions[]':[0,1],'decision_id':1,'draft_version':decision},identity,v)['command_status']=='committed')
+        check('AJAX Solomon replay restores same result',pause_cmd(a,'draft_confirm',{'positions[]':[0,1],'decision_id':1,'draft_version':decision},identity,v)['command_status']=='committed')
+        check('AJAX stale Solomon decision rejected',pause_cmd(a,'draft_pass',{'decision_id':1,'draft_version':decision})['command_status']=='rejected')
         # Catalog for isolated historical timer/transition DB regressions.
         for i in range(60):
             sql("USE LAB_DB;INSERT INTO cards(ind,ukid,name,health,move,strike_weak,strike_medium,strike_strong,prop,price,elite,single) VALUES("+str(202+i)+",'s98_draft_"+str(i)+"','Backend fixture',5,1,1,2,3,'{}',3,0,0);")
@@ -88,7 +101,7 @@ body=r'''
         run=subprocess.run([args.node,str(ROOT/'tools/test_draft_ui_browser.cjs')],env=env,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=300)
         (out/'browser-output.txt').write_text(run.stdout+run.stderr,encoding='utf-8');print(run.stdout+run.stderr)
         check('real Draft browser suite',run.returncode==0)
-        check('browser pass changes active player',state(games[0])['draft']['turn']=='player')
+        check('browser pass and opponent confirmation alternate turns',state(games[0])['draft']['turn']=='host' and len(state(games[0])['draft']['picked']['player'])==3)
         (out/'http-checks.json').write_text(json.dumps(RESULTS,ensure_ascii=False,indent=2),encoding='utf-8')
 
 '''

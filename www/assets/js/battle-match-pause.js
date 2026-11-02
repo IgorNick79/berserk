@@ -47,7 +47,7 @@
                 if (blocked) root.setAttribute("data-match-paused", "1");
                 document.body.classList.toggle("match-pause-active", blocked);
                 if (left) { left.inert = blocked; if (blocked) left.setAttribute("aria-hidden", "true"); else left.removeAttribute("aria-hidden"); }
-                root.querySelectorAll('[data-preparation-actions]').forEach(function (node) { node.inert = blocked; });
+                root.querySelectorAll('[data-preparation-actions]').forEach(function (node) { node.inert = blocked || busy(); });
                 if (mask) mask.hidden = !blocked;
                 if (blocked) {
                     if (picker.open) picker.close();

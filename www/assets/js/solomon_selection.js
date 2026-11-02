@@ -1,4 +1,4 @@
-(function () {
+(window.berserkInitSolomonSelection = function () {
     "use strict";
     var stack = document.querySelector("[data-solomon-stack]");
     var form = document.getElementById("solomon-decision");
@@ -58,6 +58,7 @@
     var root = stack.closest('.pregame-layout');
     var historyReturn = null;
     root.addEventListener('click', function (event) {
+        if(event.target.closest('[data-draft-history-close]')){event.preventDefault();root.querySelector('[data-solomon-history]').click();return;}
         if(event.target.closest('[data-view-close]')){event.preventDefault();previewPosition='-1';root.querySelector('.pregame-panel-content').replaceChildren();update();return;}
         var action = event.target.closest('[data-solomon-panel-action]');
         if (action && !action.disabled) {
@@ -71,6 +72,7 @@
         var historyEntry = event.target.closest('.pregame-history-entry .prepare-card-link');
         var content = root.querySelector('.pregame-panel-content');
         if (historyControl) {
+        var screen=root.closest('.screen');if(screen.secondaryPanel)screen.secondaryPanel(null);
             if (historyControl.getAttribute('aria-pressed') === 'true' && historyReturn) {
                 content.replaceChildren.apply(content, historyReturn.nodes);
                 content.dataset.pregameContent = historyReturn.kind;

@@ -34,6 +34,7 @@
     }
     function submit(params) {
         if (sending) return;
+        if(script.dataset.stage==='draft' && window.berserkDraftCommand && window.berserkDraftCommand(params))return;
         if (script.dataset.stage==='deal' && window.berserkPreparationCommand && window.berserkPreparationCommand(params)) return;
         if (script.dataset.stage==='place' && window.BerserkPlaceScreen) {window.BerserkPlaceScreen.submit(params);return;}
         sending = true;

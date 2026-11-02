@@ -132,6 +132,14 @@ function ajaxCommandPayload(): ?array
             continue;
         }
         if (is_array($value)) {
+            if ($commandType === 'draft_confirm' && $key === 'positions') {
+                if (!array_is_list($value) || count($value) > 8) return null;
+                foreach ($value as $position) {
+                    if ((!is_string($position) && !is_int($position)) || !preg_match('/^[0-7]$/D', (string)$position)) return null;
+                }
+                $payload[$key] = array_map('strval', $value);
+                continue;
+            }
             if ($key !== 'target_ids' || !in_array($commandType, $idListCommands, true)
                 || !array_is_list($value) || count($value) > 64) return null;
             foreach ($value as $id) {
@@ -257,6 +265,7 @@ function preparationAjaxAllowed(GameState $state, string $type): bool
     return match ($state->status) {
         'view' => in_array($type, ['confirm_view','view_to_sideboard','view_to_deck'], true),
         'deal' => in_array($type, ['pick_card','unpick_card','reshuffle','confirm_deal'], true),
+        'draft' => in_array($type, ['draft_row','draft_col','draft_confirm','draft_pass','finish_draft'], true),
         default => false,
     };
 }
@@ -803,6 +812,12 @@ if ($isBattleCommand) {
         $payload = ajaxCommandPayload();
         if ($commandType === null || $commandType === '' || $payload === null) {
             sendPreRegistrationRejection($db, $state, $playerKey, 'invalid_command_request');
+        }
+
+        // Keep Solomon's decision version distinct from the transport persistence version.
+        if (in_array($commandType, ['draft_confirm','draft_pass'], true) && array_key_exists('draft_version', $payload)) {
+            $payload['expected_version'] = $payload['draft_version'];
+            unset($payload['draft_version']);
         }
 
         if ($commandType === 'set_sound_enabled') sendAjaxJson(['ok'=>false,'error'=>'unknown_command'],400);
@@ -1476,5 +1491,5 @@ $page = $tpl->parse('page.tpl', [
 \Berserk\Auth\GameTransport::$version = $state->persistenceVersion ?? 0;
 \Berserk\Auth\GameTransport::$stage = $state->status;
 
-$transportScript = '<script src="/assets/js/game-transport.js?v=7" data-game="'.$state->gameId.'" data-stage="'.htmlspecialchars($state->status,ENT_QUOTES).'" data-version="'.\Berserk\Auth\GameTransport::$version.'" data-csrf="'.htmlspecialchars(\Berserk\Auth\GameTransport::$csrf,ENT_QUOTES).'"></script>';
+$transportScript = '<script src="/assets/js/game-transport.js?v=8" data-game="'.$state->gameId.'" data-stage="'.htmlspecialchars($state->status,ENT_QUOTES).'" data-version="'.\Berserk\Auth\GameTransport::$version.'" data-csrf="'.htmlspecialchars(\Berserk\Auth\GameTransport::$csrf,ENT_QUOTES).'"></script>';
 echo \Berserk\Auth\GameTransport::html(str_replace('</head>',$transportScript.'</head>',$page));

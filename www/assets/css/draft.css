@@ -9,7 +9,12 @@
 .draft-page .prepare-card-link,.draft-page .prepare-card{width:100%!important;height:auto!important;min-height:0!important}
 .draft-page .prepare-card{margin:0}
 .draft-page .prepare-card-link--disabled .prepare-card{visibility:hidden}
-.draft-page .pregame-grid-controls{padding:0;min-height:0;width:100%;margin-top:16px}
+.draft-page .pregame-grid-controls{padding:0 0 0 32px;min-height:0;width:100%;margin-top:16px}
+.draft-page .view-cost .prepare-card__count{display:none}
+.draft-page .pregame-draft-history{padding:0}
+.draft-page .pregame-draft-history h3{margin:0;padding:8px 12px;display:flex;justify-content:space-between;align-items:center}
+.draft-page .pregame-draft-history .draft-history__event{padding:12px}
+.draft-page [data-grid-history] .battle-icon-tooltip,.draft-page [data-solomon-history] .battle-icon-tooltip{left:50%;right:auto;transform:translateX(-50%);text-align:center}
 .draft-page .pregame-grid-controls .button{font:inherit}
 .draft-page .pregame-info-panel{gap:0}
 .draft-page .draft-timer{background:transparent;border:0;color:var(--ip-title);padding:0;margin:0}
