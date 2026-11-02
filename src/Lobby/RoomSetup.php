@@ -8,7 +8,7 @@ use Berserk\Core\Prepare\PrepareProcessor;
 /** Room configuration only: pool generation is deferred until candidate acceptance. */
 final class RoomSetup
 {
-    public static function parse(string $mode, array $input, ?int $debugAccount = null): array
+    public static function parse(string $mode, array $input, ?int $debugAccount = null, ?Db $catalog = null): array
     {
         if (!in_array($mode,['system','draft','solomon','sealed','lucktest'],true)) throw new \DomainException('Выберите вид игры.',400);
         $settings=GameSettings::defaults()->toArray();
@@ -38,6 +38,15 @@ final class RoomSetup
         }
         if ($mode === GameSettings::MODE_LUCKTEST) $settings['lucktest'] = GameSettings::luckTestInput($settings['lucktest'], $input);
         $setup = ['mode'=>$mode,'settings'=>$settings];
+        if ($mode === 'system' && array_intersect(array_keys($input), ['deck_id','other_deck_id','deck_mode','other_deck_mode'])) {
+            $setup['system_decks'] = [];
+            foreach (['deck','other_deck'] as $prefix) {
+                $id = $input[$prefix.'_id'] ?? '0';
+                if (!is_string($id) || !preg_match('/\A[0-9]{1,10}\z/D', $id) || (float)$id > 4294967295) throw new \DomainException('Некорректная колода.',400);
+                $setup['system_decks'][$prefix.'_id'] = (int)$id;
+                $setup['system_decks'][$prefix.'_mode'] = $input[$prefix.'_mode'] ?? 'manual';
+            }
+        }
         if (array_key_exists('lucktest_scenario',$input) || array_key_exists('debug_roll',$input) || array_key_exists('lucktest_url_roll',$input)) {
             if ($mode !== 'lucktest' || $debugAccount === null || !\Berserk\Auth\DebugAccess::allowsId($debugAccount)) throw new \DomainException('Debug недоступен для этого аккаунта или режима',403);
             $private = ['account_id'=>$debugAccount];
@@ -47,7 +56,15 @@ final class RoomSetup
             if (array_key_exists('debug_roll',$input)) $private['roll'] = \Berserk\Core\LuckTestDebug::rollInput($input['debug_roll']);
             if (($private['scenario'] ?? []) !== [] || ($private['roll'] ?? 'off') !== 'off' || array_key_exists('url_roll_enabled',$private)) $setup['debug'] = $private;
         }
-        return self::validate($setup);
+        $setup = self::validate($setup);
+        if (isset($setup['system_decks']) && $catalog !== null) {
+            // Reuse the existing processor checks, without persisting this validation state.
+            $probe = new GameState(0, 1, 2);
+            $probe->status = 'deck';
+            $result = (new PrepareProcessor($probe,$catalog))->selectDeck('host',new Command('select_deck',(new \Berserk\Core\DeckView($catalog))->selectionPayload($setup['system_decks'])));
+            if (!$result->success) throw new \DomainException($result->error ?? 'Некорректные колоды.',400);
+        }
+        return $setup;
     }
 
     public static function validate(array $setup): array
@@ -66,6 +83,16 @@ final class RoomSetup
         };
         if ($error!==null) throw new \DomainException($error,400);
         $result = ['mode'=>$mode,'settings'=>$s->toArray()];
+        if (isset($setup['system_decks'])) {
+            $decks = $setup['system_decks'];
+            if ($mode !== 'system' || !is_array($decks) || array_diff(array_keys($decks),['deck_id','other_deck_id','deck_mode','other_deck_mode'])) throw new \DomainException('Некорректные колоды.',400);
+            foreach (['deck','other_deck'] as $prefix) {
+                $id = $decks[$prefix.'_id'] ?? null;
+                $selection = $decks[$prefix.'_mode'] ?? null;
+                if (!is_int($id) || $id < 0 || $id > 4294967295 || !in_array($selection,['manual','random'],true) || ($selection === 'manual' && $id === 0)) throw new \DomainException('Выберите системные колоды.',400);
+            }
+            $result['system_decks'] = $decks;
+        }
         if (isset($setup['debug'])) {
             $debug = $setup['debug'];
             if ($mode !== 'lucktest' || !is_array($debug) || array_diff(array_keys($debug),['account_id','scenario','roll','url_roll_enabled'])
@@ -108,6 +135,11 @@ final class RoomSetup
                 ? (new \Berserk\Core\Engine($catalog))->apply($state, 'host', new Command('confirm_settings'))
                 : $processor->confirmSettings('host',new Command('confirm_settings'));
             if (!$result->success) throw new \DomainException($result->error??'Не удалось начать игру.',400);
+        }
+        if (isset($setup['system_decks'])) {
+            if ($catalog===null) throw new \RuntimeException('Catalog connection required');
+            $result = (new \Berserk\Core\Engine($catalog))->apply($state,'host',new Command('select_deck',(new \Berserk\Core\DeckView($catalog))->selectionPayload($setup['system_decks'])));
+            if (!$result->success) throw new \DomainException($result->error ?? 'Не удалось выбрать колоды.',400);
         }
     }
 

@@ -13,6 +13,29 @@ final class DeckView
 {
     public function __construct(private Db $db) {}
 
+    /** Server-owned payload shared by DeckScreen and preconfigured rooms. */
+    public function selectionPayload(array $input): array
+    {
+        $ids = array_map('intval', array_column($this->listStarters(), 'ind'));
+        $payload = $input;
+        foreach (['deck' => 'deck_cards', 'other_deck' => 'other_cards'] as $prefix => $cards) {
+            $mode = (string) ($input[$prefix . '_mode'] ?? 'manual');
+            $id = (int) ($input[$prefix . '_id'] ?? 0);
+            if ($mode === 'random' && $ids !== []) $id = $ids[random_int(0, count($ids) - 1)];
+            $payload[$prefix . '_mode'] = $mode;
+            $payload[$prefix . '_id'] = $id;
+            $payload[$cards] = in_array($id, $ids, true) ? array_map(static fn(array $c): array => [
+                'ukid'=>$c['ukid'], 'count'=>$c['count'], 'price'=>$c['price'], 'elite'=>$c['elite'],
+                'single'=>$c['single'] ?? false, 'element'=>$c['element'], 'health'=>$c['health'],
+                'move'=>$c['move'], 'strike_weak'=>$c['strike']['weak'],
+                'strike_medium'=>$c['strike']['medium'], 'strike_strong'=>$c['strike']['strong'],
+                'prop'=>$c['prop'], 'type'=>$c['type'], 'class'=>$c['class'],
+            ], $this->forDeck($id)['cards'] ?? []) : [];
+        }
+        $payload['valid_deck_ids'] = $ids;
+        return $payload;
+    }
+
     /**
      * Список доступных стартовых дек (для стадии deck).
      *

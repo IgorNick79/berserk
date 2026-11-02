@@ -54,7 +54,7 @@ try {
             $creationKey=$_POST['creation_key']??null;
             if (!is_string($creationKey) || !preg_match('/\A[a-f0-9]{32}\z/D',$creationKey)) throw new DomainException('Откройте мастер создания игры заново.',400);
             $invited=$store->invitee($actor,$_POST['access']??'open',$_POST['invited_login']??'');
-            $id = $store->create($actor,RoomSetup::parse($setupMode,$_POST,$actor),$invited,$creationKey);
+            $id = $store->create($actor,RoomSetup::parse($setupMode,$_POST,$actor,$setupMode==='system'?\Berserk\Auth\AuthContext::gameDb():null),$invited,$creationKey);
         } else {
             if ($id === null || !is_string($action) || !in_array($action,['open','accept','reject','withdraw'],true)) throw new DomainException('Некорректный запрос.',400);
             $version = $integer($_POST['version'] ?? null);
@@ -68,7 +68,7 @@ try {
     } else {
         $data = $id === null ? ['rooms'=>$store->listing($actor ?? 0)] : ['room'=>$store->read($id,$actor)];
     }
-    if (!$api && isset($_GET['new'])) $wizard=\Berserk\View\Ui\LobbyWizard::render($actor,$csrf);
+    if (!$api && isset($_GET['new'])) $wizard=\Berserk\View\Ui\LobbyWizard::render($actor,$csrf,\Berserk\Auth\AuthContext::gameDb());
 
 } catch (DomainException $e) {
     $code = $e->getCode(); http_response_code($code>=400 && $code<=599 ? $code : 400); $error = $e->getMessage();
@@ -80,7 +80,7 @@ if ($api) {
 }
 header('Content-Type: text/html; charset=utf-8');
 ?>
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css?v=8"><link rel="stylesheet" href="assets/css/lobby-wizard.css?v=2"><link rel="stylesheet" href="assets/css/pregame.css?v=2"><script src="assets/js/settings.js?v=2" defer></script><script src="assets/js/lobby-room.js?v=5" defer></script><script src="assets/js/lobby.js?v=11" defer></script><script src="assets/js/lobby-wizard.js?v=1" defer></script><?php if (isset($_GET['room'])): ?><link rel="stylesheet" href="assets/css/battle-ui-skins.css?v=14"><link rel="stylesheet" href="assets/css/lobby-room.css?v=5"><link rel="stylesheet" href="assets/css/battle-chat.css?v=2"><?php endif; ?></head><body class="lobby-page<?= isset($_GET['room']) ? ' room-page' : '' ?>">
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css?v=8"><link rel="stylesheet" href="assets/css/lobby-wizard.css?v=3"><link rel="stylesheet" href="assets/css/pregame.css?v=2"><script src="assets/js/settings.js?v=2" defer></script><script src="assets/js/lobby-room.js?v=5" defer></script><script src="assets/js/lobby.js?v=11" defer></script><script src="assets/js/lobby-wizard.js?v=1" defer></script><?php if (isset($_GET['room'])): ?><link rel="stylesheet" href="assets/css/battle-ui-skins.css?v=14"><link rel="stylesheet" href="assets/css/lobby-room.css?v=5"><link rel="stylesheet" href="assets/css/battle-chat.css?v=2"><?php endif; ?></head><body class="lobby-page<?= isset($_GET['room']) ? ' room-page' : '' ?>">
 <?= \Berserk\View\Ui\GameMenu::render((isset($_GET['new'])||isset($_GET['room']))?'preparation':'lobby',$account,$csrf) ?>
 <main id="lobby" class="screen lobby<?= isset($_GET['new']) ? ' lobby--wizard' : (isset($_GET['room']) ? ' lobby--room' : '') ?>" data-state="<?= $escape(json_encode($data,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)) ?>" data-csrf="<?= $escape($csrf) ?>" data-authenticated="<?= $account ? '1' : '0' ?>" data-wizard="<?= $wizard !== '' ? '1' : '0' ?>">
 <p id="notice" role="status"><?= $escape($error ?? '') ?></p>

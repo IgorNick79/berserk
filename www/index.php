@@ -1150,54 +1150,7 @@ if ($commandType !== '') {
         && $state->getPlayer('host')->deckId === null;
 
     if ($canResolveDeckSelection) {
-        $starters = $deckView->listStarters();
-        $deckIds  = array_map('intval', array_column($starters, 'ind'));
-
-        $deckMode = (string) ($_POST['deck_mode'] ?? 'manual');
-        $otherMode = (string) ($_POST['other_deck_mode'] ?? 'manual');
-        $selected = (int) ($_POST['deck_id'] ?? 0);
-        $other = (int) ($_POST['other_deck_id'] ?? 0);
-
-        if ($deckMode === 'random' && $deckIds !== []) {
-            $selected = $deckIds[random_int(0, count($deckIds) - 1)];
-        }
-        if ($otherMode === 'random' && $deckIds !== []) {
-            $other = $deckIds[random_int(0, count($deckIds) - 1)];
-        }
-
-        $payload['deck_mode'] = $deckMode;
-        $payload['other_deck_mode'] = $otherMode;
-        $payload['deck_id'] = $selected;
-        $payload['valid_deck_ids'] = $deckIds;
-        $payload['other_deck_id']  = $other;
-
-        $mapDeckCards = static fn(array $deck): array => array_map(
-            static fn ($c) => [
-                'ukid'    => $c['ukid'],
-                'count'   => $c['count'],
-                'price'   => $c['price'],
-                'elite'   => $c['elite'],
-                'single'  => $c['single'] ?? false,
-                'element' => $c['element'],
-                'health'  => $c['health'],
-                'move'    => $c['move'],
-                'strike_weak'   => $c['strike']['weak'],
-                'strike_medium' => $c['strike']['medium'],
-                'strike_strong' => $c['strike']['strong'],
-                'prop'          => $c['prop'],
-                'type'          => $c['type'],
-                'class'         => $c['class'],
-            ],
-            $deck['cards'] ?? []
-        );
-
-        // Состав дек в формате [{ukid, count}]
-        $payload['deck_cards'] = in_array($selected, $deckIds, true)
-            ? $mapDeckCards($deckView->forDeck($selected))
-            : [];
-        $payload['other_cards'] = in_array($other, $deckIds, true)
-            ? $mapDeckCards($deckView->forDeck($other))
-            : [];
+        $payload = $deckView->selectionPayload($payload);
     }
 
     $cmd = new Command($commandType, $payload);

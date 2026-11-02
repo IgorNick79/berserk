@@ -44,7 +44,7 @@ final class MatchCreator
             $transaction->recordMatch($id);
             return $id;
         }
-        if ($setup!==null) RoomSetup::apply($state,$setup,$setup['mode']==='system'?null:($catalogFactory ? $catalogFactory() : null));
+        if ($setup!==null) RoomSetup::apply($state,$setup,$setup['mode']==='system' && !isset($setup['system_decks'])?null:($catalogFactory ? $catalogFactory() : null));
         // Same persisted initial state as GameRepository::create(), including CAS version 1.
         $json = json_encode($state->toArray(),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
         $stmt = $db->prepare('UPDATE games SET status=?,json=? WHERE ind=?');

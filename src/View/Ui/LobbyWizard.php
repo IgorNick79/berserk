@@ -1,14 +1,16 @@
 <?php
 declare(strict_types=1);
 namespace Berserk\View\Ui;
-use Berserk\Core\{GameState,GameSettings};
+use Berserk\Core\{Db,DeckView,GameState,GameSettings};
 use Berserk\Lobby\RoomSetup;
 use Berserk\View\Screen\SettingsScreen;
+use Berserk\View\Screen\DeckScreen;
+use Berserk\View\Template;
 
 /** Presentation only: all modes use the existing server settings renderer/parser. */
 final class LobbyWizard
 {
-    public static function render(int $actor, string $csrf): string
+    public static function render(int $actor, string $csrf, ?Db $catalog = null): string
     {
         $e=static fn(string $s): string=>htmlspecialchars($s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
         $html='<form id="wizard-fields-sealed"></form><form id="wizard-fields-draft"></form><form id="wizard-fields-solomon"></form><form id="wizard-fields-lucktest"></form><form id="wizard-fields-system"></form><form id="create-wizard" class="create-wizard" method="post" action="lobby.php" novalidate>'
@@ -25,7 +27,16 @@ final class LobbyWizard
             $state=new GameState(0,$actor,0);$state->mode=$mode==='solomon'?'draft':$mode;
             $setup=RoomSetup::parse($mode,[]);$state->settings=GameSettings::fromArray($setup['settings']);
             $view=(new SettingsScreen())->prepare($state,'host','host',null)['data'];
-            $body=$mode==='system'?'<p>Дополнительных настроек нет. Используется существующий выбор системных колод.</p>':$view['content_html'].$view['actions_html'];
+            $body=$view['content_html'].$view['actions_html'];
+            if ($mode === 'system') {
+                if ($catalog === null) throw new \RuntimeException('Catalog connection required');
+                $tpl = new Template(dirname(__DIR__,3).'/templates');
+                $deck = (new DeckScreen(new DeckView($catalog),$tpl))->prepare($state,'host','host',null);
+                $body = (string)$tpl->parse('screen/deck_host.tpl',$deck['data']);
+            }
+            if (in_array($mode,['draft','solomon','sealed'],true)) $body=self::boosterSections($body,$mode==='sealed');
+            // The wizard already provides the mode heading; keep explanatory LuckTest text.
+            if ($mode !== 'lucktest') $body=preg_replace('/<p class="settings-mode-title">.*?<\/p>/s','',$body);
             $body=preg_replace('/<script\b[^>]*>.*?<\/script>/s','',$body);
             $body=preg_replace('/<input[^>]*name="(?:first|second|game|cmd|draft_type)"[^>]*>/','',$body);
             $body=preg_replace('/<div class="settings-submit-row">.*?<\/div>/s','',$body);
@@ -36,5 +47,18 @@ final class LobbyWizard
             $html.='<fieldset class="wizard-mode-settings" data-mode="'.$mode.'"'.($mode==='sealed'?'':' hidden disabled').'>'.$body.'</fieldset>';
         }
         return $html.'<p class="wizard-summary" data-wizard-summary></p></section><p class="wizard-error" data-wizard-error role="alert" tabindex="-1"></p></div><footer class="wizard-footer"><button type="button" data-back>Назад</button><button type="button" data-next>Далее: общие настройки</button><button type="submit" data-create hidden>Создать игру</button></footer></form><noscript>Для перехода между этапами включите JavaScript.</noscript>';
+    }
+
+    /** Regroup the existing fields only in the wizard, leaving SettingsScreen unchanged. */
+    private static function boosterSections(string $body, bool $sealed): string
+    {
+        return preg_replace_callback('/<section class="settings-section"><h2>Основные настройки<\/h2>(.*?)<\/section>/s',static function(array $section) use ($sealed): string {
+            $fields=[];
+            $remaining=preg_replace_callback('/<fieldset class="settings-fieldset"><legend>(Количество бустеров|Состав бустера|Редкая \/ ультраредкая карта)<\/legend>.*?<\/fieldset>/s',static function(array $field) use (&$fields): string {$fields[]=$field[0];return '';},$section[1]);
+            if (count($fields)!==3) throw new \LogicException('Unexpected booster settings markup');
+            return ($sealed?'':'<section class="settings-section"><h2>Основные настройки</h2>'.$remaining.'</section>')
+                .'<section class="settings-section wizard-boosters"><h2>Бустеры</h2>'.$fields[0]
+                .'<details class="panel-card-description wizard-booster-composition"><summary><span>Состав бустера</span><span class="wizard-disclosure-closed">Раскрыть</span><span class="wizard-disclosure-open">Свернуть</span><i class="description-chevron" aria-hidden="true"></i></summary><div class="panel-card-description-body">'.$fields[1].$fields[2].'</div></details></section>';
+        },$body,1);
     }
 }
