@@ -605,9 +605,6 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 
 .settings-option .deck-select-tile__body {
     width: 100%;
-    display: grid;
-    grid-template-columns: 48px 1fr;
-    align-items: center;
 }
 
 .deck-select-tile__image {
