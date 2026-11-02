@@ -74,7 +74,7 @@ final class DraftScreen
             $ukid = $draft['grid'][$i] ?? null;
 
             if ($ukid === null) {
-                $cells[] = '<div class="pregame-grid-card" data-grid-position="' . $i . '" data-grid-occupied="0">' . $ui->miniature($state, $playerKey, [
+                $cells[] = '<div class="pregame-grid-card" data-grid-position="' . $i . '" data-grid-occupied="0">' . $ui->thumbnail($cardsInfo, [
                     'link'     => $baseUrl,
                     'disabled' => true,
                     'class'    => 'prepare-card-link--empty',
@@ -87,7 +87,7 @@ final class DraftScreen
             $link = "{$baseUrl}&card={$i}&card_ukid=" . rawurlencode($ukid) . "&card_version={$state->version}";
 
             $cells[] = '<div class="pregame-grid-card" data-grid-position="' . $i . '" data-grid-occupied="1">'
-                . $ui->miniature($state, $playerKey, [
+                . $ui->thumbnail($cardsInfo, [
                     'ukid' => $ukid,
                     'info' => $info ?? ['name' => $ukid, 'strike' => []],
                     'link' => $link,
@@ -116,7 +116,7 @@ final class DraftScreen
                     . ($isMyTurn ? '<label class="solomon-stack__select button"><input type="checkbox" name="positions[]" value="' . (int) $position
                         . '" form="solomon-decision"><span>Выбрать</span></label>' : '')
                     . '</div>'
-                    . $ui->miniature($state, $playerKey, ['ukid' => $ukid, 'info' => $info, 'link' => $baseUrl . '&card=' . (int) $position
+                    . $ui->thumbnail($cardsInfo, ['ukid' => $ukid, 'info' => $info, 'link' => $baseUrl . '&card=' . (int) $position
                         . '&card_ukid=' . rawurlencode($ukid) . '&card_version=' . $state->version])
                     . '<template data-solomon-preview>' . $ui->informationWithControls(['ukid' => $ukid], $cardsInfo) . $cardActionsHtml . '</template></div>';
             }
@@ -240,7 +240,9 @@ final class DraftScreen
         $draftInfo = '';
         $draftBottom = '';
         $panelSummary = $finishHtml . '<section class="pregame-pool-stats" aria-label="Статистика выбранного пула">'
-            . '<div class="pregame-pool-totals">Выбрано: <b>' . $totalCount . '</b> · Средняя цена: <b>' . $avgPrice . '</b></div>'
+            . '<div class="pregame-pool-totals">Выбрано: <b>' . $totalCount . '</b> · Средняя цена: <b>' . $avgPrice . '</b>'
+            . ($isMyTurn ? '<span class="pregame-selection-count"> · Текущий выбор: <b ' . ($isSolomon ? 'data-solomon-selected' : 'data-grid-selected') . '>0</b></span>' : '')
+            . '</div>'
             . '<div class="pregame-pool-icons"><div class="pregame-pool-currencies">'
             . $this->statisticIcon('/assets/images/card/elite.png', 'Золотые карты', $goldCount)
             . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебряные карты', $silverCount)
@@ -249,7 +251,6 @@ final class DraftScreen
             $panelSummary .= $this->statisticIcon('/assets/images/element/' . $code . '.png', $label, $elementCodeCounts[$code]);
         }
         $panelSummary .= '</div></div>'
-            . ($isMyTurn ? '<div class="pregame-selection-count">Выбрано: <b ' . ($isSolomon ? 'data-solomon-selected' : 'data-grid-selected') . '>0</b></div>' : '')
             . '</section>';
         $panelFooter = '<div class="pregame-draft-footer">'
             . ($isMyTurn ? '<div class="pregame-footer-decisions">' . $actionsHtml . '</div>' : '')
@@ -337,7 +338,7 @@ final class DraftScreen
             foreach ((array) ($event['cards'] ?? []) as $ukid) {
                 $ukid = (string) $ukid;
                 $info = $cardsInfo[$ukid] ?? ['name'=>$ukid, 'strike'=>[]];
-                $html .= '<div class="pregame-history-entry">' . $ui->miniature($state, $playerKey, ['ukid'=>$ukid, 'info'=>$info, 'link'=>'#', 'class'=>'draft-history__card'])
+                $html .= '<div class="pregame-history-entry">' . $ui->thumbnail($cardsInfo, ['ukid'=>$ukid, 'info'=>$info, 'link'=>'#', 'class'=>'draft-history__card'])
                     . '<template data-history-card-preview>' . $ui->informationWithControls(['ukid'=>$ukid], $cardsInfo) . '</template></div>';
             }
             $html .= '</div></div>';

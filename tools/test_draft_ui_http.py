@@ -21,7 +21,7 @@ body=r'''
             fixture['draft']={'grid':[ukids[i%2] for i in range(count)],'pool':[ukids[i%2] for i in range(80)],'recycle':[],'turn':'host','picked':{'host':[],'player':[]},'history':[],'grid_mode':'continuous','decision_id':1,'consecutive_passes':0,'round_first_player':'host','round_picks':0}
             set_fixture(game,fixture);sql(f"USE LAB_DB;UPDATE games SET status='draft' WHERE ind={game};");games.append(game)
             code,html,_=http(a,game)
-            check(kind+' real page loads',code==200 and 'battle-mini-card' in html and 'draft-page' in html)
+            check(kind+' real page loads',code==200 and 'view-thumbnail' in html and 'draft-page' in html)
 
         # Real timed pause and native preparation guards, separate from browser games.
         game=match();timed=copy.deepcopy(fixture);timed['game_id']=game

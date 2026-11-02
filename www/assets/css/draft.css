@@ -2,12 +2,13 @@
 .draft-page .pregame-main{position:relative}
 .draft-page .screen-draft{min-height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;box-sizing:border-box}
 .draft-page .screen-draft>.flash:empty{display:none}
-.draft-page .pregame-draft-grid{width:max-content;padding:20px 20px 20px 48px}
-.draft-page .draft-grid{width:max-content}
-.draft-page .pregame-draft-grid .draft-row,.draft-page .solomon-stack{grid-template-columns:repeat(3,max-content)}
-.draft-page .prepare-card-link,.draft-page .prepare-card{width:max-content!important;height:auto!important;min-height:0!important}
-.draft-page .prepare-card{margin:0;padding:0;border:0;background:none;box-shadow:none}
-.draft-page .prepare-card-link--disabled .prepare-card{width:102px!important;height:92px!important;visibility:hidden}
+.draft-page .pregame-main .screen-draft{background:none;border:0;box-shadow:none}
+.draft-page .pregame-draft-grid{width:100%;padding:20px 0 20px 32px}
+.draft-page .draft-grid{width:100%}
+.draft-page .pregame-draft-grid .draft-row,.draft-page .solomon-stack{grid-template-columns:repeat(3,minmax(0,1fr))}
+.draft-page .prepare-card-link,.draft-page .prepare-card{width:100%!important;height:auto!important;min-height:0!important}
+.draft-page .prepare-card{margin:0}
+.draft-page .prepare-card-link--disabled .prepare-card{visibility:hidden}
 .draft-page .pregame-grid-controls{padding:0;min-height:0;width:100%;margin-top:16px}
 .draft-page .pregame-grid-controls .button{font:inherit}
 .draft-page .pregame-info-panel{gap:0}

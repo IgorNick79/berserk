@@ -11,19 +11,6 @@ final class PrepareUi
 {
     public function __construct(private Template $tpl) {}
 
-    /** Adapter for catalog cards that have no persistent battle instance yet. */
-    public function miniature(\Berserk\Core\GameState $state, string $viewer, array $data): string
-    {
-        if (!empty($data['disabled']) || empty($data['ukid'])) return '<span class="prepare-card-link prepare-card-link--disabled"><span class="prepare-card" aria-hidden="true"></span></span>';
-        $info = (array) ($data['info'] ?? []);
-        $health = (int) ($info['health'] ?? 0);
-        $card = new \Berserk\Core\CardInstance(instanceId:0, ukid:$data['ukid'], owner:$viewer, zone:'deck', hp:$health, hpMax:$health,
-            elite:!empty($info['elite']), price:(int)($info['price']??0), single:!empty($info['single']));
-        $name = htmlspecialchars((string)($info['name'] ?? $data['ukid']), ENT_QUOTES|ENT_SUBSTITUTE, 'UTF-8');
-        $mini = LiveBattleCard::render($card, $state, $viewer, false, $name, $health.'/'.$health);
-        return '<a class="prepare-card-link '.htmlspecialchars((string)($data['class']??''),ENT_QUOTES).'" href="'.htmlspecialchars((string)($data['link']??'#'),ENT_QUOTES).'"><div class="prepare-card">'.$mini.'</div></a>';
-    }
-
     public function informationWithControls(?array $card, array $catalog): string
     {
         $html = $this->information($card, $catalog);
@@ -137,6 +124,9 @@ final class PrepareUi
     public function thumbnail( array $catalog, array $data): string
     {
         if (!empty($data['legacy'])) return $this->card($data);
+        if (!empty($data['disabled']) || empty($data['ukid'])) return '<span class="prepare-card-link prepare-card-link--disabled"><span class="prepare-card view-thumbnail" aria-hidden="true"></span></span>';
+        $data += ['info'=>[], 'count'=>1, 'selected'=>false, 'class'=>'view-element-'.($catalog[$data['ukid']]['element_code'] ?? 'neutral')];
+        if (!str_contains($data['class'], 'view-element-')) $data['class'] = 'view-element-'.($catalog[$data['ukid']]['element_code'] ?? 'neutral').' '.$data['class'];
         $info = array_replace($data['info'], $catalog[$data['ukid']] ?? []);
         $e = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $ukid = $data['ukid'];
