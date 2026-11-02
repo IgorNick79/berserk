@@ -43,6 +43,7 @@
         card.querySelector(".prepare-card-link").addEventListener("click", function (event) {
             event.preventDefault();
             previewPosition = card.dataset.solomonPosition;
+            var screen=stack.closest(".screen");if(screen.secondaryPanel)screen.secondaryPanel(null);
             var history = document.querySelector('[data-solomon-history]');
             if (history) history.setAttribute('aria-pressed', 'false');
             var preview = document.querySelector(".pregame-panel-content");
@@ -57,6 +58,7 @@
     var root = stack.closest('.pregame-layout');
     var historyReturn = null;
     root.addEventListener('click', function (event) {
+        if(event.target.closest('[data-view-close]')){event.preventDefault();previewPosition='-1';root.querySelector('.pregame-panel-content').replaceChildren();update();return;}
         var action = event.target.closest('[data-solomon-panel-action]');
         if (action && !action.disabled) {
             var card = cards.find(function (entry) { return entry.dataset.solomonPosition === previewPosition; });

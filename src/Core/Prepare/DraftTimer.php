@@ -68,6 +68,19 @@ final class DraftTimer
         return $state->draft !== null && isset($state->draft['timer']) && is_array($state->draft['timer']);
     }
 
+    public static function suspend(GameState $state, int $now): void
+    {
+        self::ensureRuntime($state, $now);
+        if (self::hasTimer($state)) $state->draft['timer']['paused_at'] ??= $now;
+    }
+
+    public static function resume(GameState $state, int $now): void
+    {
+        if (!isset($state->draft['timer']['paused_at'])) return;
+        $state->draft['timer']['action_started_at'] += max(0, $now - $state->draft['timer']['paused_at']);
+        unset($state->draft['timer']['paused_at']);
+    }
+
     public static function startAction(GameState $state, int $now): void
     {
         self::ensureRuntime($state, $now);
@@ -86,6 +99,7 @@ final class DraftTimer
 
     public static function pendingActionCharge(GameState $state, string $playerKey, int $now): int
     {
+        $now = (int) ($state->draft['timer']['paused_at'] ?? $now);
         if (!self::hasTimer($state)) return 0;
 
         $timer = $state->draft['timer'];
@@ -104,6 +118,7 @@ final class DraftTimer
 
     public static function isExpired(GameState $state, int $now): bool
     {
+        if (\Berserk\Core\MatchPause::blocking($state)) return false;
         return self::deadlineAt($state) !== null && $now >= self::deadlineAt($state);
     }
 
@@ -130,6 +145,7 @@ final class DraftTimer
 
     public static function remainingTotal(GameState $state, string $playerKey, int $now): ?int
     {
+        $now = (int) ($state->draft['timer']['paused_at'] ?? $now);
         if (!self::hasTimer($state)) return null;
 
         $remaining = self::remainingTotalBeforeActive($state, $playerKey);
@@ -142,6 +158,7 @@ final class DraftTimer
 
     public static function remainingAction(GameState $state, int $now): ?int
     {
+        $now = (int) ($state->draft['timer']['paused_at'] ?? $now);
         $deadline = self::deadlineAt($state);
         return $deadline === null ? null : max(0, $deadline - $now);
     }

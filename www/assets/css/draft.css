@@ -1,0 +1,27 @@
+/* Composition only: card decoration, themes, buttons and selection are shared. */
+.draft-page .pregame-main{position:relative}
+.draft-page .screen-draft{min-height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;box-sizing:border-box}
+.draft-page .screen-draft>.flash:empty{display:none}
+.draft-page .pregame-draft-grid{width:max-content;padding:20px 20px 20px 48px}
+.draft-page .draft-grid{width:max-content}
+.draft-page .pregame-draft-grid .draft-row,.draft-page .solomon-stack{grid-template-columns:repeat(3,max-content)}
+.draft-page .prepare-card-link,.draft-page .prepare-card{width:max-content!important;height:auto!important;min-height:0!important}
+.draft-page .prepare-card{margin:0;padding:0;border:0;background:none;box-shadow:none}
+.draft-page .prepare-card-link--disabled .prepare-card{width:102px!important;height:92px!important;visibility:hidden}
+.draft-page .pregame-grid-controls{padding:0;min-height:0;width:100%;margin-top:16px}
+.draft-page .pregame-grid-controls .button{font:inherit}
+.draft-page .pregame-info-panel{gap:0}
+.draft-page .draft-timer{background:transparent;border:0;color:var(--ip-title);padding:0;margin:0}
+.draft-page .pregame-panel-footer{padding:12px}
+.draft-page .pregame-panel-footer .pregame-view-confirm{gap:8px}
+.draft-page .pregame-panel-footer [data-view-notice]:empty{display:none}
+.draft-page .pregame-card-heading{margin:0}
+.draft-page .pregame-panel-content>.panel-card-heading:first-child{border-top:0}
+.draft-page .pregame-footer-decisions form{display:flex;gap:8px;margin:0;flex-wrap:wrap}
+.draft-page .pregame-draft-footer{flex-wrap:wrap}
+.draft-page .pregame-draft-footer .prepare-actions{margin:0}
+.draft-page .pregame-view-confirm{flex-wrap:wrap}
+.draft-page .pregame-view-confirm .battle-icon-actions{margin-left:auto}
+.draft-page .pregame-history-control{flex:0 0 auto}
+.draft-page .pregame-panel-content .battle-secondary-view{margin:0;padding:0}
+.draft-page [data-match-paused="1"] .pregame-panel-summary{pointer-events:none}

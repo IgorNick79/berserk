@@ -1,0 +1,90 @@
+# Draft — унификация UI
+
+2026-11-02. Готово для визуальной приёмки. Commit, push, deploy и миграции рабочей БД не выполнялись.
+
+## Read-only аудит и согласованные границы
+
+- Grid уже использует серверную сетку 3×3, выбор строки/столбца и «Пас» через локальный выбор с последующим подтверждением. Клик по отдельной карте открывает информацию. Эти правила сохранены.
+- Solomon поддерживает предусмотренные настройками стеки 6/8 карт и выбор отдельных карт через существующие checkbox. Новых размеров сетки или комбинаций выбора не добавлено.
+- `DraftScreen` и `grid_selection.js` / `solomon_selection.js` владели сеткой, статистикой, выбором и preview. `draft_timer.js` выполнял существующий POST `draft_sync` и перезагрузку при изменении версии. Этот маршрут сохранён.
+- GameChat уже был доступен на `draft`. Серверная механика чата не менялась.
+- MatchPause ранее не поддерживал `draft`. Его расширение и согласование с DraftTimer отдельно разрешены пользователем. Дополнительно разрешена защита `PrepareProcessor::resolveDraftTimeouts()`, поскольку `draft_sync` вызывает его напрямую, минуя Engine.
+- Engine, DraftProcessor, выбор карт, copy limits, порядок ходов, распределение пула и правила завершения драфта не изменены.
+
+## Прямое переиспользование
+
+- `LiveBattleCard`, `battle-mini-card.css/js`, `battle-mini-nameplate.css`: изображения, рамки, HP, имя при hover и общий zoom. `PrepareUi::miniature()` — адаптер каталоговой карты к существующему рендереру, без добавления экземпляра в GameState.
+- `PrepareUi::informationWithControls()` вызывает существующие `information()` и `withCardControls()`: цена, кристалл, название, способности, характеристики, popup оригинала и крестик на изображении. Отдельная нижняя кнопка закрытия удалена.
+- Прежние `.prepare-card` и `.prepare-card--selected` оставлены как контракт существующих selection-скриптов. Само выделение/подсчёт не заменены новой клиентской моделью.
+- `PreGameLayout`, `view-deck.css`, `roll.css`, `battle-ui-skins.css`, GameMenu и четыре темы; иконки статистики прежние.
+- Общие `actionsFooter`, `BerserkPanelDock`, `view-deck.js`, `BerserkMatchPause`, `match_pause_mask.tpl`, GameChat. Не добавлено endpoint или новой системы команд.
+- «Пас» перенесён рядом с «Подтвердить». Для Grid сохранён прежний двухшаговый смысл: выбрать «Пас», затем подтвердить. В discrete Grid отсутствующий ранее «Пас» не добавлен. Solomon сохраняет свои исходные команды.
+
+## Минимальные общие адаптации
+
+- Селекторы live-miniatures и маски паузы расширены на Draft, без копирования оформления.
+- Общая палитра кнопок применена к центральным кнопкам Draft. Добавлен нейтральный `.skip.secondary` с уже используемыми серыми параметрами палитры; отдельного дизайна кнопки нет.
+- `actionsFooter()` принимает необязательный HTML существующей иконки истории перед паузой/чатом; значение по умолчанию пустое, остальные экраны сохраняют прежнюю разметку.
+- `battle-match-pause.js` блокирует помеченные `data-preparation-actions` через `inert`, не перезаписывая их собственные disabled-состояния. Поэтому пауза не разблокирует недопустимый выбор после возобновления.
+- `draft.css` содержит только компоновку: существующий коврик, размеры обёрток вокруг live-miniatures, выравнивание controls/статистики/footer, отсутствие промежутков и белого фона таймера. Мобильный редизайн не выполнялся.
+- Grid/Solomon скрипты обслуживают существующие preview/выбор; клик по карте закрывает общий чат перед показом preview, крестик закрывает информацию, сохраняя выбор карт.
+
+## DraftTimer и пауза
+
+- На запросе паузы существующий timer получает необязательный `paused_at`; обе временные величины остаются неизменны на время запроса и активной паузы.
+- При завершении паузы `action_started_at` сдвигается на реально прошедший интервал, `paused_at` удаляется. При позднем HTTP-запросе используется фактический deadline паузы, а время после него учитывается обычным образом.
+- Unlimited остаётся без таймера. Для исторических данных без нового поля действует прежний расчёт.
+- Сохраняются grace 2 секунды, лимиты, cooldown, подтверждения, ручные команды и автоматический выбор после действительного истечения таймера. Истёкший таймер нельзя скрыть новым запросом паузы.
+- В `resolveDraftTimeouts()` действует ранний выход без событий и изменения состояния при паузе — до любых автоматических распределений. Engine продолжает блокировать обычные команды.
+- При загрузке страницы во время паузы клиент получает `data-paused`, чтобы не перезаписать сохранённое сервером значение таймера до инициализации общего UI паузы.
+
+## Изменённые файлы
+
+- `src/Core/MatchPause.php`
+- `src/Core/Prepare/DraftTimer.php`, `src/Core/Prepare/PrepareProcessor.php`
+- `src/View/Screen/DraftScreen.php`
+- `src/View/Ui/PrepareUi.php`, `src/View/Ui/PreGameLayout.php`
+- `templates/screen/draft.tpl`, `www/index.php`
+- `www/assets/css/draft.css`, `battle-mini-card.css`, `battle-ui-skins.css`, `global.css`
+- `www/assets/js/draft_timer.js`, `grid_selection.js`, `solomon_selection.js`
+- `www/assets/js/game-transport.js`, `view-deck.js`, `battle-match-pause.js`
+- `tools/test_draft_match_pause.php`, `test_draft_ui_http.py`, `test_draft_ui_browser.cjs`
+- `tools/test_roll_presentation.php`: обновлён контракт разрешённой стадии Draft.
+- `tools/test_place_http_browser.cjs`: селектор учитывает оба существующих варианта общего заголовка, диагностируется полный стек pageerror.
+
+## Выполненные проверки
+
+| Проверка | Результат |
+|---|---|
+| Draft MatchPause, in-memory Engine | 187 проверок; оба режима таймера, request/active, отказ/отмена/ready/deadlines, позднее чтение, повторное возобновление |
+| Draft, реальная изолированная MariaDB/PHP | 25 HTTP/БД-проверок |
+| Draft, настоящий Yandex/Chromium | 22 сценария, четыре темы, Grid/Solomon 8, обе перспективы, preview/крестик, row/col/deselect, pass/confirm, чат во время паузы, inert формы |
+| DraftTimer/history | DB-проверки выполнены внутри disposable-стенда; пройдены |
+| Grid timeout regression | 343354 проверок, включая 1000 frozen paths; пройдены |
+| View | 19 HTTP/БД + 64 browser |
+| Roll | 29 HTTP/БД + 24 browser |
+| Deal | 20 HTTP/БД + 11 browser |
+| Place | 52 HTTP/БД + 31 browser, в том числе ранее отложенные проверки переноса |
+| Общее меню/настройки/комната/чат/пауза | 227 HTTP/БД-проверок |
+| Боевой drag-and-drop | 31 browser-сценарий |
+| Остальные PHP | MatchPause 119, Pathfinder 381, Place reposition 29, prepare dice, preparation Engine boundary, battle snapshot renderer, Roll presentation — пройдены |
+| Синтаксис | PHP lint, JS syntax, Python syntax, `git diff --check` — пройдены |
+
+Реальный Draft HTTP/БД-прогон проверяет блокировку native `draft_row`, `draft_col`, `draft_confirm`, `draft_pass`, `finish_draft`; отсутствие автопродвижения через `draft_sync`; оба остатка времени; восстановление команды паузы из журнала и повтор без второго commit; гонку pause/row; выбор строки/столбца после resume, конфликт старой версии, переход `draft → view`.
+
+Все DB-операции выполнялись только на отдельных loopback MariaDB/PHP-серверах со свежими datadir и конфигурациями. Рабочая БД не использовалась. Для Grid timeout удалённые локально эталоны считаны из HEAD в `tmp`; старые отчёты в рабочей папке не восстанавливались.
+
+## Ограничения и известные проблемы
+
+- `test_solomon_draft.php` не проходит: его mock `Db` не поддерживает запрос `GameRepository::requiresHistory()`. Та же ошибка воспроизведена на чистом HEAD в `tmp/draft-baseline`; тест не объявляется успешным. Реальные новые browser/HTTP проверки Solomon выполнены.
+- В одном предварительном Place-прогоне зарегистрирован `Cannot read properties of undefined (reading 'addEventListener')` без стека. Повторный полный прогон с регистрацией стека прошёл без ошибок. Причина единичного наблюдения не установлена; оно не объявляется исправленным дефектом.
+- Полная ранее отложенная HTTP-регрессия боевого таймера остаётся обязательной: её специальный `TURN_TIMER_TEST_URL` не настроен. Проверки DraftTimer и общий прогон не заменяют её.
+- Скриншоты получены на тестовых аккаунтах и каталоговых fixtures. Для центральной сетки использованы два предоставленных локальных WebP; полный production-набор изображений и production не проверялись.
+- Отдельная мобильная полировка, аудио на физическом устройстве и длительная ручная партия не выполнялись.
+- До визуальной приёмки пользователем задача не считается окончательно закрытой.
+
+## Реальные desktop-скриншоты
+
+`docs/evidence/draft/`: `grid-selected.png` (сетка, статистика, нижние действия), `grid-preview.png` (крестик на изображении), `solomon-preview.png` (стек 8), `chat.png`, `pause.png`, `theme-grimoire.png`, `theme-stone.png`, `theme-leather.png`, `theme-parchment.png`.
+
+Результаты: `http-checks.json`, `browser-checks.json`, `test_draft_timer_history.php.txt`.

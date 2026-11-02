@@ -15,7 +15,7 @@ final class MatchPause
 
     public static function supportsStage(string $stage): bool
     {
-        return in_array($stage, ['battle', 'view', 'turn', 'side', 'deal', 'place'], true);
+        return in_array($stage, ['battle', 'view', 'turn', 'side', 'deal', 'place', 'draft'], true);
     }
 
     public static function isCommand(string $type): bool { return in_array($type, self::COMMANDS, true); }
@@ -79,6 +79,7 @@ final class MatchPause
         if ($p['used'][$actor]>=self::ACCEPTED_LIMIT) return Result::error('pause_limit');
         if ($now<$p['cooldown_until'][$actor]) return Result::error('pause_cooldown');
         $timer=TurnTimer::snapshot($s,$now);
+        if ($s->status==='draft' && \Berserk\Core\Prepare\DraftTimer::isExpired($s,$now)) return Result::error('pause_turn_expired');
         if ($s->status==='battle' && $timer===null && TurnTimer::enabled($s)) return Result::error('pause_invalid_timer');
         if (TurnTimeoutEligibility::check($s,$now)['allowed']) return Result::error('pause_turn_expired');
         $wait=BattleWaitResolver::current($s);
@@ -89,6 +90,7 @@ final class MatchPause
         TurnTimer::settle($s,$now);
         $original=$timer===null?null:$s->battle['turn_timer'];
         if ($original!==null) TurnTimer::pause($s,$original['period_id'],'match_pause',$now);
+        if ($s->status==='draft') \Berserk\Core\Prepare\DraftTimer::suspend($s,$now);
         $generation=$p['generation']+1;
         $s->battle['match_pause']=[
             'mode'=>'requested','generation'=>$generation,'request_id'=>'mp:'.$s->gameId.':'.$generation,
@@ -123,6 +125,7 @@ final class MatchPause
     {
         $p=$s->battle['match_pause'];
         $timer=$p['suspended_timer'];
+        if ($s->status==='draft') \Berserk\Core\Prepare\DraftTimer::resume($s,$at);
         // No battle command may change the period while suspended.
         if ($timer!==null && ($s->battle['turn_timer']['period_id']??null)!==$timer['period_id']) throw new \LogicException('Pause timer period changed');
         if ($timer!==null && $timer['status']==='running') TurnTimer::resume($s,$timer['period_id'],'match_pause',$at);

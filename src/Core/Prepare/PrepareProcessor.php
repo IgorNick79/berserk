@@ -1867,6 +1867,7 @@ final class PrepareProcessor
 
     public function resolveDraftTimeouts(?int $now = null): Result
     {
+        if (\Berserk\Core\MatchPause::blocking($this->state)) return Result::ok([]);
         if ($this->state->settings->isSolomonDraft() || $this->isContinuousGrid()) {
             return $this->atomicSolomon(fn() => $this->resolveDraftTimeoutsInternal($now));
         }

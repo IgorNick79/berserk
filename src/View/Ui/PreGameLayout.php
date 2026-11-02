@@ -27,7 +27,7 @@ final class PreGameLayout
         $title = match ($screen) {
             'settings' => (string) ($data['title'] ?? self::TITLES[$screen]),
             'view' => 'Твоя дека: ' . (string) ($data['deck_name'] ?? '—'),
-            'draft' => (string) ($data['panel_title'] ?? self::TITLES[$screen]),
+            'draft' => ($data['draft_class'] ?? '') === 'screen-draft--solomon' ? 'Соломон драфт' : 'Grid Draft',
             default => self::TITLES[$screen],
         };
         $roll = in_array($screen, ['turn','side'], true);
@@ -41,21 +41,21 @@ final class PreGameLayout
             $data['panel_summary_html'] = str_replace('</button>', '</span>', $summary);
             $data['panel_actions_html'] = self::actionsFooter($data['panel_actions_html'] ?? '');
         }
-        if ($screen === 'place') $data['match_pause_mask_html'] = $this->tpl->parse('includes/match_pause_mask.tpl', ['pause_mask_hidden'=>'hidden']);
+        if (in_array($screen, ['place','draft'], true)) $data['match_pause_mask_html'] = $this->tpl->parse('includes/match_pause_mask.tpl', ['pause_mask_hidden'=>'hidden']);
         $content = (string) ($data['panel_html'] ?? '');
         if ($roll) $content = '<header class="pregame-card-heading panel-card-heading"><h3 class="pregame-card-title panel-card-title">Бросок кубиков</h3></header>' . $content;
         $html = $this->render((string) $this->tpl->parse('screen/' . $screen . '.tpl', $data),
             $title, $content, (string) ($data['timer_html'] ?? ''), (string) ($data['panel_actions_html'] ?? ''),
             $content === '' ? 'statistics' : 'card', (string) ($data['panel_phase'] ?? ''), (string) ($data['panel_summary_html'] ?? ''));
-        if (in_array($screen, ['view','deal','place'], true) || $roll) $html=str_replace(['pregame-info-panel','pregame-panel-content','pregame-panel-footer'], ['pregame-info-panel info-panel','pregame-panel-content info-panel-content','pregame-panel-footer info-panel-footer'], $html);
-        if (in_array($screen, ['view','deal','place'], true) || $roll) $html = str_replace('class="pregame-layout"', 'class="pregame-layout" data-panel-theme="grimoire"', $html);
+        if (in_array($screen, ['view','deal','place','draft'], true) || $roll) $html=str_replace(['pregame-info-panel','pregame-panel-content','pregame-panel-footer'], ['pregame-info-panel info-panel','pregame-panel-content info-panel-content','pregame-panel-footer info-panel-footer'], $html);
+        if (in_array($screen, ['view','deal','place','draft'], true) || $roll) $html = str_replace('class="pregame-layout"', 'class="pregame-layout" data-panel-theme="grimoire"', $html);
         if ($screen === 'place') $html = str_replace(['class="pregame-layout"','class="pregame-main"'], ['class="pregame-layout battle-shell" data-mini-card-design="v2"','class="pregame-main battle-main"'], $html);
         return $html;
     }
 
-    public static function actionsFooter(string $confirmHtml): string
+    public static function actionsFooter(string $confirmHtml, string $leadingIconsHtml = ''): string
     {
-        return '<div class="pregame-view-confirm info-actions">' . $confirmHtml . '<div class="battle-icon-actions"><button type="button" class="battle-icon-control" data-open-pause aria-label="Пауза игры" title="Пауза игры"><img src="/assets/images/battle/pause_160.png" width="28" height="28" alt=""><span class="battle-icon-tooltip" aria-hidden="true">Пауза игры</span></button><span class="battle-chat-anchor" data-chat-anchor></span></div></div><div data-view-notice role="status"></div>';
+        return '<div class="pregame-view-confirm info-actions">' . $confirmHtml . '<div class="battle-icon-actions">' . $leadingIconsHtml . '<button type="button" class="battle-icon-control" data-open-pause aria-label="Пауза игры" title="Пауза игры"><img src="/assets/images/battle/pause_160.png" width="28" height="28" alt=""><span class="battle-icon-tooltip" aria-hidden="true">Пауза игры</span></button><span class="battle-chat-anchor" data-chat-anchor></span></div></div><div data-view-notice role="status"></div>';
     }
 
     public function render(string $mainHtml, string $title, string $contentHtml = '', string $timerHtml = '', string $footerHtml = '', string $contentKind = 'statistics', string $phase = '', string $summaryHtml = ''): string

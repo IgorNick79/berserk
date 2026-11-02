@@ -2,16 +2,17 @@
     'use strict';
     if (!document.body.matches('.view-deck-page,.roll-page') || window.berserkViewReady) return;
     window.berserkViewReady = true;
+    const isDraft = document.body.classList.contains('draft-page');
     const isPlace = document.body.classList.contains('place-page');
     const isDeal = document.body.classList.contains('deal-page');
-    const isRoll = !isPlace && document.body.classList.contains('roll-page');
-    if (isRoll || isDeal || isPlace) document.addEventListener('contextmenu', event=>event.preventDefault());
-    const config = (isRoll || isDeal || isPlace) ? window.berserkRollTransport : window.berserkViewTransport;
+    const isRoll = !isPlace && !isDraft && document.body.classList.contains('roll-page');
+    if (isRoll || isDeal || isPlace || isDraft) document.addEventListener('contextmenu', event=>event.preventDefault());
+    const config = (isRoll || isDeal || isPlace || isDraft) ? window.berserkRollTransport : window.berserkViewTransport;
     if (!config) return;
     // Keep loaded styles connected while snapshots replace the stage markup.
     document.querySelectorAll('.pregame-layout link[rel="stylesheet"]').forEach(node=>document.head.append(node));
     let version = Number(config.version), busy = false, refreshing = false, selection = 0, pause = null, forceNext = false;
-    const key = ((isRoll || isDeal || isPlace) ? 'berserk-roll-pause:' : 'berserk-view-command:') + config.game;
+    const key = ((isRoll || isDeal || isPlace || isDraft) ? 'berserk-roll-pause:' : 'berserk-view-command:') + config.game;
     let pending = null;
     try { pending = JSON.parse(sessionStorage.getItem(key)); } catch (_) {}
     const url = action => 'index.php?game=' + encodeURIComponent(config.game) + '&ajax=' + action;
@@ -37,9 +38,10 @@
             const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
             const script = doc.querySelector('script[data-stage][data-version][data-csrf]');
             if (!script) throw Error('Не удалось загрузить состояние');
-            if ((isRoll || isDeal || isPlace) ? !(isDeal ? ['deal'] : ['turn','side']).includes(script.dataset.stage) : script.dataset.stage !== 'view') { location.assign(address); return; }
+            if (!isDraft && ((isRoll || isDeal || isPlace || isDraft) ? !(isDeal ? ['deal'] : ['turn','side']).includes(script.dataset.stage) : script.dataset.stage !== 'view')) { location.assign(address); return; }
             if (epoch !== selection) return;
             const nextVersion = Number(script.dataset.version);
+            if(isDraft){if(script.dataset.stage!=='draft'||nextVersion!==version){location.assign(address);return;}const state=doc.querySelector('#match-pause-state');pause=state?JSON.parse(state.textContent):null;renderPause();return;}
             if (force || nextVersion !== version) {
                 const next = doc.querySelector('.pregame-layout'), current = document.querySelector('.pregame-layout');
                 next.querySelectorAll('link[rel="stylesheet"],script[src]').forEach(node=>node.remove());
@@ -57,7 +59,7 @@
                 if(secondary)dock.remove();
                 current.replaceWith(next); version = nextVersion;
                 const anchor = next.querySelector('[data-chat-anchor]'); if (anchor && toggle) anchor.append(toggle);
-                if (isRoll || isDeal || isPlace) config.setVersion(version,script.dataset.stage);
+                if (isRoll || isDeal || isPlace || isDraft) config.setVersion(version,script.dataset.stage);
                 if (!isRoll) window.berserkInitViewPager();
                 next.querySelector('.pregame-main').scrollTop=mainScroll;next.querySelector('.pregame-panel-content').scrollTop=panelScroll;window.scrollTo(0,scrollY);
             }
@@ -109,7 +111,7 @@
         command(type,{ukid:params.get('ukid')||''});return true;
     };
     document.addEventListener('click', async event => {
-        if(isPlace)return;
+        if(isPlace||isDraft)return;
         const card = event.target.closest('.view-deck-page .prepare-card-link');
         const close = event.target.closest('[data-view-close]');
         const action = event.target.closest('[data-view-card-actions] a,.pregame-view-confirm a');

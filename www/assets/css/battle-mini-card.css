@@ -1,41 +1,41 @@
 /* Live miniature only. Replay continues using the untouched legacy component. */
-.battle-page [data-mini-card-design="v2"] .battle-layout{--battle-cell-width:110px;--battle-cell-height:100px;--battle-cell-size:var(--battle-cell-width);--battle-cell-gap:4px}
-.battle-page [data-mini-card-design="v2"] .battle-field .field-cell{width:var(--battle-cell-width);height:var(--battle-cell-height)}
-.battle-page [data-mini-card-design="v2"] .battle-columns,.battle-page [data-mini-card-design="v2"] .battle-numbered-row{grid-template-columns:repeat(5,var(--battle-cell-width))}
-.battle-page [data-mini-card-design="v2"] .fly-zone,.battle-page [data-mini-card-design="v2"] .piles{width:var(--battle-cell-width);height:calc(3 * var(--battle-cell-height) + 2 * var(--battle-cell-gap));grid-template-rows:repeat(3,var(--battle-cell-height))}
-.battle-page [data-mini-card-design="v2"] .fly-slot,.battle-page [data-mini-card-design="v2"] .battle-side-slot{width:var(--battle-cell-width);height:var(--battle-cell-height)}
-.battle-page [data-mini-card-design="v2"] :is(.card-link,.fly-card,.fly-page-card){display:flex;align-items:center;justify-content:center}
-.battle-page .battle-card.battle-mini-card{position:relative;isolation:isolate;display:block;flex:0 0 auto;box-sizing:border-box;width:102px;height:92px;padding:0;border:0;border-radius:7px;overflow:hidden;background:none;color:#fff4df;font:10px/1.1 system-ui,sans-serif;text-align:left;cursor:inherit}
-.battle-page .battle-card.battle-mini-card.mini-enemy{background:none}
-.battle-page .battle-mini-card .mini-art{position:absolute;left:5px;top:5px;width:92px;height:82px;object-fit:cover;pointer-events:none}
-.battle-page .battle-mini-card .mini-frame{position:absolute;inset:0;width:102px;height:92px;object-fit:contain;z-index:4;pointer-events:none}
-.battle-page .mini-indicators{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:max-content;max-width:88px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px;z-index:6}
-.battle-page .mini-indicator{display:inline-flex;align-items:center;gap:0;min-height:16px;padding:0 1px;border-radius:3px;background:rgba(24,20,15,.92);font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;color:#fff4df;font-variant-numeric:tabular-nums}
-.battle-page .mini-indicator img{width:12px;height:12px;object-fit:contain;pointer-events:none}
-.battle-page .mini-hint-text[hidden]{display:none!important}
-.battle-page .mini-indicator:focus-visible{outline:1px solid white;outline-offset:1px}
-.battle-page .battle-mini-card .mini-hp{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:max-content;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:3px 5px;border:1px solid #ad8854;border-radius:4px;background:rgba(16,17,14,.92);font-size:10px;line-height:1;font-weight:400;color:#fff4df;z-index:5;white-space:nowrap;font-variant-numeric:tabular-nums}
-.battle-page .mini-heart{display:block;width:10px;height:9px;fill:#ef5555;stroke:#ffc19a;stroke-width:.6;flex:0 0 auto}
-.battle-page .mini-question{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ecd3a0;font:700 56px/1 Georgia,serif;text-shadow:0 2px 0 #57351d,0 0 8px #140f0b;pointer-events:none}
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .battle-layout{--battle-cell-width:110px;--battle-cell-height:100px;--battle-cell-size:var(--battle-cell-width);--battle-cell-gap:4px}
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .battle-field .field-cell{width:var(--battle-cell-width);height:var(--battle-cell-height)}
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .battle-columns,:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .battle-numbered-row{grid-template-columns:repeat(5,var(--battle-cell-width))}
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .fly-zone,:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .piles{width:var(--battle-cell-width);height:calc(3 * var(--battle-cell-height) + 2 * var(--battle-cell-gap));grid-template-rows:repeat(3,var(--battle-cell-height))}
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .fly-slot,:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .battle-side-slot{width:var(--battle-cell-width);height:var(--battle-cell-height)}
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] :is(.card-link,.fly-card,.fly-page-card){display:flex;align-items:center;justify-content:center}
+:is(.battle-page,.draft-page) .battle-card.battle-mini-card{position:relative;isolation:isolate;display:block;flex:0 0 auto;box-sizing:border-box;width:102px;height:92px;padding:0;border:0;border-radius:7px;overflow:hidden;background:none;color:#fff4df;font:10px/1.1 system-ui,sans-serif;text-align:left;cursor:inherit}
+:is(.battle-page,.draft-page) .battle-card.battle-mini-card.mini-enemy{background:none}
+:is(.battle-page,.draft-page) .battle-mini-card .mini-art{position:absolute;left:5px;top:5px;width:92px;height:82px;object-fit:cover;pointer-events:none}
+:is(.battle-page,.draft-page) .battle-mini-card .mini-frame{position:absolute;inset:0;width:102px;height:92px;object-fit:contain;z-index:4;pointer-events:none}
+:is(.battle-page,.draft-page) .mini-indicators{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:max-content;max-width:88px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px;z-index:6}
+:is(.battle-page,.draft-page) .mini-indicator{display:inline-flex;align-items:center;gap:0;min-height:16px;padding:0 1px;border-radius:3px;background:rgba(24,20,15,.92);font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;color:#fff4df;font-variant-numeric:tabular-nums}
+:is(.battle-page,.draft-page) .mini-indicator img{width:12px;height:12px;object-fit:contain;pointer-events:none}
+:is(.battle-page,.draft-page) .mini-hint-text[hidden]{display:none!important}
+:is(.battle-page,.draft-page) .mini-indicator:focus-visible{outline:1px solid white;outline-offset:1px}
+:is(.battle-page,.draft-page) .battle-mini-card .mini-hp{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:max-content;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:3px 5px;border:1px solid #ad8854;border-radius:4px;background:rgba(16,17,14,.92);font-size:10px;line-height:1;font-weight:400;color:#fff4df;z-index:5;white-space:nowrap;font-variant-numeric:tabular-nums}
+:is(.battle-page,.draft-page) .mini-heart{display:block;width:10px;height:9px;fill:#ef5555;stroke:#ffc19a;stroke-width:.6;flex:0 0 auto}
+:is(.battle-page,.draft-page) .mini-question{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ecd3a0;font:700 56px/1 Georgia,serif;text-shadow:0 2px 0 #57351d,0 0 8px #140f0b;pointer-events:none}
 
-.battle-page .battle-mini-card.mini-hidden{background:#56504a!important;color:#eee}
-.battle-page .battle-mini-card.mini-closed{opacity:1;transform:translateY(2px) scale(.9);transform-origin:center center}
-.battle-page .battle-mini-card.mini-closed .mini-art{filter:saturate(.3) brightness(.88)}
-.battle-page .battle-mini-card.mini-closed::after{content:"";position:absolute;inset:5px;border-radius:4px;background:#fff;opacity:.3;z-index:3;pointer-events:none}
-.battle-page .battle-mini-card.mini-dying{outline:2px dashed #c22;outline-offset:-3px}
+:is(.battle-page,.draft-page) .battle-mini-card.mini-hidden{background:#56504a!important;color:#eee}
+:is(.battle-page,.draft-page) .battle-mini-card.mini-closed{opacity:1;transform:translateY(2px) scale(.9);transform-origin:center center}
+:is(.battle-page,.draft-page) .battle-mini-card.mini-closed .mini-art{filter:saturate(.3) brightness(.88)}
+:is(.battle-page,.draft-page) .battle-mini-card.mini-closed::after{content:"";position:absolute;inset:5px;border-radius:4px;background:#fff;opacity:.3;z-index:3;pointer-events:none}
+:is(.battle-page,.draft-page) .battle-mini-card.mini-dying{outline:2px dashed #c22;outline-offset:-3px}
 .battle-mini-zoom{position:fixed;z-index:200;pointer-events:none;transform:scale(1);transform-origin:center;transition:transform 250ms ease-out,opacity 250ms ease-out}
 .battle-mini-zoom.is-open{transform:scale(1.25)}
-.battle-page .battle-mini-zoom .battle-mini-card{cursor:default;opacity:1!important}
+:is(.battle-page,.draft-page) .battle-mini-zoom .battle-mini-card{cursor:default;opacity:1!important}
 .battle-mini-tooltip{position:fixed;z-index:1000;max-width:min(360px,calc(100vw - 16px));max-height:calc(100dvh - 16px);overflow:auto;box-sizing:border-box;padding:12px 15px;border:1px solid #9d8054;background:#242724;color:#f3ecdc;font:13px/1.4 system-ui,sans-serif;overflow-wrap:anywhere;box-shadow:0 6px 20px #0005}
 .battle-mini-tooltip[hidden]{display:none!important}.battle-mini-tooltip ul{padding:0;margin:0;list-style:none}.battle-mini-tooltip li+li{margin-top:4px}
 @media(prefers-reduced-motion:reduce){.battle-mini-zoom{transition:none}}
 
-.battle-page [data-mini-card-design="v2"] .field-cell.attack-target .battle-mini-card{outline:2px solid #c33;outline-offset:0}
-.battle-page [data-mini-card-design="v2"] :is(.field-cell,.fly-slot).friendly-attack-target .battle-mini-card{outline:2px solid #d9a21b;outline-offset:0}
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .field-cell.attack-target .battle-mini-card{outline:2px solid #c33;outline-offset:0}
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] :is(.field-cell,.fly-slot).friendly-attack-target .battle-mini-card{outline:2px solid #d9a21b;outline-offset:0}
 .battle-mini-tooltip[data-kind="name"]{padding:8px 10px;font-size:12px;font-weight:600;border-radius:4px}
 
-.battle-page .mini-indicator:has(img[src$="armor_compact.svg"]){font-size:10px;font-weight:400}
-.battle-page .mini-indicator img[src$="armor_compact.svg"]{width:12px;height:12px}
+:is(.battle-page,.draft-page) .mini-indicator:has(img[src$="armor_compact.svg"]){font-size:10px;font-weight:400}
+:is(.battle-page,.draft-page) .mini-indicator img[src$="armor_compact.svg"]{width:12px;height:12px}
 .battle-mini-tooltip{opacity:1;transition:opacity 250ms ease-out}
 .battle-mini-tooltip.is-fading{opacity:0;pointer-events:none}
 @media(prefers-reduced-motion:reduce){.battle-mini-tooltip{transition:none}}
@@ -46,72 +46,72 @@
 
 .battle-mini-tooltip.is-entering{opacity:0}
 
-.battle-page .battle-mini-card.mini-zoom-source,.view-deck-page .view-thumbnail.mini-zoom-source>.view-art{opacity:0!important}
+:is(.battle-page,.draft-page) .battle-mini-card.mini-zoom-source,.view-deck-page .view-thumbnail.mini-zoom-source>.view-art{opacity:0!important}
 /* Drag is a visual overlay; the original card and field remain server-owned. */
-.battle-page [data-battle-drag-ready] [data-drag-source="1"]{cursor:grab}
+:is(.battle-page,.draft-page) [data-battle-drag-ready] [data-drag-source="1"]{cursor:grab}
 html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!important;user-select:none!important}
 .battle-drag-ghost{position:fixed;z-index:1100;pointer-events:none!important;opacity:.9}
 .battle-drag-ghost *{pointer-events:none!important}
 .battle-drag-ghost .battle-card{margin:0!important;opacity:1!important}
-.battle-page .battle-drag-target{outline:2px solid #e8cd82!important;outline-offset:-2px}
+:is(.battle-page,.draft-page) .battle-drag-target{outline:2px solid #e8cd82!important;outline-offset:-2px}
 
 /* Fill the cell, independently of the ownership of other occupants. */
-.battle-page [data-mini-card-design="v2"] .field-cell.attack-target,
-.battle-page [data-mini-card-design="v2"] .fly-slot:has(.attack-target){background:rgba(205,48,43,.45)}
-.battle-page [data-mini-card-design="v2"] .field-cell.attack-target:has([data-cell-occupant]:not([hidden]) [data-drag-owner="own"]),
-.battle-page [data-mini-card-design="v2"] .fly-slot:has(.attack-target [data-drag-owner="own"]){background:rgba(224,174,40,.46)}
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .field-cell.attack-target,
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .fly-slot:has(.attack-target){background:rgba(205,48,43,.45)}
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .field-cell.attack-target:has([data-cell-occupant]:not([hidden]) [data-drag-owner="own"]),
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .fly-slot:has(.attack-target [data-drag-owner="own"]){background:rgba(224,174,40,.46)}
 
 /* Movement destinations stay quiet until the pointer or drag reaches them. */
-.battle-page .battle-field{background:rgba(0,0,0,.55)}
-.battle-page .field-cell.move-target{background:rgba(0,200,0,.25);transition:background-color .18s ease}
-.battle-page .field-cell.move-target:hover,
-.battle-page .field-cell.move-target.battle-drag-target{background:rgba(0,200,0,.5)}
-@media(prefers-reduced-motion:reduce){.battle-page .field-cell.move-target{transition:none}}
+:is(.battle-page,.draft-page) .battle-field{background:rgba(0,0,0,.55)}
+:is(.battle-page,.draft-page) .field-cell.move-target{background:rgba(0,200,0,.25);transition:background-color .18s ease}
+:is(.battle-page,.draft-page) .field-cell.move-target:hover,
+:is(.battle-page,.draft-page) .field-cell.move-target.battle-drag-target{background:rgba(0,200,0,.5)}
+@media(prefers-reduced-motion:reduce){:is(.battle-page,.draft-page) .field-cell.move-target{transition:none}}
 
 /* One shared footer, independent of the creature currently displayed. */
-.battle-page .cell-presentation{position:relative;width:100%;height:100%}
-.battle-page [data-cell-occupant]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
-.battle-page [data-cell-occupant][hidden]{display:none!important}
-.battle-page [data-cell-occupant]>.card-link{width:100%;height:100%}
-.battle-page .cell-presentation:has(.cell-bottom-strip) [data-cell-occupant]{bottom:16px}
-.battle-page .cell-presentation:has(.cell-bottom-strip) [data-cell-occupant] .battle-mini-card{zoom:.87}
-.battle-page :is(.cell-bottom-strip,.cell-marker-island){position:absolute;bottom:0;left:0;right:0;height:16px;display:flex;align-items:center;gap:2px;background:rgba(221, 221, 221, 0.55);color:#d3b383;z-index:21;box-sizing:border-box;padding:0 2px;pointer-events:none}
-.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-markers{position:static;display:flex;flex:1 1 0;min-width:0;height:16px;gap:1px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;pointer-events:auto}
-.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-marker{position:static;flex:0 0 14px;width:14px;height:14px;line-height:14px;font-size:13px;text-align:center;border:0;border-radius:0;background:transparent;text-shadow:none;pointer-events:auto}
-.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-marker::after{content:none}
-.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-marker-lantern_light{background:url('/assets/images/lantern.png') center/contain no-repeat}
-.battle-page .cell-switch{display:flex;align-items:center;flex:0 0 auto;height:16px;font:10px/16px system-ui,sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:auto;color:#d3b383}
-.battle-page .cell-switch button{all:unset;box-sizing:border-box;width:13px;height:16px;text-align:center;font:16px/16px system-ui,sans-serif;cursor:pointer;color:inherit}
-.battle-page .cell-switch button:focus-visible{outline:1px solid #e4c28d;outline-offset:-1px}
-.battle-page .cell-bonfire{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:42px/1 system-ui,sans-serif;z-index:20;pointer-events:none}
-.battle-page [data-mini-card-design="v2"] .field-cell.attack-target:has([data-cell-occupant]:not([hidden]) [data-drag-owner="own"]){background:rgba(224,174,40,.46)}
+:is(.battle-page,.draft-page) .cell-presentation{position:relative;width:100%;height:100%}
+:is(.battle-page,.draft-page) [data-cell-occupant]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+:is(.battle-page,.draft-page) [data-cell-occupant][hidden]{display:none!important}
+:is(.battle-page,.draft-page) [data-cell-occupant]>.card-link{width:100%;height:100%}
+:is(.battle-page,.draft-page) .cell-presentation:has(.cell-bottom-strip) [data-cell-occupant]{bottom:16px}
+:is(.battle-page,.draft-page) .cell-presentation:has(.cell-bottom-strip) [data-cell-occupant] .battle-mini-card{zoom:.87}
+:is(.battle-page,.draft-page) :is(.cell-bottom-strip,.cell-marker-island){position:absolute;bottom:0;left:0;right:0;height:16px;display:flex;align-items:center;gap:2px;background:rgba(221, 221, 221, 0.55);color:#d3b383;z-index:21;box-sizing:border-box;padding:0 2px;pointer-events:none}
+:is(.battle-page,.draft-page) :is(.cell-bottom-strip,.cell-marker-island) .cell-markers{position:static;display:flex;flex:1 1 0;min-width:0;height:16px;gap:1px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;pointer-events:auto}
+:is(.battle-page,.draft-page) :is(.cell-bottom-strip,.cell-marker-island) .cell-marker{position:static;flex:0 0 14px;width:14px;height:14px;line-height:14px;font-size:13px;text-align:center;border:0;border-radius:0;background:transparent;text-shadow:none;pointer-events:auto}
+:is(.battle-page,.draft-page) :is(.cell-bottom-strip,.cell-marker-island) .cell-marker::after{content:none}
+:is(.battle-page,.draft-page) :is(.cell-bottom-strip,.cell-marker-island) .cell-marker-lantern_light{background:url('/assets/images/lantern.png') center/contain no-repeat}
+:is(.battle-page,.draft-page) .cell-switch{display:flex;align-items:center;flex:0 0 auto;height:16px;font:10px/16px system-ui,sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:auto;color:#d3b383}
+:is(.battle-page,.draft-page) .cell-switch button{all:unset;box-sizing:border-box;width:13px;height:16px;text-align:center;font:16px/16px system-ui,sans-serif;cursor:pointer;color:inherit}
+:is(.battle-page,.draft-page) .cell-switch button:focus-visible{outline:1px solid #e4c28d;outline-offset:-1px}
+:is(.battle-page,.draft-page) .cell-bonfire{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:42px/1 system-ui,sans-serif;z-index:20;pointer-events:none}
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .field-cell.attack-target:has([data-cell-occupant]:not([hidden]) [data-drag-owner="own"]){background:rgba(224,174,40,.46)}
 
-.battle-page .cell-presentation:has(.cell-bottom-strip) .cell-bonfire{bottom:16px}
+:is(.battle-page,.draft-page) .cell-presentation:has(.cell-bottom-strip) .cell-bonfire{bottom:16px}
 
-.battle-page .cell-marker[data-cell-hint]{cursor:pointer}
-.battle-page .cell-marker[data-cell-hint]:focus-visible{outline:1px solid #9d8054;outline-offset:-1px}
+:is(.battle-page,.draft-page) .cell-marker[data-cell-hint]{cursor:pointer}
+:is(.battle-page,.draft-page) .cell-marker[data-cell-hint]:focus-visible{outline:1px solid #9d8054;outline-offset:-1px}
 
 /* Empty cells share the same marker component, centred to its content. */
-.battle-page .cell-marker-island{left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%);width:max-content;max-width:calc(100% - 8px);height:28px;padding:6px 4px;border-radius:4px}
-.battle-page .cell-marker-island .cell-markers{flex:0 1 auto;width:max-content;height:16px;max-width:100%}
-.battle-page .cell-marker-island--below-fire{top:calc(50% + 21px);transform:translateX(-50%)}
+:is(.battle-page,.draft-page) .cell-marker-island{left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%);width:max-content;max-width:calc(100% - 8px);height:28px;padding:6px 4px;border-radius:4px}
+:is(.battle-page,.draft-page) .cell-marker-island .cell-markers{flex:0 1 auto;width:max-content;height:16px;max-width:100%}
+:is(.battle-page,.draft-page) .cell-marker-island--below-fire{top:calc(50% + 21px);transform:translateX(-50%)}
 
 /* Neutral cells; ownership stays on the miniature frame. */
-.battle-page [data-mini-card-design="v2"] :is(.fly-slot,.battle-side-slot){background:rgba(0,0,0,.55)}
-.battle-page [data-mini-card-design="v2"] .fly-slot .field-cell{background:transparent}
-.battle-page .cell-marker[data-cell-hint]{color:#111}
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] :is(.fly-slot,.battle-side-slot){background:rgba(0,0,0,.55)}
+:is(.battle-page,.draft-page) [data-mini-card-design="v2"] .fly-slot .field-cell{background:transparent}
+:is(.battle-page,.draft-page) .cell-marker[data-cell-hint]{color:#111}
 
 /* Tremor uses the existing footer/island; its decoration passes clicks through. */
-.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-markers:has(.cell-marker-tremor){pointer-events:none}
-.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-marker-tremor{background:url('/assets/images/battle/tremor.svg') center/contain no-repeat;border:1px solid #319ae0;border-radius:50%;box-sizing:border-box;pointer-events:none}
-.battle-page :is(.cell-bottom-strip,.cell-marker-island) .cell-marker-tremor.tremor-owner-player{border-color:#e44d48}
-.battle-page .cell-marker-tremor + .cell-marker-tremor{margin-left:-3px;transform:translateY(1px)}
+:is(.battle-page,.draft-page) :is(.cell-bottom-strip,.cell-marker-island) .cell-markers:has(.cell-marker-tremor){pointer-events:none}
+:is(.battle-page,.draft-page) :is(.cell-bottom-strip,.cell-marker-island) .cell-marker-tremor{background:url('/assets/images/battle/tremor.svg') center/contain no-repeat;border:1px solid #319ae0;border-radius:50%;box-sizing:border-box;pointer-events:none}
+:is(.battle-page,.draft-page) :is(.cell-bottom-strip,.cell-marker-island) .cell-marker-tremor.tremor-owner-player{border-color:#e44d48}
+:is(.battle-page,.draft-page) .cell-marker-tremor + .cell-marker-tremor{margin-left:-3px;transform:translateY(1px)}
 
-.battle-page .button.tremor-stay{background:#d5ad43;color:#241e10;border:1px solid #f0ce72}
-.battle-page .button.tremor-stay:hover{background:#ebc45d}
+:is(.battle-page,.draft-page) .button.tremor-stay{background:#d5ad43;color:#241e10;border:1px solid #f0ce72}
+:is(.battle-page,.draft-page) .button.tremor-stay:hover{background:#ebc45d}
 
-.battle-page .temple-dice{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.battle-page .temple-dice>span{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap}
+:is(.battle-page,.draft-page) .temple-dice{display:flex;gap:12px;flex-wrap:wrap;align-items:center}:is(.battle-page,.draft-page) .temple-dice>span{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap}
 
-.battle-page .temple-discarded{opacity:.35}.battle-page .temple-chosen{outline:2px solid #d5ad43;border-radius:4px}
+:is(.battle-page,.draft-page) .temple-discarded{opacity:.35}:is(.battle-page,.draft-page) .temple-chosen{outline:2px solid #d5ad43;border-radius:4px}
 
-.battle-page .temple-block-die{display:inline-flex;margin-left:8px;padding-left:8px;border-left:1px solid #9d8054}
+:is(.battle-page,.draft-page) .temple-block-die{display:inline-flex;margin-left:8px;padding-left:8px;border-left:1px solid #9d8054}

@@ -2205,13 +2205,13 @@ body.battle-page {
 
 /* Match pause: the board is opaque/inert; the existing info panel retains controls. */
 .battle-page .battle-main { position: relative; }
-.battle-page .battle-pause-mask { position: absolute; inset: 0; z-index: 95; display: none; place-items: center; padding: 24px; background: #171717; color: #eee9e1; text-align: center; box-sizing: border-box; overflow: auto; }
+:is(.battle-page,.draft-page) .battle-pause-mask { position: absolute; inset: 0; z-index: 95; display: none; place-items: center; padding: 24px; background: #171717; color: #eee9e1; text-align: center; box-sizing: border-box; overflow: auto; }
 .battle-pause-mask[hidden] { display: none !important; }
 .battle-pause-mask h2 { font-size: clamp(18px, 2.5vw, 28px); margin: 12px 0; }
 .battle-pause-mask p { color: #bfb8ac; line-height: 1.5; }
 .battle-pause-symbol { display: inline-grid; place-items: center; width: 70px; height: 70px; border: 1px solid #847055; border-radius: 50%; color: #d2b486; font: 36px/1 serif; }
 .pause-control-symbol { font: bold 30px/1 Georgia, serif; color: #5d4b36; }
-.battle-page [data-match-paused="1"] .battle-left { visibility: hidden; pointer-events: none; }
+:is(.battle-page,.draft-page) [data-match-paused="1"] .battle-left { visibility: hidden; pointer-events: none; }
 .battle-page [data-match-paused="1"] #battle-debug { display: none !important; }
 .battle-page [data-match-paused="1"] .info-panel-content > :not([data-match-pause-content]) { display: none !important; }
 .match-pause-content { padding: 20px 16px; color: #3d352b; }
@@ -2232,16 +2232,16 @@ body.battle-page {
 .match-pause-active .panel-stat-hint, .match-pause-active .battle-stat-tooltip { display: none !important; }
 @media (max-width: 650px) {
     .battle-page [data-match-paused="1"].battle-shell { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(90px, 25%) minmax(0,1fr); gap: 8px; }
-    .battle-page [data-match-paused="1"] .battle-pause-mask { padding: 10px; }
+    :is(.battle-page,.draft-page) [data-match-paused="1"] .battle-pause-mask { padding: 10px; }
     .battle-page [data-match-paused="1"] .battle-pause-symbol { width: 32px; height: 32px; font-size: 20px; }
-    .battle-page [data-match-paused="1"] .battle-pause-mask h2 { margin: 6px 0; font-size: 17px; }
-    .battle-page [data-match-paused="1"] .battle-pause-mask p { display: none; }
+    :is(.battle-page,.draft-page) [data-match-paused="1"] .battle-pause-mask h2 { margin: 6px 0; font-size: 17px; }
+    :is(.battle-page,.draft-page) [data-match-paused="1"] .battle-pause-mask p { display: none; }
     .battle-page [data-match-paused="1"] .info-panel { min-height: 0; }
     .match-pause-content { padding: 12px; }
     .match-pause-countdown { font-size: 32px; }
 }
 
-.battle-page [data-match-paused="1"] .battle-pause-mask { display: grid; }
+:is(.battle-page,.draft-page) [data-match-paused="1"] .battle-pause-mask { display: grid; }
 
 .battle-pause-picker [data-picker-send] { background: #36513a; color: white; border: 1px solid #29432d; }
 .battle-pause-picker [data-picker-cancel],

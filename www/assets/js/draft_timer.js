@@ -24,6 +24,7 @@
     }
 
     function render() {
+        if (script.dataset.paused === '1' || document.querySelector('[data-match-paused="1"]')) return;
         var now = approxNow();
         var actionEl = document.querySelector("[data-draft-action-time]");
         if (actionEl && deadlineAt > 0) {

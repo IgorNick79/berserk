@@ -53,20 +53,8 @@
         content.dataset.pregameContent = saved.kind;
         content.scrollTop = saved.scroll;
     }
-    function addClose() {
-        var content = root.querySelector('.pregame-panel-content');
-        if (!content.querySelector('.pregame-card-info') || content.querySelector('[data-grid-close]')) return;
-        var actions = document.createElement('div');
-        actions.className = 'pregame-card-actions';
-        var close = document.createElement('button');
-        close.type = 'button';
-        close.className = 'button small pregame-grid-close';
-        close.dataset.gridClose = '';
-        close.textContent = 'Закрыть';
-        actions.appendChild(close);
-        content.appendChild(actions);
-    }
     function showPreview(template, source) {
+        var screen=root.closest(".screen");if(screen.secondaryPanel)screen.secondaryPanel(null);
         var content = root.querySelector('.pregame-panel-content');
         if (content.dataset.pregameContent === 'history') {
             previewReturn = snapshot(content);
@@ -78,10 +66,10 @@
         content.dataset.pregameContent = 'card';
         content.scrollTop = 0;
         root.querySelector('[data-grid-history]').setAttribute('aria-pressed', 'false');
-        addClose();
+
     }
     root.addEventListener('click', function (event) {
-        if (event.target.closest('[data-grid-close]')) {
+        if (event.target.closest('[data-grid-close],[data-view-close]')) {
             var content = root.querySelector('.pregame-panel-content');
             var history = !!previewReturn;
             var focus = previewSource;
@@ -138,6 +126,6 @@
         form.querySelector('[data-grid-confirm]').disabled = true;
         try { sessionStorage.removeItem(key); } catch (_) {}
     });
-    addClose();
+
     update();
 })();

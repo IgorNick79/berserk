@@ -11,6 +11,25 @@ final class PrepareUi
 {
     public function __construct(private Template $tpl) {}
 
+    /** Adapter for catalog cards that have no persistent battle instance yet. */
+    public function miniature(\Berserk\Core\GameState $state, string $viewer, array $data): string
+    {
+        if (!empty($data['disabled']) || empty($data['ukid'])) return '<span class="prepare-card-link prepare-card-link--disabled"><span class="prepare-card" aria-hidden="true"></span></span>';
+        $info = (array) ($data['info'] ?? []);
+        $health = (int) ($info['health'] ?? 0);
+        $card = new \Berserk\Core\CardInstance(instanceId:0, ukid:$data['ukid'], owner:$viewer, zone:'deck', hp:$health, hpMax:$health,
+            elite:!empty($info['elite']), price:(int)($info['price']??0), single:!empty($info['single']));
+        $name = htmlspecialchars((string)($info['name'] ?? $data['ukid']), ENT_QUOTES|ENT_SUBSTITUTE, 'UTF-8');
+        $mini = LiveBattleCard::render($card, $state, $viewer, false, $name, $health.'/'.$health);
+        return '<a class="prepare-card-link '.htmlspecialchars((string)($data['class']??''),ENT_QUOTES).'" href="'.htmlspecialchars((string)($data['link']??'#'),ENT_QUOTES).'"><div class="prepare-card">'.$mini.'</div></a>';
+    }
+
+    public function informationWithControls(?array $card, array $catalog): string
+    {
+        $html = $this->information($card, $catalog);
+        return $html !== '' && $card !== null ? $this->withCardControls($html, $card['ukid']) : $html;
+    }
+
     public function card(array $data): string
     {
         $info = (array) ($data['info'] ?? []);
