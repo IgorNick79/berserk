@@ -58,7 +58,7 @@ final class LobbyWizard
             if (count($fields)!==3) throw new \LogicException('Unexpected booster settings markup');
             return ($sealed?'':'<section class="settings-section"><h2>Основные настройки</h2>'.$remaining.'</section>')
                 .'<section class="settings-section wizard-boosters"><h2>Бустеры</h2>'.$fields[0]
-                .'<details class="panel-card-description wizard-booster-composition"><summary><span>Состав бустера</span><span class="wizard-disclosure-closed">Раскрыть</span><span class="wizard-disclosure-open">Свернуть</span><i class="description-chevron" aria-hidden="true"></i></summary><div class="panel-card-description-body">'.$fields[1].$fields[2].'</div></details></section>';
+                .'<details class="panel-card-description wizard-booster-composition"><summary><i class="description-chevron" aria-hidden="true"></i><span>Состав бустера</span></summary><div class="panel-card-description-body">'.$fields[1].$fields[2].'</div></details></section>';
         },$body,1);
     }
 }

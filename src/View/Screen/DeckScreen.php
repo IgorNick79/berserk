@@ -66,7 +66,6 @@ final class DeckScreen
             $html .= '<label class="settings-option deck-select-tile">'
                 . '<input type="radio" name="' . $this->esc($fieldName) . '" value="' . $id . '">'
                 . '<span class="deck-select-tile__body">'
-                . '<span class="deck-select-tile__image" aria-hidden="true"></span>'
                 . '<span class="deck-select-tile__text"><b>' . $name . '</b></span>'
                 . '</span>'
                 . '</label>';
