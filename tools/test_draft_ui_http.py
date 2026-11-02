@@ -11,7 +11,7 @@ body=r'''
         assert len(art)==2, 'Two local reference arts required'
         ukids=[p.stem for p in art]
         for i,ukid in enumerate(ukids):
-            sql("USE LAB_DB;INSERT INTO cards(ind,ukid,name,health,move,strike_weak,strike_medium,strike_strong,prop,price,elite,single) VALUES("+str(200+i)+",'"+ukid+"','Draft card "+str(i)+"',5,1,1,2,3,'{}',3,"+str(i)+",0);")
+            sql("USE LAB_DB;INSERT INTO cards(ind,ukid,name,health,move,strike_weak,strike_medium,strike_strong,prop,price,elite,single) VALUES("+str(200+i)+",'"+ukid+"','Draft card "+str(i)+"',5,1,1,2,3,'{}',3,"+str(i)+","+str(i)+");")
         games=[]
         for kind,count in [('grid',9),('solomon',8)]:
             game=match()

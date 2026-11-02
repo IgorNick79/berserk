@@ -31,3 +31,12 @@
 .draft-page .pregame-history-control{flex:0 0 auto}
 .draft-page .pregame-panel-content .battle-secondary-view{margin:0;padding:0}
 .draft-page [data-match-paused="1"] .pregame-panel-summary{pointer-events:none}
+.draft-page.roll-page .pregame-panel-content>section.pregame-draft-history:not([data-match-pause-content]){padding:0}
+.draft-page .pregame-draft-history .draft-history__event{border-top:0}
+.draft-page .pregame-draft-history .battle-window-close{border:0;background:transparent}
+.draft-page .info-panel :is([data-grid-history],[data-solomon-history]) .battle-icon-tooltip{left:50%;right:auto;transform:translate(-50%,4px);text-align:center}
+.draft-page .info-panel :is([data-grid-history],[data-solomon-history]):is(:hover,:focus-visible) .battle-icon-tooltip{transform:translate(-50%,0)}
+.draft-page .view-cost .view-element{position:static;flex:0 0 24px;width:24px;height:24px;margin-left:auto;filter:none}
+.draft-page .info-panel .view-cost{font-size:12px;line-height:20px}
+.draft-page .info-panel .view-cost>img,.draft-page .info-panel .view-cost img[src$="-unique.png"]{width:20px;height:20px}
+.draft-page .info-panel .view-cost .view-element{flex-basis:20px;width:20px;height:20px}

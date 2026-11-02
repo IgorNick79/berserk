@@ -74,7 +74,7 @@ final class DraftScreen
             $ukid = $draft['grid'][$i] ?? null;
 
             if ($ukid === null) {
-                $cells[] = '<div class="pregame-grid-card" data-grid-position="' . $i . '" data-grid-occupied="0">' . $ui->thumbnail($cardsInfo, [
+                $cells[] = '<div class="pregame-grid-card" data-grid-position="' . $i . '" data-grid-occupied="0">' . $ui->thumbnail($cardsInfo, ['element_in_cost'=>true,
                     'link'     => $baseUrl,
                     'disabled' => true,
                     'class'    => 'prepare-card-link--empty',
@@ -87,7 +87,7 @@ final class DraftScreen
             $link = "{$baseUrl}&card={$i}&card_ukid=" . rawurlencode($ukid) . "&card_version={$state->version}";
 
             $cells[] = '<div class="pregame-grid-card" data-grid-position="' . $i . '" data-grid-occupied="1">'
-                . $ui->thumbnail($cardsInfo, [
+                . $ui->thumbnail($cardsInfo, ['element_in_cost'=>true,
                     'ukid' => $ukid,
                     'info' => $info ?? ['name' => $ukid, 'strike' => []],
                     'link' => $link,
@@ -116,7 +116,7 @@ final class DraftScreen
                     . ($isMyTurn ? '<label class="solomon-stack__select button"><input type="checkbox" name="positions[]" value="' . (int) $position
                         . '" form="solomon-decision"><span>Выбрать</span></label>' : '')
                     . '</div>'
-                    . $ui->thumbnail($cardsInfo, ['ukid' => $ukid, 'info' => $info, 'link' => $baseUrl . '&card=' . (int) $position
+                    . $ui->thumbnail($cardsInfo, ['element_in_cost'=>true, 'ukid' => $ukid, 'info' => $info, 'link' => $baseUrl . '&card=' . (int) $position
                         . '&card_ukid=' . rawurlencode($ukid) . '&card_version=' . $state->version])
                     . '<template data-solomon-preview>' . $ui->informationWithControls(['ukid' => $ukid], $cardsInfo) . $cardActionsHtml . '</template></div>';
             }
@@ -338,7 +338,7 @@ final class DraftScreen
             foreach ((array) ($event['cards'] ?? []) as $ukid) {
                 $ukid = (string) $ukid;
                 $info = $cardsInfo[$ukid] ?? ['name'=>$ukid, 'strike'=>[]];
-                $html .= '<div class="pregame-history-entry">' . $ui->thumbnail($cardsInfo, ['ukid'=>$ukid, 'info'=>$info, 'link'=>'#', 'class'=>'draft-history__card'])
+                $html .= '<div class="pregame-history-entry">' . $ui->thumbnail($cardsInfo, ['element_in_cost'=>true, 'ukid'=>$ukid, 'info'=>$info, 'link'=>'#', 'class'=>'draft-history__card'])
                     . '<template data-history-card-preview>' . $ui->informationWithControls(['ukid'=>$ukid], $cardsInfo) . '</template></div>';
             }
             $html .= '</div></div>';
