@@ -319,7 +319,7 @@ final class DraftScreen
                 continue;
             }
             if (!isset($bySlot[$slot])) {
-                $grid .= '<div class="solomon-stack__card glimpse-placeholder" aria-hidden="true"><div class="glimpse-card-empty"></div><div class="glimpse-button-space"></div></div>';
+                $grid .= '<div class="solomon-stack__card glimpse-placeholder" aria-hidden="true"><div class="glimpse-card-back"><img src="/favicon.png" alt="Рубашка карты"></div><div class="glimpse-button-space"></div></div>';
                 continue;
             }
             $position = $bySlot[$slot];

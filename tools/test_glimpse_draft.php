@@ -178,7 +178,7 @@ namespace {
     check(substr_count($waitingView,'solomon-stack__card')===12,'waiting retains twelve slots');
     check(substr_count($waitingView,'data-grid-preview')===9 && !str_contains($waitingView,'<input'),'waiting can browse remaining cards without controls');
     $activeView=$screen->prepare($slotsState,'player','player',null,[])['data']['grid_html'];
-    check(substr_count($activeView,'data-glimpse-card')===9 && substr_count($activeView,'glimpse-card-empty')===3,'recipient sees holes and controls');
+    check(substr_count($activeView,'data-glimpse-card')===9 && substr_count($activeView,'glimpse-card-back')===3,'recipient sees backs for removed cards and controls');
     check($slotsProcessor->confirmGlimpse('player',0,[1,2])->success,'second stable slot pick');
     check($slotsState->draft['glimpse_slots']===range(6,11),'second pick leaves original six slots');
     check(totalG($slotsState)===60,'stable slots conserve cards');
