@@ -7,7 +7,8 @@
         event.preventDefault();
     });
     let state = JSON.parse(root.dataset.state || 'null');
-    if (!state || root.dataset.wizard === '1') return;
+    const configuringWizard=root.querySelector('#create-wizard[data-configure="1"]');
+    if (!state || (root.dataset.wizard === '1' && !configuringWizard)) return;
     const content = document.getElementById('content'), notice = document.getElementById('notice');
     const roomId = new URL(location.href).searchParams.get('room');
     let filter='all'; const expanded=new Set();
@@ -26,12 +27,13 @@
             const r = next.room, previous = versions.has(r.id) ? state.room : null;
             if (withdrawing && r.state === 'open') { location.assign('lobby.php'); return; }
             withdrawing = false;
-            if (previous?.can_decide && r.state === 'open' && ownRejection !== previous.candidate_request_id)
-                signal('withdrawal:' + r.id + ':' + previous.candidate_request_id);
+            if ((previous?.can_decide || previous?.configuring) && r.state === 'open' && ownRejection !== previous.candidate_request_id)
+                signal('withdrawal:' + r.id + ':' + (previous.candidate_request_id || previous.version));
             if (r.can_decide && (!previous || r.candidate_request_id !== previous.candidate_request_id))
                 signal('request:' + r.id + ':' + r.candidate_request_id);
             if (previous?.role === 'candidate' && previous.state === 'awaiting_confirmation' && r.state !== previous.state)
                 signal('decision:' + r.id + ':' + previous.version, r.state === 'started');
+            if(r.can_configure && !configuringWizard){if(!previous?.can_configure)signal('decision:'+r.id+':'+r.version,true);location.assign('lobby.php?room='+r.id+'&configure=1');return;}
             if (r.state === 'started') { location.assign('index.php?game=' + r.game_id); return; }
         }
         rows.forEach(r => versions.set(r.id, r.version));
@@ -39,6 +41,7 @@
     }
     function button(text, action) { const b = node('button', text); b.type = 'button'; b.disabled = busy; b.addEventListener('click', action); return b; }
     function render() {
+        if(configuringWizard)return;
         const scroll=content.scrollTop;
         const focused=document.activeElement;
         const focusRoom=focused?.closest('[data-room-id]')?.dataset.roomId;
@@ -61,7 +64,7 @@
                 const summary=node('summary'),title=node('strong','#'+r.id+' · '+r.kind),status=node('span',r.status),players=node('span',r.creator+'  ×  '+(r.second||'Ожидается соперник'));
                 status.className='room-status';players.className='room-players';
                 const date=node('time',new Date(r.created_at).toLocaleDateString('ru-RU'));date.title=new Date(r.created_at).toLocaleString('ru-RU');date.dateTime=r.created_at;
-                const conditions=node('span');conditions.className='room-conditions';conditions.append(node('span',r.turn_seconds===0?'Без таймера':'180 секунд на ход'),node('span',' · '),window.BerserkRoom.handicap(r));
+                const conditions=node('span');conditions.className='room-conditions';if(r.conditions_pending)conditions.textContent='Режим и условия выбирает соперник';else conditions.append(node('span',r.turn_seconds===0?'Без таймера':'180 секунд на ход'),node('span',' · '),window.BerserkRoom.handicap(r));
                 summary.append(title,status,players,date,conditions);card.append(summary);
                 const panel=node('div');panel.className='room-actions';
                 if(r.can_open)panel.append(button(r.is_mine?'Продолжить':'Присоединиться',()=>open(r)));

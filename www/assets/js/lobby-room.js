@@ -8,6 +8,7 @@
         return el;
     };
     function handicap(r) {
+        if(r.conditions_pending){const pending=document.createElement('span');pending.textContent='Выберет соперник';return pending;}
         const line=document.createElement('span');line.className='room-handicap';
         const values=[Number(r.handicap?.gold||0),Number(r.handicap?.silver||0)];
         if(!values.some(v=>v>0)){line.textContent='Без форы';return line;}
@@ -72,13 +73,13 @@
             kind: r.kind,
             mode: r.kind,
             access: closed ? 'Закрытая партия' : 'Открытая партия',
-            timer: r.turn_seconds === 0 ? 'Без ограничения' : r.turn_seconds === 180 ? '180 секунд на каждый ход' : 'Не указан',
+            timer: r.conditions_pending ? 'Выберет соперник' : r.turn_seconds === 0 ? 'Без ограничения' : r.turn_seconds === 180 ? '180 секунд на каждый ход' : 'Не указан',
             creator: r.creator,
             second: r.second || (closed ? 'Ожидается приглашённый игрок' : 'Место свободно'),
-            creatorStatus: started ? 'Участник партии' : awaiting ? 'Подтверждает заявку' : 'Ожидает соперника',
-            secondStatus: started ? 'Участник партии' : awaiting ? 'Заявка подана' : 'Заявка ещё не подана',
+            creatorStatus: r.configuring ? 'Ожидает настройки партии' : started ? 'Участник партии' : awaiting ? 'Подтверждает заявку' : 'Ожидает соперника',
+            secondStatus: r.configuring ? 'Выбирает режим и настройки' : started ? 'Участник партии' : awaiting ? 'Заявка подана' : 'Заявка ещё не подана',
             status: started ? 'Партия создана' : '',
-            hint: started ? 'Можно перейти к подготовке партии.' : creator && awaiting ? 'Примите заявку или откажите игроку.' : creator ? (closed ? 'Приглашённый игрок сможет подать заявку.' : 'Комната доступна для заявки второго игрока.') : awaiting ? 'Ожидаем подтверждения создателя.' : 'Отправьте заявку на участие в партии.'
+            hint: r.configuring ? (r.can_configure?'Выберите режим и настройки партии.':'Соперник выбирает режим и настройки партии.') : started ? 'Можно перейти к подготовке партии.' : creator && awaiting ? 'Примите заявку или откажите игроку.' : creator ? (closed ? 'Приглашённый игрок сможет подать заявку.' : 'Комната доступна для заявки второго игрока.') : awaiting ? 'Ожидаем подтверждения создателя.' : 'Отправьте заявку на участие в партии.'
         };
         shell.querySelector('#room-heading').textContent = 'Комната #' + r.id;
         shell.querySelectorAll('[data-room-field]').forEach(el => {
@@ -100,6 +101,9 @@
         if (started && r.game_id) {
             const link = make('a', 'button wide room-action', 'Перейти к игре');
             link.href = 'index.php?game=' + encodeURIComponent(r.game_id); actions.append(link);
+        } else if (r.can_configure) {
+            const link=make('a','button wide room-action','Настроить игру');link.href='lobby.php?room='+r.id+'&configure=1';actions.append(link);
+            action('Отмена','withdraw',()=>commands.mutate('withdraw',r));
         } else if (r.can_decide) {
             action('Принять', 'accept', () => commands.mutate('accept', r));
             action('Отказать', 'reject', () => commands.mutate('reject', r));

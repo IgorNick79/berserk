@@ -1,0 +1,146 @@
+[
+  {
+    "test": "exact isolated database identity",
+    "pass": true
+  },
+  {
+    "test": "runtime no TRIGGER or DDL privileges",
+    "pass": true
+  },
+  {
+    "test": "sealed ordinary creation",
+    "pass": true
+  },
+  {
+    "test": "sealed not delegated",
+    "pass": true
+  },
+  {
+    "test": "sealed ordinary stage",
+    "pass": true
+  },
+  {
+    "test": "draft ordinary creation",
+    "pass": true
+  },
+  {
+    "test": "draft not delegated",
+    "pass": true
+  },
+  {
+    "test": "draft ordinary stage",
+    "pass": true
+  },
+  {
+    "test": "solomon ordinary creation",
+    "pass": true
+  },
+  {
+    "test": "solomon not delegated",
+    "pass": true
+  },
+  {
+    "test": "solomon ordinary stage",
+    "pass": true
+  },
+  {
+    "test": "system ordinary creation",
+    "pass": true
+  },
+  {
+    "test": "system not delegated",
+    "pass": true
+  },
+  {
+    "test": "system ordinary stage",
+    "pass": true
+  },
+  {
+    "test": "lucktest ordinary creation",
+    "pass": true
+  },
+  {
+    "test": "lucktest not delegated",
+    "pass": true
+  },
+  {
+    "test": "lucktest ordinary stage",
+    "pass": true
+  },
+  {
+    "test": "wizard unavailable before approval",
+    "pass": true
+  },
+  {
+    "test": "wizard unavailable before approval",
+    "pass": true
+  },
+  {
+    "test": "wizard unavailable before approval",
+    "pass": true
+  },
+  {
+    "test": "approved wizard available",
+    "pass": true
+  },
+  {
+    "test": "wizard forbidden to non-configurator",
+    "pass": true
+  },
+  {
+    "test": "wizard forbidden to non-configurator",
+    "pass": true
+  },
+  {
+    "test": "save accepted",
+    "pass": true
+  },
+  {
+    "test": "reload completed wizard recovers game",
+    "pass": true
+  },
+  {
+    "test": "delegated quick start place2",
+    "pass": true
+  },
+  {
+    "test": "quick stage and identity",
+    "pass": true
+  },
+  {
+    "test": "quick handicap targets actual opponent",
+    "pass": true
+  },
+  {
+    "test": "delegated quick start battle2",
+    "pass": true
+  },
+  {
+    "test": "quick stage and identity",
+    "pass": true
+  },
+  {
+    "test": "quick handicap targets actual opponent",
+    "pass": true
+  },
+  {
+    "test": "delegated quick start battle3",
+    "pass": true
+  },
+  {
+    "test": "quick stage and identity",
+    "pass": true
+  },
+  {
+    "test": "quick handicap targets actual opponent",
+    "pass": true
+  },
+  {
+    "test": "delegated random system decks",
+    "pass": true
+  },
+  {
+    "test": "committed result restores without reroll or catalog revalidation",
+    "pass": true
+  }
+]

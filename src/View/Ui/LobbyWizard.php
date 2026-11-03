@@ -10,7 +10,7 @@ use Berserk\View\Template;
 /** Presentation only: all modes use the existing server settings renderer/parser. */
 final class LobbyWizard
 {
-    public static function render(int $actor, string $csrf, ?Db $catalog = null): string
+    public static function render(int $actor, string $csrf, ?Db $catalog = null, ?array $room = null): string
     {
         $e=static fn(string $s): string=>htmlspecialchars($s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
         $html='<form id="wizard-fields-sealed"></form><form id="wizard-fields-draft"></form><form id="wizard-fields-solomon"></form><form id="wizard-fields-lucktest"></form><form id="wizard-fields-system"></form><form id="create-wizard" class="create-wizard" method="post" action="lobby.php" novalidate>'
@@ -20,12 +20,14 @@ final class LobbyWizard
         foreach (['Режим','Общие настройки','Настройки режима'] as $i=>$title) $html.='<button type="button" data-step="'.$i.'" aria-current="'.($i===0?'step':'false').'">'.$title.'</button>';
         $html.='</nav></header><section data-page="0"><h2>Режим игры</h2><div class="wizard-modes">';
         foreach (['sealed','draft','solomon','lucktest','system'] as $mode) $html.='<label class="wizard-option"><input type="radio" name="setup_mode" value="'.$mode.'"'.($mode==='sealed'?' checked':'').'><span>'.RoomSetup::label($mode).'</span></label>';
-        $html.='</div></section><section data-page="1" hidden><h2>Доступ к партии</h2><div class="wizard-options"><label class="wizard-option"><input type="radio" name="access" value="open" checked><span>Открытая партия</span></label><label class="wizard-option"><input type="radio" name="access" value="closed"><span>🔒 Закрытая партия</span></label></div>'
+        $html.='</div>';
+        if ($room===null) $html.='<div class="wizard-delegation"><label class="wizard-option"><input type="radio" name="setup_mode" value="opponent"><span><b>Решает противник</b><small>Создайте комнату, а выбор режима и настроек передайте сопернику</small></span></label></div>';
+        $html.='</section><section data-page="1" hidden><fieldset class="wizard-common-options" data-wizard-access><h2>Доступ к партии</h2><div class="wizard-options"><label class="wizard-option"><input type="radio" name="access" value="open" checked><span>Открытая партия</span></label><label class="wizard-option"><input type="radio" name="access" value="closed"><span>🔒 Закрытая партия</span></label></div>'
             .'<label class="wizard-invite" hidden>Никнейм приглашённого игрока<input name="invited_login" autocomplete="off" minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]{3,32}"><small>Только этот игрок сможет запросить участие. Создатель подтверждает заявку.</small></label>'
-            .'<h2>Таймер хода</h2><div class="wizard-options"><label class="wizard-option"><input type="radio" name="turn_seconds" value="0" checked><span>Без ограничения времени</span></label><label class="wizard-option"><input type="radio" name="turn_seconds" value="180"><span>180 секунд на каждый ход</span></label></div><p>Ограничение относится к отдельному ходу, а не ко всей партии.</p></section><section data-page="2" hidden><h2 data-mode-title>Настройки режима</h2>';
-        $html=str_replace('</section><section data-page="2"',self::handicapFields().'</section><section data-page="2"',$html);
+            .'</fieldset><fieldset class="wizard-common-options" data-wizard-game-options><h2>Таймер хода</h2><div class="wizard-options"><label class="wizard-option"><input type="radio" name="turn_seconds" value="0" checked><span>Без ограничения времени</span></label><label class="wizard-option"><input type="radio" name="turn_seconds" value="180"><span>180 секунд на каждый ход</span></label></div><p>Ограничение относится к отдельному ходу, а не ко всей партии.</p></section><section data-page="2" hidden><h2 data-mode-title>Настройки режима</h2>';
+        $html=str_replace('</section><section data-page="2"',self::handicapFields().'</fieldset></section><section data-page="2"',$html);
         foreach (['sealed','draft','solomon','lucktest','system'] as $mode) {
-            $state=new GameState(0,$actor,0);$state->mode=$mode==='solomon'?'draft':$mode;
+            $state=new GameState(0,$room['creator_id']??$actor,$room===null?0:$actor);$state->mode=$mode==='solomon'?'draft':$mode;
             $setup=RoomSetup::parse($mode,[]);$state->settings=GameSettings::fromArray($setup['settings']);
             $view=(new SettingsScreen())->prepare($state,'host','host',null)['data'];
             $body=$view['content_html'].$view['actions_html'];
@@ -35,6 +37,7 @@ final class LobbyWizard
                 $tpl = new Template(dirname(__DIR__,3).'/templates');
                 $deck = (new DeckScreen(new DeckView($catalog),$tpl))->prepare($state,'host','host',null);
                 $body = (string)$tpl->parse('screen/deck_host.tpl',$deck['data']);
+                if ($room!==null) $body=str_replace(['Моя колода','Колода соперника'],['Колода создателя','Моя колода'],$body);
             }
             if (in_array($mode,['draft','solomon','sealed'],true)) $body=self::boosterSections($body,$mode==='sealed');
             // The wizard already provides the mode heading.
@@ -48,7 +51,15 @@ final class LobbyWizard
             $body=preg_replace('/<(input|select|textarea)\b/','<$1 form="wizard-fields-'.$mode.'"',$body);
             $html.='<fieldset class="wizard-mode-settings" data-mode="'.$mode.'"'.($mode==='sealed'?'':' hidden disabled').'>'.$body.'</fieldset>';
         }
-        return $html.'<p class="wizard-summary" data-wizard-summary></p></section><p class="wizard-error" data-wizard-error role="alert" tabindex="-1"></p></div><footer class="wizard-footer"><button type="button" data-back>Назад</button><button type="button" data-next>Далее: общие настройки</button><button type="submit" data-create hidden>Создать игру</button></footer></form><noscript>Для перехода между этапами включите JavaScript.</noscript>';
+        $html.='<p class="wizard-summary" data-wizard-summary></p></section><p class="wizard-error" data-wizard-error role="alert" tabindex="-1"></p></div><footer class="wizard-footer"><button type="button" data-back>Назад</button><button type="button" data-next>Далее: общие настройки</button><button type="submit" data-create hidden>Создать игру</button></footer></form><noscript>Для перехода между этапами включите JavaScript.</noscript>';
+        if ($room!==null) {
+            $html=str_replace('<h1>Создать игру</h1>','<h1>Настроить партию</h1>',$html);
+            $html=str_replace('<button type="submit" data-create','<button type="button" data-withdraw-configuration>Отказаться от участия</button><button type="submit" data-create',$html);
+            $html=str_replace('action="lobby.php"','action="lobby.php?room='.(int)$room['id'].'" data-configure="1" data-room-id="'.(int)$room['id'].'" data-access="'.$e($room['access']).'"',$html);
+            $html=str_replace('name="action" value="create"','name="action" value="configure"',$html);
+            $html=str_replace('<div class="wizard-scroll">','<input type="hidden" name="version" value="'.(int)$room['version'].'"><input type="hidden" name="candidate_request_id" value="'.$e($room['candidate_request_id']).'"><div class="wizard-scroll">',$html);
+        }
+        return $html;
     }
 
     private static function handicapFields(): string

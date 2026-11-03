@@ -49,6 +49,11 @@ final class LobbyStore
             default => false,
         };
         if (!$valid) throw new \LogicException('Invalid room state');
+        $setup=json_decode($row['setup_json']??'null',true,512,JSON_THROW_ON_ERROR);
+        if (is_array($setup) && RoomSetup::delegated($setup)) {
+            $setup=RoomSetup::validate($setup);$configurator=$setup['configurator_id'];
+            if (($row['state']==='open' && $configurator!==null) || ($row['state']==='awaiting_confirmation' && $configurator!==null && $configurator!==(int)$row['candidate_account_id']) || ($row['state']==='started' && ($configurator!==(int)$row['accepted_account_id'] || !isset($setup['mode'])))) throw new \LogicException('Invalid delegation state');
+        }
         return $row;
     }
 
@@ -81,28 +86,35 @@ final class LobbyStore
         $member = $this->member($row,$actor);
         // Publish only room conditions; never expose the saved setup or private Debug fields.
         $setup=json_decode($row['setup_json']??'null',true,512,JSON_THROW_ON_ERROR);
+        $delegated=is_array($setup) && RoomSetup::delegated($setup);
+        $configuring=$delegated && ($setup['configurator_id']??null)!==null && $row['state']==='awaiting_confirmation';
+        $pending=$delegated && !isset($setup['mode']);
         $battle=$setup['settings']['battle']??[];
         $handicap=($battle['handicap_enabled']??false)===true;
         $room = [
-            'turn_seconds'=>$battle['turn_seconds']??180,
+            'conditions_pending'=>$pending,
+            'configuring'=>$configuring,
+            'can_configure'=>$configuring && ($setup['configurator_id']??null)===$actor && $actor===(int)$row['candidate_account_id'],
+            'turn_seconds'=>$pending?null:($battle['turn_seconds']??180),
             'handicap'=>[
                 'gold'=>$handicap?max(0,min(5,(int)($battle['handicap_gold']??0))):0,
                 'silver'=>$handicap?max(0,min(5,(int)($battle['handicap_silver']??0))):0,
             ],
             'game_type'=>$row['game_type']??null,
-            'kind'=>RoomSetup::label($row['game_type']??null),
+            'kind'=>$pending?'Решает противник':RoomSetup::label($row['game_type']??null),
             'created_at'=>str_replace(' ','T',$row['created_at']).'Z',
             'id'=>(int)$row['id'],'version'=>(int)$row['version'],'state'=>$row['state'],
             'creator'=>$row['creator_login'],'second'=>$row['second_login'],
             'status'=>$row['game_status'] === 'game_over' ? 'Завершена' : match($row['state']) {
-                'open'=>'Открытая','awaiting_confirmation'=>'Ожидает подтверждения','started'=>'Игра идёт',
+                'open'=>'Открытая','awaiting_confirmation'=>$configuring?'Соперник выбирает настройки':'Ожидает подтверждения','started'=>'Игра идёт',
             },
             'is_mine'=>$member,
             'can_open'=>$member || $row['state'] === 'open',
-            'can_decide'=>$actor === (int)$row['creator_account_id'] && $row['state'] === 'awaiting_confirmation',
+            'can_decide'=>!$configuring && $actor === (int)$row['creator_account_id'] && $row['state'] === 'awaiting_confirmation',
         ];
         if ($private) {
             // Room presentation reads saved setup only; no transition or default form values.
+            $room['creator_id']=(int)$row['creator_account_id'];
             $room['access']=($row['invited_account_id']??null)===null?'open':'closed';
             $room['game_id'] = $row['game_id'] === null ? null : (int)$row['game_id'];
             $room['role'] = $actor === (int)$row['creator_account_id'] ? 'creator' : ($row['state'] === 'started' ? 'accepted' : ($actor===(int)($row['invited_account_id']??0) && $row['state']==='open'?'invited':'candidate'));
@@ -131,6 +143,7 @@ final class LobbyStore
     public function create(int $actor, ?array $setup = null, ?int $invited = null, ?string $creationKey = null): int
     {
         $setup=$setup===null?null:RoomSetup::validate($setup);
+        if (RoomSetup::delegated($setup??[]) && ($setup['configurator_id']??null)!==null) throw new \DomainException('Право настройки ещё не передано.',403);
         if (isset($setup['debug']) && (($setup['debug']['account_id'] ?? null) !== $actor || !\Berserk\Auth\DebugAccess::allowsId($actor))) throw new \DomainException('Debug недоступен для создателя',403);
         if ($creationKey!==null && !preg_match('/\A[a-f0-9]{32}\z/D',$creationKey)) throw new \DomainException('Некорректный ключ создания.',400);
         if ($invited!==null && ($invited===$actor || !$this->query('SELECT id FROM accounts WHERE id=?',[$invited])->fetch_assoc())) throw new \DomainException('Некорректное приглашение.',400);
@@ -138,7 +151,9 @@ final class LobbyStore
             if ($creationKey===null) return null;
             $row=$this->query('SELECT id,setup_json,invited_account_id FROM lobby_rooms WHERE creator_account_id=? AND creation_key=?',[$actor,$creationKey])->fetch_assoc();
             if (!$row) return null;
-            if ($row['setup_json']!==($setup===null?null:json_encode($setup,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)) || ($row['invited_account_id']===null?null:(int)$row['invited_account_id'])!==$invited) throw new \DomainException('Ключ создания уже использован с другими настройками.',409);
+            $priorSetup=json_decode($row['setup_json']??'null',true,512,JSON_THROW_ON_ERROR);
+            $sameDelegation=RoomSetup::delegated($setup??[]) && is_array($priorSetup) && RoomSetup::delegated($priorSetup);
+            if ((!$sameDelegation && $row['setup_json']!==($setup===null?null:json_encode($setup,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR))) || ($row['invited_account_id']===null?null:(int)$row['invited_account_id'])!==$invited) throw new \DomainException('Ключ создания уже использован с другими настройками.',409);
             return (int)$row['id'];
         };
         if (($prior=$existing())!==null) return $prior;
@@ -147,12 +162,34 @@ final class LobbyStore
             $id = (int)$this->db->insert_id;
             if ($setup !== null) {
                 $json=json_encode(RoomSetup::validate($setup),JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
-                $this->query('UPDATE lobby_rooms SET game_type=?,setup_json=? WHERE id=?',[$setup['mode'],$json,$id]);
+                $this->query('UPDATE lobby_rooms SET game_type=?,setup_json=? WHERE id=?',[$setup['mode']??null,$json,$id]);
             }
             $this->row($id,true);
         });
         } catch (\mysqli_sql_exception $e) { if ($e->getCode()!==1062 || ($prior=$existing())===null) throw $e;return $prior; }
         return $id;
+    }
+
+    public function configure(int $id,int $actor,int $version,?string $request,array $setup): void
+    {
+        $setup=RoomSetup::validate($setup);
+        if (!isset($setup['mode']) || isset($setup['debug']) || RoomSetup::delegated($setup)) throw new \DomainException('Недопустимые настройки.',403);
+        RoomTransaction::run($this->db,function(RoomTransaction $transaction) use($id,$actor,$version,$request,$setup): void {
+            $room=$this->row($id,true);
+            $stored=json_decode($room['setup_json']??'null',true,512,JSON_THROW_ON_ERROR);
+            if (!$this->visible($room,$actor) || !is_array($stored) || !RoomSetup::delegated($stored)
+                || ($stored['configurator_id']??null)!==$actor) throw new \DomainException('Настройка доступна только принятому сопернику.',403);
+            $final=RoomSetup::validate($setup+['selection'=>'opponent','configurator_id'=>$actor]);
+            if ($room['state']==='started' && (int)$room['accepted_account_id']===$actor) {
+                if (RoomSetup::validate($stored)!=$final) throw new \DomainException('Настройки уже сохранены.',409);
+                return; // Lost response: the same accepted settings never create a second match.
+            }
+            if ($room['state']!=='awaiting_confirmation' || (int)$room['candidate_account_id']!==$actor) throw new \DomainException('Настройка больше недоступна.',403);
+            if ((int)$room['version']!==$version || $version>=4294967295 || !is_string($request) || !hash_equals($room['candidate_request_id']??'',$request)) throw new \DomainException('Состояние комнаты изменилось.',409);
+            $this->query('UPDATE lobby_rooms SET game_type=?,setup_json=? WHERE id=?',[$final['mode'],json_encode($final,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$id]);
+            $game=MatchCreator::create($transaction,$id,(int)$room['creator_account_id'],$actor,$this->catalogFactory);
+            $this->query("UPDATE lobby_rooms SET accepted_account_id=candidate_account_id,candidate_account_id=NULL,candidate_request_id=NULL,game_id=?,state='started',version=version+1,updated_at=UTC_TIMESTAMP(6) WHERE id=?",[$game,$id]);
+        });
     }
 
     public function act(int $id, int $actor, int $version, ?string $request, string $action): void
@@ -175,9 +212,19 @@ final class LobbyStore
                 }
             } else {
                 if ($room['state'] !== 'awaiting_confirmation' || !is_string($request) || !hash_equals($room['candidate_request_id'] ?? '',$request)) throw new \DomainException('Заявка устарела.',409);
+                $setup=json_decode($room['setup_json']??'null',true,512,JSON_THROW_ON_ERROR);
+                $delegated=is_array($setup) && RoomSetup::delegated($setup);
+                $configuring=$delegated && ($setup['configurator_id']??null)!==null;
+                if ($configuring && $action!=='withdraw') throw new \DomainException('Соперник уже принят.',409);
                 if ($action === 'reject' || $action === 'withdraw') {
+                    if ($delegated) $this->query('UPDATE lobby_rooms SET setup_json=? WHERE id=?',[json_encode(RoomSetup::delegation(),JSON_THROW_ON_ERROR),$id]);
                     $this->query("UPDATE lobby_rooms SET candidate_account_id=NULL,candidate_request_id=NULL,state='open',version=version+1,updated_at=UTC_TIMESTAMP(6) WHERE id=?",[$id]);
                 } elseif ($action === 'accept') {
+                    if ($delegated) {
+                        $setup['configurator_id']=(int)$room['candidate_account_id'];
+                        $this->query('UPDATE lobby_rooms SET setup_json=?,version=version+1,updated_at=UTC_TIMESTAMP(6) WHERE id=?',[json_encode($setup,JSON_THROW_ON_ERROR),$id]);
+                        return;
+                    }
                     $game = MatchCreator::create($transaction,$id,(int)$room['creator_account_id'],(int)$room['candidate_account_id'],$this->catalogFactory);
                     $this->query("UPDATE lobby_rooms SET accepted_account_id=candidate_account_id,candidate_account_id=NULL,candidate_request_id=NULL,game_id=?,state='started',version=version+1,updated_at=UTC_TIMESTAMP(6) WHERE id=?",[$game,$id]);
                 } else { throw new \DomainException('Неизвестное действие.',400); }

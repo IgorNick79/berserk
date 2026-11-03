@@ -1,0 +1,318 @@
+[
+  {
+    "test": "exact isolated database identity",
+    "pass": true
+  },
+  {
+    "test": "runtime no TRIGGER or DDL privileges",
+    "pass": true
+  },
+  {
+    "test": "no mode selected",
+    "pass": true
+  },
+  {
+    "test": "no fake conditions",
+    "pass": true
+  },
+  {
+    "test": "outsider cannot configure",
+    "pass": true
+  },
+  {
+    "test": "host cannot configure",
+    "pass": true
+  },
+  {
+    "test": "candidate cannot configure before acceptance",
+    "pass": true
+  },
+  {
+    "test": "reject leaves delegation unset",
+    "pass": true
+  },
+  {
+    "test": "accept does not create game",
+    "pass": true
+  },
+  {
+    "test": "only accepted opponent configures",
+    "pass": true
+  },
+  {
+    "test": "refresh keeps approval",
+    "pass": true
+  },
+  {
+    "test": "host cannot accept twice",
+    "pass": true
+  },
+  {
+    "test": "withdraw resets room",
+    "pass": true
+  },
+  {
+    "test": "old form cannot save",
+    "pass": true
+  },
+  {
+    "test": "no mode selected",
+    "pass": true
+  },
+  {
+    "test": "no fake conditions",
+    "pass": true
+  },
+  {
+    "test": "outsider cannot configure",
+    "pass": true
+  },
+  {
+    "test": "host cannot configure",
+    "pass": true
+  },
+  {
+    "test": "candidate cannot configure before acceptance",
+    "pass": true
+  },
+  {
+    "test": "reject leaves delegation unset",
+    "pass": true
+  },
+  {
+    "test": "accept does not create game",
+    "pass": true
+  },
+  {
+    "test": "only accepted opponent configures",
+    "pass": true
+  },
+  {
+    "test": "refresh keeps approval",
+    "pass": true
+  },
+  {
+    "test": "host cannot accept twice",
+    "pass": true
+  },
+  {
+    "test": "withdraw resets room",
+    "pass": true
+  },
+  {
+    "test": "old form cannot save",
+    "pass": true
+  },
+  {
+    "test": "closed hidden from outsider",
+    "pass": true
+  },
+  {
+    "test": "sealed saved",
+    "pass": true
+  },
+  {
+    "test": "sealed starts correct preparation",
+    "pass": true
+  },
+  {
+    "test": "sealed identities retained",
+    "pass": true
+  },
+  {
+    "test": "sealed one match",
+    "pass": true
+  },
+  {
+    "test": "sealed repeat recovers same game",
+    "pass": true
+  },
+  {
+    "test": "sealed host still cannot configure",
+    "pass": true
+  },
+  {
+    "test": "sealed mismatched retry rejected",
+    "pass": true
+  },
+  {
+    "test": "draft saved",
+    "pass": true
+  },
+  {
+    "test": "draft starts correct preparation",
+    "pass": true
+  },
+  {
+    "test": "draft identities retained",
+    "pass": true
+  },
+  {
+    "test": "draft one match",
+    "pass": true
+  },
+  {
+    "test": "draft repeat recovers same game",
+    "pass": true
+  },
+  {
+    "test": "draft host still cannot configure",
+    "pass": true
+  },
+  {
+    "test": "draft mismatched retry rejected",
+    "pass": true
+  },
+  {
+    "test": "solomon saved",
+    "pass": true
+  },
+  {
+    "test": "solomon starts correct preparation",
+    "pass": true
+  },
+  {
+    "test": "solomon identities retained",
+    "pass": true
+  },
+  {
+    "test": "solomon one match",
+    "pass": true
+  },
+  {
+    "test": "solomon repeat recovers same game",
+    "pass": true
+  },
+  {
+    "test": "solomon host still cannot configure",
+    "pass": true
+  },
+  {
+    "test": "solomon mismatched retry rejected",
+    "pass": true
+  },
+  {
+    "test": "system saved",
+    "pass": true
+  },
+  {
+    "test": "system starts correct preparation",
+    "pass": true
+  },
+  {
+    "test": "system identities retained",
+    "pass": true
+  },
+  {
+    "test": "system one match",
+    "pass": true
+  },
+  {
+    "test": "system repeat recovers same game",
+    "pass": true
+  },
+  {
+    "test": "system host still cannot configure",
+    "pass": true
+  },
+  {
+    "test": "system mismatched retry rejected",
+    "pass": true
+  },
+  {
+    "test": "lucktest saved",
+    "pass": true
+  },
+  {
+    "test": "lucktest starts correct preparation",
+    "pass": true
+  },
+  {
+    "test": "lucktest identities retained",
+    "pass": true
+  },
+  {
+    "test": "lucktest one match",
+    "pass": true
+  },
+  {
+    "test": "lucktest repeat recovers same game",
+    "pass": true
+  },
+  {
+    "test": "lucktest host still cannot configure",
+    "pass": true
+  },
+  {
+    "test": "lucktest mismatched retry rejected",
+    "pass": true
+  },
+  {
+    "test": "opponent debug cannot impersonate host",
+    "pass": true
+  },
+  {
+    "test": "invalid settings keep room configurable",
+    "pass": true
+  },
+  {
+    "test": "concurrent repeats both recover",
+    "pass": true
+  },
+  {
+    "test": "concurrent repeats create one game",
+    "pass": true
+  },
+  {
+    "test": "conflicting saves have one winner",
+    "pass": true
+  },
+  {
+    "test": "withdraw save race leaves coherent room",
+    "pass": true
+  },
+  {
+    "test": "former participant cannot configure",
+    "pass": true
+  },
+  {
+    "test": "old nonce cannot configure new participant",
+    "pass": true
+  },
+  {
+    "test": "create retry after approval recovers room",
+    "pass": true
+  },
+  {
+    "test": "CSRF denied",
+    "pass": true
+  },
+  {
+    "test": "recursive delegation denied",
+    "pass": true
+  },
+  {
+    "test": "configured nonce room",
+    "pass": true
+  },
+  {
+    "test": "create retry after match recovers room",
+    "pass": true
+  },
+  {
+    "test": "configurator cannot change lock",
+    "pass": true
+  },
+  {
+    "test": "normal acceptance unchanged",
+    "pass": true
+  },
+  {
+    "test": "test_delegation_browser.cjs",
+    "pass": true
+  },
+  {
+    "test": "test_wizard_browser.cjs",
+    "pass": true
+  }
+]

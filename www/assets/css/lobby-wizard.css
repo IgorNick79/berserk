@@ -18,3 +18,7 @@
 .create-wizard [data-handicap-fields]{display:grid;gap:8px;margin-top:12px}.create-wizard [data-handicap-range]{width:100%}
 
 .create-wizard .wizard-handicap-summary,.create-wizard .wizard-handicap-currency{display:inline-flex;align-items:center;gap:4px;vertical-align:middle}.create-wizard .wizard-handicap-summary{gap:8px}.create-wizard .wizard-handicap-currency img{height:16px;width:auto;display:block}
+
+.create-wizard .wizard-common-options{border:0;padding:0;margin:0;min-width:0}.wizard-delegation{margin-top:18px;padding-top:18px;border-top:1px solid #786147}.wizard-delegation .wizard-option span{display:flex;flex-direction:column;gap:4px}.wizard-delegation small{color:#bdb3a3}
+
+.create-wizard[data-configure] .wizard-footer{flex-wrap:wrap}

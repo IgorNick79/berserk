@@ -81,6 +81,8 @@ final class RoomTransaction
         }
         if (($room['invited_account_id']??null)!==null && (int)$room['invited_account_id']!==$accepted) throw new \DomainException('Приглашён другой игрок.',403);
         $this->setup=isset($room['setup_json']) ? RoomSetup::validate(json_decode($room['setup_json'],true,512,JSON_THROW_ON_ERROR)) : null;
+        if ($this->setup!==null && RoomSetup::delegated($this->setup)
+            && (!isset($this->setup['mode']) || ($this->setup['configurator_id']??null)!==$accepted)) throw new \LogicException('Delegated settings must be completed before match creation');
         if (($this->setup===null && ($room['game_type']??null)!==null) || ($this->setup!==null && ($room['game_type']??null)!==$this->setup['mode'])) throw new \LogicException('Room type mismatch');
         $this->roomId = $roomId;
         return $this->db;

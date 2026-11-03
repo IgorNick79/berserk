@@ -8,6 +8,8 @@ use Berserk\Core\Prepare\PrepareProcessor;
 /** Room configuration only: pool generation is deferred until candidate acceptance. */
 final class RoomSetup
 {
+    public static function delegated(array $setup): bool { return ($setup['selection']??null)==='opponent'; }
+    public static function delegation(): array { return ['selection'=>'opponent','configurator_id'=>null]; }
     public static function parse(string $mode, array $input, ?int $debugAccount = null, ?Db $catalog = null): array
     {
         if (!in_array($mode,['system','draft','solomon','sealed','lucktest'],true)) throw new \DomainException('Выберите вид игры.',400);
@@ -82,6 +84,15 @@ final class RoomSetup
 
     public static function validate(array $setup): array
     {
+        if (self::delegated($setup)) {
+            $id=$setup['configurator_id']??null;
+            if ($id!==null && (!is_int($id) || $id<=0)) throw new \DomainException('Некорректное право настройки.',400);
+            if (isset($setup['mode']) && $id===null) throw new \DomainException('Соперник ещё не принят.',400);
+            if (!isset($setup['mode'])) {
+                if (array_diff(array_keys($setup),['selection','configurator_id'])) throw new \DomainException('Режим ещё не выбран.',400);
+                return ['selection'=>'opponent','configurator_id'=>$id];
+            }
+        }
         $mode=$setup['mode']??null;
         if (!in_array($mode,['system','draft','solomon','sealed','lucktest'],true) || !is_array($setup['settings']??null)) throw new \DomainException('Некорректные настройки комнаты.',400);
         $s=GameSettings::fromArray($setup['settings']);
@@ -98,6 +109,7 @@ final class RoomSetup
         };
         if ($error!==null) throw new \DomainException($error,400);
         $result = ['mode'=>$mode,'settings'=>$s->toArray()];
+        if (self::delegated($setup)) $result+=['selection'=>'opponent','configurator_id'=>$setup['configurator_id']??null];
         if (isset($setup['system_decks'])) {
             $decks = $setup['system_decks'];
             if ($mode !== 'system' || !is_array($decks) || array_diff(array_keys($decks),['deck_id','other_deck_id','deck_mode','other_deck_mode'])) throw new \DomainException('Некорректные колоды.',400);
