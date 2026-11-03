@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=16">
 <link rel="stylesheet" href="/assets/css/battle-chat.css?v=1">
 <link rel="stylesheet" href="/assets/css/lobby-room.css?v=5">
-<link rel="stylesheet" href="/assets/css/view-deck.css?v=7">
+<link rel="stylesheet" href="/assets/css/view-deck.css?v=8">
 <link rel="stylesheet" href="/assets/css/roll.css?v=4">
 <figure class="room-illustration"><img src="/assets/images/battle/waiting-war-table.png" width="1536" height="1024" alt="Военный стол с картой, свечой и двумя свободными местами"></figure>
 <script src="/assets/js/panel-secondary-view.js?v=1" defer></script>

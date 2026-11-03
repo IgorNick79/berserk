@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=16">
 <link rel="stylesheet" href="/assets/css/battle-mini-nameplate.css?v=1">
 <link rel="stylesheet" href="/assets/css/battle-chat.css?v=1">
-<link rel="stylesheet" href="/assets/css/view-deck.css?v=7">
+<link rel="stylesheet" href="/assets/css/view-deck.css?v=8">
 <div style="--player-playmat: url('{{playmat_url}}')" class="screen-prepare screen-prepare-view" data-view-pager>
     <p class="flash">{{message}}</p>
     <div class="pregame-stage-content">

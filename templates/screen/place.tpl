@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=16">
 <link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=16">
 <link rel="stylesheet" href="/assets/css/battle-mini-nameplate.css?v=2">
-<link rel="stylesheet" href="/assets/css/view-deck.css?v=7">
+<link rel="stylesheet" href="/assets/css/view-deck.css?v=8">
 <link rel="stylesheet" href="/assets/css/place.css?v=3">
 <div class="screen-prepare-place battle-left" data-place-screen data-place-view="{{place_view}}" data-place-waiting="{{place_waiting}}">
 <p class="flash">{{message}}</p>

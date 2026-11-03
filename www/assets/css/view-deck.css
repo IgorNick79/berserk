@@ -51,8 +51,8 @@
 
 /* Fixed decorations: only the illustration is cloned by the shared zoom module. */
 :is(.view-deck-page,.roll-page) .view-cost{left:0;right:0;bottom:0;border-radius:0 0 5px 5px}
-:is(.view-deck-page,.roll-page) .view-cost img[src$="-unique.png"]{width:32px;height:32px}
-:is(.view-deck-page,.roll-page) .pregame-card-cost img[src$="-unique.png"]{width:32px;height:32px}
+:is(.view-deck-page,.roll-page) .view-cost img[src$="-unique.png"]{width:24px;height:24px}
+:is(.view-deck-page,.roll-page) .pregame-card-cost img[src$="-unique.png"]{width:24px;height:24px}
 :is(.view-deck-page,.roll-page) .pregame-card-info{background:var(--ip-surface);border-bottom:1px solid var(--ip-edge)}
 :is(.view-deck-page,.roll-page) .info-panel .pregame-card-heading,:is(.view-deck-page,.roll-page) .info-panel .pregame-card-stats{background:var(--ip-surface);border-color:var(--ip-edge)}
 :is(.view-deck-page,.roll-page) .info-panel .battle-icon-tooltip{left:auto;right:0;transform:translateY(4px)}
