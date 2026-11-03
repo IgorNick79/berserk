@@ -41,8 +41,8 @@
 .draft-page .info-panel .view-cost>img,.draft-page .info-panel .view-cost img[src$="-unique.png"]{width:20px;height:20px}
 .draft-page .info-panel .view-cost .view-element{flex-basis:20px;width:20px;height:20px}
 
-.screen-draft--glimpse .glimpse-take { outline: 3px solid #63b86c; }
-.screen-draft--glimpse .glimpse-burn { outline: 3px solid #d45d46; opacity: .65; }
+.screen-draft--glimpse .glimpse-take .view-art { outline:2px solid #f3dfac; outline-offset:0; }
+.screen-draft--glimpse .glimpse-burn .view-art { outline:2px solid #d45d46; outline-offset:0; }
 
 /* Keep all twelve Glimpse choices compact; decisions stay in the panel footer. */
 .draft-page .screen-draft--glimpse { justify-content:flex-start; }

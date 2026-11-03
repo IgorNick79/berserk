@@ -316,7 +316,7 @@ final class DraftScreen
                 . '<label class="button glimpse-take-button"><input form="glimpse-decision" type="radio" name="pick" value="' . $position . '">Взять</label>'
                 . '<label class="button glimpse-burn-button" style="--btn-top:#b66c51;--btn-bottom:#78362b;--btn-edge:#d29a78"><input form="glimpse-decision" type="checkbox" name="positions[]" value="' . $position . '">Сжечь</label></div>';
         }
-        $waiting = '<p class="wait">Ожидание хода соперника. Карт в пакете: ' . count($draft['grid']) . '</p>';
+        $waiting = '<span class="wait">Ожидание хода соперника</span>';
         $form = $active ? '<form method="get" id="glimpse-decision" class="prepare-actions" data-preparation-actions data-required="' . $required . '">'
             . '<input type="hidden" name="game" value="' . $state->gameId . '">'
             . '<input type="hidden" name="cmd" value="draft_confirm">'
@@ -331,21 +331,32 @@ final class DraftScreen
             $packet = (int)($event['packet'] ?? 1);
             $groups[$packet] = array_merge($groups[$packet] ?? [], $event['cards'] ?? []);
         }
-        $history = [];
+        // Older ongoing drafts have picked cards but no per-packet history yet.
+        $recorded = [];
+        foreach ($groups as $cards) foreach ($cards as $ukid) $recorded[$ukid] = ($recorded[$ukid] ?? 0) + 1;
+        $earlier = [];
+        foreach ($draft['picked'][$playerKey] ?? [] as $ukid) {
+            if (($recorded[$ukid] ?? 0) > 0) $recorded[$ukid]--;
+            else $earlier[] = $ukid;
+        }
+        $history = $earlier ? [['player'=>$playerKey, 'cards'=>$earlier, 'packet'=>0]] : [];
         foreach ($groups as $packet=>$cards) $history[] = ['player'=>$playerKey, 'cards'=>$cards, 'packet'=>$packet];
         $historyHtml = '<template data-grid-history-content>' . $this->panelHistoryHtml($state, array_reverse($history), $playerKey, $cardsInfo, $ui) . '</template>';
         $historyControl = '<button type="button" class="battle-icon-control" data-grid-history aria-label="История выбора" aria-pressed="false" title="История выбора"><img src="/assets/images/battle/game_log_160.png" alt="" width="40" height="40"><span class="battle-icon-tooltip" aria-hidden="true">История выбора</span></button>';
         $stats = $this->poolStatistics($draft, $playerKey, $cardsInfo)['statisticsHtml'];
-        $selection = $active ? '<p class="pregame-selection-count">Взять: <b data-glimpse-picked>0</b>/1 · Сжечь: <b data-glimpse-burned>0</b>/' . $required . '</p>' : $waiting;
+        if ($active) {
+            $selection = '<span class="pregame-selection-count"> · Текущий выбор: <b data-glimpse-picked>0</b>/1 · <span role="img" aria-label="Сжигание">🔥</span> <b data-glimpse-burned>0</b>/' . $required . '</span>';
+            $stats = preg_replace('/(<div class="pregame-pool-totals">.*?)(<\/div>)/s', '$1' . $selection . '$2', $stats, 1);
+        }
         $now = time();
         return ['screen'=>'draft', 'data'=>[
             'draft_class'=>'screen-draft--glimpse', 'playmat_url'=>\Berserk\Core\PlaymatCatalog::playerUrl($state->getPlayer($playerKey)),
             'grid_attributes'=>'data-grid-selection-key="glimpse-' . $state->gameId . '-' . $playerKey . '" data-grid-version="' . $state->version . '"', 'grid_html'=>'<div class="solomon-stack">' . $grid . '</div>',
             'draft_info_html'=>'', 'draft_bottom_html'=>'', 'history_html'=>$historyHtml,
             'panel_html'=>'',
-            'panel_summary_html'=>$finish . $stats . $selection,
+            'panel_summary_html'=>$finish . $stats,
             'panel_phase'=>($active ? 'Ваш ход' : 'Ход противника') . ' · Сжечь: ' . $required,
-            'panel_actions_html'=>\Berserk\View\Ui\PreGameLayout::actionsFooter($active ? $form : '', $historyControl),
+            'panel_actions_html'=>\Berserk\View\Ui\PreGameLayout::actionsFooter($active ? $form : $waiting, $historyControl),
             'timer_html'=>$this->timerHtml($state, $playerKey, $now),
             'draft_script_html'=>$this->scriptHtml($state, $base . '&cmd=draft_sync', $now) . '<script src="/assets/js/grid_selection.js?v=4" defer></script><script src="/assets/js/glimpse-selection.js?v=3" defer></script>',
             'message'=>$message ?? '',
@@ -394,7 +405,7 @@ final class DraftScreen
         if ($history === []) $html .= '<p class="wait">Пока нет выбранных карт.</p>';
         foreach ($history as $event) {
             $owner = (string) ($event['player'] ?? '');
-            $html .= '<div class="draft-history__event"><div class="draft-history__owner">' . ($state->settings->isGlimpseDraft() ? 'Пакет ' . (int)($event['packet'] ?? 1) : ($owner === $playerKey ? 'Мой выбор' : 'Выбор противника')) . '</div><div class="draft-history__cards">';
+            $html .= '<div class="draft-history__event"><div class="draft-history__owner">' . ($state->settings->isGlimpseDraft() ? ((int)($event['packet'] ?? 1) === 0 ? 'Ранее выбранные карты' : 'Бустер ' . (int)($event['packet'] ?? 1)) : ($owner === $playerKey ? 'Мой выбор' : 'Выбор противника')) . '</div><div class="draft-history__cards">';
             foreach ((array) ($event['cards'] ?? []) as $ukid) {
                 $ukid = (string) $ukid;
                 $info = $cardsInfo[$ukid] ?? ['name'=>$ukid, 'strike'=>[]];
