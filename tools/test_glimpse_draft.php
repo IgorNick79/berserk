@@ -111,6 +111,7 @@ namespace {
     check($p->draftConfirm('host',$cmd)->success,'manual wrapper');
     $snapshot=$s->toArray();check(!$p->draftConfirm('host',$cmd)->success && $snapshot===$s->toArray(),'replay rejected');
     $tpl=new Template(__DIR__.'/../templates');$screen=new DraftScreen($tpl);
+    $s->draft['round_picks']=0;$s->draft['round_first_player']='player';
     $s->draft['grid']=['SECRET_GRID'];$s->draft['pool']=['SECRET_POOL'];$s->draft['recycle']=['SECRET_BURN'];$s->draft['picked']['player']=['SECRET_PICK'];
     $s->draft['history']=[['player'=>'host','cards'=>['OWN_CARD'],'packet'=>2],['player'=>'player','cards'=>['SECRET_HISTORY'],'packet'=>2]];
     $view=$screen->prepare($s,'host','host',null,[])['data'];
@@ -166,5 +167,20 @@ namespace {
     $p=new DraftProcessor($state,$db);check(!$p->finish('player')->success,'finish wrong turn');
     check($p->finish('host')->success && $state->status==='view','finish at 30');
     check(array_sum(array_column($state->getPlayer('host')->deckCards,'count'))===30,'deck built exactly');
+    $slotsState=freshG($db);$slotsProcessor=new DraftProcessor($slotsState,$db);
+    $screen=new DraftScreen(new Template(__DIR__.'/../templates'));
+    $hidden=$screen->prepare($slotsState,'player','player',null,[])['data']['grid_html'];
+    check(substr_count($hidden,'glimpse-card-back')===12,'initial twelve backs');
+    check(!str_contains($hidden,'<input') && !str_contains($hidden,'data-grid-preview'),'backs not interactive');
+    check($slotsProcessor->confirmGlimpse('host',0,[1,2])->success,'first stable slot pick');
+    check($slotsState->draft['glimpse_slots']===range(3,11),'slots retain original positions');
+    $waitingView=$screen->prepare($slotsState,'host','host',null,[])['data']['grid_html'];
+    check(substr_count($waitingView,'solomon-stack__card')===12,'waiting retains twelve slots');
+    check(substr_count($waitingView,'data-grid-preview')===9 && !str_contains($waitingView,'<input'),'waiting can browse remaining cards without controls');
+    $activeView=$screen->prepare($slotsState,'player','player',null,[])['data']['grid_html'];
+    check(substr_count($activeView,'data-glimpse-card')===9 && substr_count($activeView,'glimpse-card-empty')===3,'recipient sees holes and controls');
+    check($slotsProcessor->confirmGlimpse('player',0,[1,2])->success,'second stable slot pick');
+    check($slotsState->draft['glimpse_slots']===range(6,11),'second pick leaves original six slots');
+    check(totalG($slotsState)===60,'stable slots conserve cards');
     echo "OK $checks checks\n";
 }

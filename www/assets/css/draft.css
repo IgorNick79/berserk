@@ -68,3 +68,11 @@
 .draft-page [data-panel-theme] .pregame-main .screen-draft--glimpse [data-glimpse-card] > label.button { padding:4px 6px; min-height:24px; font-size:11px; }
 
 .draft-page .screen-draft--glimpse .prepare-card:is(.prepare-card--selected,.glimpse-burn) { border-color:transparent!important; box-shadow:none; }
+
+.draft-page .screen-draft--glimpse .pregame-draft-grid { padding-top:24px; }
+.screen-draft--glimpse .solomon-stack__card { min-width:0; display:grid; grid-template-columns:1fr 1fr; gap:8px; align-content:start; }
+.screen-draft--glimpse .solomon-stack__card > .prepare-card-link { grid-column:1 / -1; }
+.screen-draft--glimpse .glimpse-card-back,.screen-draft--glimpse .glimpse-card-empty { grid-column:1 / -1; aspect-ratio:8/5; border:1px solid transparent; border-radius:6px; box-sizing:border-box; }
+.screen-draft--glimpse .glimpse-card-back { display:grid; place-items:center; background:#24251f; border-color:#607b69; }
+.screen-draft--glimpse .glimpse-card-back img { width:60%; height:60%; object-fit:contain; }
+.screen-draft--glimpse .glimpse-button-space { grid-column:1 / -1; height:32px; }

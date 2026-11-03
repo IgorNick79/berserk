@@ -309,12 +309,29 @@ final class DraftScreen
         $ui = new PrepareUi($this->tpl);
         $required = (new \Berserk\Core\Prepare\DraftProcessor($state, null))->glimpseBurnCount();
         $grid = '';
-        if ($active) foreach ($draft['grid'] as $position => $ukid) {
-            $grid .= '<div class="solomon-stack__card pregame-grid-card" data-grid-occupied="1" data-glimpse-card>'
+        $roundPicks = (int)($draft['round_picks'] ?? 0);
+        $seen = $active || $roundPicks >= 2 || ($roundPicks > 0 && ($draft['round_first_player'] ?? 'host') === $playerKey);
+        $slots = $draft['glimpse_slots'] ?? array_keys($draft['grid']);
+        $bySlot = array_flip($slots);
+        for ($slot=0; $slot<12; $slot++) {
+            if (!$seen) {
+                $grid .= '<div class="solomon-stack__card glimpse-placeholder"><div class="glimpse-card-back"><img src="/favicon.png" alt="Рубашка карты"></div><div class="glimpse-button-space" aria-hidden="true"></div></div>';
+                continue;
+            }
+            if (!isset($bySlot[$slot])) {
+                $grid .= '<div class="solomon-stack__card glimpse-placeholder" aria-hidden="true"><div class="glimpse-card-empty"></div><div class="glimpse-button-space"></div></div>';
+                continue;
+            }
+            $position = $bySlot[$slot];
+            $ukid = $draft['grid'][$position];
+            $grid .= '<div class="solomon-stack__card pregame-grid-card" data-grid-occupied="1"' . ($active ? ' data-glimpse-card' : '') . '>'
                 . $ui->thumbnail($cardsInfo, ['element_in_cost'=>true, 'ukid'=>$ukid, 'info'=>$cardsInfo[$ukid] ?? [], 'link'=>'#'])
-                . '<template data-grid-preview>' . $ui->informationWithControls(['ukid'=>$ukid], $cardsInfo) . '</template>'
-                . '<label class="button glimpse-take-button"><input form="glimpse-decision" type="checkbox" name="pick" value="' . $position . '">Взять</label>'
-                . '<label class="button glimpse-burn-button" style="--btn-top:#b66c51;--btn-bottom:#78362b;--btn-edge:#d29a78"><input form="glimpse-decision" type="checkbox" name="positions[]" value="' . $position . '">Сжечь</label></div>';
+                . '<template data-grid-preview>' . $ui->informationWithControls(['ukid'=>$ukid], $cardsInfo) . '</template>';
+            if ($active) {
+                $grid .= '<label class="button glimpse-take-button"><input form="glimpse-decision" type="checkbox" name="pick" value="' . $position . '">Взять</label>'
+                    . '<label class="button glimpse-burn-button" style="--btn-top:#b66c51;--btn-bottom:#78362b;--btn-edge:#d29a78"><input form="glimpse-decision" type="checkbox" name="positions[]" value="' . $position . '">Сжечь</label>';
+            } else $grid .= '<div class="glimpse-button-space" aria-hidden="true"></div>';
+            $grid .= '</div>';
         }
         $waiting = '<span class="wait">Ожидание хода соперника</span>';
         $form = $active ? '<form method="get" id="glimpse-decision" class="prepare-actions" data-preparation-actions data-required="' . $required . '">'

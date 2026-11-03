@@ -134,7 +134,11 @@ final class DraftProcessor
         $this->state->draft['history'][] = ['player'=>$playerKey, 'cards'=>$taken, 'packet'=>$this->state->draft['packet_number'] ?? 1];
         $this->state->draft['picked'][$playerKey][] = $taken[0];
         foreach ($burns as $position) $this->state->draft['recycle'][] = $this->state->draft['grid'][(int)$position];
-        foreach ($positions as $position) unset($this->state->draft['grid'][$position]);
+        $slots = $this->state->draft['glimpse_slots'] ?? array_keys($this->state->draft['grid']);
+        foreach ($positions as $position) {
+            unset($this->state->draft['grid'][$position], $slots[$position]);
+        }
+        $this->state->draft['glimpse_slots'] = array_values($slots);
         $this->state->draft['grid'] = array_values($this->state->draft['grid']);
         $this->state->draft['round_picks']++;
         $this->state->draft['decision_id']++;
@@ -145,6 +149,7 @@ final class DraftProcessor
                 if ($card === null) break;
                 $this->state->draft['grid'][] = $card;
             }
+            $this->state->draft['glimpse_slots'] = array_keys($this->state->draft['grid']);
             $this->state->draft['packet_number'] = ($this->state->draft['packet_number'] ?? 1) + 1;
             $this->state->draft['round_first_player'] = $this->opponent($this->state->draft['round_first_player']);
             $this->state->draft['turn'] = $this->state->draft['round_first_player'];
