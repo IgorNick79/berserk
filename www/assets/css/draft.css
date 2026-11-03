@@ -40,3 +40,6 @@
 .draft-page .info-panel .view-cost{font-size:12px;line-height:20px}
 .draft-page .info-panel .view-cost>img,.draft-page .info-panel .view-cost img[src$="-unique.png"]{width:20px;height:20px}
 .draft-page .info-panel .view-cost .view-element{flex-basis:20px;width:20px;height:20px}
+
+.screen-draft--glimpse .glimpse-take { outline: 3px solid #63b86c; }
+.screen-draft--glimpse .glimpse-burn { outline: 3px solid #d45d46; opacity: .65; }

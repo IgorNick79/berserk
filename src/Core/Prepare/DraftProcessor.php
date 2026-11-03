@@ -31,14 +31,14 @@ final class DraftProcessor
             && !($allowRandomPickMode && $settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM)) {
             return Result::error('Неподдерживаемый способ драфта');
         }
-        if (!in_array($settings->draftType(), [GameSettings::DRAFT_TYPE_GRID, GameSettings::DRAFT_TYPE_SOLOMON], true)) {
+        if (!in_array($settings->draftType(), [GameSettings::DRAFT_TYPE_GRID, GameSettings::DRAFT_TYPE_SOLOMON, GameSettings::DRAFT_TYPE_GLIMPSE], true)) {
             return Result::error('Неподдерживаемый тип драфта');
         }
         if (!$settings->isSolomonDraft() && $settings->draftGridSize() !== 3) {
             return Result::error('Неподдерживаемый размер сетки драфта');
         }
         if ($settings->draftBoosters() < GameSettings::DRAFT_BOOSTERS_MIN
-            || $settings->draftBoosters() > GameSettings::DRAFT_BOOSTERS_MAX) {
+            || $settings->draftBoosters() > ($settings->isGlimpseDraft() ? 15 : GameSettings::DRAFT_BOOSTERS_MAX)) {
             return Result::error('Неверное количество бустеров');
         }
         if ($settings->draftBoosterProfile() !== GameSettings::BOOSTER_PROFILE_DEFAULT) {
@@ -49,7 +49,7 @@ final class DraftProcessor
             return Result::error('Db недоступен для драфта');
         }
 
-        if ($settings->isSolomonDraft() && ($error = $settings->validateDraftSettings()) !== null) {
+        if (($settings->isSolomonDraft() || $settings->isGlimpseDraft()) && ($error = $settings->validateDraftSettings()) !== null) {
             return Result::error($error);
         }
 
@@ -61,14 +61,14 @@ final class DraftProcessor
 
         shuffle($pool);
 
-        if ($settings->isSolomonDraft() && !DraftCopyRules::canCompleteDistribution(
+        if (($settings->isSolomonDraft() || $settings->isGlimpseDraft()) && !DraftCopyRules::canCompleteDistribution(
             ['host' => [], 'player' => []], $pool, $this->loadCopyRuleCards($pool), GameSettings::MIN_DECK_SIZE
         )) {
             return Result::error('Пул не позволяет собрать две допустимые колоды по 30 карт');
         }
 
         $grid = [];
-        for ($i = 0; $i < ($settings->isSolomonDraft() ? $settings->draftStackSize() : 9); $i++) {
+        for ($i = 0; $i < ($settings->isGlimpseDraft() ? 12 : ($settings->isSolomonDraft() ? $settings->draftStackSize() : 9)); $i++) {
             $grid[] = array_shift($pool);
         }
 
@@ -85,7 +85,7 @@ final class DraftProcessor
             'round_picks' => 0,
             'initial_count' => count($pool) + count(array_filter($grid, fn($ukid) => $ukid !== null)),
         ];
-        if ($settings->isSolomonDraft()) $this->state->draft['decision_id'] = 1;
+        if ($settings->isSolomonDraft() || $settings->isGlimpseDraft()) $this->state->draft['decision_id'] = 1;
 
         return Result::ok([
             'draft_started',
@@ -94,8 +94,70 @@ final class DraftProcessor
         ]);
     }
 
+    private function glimpseCanComplete(string $playerKey, int $position): bool
+    {
+        $picked = $this->state->draft['picked'];
+        $remaining = $this->state->draft['grid'];
+        $picked[$playerKey][] = $remaining[$position];
+        unset($remaining[$position]);
+        return $this->canComplete($picked, array_merge(array_values($remaining), $this->state->draft['pool'], $this->state->draft['recycle']));
+    }
+
+    public function glimpseBurnCount(): int
+    {
+        $step = intdiv((int) ($this->state->draft['round_picks'] ?? 0), 2);
+        $count = ($this->state->settings->draft['burn_mode'] ?? 'normal') === 'normal' ? 2
+            : ([((int) ($this->state->settings->draft['burn_count'] ?? 2)), 1, 0][min(2, $step)]);
+        return min($count, max(0, count($this->state->draft['grid'] ?? []) - 1));
+    }
+
+    public function confirmGlimpse(string $playerKey, mixed $pick, mixed $burns): Result
+    {
+        if (!$this->state->settings->isGlimpseDraft() || $this->state->status !== 'draft' || $this->state->draft === null) return Result::error('Glimpse не активен');
+        if (($this->state->draft['turn'] ?? '') !== $playerKey) return Result::error('Не ваш ход');
+        if (!is_array($burns) || !array_is_list($burns) || count($burns) !== $this->glimpseBurnCount()) return Result::error('Неверное количество сжигаемых карт');
+        $positions = array_merge([$pick], $burns);
+        foreach ($positions as $position) {
+            if ((!is_int($position) && !(is_string($position) && preg_match('/^(0|[1-9][0-9]*)$/D', $position))) || !array_key_exists((int)$position, $this->state->draft['grid'])) return Result::error('Неверная позиция');
+        }
+        $positions = array_map('intval', $positions);
+        if (count(array_unique($positions)) !== count($positions)) return Result::error('Позиции должны различаться');
+        $taken = [$this->state->draft['grid'][(int)$pick]];
+        if (($violation = $this->copyLimitViolation($playerKey, $taken)) !== null) return Result::error(DraftCopyRules::violationMessage($violation));
+        if (!$this->glimpseCanComplete($playerKey, (int)$pick)) return Result::error('Выбор не позволяет собрать две допустимые колоды по 30 карт');
+        $this->state->draft['picked'][$playerKey][] = $taken[0];
+        foreach ($burns as $position) $this->state->draft['recycle'][] = $this->state->draft['grid'][(int)$position];
+        foreach ($positions as $position) unset($this->state->draft['grid'][$position]);
+        $this->state->draft['grid'] = array_values($this->state->draft['grid']);
+        $this->state->draft['round_picks']++;
+        $this->state->draft['decision_id']++;
+        $this->state->draft['turn'] = $this->opponent($playerKey);
+        if (empty($this->state->draft['grid'])) {
+            for ($i=0; $i<12; $i++) {
+                $card = $this->drawDraftCard();
+                if ($card === null) break;
+                $this->state->draft['grid'][] = $card;
+            }
+            $this->state->draft['round_first_player'] = $this->opponent($this->state->draft['round_first_player']);
+            $this->state->draft['turn'] = $this->state->draft['round_first_player'];
+            $this->state->draft['round_picks'] = 0;
+        }
+        // Reserve the last available cards for the player still below the deck minimum.
+        // This exception is needed when alternating short packets would otherwise yield 31/29.
+        $turn = $this->state->draft['turn'];
+        $other = $this->opponent($turn);
+        $otherNeed = max(0, GameSettings::MIN_DECK_SIZE - count($this->state->draft['picked'][$other]));
+        $remaining = count($this->state->draft['grid']) + count($this->state->draft['pool']) + count($this->state->draft['recycle']);
+        if (count($this->state->draft['picked'][$turn]) >= GameSettings::MIN_DECK_SIZE
+            && $otherNeed > 0 && $remaining <= $otherNeed) {
+            $this->state->draft['turn'] = $other;
+        }
+        return $this->checkEnd('glimpse_picked');
+    }
+
     public function pickRow(string $playerKey, int $row): Result
     {
+        if ($this->state->settings->isGlimpseDraft()) return Result::error('Используйте выбор Glimpse');
         if ($this->state->settings->isSolomonDraft()) return Result::error('В Solomon выбирают карты стека');
         if ($row < 1 || $row > 3) return Result::error('Неверная строка');
 
@@ -108,6 +170,7 @@ final class DraftProcessor
 
     public function pickCol(string $playerKey, int $col): Result
     {
+        if ($this->state->settings->isGlimpseDraft()) return Result::error('Используйте выбор Glimpse');
         if ($this->state->settings->isSolomonDraft()) return Result::error('В Solomon выбирают карты стека');
         if ($col < 1 || $col > 3) return Result::error('Неверная колонка');
 
@@ -120,6 +183,12 @@ final class DraftProcessor
 
     public function pickSelection(string $playerKey, array $selection, string $eventPrefix = 'picked'): Result
     {
+        if ($this->state->settings->isGlimpseDraft()) {
+            $pick = $selection['positions'][0] ?? -1;
+            $burns = array_values(array_diff(array_keys($this->state->draft['grid']), [$pick]));
+            shuffle($burns);
+            return $this->confirmGlimpse($playerKey, $pick, array_slice($burns, 0, $this->glimpseBurnCount()));
+        }
         if ($this->state->settings->isSolomonDraft()) {
             return $this->confirmStack($playerKey, $selection['positions'] ?? null, $eventPrefix);
         }
@@ -179,6 +248,13 @@ final class DraftProcessor
     /** Auto choices must preserve a complete copy-safe allocation; manual Grid stays unchanged. */
     public function automaticSelections(): array
     {
+        if ($this->state->settings->isGlimpseDraft()) {
+            $options = [];
+            foreach ($this->state->draft['grid'] ?? [] as $position => $card) {
+                if ($this->copyLimitViolation($this->state->draft['turn'], [$card]) === null && $this->glimpseCanComplete($this->state->draft['turn'], $position)) $options[] = ['positions'=>[$position], 'cards'=>[$card]];
+            }
+            return $options;
+        }
         $selections = $this->validSelections();
         if ($this->state->settings->isSolomonDraft()
             || ($this->state->draft['grid_mode'] ?? $this->state->settings->draftGridMode()) === GameSettings::DRAFT_GRID_MODE_DISCRETE) return $selections;
@@ -272,6 +348,7 @@ final class DraftProcessor
 
     public function pass(string $playerKey): Result
     {
+        if ($this->state->settings->isGlimpseDraft()) return Result::error('Используйте выбор Glimpse');
         $draft = $this->state->draft ?? null;
         if (!$draft) return Result::error('Драфт не активен');
         if ($draft['turn'] !== $playerKey) return Result::error('Не ваш ход');
@@ -560,7 +637,7 @@ final class DraftProcessor
         $hostDeckCards = $builder->buildDeckCards($hostUkids);
         $playerDeckCards = $builder->buildDeckCards($playerUkids);
 
-        if ($this->state->settings->isSolomonDraft()) {
+        if ($this->state->settings->isSolomonDraft() || $this->state->settings->isGlimpseDraft()) {
             if (!$this->canFinish($this->state->draft)
                 || array_sum(array_column($hostDeckCards, 'count')) !== count($hostUkids)
                 || array_sum(array_column($playerDeckCards, 'count')) !== count($playerUkids)) {

@@ -6,7 +6,7 @@
  const pages=[...form.querySelectorAll('[data-page]')],tabs=[...form.querySelectorAll('.wizard-tabs [data-step]')],scroll=form.querySelector('.wizard-scroll'),error=form.querySelector('[data-wizard-error]');let step=0,busy=false,checking=false;
  const configuring=form.dataset.configure==='1';
  if(configuring)form.querySelector('[name=access][value='+form.dataset.access+']').checked=true;
- const names={opponent:'Решает противник',sealed:'Sealed',draft:'Grid Draft',solomon:'Solomon Draft',lucktest:'LuckTest',system:'Системные колоды'};
+ const names={opponent:'Решает противник',sealed:'Sealed',draft:'Grid Draft',glimpse:'Glimpse Draft',solomon:'Solomon Draft',lucktest:'LuckTest',system:'Системные колоды'};
  const mode=()=>form.querySelector('[name=setup_mode]:checked').value;
  const closed=()=>form.querySelector('[name=access]:checked').value==='closed';
  function updateSummary(){
@@ -39,3 +39,14 @@
  form.querySelector('[data-withdraw-configuration]')?.addEventListener('click',async()=>{if(busy)return;busy=true;try{const endpoint=new URL(form.getAttribute('action'),location.href);endpoint.searchParams.set('api','1');const params=new URLSearchParams({action:'withdraw',csrf:form.querySelector('[name=csrf]').value,version:form.querySelector('[name=version]').value,candidate_request_id:form.querySelector('[name=candidate_request_id]').value});const response=await fetch(endpoint,{method:'POST',body:params,credentials:'same-origin'});const data=await response.json();if(!response.ok)throw Error(data.error||'Не удалось отменить участие.');location.assign(data.url);}catch(e){error.textContent=e.message;}finally{busy=false;}});
  update();show(0);
 })();
+
+(function () {
+    function update() {
+        document.querySelectorAll('[data-glimpse-progressive]').forEach(function (field) {
+            var form = field.closest('form') || field.closest('[data-mode]');
+            var selected = form && form.querySelector('[name="draft_burn_mode"]:checked');
+            field.hidden = !selected || selected.value !== 'progressive';
+        });
+    }
+    document.addEventListener('change', update); update();
+}());

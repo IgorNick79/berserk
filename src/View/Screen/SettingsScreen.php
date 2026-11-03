@@ -77,7 +77,8 @@ final class SettingsScreen
     {
         $settings = $state->settings;
         $isSolomon = $settings->isSolomonDraft();
-        $boosters = max(GameSettings::DRAFT_BOOSTERS_MIN, min(GameSettings::DRAFT_BOOSTERS_MAX, $settings->draftBoosters()));
+        $isGlimpse = $settings->isGlimpseDraft();
+        $boosters = max(GameSettings::DRAFT_BOOSTERS_MIN, min($isGlimpse ? 15 : GameSettings::DRAFT_BOOSTERS_MAX, $settings->draftBoosters()));
         $isRandom = $settings->draftPickMode() === GameSettings::DRAFT_PICK_MODE_RANDOM;
         $gridMode = $settings->draftGridMode();
         $autoSide = $settings->draftAutoSide();
@@ -90,7 +91,7 @@ final class SettingsScreen
         if ($timerAction <= 0) {
             $timerAction = GameSettings::DRAFT_TIMER_DEFAULT_ACTION_SECONDS;
         }
-        $contentHtml = '<p class="settings-mode-title">' . ($isSolomon ? 'Solomon Draft' : 'Grid 3×3') . '</p>';
+        $contentHtml = '<p class="settings-mode-title">' . ($isGlimpse ? 'Glimpse Draft' : ($isSolomon ? 'Solomon Draft' : 'Grid 3×3')) . '</p>';
 
         $actionsHtml = '<form method="get" class="settings-form settings-draft-form" data-settings-form="draft">'
             . '<input type="hidden" name="' . $this->esc($roleParam) . '" value="1">'
@@ -102,7 +103,7 @@ final class SettingsScreen
             . '<h2>Основные настройки</h2>'
             . '<fieldset class="settings-fieldset">'
             . '<legend>Количество бустеров</legend>'
-            . '<div class="settings-option-grid settings-option-grid--compact">' . $this->boosterCountTiles('boosters', GameSettings::DRAFT_BOOSTERS_MIN, GameSettings::DRAFT_BOOSTERS_MAX, $boosters) . '</div>'
+            . '<div class="settings-option-grid settings-option-grid--compact">' . $this->boosterCountTiles('boosters', GameSettings::DRAFT_BOOSTERS_MIN, ($isGlimpse ? 15 : GameSettings::DRAFT_BOOSTERS_MAX), $boosters) . '</div>'
             . '</fieldset>'
             . $this->boosterSettingsHtml($settings)
             . ($isSolomon ? '<fieldset class="settings-fieldset"><legend>Размер стека</legend><div class="settings-option-grid">'
@@ -169,6 +170,17 @@ final class SettingsScreen
             . '</form>'
             . '<script src="/assets/js/settings.js?v=1" defer></script>';
 
+        if ($isGlimpse) {
+            $burn = '<fieldset class="settings-fieldset"><legend>Сжигание</legend><div class="settings-option-grid">'
+                . $this->radioTile('draft_burn_mode', 'normal', 'Обычное: 2', ($settings->draft['burn_mode'] ?? 'normal') === 'normal')
+                . $this->radioTile('draft_burn_mode', 'progressive', 'Прогрессивное', ($settings->draft['burn_mode'] ?? 'normal') === 'progressive')
+                . '</div></fieldset><fieldset class="settings-fieldset" data-glimpse-progressive><legend>Начальное сжигание (прогрессивное)</legend><div class="settings-option-grid">'
+                . $this->radioTile('draft_burn_count', '2', '2–1–0', (int)($settings->draft['burn_count'] ?? 2) === 2)
+                . $this->radioTile('draft_burn_count', '3', '3–1–0', (int)($settings->draft['burn_count'] ?? 2) === 3)
+                . '</div></fieldset>';
+            $actionsHtml = preg_replace('/<fieldset class="settings-fieldset"><legend>Режим сетки<\/legend>.*?<\/fieldset>/s', $burn, $actionsHtml);
+            $actionsHtml .= '<script src="/assets/js/glimpse-settings.js?v=1" defer></script>';
+        }
         return [
             'screen' => 'settings',
             'data'   => [

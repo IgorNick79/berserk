@@ -27,7 +27,7 @@ final class PreGameLayout
         $title = match ($screen) {
             'settings' => (string) ($data['title'] ?? self::TITLES[$screen]),
             'view' => 'Твоя дека: ' . (string) ($data['deck_name'] ?? '—'),
-            'draft' => ($data['draft_class'] ?? '') === 'screen-draft--solomon' ? 'Соломон драфт' : 'Grid Draft',
+            'draft' => ($data['draft_class'] ?? '') === 'screen-draft--glimpse' ? 'Glimpse Draft' : (($data['draft_class'] ?? '') === 'screen-draft--solomon' ? 'Соломон драфт' : 'Grid Draft'),
             default => self::TITLES[$screen],
         };
         $roll = in_array($screen, ['turn','side'], true);

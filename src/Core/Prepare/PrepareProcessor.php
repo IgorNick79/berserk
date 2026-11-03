@@ -37,15 +37,17 @@ final class PrepareProcessor
         }
 
         $mode = (string) $cmd->get('mode', '');
+        $glimpseChoice = $mode === GameSettings::DRAFT_TYPE_GLIMPSE;
         $solomonChoice = $mode === GameSettings::DRAFT_TYPE_SOLOMON;
+        if ($glimpseChoice) $mode = GameSettings::MODE_DRAFT;
         if ($solomonChoice) $mode = GameSettings::MODE_DRAFT;
         if (!in_array($mode, [GameSettings::MODE_DRAFT, GameSettings::MODE_SYSTEM, GameSettings::MODE_SEALED, GameSettings::MODE_LUCKTEST], true)) {
             return Result::error('Неверный режим');
         }
 
         // The radio value is only a transport alias; the persisted mode stays draft.
-        $type = $solomonChoice ? GameSettings::DRAFT_TYPE_SOLOMON : $cmd->get('draft_type', GameSettings::DRAFT_TYPE_GRID);
-        if ($mode === GameSettings::MODE_DRAFT && !in_array($type, [GameSettings::DRAFT_TYPE_GRID, GameSettings::DRAFT_TYPE_SOLOMON], true)) {
+        $type = $glimpseChoice ? GameSettings::DRAFT_TYPE_GLIMPSE : ($solomonChoice ? GameSettings::DRAFT_TYPE_SOLOMON : $cmd->get('draft_type', GameSettings::DRAFT_TYPE_GRID));
+        if ($mode === GameSettings::MODE_DRAFT && !in_array($type, [GameSettings::DRAFT_TYPE_GRID, GameSettings::DRAFT_TYPE_SOLOMON, GameSettings::DRAFT_TYPE_GLIMPSE], true)) {
             return Result::error('Неподдерживаемый тип драфта');
         }
 
@@ -142,7 +144,7 @@ final class PrepareProcessor
                         return Result::ok(array_merge(['settings_confirmed:draft', 'stage_changed:draft'], $result->events));
 
                     case GameSettings::DRAFT_PICK_MODE_RANDOM:
-                        if ($nextSettings->draftAutoSide() !== GameSettings::DRAFT_AUTO_SIDE_BOTH) {
+                        if ($nextSettings->isGlimpseDraft() || $nextSettings->draftAutoSide() !== GameSettings::DRAFT_AUTO_SIDE_BOTH) {
                             $result = (new DraftProcessor($this->state, $this->db))->start($nextSettings, true);
                             if (!$result->success) {
                                 $this->restoreState($snapshot);
@@ -228,12 +230,13 @@ final class PrepareProcessor
 
     public function draftConfirm(string $playerKey, Command $cmd): Result
     {
+        if ($this->state->settings->isGlimpseDraft()) return $this->solomonCommand($playerKey, $cmd, fn(DraftProcessor $p) => $p->confirmGlimpse($playerKey, $cmd->get('pick'), $cmd->get('positions', [])));
         return $this->solomonCommand($playerKey, $cmd, fn(DraftProcessor $p) => $p->confirmStack($playerKey, $cmd->get('positions', [])));
     }
 
     private function solomonCommand(string $playerKey, ?Command $cmd, callable $apply): Result
     {
-        if ($this->state->status !== 'draft' || !$this->state->settings->isSolomonDraft() || $this->state->draft === null) {
+        if ($this->state->status !== 'draft' || (!$this->state->settings->isSolomonDraft() && !$this->state->settings->isGlimpseDraft()) || $this->state->draft === null) {
             return Result::error('Solomon Draft не активен');
         }
         if (($this->state->draft['turn'] ?? '') !== $playerKey) return Result::error('Не ваш ход');
@@ -1492,6 +1495,8 @@ final class PrepareProcessor
 
         foreach ([
             'type' => 'draft_type',
+            'burn_mode' => 'draft_burn_mode',
+            'burn_count' => 'draft_burn_count',
             'pick_mode' => 'draft_pick_mode',
             'grid_mode' => 'draft_grid_mode',
             'auto_side' => 'draft_auto_side',
@@ -1868,7 +1873,7 @@ final class PrepareProcessor
     public function resolveDraftTimeouts(?int $now = null): Result
     {
         if (\Berserk\Core\MatchPause::blocking($this->state)) return Result::ok([]);
-        if ($this->state->settings->isSolomonDraft() || $this->isContinuousGrid()) {
+        if ($this->state->settings->isGlimpseDraft() || $this->state->settings->isSolomonDraft() || $this->isContinuousGrid()) {
             return $this->atomicSolomon(fn() => $this->resolveDraftTimeoutsInternal($now));
         }
         return $this->resolveDraftTimeoutsInternal($now);
@@ -2055,6 +2060,7 @@ final class PrepareProcessor
 
     private function runDiscreteForcedSkips(?int $now = null): Result
     {
+        if ($this->state->settings->isGlimpseDraft()) return Result::ok([]);
         if ($this->db === null && $this->draftAutoPickerOverride === null) {
             return Result::error('Db недоступен для драфта');
         }
@@ -2067,6 +2073,7 @@ final class PrepareProcessor
         while ($this->state->status === 'draft'
             && $this->state->draft !== null
             && !$this->state->settings->isSolomonDraft()
+            && !$this->state->settings->isGlimpseDraft()
             && (($this->state->draft['grid_mode'] ?? $this->state->settings->draftGridMode()) === GameSettings::DRAFT_GRID_MODE_DISCRETE)
             && empty($processor->validSelections())) {
             if (++$guard > 500) {
@@ -2108,6 +2115,11 @@ final class PrepareProcessor
             }
             $turn = (string) ($this->state->draft['turn'] ?? '');
             if (!$this->isDraftAutoControlled($turn)) break;
+            if ($this->state->settings->isGlimpseDraft() && count($this->state->draft['picked']['host']) >= 30 && count($this->state->draft['picked']['player']) >= 30) {
+                $done = $processor->finish($turn);
+                if (!$done->success) return $done;
+                return Result::ok(array_merge($events, $done->events));
+            }
 
             if ($this->isContinuousGrid() && !$processor->canCompleteGrid()) {
                 return Result::error('Нет допустимого полного распределения Grid: лимиты копий или минимум колод');
@@ -2163,6 +2175,7 @@ final class PrepareProcessor
     {
         return $this->state->status === 'draft' && $this->state->draft !== null
             && !$this->state->settings->isSolomonDraft()
+            && !$this->state->settings->isGlimpseDraft()
             && ($this->state->draft['grid_mode'] ?? $this->state->settings->draftGridMode()) === GameSettings::DRAFT_GRID_MODE_CONTINUOUS;
     }
 

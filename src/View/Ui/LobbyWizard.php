@@ -13,21 +13,21 @@ final class LobbyWizard
     public static function render(int $actor, string $csrf, ?Db $catalog = null, ?array $room = null): string
     {
         $e=static fn(string $s): string=>htmlspecialchars($s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
-        $html='<form id="wizard-fields-sealed"></form><form id="wizard-fields-draft"></form><form id="wizard-fields-solomon"></form><form id="wizard-fields-lucktest"></form><form id="wizard-fields-system"></form><form id="create-wizard" class="create-wizard" method="post" action="lobby.php" novalidate>'
+        $html='<form id="wizard-fields-sealed"></form><form id="wizard-fields-draft"></form><form id="wizard-fields-solomon"></form><form id="wizard-fields-glimpse"></form><form id="wizard-fields-lucktest"></form><form id="wizard-fields-system"></form><form id="create-wizard" class="create-wizard" method="post" action="lobby.php" novalidate>'
             .'<input type="hidden" name="action" value="create"><input type="hidden" name="csrf" value="'.$e($csrf).'">'
             .'<input type="hidden" name="creation_key" value="'.bin2hex(random_bytes(16)).'">'
             .'<div class="wizard-scroll"><header class="wizard-heading"><h1>Создать игру</h1><p data-wizard-progress>Шаг 1 из 3</p><nav class="wizard-tabs" aria-label="Этапы создания">';
         foreach (['Режим','Общие настройки','Настройки режима'] as $i=>$title) $html.='<button type="button" data-step="'.$i.'" aria-current="'.($i===0?'step':'false').'">'.$title.'</button>';
         $html.='</nav></header><section data-page="0"><h2>Режим игры</h2><div class="wizard-modes">';
-        foreach (['sealed','draft','solomon','lucktest','system'] as $mode) $html.='<label class="wizard-option"><input type="radio" name="setup_mode" value="'.$mode.'"'.($mode==='sealed'?' checked':'').'><span>'.RoomSetup::label($mode).'</span></label>';
+        foreach (['sealed','draft','solomon','glimpse','lucktest','system'] as $mode) $html.='<label class="wizard-option"><input type="radio" name="setup_mode" value="'.$mode.'"'.($mode==='sealed'?' checked':'').'><span>'.RoomSetup::label($mode).'</span></label>';
         $html.='</div>';
         if ($room===null) $html.='<div class="wizard-delegation"><label class="wizard-option"><input type="radio" name="setup_mode" value="opponent"><span><b>Решает противник</b><small>Создайте комнату, а выбор режима и настроек передайте сопернику</small></span></label></div>';
         $html.='</section><section data-page="1" hidden><fieldset class="wizard-common-options" data-wizard-access><h2>Доступ к партии</h2><div class="wizard-options"><label class="wizard-option"><input type="radio" name="access" value="open" checked><span>Открытая партия</span></label><label class="wizard-option"><input type="radio" name="access" value="closed"><span>🔒 Закрытая партия</span></label></div>'
             .'<label class="wizard-invite" hidden>Никнейм приглашённого игрока<input name="invited_login" autocomplete="off" minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]{3,32}"><small>Только этот игрок сможет запросить участие. Создатель подтверждает заявку.</small></label>'
             .'</fieldset><fieldset class="wizard-common-options" data-wizard-game-options>'.self::timeFields().'</section><section data-page="2" hidden><h2 data-mode-title>Настройки режима</h2>';
         $html=str_replace('</section><section data-page="2"',self::handicapFields().'</fieldset></section><section data-page="2"',$html);
-        foreach (['sealed','draft','solomon','lucktest','system'] as $mode) {
-            $state=new GameState(0,$room['creator_id']??$actor,$room===null?0:$actor);$state->mode=$mode==='solomon'?'draft':$mode;
+        foreach (['sealed','draft','solomon','glimpse','lucktest','system'] as $mode) {
+            $state=new GameState(0,$room['creator_id']??$actor,$room===null?0:$actor);$state->mode=in_array($mode,['solomon','glimpse'],true)?'draft':$mode;
             $setup=RoomSetup::parse($mode,[]);$state->settings=GameSettings::fromArray($setup['settings']);
             $view=(new SettingsScreen())->prepare($state,'host','host',null)['data'];
             $body=$view['content_html'].$view['actions_html'];
@@ -39,7 +39,7 @@ final class LobbyWizard
                 $body = (string)$tpl->parse('screen/deck_host.tpl',$deck['data']);
                 if ($room!==null) $body=str_replace(['Моя колода','Колода соперника'],['Колода создателя','Моя колода'],$body);
             }
-            if (in_array($mode,['draft','solomon','sealed'],true)) $body=self::boosterSections($body,$mode==='sealed');
+            if (in_array($mode,['draft','solomon','glimpse','sealed'],true)) $body=self::boosterSections($body,$mode==='sealed');
             // The wizard already provides the mode heading.
             $body=preg_replace('/<p class="settings-mode-title">.*?<\/p>/s','',$body);
             $body=preg_replace('/<script\b[^>]*>.*?<\/script>/s','',$body);

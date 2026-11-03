@@ -19,6 +19,8 @@ final class GameSettings
 
     public const SYSTEM_DECK_SELECTION_MANUAL = 'manual';
 
+    public const DRAFT_TYPE_GLIMPSE = 'glimpse';
+    public function isGlimpseDraft(): bool { return $this->draftType() === self::DRAFT_TYPE_GLIMPSE; }
     public const DRAFT_TYPE_GRID = 'grid';
     public const DRAFT_TYPE_SOLOMON = 'solomon';
     public const DRAFT_PICK_MODE_MANUAL = 'manual';
@@ -344,7 +346,7 @@ final class GameSettings
 
     public function validateDraftSettings(): ?string
     {
-        if (!in_array($this->draftType(), [self::DRAFT_TYPE_GRID, self::DRAFT_TYPE_SOLOMON], true)) {
+        if (!in_array($this->draftType(), [self::DRAFT_TYPE_GRID, self::DRAFT_TYPE_SOLOMON, self::DRAFT_TYPE_GLIMPSE], true)) {
             return 'Неподдерживаемый тип драфта';
         }
         if ($this->isSolomonDraft()) {
@@ -355,8 +357,9 @@ final class GameSettings
                 return 'Solomon использует ручной выбор и автоматическое завершение по таймеру';
             }
         }
+        if ($this->isGlimpseDraft() && (!in_array($this->draft['burn_mode'] ?? 'normal', ['normal','progressive'], true) || !in_array($this->draft['burn_count'] ?? 2, [2,3,'2','3'], true))) return 'Неверные настройки сжигания';
         $boosters = $this->draftBoosters();
-        if ($boosters < self::DRAFT_BOOSTERS_MIN || $boosters > self::DRAFT_BOOSTERS_MAX) {
+        if ($boosters < self::DRAFT_BOOSTERS_MIN || $boosters > ($this->isGlimpseDraft() ? 15 : self::DRAFT_BOOSTERS_MAX)) {
             return 'Неверное количество бустеров';
         }
 

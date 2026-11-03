@@ -133,9 +133,9 @@ function ajaxCommandPayload(): ?array
         }
         if (is_array($value)) {
             if ($commandType === 'draft_confirm' && $key === 'positions') {
-                if (!array_is_list($value) || count($value) > 8) return null;
+                if (!array_is_list($value) || count($value) > 12) return null;
                 foreach ($value as $position) {
-                    if ((!is_string($position) && !is_int($position)) || !preg_match('/^[0-7]$/D', (string)$position)) return null;
+                    if ((!is_string($position) && !is_int($position)) || !preg_match('/^(?:[0-9]|1[01])$/D', (string)$position)) return null;
                 }
                 $payload[$key] = array_map('strval', $value);
                 continue;

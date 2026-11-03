@@ -12,7 +12,7 @@ final class RoomSetup
     public static function delegation(): array { return ['selection'=>'opponent','configurator_id'=>null]; }
     public static function parse(string $mode, array $input, ?int $debugAccount = null, ?Db $catalog = null): array
     {
-        if (!in_array($mode,['system','draft','solomon','sealed','lucktest'],true)) throw new \DomainException('Выберите вид игры.',400);
+        if (!in_array($mode,['system','draft','solomon','glimpse','sealed','lucktest'],true)) throw new \DomainException('Выберите вид игры.',400);
         $settings=GameSettings::defaults()->toArray();
         foreach (['enabled','gold','silver'] as $key) {
             $field='handicap_'.$key;
@@ -36,9 +36,9 @@ final class RoomSetup
             $settings['battle']['turn_seconds']=$settings['battle']['turn_time_mode']==='none'?0:($settings['battle']['turn_time_mode']==='fixed'?$settings['battle']['turn_fixed_seconds']:180);
             if (array_key_exists('turn_seconds',$input) && $input['turn_seconds']!==(string)$settings['battle']['turn_seconds']) throw new \DomainException('Несогласованные настройки времени.',400);
         }
-        $settings['draft']['type']=$mode==='solomon'?'solomon':'grid';
+        $settings['draft']['type']=in_array($mode,['solomon','glimpse'],true)?$mode:'grid';
         $fields=[
-            'draft'=>['draft_pick_mode'=>'pick_mode','draft_grid_mode'=>'grid_mode','draft_auto_side'=>'auto_side','boosters'=>'boosters','stack_size'=>'stack_size','draft_timer_mode'=>'timer_mode','draft_timer_total'=>'timer_total','draft_timer_action'=>'timer_action'],
+            'draft'=>['draft_burn_mode'=>'burn_mode','draft_burn_count'=>'burn_count','draft_pick_mode'=>'pick_mode','draft_grid_mode'=>'grid_mode','draft_auto_side'=>'auto_side','boosters'=>'boosters','stack_size'=>'stack_size','draft_timer_mode'=>'timer_mode','draft_timer_total'=>'timer_total','draft_timer_action'=>'timer_action'],
             'sealed'=>['sealed_boosters'=>'boosters'],
             'booster'=>['booster_common'=>'common','booster_uncommon'=>'uncommon','booster_rare_slots'=>'rare_slots','booster_ultra_rare_chance'=>'ultra_rare_chance'],
         ];
@@ -46,7 +46,7 @@ final class RoomSetup
             if (!array_key_exists($field,$input)) continue;
             $value=$input[$field];
             if (!is_string($value) || strlen($value)>32) throw new \DomainException('Некорректные настройки.',400);
-            if (in_array($key,['boosters','stack_size','timer_total','timer_action','common','uncommon','rare_slots','ultra_rare_chance'],true)) {
+            if (in_array($key,['burn_count','boosters','stack_size','timer_total','timer_action','common','uncommon','rare_slots','ultra_rare_chance'],true)) {
                 if (!preg_match('/\A[0-9]{1,4}\z/D',$value)) throw new \DomainException('Некорректное число.',400);
                 $value=(int)$value;
                 if ($field==='draft_timer_total') $value*=60;
@@ -106,12 +106,12 @@ final class RoomSetup
             }
         }
         $mode=$setup['mode']??null;
-        if (!in_array($mode,['system','draft','solomon','sealed','lucktest'],true) || !is_array($setup['settings']??null)) throw new \DomainException('Некорректные настройки комнаты.',400);
+        if (!in_array($mode,['system','draft','solomon','glimpse','sealed','lucktest'],true) || !is_array($setup['settings']??null)) throw new \DomainException('Некорректные настройки комнаты.',400);
         $s=GameSettings::fromArray($setup['settings']);
         if (!is_bool($s->battle['handicap_enabled'])) throw new \DomainException('Некорректная фора сопернику.',400);
         foreach (['gold','silver'] as $currency) if (!is_int($s->battle['handicap_'.$currency]) || $s->battle['handicap_'.$currency]<0 || $s->battle['handicap_'.$currency]>5) throw new \DomainException('Некорректная фора сопернику.',400);
         if (($timerError=$s->validateTurnTime())!==null) throw new \DomainException($timerError,400);
-        if ($s->draftType()!==($mode==='solomon'?'solomon':'grid')) throw new \DomainException('Несовместимый вид драфта.',400);
+        if ($s->draftType()!==(in_array($mode,['solomon','glimpse'],true)?$mode:'grid')) throw new \DomainException('Несовместимый вид драфта.',400);
         if (!in_array($s->draft['pick_mode'],['manual','random'],true) || !in_array($s->draft['auto_side'],['both','host','player'],true)) throw new \DomainException('Некорректный автовыбор.',400);
         $error = match ($mode) {
             GameSettings::MODE_LUCKTEST => $s->validateLuckTestSettings(),
@@ -184,6 +184,6 @@ final class RoomSetup
 
     public static function label(?string $mode): string
     {
-        return ['system'=>'Системные колоды','draft'=>'Grid Draft','solomon'=>'Solomon Draft','sealed'=>'Sealed','lucktest'=>'LuckTest'][$mode??'']??'Не выбран';
+        return ['system'=>'Системные колоды','draft'=>'Grid Draft','glimpse'=>'Glimpse Draft','solomon'=>'Solomon Draft','sealed'=>'Sealed','lucktest'=>'LuckTest'][$mode??'']??'Не выбран';
     }
 }

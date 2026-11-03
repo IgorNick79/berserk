@@ -24,6 +24,7 @@ final class DraftScreen
         array $cardsInfo,
         array $elementLabels = []
     ): array {
+        if ($state->settings->isGlimpseDraft() && $state->draft !== null) return $this->glimpse($state, $playerKey, $role, $message, $cardsInfo);
         $draft = $state->draft ?? null;
         if (!$draft) {
             return ['screen' => 'draft', 'data' => [
@@ -290,6 +291,48 @@ final class DraftScreen
             'message'       => $message ?? '',
         ]];
 
+    }
+
+    private function glimpse(GameState $state, string $playerKey, string $role, ?string $message, array $cardsInfo): array
+    {
+        $draft = $state->draft;
+        $active = $draft['turn'] === $playerKey;
+        $base = '?' . ($role === 'host' ? 'first' : 'second') . '&game=' . $state->gameId;
+        $ui = new PrepareUi($this->tpl);
+        $required = (new \Berserk\Core\Prepare\DraftProcessor($state, null))->glimpseBurnCount();
+        $grid = '';
+        if ($active) foreach ($draft['grid'] as $position => $ukid) {
+            $grid .= '<div class="solomon-stack__card" data-glimpse-card>'
+                . $ui->thumbnail($cardsInfo, ['element_in_cost'=>true, 'ukid'=>$ukid, 'info'=>$cardsInfo[$ukid] ?? [], 'link'=>'#'])
+                . '<label class="button"><input form="glimpse-decision" type="radio" name="pick" value="' . $position . '">Взять</label>'
+                . '<label class="button secondary"><input form="glimpse-decision" type="checkbox" name="positions[]" value="' . $position . '">Сжечь</label></div>';
+        }
+        if (!$active) $grid = '<p class="wait">Ожидание хода соперника. Карт в пакете: ' . count($draft['grid']) . '</p>';
+        $form = $active ? '<form method="get" id="glimpse-decision" class="prepare-actions" data-preparation-actions data-required="' . $required . '">'
+            . '<input type="hidden" name="game" value="' . $state->gameId . '">'
+            . '<input type="hidden" name="cmd" value="draft_confirm">'
+            . '<input type="hidden" name="decision_id" value="' . $draft['decision_id'] . '">'
+            . '<input type="hidden" name="expected_version" value="' . $state->version . '">'
+            . '<p>Взять: <b data-glimpse-picked>0</b>/1 · Сжечь: <b data-glimpse-burned>0</b>/' . $required . '</p>'
+            . '<button class="button prepare-action" type="submit" disabled>Подтвердить выбор</button></form>' : '';
+        $finish = $active && count($draft['picked']['host']) >= 30 && count($draft['picked']['player']) >= 30
+            ? '<a class="button" href="' . $base . '&cmd=finish_draft">Завершить драфт</a>' : '';
+        // Only own allocations are rendered; no shared grid previews or history.
+        $own = '';
+        foreach ($draft['picked'][$playerKey] as $ukid) $own .= $ui->thumbnail($cardsInfo, ['element_in_cost'=>true, 'ukid'=>$ukid, 'info'=>$cardsInfo[$ukid] ?? [], 'link'=>'#']);
+        $now = time();
+        return ['screen'=>'draft', 'data'=>[
+            'draft_class'=>'screen-draft--glimpse', 'playmat_url'=>\Berserk\Core\PlaymatCatalog::playerUrl($state->getPlayer($playerKey)),
+            'grid_attributes'=>'', 'grid_html'=>'<div class="solomon-stack">' . $grid . '</div>',
+            'draft_info_html'=>'', 'draft_bottom_html'=>$form, 'history_html'=>'',
+            'panel_html'=>'<h3>Мои карты: ' . count($draft['picked'][$playerKey]) . '</h3>' . $own,
+            'panel_summary_html'=>'host: ' . count($draft['picked']['host']) . ' · player: ' . count($draft['picked']['player']),
+            'panel_phase'=>($active ? 'Ваш ход' : 'Ход противника') . ' · Сжечь: ' . $required,
+            'panel_actions_html'=>\Berserk\View\Ui\PreGameLayout::actionsFooter($finish),
+            'timer_html'=>$this->timerHtml($state, $playerKey, $now),
+            'draft_script_html'=>$this->scriptHtml($state, $base . '&cmd=draft_sync', $now) . '<script src="/assets/js/glimpse-selection.js?v=1" defer></script>',
+            'message'=>$message ?? '',
+        ]];
     }
 
     private function timerHtml(GameState $state, string $playerKey, int $now): string
