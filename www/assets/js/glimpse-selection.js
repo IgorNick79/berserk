@@ -9,9 +9,18 @@
         if (event && event.target.name === 'pick') burns.forEach(function (input) { if (input.value === event.target.value) input.checked = false; });
         if (event && event.target.name === 'positions[]' && event.target.checked && pick && pick.value === event.target.value) pick.checked = false;
         pick = picks.find(function (input) { return input.checked; });
+        var limit = Number(form.dataset.required);
         var selected = burns.filter(function (input) { return input.checked; });
-        form.querySelector('[data-glimpse-picked]').textContent = pick ? '1' : '0';
-        form.querySelector('[data-glimpse-burned]').textContent = selected.length;
+        if (selected.length > limit && event && event.target.name === 'positions[]') {
+            event.target.checked = false;
+            selected = burns.filter(function (input) { return input.checked; });
+        }
+        burns.forEach(function (input) {
+            input.disabled = !input.checked && selected.length >= limit;
+            input.closest('label').setAttribute('aria-disabled', String(input.disabled));
+        });
+        document.querySelector('[data-glimpse-picked]').textContent = pick ? '1' : '0';
+        document.querySelector('[data-glimpse-burned]').textContent = selected.length;
         form.querySelector('button[type="submit"]').disabled = !pick || selected.length !== Number(form.dataset.required);
         document.querySelectorAll('[data-glimpse-card]').forEach(function (card) {
             card.classList.toggle('glimpse-take', card.querySelector('[name="pick"]').checked);

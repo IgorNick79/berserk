@@ -189,6 +189,56 @@ final class DraftScreen
             : '<script src="/assets/js/grid_selection.js?v=4" defer></script>';
 
         // ─── Статистика набранного пула ──────────────────
+        extract($this->poolStatistics($draft, $playerKey, $cardsInfo, $elementLabels, $isMyTurn, $isSolomon));
+
+        $poolLeft = count($draft['pool'] ?? []) + ($isSolomon ? count($draft['recycle'] ?? []) : 0);
+        $panelSummary = '';
+        $panelFooter = '';
+        $draftInfo = '';
+        $draftBottom = '';
+        $panelSummary = $finishHtml . $statisticsHtml;
+        $panelFooter = '<div class="pregame-draft-footer">'
+            . ($isMyTurn ? '<div class="pregame-footer-decisions">' . $actionsHtml . '</div>' : '')
+            . '</div>';
+        $historyControl = '<button type="button" class="battle-icon-control" ' . ($isSolomon ? 'data-solomon-history' : 'data-grid-history') . ' aria-label="История выбора" aria-pressed="false" title="История выбора">'
+            . '<img src="/assets/images/battle/game_log_160.png" alt="" width="40" height="40"><span class="battle-icon-tooltip" aria-hidden="true">История выбора</span></button>';
+        $draftBottom = $gridControls;
+
+        return ['screen' => 'draft', 'data' => [
+            'playmat_url' => \Berserk\Core\PlaymatCatalog::playerUrl($state->getPlayer($playerKey)),
+            'draft_class'   => $isSolomon ? 'screen-draft--solomon' : 'screen-draft--grid',
+            'panel_title'   => $isSolomon ? '#' . (int) ($draft['decision_id'] ?? 1) . ' · ' . ($isMyTurn ? 'Ваш ход' : 'Ход противника') : ($isMyTurn ? 'Ваш ход' : 'Ход противника'),
+            'panel_phase'   => ($isSolomon ? '#' . (int) ($draft['decision_id'] ?? 1) . ' · ' : '') . ($isMyTurn ? 'Ваш ход' : 'Ход противника') . ' · Пул: ' . $poolLeft,
+            'panel_actions_html' => \Berserk\View\Ui\PreGameLayout::actionsFooter($panelFooter, $historyControl),
+            'panel_summary_html' => $panelSummary,
+            'draft_info_html' => $draftInfo,
+            'draft_bottom_html' => $draftBottom,
+            'turn_label'    => $isMyTurn ? 'Твой ход' : 'Ход оппонента',
+            'host_picked'   => $hostPickedCount,
+            'player_picked' => $playerPickedCount,
+            'pool_left'     => count($draft['pool'] ?? []) + ($isSolomon ? count($draft['recycle'] ?? []) : 0),
+
+            'my_total'      => $totalCount,
+            'my_gold'       => $goldCount,
+            'my_silver'     => $silverCount,
+            'my_avg_price'  => $avgPrice,
+            'my_elements_html' => $elementsHtml,
+
+            'grid_attributes' => $isSolomon ? '' : 'data-grid-selection-key="' . (int) $state->gameId . '-' . $playerKey . '" data-grid-version="' . (int) $state->version . '"',
+            'grid_html'     => $gridHtml,
+            'preview_html'  => '',
+            'panel_html'    => $previewHtml,
+            'actions_html'  => $actionsHtml,
+            'timer_html'    => $timerHtml,
+            'history_html'  => $historyHtml,
+            'draft_script_html' => $scriptHtml,
+            'message'       => $message ?? '',
+        ]];
+
+    }
+
+    private function poolStatistics(array $draft, string $playerKey, array $cardsInfo, array $elementLabels = [], bool $isMyTurn = false, bool $isSolomon = false): array
+    {
         $myPicked = $draft['picked'][$playerKey] ?? [];
 
         $totalCount  = count($myPicked);
@@ -235,12 +285,7 @@ final class DraftScreen
         }
         arsort($elementCounts);
 
-        $poolLeft = count($draft['pool'] ?? []) + ($isSolomon ? count($draft['recycle'] ?? []) : 0);
-        $panelSummary = '';
-        $panelFooter = '';
-        $draftInfo = '';
-        $draftBottom = '';
-        $panelSummary = $finishHtml . '<section class="pregame-pool-stats" aria-label="Статистика выбранного пула">'
+        $panelSummary = '<section class="pregame-pool-stats" aria-label="Статистика выбранного пула">'
             . '<div class="pregame-pool-totals">Выбрано: <b>' . $totalCount . '</b> · Средняя цена: <b>' . $avgPrice . '</b>'
             . ($isMyTurn ? '<span class="pregame-selection-count"> · Текущий выбор: <b ' . ($isSolomon ? 'data-solomon-selected' : 'data-grid-selected') . '>0</b></span>' : '')
             . '</div>'
@@ -253,44 +298,7 @@ final class DraftScreen
         }
         $panelSummary .= '</div></div>'
             . '</section>';
-        $panelFooter = '<div class="pregame-draft-footer">'
-            . ($isMyTurn ? '<div class="pregame-footer-decisions">' . $actionsHtml . '</div>' : '')
-            . '</div>';
-        $historyControl = '<button type="button" class="battle-icon-control" ' . ($isSolomon ? 'data-solomon-history' : 'data-grid-history') . ' aria-label="История выбора" aria-pressed="false" title="История выбора">'
-            . '<img src="/assets/images/battle/game_log_160.png" alt="" width="40" height="40"><span class="battle-icon-tooltip" aria-hidden="true">История выбора</span></button>';
-        $draftBottom = $gridControls;
-
-        return ['screen' => 'draft', 'data' => [
-            'playmat_url' => \Berserk\Core\PlaymatCatalog::playerUrl($state->getPlayer($playerKey)),
-            'draft_class'   => $isSolomon ? 'screen-draft--solomon' : 'screen-draft--grid',
-            'panel_title'   => $isSolomon ? '#' . (int) ($draft['decision_id'] ?? 1) . ' · ' . ($isMyTurn ? 'Ваш ход' : 'Ход противника') : ($isMyTurn ? 'Ваш ход' : 'Ход противника'),
-            'panel_phase'   => ($isSolomon ? '#' . (int) ($draft['decision_id'] ?? 1) . ' · ' : '') . ($isMyTurn ? 'Ваш ход' : 'Ход противника') . ' · Пул: ' . $poolLeft,
-            'panel_actions_html' => \Berserk\View\Ui\PreGameLayout::actionsFooter($panelFooter, $historyControl),
-            'panel_summary_html' => $panelSummary,
-            'draft_info_html' => $draftInfo,
-            'draft_bottom_html' => $draftBottom,
-            'turn_label'    => $isMyTurn ? 'Твой ход' : 'Ход оппонента',
-            'host_picked'   => $hostPickedCount,
-            'player_picked' => $playerPickedCount,
-            'pool_left'     => count($draft['pool'] ?? []) + ($isSolomon ? count($draft['recycle'] ?? []) : 0),
-
-            'my_total'      => $totalCount,
-            'my_gold'       => $goldCount,
-            'my_silver'     => $silverCount,
-            'my_avg_price'  => $avgPrice,
-            'my_elements_html' => $elementsHtml,
-
-            'grid_attributes' => $isSolomon ? '' : 'data-grid-selection-key="' . (int) $state->gameId . '-' . $playerKey . '" data-grid-version="' . (int) $state->version . '"',
-            'grid_html'     => $gridHtml,
-            'preview_html'  => '',
-            'panel_html'    => $previewHtml,
-            'actions_html'  => $actionsHtml,
-            'timer_html'    => $timerHtml,
-            'history_html'  => $historyHtml,
-            'draft_script_html' => $scriptHtml,
-            'message'       => $message ?? '',
-        ]];
-
+        return ['statisticsHtml'=>$panelSummary, 'totalCount'=>$totalCount, 'goldCount'=>$goldCount, 'silverCount'=>$silverCount, 'avgPrice'=>$avgPrice, 'elementsHtml'=>$elementsHtml];
     }
 
     private function glimpse(GameState $state, string $playerKey, string $role, ?string $message, array $cardsInfo): array
@@ -302,10 +310,11 @@ final class DraftScreen
         $required = (new \Berserk\Core\Prepare\DraftProcessor($state, null))->glimpseBurnCount();
         $grid = '';
         if ($active) foreach ($draft['grid'] as $position => $ukid) {
-            $grid .= '<div class="solomon-stack__card" data-glimpse-card>'
+            $grid .= '<div class="solomon-stack__card pregame-grid-card" data-grid-occupied="1" data-glimpse-card>'
                 . $ui->thumbnail($cardsInfo, ['element_in_cost'=>true, 'ukid'=>$ukid, 'info'=>$cardsInfo[$ukid] ?? [], 'link'=>'#'])
-                . '<label class="button"><input form="glimpse-decision" type="radio" name="pick" value="' . $position . '">Взять</label>'
-                . '<label class="button secondary"><input form="glimpse-decision" type="checkbox" name="positions[]" value="' . $position . '">Сжечь</label></div>';
+                . '<template data-grid-preview>' . $ui->informationWithControls(['ukid'=>$ukid], $cardsInfo) . '</template>'
+                . '<label class="button glimpse-take-button"><input form="glimpse-decision" type="radio" name="pick" value="' . $position . '">Взять</label>'
+                . '<label class="button glimpse-burn-button" style="--btn-top:#b66c51;--btn-bottom:#78362b;--btn-edge:#d29a78"><input form="glimpse-decision" type="checkbox" name="positions[]" value="' . $position . '">Сжечь</label></div>';
         }
         $waiting = '<p class="wait">Ожидание хода соперника. Карт в пакете: ' . count($draft['grid']) . '</p>';
         $form = $active ? '<form method="get" id="glimpse-decision" class="prepare-actions" data-preparation-actions data-required="' . $required . '">'
@@ -313,24 +322,32 @@ final class DraftScreen
             . '<input type="hidden" name="cmd" value="draft_confirm">'
             . '<input type="hidden" name="decision_id" value="' . $draft['decision_id'] . '">'
             . '<input type="hidden" name="expected_version" value="' . $state->version . '">'
-            . '<p>Взять: <b data-glimpse-picked>0</b>/1 · Сжечь: <b data-glimpse-burned>0</b>/' . $required . '</p>'
-            . '<button class="button prepare-action" type="submit" disabled>Подтвердить выбор</button></form>' : '';
+            . '<button class="button prepare-action" type="submit" disabled>Подтвердить</button></form>' : '';
         $finish = $active && count($draft['picked']['host']) >= 30 && count($draft['picked']['player']) >= 30
             ? '<a class="button" href="' . $base . '&cmd=finish_draft">Завершить драфт</a>' : '';
-        // Only own allocations are rendered; no shared grid previews or history.
-        $own = '';
-        foreach ($draft['picked'][$playerKey] as $ukid) $own .= $ui->thumbnail($cardsInfo, ['element_in_cost'=>true, 'ukid'=>$ukid, 'info'=>$cardsInfo[$ukid] ?? [], 'link'=>'#']);
+        $groups = [];
+        foreach ($draft['history'] ?? [] as $event) {
+            if (($event['player'] ?? '') !== $playerKey) continue;
+            $packet = (int)($event['packet'] ?? 1);
+            $groups[$packet] = array_merge($groups[$packet] ?? [], $event['cards'] ?? []);
+        }
+        $history = [];
+        foreach ($groups as $packet=>$cards) $history[] = ['player'=>$playerKey, 'cards'=>$cards, 'packet'=>$packet];
+        $historyHtml = '<template data-grid-history-content>' . $this->panelHistoryHtml($state, array_reverse($history), $playerKey, $cardsInfo, $ui) . '</template>';
+        $historyControl = '<button type="button" class="battle-icon-control" data-grid-history aria-label="История выбора" aria-pressed="false" title="История выбора"><img src="/assets/images/battle/game_log_160.png" alt="" width="40" height="40"><span class="battle-icon-tooltip" aria-hidden="true">История выбора</span></button>';
+        $stats = $this->poolStatistics($draft, $playerKey, $cardsInfo)['statisticsHtml'];
+        $selection = $active ? '<p class="pregame-selection-count">Взять: <b data-glimpse-picked>0</b>/1 · Сжечь: <b data-glimpse-burned>0</b>/' . $required . '</p>' : $waiting;
         $now = time();
         return ['screen'=>'draft', 'data'=>[
             'draft_class'=>'screen-draft--glimpse', 'playmat_url'=>\Berserk\Core\PlaymatCatalog::playerUrl($state->getPlayer($playerKey)),
-            'grid_attributes'=>'', 'grid_html'=>'<div class="solomon-stack">' . $grid . '</div>',
-            'draft_info_html'=>'', 'draft_bottom_html'=>'', 'history_html'=>'',
-            'panel_html'=>'<h3>Мои карты: ' . count($draft['picked'][$playerKey]) . '</h3>' . $own,
-            'panel_summary_html'=>'host: ' . count($draft['picked']['host']) . ' · player: ' . count($draft['picked']['player']),
+            'grid_attributes'=>'data-grid-selection-key="glimpse-' . $state->gameId . '-' . $playerKey . '" data-grid-version="' . $state->version . '"', 'grid_html'=>'<div class="solomon-stack">' . $grid . '</div>',
+            'draft_info_html'=>'', 'draft_bottom_html'=>'', 'history_html'=>$historyHtml,
+            'panel_html'=>'',
+            'panel_summary_html'=>$finish . $stats . $selection,
             'panel_phase'=>($active ? 'Ваш ход' : 'Ход противника') . ' · Сжечь: ' . $required,
-            'panel_actions_html'=>\Berserk\View\Ui\PreGameLayout::actionsFooter(($active ? $form : $waiting) . $finish),
+            'panel_actions_html'=>\Berserk\View\Ui\PreGameLayout::actionsFooter($active ? $form : '', $historyControl),
             'timer_html'=>$this->timerHtml($state, $playerKey, $now),
-            'draft_script_html'=>$this->scriptHtml($state, $base . '&cmd=draft_sync', $now) . '<script src="/assets/js/glimpse-selection.js?v=2" defer></script>',
+            'draft_script_html'=>$this->scriptHtml($state, $base . '&cmd=draft_sync', $now) . '<script src="/assets/js/grid_selection.js?v=4" defer></script><script src="/assets/js/glimpse-selection.js?v=3" defer></script>',
             'message'=>$message ?? '',
         ]];
     }
@@ -377,7 +394,7 @@ final class DraftScreen
         if ($history === []) $html .= '<p class="wait">Пока нет выбранных карт.</p>';
         foreach ($history as $event) {
             $owner = (string) ($event['player'] ?? '');
-            $html .= '<div class="draft-history__event"><div class="draft-history__owner">' . ($owner === $playerKey ? 'Мой выбор' : 'Выбор противника') . '</div><div class="draft-history__cards">';
+            $html .= '<div class="draft-history__event"><div class="draft-history__owner">' . ($state->settings->isGlimpseDraft() ? 'Пакет ' . (int)($event['packet'] ?? 1) : ($owner === $playerKey ? 'Мой выбор' : 'Выбор противника')) . '</div><div class="draft-history__cards">';
             foreach ((array) ($event['cards'] ?? []) as $ukid) {
                 $ukid = (string) $ukid;
                 $info = $cardsInfo[$ukid] ?? ['name'=>$ukid, 'strike'=>[]];
