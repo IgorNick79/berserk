@@ -66,7 +66,7 @@ final class PrepareProcessor
     {
         if ($this->state->mode !== GameSettings::MODE_LUCKTEST || $this->state->status !== 'settings' || $cmd->type !== 'confirm_settings') return false;
         $settings = $this->settingsFromCommand($this->state->settings, $cmd);
-        return $settings->validateLuckTestSettings() === null && $settings->lucktest['quick_game'] === true;
+        return $settings->validateLuckTestSettings() === null && $settings->luckTestStartStage() !== 'turn';
     }
 
     public function confirmSettings(string $playerKey, Command $cmd): Result

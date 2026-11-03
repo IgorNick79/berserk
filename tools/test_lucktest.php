@@ -115,7 +115,7 @@ namespace {
         check(settings(GameSettings::luckTestInput($default->lucktest,['lucktest_balanced'=>$bad]))->validateLuckTestSettings()!==null,'no truthy boolean coercion');
     }
     $room = RoomSetup::parse('lucktest', ['lucktest_card_count'=>'3','lucktest_average_cost'=>'6.5','lucktest_balanced'=>'0','lucktest_quick_game'=>'0']);
-    check($room['settings']['lucktest']===['card_count'=>3,'average_cost'=>6.5,'balanced'=>false,'quick_game'=>false],'room settings');
+    check($room['settings']['lucktest']===array_replace($default->lucktest,['card_count'=>3,'average_cost'=>6.5,'balanced'=>false,'quick_game'=>false]),'room settings');
     check(RoomSetup::parse('lucktest',[])['settings']['lucktest']['balanced']===true,'room defaults');
     check(RoomSetup::validate($room)===$room && RoomSetup::label('lucktest')==='LuckTest','room roundtrip and label');
     try { RoomSetup::parse('lucktest',['lucktest_card_count'=>'3abc']); check(false,'bad room should throw'); } catch (\DomainException) { check(true,'bad room rejected'); }

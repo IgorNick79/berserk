@@ -21,8 +21,8 @@ final class MatchCreator
         \Berserk\Core\Db::withTransaction($db, static function (\Berserk\Core\Db $connection) use ($id): void {
             (new \Berserk\Core\BattleHistory\HistoryRepository($connection))->initialize($id,'recording','incomplete');
         });
-        if ($setup !== null && $setup['mode'] === 'lucktest' && ($setup['settings']['lucktest']['quick_game'] ?? false) === true) {
-            // Private uncommitted seed for the existing locked executor; only final Battle is committed.
+        if ($setup !== null && $setup['mode'] === 'lucktest' && \Berserk\Core\GameSettings::fromArray($setup['settings'])->luckTestStartStage() !== 'turn') {
+            // Private uncommitted seed for the existing locked executor; only the completed automatic preparation boundary is committed.
             $result = (new \Berserk\Core\Prepare\PrepareProcessor($state))->chooseMode('host', new \Berserk\Core\Command('choose_mode', ['mode'=>'lucktest']));
             if (!$result->success) throw new \LogicException('Cannot initialize LuckTest');
             $state->settings = \Berserk\Core\GameSettings::fromArray($setup['settings']);

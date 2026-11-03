@@ -2,9 +2,11 @@
     'use strict';
     function update(form) {
         var checkbox=form.querySelector('input[type="checkbox"][name="lucktest_quick_game"]'), group=form.querySelector('[data-lucktest-scenario]');
-        if(!checkbox || !group)return;
-        group.hidden=!checkbox.checked;
-        group.querySelector('textarea').disabled=!checkbox.checked;
+        var start=form.querySelector('input[name=lucktest_start_stage]:checked');
+        if(!group || (!checkbox && !start))return;
+        var enabled=start ? start.value==='battle' : checkbox.checked;
+        group.hidden=!enabled;
+        group.querySelector('textarea').disabled=!enabled;
     }
     document.querySelectorAll('form').forEach(function(form){update(form);form.addEventListener('change',function(){update(form);});});
     document.addEventListener('click',async function(event){

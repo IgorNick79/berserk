@@ -28,6 +28,7 @@ final class LobbyWizard
             $setup=RoomSetup::parse($mode,[]);$state->settings=GameSettings::fromArray($setup['settings']);
             $view=(new SettingsScreen())->prepare($state,'host','host',null)['data'];
             $body=$view['content_html'].$view['actions_html'];
+            if ($mode === 'lucktest') $body=self::luckTestSections($body);
             if ($mode === 'system') {
                 if ($catalog === null) throw new \RuntimeException('Catalog connection required');
                 $tpl = new Template(dirname(__DIR__,3).'/templates');
@@ -49,6 +50,29 @@ final class LobbyWizard
         return $html.'<p class="wizard-summary" data-wizard-summary></p></section><p class="wizard-error" data-wizard-error role="alert" tabindex="-1"></p></div><footer class="wizard-footer"><button type="button" data-back>Назад</button><button type="button" data-next>Далее: общие настройки</button><button type="submit" data-create hidden>Создать игру</button></footer></form><noscript>Для перехода между этапами включите JavaScript.</noscript>';
     }
 
+    private static function luckTestSections(string $body): string
+    {
+        $debug='';
+        $body=preg_replace_callback('/<fieldset class="settings-fieldset debug-fieldtest"><legend>Debug<\/legend>(.*?)<\/fieldset>/s',static function(array $m) use (&$debug): string {
+            $debug='<section class="settings-section wizard-debug"><h2>Debug</h2>'.$m[1].'</section>';return '';
+        },$body);
+        $body=preg_replace('/<input type="hidden" name="lucktest_(?:balanced|quick_game)" value="0"><label class="settings-option">.*?<\/label>/s','',$body);
+        $start='<section class="settings-section"><h2>Основные настройки</h2><fieldset class="settings-fieldset"><legend>Начать игру</legend><div class="settings-option-grid">';
+        foreach (['turn'=>'Бросок кубика','place'=>'Расстановка отряда','battle'=>'Бой'] as $value=>$label) {
+            $start.='<label class="settings-option"><input type="radio" name="lucktest_start_stage" value="'.$value.'"'.($value==='battle'?' checked':'').'><span>'.$label.'</span></label>';
+        }
+        $start.='</div></fieldset></section>';
+        $balance='<section class="settings-section"><h2>Балансировка</h2>';
+        foreach (['balanced'=>['Специальные карты','В обоих отрядах либо есть специальные карты, либо их нет. Их количество и сила не уравниваются.'],
+            'balance_metals'=>['Золото и серебро','Настройка сохраняется, но пока не влияет на подбор карт.']] as $key=>[$label,$help]) {
+            $balance.='<div class="wizard-balance-row"><input type="hidden" name="lucktest_'.$key.'" value="0"><label class="settings-option"><input type="checkbox" name="lucktest_'.$key.'" value="1" checked><span>'.$label.'</span></label>'
+                .'<details class="wizard-setting-help"><summary aria-label="Пояснение: '.$label.'">?</summary><p>'.$help.'</p></details></div>';
+        }
+        $balance.='</section>';
+        $body=str_replace('<section class="settings-section"><h2>Готовые случайные отряды</h2>',$start.'<section class="settings-section"><h2>Готовые случайные отряды</h2>',$body);
+        return str_replace('</section><div class="settings-submit-row">','</section>'.$balance.$debug.'<div class="settings-submit-row">',$body);
+    }
+
     /** Regroup the existing fields only in the wizard, leaving SettingsScreen unchanged. */
     private static function boosterSections(string $body, bool $sealed): string
     {
@@ -58,7 +82,7 @@ final class LobbyWizard
             if (count($fields)!==3) throw new \LogicException('Unexpected booster settings markup');
             return ($sealed?'':'<section class="settings-section"><h2>Основные настройки</h2>'.$remaining.'</section>')
                 .'<section class="settings-section wizard-boosters"><h2>Бустеры</h2>'.$fields[0]
-                .'<details class="panel-card-description wizard-booster-composition"><summary><i class="description-chevron" aria-hidden="true"></i><span>Состав бустера</span></summary><div class="panel-card-description-body">'.$fields[1].$fields[2].'</div></details></section>';
+                .'<details class="panel-card-description wizard-booster-composition"><summary><img class="wizard-chevron" src="assets/images/berserk-chevron-gold.svg" width="16" height="16" alt="" aria-hidden="true"><span>Состав бустера</span></summary><div class="panel-card-description-body">'.$fields[1].$fields[2].'</div></details></section>';
         },$body,1);
     }
 }

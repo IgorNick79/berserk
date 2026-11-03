@@ -322,11 +322,12 @@ final class Engine
     private function confirmPrepareSettings(GameState $state, string $actor, Command $cmd, PrepareProcessor $prepare): Result
     {
         $result = $prepare->confirmSettings($actor, $cmd);
-        if (!$result->success || $state->mode !== GameSettings::MODE_LUCKTEST || !$state->settings->lucktest['quick_game']) return $result;
+        if (!$result->success || $state->mode !== GameSettings::MODE_LUCKTEST || $state->settings->luckTestStartStage() === 'turn') return $result;
         $events = $result->events;
         foreach (['host', 'player'] as $owner) $events = array_merge($events, $this->preparationEvents($prepare->confirmTurn($owner)));
         $events = array_merge($events, $this->preparationEvents($prepare->chooseSide($state->firstPlayer,
             new Command('choose_side', ['side'=>$this->preparationRandomInt(1, 2)]))));
+        if ($state->settings->luckTestStartStage() === 'place') return Result::ok($events);
         foreach (['host', 'player'] as $owner) $events = array_merge($events, $this->randomPlaceSquad($state, $prepare, $owner));
         \Berserk\Core\Prepare\LuckTestScenario::verify($state);
         \Berserk\Core\Prepare\LuckTestScenario::applyInitialHealth($state);

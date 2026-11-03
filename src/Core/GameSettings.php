@@ -75,6 +75,8 @@ final class GameSettings
             'card_count' => 5,
             'average_cost' => 5.0,
             'balanced' => true,
+            'balance_metals' => true,
+            'start_stage' => null,
             'quick_game' => true,
         ],
         public array $battle = ['turn_seconds' => 180],
@@ -114,11 +116,11 @@ final class GameSettings
     /** Shared transport parsing for in-game settings and room setup. Invalid values stay invalid. */
     public static function luckTestInput(array $current, array $input): array
     {
-        foreach (['card_count', 'average_cost', 'balanced', 'quick_game'] as $key) {
+        foreach (['card_count', 'average_cost', 'balanced', 'balance_metals', 'quick_game', 'start_stage'] as $key) {
             $field = 'lucktest_' . $key;
             if (!array_key_exists($field, $input)) continue;
             $value = $input[$field];
-            if (in_array($key, ['balanced', 'quick_game'], true)) {
+            if (in_array($key, ['balanced', 'balance_metals', 'quick_game'], true)) {
                 if (in_array($value, [0, '0'], true)) $value = false;
                 elseif (in_array($value, [1, '1'], true)) $value = true;
             } elseif (is_string($value) && strlen($value) <= 16) {
@@ -127,11 +129,18 @@ final class GameSettings
             }
             $current[$key] = $value;
         }
+        if (array_key_exists('lucktest_start_stage', $input)) $current['quick_game'] = $current['start_stage'] === 'battle';
         return $current;
+    }
+
+    public function luckTestStartStage(): string
+    {
+        return $this->lucktest['start_stage'] ?? ($this->lucktest['quick_game'] ? 'battle' : 'turn');
     }
 
     public function validateLuckTestSettings(): ?string
     {
+        if (($this->lucktest['start_stage'] ?? null) !== null && !in_array($this->lucktest['start_stage'], ['turn','place','battle'], true)) return 'LuckTest: invalid start stage';
         $count = $this->lucktest['card_count'] ?? null;
         if (!is_int($count) || $count < 3 || $count > 10) return 'LuckTest: количество карт должно быть целым числом от 3 до 10';
         $cost = $this->lucktest['average_cost'] ?? null;
@@ -139,7 +148,7 @@ final class GameSettings
             || $cost < 3 || $cost > 7 || floor($cost * 2) !== (float) ($cost * 2)) {
             return 'LuckTest: средняя стоимость должна быть от 3 до 7 с шагом 0,5';
         }
-        foreach (['balanced', 'quick_game'] as $key) {
+        foreach (['balanced', 'balance_metals', 'quick_game'] as $key) {
             if (!is_bool($this->lucktest[$key] ?? null)) return 'LuckTest: неверное значение переключателя';
         }
         return null;
