@@ -61,7 +61,8 @@
                 const summary=node('summary'),title=node('strong','#'+r.id+' · '+r.kind),status=node('span',r.status),players=node('span',r.creator+'  ×  '+(r.second||'Ожидается соперник'));
                 status.className='room-status';players.className='room-players';
                 const date=node('time',new Date(r.created_at).toLocaleDateString('ru-RU'));date.title=new Date(r.created_at).toLocaleString('ru-RU');date.dateTime=r.created_at;
-                summary.append(title,status,players,date);card.append(summary);
+                const conditions=node('span');conditions.className='room-conditions';conditions.append(node('span',r.turn_seconds===0?'Без таймера':'180 секунд на ход'),node('span',' · '),window.BerserkRoom.handicap(r));
+                summary.append(title,status,players,date,conditions);card.append(summary);
                 const panel=node('div');panel.className='room-actions';
                 if(r.can_open)panel.append(button(r.is_mine?'Продолжить':'Присоединиться',()=>open(r)));
                 else panel.append(node('span','Доступных действий пока нет.'));card.append(panel);list.append(card);

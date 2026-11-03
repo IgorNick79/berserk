@@ -16,7 +16,12 @@ body=r'''
         sql('USE LAB_DB;UPDATE cards SET price=3+MOD(ind,8);')
         def create(mode,gold,silver,enabled=True,**fields):
             code,data=a.lobby(data={'action':'create','csrf':a.token('account'),'setup_mode':mode,'creation_key':os.urandom(16).hex(),'handicap_enabled':'1' if enabled else '0','handicap_gold':str(gold),'handicap_silver':str(silver),**fields})
-            assert code==200,(code,data);return data['room']
+            assert code==200,(code,data)
+            public=next(r for r in Client().lobby()[1]['rooms'] if r['id']==data['room']['id'])
+            check('public timer is saved value',public['turn_seconds']==0)
+            check('public effective handicap',public['handicap']=={'gold':gold if enabled else 0,'silver':silver if enabled else 0})
+            check('public setup remains private','setup_json' not in public and 'settings' not in public and 'debug' not in public)
+            return data['room']
         def accept(room):
             assert b.act(room)[0]==200;pending=a.lobby(room['id'])[1]['room'];result=a.act(pending,'accept');assert result[0]==200,result
             return a.lobby(room['id'])[1]['room']['game_id']

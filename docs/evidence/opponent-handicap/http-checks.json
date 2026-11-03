@@ -8,6 +8,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "Deal reached",
     "pass": true
   },
@@ -33,6 +45,18 @@
   },
   {
     "test": "no double handicap on reload",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -64,6 +88,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "Deal reached",
     "pass": true
   },
@@ -89,6 +125,18 @@
   },
   {
     "test": "no double handicap on reload",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -120,6 +168,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "Deal reached",
     "pass": true
   },
@@ -145,6 +205,18 @@
   },
   {
     "test": "no double handicap on reload",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -184,6 +256,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('turn', '0', 2, 0, True)",
     "pass": true
   },
@@ -217,6 +301,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -256,6 +352,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('turn', '0', 5, 5, True)",
     "pass": true
   },
@@ -289,6 +397,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -328,6 +448,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('turn', '1', 0, 0, True)",
     "pass": true
   },
@@ -361,6 +493,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -400,6 +544,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('turn', '1', 0, 3, True)",
     "pass": true
   },
@@ -433,6 +589,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -472,6 +640,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('turn', '1', 5, 5, False)",
     "pass": true
   },
@@ -505,6 +685,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -544,6 +736,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('place', '0', 2, 0, True)",
     "pass": true
   },
@@ -577,6 +781,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -616,6 +832,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('place', '0', 5, 5, True)",
     "pass": true
   },
@@ -649,6 +877,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -688,6 +928,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('place', '1', 0, 0, True)",
     "pass": true
   },
@@ -721,6 +973,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -760,6 +1024,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('place', '1', 0, 3, True)",
     "pass": true
   },
@@ -793,6 +1069,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -832,6 +1120,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('place', '1', 5, 5, False)",
     "pass": true
   },
@@ -865,6 +1165,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -904,6 +1216,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('battle', '0', 2, 0, True)",
     "pass": true
   },
@@ -937,6 +1261,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -976,6 +1312,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('battle', '0', 5, 5, True)",
     "pass": true
   },
@@ -1009,6 +1357,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -1048,6 +1408,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('battle', '1', 0, 0, True)",
     "pass": true
   },
@@ -1081,6 +1453,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -1120,6 +1504,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('battle', '1', 0, 3, True)",
     "pass": true
   },
@@ -1153,6 +1549,18 @@
   },
   {
     "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {
@@ -1192,6 +1600,18 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "LuckTest stage ('battle', '1', 5, 5, False)",
     "pass": true
   },
@@ -1228,11 +1648,47 @@
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "draft settings retained",
     "pass": true
   },
   {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
+    "pass": true
+  },
+  {
     "test": "solomon settings retained",
+    "pass": true
+  },
+  {
+    "test": "public timer is saved value",
+    "pass": true
+  },
+  {
+    "test": "public effective handicap",
+    "pass": true
+  },
+  {
+    "test": "public setup remains private",
     "pass": true
   },
   {

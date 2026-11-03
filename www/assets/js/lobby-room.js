@@ -7,6 +7,12 @@
         if (text !== undefined) el.textContent = text;
         return el;
     };
+    function handicap(r) {
+        const line=document.createElement('span');line.className='room-handicap';
+        const values=[Number(r.handicap?.gold||0),Number(r.handicap?.silver||0)];
+        if(!values.some(v=>v>0)){line.textContent='Без форы';return line;}
+        line.append('Фора');values.forEach((value,index)=>{if(value<=0)return;const item=document.createElement('span');item.className='room-handicap-currency';const img=document.createElement('img');img.src='assets/images/card/'+(index===0?'elite':'ordinary')+'.png';img.alt=index===0?'Золото':'Серебро';item.append(img,document.createTextNode(String(value)));line.append(item);});return line;
+    }
     function initialise(content) {
         const shell = make('div', 'room-shell'); shell.dataset.roomScreen = '';
         shell.dataset.panelTheme = window.BerserkPreferences?.current?.theme || 'grimoire';
@@ -30,7 +36,7 @@
         }
         const settings = make('section', 'room-settings'); settings.append(make('h2', '', 'Параметры партии'));
         const list = make('dl');
-        for (const [key, label] of [['mode', 'Режим'], ['access', 'Доступ'], ['timer', 'Таймер хода']]) {
+        for (const [key, label] of [['mode', 'Режим'], ['access', 'Доступ'], ['timer', 'Таймер хода'], ['handicap', 'Фора сопернику']]) {
             const row = make('div'); const value = make('dd'); value.dataset.roomField = key;
             row.append(make('dt', '', label), value); list.append(row);
         }
@@ -76,6 +82,7 @@
         };
         shell.querySelector('#room-heading').textContent = 'Комната #' + r.id;
         shell.querySelectorAll('[data-room-field]').forEach(el => {
+            if(el.dataset.roomField==='handicap'){el.replaceChildren(handicap(r));return;}
             const value = values[el.dataset.roomField]; if (el.textContent !== value) el.textContent = value;
             if (el.dataset.roomField === 'status') el.hidden = !value;
         });
@@ -104,5 +111,5 @@
         actions.closest('.room-footer').classList.toggle('has-room-actions', actions.childElementCount > 0);
         if (focused) actions.querySelector('[data-room-action="' + focused + '"]:not(:disabled)')?.focus({preventScroll: true});
     }
-    window.BerserkRoom = {render};
+    window.BerserkRoom = {render, handicap};
 })();

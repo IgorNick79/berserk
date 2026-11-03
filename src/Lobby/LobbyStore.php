@@ -79,7 +79,16 @@ final class LobbyStore
     private function projection(array $row, int $actor, bool $private): array
     {
         $member = $this->member($row,$actor);
+        // Publish only room conditions; never expose the saved setup or private Debug fields.
+        $setup=json_decode($row['setup_json']??'null',true,512,JSON_THROW_ON_ERROR);
+        $battle=$setup['settings']['battle']??[];
+        $handicap=($battle['handicap_enabled']??false)===true;
         $room = [
+            'turn_seconds'=>$battle['turn_seconds']??180,
+            'handicap'=>[
+                'gold'=>$handicap?max(0,min(5,(int)($battle['handicap_gold']??0))):0,
+                'silver'=>$handicap?max(0,min(5,(int)($battle['handicap_silver']??0))):0,
+            ],
             'game_type'=>$row['game_type']??null,
             'kind'=>RoomSetup::label($row['game_type']??null),
             'created_at'=>str_replace(' ','T',$row['created_at']).'Z',
@@ -94,9 +103,7 @@ final class LobbyStore
         ];
         if ($private) {
             // Room presentation reads saved setup only; no transition or default form values.
-            $setup=json_decode($row['setup_json']??'null',true,512,JSON_THROW_ON_ERROR);
             $room['access']=($row['invited_account_id']??null)===null?'open':'closed';
-            $room['turn_seconds']=$setup['settings']['battle']['turn_seconds']??180;
             $room['game_id'] = $row['game_id'] === null ? null : (int)$row['game_id'];
             $room['role'] = $actor === (int)$row['creator_account_id'] ? 'creator' : ($row['state'] === 'started' ? 'accepted' : ($actor===(int)($row['invited_account_id']??0) && $row['state']==='open'?'invited':'candidate'));
             $ownRequest=$row['state']==='awaiting_confirmation' && $actor===(int)$row['candidate_account_id'];

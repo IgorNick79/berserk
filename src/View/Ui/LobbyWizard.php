@@ -37,8 +37,8 @@ final class LobbyWizard
                 $body = (string)$tpl->parse('screen/deck_host.tpl',$deck['data']);
             }
             if (in_array($mode,['draft','solomon','sealed'],true)) $body=self::boosterSections($body,$mode==='sealed');
-            // The wizard already provides the mode heading; keep explanatory LuckTest text.
-            if ($mode !== 'lucktest') $body=preg_replace('/<p class="settings-mode-title">.*?<\/p>/s','',$body);
+            // The wizard already provides the mode heading.
+            $body=preg_replace('/<p class="settings-mode-title">.*?<\/p>/s','',$body);
             $body=preg_replace('/<script\b[^>]*>.*?<\/script>/s','',$body);
             $body=preg_replace('/<input[^>]*name="(?:first|second|game|cmd|draft_type)"[^>]*>/','',$body);
             $body=preg_replace('/<div class="settings-submit-row">.*?<\/div>/s','',$body);
