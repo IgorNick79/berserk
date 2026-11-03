@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="/assets/css/battle-mini-nameplate.css?v=2">
 <link rel="stylesheet" href="/assets/css/view-deck.css?v=8">
 <link rel="stylesheet" href="/assets/css/roll.css?v=4">
-<link rel="stylesheet" href="/assets/css/draft.css?v=11">
+<link rel="stylesheet" href="/assets/css/draft.css?v=12">
 <div style="--player-playmat: url('{{playmat_url}}')" class="screen-draft battle-left {{draft_class}}">
     <p class="flash">{{message}}</p>
 
