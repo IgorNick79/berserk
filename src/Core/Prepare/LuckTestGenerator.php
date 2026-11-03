@@ -44,6 +44,9 @@ final class LuckTestGenerator
             if (!$possible) continue;
             $host = $this->search($catalog, $ordinary, $special, $count, $target, $category, $fixed['host']);
             $player = $this->search($catalog, $ordinary, $special, $count, $target, $category, $fixed['player']);
+            if ($settings->lucktest['balance_metals']) {
+                $this->balanceMetals($host,$player,$catalog,$fixed,$category,$target);
+            }
             if ($settings->lucktest['balanced'] && !self::isBalanced($host, $player)) {
                 throw new \RuntimeException('Не удалось сбалансировать LuckTest');
             }
@@ -55,6 +58,36 @@ final class LuckTestGenerator
         }
         if ($best === null) throw new \DomainException('Сценарий LuckTest: балансировка обязательных карт невозможна');
         return $best;
+    }
+
+    /** Improve separate currency totals without sacrificing the existing cost target or fixed cards. */
+    private function balanceMetals(array &$host, array &$player, array $catalog, array $fixed, ?bool $category, float $target): void
+    {
+        $totals=static function(array $cards): array {
+            $sum=[0,0];foreach ($cards as $card) $sum[!empty($card['elite'])?0:1]+=$card['price'];return $sum;
+        };
+        $distance=static function(array $a,array $b) use ($totals): float {
+            $a=$totals($a);$b=$totals($b);return abs($a[0]-$b[0])+abs($a[1]-$b[1]);
+        };
+        $error=abs($this->cost($host)-$target)+abs($this->cost($player)-$target);
+        $difference=$distance($host,$player);
+        foreach (['host','player'] as $owner) {
+            $cards=&${$owner};
+            for ($i=count($fixed[$owner]);$i<count($cards);$i++) {
+                for ($attempt=0;$attempt<self::REPLACEMENTS_PER_CARD;$attempt++) {
+                    $previous=$cards[$i];$replacement=$this->pick($catalog);
+                    if ($category===false && self::isSpecial($replacement)) continue;
+                    $cards[$i]=$replacement;
+                    $nextError=abs($this->cost($host)-$target)+abs($this->cost($player)-$target);
+                    $nextDifference=$distance($host,$player);
+                    if (($category===true && !self::hasSpecial($cards)) || $nextError>$error || $nextDifference>=$difference) {
+                        $cards[$i]=$previous;continue;
+                    }
+                    $error=$nextError;$difference=$nextDifference;
+                }
+            }
+            unset($cards);
+        }
     }
 
     /** Random reserve order is the creation/instanceId order consumed by ProphecyProcessor. */

@@ -54,7 +54,9 @@ final class LobbyWizard
     {
         $debug='';
         $body=preg_replace_callback('/<fieldset class="settings-fieldset debug-fieldtest"><legend>Debug<\/legend>(.*?)<\/fieldset>/s',static function(array $m) use (&$debug): string {
-            $debug='<section class="settings-section wizard-debug"><h2>Debug</h2>'.$m[1].'</section>';return '';
+            $fields=str_replace('class="debug-url-toggle"','class="debug-url-toggle wizard-check"',$m[1]);
+            $fields=str_replace('<summary>Формат и пример JSON</summary>','<summary><img class="wizard-chevron" src="assets/images/berserk-chevron-gold.svg" width="16" height="16" alt="" aria-hidden="true"><span>Формат и пример JSON</span></summary>',$fields);
+            $debug='<section class="settings-section wizard-debug"><h2>Debug</h2>'.$fields.'</section>';return '';
         },$body);
         $body=preg_replace('/<input type="hidden" name="lucktest_(?:balanced|quick_game)" value="0"><label class="settings-option">.*?<\/label>/s','',$body);
         $start='<section class="settings-section"><h2>Основные настройки</h2><fieldset class="settings-fieldset"><legend>Начать игру</legend><div class="settings-option-grid">';
@@ -63,10 +65,10 @@ final class LobbyWizard
         }
         $start.='</div></fieldset></section>';
         $balance='<section class="settings-section"><h2>Балансировка</h2>';
-        foreach (['balanced'=>['Специальные карты','В обоих отрядах либо есть специальные карты, либо их нет. Их количество и сила не уравниваются.'],
-            'balance_metals'=>['Золото и серебро','Настройка сохраняется, но пока не влияет на подбор карт.']] as $key=>[$label,$help]) {
-            $balance.='<div class="wizard-balance-row"><input type="hidden" name="lucktest_'.$key.'" value="0"><label class="settings-option"><input type="checkbox" name="lucktest_'.$key.'" value="1" checked><span>'.$label.'</span></label>'
-                .'<details class="wizard-setting-help"><summary aria-label="Пояснение: '.$label.'">?</summary><p>'.$help.'</p></details></div>';
+        foreach (['balanced'=>['Летающие существа, пингеры','Наличие или отсутствие пингеров и летающих существ в обоих отрядах, сила не уравнивается'],
+            'balance_metals'=>['Золото и серебро','Количество кристаллов на отряд будет приблизительно одинаково']] as $key=>[$label,$help]) {
+            $balance.='<div class="wizard-balance-row"><input type="hidden" name="lucktest_'.$key.'" value="0"><label class="wizard-check"><input type="checkbox" name="lucktest_'.$key.'" value="1" checked><span>'.$label.'</span></label>'
+                .'<p class="debug-help">'.$help.'</p></div>';
         }
         $balance.='</section>';
         $body=str_replace('<section class="settings-section"><h2>Готовые случайные отряды</h2>',$start.'<section class="settings-section"><h2>Готовые случайные отряды</h2>',$body);
