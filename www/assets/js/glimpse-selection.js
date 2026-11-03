@@ -23,8 +23,9 @@
         document.querySelector('[data-glimpse-burned]').textContent = selected.length;
         form.querySelector('button[type="submit"]').disabled = !pick || selected.length !== Number(form.dataset.required);
         document.querySelectorAll('[data-glimpse-card]').forEach(function (card) {
-            card.classList.toggle('glimpse-take', card.querySelector('[name="pick"]').checked);
-            card.classList.toggle('glimpse-burn', card.querySelector('[name="positions[]"]').checked);
+            var image = card.querySelector('.prepare-card');
+            image.classList.toggle('prepare-card--selected', card.querySelector('[name="pick"]').checked);
+            image.classList.toggle('glimpse-burn', card.querySelector('[name="positions[]"]').checked);
         });
     }
     document.addEventListener('submit', function (event) {

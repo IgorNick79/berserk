@@ -125,6 +125,12 @@ final class DraftProcessor
         $taken = [$this->state->draft['grid'][(int)$pick]];
         if (($violation = $this->copyLimitViolation($playerKey, $taken)) !== null) return Result::error(DraftCopyRules::violationMessage($violation));
         if (!$this->glimpseCanComplete($playerKey, (int)$pick)) return Result::error('Выбор не позволяет собрать две допустимые колоды по 30 карт');
+        if (!isset($this->state->draft['packet_number'])) {
+            $perPacket = ($this->state->settings->draft['burn_mode'] ?? 'normal') === 'progressive'
+                && (int)($this->state->settings->draft['burn_count'] ?? 2) === 2 ? 6 : 4;
+            $pickedCount = count($this->state->draft['picked']['host']) + count($this->state->draft['picked']['player']);
+            $this->state->draft['packet_number'] = intdiv(max(0, $pickedCount - (int)$this->state->draft['round_picks']), $perPacket) + 1;
+        }
         $this->state->draft['history'][] = ['player'=>$playerKey, 'cards'=>$taken, 'packet'=>$this->state->draft['packet_number'] ?? 1];
         $this->state->draft['picked'][$playerKey][] = $taken[0];
         foreach ($burns as $position) $this->state->draft['recycle'][] = $this->state->draft['grid'][(int)$position];

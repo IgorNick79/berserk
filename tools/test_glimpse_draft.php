@@ -114,9 +114,16 @@ namespace {
     $s->draft['grid']=['SECRET_GRID'];$s->draft['pool']=['SECRET_POOL'];$s->draft['recycle']=['SECRET_BURN'];$s->draft['picked']['player']=['SECRET_PICK'];
     $s->draft['history']=[['player'=>'host','cards'=>['OWN_CARD'],'packet'=>2],['player'=>'player','cards'=>['SECRET_HISTORY'],'packet'=>2]];
     $view=$screen->prepare($s,'host','host',null,[])['data'];
-    check(str_contains($view['history_html'],'OWN_CARD') && str_contains($view['history_html'],'Бустер 2'),'own history grouped by packet');
+    check(str_contains($view['history_html'],'Бустер 1'),'legacy own history grouped by packet');
     check(!str_contains(json_encode($view),'SECRET_HISTORY'),'opponent history hidden');
-    check(str_contains($view['history_html'],'Ранее выбранные карты'),'legacy own picks included');
+    check(!str_contains($view['history_html'],'Ранее выбранные карты'),'no extra history group');
+    $legacy=clone $s;$legacy->draft=$s->draft;
+    $legacy->draft['picked']['host']=['legacy_a','legacy_b','legacy_c','legacy_d'];
+    $legacy->draft['history']=[];
+    $legacyHtml=$screen->prepare($legacy,'host','host',null,[])['data']['history_html'];
+    check(strpos($legacyHtml,'Бустер 2') < strpos($legacyHtml,'Бустер 1'),'legacy packets newest first');
+    foreach (['legacy_a','legacy_b','legacy_c','legacy_d'] as $card) check(str_contains($legacyHtml,$card),'legacy picked card shown');
+
     check(str_contains($view['panel_summary_html'],'pregame-pool-stats') && $view['panel_html']==='','shared statistics without own card list');
     $html=json_encode($screen->prepare($s,'host','host',null,[]));
     foreach (['SECRET_GRID','SECRET_POOL','SECRET_BURN','SECRET_PICK'] as $secret) check(!str_contains($html,$secret),'hidden '.$secret);
