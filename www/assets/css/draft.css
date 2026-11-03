@@ -47,7 +47,7 @@
 /* Keep all twelve Glimpse choices compact; decisions stay in the panel footer. */
 .draft-page .screen-draft--glimpse { justify-content:flex-start; }
 .draft-page .screen-draft--glimpse .pregame-draft-grid { padding:12px; box-sizing:border-box; }
-.draft-page .screen-draft--glimpse .solomon-stack { display:grid; grid-template-columns:repeat(4,minmax(0,160px)); gap:18px; justify-content:center; }
+.draft-page .screen-draft--glimpse .solomon-stack { display:grid; grid-template-columns:repeat(4,minmax(0,160px)); gap:32px 18px; justify-content:center; }
 .screen-draft--glimpse [data-glimpse-card] { min-width:0; display:grid; grid-template-columns:1fr 1fr; gap:4px; align-content:start; }
 .screen-draft--glimpse [data-glimpse-card] > .prepare-card-link { grid-column:1 / -1; }
 .screen-draft--glimpse [data-glimpse-card] > .button { padding:4px 2px; min-width:0; font-size:12px; display:flex; align-items:center; justify-content:center; gap:3px; }
@@ -60,7 +60,7 @@
 
 .screen-draft--glimpse [data-glimpse-card] label[aria-disabled="true"] { opacity:.45; cursor:not-allowed; }
 
-@media (max-width:700px) { .draft-page .screen-draft--glimpse .solomon-stack { grid-template-columns:repeat(3,minmax(0,140px)); gap:8px; } }
+@media (max-width:700px) { .draft-page .screen-draft--glimpse .solomon-stack { grid-template-columns:repeat(3,minmax(0,140px)); gap:24px 8px; } }
 @media (max-width:420px) { .draft-page .screen-draft--glimpse .solomon-stack { grid-template-columns:repeat(2,minmax(0,140px)); } }
 
 .screen-draft--glimpse [data-glimpse-card] .view-art { display:block; width:100%; height:auto; }
@@ -69,7 +69,7 @@
 
 .draft-page .screen-draft--glimpse .prepare-card:is(.prepare-card--selected,.glimpse-burn) { border-color:transparent!important; box-shadow:none; }
 
-.draft-page .screen-draft--glimpse .pregame-draft-grid { padding-top:24px; }
+.draft-page .screen-draft--glimpse .pregame-draft-grid { padding-top:64px; }
 .screen-draft--glimpse .solomon-stack__card { min-width:0; display:grid; grid-template-columns:1fr 1fr; gap:8px; align-content:start; }
 .screen-draft--glimpse .solomon-stack__card > .prepare-card-link { grid-column:1 / -1; }
 .screen-draft--glimpse .glimpse-card-back,.screen-draft--glimpse .glimpse-card-empty { grid-column:1 / -1; aspect-ratio:8/5; border:1px solid transparent; border-radius:6px; box-sizing:border-box; }
