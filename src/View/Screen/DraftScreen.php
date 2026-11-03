@@ -307,7 +307,7 @@ final class DraftScreen
                 . '<label class="button"><input form="glimpse-decision" type="radio" name="pick" value="' . $position . '">Взять</label>'
                 . '<label class="button secondary"><input form="glimpse-decision" type="checkbox" name="positions[]" value="' . $position . '">Сжечь</label></div>';
         }
-        if (!$active) $grid = '<p class="wait">Ожидание хода соперника. Карт в пакете: ' . count($draft['grid']) . '</p>';
+        $waiting = '<p class="wait">Ожидание хода соперника. Карт в пакете: ' . count($draft['grid']) . '</p>';
         $form = $active ? '<form method="get" id="glimpse-decision" class="prepare-actions" data-preparation-actions data-required="' . $required . '">'
             . '<input type="hidden" name="game" value="' . $state->gameId . '">'
             . '<input type="hidden" name="cmd" value="draft_confirm">'
@@ -324,13 +324,13 @@ final class DraftScreen
         return ['screen'=>'draft', 'data'=>[
             'draft_class'=>'screen-draft--glimpse', 'playmat_url'=>\Berserk\Core\PlaymatCatalog::playerUrl($state->getPlayer($playerKey)),
             'grid_attributes'=>'', 'grid_html'=>'<div class="solomon-stack">' . $grid . '</div>',
-            'draft_info_html'=>'', 'draft_bottom_html'=>$form, 'history_html'=>'',
+            'draft_info_html'=>'', 'draft_bottom_html'=>'', 'history_html'=>'',
             'panel_html'=>'<h3>Мои карты: ' . count($draft['picked'][$playerKey]) . '</h3>' . $own,
             'panel_summary_html'=>'host: ' . count($draft['picked']['host']) . ' · player: ' . count($draft['picked']['player']),
             'panel_phase'=>($active ? 'Ваш ход' : 'Ход противника') . ' · Сжечь: ' . $required,
-            'panel_actions_html'=>\Berserk\View\Ui\PreGameLayout::actionsFooter($finish),
+            'panel_actions_html'=>\Berserk\View\Ui\PreGameLayout::actionsFooter(($active ? $form : $waiting) . $finish),
             'timer_html'=>$this->timerHtml($state, $playerKey, $now),
-            'draft_script_html'=>$this->scriptHtml($state, $base . '&cmd=draft_sync', $now) . '<script src="/assets/js/glimpse-selection.js?v=1" defer></script>',
+            'draft_script_html'=>$this->scriptHtml($state, $base . '&cmd=draft_sync', $now) . '<script src="/assets/js/glimpse-selection.js?v=2" defer></script>',
             'message'=>$message ?? '',
         ]];
     }

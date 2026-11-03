@@ -43,3 +43,18 @@
 
 .screen-draft--glimpse .glimpse-take { outline: 3px solid #63b86c; }
 .screen-draft--glimpse .glimpse-burn { outline: 3px solid #d45d46; opacity: .65; }
+
+/* Keep all twelve Glimpse choices compact; decisions stay in the panel footer. */
+.draft-page .screen-draft--glimpse { justify-content:flex-start; }
+.draft-page .screen-draft--glimpse .pregame-draft-grid { padding:12px; box-sizing:border-box; }
+.draft-page .screen-draft--glimpse .solomon-stack { display:grid; grid-template-columns:repeat(4,minmax(0,160px)); gap:12px; justify-content:center; }
+.screen-draft--glimpse [data-glimpse-card] { min-width:0; display:grid; grid-template-columns:1fr 1fr; gap:4px; align-content:start; }
+.screen-draft--glimpse [data-glimpse-card] > .prepare-card-link { grid-column:1 / -1; }
+.screen-draft--glimpse [data-glimpse-card] > .button { padding:4px 2px; min-width:0; font-size:12px; display:flex; align-items:center; justify-content:center; gap:3px; }
+#glimpse-decision { width:100%; margin:0; display:flex; flex-wrap:wrap; gap:8px; }
+#glimpse-decision p { width:100%; margin:0; }
+#glimpse-decision button { width:100%; }
+@media (max-width:700px) { .draft-page .screen-draft--glimpse .solomon-stack { grid-template-columns:repeat(3,minmax(0,140px)); gap:8px; } }
+@media (max-width:420px) { .draft-page .screen-draft--glimpse .solomon-stack { grid-template-columns:repeat(2,minmax(0,140px)); } }
+
+.screen-draft--glimpse [data-glimpse-card] .view-art { display:block; width:100%; height:auto; }
