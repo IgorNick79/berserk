@@ -6,7 +6,10 @@
         var picks = Array.from(document.querySelectorAll('input[form="glimpse-decision"][name="pick"]'));
         var burns = Array.from(document.querySelectorAll('input[form="glimpse-decision"][name="positions[]"]'));
         var pick = picks.find(function (input) { return input.checked; });
-        if (event && event.target.name === 'pick') burns.forEach(function (input) { if (input.value === event.target.value) input.checked = false; });
+        if (event && event.target.name === 'pick' && event.target.checked) {
+            picks.forEach(function (input) { if (input !== event.target) input.checked = false; });
+            burns.forEach(function (input) { if (input.value === event.target.value) input.checked = false; });
+        }
         if (event && event.target.name === 'positions[]' && event.target.checked && pick && pick.value === event.target.value) pick.checked = false;
         pick = picks.find(function (input) { return input.checked; });
         var limit = Number(form.dataset.required);

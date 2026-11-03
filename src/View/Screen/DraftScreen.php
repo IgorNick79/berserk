@@ -313,7 +313,7 @@ final class DraftScreen
             $grid .= '<div class="solomon-stack__card pregame-grid-card" data-grid-occupied="1" data-glimpse-card>'
                 . $ui->thumbnail($cardsInfo, ['element_in_cost'=>true, 'ukid'=>$ukid, 'info'=>$cardsInfo[$ukid] ?? [], 'link'=>'#'])
                 . '<template data-grid-preview>' . $ui->informationWithControls(['ukid'=>$ukid], $cardsInfo) . '</template>'
-                . '<label class="button glimpse-take-button"><input form="glimpse-decision" type="radio" name="pick" value="' . $position . '">Взять</label>'
+                . '<label class="button glimpse-take-button"><input form="glimpse-decision" type="checkbox" name="pick" value="' . $position . '">Взять</label>'
                 . '<label class="button glimpse-burn-button" style="--btn-top:#b66c51;--btn-bottom:#78362b;--btn-edge:#d29a78"><input form="glimpse-decision" type="checkbox" name="positions[]" value="' . $position . '">Сжечь</label></div>';
         }
         $waiting = '<span class="wait">Ожидание хода соперника</span>';
@@ -366,7 +366,7 @@ final class DraftScreen
             'panel_phase'=>($active ? 'Ваш ход' : 'Ход противника') . ' · Сжечь: ' . $required,
             'panel_actions_html'=>\Berserk\View\Ui\PreGameLayout::actionsFooter($active ? $form : $waiting, $historyControl),
             'timer_html'=>$this->timerHtml($state, $playerKey, $now),
-            'draft_script_html'=>$this->scriptHtml($state, $base . '&cmd=draft_sync', $now) . '<script src="/assets/js/grid_selection.js?v=4" defer></script><script src="/assets/js/glimpse-selection.js?v=4" defer></script>',
+            'draft_script_html'=>$this->scriptHtml($state, $base . '&cmd=draft_sync', $now) . '<script src="/assets/js/grid_selection.js?v=4" defer></script><script src="/assets/js/glimpse-selection.js?v=5" defer></script>',
             'message'=>$message ?? '',
         ]];
     }
