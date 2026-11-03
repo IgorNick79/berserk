@@ -12,6 +12,13 @@ final class RoomSetup
     {
         if (!in_array($mode,['system','draft','solomon','sealed','lucktest'],true)) throw new \DomainException('Выберите вид игры.',400);
         $settings=GameSettings::defaults()->toArray();
+        foreach (['enabled','gold','silver'] as $key) {
+            $field='handicap_'.$key;
+            if (!array_key_exists($field,$input)) continue;
+            $value=$input[$field];
+            if (!is_string($value) || !preg_match($key==='enabled'?'/\A[01]\z/D':'/\A[0-5]\z/D',$value)) throw new \DomainException('Некорректная фора сопернику.',400);
+            $settings['battle'][$field]=$key==='enabled'?$value==='1':(int)$value;
+        }
         $timer=$input['turn_seconds']??'0';
         if (!in_array($timer,['0','180'],true)) throw new \DomainException('Допустимо: без таймера или 180 секунд на ход.',400);
         $settings['battle']['turn_seconds']=(int)$timer;
@@ -78,6 +85,8 @@ final class RoomSetup
         $mode=$setup['mode']??null;
         if (!in_array($mode,['system','draft','solomon','sealed','lucktest'],true) || !is_array($setup['settings']??null)) throw new \DomainException('Некорректные настройки комнаты.',400);
         $s=GameSettings::fromArray($setup['settings']);
+        if (!is_bool($s->battle['handicap_enabled'])) throw new \DomainException('Некорректная фора сопернику.',400);
+        foreach (['gold','silver'] as $currency) if (!is_int($s->battle['handicap_'.$currency]) || $s->battle['handicap_'.$currency]<0 || $s->battle['handicap_'.$currency]>5) throw new \DomainException('Некорректная фора сопернику.',400);
         if (!in_array($s->battle['turn_seconds'],[0,180],true)) throw new \DomainException('Некорректный таймер хода.',400);
         if ($s->draftType()!==($mode==='solomon'?'solomon':'grid')) throw new \DomainException('Несовместимый вид драфта.',400);
         if (!in_array($s->draft['pick_mode'],['manual','random'],true) || !in_array($s->draft['auto_side'],['both','host','player'],true)) throw new \DomainException('Некорректный автовыбор.',400);

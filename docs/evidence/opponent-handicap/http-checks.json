@@ -1,0 +1,1262 @@
+[
+  {
+    "test": "exact isolated database identity",
+    "pass": true
+  },
+  {
+    "test": "runtime no TRIGGER or DDL privileges",
+    "pass": true
+  },
+  {
+    "test": "Deal reached",
+    "pass": true
+  },
+  {
+    "test": "Deal exact resources host(0, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "Deal exact resources player(0, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "no double handicap on reload",
+    "pass": true
+  },
+  {
+    "test": "Deal reached",
+    "pass": true
+  },
+  {
+    "test": "Deal exact resources host(2, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "Deal exact resources player(2, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "no double handicap on reload",
+    "pass": true
+  },
+  {
+    "test": "Deal reached",
+    "pass": true
+  },
+  {
+    "test": "Deal exact resources host(0, 3, True)",
+    "pass": true
+  },
+  {
+    "test": "Deal exact resources player(0, 3, True)",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "no double handicap on reload",
+    "pass": true
+  },
+  {
+    "test": "Deal reached",
+    "pass": true
+  },
+  {
+    "test": "Deal exact resources host(5, 5, True)",
+    "pass": true
+  },
+  {
+    "test": "Deal exact resources player(5, 5, True)",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "no double handicap on reload",
+    "pass": true
+  },
+  {
+    "test": "Deal reached",
+    "pass": true
+  },
+  {
+    "test": "Deal exact resources host(5, 5, False)",
+    "pass": true
+  },
+  {
+    "test": "Deal exact resources player(5, 5, False)",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "Deal HTTP reload",
+    "pass": true
+  },
+  {
+    "test": "no double handicap on reload",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('turn', '0', 0, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('turn', '0', 2, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('turn', '0', 0, 3, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('turn', '0', 5, 5, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('turn', '0', 5, 5, False)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('turn', '1', 0, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('turn', '1', 2, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('turn', '1', 0, 3, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('turn', '1', 5, 5, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('turn', '1', 5, 5, False)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('place', '0', 0, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('place', '0', 2, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('place', '0', 0, 3, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('place', '0', 5, 5, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('place', '0', 5, 5, False)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('place', '1', 0, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('place', '1', 2, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('place', '1', 0, 3, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('place', '1', 5, 5, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('place', '1', 5, 5, False)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('battle', '0', 0, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('battle', '0', 2, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('battle', '0', 0, 3, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('battle', '0', 5, 5, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('battle', '0', 5, 5, False)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('battle', '1', 0, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('battle', '1', 2, 0, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('battle', '1', 0, 3, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('battle', '1', 5, 5, True)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "LuckTest stage ('battle', '1', 5, 5, False)",
+    "pass": true
+  },
+  {
+    "test": "handicap persisted",
+    "pass": true
+  },
+  {
+    "test": "balance remains independent",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "valid six-card army",
+    "pass": true
+  },
+  {
+    "test": "no negative resources",
+    "pass": true
+  },
+  {
+    "test": "LuckTest reload",
+    "pass": true
+  },
+  {
+    "test": "no reapplication",
+    "pass": true
+  },
+  {
+    "test": "draft settings retained",
+    "pass": true
+  },
+  {
+    "test": "solomon settings retained",
+    "pass": true
+  },
+  {
+    "test": "sealed settings retained",
+    "pass": true
+  },
+  {
+    "test": "historical absent handicap remains absent or zero",
+    "pass": true
+  },
+  {
+    "test": "bad handicap denied -1",
+    "pass": true
+  },
+  {
+    "test": "bad handicap denied 6",
+    "pass": true
+  },
+  {
+    "test": "bad handicap denied 1.5",
+    "pass": true
+  },
+  {
+    "test": "browser handicap suite",
+    "pass": true
+  }
+]

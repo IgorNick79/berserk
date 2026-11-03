@@ -13,3 +13,6 @@
 .create-wizard .wizard-debug .debug-scenario{border-top-color:#786147}
 
 .create-wizard .settings-option-grid.wizard-card-count{grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}.create-wizard .wizard-card-count .settings-option{padding:8px;justify-content:center}.create-wizard [data-lucktest-cost]{width:100%}@media(max-width:600px){.create-wizard .settings-option-grid.wizard-card-count{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.create-wizard .debug-copy{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:32px;height:32px;min-width:0;padding:0;line-height:1}.create-wizard .debug-copy svg{display:block;flex:none;margin:0}
+
+.create-wizard [data-handicap-fields]{display:grid;gap:8px;margin-top:12px}.create-wizard [data-handicap-range]{width:100%}

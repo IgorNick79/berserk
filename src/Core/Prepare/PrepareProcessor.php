@@ -2276,6 +2276,7 @@ final class PrepareProcessor
                 $player->resources = ['gold' => 24, 'silver' => 22];
             }
 
+            if ($key === 'player') foreach ($this->state->settings->opponentHandicap() as $currency=>$bonus) $player->resources[$currency]+=$bonus;
             $this->dealHand($key);
         }
     }

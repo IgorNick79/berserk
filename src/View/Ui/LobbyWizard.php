@@ -23,6 +23,7 @@ final class LobbyWizard
         $html.='</div></section><section data-page="1" hidden><h2>Доступ к партии</h2><div class="wizard-options"><label class="wizard-option"><input type="radio" name="access" value="open" checked><span>Открытая партия</span></label><label class="wizard-option"><input type="radio" name="access" value="closed"><span>🔒 Закрытая партия</span></label></div>'
             .'<label class="wizard-invite" hidden>Никнейм приглашённого игрока<input name="invited_login" autocomplete="off" minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]{3,32}"><small>Только этот игрок сможет запросить участие. Создатель подтверждает заявку.</small></label>'
             .'<h2>Таймер хода</h2><div class="wizard-options"><label class="wizard-option"><input type="radio" name="turn_seconds" value="0" checked><span>Без ограничения времени</span></label><label class="wizard-option"><input type="radio" name="turn_seconds" value="180"><span>180 секунд на каждый ход</span></label></div><p>Ограничение относится к отдельному ходу, а не ко всей партии.</p></section><section data-page="2" hidden><h2 data-mode-title>Настройки режима</h2>';
+        $html=str_replace('</section><section data-page="2"',self::handicapFields().'</section><section data-page="2"',$html);
         foreach (['sealed','draft','solomon','lucktest','system'] as $mode) {
             $state=new GameState(0,$actor,0);$state->mode=$mode==='solomon'?'draft':$mode;
             $setup=RoomSetup::parse($mode,[]);$state->settings=GameSettings::fromArray($setup['settings']);
@@ -48,6 +49,13 @@ final class LobbyWizard
             $html.='<fieldset class="wizard-mode-settings" data-mode="'.$mode.'"'.($mode==='sealed'?'':' hidden disabled').'>'.$body.'</fieldset>';
         }
         return $html.'<p class="wizard-summary" data-wizard-summary></p></section><p class="wizard-error" data-wizard-error role="alert" tabindex="-1"></p></div><footer class="wizard-footer"><button type="button" data-back>Назад</button><button type="button" data-next>Далее: общие настройки</button><button type="submit" data-create hidden>Создать игру</button></footer></form><noscript>Для перехода между этапами включите JavaScript.</noscript>';
+    }
+
+    private static function handicapFields(): string
+    {
+        $html='<section class="settings-section"><h2>Основные настройки</h2><input type="hidden" name="handicap_enabled" value="0"><label class="wizard-check"><input type="checkbox" name="handicap_enabled" value="1" data-handicap-toggle><span>Фора сопернику</span></label><div data-handicap-fields hidden>';
+        foreach (['gold'=>'Золото','silver'=>'Серебро'] as $key=>$label) $html.='<div class="settings-range"><div class="settings-range__head"><span>'.$label.'</span><output data-handicap-output="'.$key.'">0</output></div><input type="range" name="handicap_'.$key.'" min="0" max="5" step="1" value="0" data-handicap-range="'.$key.'"></div>';
+        return $html.'</div></section>';
     }
 
     private static function luckTestSections(string $body): string

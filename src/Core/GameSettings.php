@@ -80,7 +80,7 @@ final class GameSettings
             'start_stage' => null,
             'quick_game' => true,
         ],
-        public array $battle = ['turn_seconds' => 180],
+        public array $battle = ['turn_seconds' => 180, 'handicap_enabled'=>false, 'handicap_gold'=>0, 'handicap_silver'=>0],
     ) {}
 
     public static function defaults(): self
@@ -132,6 +132,12 @@ final class GameSettings
         }
         if (array_key_exists('lucktest_start_stage', $input)) $current['quick_game'] = $current['start_stage'] === 'battle';
         return $current;
+    }
+
+    public function opponentHandicap(): array
+    {
+        if (($this->battle['handicap_enabled'] ?? false) !== true) return ['gold'=>0,'silver'=>0];
+        return ['gold'=>max(0,min(5,(int)($this->battle['handicap_gold']??0))), 'silver'=>max(0,min(5,(int)($this->battle['handicap_silver']??0)))];
     }
 
     public function luckTestTargetCost(): float

@@ -35,6 +35,7 @@ final class LuckTestGenerator
         }
         $best = null;
         $bestScore = INF;
+        $bestCategory = null;
         foreach ($categories as $category) {
             $possible = true;
             foreach (['host','player'] as $owner) {
@@ -44,24 +45,43 @@ final class LuckTestGenerator
             if (!$possible) continue;
             $host = $this->search($catalog, $ordinary, $special, $count, $target, $category, $fixed['host']);
             $player = $this->search($catalog, $ordinary, $special, $count, $target, $category, $fixed['player']);
-            if ($settings->lucktest['balance_metals']) {
-                $this->balanceMetals($host,$player,$catalog,$fixed,$category,$target);
-            }
             if ($settings->lucktest['balanced'] && !self::isBalanced($host, $player)) {
                 throw new \RuntimeException('Не удалось сбалансировать LuckTest');
             }
             $score = abs($this->cost($host) - $target) + abs($this->cost($player) - $target);
             if ($best === null || $score < $bestScore || ($score === $bestScore && $this->random(0, 1) === 1)) {
-                $best = ['host' => $this->group($host), 'player' => $this->group($player)];
+                $best = ['host' => $host, 'player' => $player];
+                $bestCategory = $category;
                 $bestScore = $score;
             }
         }
         if ($best === null) throw new \DomainException('Сценарий LuckTest: балансировка обязательных карт невозможна');
-        return $best;
+        if ($settings->lucktest['balance_metals']) $this->balanceMetals($best['host'],$best['player'],$catalog,$fixed,$bestCategory,$target);
+        $this->applyHandicap($best['player'],$catalog,$fixed['player'],$bestCategory,$settings->opponentHandicap());
+        return ['host'=>$this->group($best['host']), 'player'=>$this->group($best['player'])];
     }
 
-    /** Improve separate currency totals without sacrificing the existing cost target or fixed cards. */
-    private function balanceMetals(array &$host, array &$player, array $catalog, array $fixed, ?bool $category, float $target): void
+    /** Extra opponent budget after balancing; never mutate the host or mandatory cards. */
+    private function applyHandicap(array &$cards,array $catalog,array $fixed,?bool $category,array $bonus): void
+    {
+        if ($bonus['gold']===0 && $bonus['silver']===0) return;
+        $totals=static function(array $army): array {
+            $sum=['gold'=>0,'silver'=>0];foreach ($army as $card) $sum[!empty($card['elite'])?'gold':'silver']+=$card['price'];return $sum;
+        };
+        $base=$totals($cards);$target=['gold'=>$base['gold']+$bonus['gold'],'silver'=>$base['silver']+$bonus['silver']];
+        $distance=$bonus['gold']+$bonus['silver'];
+        for ($i=count($fixed);$i<count($cards);$i++) for ($attempt=0;$attempt<self::REPLACEMENTS_PER_CARD;$attempt++) {
+            $old=$cards[$i];$replacement=$this->pick($catalog);
+            if ($category===false && self::isSpecial($replacement)) continue;
+            $cards[$i]=$replacement;$sum=$totals($cards);
+            $next=abs($sum['gold']-$target['gold'])+abs($sum['silver']-$target['silver']);
+            if (($category===true && !self::hasSpecial($cards)) || $sum['gold']<$base['gold'] || $sum['silver']<$base['silver'] || $next>=$distance) {$cards[$i]=$old;continue;}
+            $distance=$next;
+        }
+    }
+
+    /** Fit only the second army to the fixed first army; preserve cost target and mandatory cards. */
+    private function balanceMetals(array $host, array &$player, array $catalog, array $fixed, ?bool $category, float $target): void
     {
         $totals=static function(array $cards): array {
             $sum=[0,0];foreach ($cards as $card) $sum[!empty($card['elite'])?0:1]+=$card['price'];return $sum;
@@ -71,22 +91,18 @@ final class LuckTestGenerator
         };
         $error=abs($this->cost($host)-$target)+abs($this->cost($player)-$target);
         $difference=$distance($host,$player);
-        foreach (['host','player'] as $owner) {
-            $cards=&${$owner};
-            for ($i=count($fixed[$owner]);$i<count($cards);$i++) {
-                for ($attempt=0;$attempt<self::REPLACEMENTS_PER_CARD;$attempt++) {
-                    $previous=$cards[$i];$replacement=$this->pick($catalog);
-                    if ($category===false && self::isSpecial($replacement)) continue;
-                    $cards[$i]=$replacement;
-                    $nextError=abs($this->cost($host)-$target)+abs($this->cost($player)-$target);
-                    $nextDifference=$distance($host,$player);
-                    if (($category===true && !self::hasSpecial($cards)) || $nextError>$error || $nextDifference>=$difference) {
-                        $cards[$i]=$previous;continue;
-                    }
-                    $error=$nextError;$difference=$nextDifference;
+        for ($i=count($fixed['player']);$i<count($player);$i++) {
+            for ($attempt=0;$attempt<self::REPLACEMENTS_PER_CARD;$attempt++) {
+                $previous=$player[$i];$replacement=$this->pick($catalog);
+                if ($category===false && self::isSpecial($replacement)) continue;
+                $player[$i]=$replacement;
+                $nextError=abs($this->cost($host)-$target)+abs($this->cost($player)-$target);
+                $nextDifference=$distance($host,$player);
+                if (($category===true && !self::hasSpecial($player)) || $nextError>$error || $nextDifference>=$difference) {
+                    $player[$i]=$previous;continue;
                 }
+                $error=$nextError;$difference=$nextDifference;
             }
-            unset($cards);
         }
     }
 
