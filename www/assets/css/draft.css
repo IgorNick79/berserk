@@ -66,3 +66,5 @@
 .screen-draft--glimpse [data-glimpse-card] .view-art { display:block; width:100%; height:auto; }
 
 .draft-page [data-panel-theme] .pregame-main .screen-draft--glimpse [data-glimpse-card] > label.button { padding:4px 6px; min-height:24px; font-size:11px; }
+
+.draft-page .screen-draft--glimpse .prepare-card:is(.prepare-card--selected,.glimpse-burn) { border-color:transparent!important; box-shadow:none; }
