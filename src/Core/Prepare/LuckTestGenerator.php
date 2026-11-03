@@ -21,7 +21,7 @@ final class LuckTestGenerator
         [$catalog, $ordinary, $special] = $this->catalogGroups($catalog);
 
         $count = $settings->lucktest['card_count'];
-        $target = $count * $settings->lucktest['average_cost'];
+        $target = $settings->luckTestTargetCost();
         // null: unrestricted. false/true: BOTH armies must have the same special-presence bit.
         $categories = [null];
         if ($settings->lucktest['balanced']) {

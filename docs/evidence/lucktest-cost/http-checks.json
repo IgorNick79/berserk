@@ -1,0 +1,610 @@
+[
+  {
+    "test": "exact isolated database identity",
+    "pass": true
+  },
+  {
+    "test": "runtime no TRIGGER or DDL privileges",
+    "pass": true
+  },
+  {
+    "test": "manual choices accepted",
+    "pass": true
+  },
+  {
+    "test": "four choices persisted",
+    "pass": true
+  },
+  {
+    "test": "room reload preserves settings",
+    "pass": true
+  },
+  {
+    "test": "auto selection reaches view",
+    "pass": true
+  },
+  {
+    "test": "both decks assigned",
+    "pass": true
+  },
+  {
+    "test": "instances initialized",
+    "pass": true
+  },
+  {
+    "test": "view remains unconfirmed",
+    "pass": true
+  },
+  {
+    "test": "repeat acceptance cannot create or reinitialize game",
+    "pass": true
+  },
+  {
+    "test": "host confirms existing view",
+    "pass": true
+  },
+  {
+    "test": "both confirmations reach roll",
+    "pass": true
+  },
+  {
+    "test": "random or mixed accepted",
+    "pass": true
+  },
+  {
+    "test": "random or mixed resolves via processor",
+    "pass": true
+  },
+  {
+    "test": "random or mixed accepted",
+    "pass": true
+  },
+  {
+    "test": "random or mixed resolves via processor",
+    "pass": true
+  },
+  {
+    "test": "invalid choice rejected {'deck_mode': 'manual', 'other_deck_mode': 'manual', 'deck_id': '999', 'other_deck_id': '1'}",
+    "pass": true
+  },
+  {
+    "test": "invalid choice rejected {'deck_mode': 'bad', 'other_deck_mode': 'manual', 'deck_id': '1', 'other_deck_id': '1'}",
+    "pass": true
+  },
+  {
+    "test": "invalid choice rejected {'deck_mode': 'manual', 'other_deck_mode': 'manual', 'deck_id': '0', 'other_deck_id': '1'}",
+    "pass": true
+  },
+  {
+    "test": "invalid choice rejected {'deck_mode': 'manual', 'other_deck_mode': 'manual', 'deck_id': '-1', 'other_deck_id': '1'}",
+    "pass": true
+  },
+  {
+    "test": "removed deck rejects acceptance",
+    "pass": true
+  },
+  {
+    "test": "failed acceptance rolls back game",
+    "pass": true
+  },
+  {
+    "test": "legacy system retains deck stage",
+    "pass": true
+  },
+  {
+    "test": "legacy deck selector still works",
+    "pass": true
+  },
+  {
+    "test": "draft settings saved",
+    "pass": true
+  },
+  {
+    "test": "draft preparation starts",
+    "pass": true
+  },
+  {
+    "test": "draft custom composition persisted and applied",
+    "pass": true
+  },
+  {
+    "test": "solomon settings saved",
+    "pass": true
+  },
+  {
+    "test": "solomon preparation starts",
+    "pass": true
+  },
+  {
+    "test": "solomon custom composition persisted and applied",
+    "pass": true
+  },
+  {
+    "test": "sealed settings saved",
+    "pass": true
+  },
+  {
+    "test": "sealed preparation starts",
+    "pass": true
+  },
+  {
+    "test": "sealed custom composition persisted and applied",
+    "pass": true
+  },
+  {
+    "test": "lucktest settings saved",
+    "pass": true
+  },
+  {
+    "test": "lucktest preparation starts",
+    "pass": true
+  },
+  {
+    "test": "turn room created",
+    "pass": true
+  },
+  {
+    "test": "turn enters requested stage",
+    "pass": true
+  },
+  {
+    "test": "turn independent flags persisted",
+    "pass": true
+  },
+  {
+    "test": "manual roll reaches place",
+    "pass": true
+  },
+  {
+    "test": "turn manual placement reaches battle",
+    "pass": true
+  },
+  {
+    "test": "turn room created",
+    "pass": true
+  },
+  {
+    "test": "turn enters requested stage",
+    "pass": true
+  },
+  {
+    "test": "turn independent flags persisted",
+    "pass": true
+  },
+  {
+    "test": "manual roll reaches place",
+    "pass": true
+  },
+  {
+    "test": "turn manual placement reaches battle",
+    "pass": true
+  },
+  {
+    "test": "place room created",
+    "pass": true
+  },
+  {
+    "test": "place enters requested stage",
+    "pass": true
+  },
+  {
+    "test": "place independent flags persisted",
+    "pass": true
+  },
+  {
+    "test": "place manual placement reaches battle",
+    "pass": true
+  },
+  {
+    "test": "place room created",
+    "pass": true
+  },
+  {
+    "test": "place enters requested stage",
+    "pass": true
+  },
+  {
+    "test": "place independent flags persisted",
+    "pass": true
+  },
+  {
+    "test": "place manual placement reaches battle",
+    "pass": true
+  },
+  {
+    "test": "battle room created",
+    "pass": true
+  },
+  {
+    "test": "battle enters requested stage",
+    "pass": true
+  },
+  {
+    "test": "battle independent flags persisted",
+    "pass": true
+  },
+  {
+    "test": "battle room created",
+    "pass": true
+  },
+  {
+    "test": "battle enters requested stage",
+    "pass": true
+  },
+  {
+    "test": "battle independent flags persisted",
+    "pass": true
+  },
+  {
+    "test": "invalid lucktest rejected {'lucktest_start_stage': 'invalid'}",
+    "pass": true
+  },
+  {
+    "test": "invalid lucktest rejected {'lucktest_balance_metals': 'yes'}",
+    "pass": true
+  },
+  {
+    "test": "invalid lucktest rejected {'lucktest_start_stage': 'place', 'lucktest_scenario': '{\"cards\":[{\"owner\":\"host\",\"ukid\":\"card_1\"}]}'}",
+    "pass": true
+  },
+  {
+    "test": "debug fields accepted",
+    "pass": true
+  },
+  {
+    "test": "debug scenario still starts battle",
+    "pass": true
+  },
+  {
+    "test": "cost room created (3, 10)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (3, 60)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (4, 10)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (4, 60)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (5, 10)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (5, 60)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (6, 10)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (6, 45)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (6, 60)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (7, 10)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (7, 60)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (8, 10)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (8, 60)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (9, 10)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (9, 60)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (10, 10)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "cost room created (10, 60)",
+    "pass": true
+  },
+  {
+    "test": "total budget persisted",
+    "pass": true
+  },
+  {
+    "test": "total cost generation accepted",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "actual requested squad count",
+    "pass": true
+  },
+  {
+    "test": "test_wizard_browser.cjs",
+    "pass": true
+  },
+  {
+    "test": "test_wizard_settings_browser.cjs",
+    "pass": true
+  },
+  {
+    "test": "test_lucktest_wizard_browser.cjs",
+    "pass": true
+  }
+]

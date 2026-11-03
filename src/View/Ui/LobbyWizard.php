@@ -52,6 +52,9 @@ final class LobbyWizard
 
     private static function luckTestSections(string $body): string
     {
+        $body=preg_replace('/(<legend>Количество карт<\/legend><div class=")settings-option-grid settings-option-grid--compact/', '$1settings-option-grid settings-option-grid--compact wizard-card-count',$body);
+        $body=preg_replace('/<fieldset class="settings-fieldset"><legend>Средняя стоимость карты<\/legend>.*?<\/fieldset>/s',
+            '<fieldset class="settings-fieldset"><legend>Стоимость отряда</legend><div class="settings-range"><div class="settings-range__head"><span>Стоимость отряда</span><output data-lucktest-cost-output>45 кр.</output></div><input type="range" name="lucktest_total_cost" min="10" max="60" step="1" value="45" data-lucktest-cost></div><p class="settings-hint">Желаемая суммарная стоимость всех карт отряда. Фактическая стоимость может немного отличаться</p></fieldset>',$body);
         $debug='';
         $body=preg_replace_callback('/<fieldset class="settings-fieldset debug-fieldtest"><legend>Debug<\/legend>(.*?)<\/fieldset>/s',static function(array $m) use (&$debug): string {
             $fields=str_replace('class="debug-url-toggle"','class="debug-url-toggle wizard-check"',$m[1]);

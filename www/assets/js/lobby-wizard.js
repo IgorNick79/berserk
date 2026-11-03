@@ -1,5 +1,6 @@
 (()=>{
  'use strict';const form=document.querySelector('#create-wizard');if(!form)return;
+ form.addEventListener('input',event=>{if(event.target.matches('[data-lucktest-cost]'))form.querySelector('[data-lucktest-cost-output]').textContent=event.target.value+' \u043a\u0440.';});
  const pages=[...form.querySelectorAll('[data-page]')],tabs=[...form.querySelectorAll('.wizard-tabs [data-step]')],scroll=form.querySelector('.wizard-scroll'),error=form.querySelector('[data-wizard-error]');let step=0,busy=false,checking=false;
  const names={sealed:'Sealed',draft:'Grid Draft',solomon:'Solomon Draft',lucktest:'LuckTest',system:'Системные колоды'};
  const mode=()=>form.querySelector('[name=setup_mode]:checked').value;

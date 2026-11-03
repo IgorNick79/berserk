@@ -36,7 +36,13 @@ final class RoomSetup
             if (!is_string($input['booster_rare_chance']) || !preg_match('/\A[0-9]{1,3}\z/D',$input['booster_rare_chance'])) throw new \DomainException('Некорректная вероятность.',400);
             $settings['booster']['ultra_rare_chance']=BoosterSettings::rareChanceToUltraChance($input['booster_rare_chance']) ?? -1;
         }
-        if ($mode === GameSettings::MODE_LUCKTEST) $settings['lucktest'] = GameSettings::luckTestInput($settings['lucktest'], $input);
+        if ($mode === GameSettings::MODE_LUCKTEST) {
+            if (!array_key_exists('lucktest_average_cost',$input)) {
+                $settings['lucktest']['card_count']=6;
+                $settings['lucktest']['total_cost']=45;
+            }
+            $settings['lucktest'] = GameSettings::luckTestInput($settings['lucktest'], $input);
+        }
         $setup = ['mode'=>$mode,'settings'=>$settings];
         if ($mode === 'system' && array_intersect(array_keys($input), ['deck_id','other_deck_id','deck_mode','other_deck_mode'])) {
             $setup['system_decks'] = [];

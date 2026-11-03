@@ -74,6 +74,7 @@ final class GameSettings
         public array $lucktest = [
             'card_count' => 5,
             'average_cost' => 5.0,
+            'total_cost' => null,
             'balanced' => true,
             'balance_metals' => true,
             'start_stage' => null,
@@ -116,7 +117,7 @@ final class GameSettings
     /** Shared transport parsing for in-game settings and room setup. Invalid values stay invalid. */
     public static function luckTestInput(array $current, array $input): array
     {
-        foreach (['card_count', 'average_cost', 'balanced', 'balance_metals', 'quick_game', 'start_stage'] as $key) {
+        foreach (['card_count', 'average_cost', 'total_cost', 'balanced', 'balance_metals', 'quick_game', 'start_stage'] as $key) {
             $field = 'lucktest_' . $key;
             if (!array_key_exists($field, $input)) continue;
             $value = $input[$field];
@@ -124,13 +125,18 @@ final class GameSettings
                 if (in_array($value, [0, '0'], true)) $value = false;
                 elseif (in_array($value, [1, '1'], true)) $value = true;
             } elseif (is_string($value) && strlen($value) <= 16) {
-                if ($key === 'card_count' && preg_match('/^[0-9]+$/D', $value)) $value = (int) $value;
+                if (in_array($key, ['card_count','total_cost'], true) && preg_match('/^[0-9]+$/D', $value)) $value = (int) $value;
                 elseif ($key === 'average_cost' && preg_match('/^[0-9]+(?:\.[0-9]+)?$/D', $value)) $value = (float) $value;
             }
             $current[$key] = $value;
         }
         if (array_key_exists('lucktest_start_stage', $input)) $current['quick_game'] = $current['start_stage'] === 'battle';
         return $current;
+    }
+
+    public function luckTestTargetCost(): float
+    {
+        return $this->lucktest['total_cost'] ?? $this->lucktest['card_count'] * $this->lucktest['average_cost'];
     }
 
     public function luckTestStartStage(): string
@@ -143,6 +149,8 @@ final class GameSettings
         if (($this->lucktest['start_stage'] ?? null) !== null && !in_array($this->lucktest['start_stage'], ['turn','place','battle'], true)) return 'LuckTest: invalid start stage';
         $count = $this->lucktest['card_count'] ?? null;
         if (!is_int($count) || $count < 3 || $count > 10) return 'LuckTest: количество карт должно быть целым числом от 3 до 10';
+        $total = $this->lucktest['total_cost'] ?? null;
+        if ($total !== null && (!is_int($total) || $total < 10 || $total > 60)) return 'LuckTest: total cost must be an integer from 10 to 60';
         $cost = $this->lucktest['average_cost'] ?? null;
         if ((!is_int($cost) && !is_float($cost)) || !is_finite((float) $cost)
             || $cost < 3 || $cost > 7 || floor($cost * 2) !== (float) ($cost * 2)) {

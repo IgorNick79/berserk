@@ -65,7 +65,7 @@ body=r'''
                     game=room['game_id'];prep(a,game,'confirm_turn');prep(b,game,'confirm_turn');first=state(game)['first_player'];prep(a if first=='host' else b,game,'choose_side',side='1');check('manual roll reaches place',state(game)['status']=='place')
                 if start!='battle':
                     game=room['game_id']
-                    for client,owner,cells in [(a,'host',[(1,2),(1,3),(1,4),(2,2),(2,3)]),(b,'player',[(4,1),(4,2),(4,3),(4,4),(4,5)])]:
+                    for client,owner,cells in [(a,'host',[(1,2),(1,3),(1,4),(2,2),(2,3),(2,4)]),(b,'player',[(4,1),(4,2),(4,3),(4,4),(4,5),(5,2)])]:
                         cards=[card for card in state(game)['cards'].values() if card['owner']==owner and card['zone']=='squad']
                         for card,(row,col) in zip(cards,cells):prep(client,game,'place_card',card_id=card.get('instance_id',card.get('id')),row=row,col=col)
                         prep(client,game,'confirm_place')
