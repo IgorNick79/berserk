@@ -80,7 +80,7 @@ final class GameSettings
             'start_stage' => null,
             'quick_game' => true,
         ],
-        public array $battle = ['turn_seconds' => 180, 'handicap_enabled'=>false, 'handicap_gold'=>0, 'handicap_silver'=>0],
+        public array $battle = ['turn_seconds' => 180, 'turn_time_mode'=>null, 'turn_fixed_seconds'=>180, 'turn_creature_seconds'=>30, 'handicap_enabled'=>false, 'handicap_gold'=>0, 'handicap_silver'=>0],
     ) {}
 
     public static function defaults(): self
@@ -132,6 +132,23 @@ final class GameSettings
         }
         if (array_key_exists('lucktest_start_stage', $input)) $current['quick_game'] = $current['start_stage'] === 'battle';
         return $current;
+    }
+
+    public function turnTimeMode(): string
+    {
+        return $this->battle['turn_time_mode']??(($this->battle['turn_seconds']??180)===0?'none':'fixed');
+    }
+
+    public function validateTurnTime(): ?string
+    {
+        if (($this->battle['turn_time_mode']??null)===null) return in_array($this->battle['turn_seconds']??180,[0,180],true)?null:'Некорректный таймер хода.';
+        if (!in_array($this->battle['turn_time_mode'],['none','fixed','adaptive'],true)) return 'Выберите режим таймера.';
+        foreach (['turn_fixed_seconds'=>[60,600,15],'turn_creature_seconds'=>[10,120,10]] as $key=>[$min,$max,$step]) {
+            $v=$this->battle[$key]??null;
+            if (!is_int($v) || $v<$min || $v>$max || ($v-$min)%$step!==0) return 'Некорректное время хода.';
+        }
+        $expected=$this->turnTimeMode()==='none'?0:($this->turnTimeMode()==='fixed'?$this->battle['turn_fixed_seconds']:180);
+        return ($this->battle['turn_seconds']??null)===$expected?null:'Несогласованные настройки времени.';
     }
 
     public function opponentHandicap(): array

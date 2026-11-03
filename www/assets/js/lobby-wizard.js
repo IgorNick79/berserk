@@ -12,7 +12,7 @@
  function updateSummary(){
   const summary=form.querySelector('[data-wizard-summary]');
   if(mode()==='opponent'){summary.textContent='Решает противник · '+(closed()?'Закрытая партия':'Открытая партия');return;}
-  summary.textContent=names[mode()]+' · '+(closed()?(configuring?'Закрытая партия':'Закрытая партия для '+form.querySelector('[name=invited_login]').value):'Открытая партия')+' · '+(form.querySelector('[name=turn_seconds]:checked').value==='0'?'Без таймера':'180 секунд на каждый ход');
+  summary.textContent=names[mode()]+' · '+(closed()?(configuring?'Закрытая партия':'Закрытая партия для '+form.querySelector('[name=invited_login]').value):'Открытая партия')+' · '+window.BerserkRoom.timeLabel({turn_time:{mode:form.querySelector('[name=turn_time_mode]:checked').value,fixed_seconds:Number(form.querySelector('[name=turn_fixed_seconds]').value),creature_seconds:Number(form.querySelector('[name=turn_creature_seconds]').value)}});
   const enabled=form.querySelector('[data-handicap-toggle]').checked;
   const values=['gold','silver'].map(key=>enabled?Number(form.querySelector('[name=handicap_'+key+']').value):0);
   if(!values.some(value=>value>0)){summary.append(' · Без форы');return;}
@@ -22,6 +22,7 @@
  function update(){const chosen=mode(),delegated=chosen==='opponent',last=delegated?1:2;
   tabs[2].hidden=delegated;form.querySelector('[data-wizard-progress]').textContent='Шаг '+(step+1)+' из '+(delegated?2:3);form.querySelector('[data-next]').hidden=step===last;form.querySelector('[data-create]').hidden=step!==last;form.querySelector('[data-create]').textContent=configuring?'Сохранить и начать игру':'Создать игру';
   form.querySelector('[name=access][value=open]').nextElementSibling.textContent=delegated?'Открытая игра':'Открытая партия';form.querySelector('[name=access][value=closed]').nextElementSibling.textContent=delegated?'Под замком':'🔒 Закрытая партия';
+  form.querySelectorAll('[data-turn-time-fields]').forEach(block=>block.hidden=block.dataset.turnTimeFields!==form.querySelector('[name=turn_time_mode]:checked').value);
   const access=form.querySelector('[data-wizard-access]');access.hidden=configuring;access.disabled=configuring;const gameOptions=form.querySelector('[data-wizard-game-options]');gameOptions.hidden=delegated;gameOptions.disabled=delegated;form.querySelectorAll('[data-mode]').forEach(f=>{f.hidden=f.dataset.mode!==chosen;f.disabled=f.hidden;});const invite=form.querySelector('.wizard-invite'),input=form.querySelector('[name=invited_login]');invite.hidden=configuring||!closed();input.required=!configuring&&closed();input.disabled=configuring||!closed();input.setCustomValidity('');
   form.querySelector('[data-mode-title]').textContent='Настройки режима · '+names[chosen];updateSummary();
  }

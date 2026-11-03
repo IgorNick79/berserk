@@ -1,0 +1,50 @@
+[
+  {
+    "test": "exact isolated database identity",
+    "pass": true
+  },
+  {
+    "test": "runtime no TRIGGER or DDL privileges",
+    "pass": true
+  },
+  {
+    "test": "strict time input {'turn_seconds': '0', 'turn_fixed_seconds': '-1'}",
+    "pass": true
+  },
+  {
+    "test": "strict time input {'turn_time_mode': 'fixed', 'turn_seconds': '0'}",
+    "pass": true
+  },
+  {
+    "test": "strict time input {'turn_time_mode': 'adaptive', 'turn_creature_seconds': '1.5'}",
+    "pass": true
+  },
+  {
+    "test": "strict time input {'turn_time_mode': 'fixed', 'turn_fixed_seconds': '-60'}",
+    "pass": true
+  },
+  {
+    "test": "boundary snapshot 60",
+    "pass": true
+  },
+  {
+    "test": "boundary snapshot 600",
+    "pass": true
+  },
+  {
+    "test": "boundary snapshot 10",
+    "pass": true
+  },
+  {
+    "test": "boundary snapshot 1200",
+    "pass": true
+  },
+  {
+    "test": "zero uses existing elimination",
+    "pass": true
+  },
+  {
+    "test": "new room default fixed 180",
+    "pass": true
+  }
+]

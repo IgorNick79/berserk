@@ -1,0 +1,25 @@
+{
+  "checks": [
+    "three modes",
+    "fixed default",
+    "3:00 default",
+    "no numeric inputs",
+    "15 second step",
+    "fixed min 1:00",
+    "fixed max 10:00",
+    "adaptive only",
+    "adaptive default 0:30",
+    "adaptive step 10",
+    "adaptive min",
+    "adaptive max",
+    "none hides both",
+    "fixed value retained",
+    "adaptive value retained",
+    "no mobile overflow 390",
+    "no mobile overflow 360",
+    "battle accepts long adaptive limit",
+    "battle limit is stored 1200",
+    "no JS errors"
+  ],
+  "errors": []
+}

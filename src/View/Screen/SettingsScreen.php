@@ -301,14 +301,14 @@ final class SettingsScreen
             . '</fieldset>';
     }
 
-    private function stepper(string $name, string $label, int $value, int $min, int $max, int $step, string $unit): string
+    public function stepper(string $name, string $label, int $value, int $min, int $max, int $step, string $unit, bool $clock = false): string
     {
         $value = max($min, min($max, $value));
-        return '<div class="settings-stepper" data-settings-stepper data-min="' . $min . '" data-max="' . $max . '" data-step="' . $step . '">'
+        return '<div class="settings-stepper" data-settings-stepper' . ($clock ? ' data-stepper-clock' : '') . ' data-min="' . $min . '" data-max="' . $max . '" data-step="' . $step . '">'
             . '<span class="settings-stepper__label">' . $this->esc($label) . '</span>'
             . '<div class="settings-stepper__control">'
             . '<button type="button" class="settings-stepper__button" data-stepper-action="down" aria-label="Уменьшить">−</button>'
-            . '<output class="settings-stepper__value" data-stepper-output>' . $this->esc((string) $value) . ' ' . $this->esc($unit) . '</output>'
+            . '<output class="settings-stepper__value" data-stepper-output>' . ($clock ? intdiv($value,60).':'.str_pad((string)($value%60),2,'0',STR_PAD_LEFT) : $this->esc((string) $value) . ' ' . $this->esc($unit)) . '</output>'
             . '<button type="button" class="settings-stepper__button" data-stepper-action="up" aria-label="Увеличить">+</button>'
             . '<input type="hidden" name="' . $this->esc($name) . '" value="' . $value . '" data-stepper-input data-unit="' . $this->esc($unit) . '">'
             . '</div>'

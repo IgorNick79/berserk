@@ -22,3 +22,5 @@
 .create-wizard .wizard-common-options{border:0;padding:0;margin:0;min-width:0}.wizard-delegation{margin-top:18px;padding-top:18px;border-top:1px solid #786147}.wizard-delegation .wizard-option span{display:flex;flex-direction:column;gap:4px}.wizard-delegation small{color:#bdb3a3}
 
 .create-wizard[data-configure] .wizard-footer{flex-wrap:wrap}
+
+.create-wizard [data-turn-time-fields]{margin-top:14px}.create-wizard [data-turn-time-fields] .settings-hint{font-size:13px;line-height:1.5}.create-wizard .settings-stepper__button:disabled{opacity:.4;cursor:default}

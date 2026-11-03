@@ -1,0 +1,382 @@
+[
+  {
+    "test": "exact isolated database identity",
+    "pass": true
+  },
+  {
+    "test": "runtime no TRIGGER or DDL privileges",
+    "pass": true
+  },
+  {
+    "test": "sealed create none",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "sealed create fixed",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "sealed create adaptive",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "draft create none",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "draft create fixed",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "draft create adaptive",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "solomon create none",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "solomon create fixed",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "solomon create adaptive",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "system create none",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "system create fixed",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "system create adaptive",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "lucktest create none",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "real first turn none",
+    "pass": true
+  },
+  {
+    "test": "lucktest create fixed",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "real first turn fixed",
+    "pass": true
+  },
+  {
+    "test": "lucktest create adaptive",
+    "pass": true
+  },
+  {
+    "test": "room time projection",
+    "pass": true
+  },
+  {
+    "test": "time persisted to match",
+    "pass": true
+  },
+  {
+    "test": "real first turn adaptive",
+    "pass": true
+  },
+  {
+    "test": "delegated timing none",
+    "pass": true
+  },
+  {
+    "test": "delegated timing fixed",
+    "pass": true
+  },
+  {
+    "test": "delegated timing adaptive",
+    "pass": true
+  },
+  {
+    "test": "invalid time rejected {'turn_time_mode': 'bad'}",
+    "pass": true
+  },
+  {
+    "test": "invalid time rejected {'turn_time_mode': 'fixed', 'turn_fixed_seconds': '59'}",
+    "pass": true
+  },
+  {
+    "test": "invalid time rejected {'turn_time_mode': 'fixed', 'turn_fixed_seconds': '601'}",
+    "pass": true
+  },
+  {
+    "test": "invalid time rejected {'turn_time_mode': 'fixed', 'turn_fixed_seconds': '61'}",
+    "pass": true
+  },
+  {
+    "test": "invalid time rejected {'turn_time_mode': 'adaptive', 'turn_creature_seconds': '9'}",
+    "pass": true
+  },
+  {
+    "test": "invalid time rejected {'turn_time_mode': 'adaptive', 'turn_creature_seconds': '121'}",
+    "pass": true
+  },
+  {
+    "test": "invalid time rejected {'turn_time_mode': 'adaptive', 'turn_creature_seconds': '15'}",
+    "pass": true
+  },
+  {
+    "test": "invalid time rejected {'turn_time_mode': 'none', 'turn_seconds': '180'}",
+    "pass": true
+  },
+  {
+    "test": "HTTP adaptive 10",
+    "pass": true
+  },
+  {
+    "test": "sync does not replace period",
+    "pass": true
+  },
+  {
+    "test": "HTTP adaptive 6",
+    "pass": true
+  },
+  {
+    "test": "sync does not replace period",
+    "pass": true
+  },
+  {
+    "test": "HTTP adaptive 2",
+    "pass": true
+  },
+  {
+    "test": "sync does not replace period",
+    "pass": true
+  },
+  {
+    "test": "HTTP adaptive 1",
+    "pass": true
+  },
+  {
+    "test": "sync does not replace period",
+    "pass": true
+  },
+  {
+    "test": "death keeps current limit",
+    "pass": true
+  },
+  {
+    "test": "summon keeps current limit",
+    "pass": true
+  },
+  {
+    "test": "next owner computes own limit",
+    "pass": true
+  },
+  {
+    "test": "lost response retry does not start twice",
+    "pass": true
+  },
+  {
+    "test": "next host sees opponent-turn death",
+    "pass": true
+  },
+  {
+    "test": "mode snapshot none",
+    "pass": true
+  },
+  {
+    "test": "pause restores same clock none",
+    "pass": true
+  },
+  {
+    "test": "untimed status never automatically ends turn",
+    "pass": true
+  },
+  {
+    "test": "mode snapshot fixed",
+    "pass": true
+  },
+  {
+    "test": "pause restores same clock fixed",
+    "pass": true
+  },
+  {
+    "test": "expiry uses ordinary next turn fixed",
+    "pass": true
+  },
+  {
+    "test": "expiry repeat does not double advance",
+    "pass": true
+  },
+  {
+    "test": "mode snapshot adaptive",
+    "pass": true
+  },
+  {
+    "test": "pause restores same clock adaptive",
+    "pass": true
+  },
+  {
+    "test": "expiry uses ordinary next turn adaptive",
+    "pass": true
+  },
+  {
+    "test": "expiry repeat does not double advance",
+    "pass": true
+  },
+  {
+    "test": "mode snapshot legacy",
+    "pass": true
+  },
+  {
+    "test": "pause restores same clock legacy",
+    "pass": true
+  },
+  {
+    "test": "expiry uses ordinary next turn legacy",
+    "pass": true
+  },
+  {
+    "test": "expiry repeat does not double advance",
+    "pass": true
+  },
+  {
+    "test": "real start pending pauses adaptive clock",
+    "pass": true
+  },
+  {
+    "test": "pending completion keeps allocated limit",
+    "pass": true
+  },
+  {
+    "test": "expired mandatory phase blocks automatic end",
+    "pass": true
+  },
+  {
+    "test": "test_time_modes_browser.cjs",
+    "pass": true
+  },
+  {
+    "test": "test_wizard_browser.cjs",
+    "pass": true
+  },
+  {
+    "test": "test_delegation_browser.cjs",
+    "pass": true
+  }
+]

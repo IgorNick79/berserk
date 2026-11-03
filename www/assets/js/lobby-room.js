@@ -7,6 +7,12 @@
         if (text !== undefined) el.textContent = text;
         return el;
     };
+    function timeLabel(r) {
+        if(r.conditions_pending)return 'Выберет соперник';
+        const t=r.turn_time||{mode:r.turn_seconds===0?'none':'fixed',fixed_seconds:180};
+        const clock=value=>Math.floor(value/60)+':'+String(value%60).padStart(2,'0');
+        return t.mode==='none'?'Без таймера':t.mode==='adaptive'?'Адаптивное · '+clock(t.creature_seconds)+' на существо':'Фиксированное · '+clock(t.fixed_seconds)+' на ход';
+    }
     function handicap(r) {
         if(r.conditions_pending){const pending=document.createElement('span');pending.textContent='Выберет соперник';return pending;}
         const line=document.createElement('span');line.className='room-handicap';
@@ -73,7 +79,7 @@
             kind: r.kind,
             mode: r.kind,
             access: closed ? 'Закрытая партия' : 'Открытая партия',
-            timer: r.conditions_pending ? 'Выберет соперник' : r.turn_seconds === 0 ? 'Без ограничения' : r.turn_seconds === 180 ? '180 секунд на каждый ход' : 'Не указан',
+            timer: timeLabel(r),
             creator: r.creator,
             second: r.second || (closed ? 'Ожидается приглашённый игрок' : 'Место свободно'),
             creatorStatus: r.configuring ? 'Ожидает настройки партии' : started ? 'Участник партии' : awaiting ? 'Подтверждает заявку' : 'Ожидает соперника',
@@ -115,5 +121,5 @@
         actions.closest('.room-footer').classList.toggle('has-room-actions', actions.childElementCount > 0);
         if (focused) actions.querySelector('[data-room-action="' + focused + '"]:not(:disabled)')?.focus({preventScroll: true});
     }
-    window.BerserkRoom = {render, handicap};
+    window.BerserkRoom = {render, handicap, timeLabel};
 })();

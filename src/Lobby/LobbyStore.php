@@ -90,11 +90,13 @@ final class LobbyStore
         $configuring=$delegated && ($setup['configurator_id']??null)!==null && $row['state']==='awaiting_confirmation';
         $pending=$delegated && !isset($setup['mode']);
         $battle=$setup['settings']['battle']??[];
+        $time=\Berserk\Core\GameSettings::fromArray(['battle'=>$battle]);
         $handicap=($battle['handicap_enabled']??false)===true;
         $room = [
             'conditions_pending'=>$pending,
             'configuring'=>$configuring,
             'can_configure'=>$configuring && ($setup['configurator_id']??null)===$actor && $actor===(int)$row['candidate_account_id'],
+            'turn_time'=>$pending?null:['mode'=>$time->turnTimeMode(),'fixed_seconds'=>($battle['turn_time_mode']??null)===null?180:$time->battle['turn_fixed_seconds'],'creature_seconds'=>$time->battle['turn_creature_seconds']],
             'turn_seconds'=>$pending?null:($battle['turn_seconds']??180),
             'handicap'=>[
                 'gold'=>$handicap?max(0,min(5,(int)($battle['handicap_gold']??0))):0,

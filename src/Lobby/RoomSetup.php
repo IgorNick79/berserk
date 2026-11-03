@@ -21,9 +21,21 @@ final class RoomSetup
             if (!is_string($value) || !preg_match($key==='enabled'?'/\A[01]\z/D':'/\A[0-5]\z/D',$value)) throw new \DomainException('Некорректная фора сопернику.',400);
             $settings['battle'][$field]=$key==='enabled'?$value==='1':(int)$value;
         }
-        $timer=$input['turn_seconds']??'0';
-        if (!in_array($timer,['0','180'],true)) throw new \DomainException('Допустимо: без таймера или 180 секунд на ход.',400);
-        $settings['battle']['turn_seconds']=(int)$timer;
+        if (array_key_exists('turn_time_mode',$input) && !in_array($input['turn_time_mode'],['none','fixed','adaptive'],true)) throw new \DomainException('Выберите режим таймера.',400);
+        if (array_key_exists('turn_seconds',$input) && !array_key_exists('turn_time_mode',$input)) {
+            if (array_key_exists('turn_fixed_seconds',$input) || array_key_exists('turn_creature_seconds',$input)) throw new \DomainException('Укажите режим таймера.',400);
+            if (!in_array($input['turn_seconds'],['0','180'],true)) throw new \DomainException('Некорректный таймер хода.',400);
+            $settings['battle']['turn_seconds']=(int)$input['turn_seconds'];
+        } else {
+            $settings['battle']['turn_time_mode']=$input['turn_time_mode']??'fixed';
+            foreach (['turn_fixed_seconds'=>180,'turn_creature_seconds'=>30] as $field=>$default) {
+                $v=$input[$field]??(string)$default;
+                if (!is_string($v) || !preg_match('/\A[0-9]{1,3}\z/D',$v)) throw new \DomainException('Некорректное время хода.',400);
+                $settings['battle'][$field]=(int)$v;
+            }
+            $settings['battle']['turn_seconds']=$settings['battle']['turn_time_mode']==='none'?0:($settings['battle']['turn_time_mode']==='fixed'?$settings['battle']['turn_fixed_seconds']:180);
+            if (array_key_exists('turn_seconds',$input) && $input['turn_seconds']!==(string)$settings['battle']['turn_seconds']) throw new \DomainException('Несогласованные настройки времени.',400);
+        }
         $settings['draft']['type']=$mode==='solomon'?'solomon':'grid';
         $fields=[
             'draft'=>['draft_pick_mode'=>'pick_mode','draft_grid_mode'=>'grid_mode','draft_auto_side'=>'auto_side','boosters'=>'boosters','stack_size'=>'stack_size','draft_timer_mode'=>'timer_mode','draft_timer_total'=>'timer_total','draft_timer_action'=>'timer_action'],
@@ -98,7 +110,7 @@ final class RoomSetup
         $s=GameSettings::fromArray($setup['settings']);
         if (!is_bool($s->battle['handicap_enabled'])) throw new \DomainException('Некорректная фора сопернику.',400);
         foreach (['gold','silver'] as $currency) if (!is_int($s->battle['handicap_'.$currency]) || $s->battle['handicap_'.$currency]<0 || $s->battle['handicap_'.$currency]>5) throw new \DomainException('Некорректная фора сопернику.',400);
-        if (!in_array($s->battle['turn_seconds'],[0,180],true)) throw new \DomainException('Некорректный таймер хода.',400);
+        if (($timerError=$s->validateTurnTime())!==null) throw new \DomainException($timerError,400);
         if ($s->draftType()!==($mode==='solomon'?'solomon':'grid')) throw new \DomainException('Несовместимый вид драфта.',400);
         if (!in_array($s->draft['pick_mode'],['manual','random'],true) || !in_array($s->draft['auto_side'],['both','host','player'],true)) throw new \DomainException('Некорректный автовыбор.',400);
         $error = match ($mode) {

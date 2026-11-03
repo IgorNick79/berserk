@@ -1,6 +1,34 @@
 (function () {
     "use strict";
 
+    document.querySelectorAll("[data-settings-stepper]").forEach(function (stepper) {
+        if(stepper.dataset.stepperReady)return;stepper.dataset.stepperReady="1";
+        var input = stepper.querySelector("[data-stepper-input]");
+        var output = stepper.querySelector("[data-stepper-output]");
+        var min = parseInt(stepper.dataset.min || "0", 10);
+        var max = parseInt(stepper.dataset.max || "0", 10);
+        var step = parseInt(stepper.dataset.step || "1", 10);
+        var unit = input ? input.dataset.unit || "" : "";
+
+        function render(value) {
+            value = Math.max(min, Math.min(max, value));
+            input.value = String(value);
+            output.textContent = stepper.hasAttribute("data-stepper-clock") ? Math.floor(value/60)+":"+String(value%60).padStart(2,"0") : unit ? value + " " + unit : String(value);
+            stepper.querySelector("[data-stepper-action=down]").disabled=value<=min;stepper.querySelector("[data-stepper-action=up]").disabled=value>=max;
+        }
+
+        stepper.addEventListener("click", function (event) {
+            var button = event.target.closest("[data-stepper-action]");
+            if (!button || !input) return;
+
+            var value = parseInt(input.value || "0", 10);
+            render(value + (button.dataset.stepperAction === "up" ? step : -step));
+            input.dispatchEvent(new Event("input",{bubbles:true}));
+        });
+        render(parseInt(input.value,10));
+    });
+
+
     document.querySelectorAll("[data-settings-form='draft']").forEach(function (form) {
     if (form.dataset.settingsReady) return;
     form.dataset.settingsReady="1";
@@ -24,29 +52,6 @@
         if (event.target.matches("input[name='draft_timer_mode'], [data-settings-toggle='auto-draft']")) {
             syncDependentSections();
         }
-    });
-
-    form.querySelectorAll("[data-settings-stepper]").forEach(function (stepper) {
-        var input = stepper.querySelector("[data-stepper-input]");
-        var output = stepper.querySelector("[data-stepper-output]");
-        var min = parseInt(stepper.dataset.min || "0", 10);
-        var max = parseInt(stepper.dataset.max || "0", 10);
-        var step = parseInt(stepper.dataset.step || "1", 10);
-        var unit = input ? input.dataset.unit || "" : "";
-
-        function render(value) {
-            value = Math.max(min, Math.min(max, value));
-            input.value = String(value);
-            output.textContent = unit ? value + " " + unit : String(value);
-        }
-
-        stepper.addEventListener("click", function (event) {
-            var button = event.target.closest("[data-stepper-action]");
-            if (!button || !input) return;
-
-            var value = parseInt(input.value || "0", 10);
-            render(value + (button.dataset.stepperAction === "up" ? step : -step));
-        });
     });
 
     form.querySelectorAll("[data-booster-config]").forEach(function (config) {

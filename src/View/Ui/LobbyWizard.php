@@ -24,7 +24,7 @@ final class LobbyWizard
         if ($room===null) $html.='<div class="wizard-delegation"><label class="wizard-option"><input type="radio" name="setup_mode" value="opponent"><span><b>Решает противник</b><small>Создайте комнату, а выбор режима и настроек передайте сопернику</small></span></label></div>';
         $html.='</section><section data-page="1" hidden><fieldset class="wizard-common-options" data-wizard-access><h2>Доступ к партии</h2><div class="wizard-options"><label class="wizard-option"><input type="radio" name="access" value="open" checked><span>Открытая партия</span></label><label class="wizard-option"><input type="radio" name="access" value="closed"><span>🔒 Закрытая партия</span></label></div>'
             .'<label class="wizard-invite" hidden>Никнейм приглашённого игрока<input name="invited_login" autocomplete="off" minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]{3,32}"><small>Только этот игрок сможет запросить участие. Создатель подтверждает заявку.</small></label>'
-            .'</fieldset><fieldset class="wizard-common-options" data-wizard-game-options><h2>Таймер хода</h2><div class="wizard-options"><label class="wizard-option"><input type="radio" name="turn_seconds" value="0" checked><span>Без ограничения времени</span></label><label class="wizard-option"><input type="radio" name="turn_seconds" value="180"><span>180 секунд на каждый ход</span></label></div><p>Ограничение относится к отдельному ходу, а не ко всей партии.</p></section><section data-page="2" hidden><h2 data-mode-title>Настройки режима</h2>';
+            .'</fieldset><fieldset class="wizard-common-options" data-wizard-game-options>'.self::timeFields().'</section><section data-page="2" hidden><h2 data-mode-title>Настройки режима</h2>';
         $html=str_replace('</section><section data-page="2"',self::handicapFields().'</fieldset></section><section data-page="2"',$html);
         foreach (['sealed','draft','solomon','lucktest','system'] as $mode) {
             $state=new GameState(0,$room['creator_id']??$actor,$room===null?0:$actor);$state->mode=$mode==='solomon'?'draft':$mode;
@@ -60,6 +60,16 @@ final class LobbyWizard
             $html=str_replace('<div class="wizard-scroll">','<input type="hidden" name="version" value="'.(int)$room['version'].'"><input type="hidden" name="candidate_request_id" value="'.$e($room['candidate_request_id']).'"><div class="wizard-scroll">',$html);
         }
         return $html;
+    }
+
+    private static function timeFields(): string
+    {
+        $html='<h2>Таймер хода</h2><div class="wizard-options">';
+        foreach (['none'=>'Без таймера','fixed'=>'Фиксированное время','adaptive'=>'Адаптивное время'] as $key=>$label) $html.='<label class="wizard-option"><input type="radio" name="turn_time_mode" value="'.$key.'"'.($key==='fixed'?' checked':'').'><span>'.$label.'</span></label>';
+        $screen=new SettingsScreen();
+        return $html.'</div><div data-turn-time-fields="fixed">'.$screen->stepper('turn_fixed_seconds','Время на ход',180,60,600,15,'',true).'</div>'
+            .'<div data-turn-time-fields="adaptive" hidden>'.$screen->stepper('turn_creature_seconds','Секунд на существо',30,10,120,10,'',true)
+            .'<p class="settings-hint">В начале каждого хода время рассчитывается по количеству живых существ игрока. Чем меньше существ осталось, тем меньше времени на ход.</p></div>';
     }
 
     private static function handicapFields(): string

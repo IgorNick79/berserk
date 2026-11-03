@@ -10,7 +10,7 @@ final class TurnTimer
 
     public static function enabled(GameState $state): bool
     {
-        return ($state->settings->battle['turn_seconds'] ?? self::LIMIT_SECONDS) !== 0;
+        return $state->settings->turnTimeMode() !== 'none';
     }
 
     /** Called only by the turn lifecycle, never by load/snapshot. */
@@ -24,14 +24,28 @@ final class TurnTimer
         $previous = $state->battle['turn_timer'] ?? null;
         // Repeated lifecycle continuation must not allocate another period.
         if ($previous !== null && $previous['owner'] === $owner) return;
+        $limit=self::LIMIT_SECONDS;
+        if (($state->settings->battle['turn_time_mode']??null)!==null) {
+            if ($state->settings->turnTimeMode()==='fixed') $limit=$state->settings->battle['turn_fixed_seconds'];
+            else {
+                $count=0;
+                foreach ($state->cards as $card) if ($card->owner===$owner && !$card->dying && $card->isAlive()
+                    && in_array($card->zone,[CardInstance::ZONE_FIELD,CardInstance::ZONE_FLYING],true)
+                    && in_array($card->type,['creature','fly'],true)) $count++;
+                $limit=$count*$state->settings->battle['turn_creature_seconds'];
+            }
+        }
+        // Elimination belongs to the existing game rules; never manufacture a zero-length period.
+        if ($limit<=0) return;
         $state->battle['turn_timer'] = [
             'period_id' => ($previous['period_id'] ?? 0) + 1,
             'owner' => $owner,
             'status' => 'paused',
-            'remaining_seconds' => self::LIMIT_SECONDS,
+            'remaining_seconds' => $limit,
             'anchor_at' => null,
             'pause_reason' => 'start_phase',
         ];
+        if (($state->settings->battle['turn_time_mode']??null)!==null) $state->battle['turn_timer']['limit_seconds']=$limit;
     }
 
     public static function settle(GameState $state, int $now): void
@@ -114,8 +128,9 @@ final class TurnTimer
         foreach (['period_id','owner','status','remaining_seconds','anchor_at','pause_reason'] as $key) {
             if (!array_key_exists($key, $t)) return false;
         }
-        if (!is_int($t['period_id']) || $t['period_id'] < 1 || !in_array($t['owner'], ['host','player'], true)
-            || !is_int($t['remaining_seconds']) || $t['remaining_seconds'] < 0 || $t['remaining_seconds'] > self::LIMIT_SECONDS
+        $limit=$t['limit_seconds']??self::LIMIT_SECONDS;
+        if (!is_int($limit) || $limit<1 || !is_int($t['period_id']) || $t['period_id'] < 1 || !in_array($t['owner'], ['host','player'], true)
+            || !is_int($t['remaining_seconds']) || $t['remaining_seconds'] < 0 || $t['remaining_seconds'] > $limit
             || !in_array($t['status'], ['running','paused','expired'], true)
             || ($t['pause_reason'] !== null && (!is_string($t['pause_reason']) || $t['pause_reason'] === ''))) return false;
         if ($t['status'] === 'running') return is_int($t['anchor_at']) && $t['anchor_at'] > 0 && $t['pause_reason'] === null;
