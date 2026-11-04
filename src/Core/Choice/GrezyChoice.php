@@ -78,7 +78,7 @@ final class GrezyChoice implements ChoiceHandlerInterface
             }
             $groups[] = [
                 'name'  => 'own_id',
-                'label' => 'Выберите вашу карту для защиты на 1',
+                'label' => '',
                 'items' => $items,
             ];
         }
@@ -87,7 +87,7 @@ final class GrezyChoice implements ChoiceHandlerInterface
 
         return new PanelSpec(
             title: 'Грезы Архаля (цена ' . $price . ')' . (!empty($pg['enemies'])
-                ? ' : выберите карту противника для отравления на 1' : ''),
+                ? ' : выберите карту противника для отравления на 1' : ' : выберите вашу карту для защиты на 1'),
             form: [
                 'type'   => 'multi_radio',
                 'groups' => $groups,
