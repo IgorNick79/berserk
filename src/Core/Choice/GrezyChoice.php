@@ -86,8 +86,9 @@ final class GrezyChoice implements ChoiceHandlerInterface
         $roleParam = $role === 'host' ? 'first' : 'second';
 
         return new PanelSpec(
-            title: 'Грезы Архаля (цена ' . $price . ')' . (!empty($pg['enemies'])
-                ? ' : выберите карту противника для отравления на 1' : ' : выберите вашу карту для защиты на 1'),
+            title: !empty($pg['enemies'])
+                ? 'Грезы Архаля (цена ' . $price . ') : выберите карту противника для отравления на 1'
+                : 'Защита +1',
             form: [
                 'type'   => 'multi_radio',
                 'groups' => $groups,
