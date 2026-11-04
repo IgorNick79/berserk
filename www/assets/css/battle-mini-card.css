@@ -19,6 +19,7 @@
 :is(.battle-page,.draft-page) .mini-card-back{position:absolute;inset:20%;width:60%;height:60%;object-fit:contain;pointer-events:none}
 
 :is(.battle-page,.draft-page) .battle-mini-card.mini-hidden{background:#56504a!important;color:#eee}
+:is(.battle-page,.draft-page) .battle-mini-card.mini-hidden.mini-enemy{box-shadow:inset 0 0 0 1px #b95353}
 :is(.battle-page,.draft-page) .battle-mini-card.mini-closed{opacity:1;transform:translateY(2px) scale(.9);transform-origin:center center}
 :is(.battle-page,.draft-page) .battle-mini-card.mini-closed .mini-art{filter:saturate(.3) brightness(.88)}
 :is(.battle-page,.draft-page) .battle-mini-card.mini-closed::after{content:"";position:absolute;inset:5px;border-radius:4px;background:#fff;opacity:.3;z-index:3;pointer-events:none}
