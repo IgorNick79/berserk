@@ -41,8 +41,11 @@ final class ActiveCardEffects
             // Preserve zero/net-zero records: a conditional effect may still carry meaning.
             $label=$stat==='execute'?'Добивание':CardStats::statLabel($stat);
             if($stat==='execute')unset($q['expire'],$q['timing']);
-            $shortLabel = $stat === 'action_range'
-                || ($stat === 'damage_reduction' && ($q['expire'] ?? null) === 'end_of_opponent_turn');
+            if ($stat === 'damage_reduction' && ($q['expire'] ?? null) === 'end_of_opponent_turn') {
+                $rows[] = (-$value) . ' от немагических атак';
+                continue;
+            }
+            $shortLabel = $stat === 'action_range';
             $rows[] = $label . ' ' . ($value > 0 ? '+' : '') . $value . ($shortLabel ? '' : self::details($q));
         }
         $names = ['stun'=>'Оглушение', 'spider_web'=>'Сеть', 'fire'=>'Огонь', 'hunt'=>'Охота',

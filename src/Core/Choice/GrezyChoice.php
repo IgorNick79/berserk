@@ -88,7 +88,7 @@ final class GrezyChoice implements ChoiceHandlerInterface
         return new PanelSpec(
             title: !empty($pg['enemies'])
                 ? 'Грезы Архаля (цена ' . $price . ') : выберите карту противника для отравления на 1'
-                : 'Защита +1',
+                : '−1 от немагических атак',
             form: [
                 'type'   => 'multi_radio',
                 'groups' => $groups,

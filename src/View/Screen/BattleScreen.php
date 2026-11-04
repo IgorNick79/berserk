@@ -321,6 +321,11 @@ final class BattleScreen
             }
             $key = (string) ($action['key'] ?? ($action['type'] ?? ''));
             if ($key === $actionKey) {
+                if (($action['condition']['type'] ?? '') === 'ally_price_near') {
+                    return !empty($card->flags['moved_this_turn'])
+                        && empty($card->flags['shot_used_this_turn'])
+                        && CardStats::hasAllyPriceNear($state, $card, (int) $action['condition']['min']);
+                }
                 return true;
             }
         }

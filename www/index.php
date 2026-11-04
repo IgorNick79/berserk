@@ -110,7 +110,7 @@ function ajaxCommandPayload(): ?array
     $payload = [];
     $commandType = requestParamString($_POST, 'cmd', 64) ?? '';
     $idListCommands = [
-        'choose_multi_discharge', 'choose_multi_heal', 'choose_row_spell_targets',
+        'choose_multi_discharge', 'choose_multi_heal', 'choose_row_spell_targets', 'choose_particle_pick',
         'choose_anubisar_chain', 'choose_incarnation_wound', 'choose_intrigue_start',
     ];
     $excluded = [
