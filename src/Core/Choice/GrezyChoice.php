@@ -78,7 +78,7 @@ final class GrezyChoice implements ChoiceHandlerInterface
             }
             $groups[] = [
                 'name'  => 'own_id',
-                'label' => 'Выбери своё существо: урон от немагических атак −1',
+                'label' => 'Выберите вашу карту для защиты на 1',
                 'items' => $items,
             ];
         }
