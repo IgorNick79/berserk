@@ -96,8 +96,16 @@ final class InfoPanel
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
         $turnInstant = !$inCombat && ($instantWindow
             || ($state->battle['turn_phase']['sub']['parent_type'] ?? '') === 'instants');
+        $prophecy = $state->battle['pending_prophecy'] ?? null;
+        $inProphecy = $prophecy !== null || !empty($state->battle['pending_grezy']);
         $contextTitle = $inCombat ? 'Сражение' : ($turnInstant ? 'Инстант' : 'Информация');
         $contextIcon = $inCombat ? 'combat.png' : 'cell_info.svg';
+        if ($inProphecy) {
+            $count = (int) ($prophecy['meta']['requested_count'] ?? $prophecy['meta']['count'] ?? 1);
+            $contextTitle = 'Пророчество - ' . $count;
+            $contextIcon = 'prophecy_icon.svg';
+            $combatKey = 'prophecy:' . ($prophecy['source_id'] ?? $state->battle['pending_grezy']['attacker_id']);
+        }
         $contextBody = $instantWindow
             ? '<section class="info-panel-instants" aria-label="Инстанты">' . $body . '</section>'
             : $body;

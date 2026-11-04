@@ -62,12 +62,10 @@ final class GrezyChoice implements ChoiceHandlerInterface
             }
             $groups[] = [
                 'name'  => 'enemy_id',
-                'label' => 'Враг для яда 1',
+                'label' => 'Выбери существо противника: отравление 1',
                 'items' => $items,
             ];
-        }
-
-        if (!empty($pg['allies'])) {
+        } elseif (!empty($pg['allies'])) {
             $items = [];
             foreach ($pg['allies'] as $tid) {
                 $tc = $state->getCard($tid);
@@ -81,7 +79,7 @@ final class GrezyChoice implements ChoiceHandlerInterface
             }
             $groups[] = [
                 'name'  => 'own_id',
-                'label' => 'Своё — защита от немагических атак',
+                'label' => 'Выбери своё существо: урон от немагических атак −1',
                 'items' => $items,
             ];
         }
@@ -98,8 +96,8 @@ final class GrezyChoice implements ChoiceHandlerInterface
                     'game'     => $state->gameId,
                     'cmd'      => 'grezy_pick',
                 ],
-                'submit' => 'Подтвердить',
-                'cancel' => $baseUrl . '&cmd=cancel_pending',
+                'submit' => !empty($pg['enemies']) ? 'Отравить' : 'Усилить',
+                'cancel' => empty($pg['chosen_enemy']) ? $baseUrl . '&cmd=cancel_pending' : null,
             ],
         );
     }

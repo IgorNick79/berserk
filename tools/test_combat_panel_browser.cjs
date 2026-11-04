@@ -13,6 +13,7 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
  const html=read('templates/screen/battle.tpl').replace(/<script[\s\S]*?<\/script>/g,'').replace(/<link[^>]+>/g,'').replace(/{{(\w+)}}/g,(_,k)=>initial[k]||'');
  await page.setContent('<style>'+read('www/assets/css/global.css')+'\n'+read('www/assets/css/battle-mini-card.css')+'</style>'+html);
  await page.evaluate(()=>{document.documentElement.classList.add('battle-page');document.body.classList.add('battle-page');window.uiRequests=[];window.fetch=(url,opts)=>{uiRequests.push({url:String(url),body:opts?.body||''});return new Promise(()=>{});};});
+ await page.addScriptTag({content:read('www/assets/js/panel-secondary-view.js')});
  await page.addScriptTag({content:read('www/assets/js/battle-ui.js')});
  let sync=read('www/assets/js/battle-sync.js');const last=sync.lastIndexOf('    requestSnapshot(false);');sync=sync.slice(0,last)+'    window.testSnapshot = data => applySnapshot(data, uiRevision);'+sync.slice(last+'    requestSnapshot(false);'.length);
  await page.addScriptTag({content:sync.replace('var syncUrl = script.dataset.syncUrl || "";','var syncUrl = "https://combat.test/";')});
@@ -40,13 +41,15 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
  await update('normal',1);assert(await card.isHidden(),'Closed state survives polling');
  await clickCard(1);await update('normal',1);assert(await card.isVisible(),'Same card can be reopened');
  await close.focus();await page.keyboard.press('Enter');assert(await card.isHidden(),'Keyboard close');
- for(const stage of ['combat','pending','instant','instant_result','message']){
+ const stages=process.argv.includes('--prophecy') ? ['prophecy','grezy'] : ['combat','pending','prophecy','grezy','instant','instant_result','message'];
+ for(const stage of stages){
   await clickCard(1);await update('normal',1);assert(await card.isVisible(),'Normal inspection before '+stage);
   await update(stage,1);
   const eventPanel=(stage==='instant'||stage==='instant_result')?page.locator('.info-panel-instants'):context;
   assert(await card.isHidden()&&await eventPanel.isVisible(),'Priority closes old creature: '+stage);
   if(stage!=='instant'&&stage!=='instant_result'){
-   assert(await context.locator('.panel-card-heading').innerText()==='Информация','Information heading');
+   const title=stage==='combat'?'Сражение':(['prophecy','grezy'].includes(stage)?'Пророчество - 1':'Информация');
+   assert(await context.locator('.panel-card-heading').innerText()===title,'Heading for '+stage);
    assert(await context.locator('.panel-information-icon').evaluate(e=>e.complete&&e.naturalWidth>0),'Provided icon loads');
   }
   assert(await page.locator('.info-panel-footer').isVisible(),'Priority never hides footer');

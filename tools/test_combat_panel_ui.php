@@ -11,6 +11,14 @@ function combatPanelFixture(string $stage, string $viewer, int $selection): arra
         'cell_marker'=>['row'=>3,'col'=>1],'confirmed'=>[],
     ];
     if ($stage === 'pending') $s->battle['pending_ui_test'] = ['owner'=>$viewer];
+    if ($stage === 'prophecy') $s->battle['pending_prophecy'] = [
+        'owner'=>$viewer,'source_id'=>1,'source_ukid'=>$s->getCard(1)->ukid,
+        'shown_ukids'=>[],'meta'=>['count'=>1],'actions'=>[['label'=>'Продолжить','cmd'=>'grezy_continue']],
+    ];
+    if ($stage === 'grezy') $s->battle['pending_grezy'] = [
+        'attacker_id'=>$viewer === 'host' ? 1 : 2,'shown_ukid'=>$s->getCard(1)->ukid,
+        'price'=>3,'enemies'=>[$viewer === 'host' ? 2 : 1],'allies'=>[],
+    ];
     if ($stage === 'instant') $s->battle['turn_instant_stack'] = ['state'=>'ordering','priority'=>'host','phase'=>'turn','stack'=>[],'participants'=>['host','player']];
     if ($stage === 'instant_result') $s->battle['turn_instant_result'] = ['summary'=>[]];
     if ($stage === 'message') $s->battle['any_death_messages'] = [['message'=>'Важная информация о результате']];

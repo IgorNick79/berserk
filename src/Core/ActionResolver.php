@@ -2973,47 +2973,34 @@ final class ActionResolver
             return Result::error('Не ваш выбор');
         }
 
-        $enemyId = (int) $cmd->get('enemy_id', 0);
-        $ownId   = (int) $cmd->get('own_id', 0);
-
-        // Валидация врага
+        $log = [];
         if (!empty($pg['enemies'])) {
-            if ($enemyId <= 0 || !in_array($enemyId, $pg['enemies'], true)) {
+            $enemyId = (int) $cmd->get('enemy_id', 0);
+            $enemy = $this->state->getCard($enemyId);
+            if (!$enemy || !in_array($enemyId, $pg['enemies'], true)) {
                 return Result::error('Выбери врага');
             }
-        } else {
-            $enemyId = 0;
+
+            $this->engine->applyPoison($enemy, 1, $attacker->owner);
+            $log[] = 'poison:' . $enemyId;
+            if (!empty($pg['allies'])) {
+                $pg['enemies'] = [];
+                $pg['chosen_enemy'] = $enemyId;
+                $this->state->battle['pending_grezy'] = $pg;
+                $this->state->bumpVersion();
+                return Result::ok($log);
+            }
         }
 
-        // Валидация союзника
         if (!empty($pg['allies'])) {
-            if ($ownId <= 0 || !in_array($ownId, $pg['allies'], true)) {
+            $ownId = (int) $cmd->get('own_id', 0);
+            if (!in_array($ownId, $pg['allies'], true)) {
                 return Result::error('Выбери своё существо');
             }
-        } else {
-            $ownId = 0;
+            $pg['chosen_own'] = $ownId;
         }
 
-        $pg['chosen_enemy'] = $enemyId ?: null;
-        $pg['chosen_own']   = $ownId ?: null;
-
-        return $this->applyGrezy($pg);
-    }
-
-    private function applyGrezy(array $pg): Result
-    {
-        $attacker = $this->state->getCard($pg['attacker_id']);
         unset($this->state->battle['pending_grezy']);
-
-        $log = [];
-
-        if (!empty($pg['chosen_enemy'])) {
-            $enemy = $this->state->getCard($pg['chosen_enemy']);
-            if ($enemy) {
-                $this->engine->applyPoison($enemy, 1, $attacker->owner);
-                $log[] = 'poison:' . $enemy->instanceId;
-            }
-        }
 
         if (!empty($pg['chosen_own'])) {
             $ally = $this->state->getCard($pg['chosen_own']);
