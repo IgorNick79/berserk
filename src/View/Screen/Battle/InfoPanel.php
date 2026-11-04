@@ -20,6 +20,7 @@ use Berserk\View\Template;
 use Berserk\View\Ui\Form;
 use Berserk\View\Ui\TaskCard;
 use Berserk\View\Ui\Panel;
+use Berserk\View\Ui\PanelSpec;
 use Berserk\View\Ui\CardButton;
 
 use Berserk\View\Screen\Battle\Choice\RadioChoice;
@@ -736,33 +737,35 @@ final class InfoPanel
             $pa     = $strike['pending_auto'];
             $source = $state->getCard($pa['source_id']);
             $sourceInfo = $source ? ($cardsInfo[$source->ukid] ?? null) : null;
-            $sourceName = $sourceInfo ? htmlspecialchars($sourceInfo['name'], ENT_QUOTES) : '?';
-
             if ($source && $playerKey === $source->owner) {
-                $buttons = '';
+                $items = [];
                 foreach ($pa['candidates'] as $tid) {
                     $tc = $state->getCard($tid);
                     if (!$tc) continue;
-                    $ti = $cardsInfo[$tc->ukid] ?? [];
-                    $url = "{$baseUrl}&cmd=choose_auto_target&target_id={$tid}";
-                    $buttons .= CardButton::battle(
-                        $this->tpl,
-                        $tc,
-                        $ti,
-                        $url,
-                        $playerKey,
-                        ['class' => 'auto-target']
-                    );
+                    $name = $cardsInfo[$tc->ukid]['name'] ?? $tc->ukid;
+                    $items[] = [
+                        'value' => $tid,
+                        'label_html' => htmlspecialchars($name, ENT_QUOTES) . ' '
+                            . \Berserk\View\Ui\Coords::render($tc->row, $tc->col, $playerKey, $tc->owner),
+                    ];
                 }
-                $skipUrl = "{$baseUrl}&cmd=choose_auto_target&target_id=0";
-                $buttons .= '<a class="button skip" href="' . $skipUrl . '">Пропустить</a>';
 
                 $effectName = $pa['effect']['name'] ?? 'Выстрел';
-
-                $contentHtml = $diceHtml . '<div class="auto-choice">'
-                    . '<p><b>' . $sourceName . '</b> — ' . htmlspecialchars($effectName, ENT_QUOTES) . ':</p>'
-                    . '<div class="auto-choice-buttons">' . $buttons . '</div>'
-                    . '</div>';
+                $choice = Panel::render(new PanelSpec(
+                    title: ($sourceInfo['name'] ?? '?') . ' — ' . $effectName,
+                    form: [
+                        'name' => 'target_id',
+                        'items' => $items,
+                        'hidden' => [
+                            ($this->role === 'host' ? 'first' : 'second') => '',
+                            'game' => $state->gameId,
+                            'cmd' => 'choose_auto_target',
+                        ],
+                    ],
+                ));
+                $skipUrl = "{$baseUrl}&cmd=choose_auto_target&target_id=0";
+                $contentHtml = $diceHtml . '<div class="auto-choice">' . $choice
+                    . '<a class="button skip" href="' . $skipUrl . '">Пропустить</a></div>';
             } else {
                 $contentHtml = $diceHtml . '<p class="wait">Ожидание выбора цели...</p>';
             }

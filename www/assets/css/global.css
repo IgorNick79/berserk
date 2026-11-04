@@ -908,23 +908,12 @@ body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background:
 }
 
 .auto-choice {
+    color: #222;
     padding: 15px;
     background: #eef;
     border-left: 3px solid #369;
     border-radius: 4px;
     margin: 15px 0;
-}
-
-.auto-choice-buttons {
-    margin-top: 10px;
-}
-
-.auto-choice-buttons .button {
-    margin: 3px;
-}
-
-.auto-choice-buttons .button.skip {
-    background: #888;
 }
 
 .hunt {

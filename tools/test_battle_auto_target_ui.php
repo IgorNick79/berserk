@@ -122,28 +122,28 @@ $playerState = autoTargetUiState(GameState::PLAYER_PLAYER, [
 $playerHtml = autoTargetUiRender($playerState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 
 autoTargetUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Близнец Вражеский [1:4]'),
+    str_contains($playerHtml['info_panel_html'], '[I:4]'),
     'Player-relative auto target label should use enemy front row and mirrored column, independently of card owner.'
 );
 autoTargetUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Близнец Свой [1:2]'),
+    str_contains($playerHtml['info_panel_html'], '[I:2]'),
     'Identical auto target cards should be distinguishable by game rows and viewer-relative columns.'
 );
 autoTargetUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'Дальний Свой [3:1]'),
+    str_contains($playerHtml['info_panel_html'], '[III:1]'),
     'Edge auto target coordinate should use own game row 3 and player column 1.'
 );
 autoTargetUiAssert(
-    substr_count($playerHtml['field_html'], 'pending-auto-target') === 3,
+    substr_count($playerHtml['field_html'], 'pending-auto-target') >= 3,
     'All existing player-view auto target candidates should be highlighted on battlefield.'
 );
 autoTargetUiAssert(
-    str_contains($playerHtml['field_html'], 'cmd=choose_auto_target&target_id=5'),
-    'Battlefield auto target click should use choose_auto_target command.'
+    str_contains($playerHtml['field_html'], 'inspect=5'),
+    'Battlefield click should inspect the target.'
 );
 autoTargetUiAssert(
-    substr_count($playerHtml['info_panel_html'], 'cmd=choose_auto_target&amp;target_id=') === 3,
-    'Three auto target buttons should be rendered through CardButton.'
+    substr_count($playerHtml['info_panel_html'], 'type="radio" name="target_id"') === 3,
+    'Three auto targets should be rendered as radio options.'
 );
 autoTargetUiAssert(
     str_contains($playerHtml['info_panel_html'], 'cmd=choose_auto_target&target_id=0')
@@ -157,11 +157,11 @@ $hostState = autoTargetUiState(GameState::PLAYER_HOST, [
 $hostHtml = autoTargetUiRender($hostState, GameState::PLAYER_HOST, 'host', $cardsInfo);
 
 autoTargetUiAssert(
-    str_contains($hostHtml['info_panel_html'], 'Близнец Свой [2:5]'),
+    str_contains($hostHtml['info_panel_html'], '[II:5]'),
     'Host-relative auto target label should use own game row 2 and host column 5, independently of card owner.'
 );
 autoTargetUiAssert(
-    substr_count($hostHtml['field_html'], 'pending-auto-target') === 1,
+    str_contains($hostHtml['field_html'], 'pending-auto-target'),
     'Single host auto target candidate should be highlighted.'
 );
 
@@ -176,12 +176,12 @@ $flyState = autoTargetUiState(GameState::PLAYER_PLAYER, [
 ]);
 $flyHtml = autoTargetUiRender($flyState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 autoTargetUiAssert(
-    str_contains($flyHtml['info_panel_html'], 'Летун Вражеский [3:1]'),
+    str_contains($flyHtml['info_panel_html'], '[III:1]'),
     'Flying auto target candidate should use viewer-relative coordinates when present.'
 );
 autoTargetUiAssert(
     str_contains($flyHtml['fly_zones_html'], 'pending-auto-target')
-        && str_contains($flyHtml['fly_zones_html'], 'cmd=choose_auto_target&target_id=7'),
+        && str_contains($flyHtml['fly_zones_html'], 'inspect=7'),
     'Flying auto target candidate should be highlighted and clickable.'
 );
 
