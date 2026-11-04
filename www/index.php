@@ -1404,7 +1404,7 @@ $screenHtml=\Berserk\View\Ui\GameMenu::render($menuScreen,$account,GameTransport
 
 if (in_array($screenName,['battle','game_over'],true)
     && $historyRuntime->journals($state->gameId) && $historyRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION)===$playerKey) {
-    $screenHtml .= '<link rel="stylesheet" href="/assets/css/battle-journal.css?v=4">'
+    $screenHtml .= '<link rel="stylesheet" href="/assets/css/battle-journal.css?v=5">'
         . '<aside id="battle-journal" class="battle-journal" hidden aria-label="Журнал боя">'
         . '<header class="panel-card-heading"><h3 class="panel-card-title">Журнал боя</h3><button type="button" data-journal-close aria-label="Закрыть журнал">×</button></header>'
         . '<p data-journal-notice>Экспериментальная неполная история.</p>'
