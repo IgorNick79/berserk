@@ -51,7 +51,6 @@ final class ProphecyProcessor
             'ukids' => $ukids,
             'meta'  => [
                 'count'        => count($shown),
-                'requested_count' => $count,
                 'all_elite'    => $allElite,
                 'all_ordinary' => $allOrdinary,
                 'first_price'  => $firstPrice,

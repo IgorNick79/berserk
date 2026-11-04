@@ -48,7 +48,7 @@ for(const width of [1600,800,375])for(const viewer of ['host','player']){
   const eventPanel=(stage==='instant'||stage==='instant_result')?page.locator('.info-panel-instants'):context;
   assert(await card.isHidden()&&await eventPanel.isVisible(),'Priority closes old creature: '+stage);
   if(stage!=='instant'&&stage!=='instant_result'){
-   const title=stage==='combat'?'Сражение':(['prophecy','grezy'].includes(stage)?'Пророчество - 1':'Информация');
+   const title=stage==='combat'?'Сражение':(['prophecy','grezy'].includes(stage)?'Пророчество':'Информация');
    assert(await context.locator('.panel-card-heading').innerText()===title,'Heading for '+stage);
    assert(await context.locator('.panel-information-icon').evaluate(e=>e.complete&&e.naturalWidth>0),'Provided icon loads');
   }

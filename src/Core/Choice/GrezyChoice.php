@@ -43,7 +43,6 @@ final class GrezyChoice implements ChoiceHandlerInterface
             );
         }
 
-        $shownName = $cardsInfo[$pg['shown_ukid']]['name'] ?? '?';
         $price     = (int) $pg['price'];
 
         $groups = [];
@@ -62,7 +61,7 @@ final class GrezyChoice implements ChoiceHandlerInterface
             }
             $groups[] = [
                 'name'  => 'enemy_id',
-                'label' => 'Выбери существо противника: отравление 1',
+
                 'items' => $items,
             ];
         } elseif (!empty($pg['allies'])) {
@@ -87,7 +86,8 @@ final class GrezyChoice implements ChoiceHandlerInterface
         $roleParam = $role === 'host' ? 'first' : 'second';
 
         return new PanelSpec(
-            title: $attName . ': «' . $shownName . '» (цена ' . $price . ')',
+            title: 'Грезы Архаля (цена ' . $price . ')' . (!empty($pg['enemies'])
+                ? ' : выберите карту противника для отравления на 1' : ''),
             form: [
                 'type'   => 'multi_radio',
                 'groups' => $groups,

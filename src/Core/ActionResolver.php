@@ -2921,7 +2921,7 @@ final class ActionResolver
         // Враги ценой X
         $enemies = [];
         foreach ($this->state->cards as $c) {
-            if ($c->owner === $attacker->owner) continue;
+            if ($c->owner === $attacker->owner || !$c->revealed) continue;
             if ($c->zone !== CardInstance::ZONE_FIELD
                 && $c->zone !== CardInstance::ZONE_FLYING) continue;
             if ($c->dying || $c->hp <= 0) continue;
@@ -2977,7 +2977,7 @@ final class ActionResolver
         if (!empty($pg['enemies'])) {
             $enemyId = (int) $cmd->get('enemy_id', 0);
             $enemy = $this->state->getCard($enemyId);
-            if (!$enemy || !in_array($enemyId, $pg['enemies'], true)) {
+            if (!$enemy || !$enemy->revealed || !in_array($enemyId, $pg['enemies'], true)) {
                 return Result::error('Выбери врага');
             }
 

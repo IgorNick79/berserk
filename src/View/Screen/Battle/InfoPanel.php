@@ -101,8 +101,7 @@ final class InfoPanel
         $contextTitle = $inCombat ? 'Сражение' : ($turnInstant ? 'Инстант' : 'Информация');
         $contextIcon = $inCombat ? 'combat.png' : 'cell_info.svg';
         if ($inProphecy) {
-            $count = (int) ($prophecy['meta']['requested_count'] ?? $prophecy['meta']['count'] ?? 1);
-            $contextTitle = 'Пророчество - ' . $count;
+            $contextTitle = 'Пророчество';
             $contextIcon = 'prophecy_icon.svg';
             $combatKey = 'prophecy:' . ($prophecy['source_id'] ?? $state->battle['pending_grezy']['attacker_id']);
         }
