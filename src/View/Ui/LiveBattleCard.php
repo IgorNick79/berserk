@@ -39,7 +39,7 @@ final class LiveBattleCard
         return '<div class="' . $classes . '" data-mini-card="' . $card->instanceId . '" role="group" aria-label="' . $label . '"' . $nameAttr . '>'
             . $art . '<img class="mini-frame" src="/assets/images/battle/mini/frame_' . $side . '_102x92_' . $frame . '.svg" alt="">'
             . ($indicators ? '<div class="mini-indicators">' . $indicators . '</div>' : '')
-            . ($hidden ? '<span class="mini-question" aria-hidden="true">?</span>' : '')
+            . ($hidden ? '<img class="mini-card-back" src="/favicon.png" alt="">' : '')
             . $hp . '</div>';
     }
     private static function indicator(string $key, int $value, string $label, string $html = ''): string

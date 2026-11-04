@@ -36,7 +36,7 @@ battleSnapshotAssert(!str_contains($visible,'<script>') && !str_contains($visibl
 battleSnapshotAssert(substr_count($visible,'data-mini-hint')===1,'Only active effects have a tooltip trigger');
 $hidden=LiveBattleCard::render($c,$state,'player',true,'SUPER_SECRET_NAME','?/?');
 battleSnapshotAssert(!str_contains($hidden,'data-mini-hint')&&!str_contains($hidden,'unknown_future_stat')&&!str_contains($hidden,'mini-art'),'Hidden card contains no indicators/art/effects');
-battleSnapshotAssert(!str_contains($hidden,'SUPER_SECRET_NAME')&&!str_contains($hidden,'data-mini-name')&&!str_contains($hidden,'???')&&!str_contains($hidden,'mini-hp')&&str_contains($hidden,'mini-question'),'Hidden question has no name/HP leak');
+battleSnapshotAssert(!str_contains($hidden,'SUPER_SECRET_NAME')&&!str_contains($hidden,'data-mini-name')&&!str_contains($hidden,'???')&&!str_contains($hidden,'mini-hp')&&str_contains($hidden,'class="mini-card-back" src="/favicon.png"'),'Hidden card back has no name/HP leak');
 $publicHp=LiveBattleCard::render($c,$state,'player',true,'SUPER_SECRET_NAME','7/7');
 battleSnapshotAssert(str_contains($publicHp,'7/7')&&!str_contains($publicHp,'SUPER_SECRET_NAME'),'Renderer retains HP only when supplied as public by caller');
 foreach(['7/7','13/13','100/100'] as $hp) {

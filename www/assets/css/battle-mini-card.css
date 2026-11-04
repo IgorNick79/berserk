@@ -16,7 +16,7 @@
 :is(.battle-page,.draft-page) .mini-indicator:focus-visible{outline:1px solid white;outline-offset:1px}
 :is(.battle-page,.draft-page) .battle-mini-card .mini-hp{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:max-content;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:3px 5px;border:1px solid #ad8854;border-radius:4px;background:rgba(16,17,14,.92);font-size:10px;line-height:1;font-weight:400;color:#fff4df;z-index:5;white-space:nowrap;font-variant-numeric:tabular-nums}
 :is(.battle-page,.draft-page) .mini-heart{display:block;width:10px;height:9px;fill:#ef5555;stroke:#ffc19a;stroke-width:.6;flex:0 0 auto}
-:is(.battle-page,.draft-page) .mini-question{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ecd3a0;font:700 56px/1 Georgia,serif;text-shadow:0 2px 0 #57351d,0 0 8px #140f0b;pointer-events:none}
+:is(.battle-page,.draft-page) .mini-card-back{position:absolute;inset:20%;width:60%;height:60%;object-fit:contain;pointer-events:none}
 
 :is(.battle-page,.draft-page) .battle-mini-card.mini-hidden{background:#56504a!important;color:#eee}
 :is(.battle-page,.draft-page) .battle-mini-card.mini-closed{opacity:1;transform:translateY(2px) scale(.9);transform-origin:center center}
