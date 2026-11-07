@@ -99,11 +99,19 @@
                 if (isDeal) card.closest('.pregame-deal-tile').hidden = card.hidden;
             });
         });
+        if (isDeal) {
+            var dealGroup = groups[0];
+            dealGroup.node.hidden = false;
+            var blanks = 12 - (page ? page.cards.length : 0);
+            dealGroup.node.querySelectorAll('[data-deal-placeholder]').forEach(function (tile, i) {
+                tile.hidden = i >= blanks;
+            });
+        }
         if (page) {
             anchor = page.cards.indexOf(anchor) === -1 ? page.cards[0] : anchor;
 
         }
-        empty.hidden = !!page;
+        empty.hidden = isDeal || !!page;
         Array.from(navigation.children).forEach(function (button, position) {
             if (position === index) button.setAttribute('aria-current', 'page');
             else button.removeAttribute('aria-current');
@@ -135,7 +143,7 @@
     }
     function layout() {
         if (document.body.classList.contains('view-deck-page')) {
-            build(9);
+            build(isDeal ? 12 : 9);
             show(Math.min(Math.max(0, Number(new URL(location.href).searchParams.get('view_page')) || 0), Math.max(0,pages.length-1)),false);
             syncControls();return;
         }

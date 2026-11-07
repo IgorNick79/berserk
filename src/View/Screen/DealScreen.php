@@ -81,6 +81,9 @@ final class DealScreen
             }
         }
 
+        $cardsHtml .= str_repeat('<div class="pregame-deal-tile" data-deal-placeholder hidden aria-hidden="true">'
+            . '<div class="pregame-deal-empty-card"></div></div>', 12);
+
         $calc = ResourceCalculator::compute($state, $playerKey);
         $selectedCount = count($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD));
         $flyingCost = SquadRules::flyingCost($state, $playerKey);
@@ -96,24 +99,25 @@ final class DealScreen
                 if ($card->type === 'fly') $hasFlying = true;
             }
         }
-        $resourceActions = '';
+        $reshuffleIcon = '';
         if (!$me->isConfirmed('deal') && $me->reshuffles < 3 && $pendingHtml === '') {
             $hint = 'Пересдать колоду (штраф: 1 золото, осталось: ' . (3 - $me->reshuffles) . ')';
-            $resourceActions .= '<a class="pregame-hint pregame-reshuffle" data-pregame-hint-action href="' . $baseUrl . '&cmd=reshuffle"'
+            $reshuffleIcon .= '<a class="pregame-hint pregame-reshuffle" data-pregame-hint-action href="' . $baseUrl . '&cmd=reshuffle"'
                 . ' aria-label="' . $hint . '" onclick="return confirm(\'Пересдать карты?\')">'
-                . '<img src="/assets/images/battle/reshuffle_160.png" alt="" width="40" height="40">'
+                . '<img src="/assets/images/battle/reshuffle_160.png" alt="" width="28" height="28">'
                 . '<template data-pregame-hint>' . $hint . '</template></a>';
         }
-        $resourceActions .= '<button type="button" class="pregame-deal-selected" data-deal-selected aria-pressed="false">Выбрано: <b>' . $selectedCount . '</b></button>';
+        $selectedControl = '<button type="button" class="pregame-deal-selected" data-deal-selected aria-pressed="false">Выбрано: <b>' . $selectedCount . '</b></button>';
         $summary = '<section class="pregame-pool-stats pregame-deal-stats" aria-label="Статистика отряда">';
         $summary .= '<div class="pregame-deal-resources">'
             . $this->statisticIcon('/assets/images/card/elite.png', 'Золото', $calc['gold_left'] . '/' . $calc['gold_total'], 'crystal:gold')
             . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебро', $calc['silver_left'] . '/' . $calc['silver_total'], 'crystal:silver')
             . ($hasFlying ? $this->statisticIcon('/assets/images/card/fly.png', 'Стоимость летающих', $flyingCost . '/' . SquadRules::FLYING_COST_LIMIT) : '')
-            . $resourceActions
+            . $selectedControl
             . ($calc['penalty'] > 0 ? '<span class="pregame-hint penalty active" aria-label="Штраф за стихии: −' . (int) $calc['penalty'] . ' золото">Штраф<img src="/assets/images/card/elite.png" width="24" height="24" alt="Золото"><span>' . (int) $calc['penalty'] . '</span><template data-pregame-hint>Штраф за стихии: −' . (int) $calc['penalty'] . ' золото</template></span>' : '')
             . '</div><div class="pregame-deal-elements">';
         foreach (self::ELEMENT_NAMES as $code => $label) {
+            if ($elementTotals[$code] === 0) continue;
             $name = ElementLabels::label($code, $elementLabels + self::ELEMENT_NAMES);
             $summary .= $this->statisticIcon('/assets/images/element/' . $code . '.png', $name,
                 $elementCounts[$code] . '/' . $elementTotals[$code], 'element:' . $code,
@@ -128,13 +132,13 @@ final class DealScreen
             $info = $this->selectedPreviewInfo($state, $playerKey, $selectedZone, $selectedUkid, $groups[$selectedUkid]['info'], $cardsInfo);
             $selectedCard = ['ukid' => $selectedUkid, 'info' => $info];
             if (!$me->isConfirmed('deal') && $pendingHtml === '') {
-                if ($groups[$selectedUkid]['hand'] > 0) {
+                if ($selectedZone === 'hand') {
                     $candidate = $this->selectedCardInstance($state, $playerKey, 'hand', $selectedUkid);
                     $error = $candidate ? SquadRules::validate($state, $playerKey, [$candidate]) : null;
                     $cardActions[] = ['label' => 'В отряд', 'enabled' => $error === null,
                         'url' => $baseUrl . '&cmd=pick_card&ukid=' . rawurlencode($selectedUkid) . '&card=hand:' . rawurlencode($selectedUkid)];
                 }
-                if ($groups[$selectedUkid]['squad'] > 0 && !$this->selectedSquadCardIsLinkedCompanion($state, $playerKey, $selectedUkid)) {
+                if ($selectedZone === 'squad' && !$this->selectedSquadCardIsLinkedCompanion($state, $playerKey, $selectedUkid)) {
                     $cardActions[] = ['label' => 'Вернуть', 'class' => 'cancel',
                         'url' => $baseUrl . '&cmd=unpick_card&ukid=' . rawurlencode($selectedUkid) . '&card=squad:' . rawurlencode($selectedUkid)];
                 }
@@ -160,7 +164,7 @@ final class DealScreen
                 : '<span class="wait">Ожидание оппонента...</span>';
         }
         $footerHtml .= '</div>';
-        $footerHtml = \Berserk\View\Ui\PreGameLayout::actionsFooter($footerHtml);
+        $footerHtml = \Berserk\View\Ui\PreGameLayout::actionsFooter($footerHtml, $reshuffleIcon);
         return ['screen' => 'deal', 'data' => [
             'cards_html' => $cardsHtml, 'hand_html' => $cardsHtml, 'squad_html' => '',
             'preview_html' => $previewHtml, 'panel_html' => $panelHtml,
