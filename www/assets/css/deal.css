@@ -1,8 +1,17 @@
-.deal-page,.deal-page *{user-select:none;-webkit-user-select:none}
+.deal-page,.deal-page *{user-select:none!important;-webkit-user-select:none!important}
 .deal-page .screen-prepare-deal{background:none!important;border:0!important;box-shadow:none!important}
 .deal-page .pregame-deal-resources .penalty{color:#ff8989;font:600 14px/1.5 var(--battle-body-font);white-space:normal}
 .deal-page .pregame-deal-notes .bonus,.deal-page .pregame-card-details .bonus{color:#9fdfa4;font:600 14px/1.5 var(--battle-body-font)}
-.deal-page .pregame-deal-tile{height:auto;grid-template-rows:40px auto}
+.deal-page .screen-prepare-deal .pregame-view-group .cards{grid-template-columns:repeat(4,minmax(0,160px));gap:32px 24px;justify-content:center}
+.deal-page .pregame-deal-tile{height:auto;grid-template-rows:auto 24px;gap:8px;align-content:start}
+.deal-page .pregame-deal-tile[hidden]{display:none}
+.deal-page .pregame-deal-resources{flex-wrap:wrap}
+.deal-page .pregame-deal-quick-slot{height:24px}
+.deal-page [data-panel-theme] .pregame-main .pregame-deal-choose{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;height:24px;min-height:24px;padding:3px 6px;font-size:11px;background:#356744;border-color:#72a27e;color:#fff}
+.deal-page .pregame-deal-tile .prepare-card__count{display:none}
+.deal-page .pregame-deal-tile .view-cost .view-element{position:static;flex:0 0 24px;width:24px;height:24px;margin-left:auto;filter:none}
+@media(max-width:700px){.deal-page .screen-prepare-deal .pregame-view-group .cards{grid-template-columns:repeat(3,minmax(0,140px));gap:24px 12px}}
+@media(max-width:420px){.deal-page .screen-prepare-deal .pregame-view-group .cards{grid-template-columns:repeat(2,minmax(0,140px))}}
 .deal-page .pregame-deal-footer{display:flex;align-items:center;flex-wrap:wrap}
 
 .deal-page .view-thumbnail.prepare-card--selected{border-color:transparent!important}

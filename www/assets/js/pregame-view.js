@@ -148,21 +148,29 @@
         });
         var width = view.querySelector('.pregame-view-pages').clientWidth;
         var columns = Math.max(1, Math.min(3, Math.floor((width + 12) / 172)));
+        var dealGrid = isDeal ? view.querySelector('.pregame-view-group .cards') : null;
+        var rowGap = 12;
+        if (dealGrid) {
+            var gridStyle = getComputedStyle(dealGrid);
+            columns = gridStyle.gridTemplateColumns.split(' ').length;
+            rowGap = parseFloat(gridStyle.rowGap) || 0;
+        }
         view.style.setProperty('--view-columns', columns);
         view.style.setProperty('--view-card-height', 'auto');
-        var cardHeight = 144;
+        var cardHeight = isDeal ? 0 : 144;
         groups.forEach(function (group) {
-            group.cards.forEach(function (card) { cardHeight = Math.max(cardHeight, Math.max(144, card.querySelector('.prepare-card').scrollHeight + 2) + (isDeal ? 48 : 0)); });
+            group.cards.forEach(function (card) { cardHeight = Math.max(cardHeight, (isDeal ? card.closest('.pregame-deal-tile').scrollHeight : card.querySelector('.prepare-card').scrollHeight + 2)); });
         });
+        cardHeight = Math.max(1, cardHeight);
         var mainStyle = getComputedStyle(main), viewStyle = getComputedStyle(view);
         var budget = main.clientHeight - parseFloat(mainStyle.paddingTop) - parseFloat(mainStyle.paddingBottom)
             - parseFloat(viewStyle.paddingTop) - parseFloat(viewStyle.paddingBottom) - 2
             - outerHeight(view.querySelector('.flash'))
             - outerHeight(view.querySelector('.pregame-view-actions')) - 14;
-        var rows = Math.max(1, Math.min(3, Math.floor((budget - 24 + 12) / (cardHeight + 12))));
+        var rows = Math.max(1, Math.min(3, Math.floor((budget - 24 + rowGap) / (cardHeight + rowGap))));
         for (var attempt = 0; attempt < 3; attempt++) {
             build(columns * rows);
-            var fit = Math.max(1, Math.min(3, Math.floor((budget - navigation.clientHeight + 12) / (cardHeight + 12))));
+            var fit = Math.max(1, Math.min(3, Math.floor((budget - navigation.clientHeight + rowGap) / (cardHeight + rowGap))));
             if (fit === rows) break;
             rows = fit;
         }

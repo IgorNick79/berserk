@@ -53,30 +53,32 @@ final class DealScreen
         $pendingHtml = $this->pendingPanelHtml($state, $playerKey, $baseUrl, $role, $cardsInfo);
         $cardsHtml = '';
         foreach ($groups as $ukid => $group) {
-            $zone = $group['hand'] > 0 ? 'hand' : 'squad';
             $info = $group['info'];
             $code = $this->elementCode((string) ($info['element_code'] ?? $group['card']->element));
-            $quickHtml = '';
-            if (!$me->isConfirmed('deal') && $pendingHtml === '') {
-                if ($group['hand'] > 0) {
-                    $candidate = $this->selectedCardInstance($state, $playerKey, 'hand', (string) $ukid);
-                    $error = $candidate ? SquadRules::validate($state, $playerKey, [$candidate]) : null;
-                    $quickHtml = $error === null
-                        ? '<a class="button pregame-deal-choose" data-deal-quick href="' . $baseUrl . '&cmd=pick_card&ukid=' . rawurlencode((string) $ukid)
-                            . '&card=hand:' . rawurlencode((string) $ukid) . '">Выбрать</a>'
-                        : '<span class="button pregame-deal-choose" aria-disabled="true" title="' . htmlspecialchars($error, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">Выбрать</span>';
-                } else {
-                    $quickHtml = '<span class="button pregame-deal-choose" aria-disabled="true">Выбрано</span>';
+            foreach (['hand', 'squad'] as $zone) {
+                if ($group[$zone] === 0) continue;
+                $quickHtml = '';
+                if (!$me->isConfirmed('deal') && $pendingHtml === '') {
+                    if ($zone === 'hand') {
+                        $candidate = $this->selectedCardInstance($state, $playerKey, 'hand', (string) $ukid);
+                        $error = $candidate ? SquadRules::validate($state, $playerKey, [$candidate]) : null;
+                        $quickHtml = $error === null
+                            ? '<a class="button pregame-deal-choose" data-deal-quick href="' . $baseUrl . '&cmd=pick_card&ukid=' . rawurlencode((string) $ukid)
+                                . '&card=hand:' . rawurlencode((string) $ukid) . '">Выбрать</a>'
+                            : '<span class="button pregame-deal-choose" aria-disabled="true" title="' . htmlspecialchars($error, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">Выбрать</span>';
+                    } else {
+                        $quickHtml = '<span class="button pregame-deal-choose" aria-disabled="true">Выбрано</span>';
+                    }
                 }
+                $tile = '<div class="pregame-deal-tile">' . $ui->thumbnail($cardsInfo, [
+                    'ukid' => $ukid, 'info' => $info, 'element_in_cost' => true,
+                    'class' => 'view-element-' . $code . ' view-crystal-' . ($group['card']->elite ? 'gold' : 'silver')
+                        . ($zone === 'squad' ? ' deal-in-squad' : ''),
+                    'link' => $baseUrl . '&card=' . $zone . ':' . rawurlencode((string) $ukid),
+                    'selected' => $selectedUkid === (string) $ukid && $selectedZone === $zone,
+                ]) . '<div class="pregame-deal-quick-slot">' . $quickHtml . '</div></div>';
+                $cardsHtml .= str_repeat($tile, $group[$zone]);
             }
-            $cardsHtml .= '<div class="pregame-deal-tile"><div class="pregame-deal-quick-slot">' . $quickHtml . '</div>' . $ui->thumbnail($cardsInfo, [
-                'ukid' => $ukid, 'info' => $info, 'count' => $group['hand'] + $group['squad'],
-                'count_note' => '',
-                'class' => 'view-element-' . $code . ' view-crystal-' . ($group['card']->elite ? 'gold' : 'silver')
-                    . ($group['squad'] > 0 ? ' deal-in-squad' : ''),
-                'link' => $baseUrl . '&card=' . $zone . ':' . rawurlencode((string) $ukid),
-                'selected' => $selectedUkid === (string) $ukid,
-            ]) . '</div>';
         }
 
         $calc = ResourceCalculator::compute($state, $playerKey);
@@ -94,11 +96,21 @@ final class DealScreen
                 if ($card->type === 'fly') $hasFlying = true;
             }
         }
+        $resourceActions = '';
+        if (!$me->isConfirmed('deal') && $me->reshuffles < 3 && $pendingHtml === '') {
+            $hint = 'Пересдать колоду (штраф: 1 золото, осталось: ' . (3 - $me->reshuffles) . ')';
+            $resourceActions .= '<a class="pregame-hint pregame-reshuffle" data-pregame-hint-action href="' . $baseUrl . '&cmd=reshuffle"'
+                . ' aria-label="' . $hint . '" onclick="return confirm(\'Пересдать карты?\')">'
+                . '<img src="/assets/images/battle/reshuffle_160.png" alt="" width="40" height="40">'
+                . '<template data-pregame-hint>' . $hint . '</template></a>';
+        }
+        $resourceActions .= '<button type="button" class="pregame-deal-selected" data-deal-selected aria-pressed="false">Выбрано: <b>' . $selectedCount . '</b></button>';
         $summary = '<section class="pregame-pool-stats pregame-deal-stats" aria-label="Статистика отряда">';
         $summary .= '<div class="pregame-deal-resources">'
             . $this->statisticIcon('/assets/images/card/elite.png', 'Золото', $calc['gold_left'] . '/' . $calc['gold_total'], 'crystal:gold')
             . $this->statisticIcon('/assets/images/card/ordinary.png', 'Серебро', $calc['silver_left'] . '/' . $calc['silver_total'], 'crystal:silver')
             . ($hasFlying ? $this->statisticIcon('/assets/images/card/fly.png', 'Стоимость летающих', $flyingCost . '/' . SquadRules::FLYING_COST_LIMIT) : '')
+            . $resourceActions
             . ($calc['penalty'] > 0 ? '<span class="pregame-hint penalty active" aria-label="Штраф за стихии: −' . (int) $calc['penalty'] . ' золото">Штраф<img src="/assets/images/card/elite.png" width="24" height="24" alt="Золото"><span>' . (int) $calc['penalty'] . '</span><template data-pregame-hint>Штраф за стихии: −' . (int) $calc['penalty'] . ' золото</template></span>' : '')
             . '</div><div class="pregame-deal-elements">';
         foreach (self::ELEMENT_NAMES as $code => $label) {
@@ -147,14 +159,6 @@ final class DealScreen
                 ? ($selectedCount > 0 ? '<a class="button" href="' . $baseUrl . '&cmd=confirm_deal" data-confirm="Подтвердить отряд?">Подтвердить</a>' : '<button class="button" type="button" disabled>Подтвердить</button>')
                 : '<span class="wait">Ожидание оппонента...</span>';
         }
-        if (!$me->isConfirmed('deal') && $me->reshuffles < 3 && $pendingHtml === '') {
-            $hint = 'Пересдать колоду (штраф: 1 золото, осталось: ' . (3 - $me->reshuffles) . ')';
-            $footerHtml .= '<a class="pregame-hint pregame-reshuffle" data-pregame-hint-action href="' . $baseUrl . '&cmd=reshuffle"'
-                . ' aria-label="' . $hint . '" onclick="return confirm(\'Пересдать карты?\')">'
-                . '<img src="/assets/images/battle/reshuffle_160.png" alt="" width="40" height="40">'
-                . '<template data-pregame-hint>' . $hint . '</template></a>';
-        }
-        $footerHtml .= '<button type="button" class="pregame-deal-selected" data-deal-selected aria-pressed="false">Выбрано: <b>' . $selectedCount . '</b></button>';
         $footerHtml .= '</div>';
         $footerHtml = \Berserk\View\Ui\PreGameLayout::actionsFooter($footerHtml);
         return ['screen' => 'deal', 'data' => [

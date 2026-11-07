@@ -485,7 +485,7 @@ $screen = (new DealScreen($tpl))->prepare($state, GameState::PLAYER_HOST, 'host'
 
 assertTrue(str_contains($screen['data']['preview_html'], 'В отряд'), 'Recruit action should be rendered in card preview');
 assertTrue(!str_contains($screen['data']['preview_html'], 'prepare-card-preview__actions'), 'Preview action should render inside card info');
-assertTrue(str_contains($screen['data']['panel_actions_html'], 'Выбрано:'), 'Bottom panel should render selected count');
+assertTrue(str_contains($screen['data']['panel_summary_html'], 'Выбрано:'), 'Resource summary should render selected count');
 assertTrue(str_contains($screen['data']['panel_summary_html'], 'Золото:'), 'Bottom panel should render gold resources');
 assertTrue(str_contains($screen['data']['panel_summary_html'], 'Серебро:'), 'Bottom panel should render silver resources');
 assertTrue(str_contains($screen['data']['panel_summary_html'], 'aria-label="Степи: выбрано 0, всего 1"'), 'Hand-only element should not appear in squad badges');

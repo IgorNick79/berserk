@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="/assets/css/deal.css?v=3">
+<link rel="stylesheet" href="/assets/css/deal.css?v=4">
 <link rel="stylesheet" href="/assets/css/battle-fonts.css?v=1">
 <link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=16">
 <link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=16">
@@ -19,7 +19,7 @@
     <nav class="pregame-view-pagination" data-view-pagination aria-label="Страницы карт"></nav>
 
 </div>
-<script src="/assets/js/pregame-view.js?v=9" defer></script>
+<script src="/assets/js/pregame-view.js?v=10" defer></script>
 <script src="/assets/js/panel-secondary-view.js?v=1" defer></script>
 <script src="/assets/js/battle-match-pause.js?v=2" defer></script>
 <script src="/assets/js/view-deck.js?v=10" defer></script>
