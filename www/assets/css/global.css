@@ -1234,7 +1234,12 @@ body { padding-bottom: 46vh; }
 
 .prophecy-card { flex: 0 1 160px; min-width: 0; }
 .prophecy-card .view-thumbnail {
+    display: block;
     position: relative;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
     overflow: hidden;
     border: 1px solid #607b69;
     border-radius: 6px;
@@ -1251,7 +1256,9 @@ body { padding-bottom: 46vh; }
     background: #141410df;
     color: #fff;
 }
-.prophecy-card .view-cost img { display: block; width: 24px; height: 24px; object-fit: contain; }
+.prophecy-card .view-cost { font-size: 12px; line-height: 20px; }
+.prophecy-card .view-cost .view-element { margin-left: auto; }
+.prophecy-card .view-cost img { display: block; width: 20px; height: 20px; object-fit: contain; }
 .prophecy-card .prepare-card__count { display: none; }
 .prophecy-cards {
     display: flex;

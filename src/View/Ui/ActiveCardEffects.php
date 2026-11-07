@@ -27,6 +27,10 @@ final class ActiveCardEffects
         foreach ($card->modifiers as $m) {
             $stat = (string) ($m['stat'] ?? '');
             if ($stat === '') continue;
+            if ($stat === 'ability_strike' && ($m['source'] ?? '') === 'prophecy_charge') {
+                $rows[] = 'Удар +' . (int) $m['value'];
+                continue;
+            }
             // Only combine records whose qualifiers and lifetime are identical.
             $qualifiers = $m; unset($qualifiers['value'], $qualifiers['source']);
             $key = json_encode($qualifiers, JSON_UNESCAPED_UNICODE);
