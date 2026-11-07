@@ -54,20 +54,13 @@ final class TurnPhaseProcessor
         $this->advance();
     }
 
-    public function ackPending(string $playerKey, Command $cmd): Result
+    public function ackPending(string $playerKey): Result
     {
-        if (!(\Berserk\Core\Choice\ChoiceRegistry::current($this->state) instanceof \Berserk\Core\Choice\TurnAckChoice)) {
-            return Result::error('Ожидается другой обязательный выбор');
-        }
         $tp = $this->state->battle['turn_phase'] ?? null;
         if (!$tp || empty($tp['pending_ack'])) {
             return Result::error('Нет ожидающего подтверждения');
         }
 
-        $ack = $tp['pending_ack'];
-        if (!TurnPhaseAck::valid($ack)) return Result::error('turn_ack_legacy_contract: требуется восстановление контекста подтверждения');
-        if ($ack['owner'] !== $playerKey) return Result::error('Не ваше подтверждение');
-        if (!is_string($cmd->get('ack_id')) || $cmd->get('ack_id') !== $ack['ack_id']) return Result::error('Подтверждение устарело');
         unset($this->state->battle['turn_phase']['pending_ack']);
         $this->advance();
         $this->state->bumpVersion();
@@ -119,7 +112,7 @@ final class TurnPhaseProcessor
         if (!empty($desc['skip_ack'])) {
             $this->advance();
         } else {
-            TurnPhaseAck::set($this->state, $ownerKey, $desc);
+            $this->state->battle['turn_phase']['pending_ack'] = $desc;
         }
         $this->state->bumpVersion();
         return Result::ok(['task_done']);
@@ -130,7 +123,6 @@ final class TurnPhaseProcessor
         $tp = $this->state->battle['turn_phase'] ?? null;
         if (!$tp || empty($tp['sub'])) return Result::error('Нет подочереди');
 
-        if (!(\Berserk\Core\Choice\ChoiceRegistry::current($this->state) instanceof \Berserk\Core\Choice\TurnSubChoice)) return Result::error('Another choice required');
         $side = $tp['side'];
         $ownerKey = $side === 'passive' ? $tp['passive_key'] : $tp['active_key'];
         if ($playerKey !== $ownerKey) return Result::error('Не ваш выбор');
@@ -146,17 +138,12 @@ final class TurnPhaseProcessor
             }
         }
         if (!$subTask) {
+            $this->state->bumpVersion();
             return Result::error('Подзадача устарела');
         }
 
         $parentType = $sub['parent_type'];
 
-        if ($parentType === 'instants') {
-            $card = $this->state->getCard((int) ($subTask['card_id'] ?? 0));
-            if (!$card || $card->owner !== $ownerKey) return Result::error('Instant unavailable');
-            $result = (new InstantProcessor($this->state, $this->engine))->declareTurnInstantFromTask($ownerKey, $subTask);
-            if (!$result->success) return $result;
-        }
         // Для prophecy и valhalla НЕ удаляем сразу — удалим после успеха
         if ($parentType !== 'prophecy' && $parentType !== 'valhalla' && $parentType !== 'instants') {
             foreach ($sub['remaining'] as $i => $s) {
@@ -168,7 +155,7 @@ final class TurnPhaseProcessor
         }
 
         // Выполняем подзадачу (пророчество / вальхалла)
-        if ($parentType !== 'instants') $this->executeSub($subTask, $sub['parent_type'], $tp['active_key']);
+        $this->executeSub($subTask, $sub['parent_type'], $tp['active_key']);
 
         // Проверяем, создался ли pending
         $hasPending = CardHealing::waiting($this->state);
@@ -206,8 +193,6 @@ final class TurnPhaseProcessor
         $tp = $this->state->battle['turn_phase'] ?? null;
         if (!$tp || empty($tp['sub'])) return Result::error('Нет подочереди');
 
-        if (!(\Berserk\Core\Choice\ChoiceRegistry::current($this->state) instanceof \Berserk\Core\Choice\TurnSubChoice)) return Result::error('Another choice required');
-        if (($tp['sub']['can_close'] ?? false) !== true) return Result::error('Subqueue cannot close');
         $side     = $tp['side'];
         $ownerKey = $side === 'passive' ? $tp['passive_key'] : $tp['active_key'];
         if ($playerKey !== $ownerKey) return Result::error('Не ваш выбор');
@@ -291,7 +276,7 @@ final class TurnPhaseProcessor
                     }
 
                     if (!empty($desc['skip_ack'])) continue;
-                    TurnPhaseAck::set($this->state, $tp[$side . '_key'], $desc);
+                    $tp['pending_ack'] = $desc;
                     return;
                 }
 
@@ -1385,7 +1370,7 @@ final class TurnPhaseProcessor
     {
         if(($to['kind']??'')!=='after_effect')$to['items'][]=['instance_id'=>$r['target_id'],'delta'=>$r['restored']];
         $desc=$this->executeTurnEndEffect($to['task'],$to['owner'],$to['remaining'],$to['items']);
-        if(!CardHealing::waiting($this->state))TurnPhaseAck::set($this->state,$to['owner'],$desc);
+        if(!CardHealing::waiting($this->state))$this->state->battle['turn_phase']['pending_ack']=$desc;
         $this->state->bumpVersion();return Result::ok(['card_heal_turn_continued']);
     }
 
