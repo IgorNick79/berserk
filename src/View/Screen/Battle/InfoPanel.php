@@ -1148,7 +1148,7 @@ final class InfoPanel
                     $parts[] = '<div>' . htmlspecialchars($tn, ENT_QUOTES) . ' <strong>−' . (int) $t['damage']
                         . ' ❤️ HP</strong></div>';
                 }
-                $resultText = implode('', $parts);
+                $resultText = $parts ? '<div style="margin-bottom: 8px">' . implode('', $parts) . '</div>' : '';
             } elseif ($kind === 'life_gift') {
                 $lg = $strike['life_gift'] ?? null;
                 if ($lg) {
