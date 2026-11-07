@@ -3,11 +3,11 @@
 .deal-page .pregame-deal-resources .penalty{color:#ff8989;font:600 14px/1.5 var(--battle-body-font);white-space:normal}
 .deal-page .pregame-deal-notes .bonus,.deal-page .pregame-card-details .bonus{color:#9fdfa4;font:600 14px/1.5 var(--battle-body-font)}
 .deal-page .screen-prepare-deal .pregame-view-group .cards{grid-template-columns:repeat(4,minmax(0,160px));gap:32px 24px;justify-content:center;grid-template-rows:none}
-.deal-page .pregame-deal-tile{height:auto;grid-template-rows:auto 24px;gap:8px;align-content:start}
+.deal-page .pregame-deal-tile{height:auto;grid-template-rows:auto 22px;gap:8px;align-content:start}
 .deal-page .pregame-deal-tile[hidden]{display:none}
 .deal-page .pregame-deal-resources{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
-.deal-page .pregame-deal-quick-slot{height:24px}
-.deal-page [data-panel-theme] .pregame-main .button.pregame-deal-choose{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;height:24px;min-height:0;padding:2px 6px;line-height:1;font-size:11px;background:#356744;border-color:#72a27e;color:#fff}
+.deal-page .pregame-deal-quick-slot{height:22px}
+.deal-page [data-panel-theme] .pregame-main .button.pregame-deal-choose:not(.green-btn){display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;height:22px;min-height:22px;padding:2px 6px;line-height:1;font-size:11px;background:#356744;border-color:#72a27e;color:#fff}
 .deal-page .pregame-deal-tile .prepare-card__count{display:none}
 .deal-page .pregame-deal-tile .view-cost .view-element{position:static;flex:0 0 24px;width:24px;height:24px;margin-left:auto;filter:none}
 @media(max-width:700px){.deal-page .screen-prepare-deal .pregame-view-group .cards{grid-template-columns:repeat(3,minmax(0,140px));gap:24px 12px}}
@@ -21,3 +21,13 @@
 .deal-page .penalty > span{color:#fff;font-weight:400}
 
 .deal-page .pregame-deal-empty-card{aspect-ratio:8/5;box-sizing:border-box;border:1px solid #607b69;border-radius:6px;background:#24251f}
+
+.deal-page .deal-rarity-common { --deal-rarity-border: #607b69; }
+.deal-page .deal-rarity-uncommon { --deal-rarity-border: #548bdb; }
+.deal-page .deal-rarity-rare { --deal-rarity-border: #a475db; }
+.deal-page .deal-rarity-ultrarare { --deal-rarity-border: #f08a3e; }
+.deal-page .pregame-deal-tile .prepare-card-link .view-thumbnail:not(.prepare-card--selected) {
+    border-color: var(--deal-rarity-border, #607b69);
+}
+.deal-page .pregame-deal-empty-card { display:grid; place-items:center; }
+.deal-page .pregame-deal-empty-card img { width:60%; height:60%; object-fit:contain; }

@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="/assets/css/deal.css?v=5">
+<link rel="stylesheet" href="/assets/css/deal.css?v=6">
 <link rel="stylesheet" href="/assets/css/battle-fonts.css?v=1">
 <link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=16">
 <link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=16">

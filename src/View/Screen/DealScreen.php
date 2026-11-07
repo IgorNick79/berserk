@@ -54,6 +54,12 @@ final class DealScreen
         $cardsHtml = '';
         foreach ($groups as $ukid => $group) {
             $info = $group['info'];
+            $rarity = match ($info['rarity'] ?? '') {
+                'uncommon' => 'uncommon',
+                'rare' => 'rare',
+                'ultrarare' => 'ultrarare',
+                default => 'common',
+            };
             $code = $this->elementCode((string) ($info['element_code'] ?? $group['card']->element));
             foreach (['hand', 'squad'] as $zone) {
                 if ($group[$zone] === 0) continue;
@@ -72,7 +78,7 @@ final class DealScreen
                 }
                 $tile = '<div class="pregame-deal-tile">' . $ui->thumbnail($cardsInfo, [
                     'ukid' => $ukid, 'info' => $info, 'element_in_cost' => true,
-                    'class' => 'view-element-' . $code . ' view-crystal-' . ($group['card']->elite ? 'gold' : 'silver')
+                    'class' => 'deal-rarity-' . $rarity . ' view-element-' . $code . ' view-crystal-' . ($group['card']->elite ? 'gold' : 'silver')
                         . ($zone === 'squad' ? ' deal-in-squad' : ''),
                     'link' => $baseUrl . '&card=' . $zone . ':' . rawurlencode((string) $ukid),
                     'selected' => $selectedUkid === (string) $ukid && $selectedZone === $zone,
@@ -82,7 +88,7 @@ final class DealScreen
         }
 
         $cardsHtml .= str_repeat('<div class="pregame-deal-tile" data-deal-placeholder hidden aria-hidden="true">'
-            . '<div class="pregame-deal-empty-card"></div></div>', 12);
+            . '<div class="pregame-deal-empty-card"><img src="/favicon.png" alt=""></div></div>', 12);
 
         $calc = ResourceCalculator::compute($state, $playerKey);
         $selectedCount = count($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD));
