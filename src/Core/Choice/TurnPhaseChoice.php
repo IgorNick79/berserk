@@ -62,9 +62,10 @@ final class TurnPhaseChoice implements ChoiceHandlerInterface
                 'row'        => $task['row'] ?? null,
                 'col'        => $task['col'] ?? null,
                 'hint'       => $task['label'] ?? '',
+                'owner'      => $state->getCard((int) ($task['card_id'] ?? 0))?->owner,
                 'is_instant' => !empty($task['is_instant']),
             ];
-            $cards[] = TaskCard::render($render, $url, $cardsInfo);
+            $cards[] = TaskCard::render($render, $url, $cardsInfo, true, $playerKey);
         }
 
         return new PanelSpec(
