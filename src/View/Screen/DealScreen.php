@@ -78,7 +78,7 @@ final class DealScreen
                 }
                 $tile = '<div class="pregame-deal-tile">' . $ui->thumbnail($cardsInfo, [
                     'ukid' => $ukid, 'info' => $info, 'element_in_cost' => true,
-                    'class' => 'deal-rarity-' . $rarity . ' view-element-' . $code . ' view-crystal-' . ($group['card']->elite ? 'gold' : 'silver')
+                    'class' => 'view-element-' . $code . ' deal-rarity-' . $rarity . ' view-crystal-' . ($group['card']->elite ? 'gold' : 'silver')
                         . ($zone === 'squad' ? ' deal-in-squad' : ''),
                     'link' => $baseUrl . '&card=' . $zone . ':' . rawurlencode((string) $ukid),
                     'selected' => $selectedUkid === (string) $ukid && $selectedZone === $zone,

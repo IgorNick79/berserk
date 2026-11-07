@@ -485,6 +485,7 @@ $screen = (new DealScreen($tpl))->prepare($state, GameState::PLAYER_HOST, 'host'
 
 assertTrue(str_contains($screen['data']['preview_html'], 'В отряд'), 'Recruit action should be rendered in card preview');
 assertTrue(!str_contains($screen['data']['preview_html'], 'prepare-card-preview__actions'), 'Preview action should render inside card info');
+assertTrue(str_contains($screen['data']['cards_html'], '/assets/images/element/plains.png'), 'Rarity class should preserve the thumbnail element icon');
 assertTrue(str_contains($screen['data']['panel_summary_html'], 'Выбрано:'), 'Resource summary should render selected count');
 assertTrue(str_contains($screen['data']['panel_summary_html'], 'Золото:'), 'Bottom panel should render gold resources');
 assertTrue(str_contains($screen['data']['panel_summary_html'], 'Серебро:'), 'Bottom panel should render silver resources');
