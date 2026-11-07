@@ -1882,11 +1882,8 @@ final class InfoPanel
 
         return '<div class="card-choice">'
             . '<h3>' . htmlspecialchars($title, ENT_QUOTES) . '</h3>'
-            . '<div class="prophecy-view">'
             . '<div class="prophecy-cards">' . $cardsHtml . '</div>'
-            . ($isMine ? $actionsHtml : '')
-            . '</div>'
-            . ($isMine ? '' : $actionsHtml)
+            . $actionsHtml
             . '</div>';
     }
     

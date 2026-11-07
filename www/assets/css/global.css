@@ -1226,10 +1226,11 @@ body { padding-bottom: 46vh; }
     color: #fff;
 }
 
-.prophecy-view {
+.prophecy-actions {
     display: flex;
-    align-items: center;
-    gap: 20px;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
 }
 
 .prophecy-card { flex: 0 1 160px; min-width: 0; }
