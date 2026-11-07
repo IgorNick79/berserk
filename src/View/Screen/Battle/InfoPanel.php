@@ -1850,22 +1850,11 @@ final class InfoPanel
 
         // ── Обычный рендер ─────────────────────────────────
         $cardsHtml = '';
+        $ui = new \Berserk\View\Ui\PrepareUi($this->tpl);
         foreach ($pp['shown_ukids'] as $ukid) {
-            $info = $cardsInfo[$ukid] ?? null;
-            if (!$info) {
-                $cardsHtml .= '<div class="prophecy-card"><div class="prophecy-card__name">?</div></div>';
-                continue;
-            }
-            $cardsHtml .= $this->tpl->parse('includes/prophecy_card.tpl', [
-                'name'   => htmlspecialchars($info['name'], ENT_QUOTES),
-                'price'  => (int) $info['price'],
-                'health' => (int) $info['health'],
-                'move'   => (int) $info['move'],
-                'weak'   => (int) $info['strike']['weak'],
-                'medium' => (int) $info['strike']['medium'],
-                'strong' => (int) $info['strike']['strong'],
-                'elite'  => $info['elite'] ? 'elite' : '',
-            ]);
+            $cardsHtml .= '<div class="prophecy-card" inert>'
+                . $ui->thumbnail($cardsInfo, ['ukid' => $ukid, 'element_in_cost' => true, 'link' => '#'])
+                . '</div>';
         }
 
         if ($isMine) {

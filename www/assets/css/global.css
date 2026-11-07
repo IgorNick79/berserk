@@ -1232,37 +1232,27 @@ body { padding-bottom: 46vh; }
     gap: 20px;
 }
 
-.prophecy-card {
-    display: inline-block;
-    width: 140px;
-    padding: 10px;
-    background: transparent;
-    border: 2px solid #ccc;
+.prophecy-card { flex: 0 1 160px; min-width: 0; }
+.prophecy-card .view-thumbnail {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #607b69;
     border-radius: 6px;
-    text-align: center;
-    font-size: 13px;
+    background: #292824;
 }
-
-.prophecy-card.elite {
-    border-color: gold;
-    box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
-}
-
-.prophecy-card__name {
-    font-weight: bold;
-    margin-bottom: 4px;
-}
-
-.prophecy-card__price {
-    color: #b8860b;
-    font-weight: bold;
-    margin-bottom: 6px;
-}
-
-.prophecy-card__stats {
+.prophecy-card .view-art { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; }
+.prophecy-card .view-cost {
+    position: absolute;
+    inset: auto 0 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 5px;
+    background: #141410df;
     color: #fff;
-    font-size: 12px;
 }
+.prophecy-card .view-cost img { display: block; width: 24px; height: 24px; object-fit: contain; }
+.prophecy-card .prepare-card__count { display: none; }
 .prophecy-cards {
     display: flex;
     gap: 10px;
