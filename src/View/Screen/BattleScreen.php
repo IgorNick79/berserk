@@ -1032,6 +1032,7 @@ final class BattleScreen
                 foreach ($c->prop['actions'] ?? [] as $a) {
                     if (!\Berserk\Core\CoinAbilities::actionAvailable($c, $a)) continue;
                     $type = $a['type'] ?? '';
+                    if ($type === 'become_fly' && ($c->type === 'fly' || $c->zone !== CardInstance::ZONE_FIELD)) continue;
                     if ((\Berserk\Core\StitchRevival::isAction($a)
                             && !\Berserk\Core\StitchRevival::available($state, $c, $a))
                         || ((!empty($a['heal_gain_coin']) || \Berserk\Core\TemporaryHealth::isAction($a))
