@@ -1145,10 +1145,10 @@ final class InfoPanel
                 foreach ($strike['particle']['targets'] ?? [] as $t) {
                     $tc = $state->getCard((int) $t['target_id']);
                     $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
-                    $parts[] = '<li>' . htmlspecialchars($tn, ENT_QUOTES) . ' <strong>−' . (int) $t['damage']
-                        . ' <img src="/assets/images/card/heart.png" width="16" height="16" alt="HP"></strong></li>';
+                    $parts[] = '<div>' . htmlspecialchars($tn, ENT_QUOTES) . ' <strong>−' . (int) $t['damage']
+                        . ' ❤️ HP</strong></div>';
                 }
-                $resultText = $parts ? '<ul>' . implode('', $parts) . '</ul>' : '';
+                $resultText = implode('', $parts);
             } elseif ($kind === 'life_gift') {
                 $lg = $strike['life_gift'] ?? null;
                 if ($lg) {
