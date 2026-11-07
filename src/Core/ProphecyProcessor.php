@@ -205,8 +205,6 @@ final class ProphecyProcessor
             'expire' => 'permanent',
         ];
         (new ZoneManager($this->state))->toFlying($seeker);
-
-        unset($this->state->battle['pending_prophecy']);
         return Result::ok(['seeker_transformed']);
     }
 

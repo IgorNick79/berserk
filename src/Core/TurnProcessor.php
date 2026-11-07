@@ -1166,8 +1166,8 @@ final class TurnProcessor
         }
 
         // Если в подочереди — удаляем обработанную подзадачу
-        if (!empty($this->state->battle['turn_phase']['sub']['pending_id'])) {
-            $pid = $this->state->battle['turn_phase']['sub']['pending_id'];
+        $pid = $this->state->battle['turn_phase']['sub']['pending_id'] ?? null;
+        if ($pid !== null) {
             unset($this->state->battle['turn_phase']['sub']['pending_id']);
 
             $sub = &$this->state->battle['turn_phase']['sub'];
@@ -1184,7 +1184,7 @@ final class TurnProcessor
 
         // Внутри фазы начала хода — следующее пророчество, иначе resume
         if (!empty($this->state->battle['turn_phase'])) {
-            if ($this->triggerProphecy($playerKey)) {
+            if ($pid === null && $this->triggerProphecy($playerKey)) {
                 $this->state->bumpVersion();
                 return Result::ok(['prophecy_next']);
             }
@@ -1214,18 +1214,10 @@ final class TurnProcessor
     {
         $pp = new ProphecyProcessor($this->state, $this->engine);
         $res = $pp->transformSeeker($playerKey);
-        if ($res->error !== null) {   // ← тут заменить на правильный API
-            return $res;
-        }
+        if (!$res->success) return $res;
 
-        if ($this->triggerProphecy($playerKey)) {
-            $this->state->bumpVersion();
-            return Result::ok(['seeker_transformed_next']);
-        }
-        $this->continueStartTurn($playerKey, true);
-
-        $this->state->bumpVersion();
-        return Result::ok(['seeker_transformed']);
+        $closed = $this->closeProphecy($playerKey, $cmd);
+        return $closed->success ? $res : $closed;
     }
 
     public function triggerProphecyForCard(CardInstance $card, string $activeKey): void
