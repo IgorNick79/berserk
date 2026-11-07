@@ -33,61 +33,28 @@ final class ParticlePickChoice implements ChoiceHandlerInterface
             return new PanelSpec(title: $srcName . ' — частица души', isMine: false);
         }
 
-        // Дефолт — чужие. Кнопка переключает на "Все".
-        $side = (string) ($_GET['p_side'] ?? 'enemy');
-        if (!in_array($side, ['enemy', 'all'], true)) $side = 'enemy';
-
         $items = [];
         foreach ($p['candidates'] as $tid) {
             $tc = $state->getCard((int) $tid);
             if (!$tc) continue;
-            $isOwn = ($tc->owner === $playerKey);
-            if ($side === 'enemy' && $isOwn) continue;
-
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-            $label = $tn . ' (' . $tc->row . ';' . $tc->col . ') — ' . $tc->hp . '/' . $tc->hpMax;
-            if ($isOwn) $label .= ' — моё';
-
-            $items[] = ['value' => (int) $tid, 'label' => $label];
+            $items[] = ['value' => $tc->instanceId, 'label' => $cardsInfo[$tc->ukid]['name'] ?? '?'];
         }
 
         $roleParam = $role === 'host' ? 'first' : 'second';
         $max = (int) $p['max_targets'];
 
-        // Кнопка переключения
-        $toggleLabel = ($side === 'enemy') ? 'Все существа' : 'Только чужие';
-        $toggleSide  = ($side === 'enemy') ? 'all' : 'enemy';
-
-        $buttons = [
-            [
-                'label' => $toggleLabel,
-                'url'   => $baseUrl . '&cmd=choose_particle_pick&p_side=' . $toggleSide,
-            ],
-        ];
-
-        if (empty($items)) {
-            return new PanelSpec(
-                title: $srcName . ': нет целей без ран на этой стороне',
-                buttons: array_merge($buttons, [[
-                    'label' => 'Отмена',
-                    'url'   => $baseUrl . '&cmd=cancel_pending',
-                    'class' => 'skip',
-                ]]),
-            );
-        }
-
         return new PanelSpec(
             title: $srcName . ': выбери до ' . $max . ' существ без ран (по 1 урона)',
-            buttons: $buttons,
             form: [
                 'type'   => 'checkbox',
                 'name'   => 'target_ids[]',
                 'items'  => $items,
+                'side_toggle' => true,
+                'side_default' => 'enemy',
                 'hidden' => [
                     $roleParam => '',
                     'game'     => $state->gameId,
                     'cmd'      => 'choose_particle_pick',
-                    'p_side'   => $side,
                 ],
                 'submit' => 'Применить',
                 'cancel' => $baseUrl . '&cmd=cancel_pending',

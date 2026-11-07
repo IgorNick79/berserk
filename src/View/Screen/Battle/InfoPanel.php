@@ -1141,18 +1141,14 @@ final class InfoPanel
                     $resultText = $name;
                 }
             } elseif ($kind === 'particle') {
-                $pt = $strike['particle'] ?? null;
-                if ($pt) {
-                    $parts = [];
-                    foreach ($pt['targets'] as $t) {
-                        $tc = $state->getCard((int) $t['target_id']);
-                        $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
-                        $parts[] = '<div class="row-spell-wound">' . htmlspecialchars($tn, ENT_QUOTES) . ' <strong>−' . (int)$t['damage'] . ' ❤ HP</strong></div>';
-                    }
-                    $resultText = 'Частица души: ' . implode(', ', $parts);
-                } else {
-                    $resultText = 'Частица души';
+                $parts = [];
+                foreach ($strike['particle']['targets'] ?? [] as $t) {
+                    $tc = $state->getCard((int) $t['target_id']);
+                    $tn = $tc ? ($cardsInfo[$tc->ukid]['name'] ?? '?') : '?';
+                    $parts[] = '<li>' . htmlspecialchars($tn, ENT_QUOTES) . ' <strong>−' . (int) $t['damage']
+                        . ' <img src="/assets/images/card/heart.png" width="16" height="16" alt="HP"></strong></li>';
                 }
+                $resultText = $parts ? '<ul>' . implode('', $parts) . '</ul>' : '';
             } elseif ($kind === 'life_gift') {
                 $lg = $strike['life_gift'] ?? null;
                 if ($lg) {
@@ -1703,7 +1699,7 @@ final class InfoPanel
                     'confirm_html'     => $confirmHtml,
                 ]);
             } else {
-                $contentHtml = $summaryHtml . ($resultText !== '' ? '<p>' . $resultText . '</p>' : '') . $extraResultHtml . $confirmHtml;
+                $contentHtml = $summaryHtml . ($kind === 'particle' || $resultText === '' ? $resultText : '<p>' . $resultText . '</p>') . $extraResultHtml . $confirmHtml;
             }
         }
 
@@ -1745,7 +1741,7 @@ final class InfoPanel
             };
         }
 
-        if ($kind === 'impact' && (int) $strike['attacker_id'] === (int) $strike['target_id']) {
+        if ($kind === 'particle' || ($kind === 'impact' && (int) $strike['attacker_id'] === (int) $strike['target_id'])) {
             return '<div class="strike-box"><p>' . htmlspecialchars($headerText, ENT_QUOTES)
                 . ': <b>' . $an . '</b></p>' . $contentHtml . '</div>';
         }
