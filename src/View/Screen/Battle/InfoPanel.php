@@ -1877,15 +1877,16 @@ final class InfoPanel
             }
             $actionsHtml = '<div class="prophecy-actions">' . $buttons . '</div>';
         } else {
-            $actionsHtml = '<div class="prophecy-actions"><p class="wait">Ожидание выбора...</p></div>';
+            $actionsHtml = '<p class="wait">Ожидание выбора...</p>';
         }
 
         return '<div class="card-choice">'
             . '<h3>' . htmlspecialchars($title, ENT_QUOTES) . '</h3>'
             . '<div class="prophecy-view">'
             . '<div class="prophecy-cards">' . $cardsHtml . '</div>'
-            . $actionsHtml
+            . ($isMine ? $actionsHtml : '')
             . '</div>'
+            . ($isMine ? '' : $actionsHtml)
             . '</div>';
     }
     
