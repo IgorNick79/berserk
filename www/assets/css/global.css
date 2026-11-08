@@ -1695,6 +1695,19 @@ html.battle-page, body.battle-page {
     box-sizing: border-box;
 }
 body.battle-page > .toolbar { display: none; }
+body.battle-page #bot-status {
+    position: fixed;
+    top: 8px;
+    left: 64px;
+    z-index: 2;
+    max-width: calc(100vw - 80px);
+    margin: 0;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: #221b14;
+    color: #fff2d4;
+    pointer-events: none;
+}
 body.battle-page > .screen {
     max-width: none;
     margin: 0;
