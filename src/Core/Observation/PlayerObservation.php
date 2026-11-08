@@ -201,7 +201,7 @@ final class PlayerObservation
                 $options[] = $option + ['type'=>'place_gates','gate_count'=>$count,'effect'=>'may_open_gate_cell_choice'];
             } elseif ($phase['phase']==='end' && ($task['type'] ?? null)==='opponent_turn_end') {
                 // The executor prefers turn_end when both properties exist. Match its actual source.
-                $effects = $source->effectiveProp()['turn_end'] ?? $source->effectiveProp()['opponent_turn_end'] ?? [];
+                $effects = $task['closed_effects'] ?? $source->effectiveProp()['turn_end'] ?? $source->effectiveProp()['opponent_turn_end'] ?? [];
                 if (!is_array($effects) || count($effects)!==1 || ($effects[0]['type'] ?? null)!=='greed_teleport') continue;
                 $options[] = $option + ['type'=>'greed_teleport','source_hp'=>$source->hp,
                     'potential_damage'=>(int)($effects[0]['damage'] ?? 2),

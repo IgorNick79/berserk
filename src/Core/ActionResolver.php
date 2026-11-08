@@ -3501,6 +3501,7 @@ final class ActionResolver
                 ZoneManager::addMarker($this->state, $k, [
                     'type'   => 'gate',
                     'source' => $playerKey,
+                    'source_id' => $resolutionActor?->instanceId,
                     'timing' => 'end_of_opponent_turn',
                 ]);
             }

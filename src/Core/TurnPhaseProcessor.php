@@ -537,7 +537,9 @@ final class TurnPhaseProcessor
                     $passiveLight = ($eff['type'] ?? '') === 'cell_effect'
                         && ($eff['effect'] ?? '') === 'lantern_light'
                         && Choice\CellEffectDirectionChoice::canCreateLight($card);
-                    if (!$passiveLight) continue;
+                    $passiveGates = ($eff['type'] ?? '') === 'place_gates'
+                        && !isset($card->markers['spider_web']);
+                    if (!$passiveLight && !$passiveGates) continue;
                 }
 
                 $stacked = !empty($eff['stacked']);
@@ -914,7 +916,7 @@ final class TurnPhaseProcessor
         $card = $this->state->getCard($task['card_id']);
         if (!$card) return ['label' => $task['label'], 'items' => []];
 
-        $effects = $remaining ?? ($card->effectiveProp()['turn_end'] ?? $card->effectiveProp()['opponent_turn_end'] ?? []);
+        $effects = $remaining ?? $task['closed_effects'] ?? ($card->effectiveProp()['turn_end'] ?? $card->effectiveProp()['opponent_turn_end'] ?? []);
         if (!is_array($effects)) return ['label'=>$task['label'],'items'=>[]];
         $effects=array_values($effects);
         foreach ($effects as $effectIndex=>$eff) {
@@ -1173,12 +1175,16 @@ final class TurnPhaseProcessor
             if ($card->owner !== $passiveKey) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->dying || CardStats::isDisabled($card)) continue;
-            if (empty($card->effectiveProp()['opponent_turn_end'])) continue;
-            if (!array_filter($card->effectiveProp()['opponent_turn_end'], static fn($e) => !in_array($e['type']??'',['deck_summon','deck_reorder'],true))) continue;
+            if ($card->dying || isset($card->markers['spider_web'])) continue;
+            $effects = $card->effectiveProp()['opponent_turn_end'] ?? [];
+            if ($card->closed) {
+                $effects = array_values(array_filter($effects, static fn($effect) => ($effect['type'] ?? '') === 'greed_teleport'));
+            }
+            if (!array_filter($effects, static fn($e) => !in_array($e['type']??'',['deck_summon','deck_reorder'],true))) continue;
 
             $queue[] = [
                 'id'      => 'ote:' . $card->instanceId,
+                'closed_effects' => $card->closed ? $effects : null,
                 'type'    => 'opponent_turn_end',
                 'card_id' => $card->instanceId,
                 'ukid'    => $card->ukid,

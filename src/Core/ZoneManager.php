@@ -253,6 +253,33 @@ final class ZoneManager
         }
     }
 
+    public static function removeDepartedGates(GameState $state, CardInstance $card): void
+    {
+        $canPlaceGates = static fn(CardInstance $source): bool => (bool) array_filter(
+            $source->prop['opponent_turn_start'] ?? [],
+            static fn(array $effect): bool => ($effect['type'] ?? '') === 'place_gates'
+        );
+        $removeLegacy = $canPlaceGates($card);
+        foreach ($state->cards as $other) {
+            if (!$removeLegacy) break;
+            if ($other->owner === $card->owner && EffectiveFeatures::onBattlefield($other) && $canPlaceGates($other)) {
+                $removeLegacy = false;
+            }
+        }
+
+        foreach (array_keys($state->cell_markers) as $key) {
+            $markers = self::markersAt($state, $key);
+            $kept = array_values(array_filter($markers, static function (array $marker) use ($card, $removeLegacy): bool {
+                if (($marker['type'] ?? null) !== 'gate' || ($marker['source'] ?? null) !== $card->owner) return true;
+                $sourceId = $marker['source_id'] ?? null;
+                return $sourceId === null ? !$removeLegacy : $sourceId !== $card->instanceId;
+            }));
+            if ($kept === $markers) continue;
+            if ($kept) $state->cell_markers[$key] = $kept;
+            else unset($state->cell_markers[$key]);
+        }
+    }
+
     public static function markerBlocksMovement(array $marker): bool
     {
         // Клетку блокирует только костёр. Остальные маркеры (бомба и т.д.) — нет.

@@ -58,6 +58,7 @@ final class EffectiveFeatures
     public static function leftBattlefield(GameState $state, CardInstance $leaving): void
     {
         if (self::onBattlefield($leaving)) return;
+        ZoneManager::removeDepartedGates($state, $leaving);
         $changed = false;
         unset($leaving->flags[self::MEMORY_LOSS]);
         foreach ($state->cards as $target) {
