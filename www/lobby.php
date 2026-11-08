@@ -24,7 +24,7 @@ try {
     if (!is_array($config)) throw new RuntimeException('Configuration unavailable');
     AuthSession::start(($config['allow_loopback_http'] ?? false) === true);
     $actor = AuthSession::id();
-    if ($actor === null && ($method === 'POST' || isset($_GET['room']) || isset($_GET['new']))) {
+    if ($actor === null && ($method === 'POST' || isset($_GET['room']) || isset($_GET['new']) || isset($_GET['bot']))) {
         if ($api || $method === 'POST') throw new DomainException('Требуется вход.',401);
         header('Location: auth.php?page=login',true,303); exit;
     }
@@ -51,7 +51,12 @@ try {
             if ($id !== null || !is_string($_POST['creation_key'] ?? null)) throw new DomainException('Некорректный запрос.',400);
             $bot = $config['bot_account_id'] ?? null;
             if (!is_int($bot) || $bot <= 0) throw new DomainException('Соперник-бот пока недоступен.',503);
-            $game = $store->createBotMatch($actor,$bot,$_POST['creation_key']);
+            $allowed = ['action','csrf','creation_key','lucktest_card_count','lucktest_total_cost',
+                'lucktest_balanced','lucktest_balance_metals','lucktest_placement','lucktest_scenario',
+                'handicap_enabled','handicap_gold','handicap_silver'];
+            if (array_diff(array_keys($_POST), $allowed)) throw new DomainException('Некорректные настройки игры с ботом.',400);
+            $setup = RoomSetup::parse('lucktest', $_POST + ['lucktest_start_stage'=>'battle','turn_seconds'=>'0'], $actor);
+            $game = $store->createBotMatch($actor,$bot,$_POST['creation_key'],$setup);
             $url = 'index.php?game='.$game;
             if (!$api) { header('Location: '.$url,true,303); exit; }
             header('Content-Type: application/json; charset=utf-8');
@@ -90,7 +95,10 @@ try {
         if ($id===null || !($data['room']['can_configure']??false)) throw new DomainException('Настройка недоступна.',403);
         $wizard=\Berserk\View\Ui\LobbyWizard::render($actor,$csrf,\Berserk\Auth\AuthContext::gameDb(),$data['room']);
     }
-    if (!$api && isset($_GET['new']) && !isset($_GET['configure'])) $wizard=\Berserk\View\Ui\LobbyWizard::render($actor,$csrf,\Berserk\Auth\AuthContext::gameDb());
+    if (!$api && $method === 'GET' && $id === null && isset($_GET['bot'])) {
+        $wizard = \Berserk\View\Ui\LobbyWizard::renderBot($actor, $csrf);
+    }
+    if (!$api && !isset($_GET['bot']) && isset($_GET['new']) && !isset($_GET['configure'])) $wizard=\Berserk\View\Ui\LobbyWizard::render($actor,$csrf,\Berserk\Auth\AuthContext::gameDb());
 
 } catch (DomainException $e) {
     $code = $e->getCode(); http_response_code($code>=400 && $code<=599 ? $code : 400); $error = $e->getMessage();
@@ -102,7 +110,7 @@ if ($api) {
 }
 header('Content-Type: text/html; charset=utf-8');
 ?>
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css?v=9"><link rel="stylesheet" href="assets/css/lobby-wizard.css?v=15"><link rel="stylesheet" href="assets/css/pregame.css?v=2"><script src="assets/js/settings.js?v=3" defer></script><script src="assets/js/lobby-room.js?v=8" defer></script><script src="assets/js/lobby.js?v=15" defer></script><script src="assets/js/lobby-wizard.js?v=7" defer></script><?php if (isset($_GET['room'])): ?><link rel="stylesheet" href="assets/css/battle-ui-skins.css?v=14"><link rel="stylesheet" href="assets/css/lobby-room.css?v=5"><link rel="stylesheet" href="assets/css/battle-chat.css?v=2"><?php endif; ?></head><body class="lobby-page<?= isset($_GET['room']) && $wizard==='' ? ' room-page' : '' ?>">
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css?v=9"><link rel="stylesheet" href="assets/css/lobby-wizard.css?v=15"><link rel="stylesheet" href="assets/css/pregame.css?v=2"><script src="assets/js/settings.js?v=3" defer></script><script src="assets/js/lobby-room.js?v=8" defer></script><script src="assets/js/lobby.js?v=16" defer></script><script src="assets/js/lobby-wizard.js?v=8" defer></script><?php if (isset($_GET['room'])): ?><link rel="stylesheet" href="assets/css/battle-ui-skins.css?v=14"><link rel="stylesheet" href="assets/css/lobby-room.css?v=5"><link rel="stylesheet" href="assets/css/battle-chat.css?v=2"><?php endif; ?></head><body class="lobby-page<?= isset($_GET['room']) && $wizard==='' ? ' room-page' : '' ?>">
 <?= \Berserk\View\Ui\GameMenu::render((isset($_GET['new'])||isset($_GET['room']))?'preparation':'lobby',$account,$csrf) ?>
 <main id="lobby" class="screen lobby<?= $wizard!=='' ? ' lobby--wizard' : (isset($_GET['room']) ? ' lobby--room' : '') ?>" data-state="<?= $escape(json_encode($data,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)) ?>" data-csrf="<?= $escape($csrf) ?>" data-authenticated="<?= $account ? '1' : '0' ?>" data-wizard="<?= $wizard !== '' ? '1' : '0' ?>">
 <p id="notice" role="status"><?= $escape($error ?? '') ?></p>

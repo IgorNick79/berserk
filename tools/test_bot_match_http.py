@@ -7,7 +7,7 @@ assert root.is_relative_to(pathlib.Path(os.environ['TEMP']).resolve())
 source = (root/'tools/test_integration_http.py').read_text(encoding='utf-8')
 source = source.replace("from http.cookiejar import Cookie", "from http.cookiejar import Cookie\nurllib.request.getproxies=lambda: {}")
 source = source.replace("'20261021_lobby_setup.sql'", "'20261021_lobby_setup.sql','20261030_lobby_wizard.sql','20261108_bot_matches.sql'")
-source = source.replace("'allow_loopback_http'=>true];", "'allow_loopback_http'=>true,'bot_account_id'=>5];")
+source = source.replace("'allow_loopback_http'=>true];", "'allow_loopback_http'=>true,'bot_account_id'=>5,'debug_account_ids'=>[1,4]];")
 source = source.replace("'20261020_battle_history.sql']", "'20261020_battle_history.sql','20261024_account_ui_preferences.sql','20261030_account_ui_preferences.sql']")
 source = source.replace("        check('runtime no TRIGGER", "        sql(\"GRANT SELECT,INSERT,UPDATE ON LAB_DB.account_ui_preferences TO 'AUTH_USER'@'127.0.0.1';\")\n        check('runtime no TRIGGER")
 start = source.index('        game=match()')
@@ -41,6 +41,47 @@ body = r'''
         check('virtual seat cannot be controlled via gameplay HTTP',http(virtual,game,query='&ajax=battle_sync')[0]==403)
 
         check('repeat create recovers existing game',a.lobby(data=payload)==outcomes[0])
+        defaults=state(game)['settings']['lucktest']
+        check('bot defaults preserve six cards and target 45',defaults['card_count']==6 and defaults['total_cost']==45)
+        totals=lambda:sql('USE LAB_DB;SELECT COUNT(*) FROM games;SELECT COUNT(*) FROM lobby_rooms;SELECT COUNT(*) FROM battle_command_journal;')
+        baseline=totals()
+        scenario=json.dumps({'cards':[{'owner':'host','ukid':'card_8'},{'owner':'player','ukid':'card_9'}],
+                             'deck':[{'owner':'host','ukid':'card_10'},{'owner':'player','ukid':'card_11'}]})
+        for overrides in [{'lucktest_card_count':'11'}, {'lucktest_total_cost':'61'}, {'lucktest_start_stage':'place'},
+                          {'handicap_gold':'6'}, {'lucktest_balanced':'2'}, {'setup_mode':'system'},
+                          {'lucktest_placement':'smart','lucktest_scenario':scenario},
+                          {'lucktest_scenario':scenario.replace('card_8','missing_card')}]:
+            check('invalid bot setup rolls back: '+next(iter(overrides)),
+                  a.lobby(data={**payload,'creation_key':os.urandom(16).hex(),**overrides})[0]==400 and totals()==baseline)
+        check('non-Debug account cannot submit mandatory cards',
+              b.lobby(data={**payload,'csrf':b.token('account'),'creation_key':os.urandom(16).hex(),'lucktest_scenario':scenario})[0]==403
+              and totals()==baseline)
+        sql('USE LAB_DB;UPDATE cards SET price=2+MOD(ind,7);')
+        selected={**payload,'creation_key':os.urandom(16).hex(),'lucktest_card_count':'4','lucktest_total_cost':'20',
+                  'lucktest_balanced':'0','lucktest_balance_metals':'0','handicap_enabled':'1','handicap_gold':'2',
+                  'handicap_silver':'1','lucktest_scenario':scenario}
+        try:
+            code, reply=a.lobby(data=selected)
+            assert code==200,(code,reply)
+            configured=state(int(reply['url'].split('=')[-1]))
+            settings=configured['settings']
+            check('configured match persists both balances off and selected budget',
+                  settings['lucktest']['total_cost']==20 and not settings['lucktest']['balanced'] and not settings['lucktest']['balance_metals'])
+            check('configured handicap persists for the opponent',
+                  settings['battle']['handicap_enabled'] and settings['battle']['handicap_gold']==2 and settings['battle']['handicap_silver']==1)
+            cards=list(configured['cards'].values())
+            for owner, squad, reserve in [('host','card_8','card_10'),('player','card_9','card_11')]:
+                field=[card for card in cards if card['owner']==owner and card['zone']=='field']
+                deck=[card for card in cards if card['owner']==owner and card['zone']=='deck']
+                check(owner+' gets four field cards and 26 reserve cards with mandatory picks',
+                      len(field)==4 and len(deck)==26 and squad in [c['ukid'] for c in field] and reserve in [c['ukid'] for c in deck])
+                if owner=='host':
+                    check('host budget guides actual field cost',abs(sum(2+int(c['ukid'].split('_')[1])%7 for c in field)-20)<=2)
+            check('configured retry resumes same game',a.lobby(data=selected)==(code,reply))
+            check('changed settings cannot reuse the creation key',a.lobby(data={**selected,'lucktest_total_cost':'21'})[0]==409)
+        finally:
+            sql('USE LAB_DB;UPDATE cards SET price=1;')
+
         with concurrent.futures.ThreadPoolExecutor(2) as pool:
             polls=[pool.submit(http,client,game,query='&ajax=battle_sync') for client in (a,a2)]
             responses=[f.result() for f in polls]

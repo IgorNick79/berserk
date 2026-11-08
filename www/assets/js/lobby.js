@@ -52,7 +52,7 @@
             actions.append(button('⚔ Создать игру',()=>location.assign(root.dataset.authenticated==='1'?'lobby.php?new=1':'auth.php?page=login')));
             actions.append(button('♟ Играть с ботом', () => {
                 if (root.dataset.authenticated !== '1') location.assign('auth.php?page=login');
-                else mutate('create_bot');
+                else location.assign('lobby.php?bot=1');
             }));
             const tabs=node('div');tabs.className='lobby-tabs';tabs.setAttribute('aria-label','Фильтр партий');
             [['all','Все'],['mine','Мои'],['open','Открытые'],['history','История']].forEach(([key,label])=>{
@@ -92,14 +92,6 @@
         const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10000);
         if (room) { params.set('version', room.version); if (room.candidate_request_id) params.set('candidate_request_id', room.candidate_request_id); }
         try {
-            if (action === 'create_bot') {
-                let key = sessionStorage.getItem('berserk.botCreation');
-                if (!key) {
-                    key = Array.from(crypto.getRandomValues(new Uint8Array(16)), n => n.toString(16).padStart(2, '0')).join('');
-                    sessionStorage.setItem('berserk.botCreation', key);
-                }
-                params.set('creation_key', key);
-            }
             const response = await fetch('lobby.php?api=1' + (room ? '&room=' + room.id : ''), {method:'POST', body:params, credentials:'same-origin', cache:'no-store', signal:controller.signal});
             const data = await response.json();
             if (response.status === 401) { location.assign('auth.php?page=login'); return; }
@@ -108,8 +100,7 @@
                 throw new Error(data.error || 'Действие не выполнено. Обновляю состояние.');
             }
             // No legacy game URL is ever used, including after accept.
-            if (action === 'create_bot') sessionStorage.removeItem('berserk.botCreation');
-            if (action === 'create_bot' || action === 'create' || action === 'open' || action === 'withdraw') { location.assign(data.url); return; }
+            if (action === 'create' || action === 'open' || action === 'withdraw') { location.assign(data.url); return; }
             adopt(data); notice.textContent = '';
         } catch (error) {
             // Lost responses are recovered by READ; never automatically repeat the mutation.

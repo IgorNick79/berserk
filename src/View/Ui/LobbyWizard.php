@@ -61,6 +61,25 @@ final class LobbyWizard
         return $html;
     }
 
+    public static function renderBot(int $actor, string $csrf): string
+    {
+        $state = new GameState(0, $actor, 0);
+        $state->mode = 'lucktest';
+        $setup = RoomSetup::parse('lucktest', ['lucktest_start_stage'=>'battle', 'turn_seconds'=>'0']);
+        $state->settings = GameSettings::fromArray($setup['settings']);
+        $view = (new SettingsScreen())->prepare($state, 'host', 'host', null)['data'];
+        $body = self::luckTestSections($view['actions_html'], true);
+        $body = preg_replace('/<form[^>]*>|<\/form>|<script\b[^>]*>.*?<\/script>/s', '', $body);
+        $body = preg_replace('/<input[^>]*name="(?:first|second|game|cmd)"[^>]*>/', '', $body);
+        $body = preg_replace('/<div class="settings-submit-row">.*?<\/div>/s', '', $body);
+        return '<form id="create-wizard" class="create-wizard" data-bot-settings method="post" action="lobby.php">'
+            .'<input type="hidden" name="action" value="create_bot"><input type="hidden" name="csrf" value="'.htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8').'">'
+            .'<input type="hidden" name="creation_key" value="'.bin2hex(random_bytes(16)).'">'
+            .'<div class="wizard-scroll"><header class="wizard-heading"><h1>Играть с ботом</h1><p>LuckTest · старт сразу в бой</p></header>'
+            .$body.self::handicapFields().'<p class="wizard-error" data-wizard-error role="alert"></p></div>'
+            .'<footer class="wizard-footer"><a class="button" href="lobby.php">Отмена</a><button type="submit" data-create>Начать игру</button></footer></form>';
+    }
+
     private static function timeFields(): string
     {
         $html='<h2>Таймер хода</h2><div class="wizard-options">';
@@ -78,15 +97,16 @@ final class LobbyWizard
         return $html.'</div></section>';
     }
 
-    private static function luckTestSections(string $body): string
+    private static function luckTestSections(string $body, bool $bot = false): string
     {
         $body=preg_replace('/(<legend>Количество карт<\/legend><div class=")settings-option-grid settings-option-grid--compact/', '$1settings-option-grid settings-option-grid--compact wizard-card-count',$body);
         $body=preg_replace('/<fieldset class="settings-fieldset"><legend>Средняя стоимость карты<\/legend>.*?<\/fieldset>/s',
             '<fieldset class="settings-fieldset"><legend>Стоимость отряда</legend><div class="settings-range"><div class="settings-range__head"><span>Стоимость отряда</span><output data-lucktest-cost-output>45 кр.</output></div><input type="range" name="lucktest_total_cost" min="10" max="60" step="1" value="45" data-lucktest-cost></div><p class="settings-hint">Желаемая суммарная стоимость всех карт отряда. Фактическая стоимость может немного отличаться</p></fieldset>',$body);
         $debug='';
-        $body=preg_replace_callback('/<fieldset class="settings-fieldset debug-fieldtest"><legend>Debug<\/legend>(.*?)<\/fieldset>/s',static function(array $m) use (&$debug): string {
+        $body=preg_replace_callback('/<fieldset class="settings-fieldset debug-fieldtest"><legend>Debug<\/legend>(.*?)<\/fieldset>/s',static function(array $m) use (&$debug, $bot): string {
             $fields=str_replace('class="debug-url-toggle"','class="debug-url-toggle wizard-check"',$m[1]);
             $fields=str_replace('<summary>Формат и пример JSON</summary>','<summary><img class="wizard-chevron" src="assets/images/berserk-chevron-gold.svg" width="16" height="16" alt="" aria-hidden="true"><span>Формат и пример JSON</span></summary>',$fields);
+            if ($bot) $fields = str_replace(LuckTestDebugFields::toggle(false), '', $m[1]);
             $debug='<section class="settings-section wizard-debug"><h2>Debug</h2>'.$fields.'</section>';return '';
         },$body);
         $body=preg_replace('/<input type="hidden" name="lucktest_(?:balanced|quick_game)" value="0"><label class="settings-option">.*?<\/label>/s','',$body);
@@ -102,7 +122,7 @@ final class LobbyWizard
                 .'<p class="debug-help">'.$help.'</p></div>';
         }
         $balance.='</section>';
-        $body=str_replace('<section class="settings-section"><h2>Готовые случайные отряды</h2>',$start.'<section class="settings-section"><h2>Готовые случайные отряды</h2>',$body);
+        $body=str_replace('<section class="settings-section"><h2>Готовые случайные отряды</h2>',($bot ? '' : $start).'<section class="settings-section"><h2>Готовые случайные отряды</h2>',$body);
         return str_replace('</section><div class="settings-submit-row">','</section>'.$balance.$debug.'<div class="settings-submit-row">',$body);
     }
 

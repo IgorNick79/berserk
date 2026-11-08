@@ -47,6 +47,14 @@ source=source.replace("'tools/test_bot_match_browser.cjs'","'tools/test_bot_acti
 end = '        print(json.dumps(RESULTS,ensure_ascii=False))'
 assert source.count(end)==1
 source=source.replace(end,'''
+        configured_ui=json.loads((LAB/'bot-configured-browser.json').read_text())
+        ui_state=state(configured_ui['game'])
+        check('Edge form persists chosen count budget balance and handicap',
+              ui_state['settings']['lucktest']['card_count']==4 and ui_state['settings']['lucktest']['total_cost']==20
+              and not ui_state['settings']['lucktest']['balance_metals'] and ui_state['settings']['battle']['handicap_gold']==1)
+        check('Edge scenario materializes mandatory field and reserve picks on both sides',
+              all(any((card['owner'],card['zone'],card['ukid'])==expected for card in ui_state['cards'].values())
+                  for expected in [('host','field','card_8'),('player','field','card_9'),('host','deck','card_10'),('player','deck','card_11')]))
         if os.environ.get('BERSERK_BOT_NATURAL') == '1':
             natural=subprocess.run([args.node,str(ROOT/'tools/test_bot_activation_browser.cjs'),'--elimination'],
                 env=env,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=240)

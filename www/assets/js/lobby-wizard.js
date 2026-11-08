@@ -3,6 +3,39 @@
  form.addEventListener('input',event=>{if(event.target.matches('[data-lucktest-cost]'))form.querySelector('[data-lucktest-cost-output]').textContent=event.target.value+' кр.';});
  form.addEventListener('change',event=>{if(event.target.matches('[data-handicap-toggle]'))form.querySelector('[data-handicap-fields]').hidden=!event.target.checked;});
  form.addEventListener('input',event=>{if(event.target.matches('[data-handicap-range]'))form.querySelector('[data-handicap-output='+event.target.dataset.handicapRange+']').textContent=event.target.value;});
+ if (form.hasAttribute('data-bot-settings')) {
+  const scenario = form.elements.lucktest_scenario;
+  if (scenario) {
+   const smart = form.querySelector('[name=lucktest_placement][value=smart]');
+   const random = form.querySelector('[name=lucktest_placement][value=random]');
+   const syncPlacement = () => {
+    smart.disabled = scenario.value.trim() !== '';
+    if (smart.disabled) random.checked = true;
+   };
+   scenario.addEventListener('input', syncPlacement);
+   syncPlacement();
+  }
+  form.addEventListener('submit', async event => {
+   event.preventDefault();
+   const submit = form.querySelector('[type=submit]');
+   const error = form.querySelector('[data-wizard-error]');
+   if (submit.disabled) return;
+   submit.disabled = true;
+   error.textContent = '';
+   try {
+    const response = await fetch('lobby.php?api=1', {method:'POST', body:new URLSearchParams(new FormData(form))});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Не удалось начать игру.');
+    location.assign(data.url);
+   } catch (failure) {
+    error.textContent = failure.message;
+    error.scrollIntoView({block:'nearest'});
+    submit.disabled = false;
+   }
+  });
+  return;
+ }
+
  const pages=[...form.querySelectorAll('[data-page]')],tabs=[...form.querySelectorAll('.wizard-tabs [data-step]')],scroll=form.querySelector('.wizard-scroll'),error=form.querySelector('[data-wizard-error]');let step=0,busy=false,checking=false;
  const configuring=form.dataset.configure==='1';
  if(configuring)form.querySelector('[name=access][value='+form.dataset.access+']').checked=true;

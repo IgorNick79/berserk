@@ -17,6 +17,43 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE);
         await page.getByRole('button', {name:'Войти', exact:true}).click();
         await page.waitForURL('**/lobby.php');
         await page.getByRole('button', {name: /Играть с ботом/}).click();
+        await page.waitForURL('**/lobby.php?bot=1');
+        assert.equal(await page.locator('[name=lucktest_card_count]:checked').inputValue(), '6');
+        assert.equal(await page.locator('[name=lucktest_total_cost]').inputValue(), '45');
+        await page.getByRole('link', {name:'Отмена'}).click();
+        await page.waitForURL('**/lobby.php');
+        await page.getByRole('button', {name: /Играть с ботом/}).click();
+        await page.locator('[name=lucktest_card_count][value="4"]').check();
+        await page.locator('[name=lucktest_total_cost]').focus();
+        await page.keyboard.press('Home');
+        for (let step = 0; step < 10; step++) await page.keyboard.press('ArrowRight');
+        assert.equal(await page.locator('[data-lucktest-cost-output]').textContent(), '20 кр.');
+        await page.locator('[name=lucktest_placement][value=smart]').check();
+        await page.locator('[name=lucktest_scenario]').fill(JSON.stringify({
+            cards:[{owner:'host',ukid:'card_8'},{owner:'player',ukid:'card_9'}],
+            deck:[{owner:'host',ukid:'card_10'},{owner:'player',ukid:'card_11'}]
+        }));
+        assert(await page.locator('[name=lucktest_placement][value=random]').isChecked());
+        assert(await page.locator('[name=lucktest_placement][value=smart]').isDisabled());
+        await page.locator('[type=checkbox][name=lucktest_balance_metals]').uncheck();
+        await page.locator('[data-handicap-toggle]').check();
+        await page.locator('[name=handicap_gold]').focus();
+        await page.keyboard.press('ArrowRight');
+        assert.equal(await page.locator('[data-handicap-output=gold]').textContent(), '1');
+        await page.screenshot({path:path.join(evidence, 'bot-settings.png')});
+        const configuredPayload = await page.locator('#create-wizard').evaluate(form => new URLSearchParams(new FormData(form)).toString());
+        await page.getByRole('button', {name:'Начать игру'}).click();
+        await page.waitForURL('**/index.php?game=*');
+        const configuredGame = Number(new URL(page.url()).searchParams.get('game'));
+        const retry = await page.request.post(origin + '/lobby.php?api=1', {
+            data:configuredPayload, headers:{'content-type':'application/x-www-form-urlencoded'}
+        });
+        assert.equal(retry.status(), 200);
+        assert.equal((await retry.json()).url, 'index.php?game=' + configuredGame);
+        fs.writeFileSync(path.join(evidence, 'bot-configured-browser.json'), JSON.stringify({game:configuredGame, replay:true}));
+        await page.goto(origin + '/lobby.php');
+        await page.getByRole('button', {name: /Играть с ботом/}).click();
+        await page.getByRole('button', {name:'Начать игру'}).click();
         await page.waitForURL('**/index.php?game=*');
         await page.locator('[data-battle-sync-root]').waitFor();
         assert.match(await page.locator('#bot-status').innerText(), /Бот/);
