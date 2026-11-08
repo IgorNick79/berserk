@@ -1708,6 +1708,7 @@ body.battle-page #bot-status {
     color: #fff2d4;
     pointer-events: none;
 }
+body.battle-page #bot-status ~ .battle-shell { box-sizing: border-box; }
 body.battle-page > .screen {
     max-width: none;
     margin: 0;
