@@ -39,7 +39,12 @@ final class MatchCreator
                 $entry = $journal->registerProcessing($id, 'host', 'lobby:'.$roomId.':'.$id, $cmd->type, [], $working->persistenceVersion);
                 $repo->executeLockedCommand($working, $journal, (int) $entry['id'],
                     fn(GameState $locked) => (new \Berserk\Core\Engine($connection))->apply($locked, 'host', $cmd), 'prepare_rejected');
-                if (($journal->findById((int) $entry['id'])['status'] ?? null) !== 'committed') throw new \DomainException('Не удалось завершить подготовку LuckTest', 400);
+                $outcome = $journal->findById((int) $entry['id']);
+                if (($outcome['status'] ?? null) !== 'committed') {
+                    $message = (string) ($outcome['error_message'] ?? '');
+                    throw new \DomainException(str_starts_with($message, 'LuckTest Smart:')
+                        ? $message : 'Не удалось завершить подготовку LuckTest', 400);
+                }
             });
             $transaction->recordMatch($id);
             return $id;

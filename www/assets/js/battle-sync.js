@@ -35,6 +35,16 @@
     var matchPause = null, battleDebug = null, drag = null;
 
     function updateTurnTimer(data) {
+        var bot = document.getElementById("bot-status");
+        if (bot && data && Object.prototype.hasOwnProperty.call(data, "bot_status")) {
+            var messages = {
+                bot_unsupported: "Бот остановился на неподдержанном решении.",
+                bot_stopped: "Команда бота остановлена. Состояние партии сохранено.",
+                bot_pending: "Команда бота ожидает подтверждения.",
+                bot_unavailable: "Бот временно недоступен."
+            };
+            bot.textContent = messages[data.bot_status] || "Соперник: Бот";
+        }
         document.dispatchEvent(new Event("berserk:battle-updated"));
         if (pendingCommand && data && data.command_id === pendingCommand.id && data.command_status === "conflict"
             && pendingCommand.type === "pause_ready") pendingCommand.readyConflict = true;
@@ -317,13 +327,22 @@
         return true;
     }
 
-    function navigateToCurrentPage() {
+    function navigateToCurrentPage(data) {
         if (battleDebug) battleDebug.destroy();
         if (matchPause) matchPause.destroy();
         if (turnTimer) turnTimer.destroy();
         stopped = true;
         clearPollTimer();
         cancelActiveRequest();
+        if (data && typeof data.bot_result_html === "string") {
+            var result = document.createElement("template");
+            result.innerHTML = data.bot_result_html;
+            result.content.querySelectorAll("script").forEach(function (script) { script.remove(); });
+            root.replaceWith(result.content);
+            document.body.classList.add("result-page");
+            document.dispatchEvent(new Event("berserk:battle-updated"));
+            return;
+        }
         var url = new URL(window.location.href);
         url.searchParams.delete("ajax");
         url.searchParams.delete("since_version");
@@ -350,7 +369,7 @@
                 syncVersion = Math.max(syncVersion, incomingVersion);
             }
             if (data.status === "game_over") {
-                navigateToCurrentPage();
+                navigateToCurrentPage(data);
                 return "game_over";
             }
             return "status";
@@ -370,7 +389,7 @@
         }
 
         if (data.status === "game_over") {
-            navigateToCurrentPage();
+            navigateToCurrentPage(data);
             return;
         }
 

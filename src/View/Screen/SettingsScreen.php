@@ -239,7 +239,11 @@ final class SettingsScreen
             $value = (string) ($half / 2);
             $form .= $this->radioTile('lucktest_average_cost', $value, str_replace('.', ',', $value), (float) $settings['average_cost'] === (float) ($half / 2));
         }
-        $form .= '</div></fieldset>';
+        $form .= '</div></fieldset>'
+            . '<fieldset class="settings-fieldset"><legend>Автоматическая расстановка</legend><div class="settings-option-grid">'
+            . $this->radioTile('lucktest_placement', 'random', 'Random', ($settings['placement'] ?? 'random') === 'random')
+            . $this->radioTile('lucktest_placement', 'smart', 'Smart (экспериментальный)', ($settings['placement'] ?? 'random') === 'smart')
+            . '</div><p class="settings-hint">При автоматическом старте боя.</p></fieldset>';
         foreach (['balanced' => 'Балансировка специальных карт', 'quick_game' => 'Быстрая игра'] as $key => $label) {
             $name = 'lucktest_' . $key;
             $form .= '<input type="hidden" name="' . $name . '" value="0">'

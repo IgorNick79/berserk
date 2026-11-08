@@ -1426,36 +1426,46 @@ final class PrepareProcessor
         return Result::ok(["card_unplaced:{$playerKey}:{$cardId}"]);
     }
 
-    public function confirmPlace(string $playerKey): Result
+    public function placementConfirmationError(string $playerKey): ?string
     {
         if ($this->state->status !== 'place') {
-            return Result::error('Сейчас не стадия расстановки');
+            return 'Сейчас не стадия расстановки';
         }
-        if (!\Berserk\Core\PathfinderProcessor::canEdit($this->state,$playerKey)) return Result::error('Сначала выберите действие Следопыта');
+        if (!\Berserk\Core\PathfinderProcessor::canEdit($this->state,$playerKey)) return 'Сначала выберите действие Следопыта';
         $player = $this->state->getPlayer($playerKey);
         if ($player->isConfirmed('place')) {
-            return Result::error('Уже подтверждено');
+            return 'Уже подтверждено';
         }
 
         if ($this->state->mode === GameSettings::MODE_LUCKTEST) {
             $error = $this->validateLuckTestCards($playerKey, true);
-            if ($error !== null) return Result::error($error);
+            if ($error !== null) return $error;
             $opponent = $this->state->getOpponentKey($playerKey);
             if ($this->state->getPlayer($opponent)->isConfirmed('place')) {
                 $error = $this->validateLuckTestCards($opponent, true);
-                if ($error !== null) return Result::error($error);
+                if ($error !== null) return $error;
             }
             if (!in_array($this->state->getPlayer('host')->side, [1, 2], true)
                 || $this->state->getPlayer('player')->side !== 3 - $this->state->getPlayer('host')->side) {
-                return Result::error('Некорректные стороны LuckTest');
+                return 'Некорректные стороны LuckTest';
             }
         }
 
         foreach ($this->state->cards as $card) {
             if ($card->owner === $playerKey && $card->zone === CardInstance::ZONE_SQUAD) {
-                return Result::error('Не все карты расставлены');
+                return 'Не все карты расставлены';
             }
         }
+
+        return null;
+    }
+
+    public function confirmPlace(string $playerKey): Result
+    {
+        $error = $this->placementConfirmationError($playerKey);
+        if ($error !== null) return Result::error($error);
+
+        $player = $this->state->getPlayer($playerKey);
 
         $player->confirm('place');
         $this->state->bumpVersion();

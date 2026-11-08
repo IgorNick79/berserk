@@ -32,6 +32,13 @@ final class TurnAckChoice implements ChoiceHandlerInterface
         $tp = $state->battle['turn_phase'] ?? null;
         if (!$tp || empty($tp['pending_ack'])) return null;
 
+        if (!\Berserk\Core\TurnPhaseAck::valid($tp['pending_ack'])) {
+            return new PanelSpec(title: 'Подтверждение требует восстановления контекста (turn_ack_legacy_contract)', isMine: false);
+        }
+        if ($tp['pending_ack']['owner'] !== $playerKey) {
+            return new PanelSpec(title: 'Оппонент подтверждает результат фазы', isMine: false);
+        }
+
         $text = $this->formatAck($tp['pending_ack'], $state, $cardsInfo, $playerKey);
 
         return new PanelSpec(
@@ -39,7 +46,7 @@ final class TurnAckChoice implements ChoiceHandlerInterface
             isMine: true,
             buttons: [[
                 'label' => 'Продолжить',
-                'url'   => $baseUrl . '&cmd=turn_ack',
+                'url'   => $baseUrl . '&cmd=turn_ack&ack_id=' . rawurlencode($tp['pending_ack']['ack_id']),
             ]],
         );
     }
@@ -112,6 +119,6 @@ final class TurnAckChoice implements ChoiceHandlerInterface
         Command $cmd
     ): Result {
         $tp = new \Berserk\Core\TurnPhaseProcessor($state, $engine);
-        return $tp->ackPending($playerKey);
+        return $tp->ackPending($playerKey, $cmd);
     }
 }

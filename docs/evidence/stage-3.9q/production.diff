@@ -1,0 +1,614 @@
+diff --git a/config/auth.example.php b/config/auth.example.php
+index deee0af..58dd737 100644
+--- a/config/auth.example.php
++++ b/config/auth.example.php
+@@ -9,4 +9,6 @@ return [
+     'allow_loopback_http' => false,
+     // Exactly two distinct positive registered IDs, set privately by the operator. Empty disables debug.
+     'debug_account_ids' => [],
++    // Dedicated account with an undisclosed random password. Null disables bot matches.
++    'bot_account_id' => null,
+ ];
+diff --git a/src/Lobby/LobbyStore.php b/src/Lobby/LobbyStore.php
+index 4a47f06..26baab6 100644
+--- a/src/Lobby/LobbyStore.php
++++ b/src/Lobby/LobbyStore.php
+@@ -172,6 +172,42 @@ final class LobbyStore
+         return $id;
+     }
+ 
++    /** Private LuckTest room and match are committed together. */
++    public function createBotMatch(int $actor, int $bot, string $creationKey): int
++    {
++        if ($actor <= 0 || $bot <= 0 || $actor === $bot
++            || !preg_match('/\A[a-f0-9]{32}\z/D', $creationKey)) {
++            throw new \DomainException('Некорректный запрос игры с ботом.', 400);
++        }
++        $setup = RoomSetup::parse('lucktest', ['lucktest_start_stage'=>'battle', 'turn_seconds'=>'0']);
++        $game = 0;
++        try {
++            RoomTransaction::run($this->db, function (RoomTransaction $transaction) use ($actor, $bot, $creationKey, $setup, &$game): void {
++                if (!$this->query('SELECT id FROM accounts WHERE id=?', [$bot])->fetch_assoc()) {
++                    throw new \DomainException('Соперник-бот пока недоступен.', 503);
++                }
++                $this->query("INSERT INTO lobby_rooms(creator_account_id, invited_account_id, candidate_account_id,
++                    candidate_request_id, creation_key, state, version, created_at, updated_at, game_type, setup_json, bot_account_id)
++                    VALUES(?,?,?, ?,?,'awaiting_confirmation',1,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),'lucktest',?,?)",
++                    [$actor,$bot,$bot,bin2hex(random_bytes(32)),$creationKey,json_encode($setup, JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$bot]);
++                $room = (int) $this->db->insert_id;
++                $game = MatchCreator::create($transaction, $room, $actor, $bot, $this->catalogFactory);
++                if (($this->query('SELECT status FROM games WHERE ind=?', [$game])->fetch_assoc()['status'] ?? null) !== 'battle') {
++                    throw new \DomainException('Быстрый старт остановился на обязательной подготовке. Игра с ботом не создана.', 409);
++                }
++                $this->query("UPDATE lobby_rooms SET accepted_account_id=candidate_account_id, candidate_account_id=NULL,
++                    candidate_request_id=NULL, game_id=?, state='started', version=version+1 WHERE id=?", [$game,$room]);
++            });
++        } catch (\mysqli_sql_exception $error) {
++            if ($error->getCode() !== 1062) throw $error;
++            $prior = $this->query("SELECT game_id FROM lobby_rooms WHERE creator_account_id=? AND creation_key=?
++                AND bot_account_id=? AND accepted_account_id=? AND state='started'", [$actor,$creationKey,$bot,$bot])->fetch_assoc();
++            if (!$prior) throw new \DomainException('Ключ создания уже использован.', 409);
++            return (int) $prior['game_id'];
++        }
++        return $game;
++    }
++
+     public function configure(int $id,int $actor,int $version,?string $request,array $setup): void
+     {
+         $setup=RoomSetup::validate($setup);
+diff --git a/www/assets/js/battle-sync.js b/www/assets/js/battle-sync.js
+index b21edfb..d474a30 100644
+--- a/www/assets/js/battle-sync.js
++++ b/www/assets/js/battle-sync.js
+@@ -35,6 +35,16 @@
+     var matchPause = null, battleDebug = null, drag = null;
+ 
+     function updateTurnTimer(data) {
++        var bot = document.getElementById("bot-status");
++        if (bot && data && Object.prototype.hasOwnProperty.call(data, "bot_status")) {
++            var messages = {
++                bot_unsupported: "Бот остановился на неподдержанном решении.",
++                bot_stopped: "Команда бота остановлена. Состояние партии сохранено.",
++                bot_pending: "Команда бота ожидает подтверждения.",
++                bot_unavailable: "Бот временно недоступен."
++            };
++            bot.textContent = messages[data.bot_status] || "Соперник: Бот";
++        }
+         document.dispatchEvent(new Event("berserk:battle-updated"));
+         if (pendingCommand && data && data.command_id === pendingCommand.id && data.command_status === "conflict"
+             && pendingCommand.type === "pause_ready") pendingCommand.readyConflict = true;
+@@ -317,13 +327,22 @@
+         return true;
+     }
+ 
+-    function navigateToCurrentPage() {
++    function navigateToCurrentPage(data) {
+         if (battleDebug) battleDebug.destroy();
+         if (matchPause) matchPause.destroy();
+         if (turnTimer) turnTimer.destroy();
+         stopped = true;
+         clearPollTimer();
+         cancelActiveRequest();
++        if (data && typeof data.bot_result_html === "string") {
++            var result = document.createElement("template");
++            result.innerHTML = data.bot_result_html;
++            result.content.querySelectorAll("script").forEach(function (script) { script.remove(); });
++            root.replaceWith(result.content);
++            document.body.classList.add("result-page");
++            document.dispatchEvent(new Event("berserk:battle-updated"));
++            return;
++        }
+         var url = new URL(window.location.href);
+         url.searchParams.delete("ajax");
+         url.searchParams.delete("since_version");
+@@ -350,7 +369,7 @@
+                 syncVersion = Math.max(syncVersion, incomingVersion);
+             }
+             if (data.status === "game_over") {
+-                navigateToCurrentPage();
++                navigateToCurrentPage(data);
+                 return "game_over";
+             }
+             return "status";
+@@ -370,7 +389,7 @@
+         }
+ 
+         if (data.status === "game_over") {
+-            navigateToCurrentPage();
++            navigateToCurrentPage(data);
+             return;
+         }
+ 
+diff --git a/www/assets/js/lobby.js b/www/assets/js/lobby.js
+index f1676ac..88ca4aa 100644
+--- a/www/assets/js/lobby.js
++++ b/www/assets/js/lobby.js
+@@ -50,7 +50,10 @@
+             content.replaceChildren();
+             const actions=node('div'); actions.className='lobby-actions';
+             actions.append(button('⚔ Создать игру',()=>location.assign(root.dataset.authenticated==='1'?'lobby.php?new=1':'auth.php?page=login')));
+-            const bot=node('button','♟ Играть с ботом · Скоро');bot.disabled=true;actions.append(bot);
++            actions.append(button('♟ Играть с ботом', () => {
++                if (root.dataset.authenticated !== '1') location.assign('auth.php?page=login');
++                else mutate('create_bot');
++            }));
+             const tabs=node('div');tabs.className='lobby-tabs';tabs.setAttribute('aria-label','Фильтр партий');
+             [['all','Все'],['mine','Мои'],['open','Открытые'],['history','История']].forEach(([key,label])=>{
+                 const tab=button(label,()=>{filter=key;render();});tab.setAttribute('aria-pressed',String(filter===key));tabs.append(tab);
+@@ -89,6 +92,14 @@
+         const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10000);
+         if (room) { params.set('version', room.version); if (room.candidate_request_id) params.set('candidate_request_id', room.candidate_request_id); }
+         try {
++            if (action === 'create_bot') {
++                let key = sessionStorage.getItem('berserk.botCreation');
++                if (!key) {
++                    key = Array.from(crypto.getRandomValues(new Uint8Array(16)), n => n.toString(16).padStart(2, '0')).join('');
++                    sessionStorage.setItem('berserk.botCreation', key);
++                }
++                params.set('creation_key', key);
++            }
+             const response = await fetch('lobby.php?api=1' + (room ? '&room=' + room.id : ''), {method:'POST', body:params, credentials:'same-origin', cache:'no-store', signal:controller.signal});
+             const data = await response.json();
+             if (response.status === 401) { location.assign('auth.php?page=login'); return; }
+@@ -97,7 +108,8 @@
+                 throw new Error(data.error || 'Действие не выполнено. Обновляю состояние.');
+             }
+             // No legacy game URL is ever used, including after accept.
+-            if (action === 'create' || action === 'open' || action === 'withdraw') { location.assign(data.url); return; }
++            if (action === 'create_bot') sessionStorage.removeItem('berserk.botCreation');
++            if (action === 'create_bot' || action === 'create' || action === 'open' || action === 'withdraw') { location.assign(data.url); return; }
+             adopt(data); notice.textContent = '';
+         } catch (error) {
+             // Lost responses are recovered by READ; never automatically repeat the mutation.
+diff --git a/www/index.php b/www/index.php
+index 7d67ee2..5ca074c 100644
+--- a/www/index.php
++++ b/www/index.php
+@@ -193,7 +193,8 @@ function sendAjaxJson(array $payload, int $statusCode = 200): never
+             && ($_POST['html_resign'] ?? null) === '1')
+         || (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'
+             && ($_GET['ajax'] ?? null) === 'battle_command_status' && ($_GET['html_resign'] ?? null) === '1');
+-    global $state, $playerKey;
++    global $state, $playerKey, $botBinding, $botStatus, $isBattleSync;
++    if (isset($botBinding) && ($isBattleSync ?? false)) $payload['bot_status'] = $botStatus;
+     if ($htmlResign && isset($state, $playerKey) && $state instanceof GameState) {
+         $url = '?game=' . (int) $state->gameId;
+         header('Cache-Control: no-store');
+@@ -270,6 +271,16 @@ function preparationAjaxAllowed(GameState $state, string $type): bool
+     };
+ }
+ 
++function botResultFragment(Template $tpl, GameState $state, string $playerKey): array
++{
++    global $botBinding, $historyRuntime;
++    if ($botBinding === null || $state->status !== 'game_over') return [];
++    $allowed = $historyRuntime->journals($state->gameId)
++        && $historyRuntime->journalSide($state->gameId, $state->hostId, $state->playerId, $_SESSION) === $playerKey;
++    return ['bot_result_html'=>$tpl->parse('screen/game_over.tpl',
++        (new \Berserk\View\Screen\GameOverScreen($tpl))->prepare($state, $playerKey, $allowed))];
++}
++
+ function sendBattleAjaxState(
+     Db $db,
+     Template $tpl,
+@@ -301,7 +312,7 @@ function sendBattleAjaxState(
+         if ($error !== null) {
+             $payload['error'] = $error;
+         }
+-        $payload = array_merge($payload, $extra);
++        $payload = array_merge($payload, $extra, botResultFragment($tpl, $state, $playerKey));
+         sendAjaxJson($payload, $statusCode);
+     }
+ 
+@@ -584,6 +595,13 @@ try {
+     \Berserk\Auth\AccountUiPreferences::bindPresentation(new \Berserk\Auth\AccountUiPreferences($uiConfig['db']));
+     $userId = $account->id;
+     $playerKey = $role;
++    $configuredBot = $uiConfig['bot_account_id'] ?? null;
++    if ($playerKey === 'player' && $configuredBot === $userId
++        && $db->fetchOne("SELECT id FROM lobby_rooms WHERE game_id=".$gameId." AND bot_account_id=".$userId)) {
++        throw new DomainException('server_managed_participant', 403);
++    }
++    $botBinding = $playerKey === 'host'
++        ? \Berserk\Core\Combat\BotMatch::bound($db, $gameId, $userId, $configuredBot) : null;
+     $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+     if (!in_array($requestMethod,['GET','POST'],true)) throw new DomainException('method_not_allowed',405);
+     if ($requestMethod === 'POST') {
+@@ -689,10 +707,20 @@ if (in_array($state->status,['battle','game_over'],true) && ($_SERVER['REQUEST_M
+     http_response_code(405); exit('battle_commands_require_journal_endpoint');
+ }
+ $oppKey    = $state->getOpponentKey($playerKey);
++$botStatus = null;
+ 
+ if ($isBattleSync) {
+     try {
+         $state = applyAutomaticBattleProgress($db, $state, $playerKey);
++        if ($botBinding !== null && $state->status === 'battle') {
++            try {
++                [$state, $botStatus] = \Berserk\Core\Combat\BotMatch::tick($db, $repo, $state, $userId, (int) $botBinding['bot_account_id']);
++            } catch (Throwable $error) {
++                error_log('Bot match '.$gameId.': '.get_class($error));
++                $state = $repo->findById($gameId) ?? $state;
++                $botStatus = 'bot_unavailable';
++            }
++        }
+         $syncVersion = $state->persistenceVersion ?? 0;
+         $sinceVersion = ajaxParamInt('since_version');
+         $forceSnapshot = ajaxFlag('force_snapshot');
+@@ -707,7 +735,7 @@ if ($isBattleSync) {
+                 'instant_reservation' => \Berserk\Core\InstantReservation::controls($state, $playerKey, time()),
+                 'instant_control' => \Berserk\View\Screen\Battle\InstantControl::project($state, $playerKey, time()),
+                 'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
+-            ]);
++            ] + botResultFragment($tpl, $state, $playerKey));
+         }
+ 
+         if (!$forceSnapshot && $sinceVersion !== null && ($sinceVersion === $syncVersion || hash_equals(\Berserk\Core\PlaymatCatalog::renderToken($state), ajaxParamString('render_token',64) ?? ''))) {
+@@ -1349,7 +1377,7 @@ switch ($state->status) {
+         $scriptsHtml = '<script src="/assets/js/battle-turn-timer.js?v={{rkey}}"></script>'
+             . '<script src="/assets/js/battle-debug.js?v={{rkey}}"></script>'
+             . '<script src="/assets/js/battle-match-pause.js?v={{rkey}}"></script>'
+-            . '<script src="/assets/js/battle-sync.js?v={{rkey}}"'
++            . '<script src="/assets/js/battle-sync.js?v=bot1-{{rkey}}"'
+             . ' data-viewer-key="' . htmlspecialchars($playerKey, ENT_QUOTES) . '"'
+             . ' data-turn-sound-url="' . htmlspecialchars($turnSoundUrl, ENT_QUOTES) . '"'
+             . ' data-sync-url="' . htmlspecialchars($syncUrl, ENT_QUOTES) . '"'
+@@ -1399,6 +1427,7 @@ $screenHtml = $isPreGame
+ 
+ $accountPresentation=\Berserk\Auth\AccountUiPreferences::forPlayer($state->getPlayer($playerKey));
+ if ($accountPresentation) $screenHtml=str_replace('data-panel-theme="grimoire"','data-panel-theme="'.$accountPresentation['theme'].'"',$screenHtml);
++if ($botBinding !== null) $screenHtml = '<p id="bot-status" role="status">Соперник: Бот</p>'.$screenHtml;
+ $menuScreen=$screenName==='battle'?'battle':($screenName==='game_over'?'finished':'preparation');
+ $screenHtml=\Berserk\View\Ui\GameMenu::render($menuScreen,$account,GameTransport::$csrf,$state,$playerKey,$screenData['debug_menu_html']??'').$screenHtml;
+ 
+diff --git a/www/lobby.php b/www/lobby.php
+index 67411dd..80f944e 100644
+--- a/www/lobby.php
++++ b/www/lobby.php
+@@ -47,6 +47,16 @@ try {
+     if ($method === 'POST') {
+         if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0)>8192 || count($_POST)>32) throw new DomainException('Слишком большой запрос.',413);
+         $action = $_POST['action'] ?? null;
++        if ($action === 'create_bot') {
++            if ($id !== null || !is_string($_POST['creation_key'] ?? null)) throw new DomainException('Некорректный запрос.',400);
++            $bot = $config['bot_account_id'] ?? null;
++            if (!is_int($bot) || $bot <= 0) throw new DomainException('Соперник-бот пока недоступен.',503);
++            $game = $store->createBotMatch($actor,$bot,$_POST['creation_key']);
++            $url = 'index.php?game='.$game;
++            if (!$api) { header('Location: '.$url,true,303); exit; }
++            header('Content-Type: application/json; charset=utf-8');
++            echo json_encode(['url'=>$url],JSON_THROW_ON_ERROR); exit;
++        }
+         if ($action === 'create') {
+             if ($id !== null) throw new DomainException('Некорректный запрос.',400);
+             $setupMode=$_POST['setup_mode']??null;
+@@ -92,7 +102,7 @@ if ($api) {
+ }
+ header('Content-Type: text/html; charset=utf-8');
+ ?>
+-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css?v=9"><link rel="stylesheet" href="assets/css/lobby-wizard.css?v=15"><link rel="stylesheet" href="assets/css/pregame.css?v=2"><script src="assets/js/settings.js?v=3" defer></script><script src="assets/js/lobby-room.js?v=8" defer></script><script src="assets/js/lobby.js?v=14" defer></script><script src="assets/js/lobby-wizard.js?v=7" defer></script><?php if (isset($_GET['room'])): ?><link rel="stylesheet" href="assets/css/battle-ui-skins.css?v=14"><link rel="stylesheet" href="assets/css/lobby-room.css?v=5"><link rel="stylesheet" href="assets/css/battle-chat.css?v=2"><?php endif; ?></head><body class="lobby-page<?= isset($_GET['room']) && $wizard==='' ? ' room-page' : '' ?>">
++<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Berserk — лобби</title><link rel="stylesheet" href="assets/css/global.css"><link rel="stylesheet" href="assets/css/auth.css"><link rel="stylesheet" href="assets/css/lobby.css?v=9"><link rel="stylesheet" href="assets/css/lobby-wizard.css?v=15"><link rel="stylesheet" href="assets/css/pregame.css?v=2"><script src="assets/js/settings.js?v=3" defer></script><script src="assets/js/lobby-room.js?v=8" defer></script><script src="assets/js/lobby.js?v=15" defer></script><script src="assets/js/lobby-wizard.js?v=7" defer></script><?php if (isset($_GET['room'])): ?><link rel="stylesheet" href="assets/css/battle-ui-skins.css?v=14"><link rel="stylesheet" href="assets/css/lobby-room.css?v=5"><link rel="stylesheet" href="assets/css/battle-chat.css?v=2"><?php endif; ?></head><body class="lobby-page<?= isset($_GET['room']) && $wizard==='' ? ' room-page' : '' ?>">
+ <?= \Berserk\View\Ui\GameMenu::render((isset($_GET['new'])||isset($_GET['room']))?'preparation':'lobby',$account,$csrf) ?>
+ <main id="lobby" class="screen lobby<?= $wizard!=='' ? ' lobby--wizard' : (isset($_GET['room']) ? ' lobby--room' : '') ?>" data-state="<?= $escape(json_encode($data,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)) ?>" data-csrf="<?= $escape($csrf) ?>" data-authenticated="<?= $account ? '1' : '0' ?>" data-wizard="<?= $wizard !== '' ? '1' : '0' ?>">
+ <p id="notice" role="status"><?= $escape($error ?? '') ?></p>
+diff --git a/src/Core/Combat/BotMatch.php b/src/Core/Combat/BotMatch.php
+new file mode 100644
+--- /dev/null
++++ b/src/Core/Combat/BotMatch.php
+@@ -0,0 +1,94 @@
++<?php
++declare(strict_types=1);
++
++namespace Berserk\Core\Combat;
++
++use Berserk\Auth\GameAccess;
++use Berserk\Core\{Command, CommandJournalRepository, Db, DbQueryException, Engine, GameRepository, GameState, Result, StaleStateException};
++use Berserk\Core\Legal\LegalActions;
++use Berserk\Core\Observation\PlayerObservation;
++
++/** Bounded server-side work driven by the host's authenticated battle polling. */
++final class BotMatch
++{
++    public static function bound(Db $db, int $game, int $host, mixed $configuredBot): ?array
++    {
++        if (!is_int($configuredBot) || $configuredBot <= 0 || $configuredBot === $host) return null;
++        return $db->fetchOne("SELECT bot_account_id,bot_visited FROM lobby_rooms
++            WHERE state='started' AND game_id=".$game." AND creator_account_id=".$host."
++            AND accepted_account_id=".$configuredBot." AND bot_account_id=".$configuredBot);
++    }
++
++    public static function tick(Db $db, GameRepository $repo, GameState $state, int $host, int $bot): array
++    {
++        $journal = new CommandJournalRepository($db);
++        for ($step = 0; $step < 4 && $state->status === 'battle'; $step++) {
++            $binding = self::bound($db, $state->gameId, $host, $bot);
++            if ($binding === null || GameAccess::resolve($db, $state->gameId, $bot) !== 'player') {
++                return [$state, 'bot_unavailable'];
++            }
++            $version = $state->persistenceVersion;
++            if ($version === null) return [$state, 'bot_unavailable'];
++            $period = $state->battle['instant_reservation']['period_id'] ?? null;
++            $saved = json_decode($binding['bot_visited'] ?? 'null', true, 512, JSON_THROW_ON_ERROR);
++            $visited = ($saved['period'] ?? null) === $period && $period !== null ? $saved['cells'] : [];
++            $now = time();
++            $observation = PlayerObservation::build($state, 'player');
++            $legal = LegalActions::build($state, 'player', $now);
++            foreach ($observation['cards'] as $card) {
++                if ($card['owner'] === 'player' && $card['zone'] === 'field') {
++                    $visited[$card['id']][$card['row'].':'.$card['col']] = true;
++                }
++            }
++            $decision = CombatDecisionPlanner::decide($observation, $legal, $visited);
++            $action = $decision['action'];
++            if ($action === null) {
++                if ($decision['reason'] === 'waiting' || $legal['decision'] === 'paused') return [$state, null];
++                $reason = $db->escape(substr($version.':'.$decision['reason'], 0, 128));
++                $db->query("UPDATE lobby_rooms r JOIN games g ON g.ind=r.game_id
++                    SET r.bot_diagnostic='".$reason."' WHERE r.game_id=".$state->gameId." AND r.bot_account_id=".$bot
++                    ." AND g.version=".$version." AND NOT (r.bot_diagnostic <=> '".$reason."')");
++                return [$state, 'bot_unsupported'];
++            }
++            if (!in_array($action, $legal['actions'], true)) return [$state, 'bot_unavailable'];
++
++            // One opportunity per persisted version, even if two poll requests race.
++            $id = 'bot:'.$version;
++            if (($prior = $journal->find($state->gameId, 'player', $id)) !== null) {
++                return [$repo->findById($state->gameId) ?? $state, $prior['status'] === 'processing' ? 'bot_pending' : 'bot_stopped'];
++            }
++            $entry = $journal->registerProcessing($state->gameId, 'player', $id, $action['type'], $action['payload'], $version);
++            if (!$entry['is_new']) return [$repo->findById($state->gameId) ?? $state, 'bot_pending'];
++            $command = new Command($action['type'], $action['payload']);
++            try {
++                $repo->executeLockedCommand($state, $journal, (int) $entry['id'],
++                    static function (GameState $locked) use ($db, $command, $host, $bot, $period, $visited): Result {
++                        if (self::bound($db, $locked->gameId, $host, $bot) === null
++                            || GameAccess::resolve($db, $locked->gameId, $bot) !== 'player') {
++                            return Result::error('bot_binding_changed');
++                        }
++                        $result = (new Engine($db))->apply($locked, 'player', $command);
++                        if ($result->success) {
++                            $memory = $db->escape(json_encode(['period'=>$period, 'cells'=>$visited], JSON_THROW_ON_ERROR));
++                            $db->query("UPDATE lobby_rooms SET bot_diagnostic=NULL, bot_visited='".$memory."' WHERE game_id=".$locked->gameId
++                                ." AND bot_account_id=".$bot." AND creator_account_id=".$host);
++                        }
++                        return $result;
++                    }, 'bot_command_rejected');
++            } catch (StaleStateException) {
++                $latest = $repo->findById($state->gameId) ?? $state;
++                $journal->markConflict((int) $entry['id'], $latest->persistenceVersion ?? $version, 'stale_state');
++                return [$latest, null];
++            } catch (DbQueryException) {
++                // executeLockedCommand only rethrows a SQL failure after a certain rollback.
++                $journal->markFailed((int) $entry['id'], $version, 'bot_persistence_failed');
++                return [$repo->findById($state->gameId) ?? $state, 'bot_stopped'];
++            }
++            $state = $repo->findById($state->gameId) ?? $state;
++            if (($journal->findById((int) $entry['id'])['status'] ?? null) !== 'committed') {
++                return [$state, 'bot_stopped'];
++            }
++        }
++        return [$state, null];
++    }
++}
+diff --git a/tools/migrations/20261108_bot_matches.sql b/tools/migrations/20261108_bot_matches.sql
+new file mode 100644
+--- /dev/null
++++ b/tools/migrations/20261108_bot_matches.sql
+@@ -0,0 +1,5 @@
++-- Apply before configuring bot_account_id. Both lobby and gameplay use this room binding.
++ALTER TABLE lobby_rooms
++    ADD COLUMN bot_account_id INT NULL,
++    ADD COLUMN bot_visited LONGTEXT NULL,
++    ADD COLUMN bot_diagnostic VARCHAR(128) NULL;
+diff --git a/tools/test_bot_match_http.py b/tools/test_bot_match_http.py
+new file mode 100644
+--- /dev/null
++++ b/tools/test_bot_match_http.py
+@@ -0,0 +1,110 @@
++"""Bot match HTTP and Chromium checks. Run from a disposable source copy in TEMP."""
++import pathlib
++
++root = pathlib.Path(__file__).resolve().parents[1]
++import os
++assert root.is_relative_to(pathlib.Path(os.environ['TEMP']).resolve())
++source = (root/'tools/test_integration_http.py').read_text(encoding='utf-8')
++source = source.replace("from http.cookiejar import Cookie", "from http.cookiejar import Cookie\nurllib.request.getproxies=lambda: {}")
++source = source.replace("'20261021_lobby_setup.sql'", "'20261021_lobby_setup.sql','20261030_lobby_wizard.sql','20261108_bot_matches.sql'")
++source = source.replace("'allow_loopback_http'=>true];", "'allow_loopback_http'=>true,'bot_account_id'=>5];")
++source = source.replace("'20261020_battle_history.sql']", "'20261020_battle_history.sql','20261024_account_ui_preferences.sql','20261030_account_ui_preferences.sql']")
++source = source.replace("        check('runtime no TRIGGER", "        sql(\"GRANT SELECT,INSERT,UPDATE ON LAB_DB.account_ui_preferences TO 'AUTH_USER'@'127.0.0.1';\")\n        check('runtime no TRIGGER")
++start = source.index('        game=match()')
++end = source.index('    finally:', start)
++body = r'''
++        urllib.request.getproxies=lambda:{}
++        virtual=Client()
++        bot_password=os.urandom(24).hex()
++        assert virtual.post('register','BerserkBot',bot_password)[0]==303
++        assert virtual.post('login','BerserkBot',bot_password)[0]==303
++        check('virtual account has distinct ID',sql("USE LAB_DB;SELECT id FROM accounts WHERE login_key='berserkbot'")=='5')
++        csrf=a.token('account')
++        key=os.urandom(16).hex()
++        payload={'action':'create_bot','creation_key':key,'csrf':csrf}
++        check('bad CSRF denied',a.lobby(data={**payload,'csrf':'bad'})[0]==403)
++        a2=Client(33573);assert a2.post('login','Creator',password)[0]==303
++        with concurrent.futures.ThreadPoolExecutor(2) as pool:
++            requests=[pool.submit(a.lobby,data=payload),pool.submit(a2.lobby,data={**payload,'csrf':a2.token('account')})]
++            outcomes=[f.result() for f in requests]
++        check('concurrent create returns same game',outcomes[0]==outcomes[1] and outcomes[0][0]==200)
++        game=int(outcomes[0][1]['url'].split('=')[-1])
++        check('real automatic preparation',state(game)['status']=='battle')
++        check('separate host/player',state(game)['host_id']==1 and state(game)['player_id']==5)
++        check('one persisted room for key',sql(f"USE LAB_DB;SELECT COUNT(*) FROM lobby_rooms WHERE creation_key='{key}'")=='1')
++        check('outsider cannot tick bot',http(c,game,query='&ajax=battle_sync')[0]==403)
++        check('virtual seat cannot be controlled via gameplay HTTP',http(virtual,game,query='&ajax=battle_sync')[0]==403)
++
++        check('repeat create recovers existing game',a.lobby(data=payload)==outcomes[0])
++        with concurrent.futures.ThreadPoolExecutor(2) as pool:
++            polls=[pool.submit(http,client,game,query='&ajax=battle_sync') for client in (a,a2)]
++            responses=[f.result() for f in polls]
++            if not all(r[0]==200 for r in responses):print([(r[0],r[1][:600]) for r in responses])
++            check('parallel authorized polls return snapshots',all(r[0]==200 for r in responses))
++        check('bot journal has at most one commit per version',sql(f"USE LAB_DB;SELECT COUNT(*) FROM (SELECT expected_version FROM battle_command_journal WHERE game_id={game} AND player_key='player' AND status='committed' GROUP BY expected_version HAVING COUNT(*)>1) q")=='0')
++        v=version(game)
++        resign={'cmd':'resign','expected_version':v,'command_id':'human-resign-acceptance','csrf':csrf}
++        check('stale request does not save',http(a,game,{**resign,'expected_version':v-1,'command_id':'human-stale'},'&ajax=battle_command')[0]==409 and version(game)==v)
++        check('fresh surrender commits exactly once',http(a,game,resign,'&ajax=battle_command')[0]==200 and version(game)==v+1)
++        check('duplicate surrender preserves version',http(a,game,resign,'&ajax=battle_command')[0]==200 and version(game)==v+1)
++        check('same ID with changed payload conflicts',http(a,game,{**resign,'cmd':'end_turn'},'&ajax=battle_command')[0]==409 and version(game)==v+1)
++        totals=lambda:sql('USE LAB_DB;SELECT COUNT(*) FROM games;SELECT COUNT(*) FROM lobby_rooms;SELECT COUNT(*) FROM battle_command_journal;')
++        before=totals()
++        sql("USE LAB_DB;CREATE TRIGGER bot_reject_prepare BEFORE UPDATE ON games FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='disposable failure';")
++        try:
++            check('creation failure rolls room game and journal back',a.lobby(data={**payload,'creation_key':os.urandom(16).hex()})[0]>=400 and totals()==before)
++        finally:
++            sql('USE LAB_DB;DROP TRIGGER bot_reject_prepare;')
++
++        sql("USE LAB_DB;UPDATE cards SET prop='{\"pathfinder_rearrange\":true}';")
++        try:
++            code,detail=a.lobby(data={**payload,'creation_key':os.urandom(16).hex()})
++            check('mandatory preparation is neither bypassed nor partially saved',code==409 and 'подготовке' in detail['error'] and totals()==before)
++        finally:
++            sql("USE LAB_DB;UPDATE cards SET prop='{}';")
++        code,failure=a.lobby(data={**payload,'creation_key':os.urandom(16).hex()})
++        assert code==200
++        failure_game=int(failure['url'].split('=')[-1])
++        if state(failure_game)['battle']['active']=='host':
++            opening={'cmd':'end_turn','expected_version':version(failure_game),'command_id':'human-pass-before-failure','csrf':csrf}
++            assert http(a,failure_game,opening,'&ajax=battle_command')[0]==200
++        assert state(failure_game)['battle']['active']=='player'
++        before_state=state(failure_game)
++        v=version(failure_game)
++        sql("USE LAB_DB;CREATE TRIGGER bot_reject_action BEFORE UPDATE ON games FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='disposable action failure';")
++        try:
++            code,reply,_=http(a,failure_game,query='&ajax=battle_sync')
++            check('bot rollback preserves durable state and version',code==200 and json.loads(reply)['bot_status']=='bot_stopped'
++                and version(failure_game)==v and state(failure_game)==before_state)
++            check('failed bot journal and rollback of movement memory',sql(f"USE LAB_DB;SELECT status FROM battle_command_journal WHERE game_id={failure_game} AND command_id='bot:{v}';SELECT bot_visited IS NULL FROM lobby_rooms WHERE game_id={failure_game};")=='failed\n1')
++        finally:
++            sql('USE LAB_DB;DROP TRIGGER bot_reject_action;')
++        check('ordinary PvP still creates and authorizes both sides',http(a,(pvp:=match()))[0]==http(b,pvp)[0]==200)
++        check('ordinary PvP has no virtual binding',sql(f"USE LAB_DB;SELECT COUNT(*) FROM lobby_rooms WHERE game_id={pvp} AND bot_account_id IS NULL")=='1')
++        code,created=a.lobby(data={'action':'create','csrf':csrf,'setup_mode':'lucktest',
++            'creation_key':os.urandom(16).hex(),'lucktest_start_stage':'battle'})
++        assert code==200,(code,created)
++        room=created['room'];assert b.act(room)[0]==200
++        offered=a.lobby(room['id'])[1]['room'];assert a.act(offered,'accept')[0]==200
++        pvp=a.lobby(room['id'])[1]['room']['game_id']
++        v=version(pvp);assert state(pvp)['status']=='battle'
++        responses=[http(client,pvp,query='&ajax=battle_sync') for client in (a,b)]
++        check('PvP battle polls remain projection only here',all(r[0]==200 and 'bot_status' not in json.loads(r[1]) for r in responses)
++            and version(pvp)==v)
++
++        env=dict(os.environ,INTEGRATION_URL='http://127.0.0.1:33572',PLAYWRIGHT_MODULE=args.playwright,BROWSER_EXECUTABLE=args.browser,INTEGRATION_EVIDENCE=str(LAB))
++        ui=subprocess.run([args.node,str(ROOT/'tools/test_bot_match_browser.cjs')],env=env,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=180)
++        (LAB/'bot-browser-output.txt').write_text(ui.stdout+ui.stderr,encoding='utf-8')
++        check('Chromium bot match',ui.returncode==0)
++        browser=json.loads((LAB/'bot-browser.json').read_text())
++        game=browser['game']
++        check('browser match persisted game_over',state(game)['status']=='game_over')
++        check('bot committed from its side',int(sql(f"USE LAB_DB;SELECT COUNT(*) FROM battle_command_journal WHERE game_id={game} AND player_key='player' AND command_id LIKE 'bot:%' AND status='committed'"))>0)
++        check('human never submits a bot command',sql(f"USE LAB_DB;SELECT COUNT(*) FROM battle_command_journal WHERE game_id={game} AND player_key='host' AND command_id LIKE 'bot:%'")=='0')
++        fields=('id','side','command','expected_version','status','before_version','after_version')
++        journal=sql(f"USE LAB_DB;SELECT command_id,player_key,command_type,expected_version,status,before_version,after_version FROM battle_command_journal WHERE game_id={game} ORDER BY id")
++        (LAB/'bot-journal.jsonl').write_text(''.join(json.dumps(dict(zip(fields,line.split('\t'))))+'\n' for line in journal.splitlines()),encoding='utf-8')
++        print(json.dumps(RESULTS,ensure_ascii=False))
++'''
++exec(compile(source[:start]+body+source[end:],str(root/'tools/test_integration_http.py'),'exec'),{'__name__':'__main__','__file__':str(root/'tools/test_integration_http.py')})
++
+diff --git a/tools/test_bot_match_browser.cjs b/tools/test_bot_match_browser.cjs
+new file mode 100644
+--- /dev/null
++++ b/tools/test_bot_match_browser.cjs
+@@ -0,0 +1,92 @@
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const { chromium } = require(process.env.PLAYWRIGHT_MODULE);
++
++(async () => {
++    const origin = process.env.INTEGRATION_URL;
++    assert.equal(origin, 'http://127.0.0.1:33572');
++    const browser = await chromium.launch({headless: true, executablePath: process.env.BROWSER_EXECUTABLE});
++    const evidence = process.env.INTEGRATION_EVIDENCE;
++    try {
++        const page = await browser.newPage({viewport: {width: 1440, height: 900}});
++        await page.goto(origin + '/auth.php');
++        await page.locator('[name=login]').fill('Creator');
++        await page.locator('[name=password]').fill('LobbyFixture123');
++        await page.getByRole('button', {name:'Войти', exact:true}).click();
++        await page.waitForURL('**/lobby.php');
++        await page.getByRole('button', {name: /Играть с ботом/}).click();
++        await page.waitForURL('**/index.php?game=*');
++        await page.locator('[data-battle-sync-root]').waitFor();
++        assert.match(await page.locator('#bot-status').innerText(), /Бот/);
++        const game = new URL(page.url()).searchParams.get('game');
++        await page.evaluate(() => { window.botTestMarker = true; });
++        let acted = false, answered = false, ack = false, mandatoryCommand = null;
++        const sync = [];
++        let dropped = false;
++        await page.route('**/*ajax=battle_sync*', async route => {
++            if (!dropped) { dropped = true; await route.abort(); }
++            else await route.continue();
++        });
++        let humanVersion = null;
++        let lostCommit = null, recoveryObserved = false;
++        await page.route('**/*ajax=battle_command*', async route => {
++            const body = new URLSearchParams(route.request().postData() || '');
++            if (route.request().method() !== 'POST' || body.get('cmd') !== 'end_turn' || lostCommit) {
++                await route.continue();
++                return;
++            }
++            const response = await route.fetch();
++            lostCommit = await response.json();
++            assert.equal(response.status(), 200);
++            assert.equal(lostCommit.command_status, 'committed');
++            await route.abort();
++        });
++        page.on('response', async r => {
++            if (r.url().includes('ajax=battle_command_status')) {
++                try { recoveryObserved ||= (await r.json()).command_status === 'committed'; } catch {}
++                return;
++            }
++            if (!r.url().includes('ajax=battle_sync')) return;
++            try { sync.push(await r.json()); } catch {}
++        });
++        for (let i = 0; i < 25 && !ack; i++) {
++            const command = page.locator('a[href*="cmd=confirm_strike"], a[href*="cmd=choose_defender"], a[href*="cmd=choose_strike_mode"], a[href*="cmd=end_turn"]').filter({visible:true}).first();
++            await command.waitFor({timeout: 12000});
++            const href = await command.getAttribute('href');
++            if (href.includes('cmd=end_turn') && !lostCommit) {
++                await command.click();
++                for (let tries=0; tries<100 && !recoveryObserved; tries++) await page.waitForTimeout(100);
++                assert(recoveryObserved && lostCommit);
++                await page.locator('[data-battle-message]').waitFor({state:'hidden', timeout:15000});
++                humanVersion = lostCommit.after_version;
++                acted = true;
++            } else {
++                const response = page.waitForResponse(r => r.url().includes('ajax=battle_command') && r.request().method()==='POST');
++                await command.click();
++                assert.equal((await response).status(), 200);
++                if (!href.includes('cmd=end_turn') && acted) {
++                    ack = true;
++                    mandatoryCommand = new URL(href, page.url()).searchParams.get('cmd');
++                }
++            }
++            await page.waitForTimeout(700);
++            answered = answered || sync.some(x => x.type === 'snapshot' && x.sync_version > humanVersion && x.fragments?.field_html);
++        }
++        assert(acted && answered && ack && dropped);
++        assert.equal(await page.evaluate(() => window.botTestMarker), true);
++        await page.screenshot({path: path.join(evidence, 'bot-battle.png')});
++        await page.reload();
++        assert.equal(new URL(page.url()).searchParams.get('game'), game);
++        await page.locator('[data-battle-sync-root]').waitFor();
++        await page.evaluate(() => { window.botTestMarker = true; });
++        page.once('dialog', dialog => dialog.accept());
++        await page.getByRole('link', {name: 'Сдаться'}).click();
++        await page.locator('[data-result="defeat"]').waitFor();
++        assert.equal(await page.evaluate(() => window.botTestMarker), true);
++        assert.equal(new URL(page.url()).searchParams.get('game'), game);
++        await page.screenshot({path: path.join(evidence, 'bot-result.png')});
++        fs.writeFileSync(path.join(evidence, 'bot-browser.json'), JSON.stringify({game:Number(game), acted, answered, ack, mandatoryCommand, end:'resign', reloadPreservedId:true, resultWithoutReload:true, droppedPollRecovered:true, lostCommittedCommandRecovered:true}));
++    } finally { await browser.close(); }
++})().catch(error => { console.error(error); process.exit(1); });
++

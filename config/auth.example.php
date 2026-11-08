@@ -9,4 +9,6 @@ return [
     'allow_loopback_http' => false,
     // Exactly two distinct positive registered IDs, set privately by the operator. Empty disables debug.
     'debug_account_ids' => [],
+    // Dedicated account with an undisclosed random password. Null disables bot matches.
+    'bot_account_id' => null,
 ];

@@ -79,3 +79,4 @@ www/assets/cards/
 !tools/migrations/20261030_lobby_wizard.sql
 
 !tools/migrations/20261030_lobby_chat.sql
+!tools/migrations/20261108_bot_matches.sql

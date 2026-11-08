@@ -141,6 +141,9 @@ final class RoomSetup
             if (!is_array($entries)) throw new \DomainException('Некорректный сценарий LuckTest',400);
             if ($entries !== []) {
                 $debug['scenario'] = \Berserk\Core\Prepare\LuckTestScenario::parse(json_encode(\Berserk\Core\Prepare\LuckTestScenario::root($entries),JSON_THROW_ON_ERROR),$s->lucktest['card_count']);
+                if ($s->luckTestStartStage() === 'battle' && $s->lucktest['placement'] === 'smart') {
+                    throw new \DomainException('LuckTest Smart: несовместим со сценарием Debug',400);
+                }
                 if ($s->lucktest['quick_game'] !== true) throw new \DomainException('Сценарий LuckTest доступен только в быстрой игре',400);
             }
             if (isset($debug['roll'])) $debug['roll'] = \Berserk\Core\LuckTestDebug::rollInput($debug['roll']);

@@ -31,12 +31,15 @@ final class TurnInstantResultChoice implements ChoiceHandlerInterface
         $result = $state->battle['turn_instant_result'] ?? null;
         if (!$result) return null;
 
+        $current = \Berserk\Core\TurnInstantResult::current($result);
+        if ($current === null) return new PanelSpec(title: 'turn_instant_result_legacy_contract', isMine: false);
+        if ($current['owner'] !== $playerKey) return new PanelSpec(title: 'Ожидание', isMine: false);
         return new PanelSpec(
             title: 'Разрешение инстантов',
-            text: [$this->renderSummary($state, (array) ($result['summary'] ?? []), $cardsInfo, $playerKey)],
+            text: [$this->renderSummary($state, [$result['summary'][$result['position']]], $cardsInfo, $playerKey)],
             buttons: [[
-                'label' => 'OK',
-                'url' => $baseUrl . '&cmd=turn_instant_result_ok',
+                'label' => 'Продолжить',
+                'url' => $baseUrl . '&cmd=turn_instant_result_ok&ack_id=' . urlencode($current['ack_id']),
             ]],
         );
     }
@@ -105,6 +108,6 @@ final class TurnInstantResultChoice implements ChoiceHandlerInterface
 
     public function apply(GameState $state, Engine $engine, string $playerKey, Command $cmd): Result
     {
-        return (new InstantProcessor($state, $engine))->ackTurnInstantResult($playerKey);
+        return (new InstantProcessor($state, $engine))->ackTurnInstantResult($playerKey, $cmd);
     }
 }

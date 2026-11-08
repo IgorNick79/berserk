@@ -59,11 +59,20 @@ final class BattleWaitResolver
         if ($handler !== null) {
             $key = $handler->pendingKey();
             $pending = $battle[$key];
-            if (in_array($key, ['pending_incarnation_ack', 'turn_instant_result'], true)) {
+            if ($key === 'turn_instant_result') {
+                $current = TurnInstantResult::current($pending);
+                return $current === null ? self::unknown($key, 'turn_instant_result_legacy_contract')
+                    : self::projection('informational', [$current['owner']], $key);
+            }
+            if ($key === 'pending_incarnation_ack') {
                 return self::unknown($key, 'ack_owner_not_defined');
             }
             if ($key === 'turn_phase') {
-                if (!empty($pending['pending_ack'])) return self::unknown('turn_phase.pending_ack', 'ack_owner_not_defined');
+                if (!empty($pending['pending_ack'])) {
+                    return TurnPhaseAck::valid($pending['pending_ack'])
+                        ? self::projection('informational', [$pending['pending_ack']['owner']], 'turn_phase.pending_ack')
+                        : self::unknown('turn_phase.pending_ack', 'turn_ack_legacy_contract');
+                }
                 $side = $pending['side'] ?? null;
                 if (!in_array($side, ['active', 'passive'], true)) return self::unknown($key, 'invalid_phase_side');
                 return self::decision($key . (!empty($pending['sub']) ? '.sub' : '.' . $side . '_queue'), $pending[$side . '_key'] ?? null);
@@ -98,7 +107,13 @@ final class BattleWaitResolver
         }
 
         // Legacy panels follow the same priority as InfoPanel: prophecy, strike, dive.
-        if (!empty($battle['pending_prophecy'])) return self::prophecy($battle['pending_prophecy']);
+        if (!empty($battle['pending_prophecy'])) {
+            $owner = Observation\ProphecyKnowledge::closeOwner($state);
+            if ($owner !== null) return self::decision('pending_prophecy.close_only', $owner);
+            $owner = Observation\ProphecyKnowledge::transformDeclineOwner($state);
+            return $owner === null ? self::prophecy($battle['pending_prophecy'])
+                : self::decision('pending_prophecy.transform_decline', $owner);
+        }
         if (!empty($battle['strike'])) return self::strike($state, $battle['strike']);
         if (!empty($battle['pending_dive'])) {
             $pending = $battle['pending_dive'];

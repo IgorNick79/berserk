@@ -5,7 +5,10 @@ declare(strict_types=1);
 
 namespace Berserk\Core;
 
+use Berserk\Core\Legal\LegalActions;
 use Berserk\Core\Movement\MovementResolver;
+use Berserk\Core\Observation\PlayerObservation;
+use Berserk\Core\Placement\SmartPlacementPlanner;
 use Berserk\Core\Prepare\PrepareProcessor;
 
 /**
@@ -79,6 +82,19 @@ final class Engine
     }
 
     private function applyCommand(GameState $state, string $playerKey, Command $cmd): Result
+    {
+        if (!in_array($cmd->type, ['turn_sub', 'turn_sub_close', 'turn_instant_result_ok'], true)) return $this->applyContractCommand($state, $playerKey, $cmd);
+        $battle = $state->battle;
+        $version = $state->version;
+        $result = $this->applyContractCommand($state, $playerKey, $cmd);
+        if (!$result->success) {
+            $state->battle = $battle;
+            $state->version = $version;
+        }
+        return $result;
+    }
+
+    private function applyContractCommand(GameState $state, string $playerKey, Command $cmd): Result
     {
         $now = $this->serverNow();
         if (MatchPause::isCommand($cmd->type)) return MatchPause::apply($state, $playerKey, $cmd, $now);
@@ -240,7 +256,7 @@ final class Engine
             'choose_dive_cell'        => $action->chooseDiveCell($playerKey, $cmd),
             'turn_task'               => $turnPhase->runTask($playerKey, $cmd),
             'turn_sub'                => $turnPhase->runSub($playerKey, $cmd),
-            'turn_ack'                => $turnPhase->ackPending($playerKey),
+            'turn_ack'                => $turnPhase->ackPending($playerKey, $cmd),
             'choose_blood_tap'        => $action->chooseBloodTap($playerKey, $cmd),
             'valhalla_pick'           => $valhalla->chooseTarget($playerKey, $cmd),
             'turn_sub_close'          => $turnPhase->closeSub($playerKey, $cmd),
@@ -328,7 +344,15 @@ final class Engine
         $events = array_merge($events, $this->preparationEvents($prepare->chooseSide($state->firstPlayer,
             new Command('choose_side', ['side'=>$this->preparationRandomInt(1, 2)]))));
         if ($state->settings->luckTestStartStage() === 'place') return Result::ok($events);
-        foreach (['host', 'player'] as $owner) $events = array_merge($events, $this->randomPlaceSquad($state, $prepare, $owner));
+        $smart = ($state->settings->lucktest['placement'] ?? 'random') === 'smart';
+        if ($smart && ($state->lucktestDebug['bindings'] ?? []) !== []) {
+            throw new \DomainException('LuckTest Smart: несовместим со сценарием Debug');
+        }
+        foreach (['host', 'player'] as $owner) {
+            $events = array_merge($events, $smart
+                ? $this->smartPlaceSquad($state, $prepare, $owner)
+                : $this->randomPlaceSquad($state, $prepare, $owner));
+        }
         \Berserk\Core\Prepare\LuckTestScenario::verify($state);
         \Berserk\Core\Prepare\LuckTestScenario::applyInitialHealth($state);
         // This is the SAME final validation and startBattle boundary used by manual confirm_place.
@@ -336,6 +360,44 @@ final class Engine
             $this->preparationEvents($this->confirmPreparePlace($state, $owner, $prepare)));
         $events[] = 'lucktest_quick_preparation_completed';
         return Result::ok($events);
+    }
+
+    private function smartPlaceSquad(GameState $state, PrepareProcessor $prepare, string $owner): array
+    {
+        $events = $seen = [];
+        for ($step = 0; $step < 64; $step++) {
+            // The in-memory revision advances for every placement inside this single durable command.
+            $snapshot = clone $state;
+            $snapshot->persistenceVersion = $state->version;
+            $observation = PlayerObservation::build($snapshot, $owner);
+            $legal = LegalActions::build($snapshot, $owner);
+            $position = [];
+            foreach ($observation['cards'] as $card) {
+                if ($card['owner'] === $owner && $card['zone'] === 'field') {
+                    $position[$card['id']] = [$card['row'], $card['col']];
+                }
+            }
+            $key = serialize($position);
+            if (isset($seen[$key])) throw new \DomainException("LuckTest Smart: цикл расстановки ($owner)");
+            $seen[$key] = true;
+
+            $action = SmartPlacementPlanner::plan($observation, $legal)['action'];
+            if ($action === null) {
+                $error = $prepare->placementConfirmationError($owner);
+                if ($error === null) return $events;
+                throw new \DomainException("LuckTest Smart: расстановка не завершена ($owner). $error");
+            }
+            if ($action['type'] !== 'place_card' || !in_array($action, $legal['actions'], true)) {
+                throw new \DomainException("LuckTest Smart: недопустимая команда ($owner)");
+            }
+            // The same placement processor handles a participant's place_card command.
+            $result = $prepare->placeCard($owner, new Command($action['type'], $action['payload']));
+            if (!$result->success) {
+                throw new \DomainException("LuckTest Smart: команда отклонена ($owner). {$result->error}");
+            }
+            $events = array_merge($events, $result->events);
+        }
+        throw new \DomainException("LuckTest Smart: превышен лимит расстановки ($owner)");
     }
 
     private function randomPlaceSquad(GameState $state, PrepareProcessor $prepare, string $owner): array

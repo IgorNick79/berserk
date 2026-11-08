@@ -172,6 +172,42 @@ final class LobbyStore
         return $id;
     }
 
+    /** Private LuckTest room and match are committed together. */
+    public function createBotMatch(int $actor, int $bot, string $creationKey): int
+    {
+        if ($actor <= 0 || $bot <= 0 || $actor === $bot
+            || !preg_match('/\A[a-f0-9]{32}\z/D', $creationKey)) {
+            throw new \DomainException('Некорректный запрос игры с ботом.', 400);
+        }
+        $setup = RoomSetup::parse('lucktest', ['lucktest_start_stage'=>'battle', 'turn_seconds'=>'0']);
+        $game = 0;
+        try {
+            RoomTransaction::run($this->db, function (RoomTransaction $transaction) use ($actor, $bot, $creationKey, $setup, &$game): void {
+                if (!$this->query('SELECT id FROM accounts WHERE id=?', [$bot])->fetch_assoc()) {
+                    throw new \DomainException('Соперник-бот пока недоступен.', 503);
+                }
+                $this->query("INSERT INTO lobby_rooms(creator_account_id, invited_account_id, candidate_account_id,
+                    candidate_request_id, creation_key, state, version, created_at, updated_at, game_type, setup_json, bot_account_id)
+                    VALUES(?,?,?, ?,?,'awaiting_confirmation',1,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),'lucktest',?,?)",
+                    [$actor,$bot,$bot,bin2hex(random_bytes(32)),$creationKey,json_encode($setup, JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$bot]);
+                $room = (int) $this->db->insert_id;
+                $game = MatchCreator::create($transaction, $room, $actor, $bot, $this->catalogFactory);
+                if (($this->query('SELECT status FROM games WHERE ind=?', [$game])->fetch_assoc()['status'] ?? null) !== 'battle') {
+                    throw new \DomainException('Быстрый старт остановился на обязательной подготовке. Игра с ботом не создана.', 409);
+                }
+                $this->query("UPDATE lobby_rooms SET accepted_account_id=candidate_account_id, candidate_account_id=NULL,
+                    candidate_request_id=NULL, game_id=?, state='started', version=version+1 WHERE id=?", [$game,$room]);
+            });
+        } catch (\mysqli_sql_exception $error) {
+            if ($error->getCode() !== 1062) throw $error;
+            $prior = $this->query("SELECT game_id FROM lobby_rooms WHERE creator_account_id=? AND creation_key=?
+                AND bot_account_id=? AND accepted_account_id=? AND state='started'", [$actor,$creationKey,$bot,$bot])->fetch_assoc();
+            if (!$prior) throw new \DomainException('Ключ создания уже использован.', 409);
+            return (int) $prior['game_id'];
+        }
+        return $game;
+    }
+
     public function configure(int $id,int $actor,int $version,?string $request,array $setup): void
     {
         $setup=RoomSetup::validate($setup);

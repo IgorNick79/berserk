@@ -1,0 +1,52 @@
+{
+  "stage": "3.9Q",
+  "http_assertions": 28,
+  "browser": {
+    "game": 8,
+    "acted": true,
+    "answered": true,
+    "ack": true,
+    "mandatoryCommand": "confirm_strike",
+    "end": "resign",
+    "reloadPreservedId": true,
+    "resultWithoutReload": true,
+    "droppedPollRecovered": true,
+    "lostCommittedCommandRecovered": true
+  },
+  "focused": {
+    "test_positional_progress": 743,
+    "test_contact_only_detour": 0,
+    "test_prophecy_source_close": 140,
+    "test_combat_main_terminal_pass": 75,
+    "test_turn_stack_terminal_pass": 133,
+    "test_after_strike_terminal_pass": 178,
+    "exact-engine": 208,
+    "exact-sql": 117,
+    "close-only-sql": 72,
+    "sql-main": 61,
+    "sql-before": 104,
+    "sql-after": 36
+  },
+  "regressions_passed": 45,
+  "known_baseline_failures": [
+    "test_bulbagur",
+    "test_lucktest_manual",
+    "test_lucktest_quick",
+    "test_stage31_fixes"
+  ],
+  "unexpected_regression_failures": [],
+  "protected_paths_before": 526,
+  "protected_paths_after": 527,
+  "changed_manifest_paths": [
+    "config/auth.example.php",
+    "src/Core/Combat/BotMatch.php",
+    "src/Lobby/LobbyStore.php",
+    "www/assets/js/battle-sync.js",
+    "www/assets/js/lobby.js",
+    "www/index.php",
+    "www/lobby.php"
+  ],
+  "game_zero_sha256": "983C9C7459A53ED5DFCA7422E290426E90D9710DF12981C3ED9DB3EEE603DA18",
+  "deployment_applied": false,
+  "worker": "authenticated battle_sync polling"
+}

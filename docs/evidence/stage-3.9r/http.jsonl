@@ -1,0 +1,39 @@
+{"test": "exact isolated database identity", "pass": true}
+{"test": "runtime no TRIGGER or DDL privileges", "pass": true}
+{"test": "virtual account has distinct ID", "pass": true}
+{"test": "no bot columns before applying migration", "pass": true}
+{"test": "migration preserves existing PvP JSON and version", "pass": true}
+{"test": "all three activation columns present", "pass": true}
+{"test": "raw replay fails with duplicate column and leaves existing match intact", "pass": true}
+{"test": "idempotent preflight skip preserves existing match", "pass": true}
+{"test": "configuration disabled fails closed", "pass": true}
+{"test": "configuration wrong type fails closed", "pass": true}
+{"test": "configuration missing account fails closed", "pass": true}
+{"test": "configuration human account fails closed", "pass": true}
+{"test": "pre-migration PvP still authorizes both participants", "pass": true}
+{"test": "bad CSRF denied", "pass": true}
+{"test": "concurrent create returns same game", "pass": true}
+{"test": "real automatic preparation", "pass": true}
+{"test": "separate host/player", "pass": true}
+{"test": "one persisted room for key", "pass": true}
+{"test": "outsider cannot tick bot", "pass": true}
+{"test": "virtual seat cannot be controlled via gameplay HTTP", "pass": true}
+{"test": "repeat create recovers existing game", "pass": true}
+{"test": "parallel authorized polls return snapshots", "pass": true}
+{"test": "bot journal has at most one commit per version", "pass": true}
+{"test": "stale request does not save", "pass": true}
+{"test": "fresh surrender commits exactly once", "pass": true}
+{"test": "duplicate surrender preserves version", "pass": true}
+{"test": "same ID with changed payload conflicts", "pass": true}
+{"test": "creation failure rolls room game and journal back", "pass": true}
+{"test": "mandatory preparation is neither bypassed nor partially saved", "pass": true}
+{"test": "bot rollback preserves durable state and version", "pass": true}
+{"test": "failed bot journal and rollback of movement memory", "pass": true}
+{"test": "ordinary PvP still creates and authorizes both sides", "pass": true}
+{"test": "ordinary PvP has no virtual binding", "pass": true}
+{"test": "PvP battle polls remain projection only here", "pass": true}
+{"test": "Chromium bot match", "pass": true}
+{"test": "browser match persisted game_over", "pass": true}
+{"test": "bot committed from its side", "pass": true}
+{"test": "human never submits a bot command", "pass": true}
+{"test": "browser elimination matches durable reason", "pass": true}

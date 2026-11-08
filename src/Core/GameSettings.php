@@ -80,6 +80,7 @@ final class GameSettings
             'balanced' => true,
             'balance_metals' => true,
             'start_stage' => null,
+            'placement' => 'random',
             'quick_game' => true,
         ],
         public array $battle = ['turn_seconds' => 180, 'turn_time_mode'=>null, 'turn_fixed_seconds'=>180, 'turn_creature_seconds'=>30, 'handicap_enabled'=>false, 'handicap_gold'=>0, 'handicap_silver'=>0],
@@ -119,7 +120,7 @@ final class GameSettings
     /** Shared transport parsing for in-game settings and room setup. Invalid values stay invalid. */
     public static function luckTestInput(array $current, array $input): array
     {
-        foreach (['card_count', 'average_cost', 'total_cost', 'balanced', 'balance_metals', 'quick_game', 'start_stage'] as $key) {
+        foreach (['card_count', 'average_cost', 'total_cost', 'balanced', 'balance_metals', 'quick_game', 'start_stage', 'placement'] as $key) {
             $field = 'lucktest_' . $key;
             if (!array_key_exists($field, $input)) continue;
             $value = $input[$field];
@@ -171,6 +172,9 @@ final class GameSettings
 
     public function validateLuckTestSettings(): ?string
     {
+        if (array_key_exists('placement', $this->lucktest) && !in_array($this->lucktest['placement'], ['random', 'smart'], true)) {
+            return 'LuckTest: неизвестный алгоритм автоматической расстановки';
+        }
         if (($this->lucktest['start_stage'] ?? null) !== null && !in_array($this->lucktest['start_stage'], ['turn','place','battle'], true)) return 'LuckTest: invalid start stage';
         $count = $this->lucktest['card_count'] ?? null;
         if (!is_int($count) || $count < 3 || $count > 10) return 'LuckTest: количество карт должно быть целым числом от 3 до 10';

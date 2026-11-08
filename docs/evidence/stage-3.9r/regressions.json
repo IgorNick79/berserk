@@ -1,0 +1,198 @@
+{
+  "test_abyss_luck_window": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_abyss_movement": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_ai_combat_power": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_ai_flying_units": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_ai_forced_strike": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_ai_observation_legal_integration": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_ai_ranged_attacks": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_ai_root_auto_shot": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_ai_strike_redirect": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_ai_turn_instants": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_ai_turn_phase_ack": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_alvalind": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_battle_helper_movement": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_bulbagur": {
+    "exit_code": 255,
+    "expected": "known_baseline"
+  },
+  "test_combat_continuation": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_combat_instant_phases": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_dynamic_flying_lifecycle": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_effective_feature_continuations": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_fly_pagination": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_forced_directional_movement": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_forced_strike_targets": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_greed_teleport": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_informational_wait": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_king_priest": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_legal_actions": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_lilith": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_lord_of_the_dead": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_lucktest": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_lucktest_manual": {
+    "exit_code": 255,
+    "expected": "known_baseline"
+  },
+  "test_lucktest_quick": {
+    "exit_code": 255,
+    "expected": "known_baseline"
+  },
+  "test_movement_effects": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_nested_combat_ownership": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_passive_queue": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_player_observation": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_riala_movement": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_smart_placement": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_smart_placement_comparative": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_stage31_fixes": {
+    "exit_code": 1,
+    "expected": "known_baseline"
+  },
+  "test_strike_redirect_contract": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_swamp_queen": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_temple_combat": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_temple_ranged": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_tremor_movement": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_turn_phase_ack": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_turn_result_contract": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_turn_timeout": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_turn_timer": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_wizard_continuation": {
+    "exit_code": 0,
+    "expected": "pass"
+  },
+  "test_ai_basic_magic": {
+    "exit_code": 0,
+    "expected": "pass"
+  }
+}

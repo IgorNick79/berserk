@@ -193,7 +193,8 @@ function sendAjaxJson(array $payload, int $statusCode = 200): never
             && ($_POST['html_resign'] ?? null) === '1')
         || (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'
             && ($_GET['ajax'] ?? null) === 'battle_command_status' && ($_GET['html_resign'] ?? null) === '1');
-    global $state, $playerKey;
+    global $state, $playerKey, $botBinding, $botStatus, $isBattleSync;
+    if (isset($botBinding) && ($isBattleSync ?? false)) $payload['bot_status'] = $botStatus;
     if ($htmlResign && isset($state, $playerKey) && $state instanceof GameState) {
         $url = '?game=' . (int) $state->gameId;
         header('Cache-Control: no-store');
@@ -270,6 +271,16 @@ function preparationAjaxAllowed(GameState $state, string $type): bool
     };
 }
 
+function botResultFragment(Template $tpl, GameState $state, string $playerKey): array
+{
+    global $botBinding, $historyRuntime;
+    if ($botBinding === null || $state->status !== 'game_over') return [];
+    $allowed = $historyRuntime->journals($state->gameId)
+        && $historyRuntime->journalSide($state->gameId, $state->hostId, $state->playerId, $_SESSION) === $playerKey;
+    return ['bot_result_html'=>$tpl->parse('screen/game_over.tpl',
+        (new \Berserk\View\Screen\GameOverScreen($tpl))->prepare($state, $playerKey, $allowed))];
+}
+
 function sendBattleAjaxState(
     Db $db,
     Template $tpl,
@@ -301,7 +312,7 @@ function sendBattleAjaxState(
         if ($error !== null) {
             $payload['error'] = $error;
         }
-        $payload = array_merge($payload, $extra);
+        $payload = array_merge($payload, $extra, botResultFragment($tpl, $state, $playerKey));
         sendAjaxJson($payload, $statusCode);
     }
 
@@ -584,6 +595,13 @@ try {
     \Berserk\Auth\AccountUiPreferences::bindPresentation(new \Berserk\Auth\AccountUiPreferences($uiConfig['db']));
     $userId = $account->id;
     $playerKey = $role;
+    $configuredBot = $uiConfig['bot_account_id'] ?? null;
+    if ($playerKey === 'player' && $configuredBot === $userId
+        && $db->fetchOne("SELECT id FROM lobby_rooms WHERE game_id=".$gameId." AND bot_account_id=".$userId)) {
+        throw new DomainException('server_managed_participant', 403);
+    }
+    $botBinding = $playerKey === 'host'
+        ? \Berserk\Core\Combat\BotMatch::bound($db, $gameId, $userId, $configuredBot) : null;
     $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     if (!in_array($requestMethod,['GET','POST'],true)) throw new DomainException('method_not_allowed',405);
     if ($requestMethod === 'POST') {
@@ -689,10 +707,20 @@ if (in_array($state->status,['battle','game_over'],true) && ($_SERVER['REQUEST_M
     http_response_code(405); exit('battle_commands_require_journal_endpoint');
 }
 $oppKey    = $state->getOpponentKey($playerKey);
+$botStatus = null;
 
 if ($isBattleSync) {
     try {
         $state = applyAutomaticBattleProgress($db, $state, $playerKey);
+        if ($botBinding !== null && $state->status === 'battle') {
+            try {
+                [$state, $botStatus] = \Berserk\Core\Combat\BotMatch::tick($db, $repo, $state, $userId, (int) $botBinding['bot_account_id']);
+            } catch (Throwable $error) {
+                error_log('Bot match '.$gameId.': '.get_class($error));
+                $state = $repo->findById($gameId) ?? $state;
+                $botStatus = 'bot_unavailable';
+            }
+        }
         $syncVersion = $state->persistenceVersion ?? 0;
         $sinceVersion = ajaxParamInt('since_version');
         $forceSnapshot = ajaxFlag('force_snapshot');
@@ -707,7 +735,7 @@ if ($isBattleSync) {
                 'instant_reservation' => \Berserk\Core\InstantReservation::controls($state, $playerKey, time()),
                 'instant_control' => \Berserk\View\Screen\Battle\InstantControl::project($state, $playerKey, time()),
                 'match_pause' => MatchPause::snapshot($state, $playerKey, time()),
-            ]);
+            ] + botResultFragment($tpl, $state, $playerKey));
         }
 
         if (!$forceSnapshot && $sinceVersion !== null && ($sinceVersion === $syncVersion || hash_equals(\Berserk\Core\PlaymatCatalog::renderToken($state), ajaxParamString('render_token',64) ?? ''))) {
@@ -1349,7 +1377,7 @@ switch ($state->status) {
         $scriptsHtml = '<script src="/assets/js/battle-turn-timer.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-debug.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-match-pause.js?v={{rkey}}"></script>'
-            . '<script src="/assets/js/battle-sync.js?v={{rkey}}"'
+            . '<script src="/assets/js/battle-sync.js?v=bot1-{{rkey}}"'
             . ' data-viewer-key="' . htmlspecialchars($playerKey, ENT_QUOTES) . '"'
             . ' data-turn-sound-url="' . htmlspecialchars($turnSoundUrl, ENT_QUOTES) . '"'
             . ' data-sync-url="' . htmlspecialchars($syncUrl, ENT_QUOTES) . '"'
@@ -1399,6 +1427,7 @@ $screenHtml = $isPreGame
 
 $accountPresentation=\Berserk\Auth\AccountUiPreferences::forPlayer($state->getPlayer($playerKey));
 if ($accountPresentation) $screenHtml=str_replace('data-panel-theme="grimoire"','data-panel-theme="'.$accountPresentation['theme'].'"',$screenHtml);
+if ($botBinding !== null) $screenHtml = '<p id="bot-status" role="status">Соперник: Бот</p>'.$screenHtml;
 $menuScreen=$screenName==='battle'?'battle':($screenName==='game_over'?'finished':'preparation');
 $screenHtml=\Berserk\View\Ui\GameMenu::render($menuScreen,$account,GameTransport::$csrf,$state,$playerKey,$screenData['debug_menu_html']??'').$screenHtml;
 

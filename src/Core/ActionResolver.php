@@ -5001,13 +5001,13 @@ final class ActionResolver
 
         // Результат — записать в текущий turn_phase pending_ack
         if (!empty($this->state->battle['turn_phase'])) {
-            $this->state->battle['turn_phase']['pending_ack'] = [
+            TurnPhaseAck::set($this->state, $ownerKey, [
                 'label' => 'Демон жадности',
                 'items' => array_merge(
                     [['position_event'=>'teleport', 'row'=>$row, 'col'=>$col]],
                     $hits
                 ),
-            ];
+            ]);
             // НЕ resume — ждём подтверждения игрока через turn_ack.
             // Кнопка «Продолжить» → ackPending() → advance → finish.
         }

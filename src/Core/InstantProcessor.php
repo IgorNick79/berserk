@@ -1776,6 +1776,8 @@ final class InstantProcessor
 
         $found = $this->findAvailableTurnInstant($playerKey, $cardId, $key, 'turn');
         if (!$found) return Result::error('Инстант недоступен');
+        $source = $this->state->getCard($cardId);
+        if (($found['target'] ?? 'self') === 'self' && (!$source || !$this->isLegalInstantTarget($source, $source, 'self', $found['effect']['condition'] ?? null))) return Result::error('Цель недоступна');
         if (empty($this->state->battle['turn_instant_stack'])) {
             $this->openTurnStackWindow($playerKey, ['type' => 'turn_phase'], 'turn');
         }
@@ -1981,6 +1983,8 @@ final class InstantProcessor
 
         $this->state->battle['turn_instant_result'] = [
             'summary' => $summary,
+            'confirmations' => TurnInstantResult::create($summary),
+            'position' => 0,
             'continuation' => $continuation,
             'phase' => $phase,
         ];
@@ -1997,13 +2001,23 @@ final class InstantProcessor
         return CardStats::hasDefense($this->state, $target, $actionType, $source);
     }
 
-    public function ackTurnInstantResult(string $playerKey): Result
+    public function ackTurnInstantResult(string $playerKey, Command $cmd): Result
     {
         $pending = $this->state->battle['turn_instant_result'] ?? null;
         if (!$pending) {
             return Result::error('Нет результата инстантов');
         }
 
+        if (!(\Berserk\Core\Choice\ChoiceRegistry::current($this->state) instanceof \Berserk\Core\Choice\TurnInstantResultChoice)) return Result::error('Another choice required');
+        $current = TurnInstantResult::current($pending);
+        if ($current === null) return Result::error('turn_instant_result_legacy_contract');
+        if ($current['owner'] !== $playerKey) return Result::error('Not your acknowledgement');
+        if (!is_string($cmd->get('ack_id')) || $cmd->get('ack_id') !== $current['ack_id']) return Result::error('Stale acknowledgement');
+        if ($pending['position'] + 1 < count($pending['confirmations'])) {
+            $this->state->battle['turn_instant_result']['position']++;
+            $this->state->bumpVersion();
+            return Result::ok(['turn_instant_result_next']);
+        }
         $continuation = (array) ($pending['continuation'] ?? ['type' => 'manual']);
         if (!empty($continuation['combat_origin_strike'])) {
             $continuation['combat_origin_strike']['after_instant_summary'] = $pending['summary'] ?? [];
