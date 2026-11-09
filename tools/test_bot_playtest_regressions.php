@@ -120,4 +120,27 @@ foreach (['bomb', 'hydra'] as $ability) {
     }
 }
 
+foreach (['aura', 'power', 'gain_coin', 'shot'] as $action) {
+    $state = new GameState(-533, 1, 2);
+    $state->status = 'battle';
+    $state->persistenceVersion = 1;
+    $state->battle = ['active'=>'host', 'turn'=>4, 'hidden_row_revealed'=>true];
+    $undine = in_array($action, ['aura', 'power'], true);
+    $prop = $undine ? ['actions'=>[
+        ['key'=>'aura','type'=>'poison_target','value'=>1],
+        ['key'=>'power','type'=>'damage_poisoned','value'=>1,'filter'=>'enemy'],
+    ]] : ['save_coins'=>true,'coins'=>['max_value'=>4,'shot'=>['spend'=>'all','value'=>2]],
+        'actions'=>[['type'=>'shot','range'=>3,'strike'=>['weak'=>1,'medium'=>2,'strong'=>3]]]];
+    $state->addCard(new CardInstance(1, $undine ? 's1_129' : 's1_17', 'host', 'field',
+        row:3, col:2, hp:8, hpMax:8, coins:$action === 'shot' ? 2 : 0, prop:$prop));
+    $target = new CardInstance(2, 'target', 'player', 'field', row:$action === 'gain_coin' ? 6 : 5, col:2, hp:12, hpMax:12);
+    if ($action === 'gain_coin') $target->col = 5;
+    if ($action === 'power') $target->markers['poison'] = ['value'=>1,'source'=>'host'];
+    $state->addCard($target);
+    bot($engine, $state, 'host', $action === 'gain_coin' ? 'gain_coin' : 'action');
+    $kind = ['aura'=>'poison_target','power'=>'damage_poisoned','shot'=>'shot'][$action] ?? null;
+    check(($state->battle['strike']['kind'] ?? null) === $kind, "$action publishes expected result");
+    if ($action === 'gain_coin') check($state->getCard(1)->coins === 1, 'Crossbowman saves coin');
+    if ($action === 'shot') check($state->getCard(1)->coins === 0, 'Crossbowman spends coins on shot');
+}
 echo "PASS special strike ACK and Greed gate lifecycle\n";

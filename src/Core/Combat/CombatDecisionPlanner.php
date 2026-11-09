@@ -127,7 +127,7 @@ final class CombatDecisionPlanner
         if ($decision === 'strike_mode' && $control === 'choice_required') {
             return self::strikeMode($observation['strike_mode_choice'] ?? [],$legalActions['actions']);
         }
-        if (in_array($decision, ['attack_series', 'bomb_task'], true) && $control === 'choice_required') {
+        if (in_array($decision, ['attack_series', 'supported_start_task'], true) && $control === 'choice_required') {
             $action = $legalActions['actions'][0] ?? null;
             if ($action !== null) return ['action'=>$action, 'reason'=>$decision, 'score'=>0, 'factors'=>[]];
         }
@@ -191,15 +191,18 @@ final class CombatDecisionPlanner
             $target = $enemies[$p['target_id'] ?? 0] ?? null;
             $factors = match ($action['type']) {
                 'end_turn' => [],
+                'gain_coin' => $source ? ['save_crossbow_coin'=>8] : null,
                 'strike' => $source && $target ? [
                     'strike_opportunity'=>30,
                     'printed_strike'=>min(9, array_sum($source['strike'])),
                     'wounded_target'=>min(6, max(0, $target['hp_max'] - $target['hp'])),
                     'own_fragility'=>$source['hp'] <= 3 ? -6 : 0,
                 ] : null,
-                'action' => $source && $target ? (self::magicFactors($source,$target,$p)
+                'action' => $source && ($p['action_key'] ?? '') === 'power' && ($p['target_id'] ?? null) === $source['id']
+                    ? ['damage_poisoned_enemies'=>29]
+                    : ($source && $target ? (self::magicFactors($source,$target,$p)
                     ?? self::shotFactors($source,$target,$p,$enemies)
-                    ?? (($p['action_key'] ?? '') === 'bomb' ? ['bomb_opportunity'=>26] : null)) : null,
+                    ?? (($p['action_key'] ?? '') === 'bomb' ? ['bomb_opportunity'=>26] : (($p['action_key'] ?? '') === 'aura' ? ['poison_enemy'=>24] : null))) : null),
                 'move' => $source && $source['zone']==='field' ? (self::moveFactors($source, $p, $groundEnemies, $field, $visited)
                     ?? self::shotMoveFactors($source,$p,$groundEnemies,$visited)) : null,
                 default => null,

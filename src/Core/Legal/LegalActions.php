@@ -210,13 +210,23 @@ final class LegalActions
             } elseif ($handler instanceof TurnPhaseChoice && $wait['source'] === 'turn_phase.active_queue'
                 && ($state->battle['turn_phase']['phase'] ?? null) === 'start') {
                 foreach ($state->battle['turn_phase']['active_queue'] as $task) {
-                    if (($task['type'] ?? null) !== 'bombs') continue;
+                    if (!in_array($task['type'] ?? null, ['bombs', 'regen', 'valhalla'], true)) continue;
                     $option = self::option('turn_task', ['task_id' => $task['id']]);
                     if (self::passesClock($state, $viewer, $option, $now)) {
-                        $out['decision'] = 'bomb_task';
+                        $out['decision'] = 'supported_start_task';
                         $out['coverage'] = 'partial';
                         $out['actions'][] = $option;
                     }
+                }
+            } elseif ($wait['source'] === 'turn_phase.sub'
+                && ($state->battle['turn_phase']['sub']['parent_type'] ?? null) === 'valhalla'
+                && ($state->battle['turn_phase']['sub']['can_close'] ?? false) === true) {
+                $option = self::option('turn_sub_close');
+                if (self::passesClock($state, $viewer, $option, $now)) {
+                    unset($out['reason']);
+                    $out['decision'] = 'supported_start_task';
+                    $out['coverage'] = 'partial';
+                    $out['actions'][] = $option;
                 }
             } elseif ($wait['source'] === 'pending_attack_series_choice') {
                 $series = $state->battle['pending_attack_series_choice'];
@@ -278,7 +288,7 @@ final class LegalActions
         $out['coverage'] = 'partial';
         [$out['actions'], $out['candidates']] = self::strikes($state, $viewer, $now);
         $out['actions']=array_merge($out['actions'],self::airStrikes($state,$viewer,$now));
-        $out['actions']=array_merge($out['actions'],self::shots($state,$viewer,$now),self::bombs($state,$viewer,$now));
+        $out['actions']=array_merge($out['actions'],self::shots($state,$viewer,$now),self::bombs($state,$viewer,$now),self::cardAbilities($state,$viewer,$now));
         $out['actions']=array_merge($out['actions'],self::magic($state,$viewer,$now));
         foreach ($state->getCardsInZone($viewer, CardInstance::ZONE_FIELD) as $card) {
             if ($card->dying || $card->hp <= 0) continue;
@@ -328,6 +338,46 @@ final class LegalActions
             }
         }
         return $out;
+    }
+
+    private static function cardAbilities(GameState $state, string $viewer, int $now): array
+    {
+        if (self::hiddenBattlefield($state, $viewer)) return [];
+        $options = [];
+        foreach ($state->getCardsInZone($viewer, CardInstance::ZONE_FIELD) as $card) {
+            if (CardStats::getForcedStrikeTarget($state, $card) !== null) return [];
+        }
+        foreach ($state->getCardsInZone($viewer, CardInstance::ZONE_FIELD) as $source) {
+            if ($source->closed || $source->dying || $source->hp <= 0 || CardStats::isDisabled($source)) continue;
+            $prop = $source->effectiveProp();
+            if ($source->ukid === 's1_17' && !empty($prop['save_coins'])
+                && $source->coins < (int) ($prop['coins']['max_value'] ?? 0)) {
+                $option = self::option('gain_coin', ['card_id' => $source->instanceId]);
+                if (self::passesClock($state, $viewer, $option, $now)) $options[] = $option;
+            }
+            if ($source->ukid !== 's1_129' || CardStats::hasCannotAttack($source)) continue;
+            foreach ($prop['actions'] ?? [] as $action) {
+                $type = $action['type'] ?? '';
+                $key = $action['key'] ?? '';
+                if (!(($type === 'poison_target' && $key === 'aura')
+                    || ($type === 'damage_poisoned' && $key === 'power' && ($action['filter'] ?? 'enemy') === 'enemy'))
+                    || Strangulation::blocksAttack($source, $type)) continue;
+                foreach ($state->cards as $target) {
+                    if ($target->owner === $viewer || !$target->revealed || $target->dying || $target->hp <= 0
+                        || !in_array($target->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) continue;
+                    $poison = (int) ($target->markers['poison']['value'] ?? 0);
+                    if ($type === 'poison_target' && ($poison >= (int) ($action['value'] ?? 1)
+                        || !empty($target->effectiveProp()['zoo']))) continue;
+                    if ($type === 'damage_poisoned' && ($poison <= 0
+                        || CardStats::hasDefense($state, $target, 'discharge', $source))) continue;
+                    $option = self::option('action', ['card_id' => $source->instanceId, 'action_key' => $key,
+                        'target_id' => $type === 'damage_poisoned' ? $source->instanceId : $target->instanceId]);
+                    if (self::passesClock($state, $viewer, $option, $now)) $options[] = $option;
+                    if ($type === 'damage_poisoned') break;
+                }
+            }
+        }
+        return $options;
     }
 
     private static function bombs(GameState $state, string $viewer, int $now): array

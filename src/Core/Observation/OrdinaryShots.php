@@ -11,7 +11,8 @@ final class OrdinaryShots
     {
         if (!in_array($source->zone,[CardInstance::ZONE_FIELD,CardInstance::ZONE_FLYING],true) || EffectiveFeatures::suppressed($source)) return [];
         $prop=$source->effectiveProp();
-        if (!empty($prop['coins']['shot'])) return [];
+        $coinShot = $prop['coins']['shot'] ?? [];
+        if ($coinShot && ($source->ukid !== 's1_17' || ($coinShot['spend'] ?? null) !== 'all')) return [];
         $hidden=false;
         foreach($state->cards as $card) if(VisibilityPolicy::card($state,$card,$source->owner)==='unknown') {$hidden=true;break;}
         $out=[];$seen=[];
@@ -34,7 +35,7 @@ final class OrdinaryShots
             $out[]=['action_key'=>$key,'type'=>'shot','damage_profile'=>$damage,
                 'range'=>$hidden ? null : CardStats::getEffectiveRange($state,$source,$action),
                 'printed_range'=>(int)($action['range'] ?? 0),'near_shot'=>!empty($action['near_shot']),
-                'own_damage_bonus'=>CardStats::getShotBonus($source)+CardStats::getNextActionBonus($source,'shot'),
+                'own_damage_bonus'=>CardStats::getShotBonus($source)+CardStats::getNextActionBonus($source,'shot') + $source->coins * (int) ($coinShot['value'] ?? 0),
                 'closes_source'=>true,'contextual_effects'=>'unknown'];
             $out[array_key_last($out)]['distance_rule']='ground_pair_only';
         }
