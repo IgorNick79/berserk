@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{Coords, PanelSpec};
 
 final class TurnAckChoice implements ChoiceHandlerInterface
 {
@@ -39,10 +39,13 @@ final class TurnAckChoice implements ChoiceHandlerInterface
             return new PanelSpec(title: 'Оппонент подтверждает результат фазы', isMine: false);
         }
 
-        $text = $this->formatAck($tp['pending_ack'], $state, $cardsInfo, $playerKey);
+        $ack = $tp['pending_ack'];
+        $teleport = ($ack['items'][0]['position_event'] ?? '') === 'teleport';
+        [$label, $parts] = $this->formatAck($ack, $state, $cardsInfo, $playerKey, $teleport);
 
         return new PanelSpec(
-            title: $text,
+            title: $label . (!$teleport && $parts ? ': ' . implode(', ', $parts) : ''),
+            text: $teleport ? array_map([Coords::class, 'text'], $parts) : [],
             isMine: true,
             buttons: [[
                 'label' => 'Продолжить',
@@ -51,7 +54,7 @@ final class TurnAckChoice implements ChoiceHandlerInterface
         );
     }
 
-    private function formatAck($ack, GameState $state, array $cardsInfo, string $playerKey): string
+    private function formatAck($ack, GameState $state, array $cardsInfo, string $playerKey, bool $teleport): array
     {
         if (is_array($ack)) {
             $label = (string) ($ack['label'] ?? '');
@@ -70,7 +73,7 @@ final class TurnAckChoice implements ChoiceHandlerInterface
                 if (($it['position_event'] ?? '') === 'teleport') {
                     $pos = \Berserk\View\Ui\BattlefieldPosition::display($it['row'] ?? null, $it['col'] ?? null, $playerKey);
                     if ($pos) $parts[] = 'телепортировался на ' . ($pos['side'] === 'own' ? 'Свой' : 'Вражеский')
-                        . ' [' . \Berserk\View\Ui\Coords::rowLabel($pos['row']) . ':' . $pos['col'] . ']';
+                        . ' [' . $pos['row'] . ':' . $pos['col'] . ']';
                     continue;
                 }
                 if (isset($it['standalone_text'])) {
@@ -87,9 +90,10 @@ final class TurnAckChoice implements ChoiceHandlerInterface
                 if (isset($it['delta'])) {
                     $delta   = (int) $it['delta'];
                     $sign    = $delta >= 0 ? '+' . $delta : '−' . abs($delta);
-                    $parts[] = ($it['unit'] ?? '') === 'hp' && $delta === 0
+                    $isHp = $teleport || ($it['unit'] ?? '') === 'hp';
+                    $parts[] = $isHp && $delta === 0
                         ? $name . ' — урон предотвращён'
-                        : $name . ' ' . $sign . (($it['unit'] ?? '') === 'hp' ? ' ❤️ HP' : '');
+                        : $name . ' ' . $sign . ($isHp ? ' ❤️ HP' : '');
                 } elseif (isset($it['text'])) {
                     $parts[] = $name . ' — ' . $it['text'];
                 } else {
@@ -104,12 +108,12 @@ final class TurnAckChoice implements ChoiceHandlerInterface
                 }
             }
 
-            return $label . (empty($parts) ? '' : ': ' . implode(', ', $parts));
+            return [$label, $parts];
         }
 
         $text = (string) $ack;
         if ($text === 'incarnation') $text = 'Инкарнация';
-        return $text;
+        return [$text, []];
     }
 
     public function apply(
