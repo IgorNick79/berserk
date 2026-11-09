@@ -95,4 +95,29 @@ foreach (['host', 'player'] as $owner) {
     check(array_column(ZoneManager::markersAt($state, '6_5'), 'type') === ['gate', 'bonfire'], 'Unrelated markers survive');
 }
 
+foreach (['bomb', 'hydra'] as $ability) {
+    $state = new GameState(-533, 1, 2);
+    $state->status = 'battle';
+    $state->persistenceVersion = 1;
+    $state->battle = ['active'=>'host', 'turn'=>4, 'hidden_row_revealed'=>true];
+    $prop = $ability === 'bomb'
+        ? ['actions'=>[['key'=>'bomb', 'type'=>'bomb_shot', 'range'=>3, 'value'=>1, 'bomb_damage'=>2]]]
+        : ['attack_series'=>true, 'unanswer'=>true];
+    $state->addCard(new CardInstance(1, $ability, 'host', 'field', row:3, col:2, hp:8, hpMax:8,
+        strikeWeak:2, strikeMedium:3, strikeStrong:3, prop:$prop));
+    foreach ([2, 3] as $id) {
+        $state->addCard(new CardInstance($id, 'target', 'player', 'field', row:($ability === 'bomb' ? 5 : 4), col:$id, hp:12, hpMax:12, closed:true));
+    }
+    bot($engine, $state, 'host', $ability === 'bomb' ? 'action' : 'strike');
+    if ($ability === 'bomb') check(!empty($state->cell_markers), 'Bomb places a marker');
+    bot($engine, $state, 'host', 'confirm_strike');
+    bot($engine, $state, 'player', 'confirm_strike');
+    if ($ability === 'hydra') {
+        bot($engine, $state, 'host', 'attack_series_next');
+        bot($engine, $state, 'host', 'confirm_strike');
+        bot($engine, $state, 'player', 'confirm_strike');
+        check($state->getCard(1)->closed && empty($state->battle['pending_attack_series_choice']), 'Hydra completes series');
+    }
+}
+
 echo "PASS special strike ACK and Greed gate lifecycle\n";

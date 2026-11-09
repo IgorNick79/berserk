@@ -207,6 +207,34 @@ final class LegalActions
                 $out['decision'] = 'combat_main_pass';
                 $out['coverage'] = 'partial';
                 $out['actions'] = [self::option('combat_instant_pass')];
+            } elseif ($handler instanceof TurnPhaseChoice && $wait['source'] === 'turn_phase.active_queue'
+                && ($state->battle['turn_phase']['phase'] ?? null) === 'start') {
+                foreach ($state->battle['turn_phase']['active_queue'] as $task) {
+                    if (($task['type'] ?? null) !== 'bombs') continue;
+                    $option = self::option('turn_task', ['task_id' => $task['id']]);
+                    if (self::passesClock($state, $viewer, $option, $now)) {
+                        $out['decision'] = 'bomb_task';
+                        $out['coverage'] = 'partial';
+                        $out['actions'][] = $option;
+                    }
+                }
+            } elseif ($wait['source'] === 'pending_attack_series_choice') {
+                $series = $state->battle['pending_attack_series_choice'];
+                $source = $state->getCard((int) $series['source_id']);
+                $options = [];
+                if ($source && !self::hiddenBattlefield($state, $viewer)) {
+                    $targets = BattleHelper::getAttackTargets($state, $source, 'strike', $viewer);
+                    foreach ($series['candidates'] as $id) {
+                        $target = $state->getCard((int) $id);
+                        if ($target && isset($targets[$id]) && ZoneManager::areAdjacentFieldCards($source, $target)) {
+                            $options[] = self::option('attack_series_next', ['target_id' => $id]);
+                        }
+                    }
+                }
+                $options[] = self::option('attack_series_end');
+                $out['decision'] = 'attack_series';
+                $out['coverage'] = 'partial';
+                foreach ($options as $option) if (self::passesClock($state, $viewer, $option, $now)) $out['actions'][] = $option;
             } elseif ($wait['source'] === 'pending_coin_ability'
                 && ($coin = $state->battle['pending_coin_ability'] ?? [])['kind'] === 'gain'
                 && $coin['owner'] === $viewer) {
@@ -217,7 +245,7 @@ final class LegalActions
                     $out['actions'][] = $option;
                 }
             } elseif ($handler === null && $wait['source'] === 'strike.results'
-                && (in_array($state->battle['strike']['kind'] ?? '', ['', 'shot', 'tap', 'discharge', 'uchr', 'heal', 'multi_heal', 'poison_target', 'damage_poisoned'], true)
+                && (in_array($state->battle['strike']['kind'] ?? '', ['', 'shot', 'tap', 'discharge', 'uchr', 'heal', 'multi_heal', 'poison_target', 'damage_poisoned', 'bomb_shot'], true)
                     || BasicMagic::resultAck($state,$viewer))
                 && in_array($state->battle['strike']['instant_result_stage'] ?? null,[null,'dice'],true)
                 && empty($state->battle['strike']['pending_wounds_resolution'])) {
@@ -250,7 +278,7 @@ final class LegalActions
         $out['coverage'] = 'partial';
         [$out['actions'], $out['candidates']] = self::strikes($state, $viewer, $now);
         $out['actions']=array_merge($out['actions'],self::airStrikes($state,$viewer,$now));
-        $out['actions']=array_merge($out['actions'],self::shots($state,$viewer,$now));
+        $out['actions']=array_merge($out['actions'],self::shots($state,$viewer,$now),self::bombs($state,$viewer,$now));
         $out['actions']=array_merge($out['actions'],self::magic($state,$viewer,$now));
         foreach ($state->getCardsInZone($viewer, CardInstance::ZONE_FIELD) as $card) {
             if ($card->dying || $card->hp <= 0) continue;
@@ -300,6 +328,31 @@ final class LegalActions
             }
         }
         return $out;
+    }
+
+    private static function bombs(GameState $state, string $viewer, int $now): array
+    {
+        if (self::hiddenBattlefield($state, $viewer)) return [];
+        $options = [];
+        foreach ($state->getCardsInZone($viewer, CardInstance::ZONE_FIELD) as $source) {
+            if (!BasicGroundStrikeSource::enabled($source) || $source->closed
+                || Strangulation::blocksAttack($source, 'bomb_shot')) continue;
+            foreach ($source->effectiveProp()['actions'] ?? [] as $action) {
+                if (($action['type'] ?? '') !== 'bomb_shot' || ($action['key'] ?? '') !== 'bomb'
+                    || !\Berserk\Core\CoinAbilities::actionAvailable($source, $action)
+                    || $source->coins < (int) ($action['coins'] ?? 0)) continue;
+                $range = CardStats::getEffectiveRange($state, $source, $action);
+                foreach ($state->getCardsInZone($state->getOpponentKey($viewer), CardInstance::ZONE_FIELD) as $target) {
+                    if (!$target->revealed || $target->dying || $target->hp <= 0) continue;
+                    $distance = abs($source->row - $target->row) + abs($source->col - $target->col);
+                    if ($distance === 0 || ($range > 0 && $distance > $range)
+                        || ZoneManager::hasMarker($state, "{$target->row}_{$target->col}")) continue;
+                    $option = self::option('action', ['card_id' => $source->instanceId, 'target_id' => $target->instanceId, 'action_key' => 'bomb']);
+                    if (self::passesClock($state, $viewer, $option, $now)) $options[] = $option;
+                }
+            }
+        }
+        return $options;
     }
 
     private static function shots(GameState $state, string $viewer, int $now): array
@@ -438,7 +491,11 @@ final class LegalActions
             }
         }
         foreach ($state->getCardsInZone($viewer, CardInstance::ZONE_FIELD) as $source) {
-            if(!self::basicGroundStrikeSource($source))continue;
+            $series = !empty($source->effectiveProp()['attack_series'])
+                && empty($source->flags['attack_series_active'])
+                && empty($source->flags['attacks_used_this_turn'])
+                && BasicGroundStrikeSource::enabled($source) && CardStats::hasAnyStrike($source);
+            if (!self::basicGroundStrikeSource($source) && !$series) continue;
             $prop = $source->effectiveProp();
             // Restrict certification to basic ground strikes.
             $used = (int) ($source->flags['attacks_used_this_turn'] ?? 0);

@@ -127,6 +127,10 @@ final class CombatDecisionPlanner
         if ($decision === 'strike_mode' && $control === 'choice_required') {
             return self::strikeMode($observation['strike_mode_choice'] ?? [],$legalActions['actions']);
         }
+        if (in_array($decision, ['attack_series', 'bomb_task'], true) && $control === 'choice_required') {
+            $action = $legalActions['actions'][0] ?? null;
+            if ($action !== null) return ['action'=>$action, 'reason'=>$decision, 'score'=>0, 'factors'=>[]];
+        }
         if ($decision === 'coin_gain' && $control === 'choice_required') {
             $action = $legalActions['actions'][0] ?? null;
             if (($action['type'] ?? null) === 'choose_coin_ability') {
@@ -194,7 +198,8 @@ final class CombatDecisionPlanner
                     'own_fragility'=>$source['hp'] <= 3 ? -6 : 0,
                 ] : null,
                 'action' => $source && $target ? (self::magicFactors($source,$target,$p)
-                    ?? self::shotFactors($source,$target,$p,$enemies)) : null,
+                    ?? self::shotFactors($source,$target,$p,$enemies)
+                    ?? (($p['action_key'] ?? '') === 'bomb' ? ['bomb_opportunity'=>26] : null)) : null,
                 'move' => $source && $source['zone']==='field' ? (self::moveFactors($source, $p, $groundEnemies, $field, $visited)
                     ?? self::shotMoveFactors($source,$p,$groundEnemies,$visited)) : null,
                 default => null,
