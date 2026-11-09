@@ -40,6 +40,10 @@ final class BattleScreen
         $strike    = $state->battle['strike'] ?? null;
         $instantContext = !empty($state->battle['turn_instant_stack']) || !empty($state->battle['turn_instant_result']);
 
+        $requiresInteraction = InfoPanel::hasRequiredInteraction($state);
+        $canTarget = $isActive && !$requiresInteraction
+            && !\Berserk\Core\MatchPause::blocking($state);
+
         $pendingAnyDeath = $state->battle['pending_any_death'][0] ?? null;
         $ui = $this->normalizeUiState($state, $playerKey, $uiState);
 
@@ -57,7 +61,7 @@ final class BattleScreen
         // Возможные ходы/прыжки
         $moveCells = [];
         $jumpCells = [];
-        if ($selectedCardId > 0 && $isActive && !$strike && !$instantContext) {
+        if ($selectedCardId > 0 && $canTarget) {
             $c = $state->getCard($selectedCardId);
             if ($c && $c->owner === $playerKey && in_array($c->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) {
                 $moveCells = BattleHelper::getMoveCells($state, $c);
@@ -81,7 +85,7 @@ final class BattleScreen
 
 
         $attackTargets = [];
-        if ($selectedCardId > 0 && $isActive && !$strike && !$instantContext) {
+        if ($selectedCardId > 0 && $canTarget) {
             $c = $state->getCard($selectedCardId);
             if ($c && $c->owner === $playerKey && in_array($c->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) {
                 $attackTargets = BattleHelper::getAttackTargets($state, $c, $mode, $playerKey, $explicitAttackMode);
@@ -96,7 +100,7 @@ final class BattleScreen
 
         $actionChoice = $this->actionTargetChoice($state, $playerKey, $selectedCardId, $cardsInfo,
             $baseUrl, $mode, $isActive, $strike, $attackTargets);
-        $this->inspectionBase = (InfoPanel::hasRequiredInteraction($state) || $actionChoice !== '')
+        $this->inspectionBase = ($requiresInteraction || $actionChoice !== '')
             ? $baseUrl . '&sel=' . $selectedCardId . '&mode=' . rawurlencode($mode) : '';
 
         // Порядок осей
@@ -124,8 +128,8 @@ final class BattleScreen
             $explicitAttackMode
         );
         // Public UI projection only: never expose hidden card properties or classify pending in JS.
-        $dragAllowed = $state->status === 'battle' && $state->winner === null && $isActive
-            && !$strike && !$instantContext && $mode === 'strike'
+        $dragAllowed = $state->status === 'battle' && $state->winner === null && $canTarget
+            && $mode === 'strike'
             && !\Berserk\Core\MatchPause::blocking($state)
             && \Berserk\Core\BattleWaitResolver::current($state) === null
             && ChoiceRegistry::current($state) === null
@@ -143,7 +147,7 @@ final class BattleScreen
         $panelHtml      = $this->buildPanel(
             $state, $playerKey, $ui['inspect'] ?? $selectedCardId, $cardsInfo,
             $baseUrl, $mode, $isActive, $strike, $attackTargets, $explicitAttackMode,
-            isset($ui['inspect']) || InfoPanel::hasRequiredInteraction($state) || $actionChoice !== ''
+            isset($ui['inspect']) || $requiresInteraction || $actionChoice !== ''
         );
         
         $pilePanelHtml = '';
