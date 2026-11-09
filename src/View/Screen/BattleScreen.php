@@ -904,7 +904,7 @@ final class BattleScreen
                         'card_id' => $c->instanceId, 'action_key' => substr($mode, 7),
                         'sel' => $c->instanceId, 'mode' => $mode,
                     ]),
-                    'submit' => 'Применить', 'cancel' => $baseUrl,
+                    'submit' => 'Применить', 'cancel' => $baseUrl . '&sel=0',
                 ],
             ));
         }
@@ -1186,7 +1186,7 @@ final class BattleScreen
         if ($this->canCancelTargetMode($state, $c, $playerKey, $mode, $isActive, $strike, $explicitAttackMode)) {
             $modeButtons .= $this->tpl->parse('includes/battle/mode_button.tpl', [
                 'label'  => 'Отменить действие',
-                'link'   => $baseUrl,
+                'link'   => $baseUrl . '&sel=0',
                 'active' => ' cancel',
             ]);
         }
