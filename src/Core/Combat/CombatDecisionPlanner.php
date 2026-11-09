@@ -127,6 +127,12 @@ final class CombatDecisionPlanner
         if ($decision === 'strike_mode' && $control === 'choice_required') {
             return self::strikeMode($observation['strike_mode_choice'] ?? [],$legalActions['actions']);
         }
+        if ($decision === 'coin_gain' && $control === 'choice_required') {
+            $action = $legalActions['actions'][0] ?? null;
+            if (($action['type'] ?? null) === 'choose_coin_ability') {
+                return ['action'=>$action, 'reason'=>'gain_coin', 'score'=>0, 'factors'=>[]];
+            }
+        }
         if ($decision === 'strike_ack' && $control === 'confirm_information') {
             foreach ($legalActions['actions'] as $action) {
                 if ($action['type'] === 'confirm_strike') {

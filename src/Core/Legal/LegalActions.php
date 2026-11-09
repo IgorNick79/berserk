@@ -207,8 +207,17 @@ final class LegalActions
                 $out['decision'] = 'combat_main_pass';
                 $out['coverage'] = 'partial';
                 $out['actions'] = [self::option('combat_instant_pass')];
+            } elseif ($wait['source'] === 'pending_coin_ability'
+                && ($coin = $state->battle['pending_coin_ability'] ?? [])['kind'] === 'gain'
+                && $coin['owner'] === $viewer) {
+                $option = self::option('choose_coin_ability', ['choice_id' => $coin['id'], 'choice' => 'yes']);
+                if (self::passesClock($state, $viewer, $option, $now)) {
+                    $out['decision'] = 'coin_gain';
+                    $out['coverage'] = 'complete';
+                    $out['actions'][] = $option;
+                }
             } elseif ($handler === null && $wait['source'] === 'strike.results'
-                && (in_array($state->battle['strike']['kind'] ?? '', ['', 'shot', 'tap', 'discharge'], true)
+                && (in_array($state->battle['strike']['kind'] ?? '', ['', 'shot', 'tap', 'discharge', 'uchr', 'heal', 'multi_heal', 'poison_target', 'damage_poisoned'], true)
                     || BasicMagic::resultAck($state,$viewer))
                 && in_array($state->battle['strike']['instant_result_stage'] ?? null,[null,'dice'],true)
                 && empty($state->battle['strike']['pending_wounds_resolution'])) {

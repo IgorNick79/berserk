@@ -39,9 +39,22 @@ $state->addCard(new CardInstance(1, 'borg', 'host', 'field', row:3, col:2, hp:8,
 $state->addCard(new CardInstance(2, 'target', 'player', 'field', row:4, col:2, hp:8, hpMax:8));
 play($engine, $state, 'host', 'action', ['card_id'=>1, 'target_id'=>2, 'action_key'=>'special']);
 check(($state->battle['strike']['kind'] ?? null) === 'tap', 'Native special strike publishes tap results');
+foreach (['uchr', 'heal', 'multi_heal', 'poison_target', 'damage_poisoned'] as $kind) {
+    $resultState = unserialize(serialize($state));
+    $resultState->battle['strike']['kind'] = $kind;
+    bot($engine, $resultState, 'host', 'confirm_strike');
+    bot($engine, $resultState, 'player', 'confirm_strike');
+    check(empty($resultState->battle['strike']), "$kind result completes");
+}
 bot($engine, $state, 'host', 'confirm_strike');
 bot($engine, $state, 'player', 'confirm_strike');
 check(empty($state->battle['strike']), 'Both ACKs complete combat with a fixed clock');
+
+$state->battle['pending_coin_ability'] = [
+    'kind' => 'gain', 'owner' => 'host', 'id' => 'coin-offer', 'card_id' => 1, 'value' => 1,
+];
+bot($engine, $state, 'host', 'choose_coin_ability');
+check($state->getCard(1)->coins === 1 && empty($state->battle['pending_coin_ability']), 'Bot accepts optional coin');
 
 foreach (['host', 'player'] as $owner) {
     $state = new GameState(-533, 1, 2);
