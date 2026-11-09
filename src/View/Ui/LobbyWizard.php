@@ -77,7 +77,7 @@ final class LobbyWizard
             .'<input type="hidden" name="creation_key" value="'.bin2hex(random_bytes(16)).'">'
             .'<div class="wizard-scroll"><header class="wizard-heading"><h1>Играть с ботом</h1><p>LuckTest · старт сразу в бой</p></header>'
             .$body.self::handicapFields().'<p class="wizard-error" data-wizard-error role="alert"></p></div>'
-            .'<footer class="wizard-footer"><a class="button" href="lobby.php">Отмена</a><button type="submit" data-create>Начать игру</button></footer></form>';
+            .'<footer class="wizard-footer"><a class="wizard-cancel" href="lobby.php">Отмена</a><button type="submit" data-create>Начать игру</button></footer></form>';
     }
 
     private static function timeFields(): string
