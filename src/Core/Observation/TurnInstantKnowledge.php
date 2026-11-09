@@ -81,7 +81,7 @@ final class TurnInstantKnowledge
      if (($wait['source']??null)!=='turn_instant_stack' || ($wait['kind']??null)!=='decision'
          || $wait['required_players']!==[$side]
          || ($frame['state']??null)!=='ordering' || ($frame['phase']??null)!=='after'
-         || ($frame['continuation']??null)!==['type'=>'strike_after']
+         || ($frame['continuation']['type']??null)!=='strike_after'
          || ($frame['priority']??null)!==$side || ($frame['passed']??null)!==[$other]
          || !in_array($participants,[['host','player'],['player','host']],true)
          || ($frame['stack']??null)!==[] || ($frame['summary']??null)!==[] || ($frame['next_sequence']??null)!==0
@@ -92,14 +92,23 @@ final class TurnInstantKnowledge
          || !empty($s->battle['informational_wait']) || !empty($s->battle['informational_wait_pending'])
          || !empty($s->battle['coin_post_combat_queue']) || !empty($s->battle['coin_post_combat_continuation'])) return null;
      foreach($s->battle as $key=>$value)if(is_string($key) && str_starts_with($key,'pending_') && !empty($value))return null;
-     $resolution=$s->battle['action_resolution']??[];
-     $id=$resolution['next_id']??null;
-     if (!is_int($id) || !is_array($resolution['tokens']??null)) return null;
-     $token=$resolution['tokens'][$id]??[];
-     if (($token['action_id']??null)!==$id || ($token['parent_id']??null)!==null) return null;
-     if (($s->battle['active']??null)!==$other || ($token['owner']??null)!==$other
-         || ($token['type']??null)!=='strike' || ($token['origin']??null)!=='ordinary'
-         || ($token['delivered']??null)!==true || !empty($resolution['notifications'])) return null;
+     if ($frame['continuation'] === ['type'=>'strike_after']) {
+         $resolution=$s->battle['action_resolution']??[];
+         $id=$resolution['next_id']??null;
+         if (!is_int($id) || !is_array($resolution['tokens']??null)) return null;
+         $token=$resolution['tokens'][$id]??[];
+         if (($token['action_id']??null)!==$id || ($token['parent_id']??null)!==null) return null;
+         if (($s->battle['active']??null)!==$other || ($token['owner']??null)!==$other
+             || ($token['type']??null)!=='strike' || ($token['origin']??null)!=='ordinary'
+             || ($token['delivered']??null)!==true || !empty($resolution['notifications'])) return null;
+     } else {
+         $origin=$frame['continuation']['coin_origin_strike']??null;
+         if (!is_array($origin) || array_diff(array_keys($frame['continuation']), ['type','coin_origin_strike'])
+             || ($origin['kind']??null)!=='uchr' || ($origin['state']??null)!=='results'
+             || count(array_intersect([$side,$other], $origin['confirmed']??[]))!==2
+             || empty($origin['coin_post_combat_effects']) || ($s->battle['active']??null)!==$other
+             || $s->getCard((int)($origin['attacker_id']??0))?->owner!==$other) return null;
+     }
      // Availability of a voluntary, unannounced instant does not change the saved ordering state.
      $a=new Command('pass_turn_instant',[]);
      if(InstantReservation::blocks($s,$a->type)
