@@ -2353,19 +2353,29 @@ final class ActionResolver
             return Result::error('Неверная цель');
         }
 
-        $action = [
-            'type'=>'discharge',
-            'name'=>$pending['action']['name'] ?? 'Тройной разряд',
-            'value'=>(int) $pending['value'],
-        ];
-        ActionResolution::bind($this->state, $action, $source, 'discharge', 'ordinary');
-        $pending[ActionResolution::ID] = $action[ActionResolution::ID];
+        $dice = CardRoll::roll($this->state, $source);
+        $level = BattleHelper::diceToLevel($dice);
+        $defended = CardStats::hasDefense($this->state, $target, 'discharge', $source);
         $pending['series_id'] ??= $this->state->version;
         $pending['results'] ??= [];
         $pending['candidates'] = array_values(array_diff($pending['candidates'], [$id]));
+        $action = $pending['action'];
+        $pending[ActionResolution::ID] = ActionResolution::bind($this->state, $action, $source, 'multi_discharge');
+
         unset($this->state->battle['pending_multi_discharge']);
         $this->state->battle['multi_discharge_series'] = $pending;
-        return $this->triggeredDischarge($source, $target, $action);
+        InformationalWaitManager::publish($this->state);
+        $this->state->battle['strike'] = [
+            'kind'=>'discharge', 'state'=>'results', 'attacker_id'=>$source->instanceId,
+            'target_id'=>$id, 'defender_id'=>null, 'action_name'=>$action['name'] ?? 'Тройной разряд',
+            'attack_dice'=>$dice, 'defend_dice'=>0, 'damage'=>0, 'damage_total'=>0, 'confirmed'=>[],
+            'result'=>['attack'=>$level, 'defend'=>'', 'winner'=>'attack'],
+            'final'=>['attack'=>$level, 'defend'=>'', 'decreased'=>false],
+            'defended'=>$defended, 'prepared_discharge_damage'=>$defended ? 0 : (int) $pending['value'],
+            ActionResolution::ID=>$pending[ActionResolution::ID],
+        ];
+        $this->state->bumpVersion();
+        return Result::ok(['multi_discharge_prepared']);
     }
 
     /** Called at the same result acknowledgement boundary as the Hydra's series. */
@@ -2373,7 +2383,8 @@ final class ActionResolver
     {
         $series = $this->state->battle['multi_discharge_series'] ?? null;
         if (!$series || ($strike[ActionResolution::ID] ?? null) !== $series[ActionResolution::ID]) return false;
-        unset($this->state->battle['multi_discharge_series'], $series[ActionResolution::ID]);
+        unset($this->state->battle['multi_discharge_series']);
+        $series['action'][ActionResolution::ID] = $series[ActionResolution::ID];
         $series['results'][] = [
             'target_id'=>(int) ($strike['target_id'] ?? 0),
             'dice'=>(int) ($strike['attack_dice'] ?? 0),
@@ -2381,6 +2392,10 @@ final class ActionResolver
             'defended'=>!empty($strike['defended']) || !empty($strike['first_strike_blocked'])
                 || !empty($strike['coin_blocked']) || !empty($strike['temple_defense']['blocked']),
         ];
+        if (isset($strike['prepared_discharge_damage'])) {
+            $series['results'][array_key_last($series['results'])]['prepared_damage'] = $strike['prepared_discharge_damage'];
+        }
+        $blocked = in_array(true, array_column($series['results'], 'defended'), true);
         $source = $this->state->getCard((int) $series['attacker_id']);
         $lastTarget = (int) ($strike['target_id'] ?? 0);
         $series['candidates'] = array_values(array_filter($series['candidates'], function (int $id) use ($lastTarget): bool {
@@ -2388,10 +2403,23 @@ final class ActionResolver
             return $id !== $lastTarget && CardHealing::live($card);
         }));
         if ($this->state->status !== 'battle' || $this->state->winner !== null) return true;
-        if (CardHealing::live($source) && !EffectiveFeatures::suppressed($source)
+        if (!$blocked && CardHealing::live($source) && !EffectiveFeatures::suppressed($source)
             && count($series['results']) < (int) $series['max_targets'] && $series['candidates']) {
             $this->state->battle['pending_multi_discharge'] = $series;
             return true;
+        }
+        if (CardHealing::live($source) && !EffectiveFeatures::suppressed($source)) {
+            foreach ($series['results'] as &$result) {
+                $target = $this->state->getCard($result['target_id']);
+                if (isset($result['prepared_damage']) && CardHealing::live($target)
+                    && CardStats::hasDefense($this->state, $target, 'discharge', $source)) {
+                    $result['defended'] = true;
+                    $blocked = true;
+                }
+            }
+            unset($result);
+        } else {
+            $blocked = true;
         }
         if (CardHealing::live($source)) $source->closed = true;
         InformationalWaitManager::publish($this->state);
@@ -2402,8 +2430,22 @@ final class ActionResolver
             'attack_dice'=>0, 'defend_dice'=>0, 'damage'=>0, 'confirmed'=>[],
             'result'=>['attack'=>'', 'defend'=>'', 'winner'=>''],
             'final'=>['attack'=>'', 'defend'=>'', 'decreased'=>false],
-            'discharged'=>$series['results'],
+            'multi_discharge_blocked'=>$blocked, 'discharged'=>$series['results'],
+            ActionResolution::ID=>$series[ActionResolution::ID],
         ];
+        if ($source && isset($strike['prepared_discharge_damage'])) {
+            ActionResolution::resolve($this->state, $series['action'], $blocked ? 'blocked' : 'performed', ['hit'=>!$blocked]);
+        }
+        if (!$blocked) {
+            foreach ($series['results'] as $index => $result) {
+                $target = $this->state->getCard($result['target_id']);
+                if (!isset($result['prepared_damage']) || !CardHealing::live($target)) continue;
+                $before = $target->hp;
+                $this->engine->applyDamage($this->state, $target, $result['prepared_damage'], 'discharge', $source);
+                $this->state->battle['strike']['discharged'][$index]['damage'] = max(0, $before - $target->hp);
+            }
+            $this->engine->flushDeadeatQueue($this->state);
+        }
         return true;
     }
 
