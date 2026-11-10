@@ -966,10 +966,11 @@ final class InfoPanel
                     $tc = $state->getCard($r['target_id']);
                     $ti = $tc ? ($cardsInfo[$tc->ukid] ?? null) : null;
                     $tn = $ti ? htmlspecialchars($ti['name'], ENT_QUOTES) : '?';
+                    $die = isset($r['dice']) ? \Berserk\View\Ui\DiceValue::render((int) $r['dice']) . ' ' : '';
                     if (!empty($r['defended'])) {
-                        $parts[] = $tn . ' — защита (0)';
+                        $parts[] = $die . $tn . ' — защита (0)';
                     } else {
-                        $parts[] = $tn . ' −' . $r['damage'] . ' ❤️ HP';
+                        $parts[] = $die . $tn . ' −' . $r['damage'] . ' ❤️ HP';
                     }
                 }
                 $resultText = $name . ': ' . implode(', ', $parts);

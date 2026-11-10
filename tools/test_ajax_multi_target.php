@@ -93,6 +93,19 @@ foreach ([[],[2],[2,3],[2,3,4],[2,3,4,5],[2,2,3],[1],[999]] as $targets) {
     foreach ([2,3,4,5,6] as $id) mtAssert($s->getCard($id)->hp===10-($ok&&in_array($id,$unique,true)?1:0), 'Exactly once damage per unique target');
     if (!$ok) mtAssert(isset($s->battle['pending_multi_discharge']), 'Invalid pick retains pending');
 }
+$s = mtFixture();
+$s->getCard(2)->prop['zor'] = true;
+$_SESSION['debug_roll'] = '2,4,6,1';
+\Berserk\Core\Dice::init();
+$engine = new Engine();
+$triple = $engine->apply($s, 'host', new Command('choose_multi_discharge', ['target_ids'=>[2,3,4]]));
+mtAssert($triple->success, 'Protected target does not stop the triple discharge');
+$discharged = $s->battle['strike']['discharged'];
+mtAssert(array_column($discharged, 'dice') === [2,4,6] && \Berserk\Core\Dice::remaining() === [1], 'Triple discharge rolls three times');
+mtAssert(array_column($discharged, 'damage') === [0,1,1] && array_column($discharged, 'defended') === [true,false,false],
+    'Only the protected target blocks its discharge');
+unset($_SESSION['debug_roll'], $_SESSION['debug_roll_state']);
+\Berserk\Core\Dice::init();
 $s=mtFixture();$engine=new Engine();
 mtAssert(!$engine->apply($s,'player',new Command('cancel_pending'))->success && isset($s->battle['pending_multi_discharge']), 'Opponent cannot cancel');
 $s=GameState::fromArray(json_decode(json_encode($s->toArray()),true));

@@ -2294,10 +2294,11 @@ final class ActionResolver
             $target = $this->state->getCard($tid);
             if (!$target) continue;
 
+            $dice = CardRoll::roll($this->state, $attacker);
             $hpBefore = $target->hp;
 
             if (CardStats::hasDefense($this->state, $target, 'discharge', $attacker)) {
-                $results[] = ['target_id' => $tid, 'damage' => 0, 'defended' => true];
+                $results[] = ['target_id' => $tid, 'dice' => $dice, 'damage' => 0, 'defended' => true];
                 continue;
             }
 
@@ -2305,6 +2306,7 @@ final class ActionResolver
 
             $results[] = [
                 'target_id' => $tid,
+                'dice'      => $dice,
                 'damage'    => max(0, $hpBefore - $target->hp),
                 'defended'  => false,
             ];

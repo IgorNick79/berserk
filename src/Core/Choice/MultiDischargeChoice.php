@@ -52,7 +52,7 @@ final class MultiDischargeChoice implements ChoiceHandlerInterface
             $tc = $state->getCard($tid);
             if (!$tc) continue;
 
-            $defended = CardStats::hasDefense($state, $tc, 'discharge');
+            $defended = $tc->revealed && CardStats::hasDefense($state, $tc, 'discharge', $attCard);
             $hint     = $defended ? ' (защита)' : '';
 
             $items[] = [
