@@ -959,21 +959,27 @@ final class InfoPanel
                     $resultText = $name;
                 }
             } elseif ($kind === 'multi_discharge') {
-                $name    = $strike['action_name'] ?? 'Тройной разряд';
-                $results = $strike['discharged'] ?? [];
-                $parts   = [];
-                foreach ($results as $r) {
+                $name = htmlspecialchars($strike['action_name'] ?? 'Тройной разряд', ENT_QUOTES);
+                $parts = [];
+                $dischargeDice = [];
+                foreach ($strike['discharged'] ?? [] as $r) {
                     $tc = $state->getCard($r['target_id']);
-                    $ti = $tc ? ($cardsInfo[$tc->ukid] ?? null) : null;
-                    $tn = $ti ? htmlspecialchars($ti['name'], ENT_QUOTES) : '?';
-                    $die = isset($r['dice']) ? \Berserk\View\Ui\DiceValue::render((int) $r['dice']) . ' ' : '';
+                    $tn = htmlspecialchars($tc ? ($cardsInfo[$tc->ukid]['name'] ?? $tc->ukid) : '?', ENT_QUOTES);
+                    if (!empty($r['dice'])) {
+                        $dischargeDice[] = $this->tpl->parse('includes/battle/dice_column.tpl', [
+                            'label' => 'Разряд ' . (count($dischargeDice) + 1),
+                            'value' => \Berserk\View\Ui\DiceValue::render((int) $r['dice']),
+                        ]);
+                    }
                     if (!empty($r['defended'])) {
-                        $parts[] = $die . $tn . ' — защита (0)';
-                    } else {
-                        $parts[] = $die . $tn . ' −' . $r['damage'] . ' ❤️ HP';
+                        $parts[] = $tn . ' — защита от разряда';
+                    } elseif (empty($strike['multi_discharge_blocked'])) {
+                        $parts[] = $tn . ' −' . $r['damage'] . ' ❤️ HP';
                     }
                 }
-                $resultText = $name . ': ' . implode(', ', $parts);
+                $resultText = !empty($strike['multi_discharge_blocked'])
+                    ? $name . ' сорван. Никто не получил ран.' . ($parts ? '<br>' . implode(', ', $parts) : '')
+                    : $name . ': ' . implode(', ', $parts);
             } elseif ($kind === 'multi_heal') {
                 $name = $strike['action_name'] ?? 'Излечение';
                 $healed = $strike['healed'] ?? [];
@@ -1727,7 +1733,10 @@ final class InfoPanel
             if (!empty($strike['temple_defense']['blocked'])) $resultText = 'Атака заблокирована';
 
             $noDiceKinds = ['impact', 'strangle', 'heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'become_fly', 'bomb_shot', 'apply_delayed_marker', 'particle', 'life_gift', 'poison_boost', 'damage_ranged', 'teleport_target', 'blood_storm', 'row_spell'];
-            if (!in_array($kind, $noDiceKinds, true)) {
+            if (!empty($dischargeDice)) {
+                $contentHtml = '<div class="dice-block">' . implode('', $dischargeDice) . '</div>'
+                    . $summaryHtml . '<p>' . $resultText . '</p>' . $extraResultHtml . $confirmHtml;
+            } elseif (!in_array($kind, $noDiceKinds, true)) {
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
                     'defend_dice_html' => $defendDiceHtml,

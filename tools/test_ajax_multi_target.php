@@ -94,16 +94,23 @@ foreach ([[],[2],[2,3],[2,3,4],[2,3,4,5],[2,2,3],[1],[999]] as $targets) {
     if (!$ok) mtAssert(isset($s->battle['pending_multi_discharge']), 'Invalid pick retains pending');
 }
 $s = mtFixture();
-$s->getCard(2)->prop['zor'] = true;
+$s->getCard(4)->prop['zor'] = true;
 $_SESSION['debug_roll'] = '2,4,6,1';
 \Berserk\Core\Dice::init();
 $engine = new Engine();
 $triple = $engine->apply($s, 'host', new Command('choose_multi_discharge', ['target_ids'=>[2,3,4]]));
-mtAssert($triple->success, 'Protected target does not stop the triple discharge');
+mtAssert($triple->success, 'Blocked discharge still publishes a result');
 $discharged = $s->battle['strike']['discharged'];
 mtAssert(array_column($discharged, 'dice') === [2,4,6] && \Berserk\Core\Dice::remaining() === [1], 'Triple discharge rolls three times');
-mtAssert(array_column($discharged, 'damage') === [0,1,1] && array_column($discharged, 'defended') === [true,false,false],
-    'Only the protected target blocks its discharge');
+mtAssert(array_column($discharged, 'damage') === [0,0,0] && array_column($discharged, 'defended') === [false,false,true],
+    'Protection on the last target blocks the whole discharge before any damage');
+mtAssert(!empty($s->battle['strike']['multi_discharge_blocked']) && $s->getCard(2)->hp === 10 && $s->getCard(3)->hp === 10,
+    'Blocked series leaves previous targets untouched');
+$view = (new \Berserk\View\Screen\BattleSnapshotRenderer(new \Berserk\View\Template(__DIR__ . '/../templates')))
+    ->render($s, 'host', 'host', null, [])['fragments']['info_panel_html'];
+mtAssert(preg_match('/<div class="dice-block">.*dice_2\.svg.*dice_4\.svg.*dice_6\.svg/s', $view) === 1
+    && str_contains($view, '>Сражение</h3>') && str_contains($view, 'Никто не получил ран'),
+    'All three dice are displayed together in the combat result');
 unset($_SESSION['debug_roll'], $_SESSION['debug_roll_state']);
 \Berserk\Core\Dice::init();
 $s=mtFixture();$engine=new Engine();

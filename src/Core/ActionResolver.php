@@ -2271,6 +2271,18 @@ final class ActionResolver
 
         $value   = (int) $pmd['value'];
         $results = [];
+        $targets = [];
+        foreach ($targetIds as $tid) {
+            $target = $this->state->getCard($tid);
+            if (!$target) continue;
+            $targets[$tid] = $target;
+            $results[$tid] = [
+                'target_id' => $tid,
+                'damage' => 0,
+                'defended' => CardStats::hasDefense($this->state, $target, 'discharge', $attacker),
+            ];
+        }
+        $blocked = in_array(true, array_column($results, 'defended'), true);
 
         InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
@@ -2289,32 +2301,26 @@ final class ActionResolver
             'confirmed'   => [],
         ];
 
-        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'multi_discharge'], $pmd['action'] ?? []));
-        foreach ($targetIds as $tid) {
-            $target = $this->state->getCard($tid);
-            if (!$target) continue;
+        $action = array_replace(['type'=>'multi_discharge'], $pmd['action'] ?? []);
+        if ($blocked) {
+            $this->state->battle['strike'][ActionResolution::ID] = ActionResolution::bind($this->state, $action, $attacker, 'multi_discharge');
+            ActionResolution::resolve($this->state, $action, 'blocked', ['hit'=>false]);
+        } else {
+            ActionResolution::performed($this->state, $attacker, $action);
+        }
+        foreach ($targets as $tid => $target) {
+            $results[$tid]['dice'] = CardRoll::roll($this->state, $attacker);
+            if ($blocked) continue;
 
-            $dice = CardRoll::roll($this->state, $attacker);
             $hpBefore = $target->hp;
-
-            if (CardStats::hasDefense($this->state, $target, 'discharge', $attacker)) {
-                $results[] = ['target_id' => $tid, 'dice' => $dice, 'damage' => 0, 'defended' => true];
-                continue;
-            }
-
             $this->engine->applyDamage($this->state, $target, $value, 'discharge', $attacker);
-
-            $results[] = [
-                'target_id' => $tid,
-                'dice'      => $dice,
-                'damage'    => max(0, $hpBefore - $target->hp),
-                'defended'  => false,
-            ];
+            $results[$tid]['damage'] = max(0, $hpBefore - $target->hp);
         }
 
         $attacker->closed = true;
 
-        $this->state->battle['strike']['discharged'] = $results;
+        $this->state->battle['strike']['multi_discharge_blocked'] = $blocked;
+        $this->state->battle['strike']['discharged'] = array_values($results);
 
         $this->engine->flushDeadeatQueue($this->state);
         $this->state->bumpVersion();
