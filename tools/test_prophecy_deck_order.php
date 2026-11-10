@@ -41,4 +41,19 @@ efCheck(empty($s->battle['pending_prophecy']), 'Transform closes the current pro
 efCheck(array_column($s->battle['turn_phase']['sub']['remaining'], 'id') === ['prophecy_2'], 'Only the other prophecy remains queued');
 efCheck($s->getCard(1)->zone === CardInstance::ZONE_FLYING, 'Seeker enters the flying zone');
 
+$s = efState();
+$s->nextInstanceId = 100;
+$s->persistenceVersion = 1;
+$s->getCard(2)->prop = ['prophecy_block' => true];
+$s->addCard(new CardInstance(instanceId: 10, ukid: 'odd', owner: 'host', zone: 'deck', price: 3));
+$engine = new Engine();
+efCheck($engine->tryProphecyBlock($s, $s->getCard(3), $s->getCard(2), 'strike'), 'Odd prophecy blocks the attack');
+$plan = \Berserk\Core\Combat\CombatDecisionPlanner::decide(
+    \Berserk\Core\Observation\PlayerObservation::build($s, 'host'),
+    \Berserk\Core\Legal\LegalActions::build($s, 'host'),
+);
+efCheck($plan['action'] === ['type' => 'close_prophecy', 'payload' => []], 'Bot closes the attack block reveal');
+efCheck($engine->apply($s, 'host', new \Berserk\Core\Command('close_prophecy'))->success, 'Native command closes block');
+efCheck(empty($s->battle['pending_prophecy']), 'The blocked attack no longer holds the game');
+
 echo 'Prophecy deck order: ',$checks-$before," new checks passed\n";
