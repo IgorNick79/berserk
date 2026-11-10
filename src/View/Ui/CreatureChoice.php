@@ -109,7 +109,7 @@ final class CreatureChoice
             $items = []; $remaining = []; $hidden = null;
             foreach ($spec->buttons as $button) {
                 parse_str((string) parse_url($button['url'], PHP_URL_QUERY), $query);
-                if (!in_array($query['cmd'] ?? '', ['choose_instant_pick', 'choose_combat_pick', 'choose_revive_target', 'choose_death_target', 'attack_series_next'], true)
+                if (!in_array($query['cmd'] ?? '', ['choose_instant_pick', 'choose_combat_pick', 'choose_revive_target', 'choose_death_target'], true)
                     || !isset($query['target_id']) || !$state->getCard((int) $query['target_id'])) {
                     $remaining[] = $button; continue;
                 }

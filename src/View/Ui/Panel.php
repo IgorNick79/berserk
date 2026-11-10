@@ -99,7 +99,7 @@ final class Panel
         $body .= '<button type="submit" class="button">' . htmlspecialchars($submit, ENT_QUOTES) . '</button>';
 
         if ($cancel !== null) {
-            $body .= ' <a class="button skip" href="' . htmlspecialchars($cancel, ENT_QUOTES) . '">Отмена</a>';
+            $body .= ' <a class="button skip" href="' . htmlspecialchars($cancel, ENT_QUOTES) . '">' . htmlspecialchars($form['cancel_label'] ?? 'Отмена', ENT_QUOTES) . '</a>';
         }
 
         $context = $selection === null ? '' : ' data-card-selection="' . htmlspecialchars($selection->context, ENT_QUOTES)
