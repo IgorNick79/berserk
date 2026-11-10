@@ -146,8 +146,11 @@ final class InfoPanel
                 $woundedByAmount[$amount ?? 'unknown'][] = $nameOf($id);
             }
             foreach ($woundedByAmount as $amount => $names) {
-                $html .= '<p>Получили раны' . ($amount === 'unknown' ? '' : ' ❤️ ' . (int) $amount)
-                    . ': ' . implode(', ', $names) . '.</p>';
+                $count = $amount === 'unknown'
+                    ? '<span title="Число ран не сохранено">?</span>'
+                    : (string) (int) $amount;
+                $html .= '<p><b>Получили раны <img src="/assets/images/card/heart.png" width="14" height="14" alt=""> '
+                    . $count . '</b><br>' . implode('<br>', $names) . '</p>';
             }
             $html .= '<button type="button" class="button small cancel" data-dismiss-battle-notice>Закрыть</button></div></section>';
         }
