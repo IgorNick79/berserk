@@ -89,9 +89,10 @@ final class CombatDecisionPlanner
         if ($decision === 'greed_teleport' && $control === 'choice_required') {
             return self::greedTeleport($observation,$legalActions['actions']);
         }
-        if ($decision === 'first_strike_movement' && $control === 'choice_required') {
+        if (in_array($decision, ['first_strike_movement', 'card_option'], true) && $control === 'choice_required') {
+            $command = $decision === 'card_option' ? 'choose_card_option' : 'choose_first_strike_movement';
             foreach ($legalActions['actions'] as $action) {
-                if ($action['type'] === 'choose_first_strike_movement') {
+                if ($action['type'] === $command) {
                     return ['action'=>$action, 'reason'=>$decision, 'score'=>0, 'factors'=>[]];
                 }
             }

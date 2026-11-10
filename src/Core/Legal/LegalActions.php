@@ -149,6 +149,19 @@ final class LegalActions
                     $option = self::option('choose_greed_teleport',$destination);
                     if (self::passesClock($state,$viewer,$option,$now)) $out['actions'][] = $option;
                 }
+            } elseif ($handler instanceof \Berserk\Core\Choice\CardChoice
+                && $wait['source'] === $handler->pendingKey()) {
+                $pending = $state->battle[$handler->pendingKey()];
+                $card = $state->getCard((int) ($pending['card_id'] ?? 0));
+                if ($card && $card->owner === $viewer) {
+                    $out['decision'] = 'card_option';
+                    $out['coverage'] = 'complete';
+                    foreach ($pending['options'] ?? [] as $index => $option) {
+                        if (!is_int($index) || $index < 0 || !is_array($option)) continue;
+                        $action = self::option('choose_card_option', ['card_id'=>$card->instanceId, 'option_index'=>$index]);
+                        if (self::passesClock($state, $viewer, $action, $now)) $out['actions'][] = $action;
+                    }
+                }
             } elseif ($handler instanceof \Berserk\Core\Choice\FirstStrikeJumpChoice
                 && $wait['source'] === \Berserk\Core\FirstStrikeJump::PENDING) {
                 $pending = $state->battle[$handler->pendingKey()];

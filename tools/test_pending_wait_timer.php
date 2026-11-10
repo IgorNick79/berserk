@@ -287,7 +287,16 @@ pwAssert($s->battle['turn_timer']['period_id']===2 && $s->battle['turn_timer']['
 $s=pwState();$s->getCard(2)->prop['pre_turn_start']=['options'=>[['modifiers'=>[]]]];
 $now=1020;pwApply($engine,$s,'host','end_turn');
 pwAssert($s->battle['turn_timer']['pause_reason']==='start_phase','Next period preserves start pause despite own pending');
-$now=1200;pwApply($engine,$s,'player','choose_card_option',['option_index'=>0]);
+$now=1200;
+$s->persistenceVersion = 1;
+foreach (['host', 'player'] as $viewer) {
+    $legal = \Berserk\Core\Legal\LegalActions::build($s, $viewer, $now);
+    $observation = \Berserk\Core\Observation\PlayerObservation::build($s, $viewer);
+    $plan = \Berserk\Core\Combat\CombatDecisionPlanner::decide($observation, $legal);
+    $expected = $viewer === 'player' ? ['type'=>'choose_card_option','payload'=>['card_id'=>2,'option_index'=>0]] : null;
+    pwAssert($plan['action'] === $expected, 'Only the owner can choose the required card option');
+}
+pwApply($engine,$s,'player',$plan['action']['type'],$plan['action']['payload']);
 pwAssert($s->battle['turn_timer']['anchor_at']===1200 && $s->battle['turn_timer']['remaining_seconds']===180,'Start effects finish through existing lifecycle');
 $s=pwState();unset($s->battle['turn_timer']);
 $s->getCard(1)->prop['actions']=[['key'=>'bonfire','type'=>'place_cell_marker','marker'=>'bonfire']];
