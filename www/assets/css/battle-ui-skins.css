@@ -12,7 +12,7 @@
 :is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel a:not(.button):not(.panel-card-preview):not(.panel-stat-hint):not(.battle-icon-control){color:var(--ip-title)}
 /* Shared semantic button palette is independent of the selected material. */
 :is(:is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle,:is(.deal-page,.draft-page) [data-panel-theme] .pregame-main) .button:not(.green-btn){--btn-top:#50ad62;--btn-bottom:#26773b;--btn-edge:#91c78b;box-sizing:border-box;max-width:100%;min-height:40px;padding:10px 14px;border-radius:6px;border:1px solid var(--btn-edge);background:linear-gradient(180deg,#ffffff26,transparent 45%),linear-gradient(180deg,var(--btn-top),var(--btn-bottom));box-shadow:inset 0 1px #ffffff50,0 3px 0 #0005,0 4px 9px #0004;color:#fff;font-weight:700;text-shadow:0 1px 1px #0009;cursor:pointer;transition:filter .15s,transform .15s,box-shadow .15s}
-:is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel .battle-mode-buttons .button:not(.green-btn){--btn-top:#c39b4c;--btn-bottom:#8e6025;--btn-edge:#ebc780}
+:is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel .battle-mode-buttons .button:not(.green-btn,[data-card-inspect-select]){--btn-top:#c39b4c;--btn-bottom:#8e6025;--btn-edge:#ebc780}
 :is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel .button.skip:not(.green-btn){--btn-top:#5e98c7;--btn-bottom:#30608c;--btn-edge:#94b5d2}
 :is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel .button.skip.secondary:not(.green-btn){--btn-top:#777b7c;--btn-bottom:#4d5355;--btn-edge:#9a9d9b}
 :is(:is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle,:is(.deal-page,.draft-page) [data-panel-theme] .pregame-main) .button.cancel:not(.green-btn),:is(:is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle,:is(.deal-page,.draft-page) [data-panel-theme] .pregame-main) .button.red:not(.green-btn){--btn-top:#c66a63;--btn-bottom:#913a38;--btn-edge:#df9a8b}
@@ -167,3 +167,5 @@
 }
 
 .battle-page [data-card-inspect-select][hidden]{display:none!important}
+
+.battle-page [data-panel-theme] .info-panel .battle-mode-buttons:has([data-card-inspect-select]:not([hidden])) [data-combat-back]{--btn-top:#b94a44;--btn-bottom:#82302b;--btn-edge:#d87c74}

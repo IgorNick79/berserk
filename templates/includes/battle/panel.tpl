@@ -14,6 +14,6 @@
     <div class="panel-stats-extra">{{class_html}}{{info_icon_html}}</div>
 </div>
 <div class="panel-card-details">
-    <div class="battle-mode-buttons">{{mode_buttons}}<button type="button" class="button" data-card-inspect-select hidden>Выбрать</button></div>
+    <div class="battle-mode-buttons"><button type="button" class="button" data-card-inspect-select hidden>Выбрать</button>{{mode_buttons}}</div>
     {{status_html}}
 </div>
