@@ -140,13 +140,14 @@ final class InfoPanel
             if (!empty($result['destroyed'])) {
                 $html .= '<p>Уничтожены: ' . implode(', ', array_map($nameOf, $result['destroyed'])) . '.</p>';
             }
-            if (!empty($result['wounded'])) {
-                $html .= '<p>Получили раны:</p><ul>';
-                foreach ($result['wounded'] as $id) {
-                    $amount = $result['wound_amounts'][$id] ?? null;
-                    $html .= '<li>' . $nameOf($id) . ($amount === null ? '' : ' — ' . (int) $amount . ' HP') . '</li>';
-                }
-                $html .= '</ul>';
+            $woundedByAmount = [];
+            foreach ($result['wounded'] ?? [] as $id) {
+                $amount = $result['wound_amounts'][$id] ?? null;
+                $woundedByAmount[$amount ?? 'unknown'][] = $nameOf($id);
+            }
+            foreach ($woundedByAmount as $amount => $names) {
+                $html .= '<p>Получили раны' . ($amount === 'unknown' ? '' : ' ❤️ ' . (int) $amount)
+                    . ': ' . implode(', ', $names) . '.</p>';
             }
             $html .= '<button type="button" class="button small cancel" data-dismiss-battle-notice>Закрыть</button></div></section>';
         }
