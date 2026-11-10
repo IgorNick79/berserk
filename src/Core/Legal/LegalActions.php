@@ -149,6 +149,12 @@ final class LegalActions
                     $option = self::option('choose_greed_teleport',$destination);
                     if (self::passesClock($state,$viewer,$option,$now)) $out['actions'][] = $option;
                 }
+            } elseif ($handler instanceof \Berserk\Core\Choice\FirstStrikeJumpChoice
+                && $wait['source'] === \Berserk\Core\FirstStrikeJump::PENDING) {
+                $pending = $state->battle[$handler->pendingKey()];
+                $out['decision'] = 'first_strike_movement';
+                $out['coverage'] = 'complete';
+                $out['actions'] = self::firstStrikeMovement($state, $viewer, $pending, $now);
             } elseif ($handler instanceof GatePickChoice && $wait['source']==='pending_gate_pick') {
                 $pending = $state->battle['pending_gate_pick'];
                 $out['decision'] = 'gate_cell';
@@ -477,6 +483,37 @@ final class LegalActions
                 if (self::passesClock($state, $viewer, $option, $now)) $actions[] = $option;
             }
             break;
+        }
+        return $actions;
+    }
+
+    private static function firstStrikeMovement(GameState $state, string $viewer, array $pending, int $now): array
+    {
+        $id = $pending['id'] ?? null;
+        if (($pending['owner'] ?? null) !== $viewer || !is_string($id) || $id === '') return [];
+        $engine = new \Berserk\Core\Engine();
+        $payloads = [];
+        if (($pending['stage'] ?? null) === 'jump') {
+            $card = $state->getCard((int) $pending['card_id']);
+            if (!$card || $card->owner !== $viewer
+                || $card->row !== $pending['from_row'] || $card->col !== $pending['from_col']) return [];
+            $cells = (new \Berserk\Core\Movement\MovementResolver($state, $engine))
+                ->triggeredJumpCells($card, (int) $pending['range']);
+            foreach ($pending['cells'] as $cell) {
+                if (!isset($cells[$cell])) continue;
+                [$row, $col] = array_map('intval', explode('_', $cell));
+                $payloads[] = ['choice_id'=>$id, 'row'=>$row, 'col'=>$col];
+            }
+        } elseif (($pending['stage'] ?? null) === 'pull') {
+            $valid = (new \Berserk\Core\FirstStrikeJump($state, $engine))->candidates($pending);
+            foreach (array_intersect($pending['candidates'], $valid) as $targetId) {
+                $payloads[] = ['choice_id'=>$id, 'target_id'=>$targetId];
+            }
+        }
+        $actions = [];
+        foreach ($payloads as $payload) {
+            $option = self::option('choose_first_strike_movement', $payload);
+            if (self::passesClock($state, $viewer, $option, $now)) $actions[] = $option;
         }
         return $actions;
     }

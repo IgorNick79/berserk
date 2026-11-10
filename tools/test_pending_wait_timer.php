@@ -84,10 +84,20 @@ foreach ([1030,1200] as $now) {
     pwWait($s,'decision',['player'],'pending_first_strike_jump');
     $expired=$now===1200;
     pwAssert($s->battle['turn_timer']['status']===($expired?'expired':'paused'),'Opponent jump pauses only a live timer');
+    $s->persistenceVersion = 1;
+    $planMovement = static function (string $owner) use ($s, &$now): array {
+        $observation = \Berserk\Core\Observation\PlayerObservation::build($s, $owner);
+        $legal = \Berserk\Core\Legal\LegalActions::build($s, $owner, $now);
+        return \Berserk\Core\Combat\CombatDecisionPlanner::decide($observation, $legal);
+    };
+    pwAssert(($planMovement('player')['action']['type'] ?? null) === 'choose_first_strike_movement'
+        && $planMovement('host')['action'] === null, 'Bot can jump only for the decision owner');
     $now+=10;$p=$s->battle['pending_first_strike_jump'];
     pwAssert($engine->apply($s,'player',new Command('choose_first_strike_movement',[
         'choice_id'=>$p['id'],'row'=>2,'col'=>3]))->success,'Jump completes, including after zero');
     pwWait($s,'decision',['host'],'pending_first_strike_jump');
+    pwAssert(($planMovement('host')['action']['payload']['target_id'] ?? null) === 1
+        && $planMovement('player')['action'] === null, 'Bot can resolve the pull after the owner handoff');
     pwAssert($s->battle['turn_timer']['status']===($expired?'expired':'running'),'Own pull resumes the same timer');
     $now+=10;$p=$s->battle['pending_first_strike_jump'];
     pwAssert($engine->apply($s,'host',new Command('choose_first_strike_movement',[
