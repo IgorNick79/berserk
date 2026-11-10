@@ -11,7 +11,7 @@ const assert = (ok,msg) => {if (!ok) throw Error(msg);};
  async function setup(kind='selected',options={}) {
   const page = await browser.newPage({viewport:{width:1600,height:1000}});
   let requests=[], errors=[], version=1, current=fixture.cases[kind], posts=0, delay=options.delay||0;
-  let last=null, recovery=!!options.fail, releaseRecovery=false, selections=0;
+  let handoff=false, last=null, recovery=!!options.fail, releaseRecovery=false, selections=0;
   page.on('pageerror', e=>errors.push(e.message));
   const snapshot = d => ({...Object.fromEntries(Object.entries(fixture.snapshots[String(d.ui.sel)] || fixture.snapshots['1']).filter(([k])=>k!=='ui')), ui:d.ui,
    fragments:Object.fromEntries(['field_html','fly_zones_html','panel_html','piles_html','pile_reveal_html','info_panel_html'].map(k=>[k,d[k]||'']))});
@@ -20,6 +20,7 @@ const assert = (ok,msg) => {if (!ok) throw Error(msg);};
    const u=new URL(r.request().url()), ajax=u.searchParams.get('ajax');
    if (ajax==='battle_command') {
     last=new URLSearchParams(r.request().postData());requests.push(Object.fromEntries(last));posts++;version++;
+    if(last.get('cmd')==='end_turn') current=fixture.cases.passedTurn;
     if(recovery){await r.abort('failed');return;}
     await r.fulfill({json:{...envelope(),ok:!options.reject, error:options.reject?'Rejected test command':undefined,
       command_id:last.get('command_id'),command_status:options.reject?'rejected':'committed',terminal:true}});return;
@@ -28,6 +29,7 @@ const assert = (ok,msg) => {if (!ok) throw Error(msg);};
     await r.fulfill({json:{ok:true,type:'command_status',sync_version:version,command_id:last.get('command_id'),command_status:releaseRecovery?'committed':'processing',terminal:releaseRecovery}});return;
    }
    if(ajax==='battle_sync') {
+    if(handoff || last?.get('cmd')==='end_turn') return r.fulfill({json:envelope()});
     if(u.searchParams.get('force_snapshot')==='1') {
      selections++;
      if(delay) await new Promise(resolve=>setTimeout(resolve,delay));
@@ -59,6 +61,7 @@ const assert = (ok,msg) => {if (!ok) throw Error(msg);};
    const script=document.createElement('script');
    script.dataset.syncUrl='https://drag.test/?first&game=981&ajax=battle_sync';
    script.dataset.version='1';script.dataset.sel=String(ui.sel);script.dataset.mode=ui.mode;
+   script.dataset.uiTurn=ui.turn_key || '';
    script.dataset.modeExplicit=ui.mode_explicit?'1':'0';script.textContent=sync;document.body.append(script);
   },{sync,ui:current.ui});
   await page.waitForTimeout(60);
@@ -69,10 +72,26 @@ const assert = (ok,msg) => {if (!ok) throw Error(msg);};
   async function end() {await page.mouse.up();await page.waitForTimeout(160);}
   async function close(label) {assert(!errors.length, errors.join('\n'));results.push(label);console.log('PASS '+label);await page.close();}
   return {page,card,point,begin,to,end,close,requests,envelope,posts:()=>posts,selections:()=>selections,
-    release:()=>{releaseRecovery=true;},setDelay:n=>{delay=n;}};
+    handoff:()=>{handoff=true;version++;current=fixture.cases.receivedTurn;}, release:()=>{releaseRecovery=true;},setDelay:n=>{delay=n;}};
  }
  try {
-  let t=await setup('targeting');
+  let t=await setup('inactiveTargeting');
+  await t.page.evaluate(() => history.replaceState(null, '', '?first&game=981&sel=1&mode=action:aimed_shot&ui_turn=' +
+    encodeURIComponent(document.querySelector('script[data-ui-turn]').dataset.uiTurn)));
+  t.handoff();
+  await t.page.waitForFunction(() => !new URL(location.href).searchParams.has('mode'));
+  assert(!await t.page.locator('input[name=target_id]').count(), 'Incoming turn clears the previous targeting form');
+  await t.close('Receiving the turn clears stale action URL');
+  t=await setup('special');
+  await t.page.evaluate(() => history.replaceState(null, '', '?first&game=981&sel=1&mode=action:aimed_shot'));
+  const ended = t.page.waitForResponse(response => response.request().method() === 'POST');
+  await t.page.getByRole('link', {name:'Завершить ход'}).click();
+  await ended;
+  assert(t.requests[0].cmd==='end_turn' && !('mode' in t.requests[0]) && t.requests[0].sel==='0'
+    && !new URL(t.page.url()).searchParams.has('mode'), 'End turn clears selection and mode before sending');
+  await t.close('Ending the turn sends no previous targeting mode');
+
+  t=await setup('targeting');
   const reset = t.page.waitForResponse(response => {
    const url = new URL(response.url());
    return url.searchParams.get('ajax') === 'battle_sync' && url.searchParams.get('sel') === '0';

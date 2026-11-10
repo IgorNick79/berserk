@@ -185,6 +185,7 @@ final class BattleScreen
                     'mode' => $ui['mode'],
                     'pile' => $ui['pile'],
                     'mode_explicit' => $ui['mode_explicit'],
+                    'turn_key' => $ui['turn_key'],
                     ...(isset($ui['inspect']) ? ['inspect' => $ui['inspect']] : []),
                 ],
                 'mini_card_design' => \Berserk\View\Ui\LiveBattleCard::enabled() ? 'v2' : 'legacy',
@@ -212,7 +213,7 @@ final class BattleScreen
     }
 
     /**
-     * @return array{sel:int,mode:string,pile:string,mode_explicit:bool}
+     * @return array{sel:int,mode:string,pile:string,mode_explicit:bool,turn_key:string}
      */
     private function normalizeUiState(
         GameState $state,
@@ -220,6 +221,11 @@ final class BattleScreen
         ?array $uiState
     ): array {
         $source = $uiState ?? $_GET;
+        $turnKey = (string) ($state->battle['turn'] ?? 0) . ':' . ($state->battle['active'] ?? '');
+        if (isset($source['ui_turn']) && $source['ui_turn'] !== '' && $source['ui_turn'] !== $turnKey) {
+            $source = [];
+        }
+
 
         $pile = $this->normalizePile((string) ($source['pile'] ?? ''));
         $selectedCardId = (int) ($source['sel'] ?? 0);
@@ -254,6 +260,7 @@ final class BattleScreen
             'mode' => $mode,
             'pile' => $pile,
             'mode_explicit' => $modeExplicit,
+            'turn_key' => $turnKey,
             ...($inspect > 0 ? ['inspect' => $inspect] : []),
         ];
     }

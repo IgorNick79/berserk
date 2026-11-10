@@ -58,6 +58,7 @@
         if (drag) drag.observe(data);
     }
 
+    var uiTurn = script.dataset.uiTurn || "";
     var uiState = {
         sel: parseInt(script.dataset.sel || "0", 10) || 0,
         inspect: parseInt(script.dataset.inspect || "0", 10) || 0,
@@ -65,6 +66,23 @@
         modeExplicit: script.dataset.modeExplicit === "1",
         pile: script.dataset.pile || ""
     };
+
+    function clearUiUrl() {
+        var url = new URL(window.location.href);
+        ["sel", "inspect", "mode", "pile", "ui_turn"].forEach(function (key) { url.searchParams.delete(key); });
+        window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    }
+
+    if (uiTurn) {
+        var initialUrl = new URL(window.location.href);
+        var previousTurn = initialUrl.searchParams.get("ui_turn");
+        if (previousTurn && previousTurn !== uiTurn) {
+            clearUiUrl();
+        } else if (["sel", "inspect", "mode", "pile"].some(function (key) { return initialUrl.searchParams.has(key); })) {
+            initialUrl.searchParams.set("ui_turn", uiTurn);
+            window.history.replaceState(null, "", initialUrl.pathname + initialUrl.search + initialUrl.hash);
+        }
+    }
 
     var uiRevision = 0;
     var requestSequence = 0;
@@ -158,6 +176,7 @@
         url.searchParams.set("render_token", renderToken);
         url.searchParams.set("since_version", String(Math.max(0, syncVersion)));
         url.searchParams.delete("settings_sync_id");
+        if (uiTurn) url.searchParams.set("ui_turn", uiTurn);
         url.searchParams.set("sel", String(uiState.sel || 0));
         url.searchParams.set("inspect", String(uiState.inspect || 0));
         if (uiState.modeExplicit) {
@@ -201,6 +220,7 @@
 
     function addUiAndVersion(params) {
         params.set("expected_version", String(Math.max(0, syncVersion)));
+        if (uiTurn) params.set("ui_turn", uiTurn);
         params.set("sel", String(uiState.sel || 0));
         params.set("inspect", String(uiState.inspect || 0));
         if (!params.has("mode") && uiState.modeExplicit) {
@@ -320,6 +340,10 @@
 
         syncVersion = incomingVersion;
         if (data.render_token) renderToken = data.render_token;
+        if (typeof data.ui.turn_key === "string" && data.ui.turn_key !== uiTurn) {
+            if (uiTurn) clearUiUrl();
+            uiTurn = data.ui.turn_key;
+        }
         uiState = normalizeUi(data.ui);
         if (drag) drag.afterSnapshot();
         updateTurnTimer(data);
@@ -747,6 +771,11 @@
             return;
         }
 
+        if (params.get("cmd") === "end_turn") {
+            uiState = normalizeUi({});
+            params.delete("mode");
+            clearUiUrl();
+        }
         uiState.inspect = 0;
         var commandUiRevision = uiRevision;
         if (drag) drag.cancel();
@@ -801,6 +830,11 @@
 
     function updateUiFromUrl(url, fromDrag) {
         if (drag && !fromDrag) drag.cancel();
+        var previousTurn = url.searchParams.get("ui_turn");
+        if (uiTurn && previousTurn && previousTurn !== uiTurn) {
+            ["sel", "inspect", "mode", "pile"].forEach(function (key) { url.searchParams.delete(key); });
+        }
+        if (uiTurn) url.searchParams.set("ui_turn", uiTurn);
         uiState = {
             sel: url.searchParams.has("sel") ? (parseInt(url.searchParams.get("sel") || "0", 10) || 0) : 0,
             inspect: parseInt(url.searchParams.get("inspect") || "0", 10) || 0,

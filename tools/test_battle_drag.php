@@ -49,8 +49,17 @@ battleSnapshotAssert(str_contains($cases['expired']['field_html'], 'data-drag-en
 unset($state->battle['turn_timer']);
 $state->battle['active'] = 'player';
 $cases['inactive'] = $render(['sel'=>1]);
+$cases['inactiveTargeting'] = $render(['sel'=>1, 'mode'=>'action:aimed_shot']);
+$cases['passedTurn'] = $render(['sel'=>1, 'mode'=>'action:aimed_shot', 'ui_turn'=>$cases['special']['ui']['turn_key']]);
 battleSnapshotAssert(str_contains($cases['inactive']['field_html'], 'data-drag-enabled="0"'), 'Inactive player cannot drag');
 $state->battle['active'] = 'host';
+$cases['receivedTurn'] = $render(['sel'=>1, 'mode'=>'action:aimed_shot', 'ui_turn'=>$cases['inactiveTargeting']['ui']['turn_key']]);
+foreach (['receivedTurn', 'passedTurn'] as $side) {
+    battleSnapshotAssert($cases[$side]['ui']['sel'] === 0 && !$cases[$side]['ui']['mode_explicit']
+        && !str_contains($cases[$side]['info_panel_html'], 'name="target_id"'), 'Stale target mode is cleared on both sides');
+}
+battleSnapshotAssert($render(['sel'=>1, 'mode'=>'action:aimed_shot', 'ui_turn'=>$cases['special']['ui']['turn_key']])['ui']['mode_explicit'],
+    'Same-turn targeting still works');
 $state->getCard(1)->closed = true;
 $cases['closed'] = $render(['sel'=>1]);
 battleSnapshotAssert(str_contains($cases['closed']['field_html'], 'data-drag-card="1" data-drag-owner="own" data-drag-source="0"'), 'Closed source disabled');
