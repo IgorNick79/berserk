@@ -135,7 +135,7 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
             await Promise.all([page.waitForResponse(response => response.request().method() === 'POST'), page.locator('[data-card-selection] a.skip').click()]);
             await page.waitForFunction(() => !document.querySelector('[data-card-selection]'));
             assert.equal(posts[1].get('cancel'), '1');
-            assert.equal(posts[1].get('mode'), 'strike');
+            assert.equal(posts[1].get('mode'), '');
             assert.equal(posts[1].has('target_id'), false);
             assert.deepEqual(await selected(), []);
             const normalCard = card(1);

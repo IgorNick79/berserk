@@ -72,7 +72,7 @@ const styles = ['global.css', 'battle-ui-skins.css', 'battle-coordinates.css'].m
         await Promise.all([page.waitForResponse(response => response.request().method() === 'POST'), page.locator('a.skip').click()]);
         assert.equal(posts[1].get('cmd'), 'choose_paired_ranged');
         assert.equal(posts[1].get('cancel'), '1');
-        assert.equal(posts[1].get('mode'), 'strike');
+        assert.equal(posts[1].get('mode'), '');
         assert.equal(posts[1].has('target_id'), false);
         assert.equal(navigations, beforeCancel);
         assert.deepEqual(errors, []);

@@ -66,8 +66,14 @@ if (in_array('--field', $argv, true)) {
     $choice = new Command('choose_paired_ranged', ['operation_id'=>$operation['id'], 'stage'=>0, 'target_id'=>2]);
     if (!$engine->apply($state, 'host', $choice)->success) throw new RuntimeException('Cannot open next step');
     $fixture['next'] = $renderer->render($state, 'host', 'host', null, $catalog)['fragments'];
+    $nextSpec = $handler->spec($state, 'host', $catalog, $base, 'host');
+    parse_str((string) parse_url($nextSpec->form['cancel'], PHP_URL_QUERY), $cancelUi);
     $cancel = new Command('choose_paired_ranged', ['operation_id'=>$operation['id'], 'stage'=>1, 'cancel'=>1]);
     if (!$engine->apply($state, 'host', $cancel)->success) throw new RuntimeException('Cannot cancel next step');
-    $fixture['cancelled'] = $renderer->render($state, 'host', 'host', null, $catalog)['fragments'];
+    $cancelled = $renderer->render($state, 'host', 'host', null, $catalog, ['sel'=>1, 'mode'=>$cancelUi['mode']]);
+    if ($cancelled['ui']['mode_explicit'] || str_contains($cancelled['fragments']['panel_html'], 'Отменить действие')) {
+        throw new RuntimeException('Cancelling the pair leaves an explicit targeting mode');
+    }
+    $fixture['cancelled'] = $cancelled['fragments'];
 }
 echo json_encode($fixture, JSON_THROW_ON_ERROR);
