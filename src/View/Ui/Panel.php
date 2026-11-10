@@ -74,7 +74,7 @@ final class Panel
             foreach ($groups as $group) {
                 $sides = array_merge($sides, array_column($group->items, 'side'));
             }
-            $body = count(array_unique($sides)) > 1 ? CreatureChoice::controls() : '';
+            $body = ($form['side_toggle'] ?? count(array_unique($sides)) > 1) ? CreatureChoice::controls() : '';
             if ($selection->mode === CardSelectionSpec::EXTENDED) {
                 $body .= '<div class="creature-choice-sides" data-card-rows hidden role="group" aria-label="Ряд существа">';
                 foreach (['all'=>'Все', '1'=>'I', '2'=>'II', '3'=>'III', 'fly'=>'Летающие'] as $row => $label) {

@@ -532,7 +532,7 @@ final class InfoPanel
                     $options[] = [
                         'value' => 'redirect:' . (int) $tid,
                         'label' => $this->battleCardLabel($tc, $ti, $playerKey),
-                        'label_html' => htmlspecialchars((string) ($ti['name'] ?? $tc->ukid), ENT_QUOTES) . ' ' . \Berserk\View\Ui\Coords::render($tc->row, $tc->col, $playerKey, $tc->owner),
+                        'card_id' => (int) $tid,
                         'class' => 'redirect-target',
                     ];
                 }
@@ -1711,15 +1711,21 @@ final class InfoPanel
                 $chooserKey = $died ? $died->owner : null;
 
                 if ($playerKey === $chooserKey) {
-                    $buttons = [];
+                    $rows = [];
                     foreach ($pc['candidates'] as $tid) {
-                        $tc = $state->getCard($tid);
-                        if (!$tc) continue;
-                        $buttons[] = ['label' => $cardsInfo[$tc->ukid]['name'] ?? '?',
-                            'url' => "{$baseUrl}&cmd=choose_death_target&target_id={$tid}"];
+                        if ($state->getCard($tid)) $rows[] = ['value'=>$tid];
                     }
-                    $spec = new \Berserk\View\Ui\PanelSpec(title: (string) ($diedInfo['name'] ?? '?') . ': выберите существо', buttons: $buttons);
-                    \Berserk\View\Ui\CreatureChoice::decorate($spec, $state, $playerKey, $cardsInfo);
+                    $spec = new \Berserk\View\Ui\PanelSpec(
+                        title: (string) ($diedInfo['name'] ?? '?') . ': выберите существо',
+                        form: $rows ? [
+                            'name'=>'target_id', 'submit'=>'Выбрать',
+                            'hidden'=>Form::battleHidden($this->role, $state->gameId, 'choose_death_target'),
+                        ] : null,
+                        cardSelection: $rows ? \Berserk\View\Ui\CreatureChoice::confirmed(
+                            $state, $playerKey, $cardsInfo, $rows, 'death:' . ($pc['choice_id'] ?? $state->version),
+                            mode:\Berserk\View\Ui\CardSelectionSpec::SIMPLE, field:false,
+                        ) : null,
+                    );
                     $confirmHtml = Panel::render($spec);
                 } else {
                     $confirmHtml = '<p class="wait">Ожидание выбора цели оппонентом...</p>';
@@ -2304,13 +2310,16 @@ final class InfoPanel
         }
 
         $body = '<div class="defender-radio-list">';
+        $cards = array_column(\Berserk\View\Ui\CreatureChoice::candidates(
+            $this->state, array_column($options, 'card_id'), $this->playerKey, $this->cardsInfo,
+            \Berserk\View\Ui\CardSelectionSpec::SIMPLE,
+        ), 'label', 'instanceId');
         foreach ($options as $index => $option) {
-            $labelHtml = $option['label_html'] ?? \Berserk\View\Ui\Coords::text((string) $option['label']);
-            $card = $this->state->getCard((int) ($option['card_id'] ?? 0));
-            $coordsHtml = $card !== null
-                ? \Berserk\View\Ui\Coords::renderResult($card->row, $card->col, $this->playerKey)
-                : '';
-
+            $id = (int) ($option['card_id'] ?? 0);
+            $card = $this->state->getCard($id);
+            $labelHtml = \Berserk\View\Ui\Coords::text((string) ($cards[$id] ?? $option['label']));
+            $coordsHtml = $card ? \Berserk\View\Ui\Coords::renderResult($card->row, $card->col, $this->playerKey,
+                $skipDefender ? null : $card->owner) : '';
             $body .= '<label class="' . htmlspecialchars('choice-radio ' . ($option['class'] ?? ''), ENT_QUOTES) . '">'
                 . '<input type="radio" name="choice" value="' . htmlspecialchars($option['value'], ENT_QUOTES) . '"'
                 . ($index === 0 ? ' checked="checked"' : '') . '>'

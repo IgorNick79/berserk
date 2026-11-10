@@ -127,4 +127,33 @@ $fixtures['forced'] = $render($forced);
 check(!str_contains($fixtures['forced']['info_panel_html'], 'data-card-selection')
     && str_contains($fixtures['forced']['info_panel_html'], 'cmd=choose_forced_strike&amp;target_id=4')
     && !str_contains($fixtures['forced']['info_panel_html'], 'Секретная'), 'Immediate link preserves command and masks the hidden card');
+$revive = GameState::fromArray($cancelled->toArray());
+$revive->getCard(2)->zone = 'graveyard';
+$revive->getCard(3)->zone = 'graveyard';
+$revive->battle['pending_revive'] = ['healer_id'=>1, 'step'=>'card', 'candidates'=>[2,3]];
+$fixtures['revive'] = $render($revive);
+check($engine->apply($revive, 'host', new Command('choose_revive_target', ['target_id'=>2]))->success
+    && $revive->battle['pending_revive']['step'] === 'cell', 'Confirmed revive target keeps the native cell transition');
+
+$intrigue = GameState::fromArray($cancelled->toArray());
+$intrigue->battle['pending_intrigue_start'] = [[
+    'owner'=>'host', 'source_id'=>1, 'count'=>2, 'candidates'=>[2,4,5], 'effect'=>['type'=>'poison', 'value'=>1],
+]];
+$fixtures['intrigue'] = $render($intrigue);
+$_GET['in_side'] = 'all';
+$fixtures['intrigueAll'] = $render($intrigue);
+unset($_GET['in_side']);
+check(!str_contains($fixtures['intrigue']['info_panel_html'], 'data-card-instance="2"')
+    && str_contains($fixtures['intrigueAll']['info_panel_html'], 'data-card-instance="2"')
+    && !str_contains($fixtures['intrigueAll']['info_panel_html'], 'data-creature-sides'), 'Intrigue has its own scope, not a side filter');
+check($engine->apply($intrigue, 'host', new Command('choose_intrigue_start', ['target_ids'=>[2,4], 'in_side'=>'all']))->success,
+    'Intrigue accepts the existing ordered array and side field');
+
+$combatPick = GameState::fromArray($cancelled->toArray());
+$combatPick->battle['pending_combat_pick'] = [
+    'owner'=>'host', 'card_id'=>1, 'target'=>'enemy', 'effect'=>[], 'pick_token'=>'pick-stage42',
+];
+$fixtures['combatPick'] = $render($combatPick);
+check(str_contains($fixtures['combatPick']['info_panel_html'], 'name="pick_token" value="pick-stage42"')
+    && str_contains($fixtures['combatPick']['info_panel_html'], 'cmd=cancel_pending&amp;pick_token=pick-stage42'), 'Combat token reaches both actions');
 echo json_encode($fixtures, JSON_THROW_ON_ERROR);

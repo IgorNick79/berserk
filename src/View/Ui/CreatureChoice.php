@@ -82,6 +82,19 @@ final class CreatureChoice
         );
     }
 
+    /** A confirmed target step with the existing standalone cancel link if no candidates remain. */
+    public static function targetPanel(
+        GameState $state, string $viewer, array $catalog, array $rows, string $decision,
+        string $title, array $hidden, string $cancel, string $mode = CardSelectionSpec::SIMPLE, bool $field = true
+    ): PanelSpec {
+        return new PanelSpec(
+            title: $title,
+            form: $rows ? ['name'=>'target_id', 'hidden'=>$hidden, 'submit'=>'Выбрать', 'cancel'=>$cancel] : null,
+            buttons: $rows ? [] : [['label'=>'Отмена', 'url'=>$cancel, 'class'=>'skip']],
+            cardSelection: $rows ? self::confirmed($state, $viewer, $catalog, $rows, $decision, mode:$mode, field:$field) : null,
+        );
+    }
+
     /** Immediate links retain their caller-supplied URL and order. */
     public static function immediateButtons(GameState $state, string $viewer, array $catalog, array $links): array
     {
@@ -91,8 +104,9 @@ final class CreatureChoice
         foreach ($links as $link) {
             $item = $items[$link['instanceId']] ?? null;
             if (!$item) continue;
+            $prefix = htmlspecialchars((string) ($link['prefix'] ?? ''), ENT_QUOTES);
             $suffix = htmlspecialchars((string) ($link['suffix'] ?? ''), ENT_QUOTES);
-            $buttons[] = $link + ['label' => $item['label'], 'label_html' => $item['label_html'] . $suffix];
+            $buttons[] = $link + ['label' => $item['label'], 'label_html' => $prefix . $item['label_html'] . $suffix];
         }
         return $buttons;
     }
@@ -105,28 +119,6 @@ final class CreatureChoice
     public static function decorate(PanelSpec $spec, GameState $state, string $viewer, array $catalog): void
     {
         if (!$spec->isMine || $spec->cardSelection !== null) return;
-        if ($spec->form === null) {
-            $items = []; $remaining = []; $hidden = null;
-            foreach ($spec->buttons as $button) {
-                parse_str((string) parse_url($button['url'], PHP_URL_QUERY), $query);
-                if (!in_array($query['cmd'] ?? '', ['choose_instant_pick', 'choose_combat_pick', 'choose_revive_target', 'choose_death_target'], true)
-                    || !isset($query['target_id']) || !$state->getCard((int) $query['target_id'])) {
-                    $remaining[] = $button; continue;
-                }
-                $card = $state->getCard((int) $query['target_id']);
-                $items[] = self::item($card, (string) ($catalog[$card->ukid]['name'] ?? $card->ukid), $viewer);
-                unset($query['target_id']); $hidden ??= $query;
-            }
-            if ($items) {
-                $spec->buttons = [];
-                foreach ($remaining as $button) {
-                    if (str_contains($button['url'],'cmd=cancel_pending')) $cancel=$button['url'];
-                    else $spec->buttons[]=$button;
-                }
-                $spec->form = ['type' => 'radio', 'name' => 'target_id', 'items' => $items, 'hidden' => $hidden, 'submit' => 'Выбрать'];
-                if (isset($cancel)) $spec->form['cancel']=$cancel;
-            }
-        }
         if ($spec->form === null || !in_array($spec->form['name'] ?? '', ['target_id', 'target_ids[]', 'card_id'], true)) return;
         $showHealth = in_array($spec->form['hidden']['cmd'] ?? '', ['choose_multi_heal', 'choose_wild_healer_heal', 'wt_target'], true)
             || (($spec->form['hidden']['cmd'] ?? '') === 'choose_instant_pick'

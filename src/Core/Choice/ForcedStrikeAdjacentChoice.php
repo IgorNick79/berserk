@@ -10,7 +10,7 @@ use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\InstantProcessor;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class ForcedStrikeAdjacentChoice implements ChoiceHandlerInterface
 {
@@ -34,21 +34,17 @@ final class ForcedStrikeAdjacentChoice implements ChoiceHandlerInterface
             return new PanelSpec(title: $attName . ' — выбор цели удара', isMine: false);
         }
 
-        $buttons = [];
+        $links = [];
         foreach ((array) ($pending['candidates'] ?? []) as $targetId) {
             $target = $state->getCard((int) $targetId);
             if (!$target) continue;
 
-            $name = $cardsInfo[$target->ukid]['name'] ?? '?';
-            $coords = $target->row !== null && $target->col !== null
-                ? ' (' . $target->row . ',' . $target->col . ')'
-                : '';
-            $buttons[] = [
-                'label' => $name . $coords . ' (' . $target->hp . '/' . $target->hpMax . ')',
-                'label_html' => \Berserk\View\Ui\CreatureChoice::item($target,$name,$playerKey,true)['label_html'],
+            $links[] = [
+                'instanceId' => $target->instanceId,
                 'url'   => "{$baseUrl}&cmd=choose_forced_strike_adjacent&target_id={$target->instanceId}",
             ];
         }
+        $buttons = CreatureChoice::immediateButtons($state, $playerKey, $cardsInfo, $links);
 
         $buttons[] = [
             'label' => 'Отмена',

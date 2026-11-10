@@ -69,7 +69,7 @@
 
     function clearUiUrl() {
         var url = new URL(window.location.href);
-        ["sel", "inspect", "mode", "pile", "ui_turn"].forEach(function (key) { url.searchParams.delete(key); });
+        ["sel", "inspect", "mode", "pile", "in_side", "ui_turn"].forEach(function (key) { url.searchParams.delete(key); });
         window.history.replaceState(null, "", url.pathname + url.search + url.hash);
     }
 
@@ -176,6 +176,9 @@
         url.searchParams.set("render_token", renderToken);
         url.searchParams.set("since_version", String(Math.max(0, syncVersion)));
         url.searchParams.delete("settings_sync_id");
+        var intrigueSide = new URL(window.location.href).searchParams.get("in_side");
+        if (intrigueSide === "all" || intrigueSide === "enemy") url.searchParams.set("in_side", intrigueSide);
+        else url.searchParams.delete("in_side");
         if (uiTurn) url.searchParams.set("ui_turn", uiTurn);
         url.searchParams.set("sel", String(uiState.sel || 0));
         url.searchParams.set("inspect", String(uiState.inspect || 0));
@@ -494,6 +497,13 @@
         if (!pendingCommand || stopped) return;
         if (forcedSyncInFlight) return;
 
+        if (pendingCommand.type === "choose_intrigue_start" && !pendingCommand.finalError) {
+            var url = new URL(window.location.href);
+            if (url.searchParams.has("in_side")) {
+                url.searchParams.delete("in_side");
+                window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+            }
+        }
         commandState = "syncing";
         clearStatusTimer();
         clearForcedSyncTimer();
@@ -707,7 +717,8 @@
         }
         return url.searchParams.has("sel")
             || url.searchParams.has("mode")
-            || url.searchParams.has("pile");
+            || url.searchParams.has("pile")
+            || url.searchParams.has("in_side");
     }
 
     function isCommandUrl(url) {
@@ -832,7 +843,7 @@
         if (drag && !fromDrag) drag.cancel();
         var previousTurn = url.searchParams.get("ui_turn");
         if (uiTurn && previousTurn && previousTurn !== uiTurn) {
-            ["sel", "inspect", "mode", "pile"].forEach(function (key) { url.searchParams.delete(key); });
+            ["sel", "inspect", "mode", "pile", "in_side"].forEach(function (key) { url.searchParams.delete(key); });
         }
         if (uiTurn) url.searchParams.set("ui_turn", uiTurn);
         uiState = {

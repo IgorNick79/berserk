@@ -10,7 +10,7 @@ use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
 use Berserk\Core\CardInstance;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class IncarnationChoice implements ChoiceHandlerInterface
 {
@@ -42,9 +42,13 @@ final class IncarnationChoice implements ChoiceHandlerInterface
             $pc=$state->battle['strike']['pending_choice']??null;if(!$pc)return null;
             $source=$state->getCard($pc['died_id']);
             if($source->owner!==$playerKey)return new PanelSpec(title:'Предсмертная способность',isMine:false);
-            $buttons=[];foreach($pc['candidates'] as $id)$buttons[]=['label'=>($cardsInfo[$state->getCard($id)->ukid]['name']??'Карта').' #'.$id,
-                'url'=>$baseUrl.'&cmd=choose_worm_death&choice_id='.rawurlencode($pc['choice_id']).'&target_id='.$id];
-            return new PanelSpec(title:'Предсмертная способность — выберите цель',buttons:$buttons);
+            $links = [];
+            foreach ($pc['candidates'] as $id) {
+                $links[] = ['instanceId'=>$id,
+                    'url'=>$baseUrl . '&cmd=choose_worm_death&choice_id=' . rawurlencode($pc['choice_id']) . '&target_id=' . $id];
+            }
+            return new PanelSpec(title:'Предсмертная способность — выберите цель',
+                buttons:CreatureChoice::immediateButtons($state, $playerKey, $cardsInfo, $links));
         }
 
 

@@ -9,7 +9,7 @@ use Berserk\Core\Command;
 use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CardSelectionSpec, CreatureChoice, PanelSpec};
 
 final class TalionIncarnationChoice implements ChoiceHandlerInterface
 {
@@ -49,10 +49,9 @@ final class TalionIncarnationChoice implements ChoiceHandlerInterface
             $card = $state->getCard((int) $id);
             if (!$card) continue;
 
-            $name = $cardsInfo[$card->ukid]['name'] ?? $card->ukid;
             $items[] = [
                 'value' => $card->instanceId,
-                'label' => $name . ' #' . $card->instanceId . ' — ' . self::incarnationLabel($card),
+                'suffix' => ' — ' . self::incarnationLabel($card),
             ];
         }
 
@@ -63,7 +62,6 @@ final class TalionIncarnationChoice implements ChoiceHandlerInterface
             form: [
                 'type' => 'radio',
                 'name' => 'target_id',
-                'items' => $items,
                 'hidden' => [
                     $roleParam => '',
                     'game' => $state->gameId,
@@ -71,6 +69,8 @@ final class TalionIncarnationChoice implements ChoiceHandlerInterface
                 ],
                 'submit' => 'Положить жетон',
             ],
+            cardSelection: CreatureChoice::confirmed($state, $playerKey, $cardsInfo, $items,
+                'talion-incarnation:' . $state->version, mode:CardSelectionSpec::SIMPLE, field:false),
         );
     }
 

@@ -34,6 +34,7 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
                     snapshot = params.get('cmd') === 'grezy_pick' && params.has('enemy_id') ? fixtures.grezyAlly : fixtures.cancelled;
                     version++;
                 }
+                if (snapshot === fixtures.intrigue && url.searchParams.get('in_side') === 'all') snapshot = fixtures.intrigueAll;
                 if (request.method() === 'GET' && !url.searchParams.has('force_snapshot')
                     && Number(url.searchParams.get('since_version')) === version) {
                     return route.fulfill({json: {type: 'no_change', ok: true, sync_version: version}});
@@ -206,6 +207,38 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
             await command(immediate);
             assert.equal(posts[dischargePosts + 3].get('cmd'), 'choose_forced_strike');
             assert.equal(posts[dischargePosts + 3].get('target_id'), '4');
+            await show('intrigue');
+            const intrigueNav = navigations;
+            const intriguePost = posts.length;
+            assert.equal(await row(2).count(), 0);
+            const allSide = page.waitForResponse(response => new URL(response.url()).searchParams.get('in_side') === 'all');
+            await page.getByRole('link', {name:'Все существа'}).click();
+            await allSide;
+            await row(2).waitFor();
+            assert.equal(await page.locator('[data-creature-sides]').count(), 0);
+            await row(2).click();
+            assert.equal(await submit.isDisabled(), true);
+            await row(4).click();
+            await command(submit);
+            assert.equal(posts[intriguePost].get('cmd'), 'choose_intrigue_start');
+            assert.equal(posts[intriguePost].get('in_side'), 'all');
+            assert.deepEqual(posts[intriguePost].getAll('target_ids[]'), ['2', '4']);
+            assert.equal(navigations, intrigueNav);
+
+            await show('revive');
+            await row(2).click();
+            assert.deepEqual(await selected(), []);
+            assert.equal(posts.length, intriguePost + 1);
+            await command(submit);
+            assert.equal(posts[intriguePost + 1].get('cmd'), 'choose_revive_target');
+            assert.equal(posts[intriguePost + 1].get('target_id'), '2');
+
+            await show('combatPick');
+            await row(4).click();
+            assert.equal(posts.length, intriguePost + 2);
+            await command(page.locator('[data-card-selection] a.skip'));
+            assert.equal(posts[intriguePost + 2].get('cmd'), 'cancel_pending');
+            assert.equal(posts[intriguePost + 2].get('pick_token'), 'pick-stage42');
             assert.deepEqual(errors, []);
             console.log('PASS Stage 3 at ' + width + 'px');
             await page.close();

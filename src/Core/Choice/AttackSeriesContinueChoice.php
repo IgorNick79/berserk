@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CardSelectionSpec, CreatureChoice, PanelSpec};
 
 final class AttackSeriesContinueChoice implements ChoiceHandlerInterface
 {
@@ -44,9 +44,7 @@ final class AttackSeriesContinueChoice implements ChoiceHandlerInterface
         foreach ($p['candidates'] as $tid) {
             $target = $state->getCard((int) $tid);
             if (!$target || $target->dying || $target->hp <= 0) continue;
-            $name = $target->revealed || $target->owner === $playerKey
-                ? ($cardsInfo[$target->ukid]['name'] ?? '?') : '???';
-            $items[] = ['value' => $target->instanceId, 'label' => $name];
+            $items[] = ['value'=>$target->instanceId];
         }
         $endUrl = $baseUrl . '&cmd=attack_series_end';
 
@@ -56,12 +54,13 @@ final class AttackSeriesContinueChoice implements ChoiceHandlerInterface
             form: $items ? [
                 'type' => 'radio',
                 'name' => 'target_id',
-                'items' => $items,
                 'hidden' => \Berserk\View\Ui\Form::battleHidden($role, $state->gameId, 'attack_series_next'),
                 'submit' => 'Выбрать',
                 'cancel' => $endUrl,
                 'cancel_label' => 'Закончить серию',
             ] : null,
+            cardSelection: $items ? CreatureChoice::confirmed($state, $playerKey, $cardsInfo, $items,
+                'attack-series:' . $state->version, mode:CardSelectionSpec::SIMPLE) : null,
             buttons: $items ? [] : [['label'=>'Закончить серию', 'url'=>$endUrl, 'class'=>'skip']],
         );
     }
