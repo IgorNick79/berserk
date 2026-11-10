@@ -93,7 +93,7 @@ final class InfoPanel
         if ($inInstantStack) $combatKey = 'instant:' . ($state->battle['turn'] ?? 0);
         if ($priority && $combatKey === '') $combatKey = 'information:' . ($state->battle['turn'] ?? 0);
         $body = $actionChoiceHtml !== '' ? $actionChoiceHtml : $this->renderOchiKrongaNotice() . $this->renderBody();
-        $body = $this->renderWormResults() . $body;
+        $body = $this->renderWormResults() . $this->renderRagnarValhallaNotice() . $body;
         $instantWindow = $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
         $turnInstant = !$inCombat && ($instantWindow
@@ -120,6 +120,19 @@ final class InfoPanel
     }
 
     /** The per-card counter is persisted with gameplay; rendering never consumes it. */
+    private function renderRagnarValhallaNotice(): string
+    {
+        $period = ($this->state->battle['turn'] ?? 0) . ':' . ($this->state->battle['active'] ?? '');
+        foreach ($this->state->cards as $card) {
+            if ($card->owner === $this->playerKey && $card->zone === CardInstance::ZONE_GRAVEYARD
+                && ($card->flags['ragnar_valhalla_resolved_period'] ?? null) === $period
+                && empty($card->flags['ragnar_unanswer_used_this_turn'])) {
+                return '<div class="panel-text">Вальхалла Рагнара действует: первый простой удар вашего существа за этот ход станет безответным.</div>';
+            }
+        }
+        return '';
+    }
+
     private function renderWormResults(): string
     {
         $html = '';

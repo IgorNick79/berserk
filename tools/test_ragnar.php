@@ -177,6 +177,11 @@ $graveRagnar = rgActiveValhalla(rgRagnar(['instanceId' => 163]));
 $state = rgState($fieldRagnar, $graveRagnar);
 rgResolveValhalla($state, 163);
 rgAssert(($graveRagnar->flags['ragnar_valhalla_resolved_this_turn'] ?? 0) === 2, 'First no-target Valhalla should resolve twice with field Ragnar.');
+$valhallaView = (new \Berserk\View\Screen\BattleSnapshotRenderer(new \Berserk\View\Template(__DIR__ . '/../templates')))
+    ->render($state, 'host', 'host', null, [])['fragments']['info_panel_html'];
+rgAssert(str_contains($valhallaView, 'Вальхалла Рагнара действует') && !str_contains($valhallaView, 'cmd=valhalla_pick'),
+    'Ragnar shows a confirmation without a target picker');
+
 
 // 2. Первая Вальхалла с целью: два последовательных выбора могут попасть в разные цели.
 $fieldRagnar = rgRagnar(['instanceId' => 63, 'row' => 3, 'col' => 2]);
