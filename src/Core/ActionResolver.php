@@ -4504,6 +4504,7 @@ final class ActionResolver
         }
 
         $this->state->battle['pending_life_gift'] = [
+            'opened_version' => $this->state->version,
             'owner'     => $playerKey,
             'card_id'   => $cardId,
             'min_x'     => $min,

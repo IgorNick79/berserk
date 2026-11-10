@@ -823,7 +823,7 @@
             && window.BerserkCardSelection.fieldChoice(root, event, script.dataset.viewerKey);
     }
     function sameDecision(first, second) {
-        return second && first.id === second.id
+        return second && first.id === second.id && first.group === second.group
             && first.form.dataset.cardSelection === second.form.dataset.cardSelection;
     }
     function consume(event) {
@@ -870,7 +870,7 @@
         if (!choice) return;
         consume(event);
         cancelInspection();
-        window.BerserkCardSelection.select(choice.form, choice.id);
+        window.BerserkCardSelection.select(choice.form, choice.id, choice.group);
     }, true);
     document.addEventListener("pointerdown", function (event) {
         if (event.pointerType !== "touch") return;
@@ -884,7 +884,7 @@
             var current = fieldChoice(event);
             if (!sameDecision(choice, current) || !choice.card.contains(document.elementFromPoint(event.clientX, event.clientY))) return;
             heldClick = {id: choice.id, pointer: event.pointerId, until: Infinity};
-            window.BerserkCardSelection.select(current.form, current.id);
+            window.BerserkCardSelection.select(current.form, current.id, current.group);
         }, selectionGestures.holdMs)};
     }, true);
     document.addEventListener("pointermove", function (event) {

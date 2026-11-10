@@ -21,9 +21,9 @@
     <aside class="info-panel" data-battle-fragment="info_panel_html" aria-label="Сражение и действия">{{info_panel_html}}</aside>
 </div>
 <script src="/assets/js/cell-marker-picker.js?v=1" defer></script>
-<script src="/assets/js/creature-choice.js?v=6" defer></script>
+<script src="/assets/js/creature-choice.js?v=7" defer></script>
 <script src="/assets/js/panel-secondary-view.js?v=1" defer></script>
-<script src="/assets/js/battle-ui.js?v=21" defer></script>
+<script src="/assets/js/battle-ui.js?v=22" defer></script>
 <script src="/assets/js/card-image-popup.js?v=2" defer></script>
 
 <script src="/assets/js/battle-mini-card.js?v=12" defer></script>

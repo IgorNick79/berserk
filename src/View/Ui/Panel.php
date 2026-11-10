@@ -62,16 +62,19 @@ final class Panel
         $type = $form['type'] ?? 'radio';
 
         if ($selection !== null) {
-            if ($selection->maxSelect !== 1 || $selection->minSelect < 0 || $selection->minSelect > 1
-                || $selection->confirmation !== CardSelectionSpec::CONFIRM) {
-                throw new \LogicException('Panel supports only confirmed single-card selection');
+            if ($selection->confirmation !== CardSelectionSpec::CONFIRM) {
+                throw new \LogicException('Panel supports confirmed selection');
             }
-            $items = $selection->candidates;
-            foreach ($items as &$item) {
-                $item['checked'] = in_array($item['instanceId'], $selection->selected, true);
+            $groups = $selection->groups ?: [new CardSelectionGroup(
+                id: 'default', field: $form['name'], items: $selection->candidates,
+                minSelect: $selection->minSelect, maxSelect: $selection->maxSelect, selected: $selection->selected,
+                checkbox: $type === 'checkbox',
+            )];
+            $sides = [];
+            foreach ($groups as $group) {
+                $sides = array_merge($sides, array_column($group->items, 'side'));
             }
-            unset($item);
-            $body = count(array_unique(array_column($items, 'side'))) > 1 ? CreatureChoice::controls() : '';
+            $body = count(array_unique($sides)) > 1 ? CreatureChoice::controls() : '';
             if ($selection->mode === CardSelectionSpec::EXTENDED) {
                 $body .= '<div class="creature-choice-sides" data-card-rows hidden role="group" aria-label="Ряд существа">';
                 foreach (['all'=>'Все', '1'=>'I', '2'=>'II', '3'=>'III', 'fly'=>'Летающие'] as $row => $label) {
@@ -79,7 +82,9 @@ final class Panel
                 }
                 $body .= '</div>';
             }
-            $body .= self::renderChoiceItems($items, 'radio', $form['name'], $selection->minSelect === 1);
+            foreach ($groups as $group) {
+                $body .= self::renderCardSelectionGroup($group, $selection->groups !== []);
+            }
         } elseif ($type === 'multi_radio') {
             $body = self::renderMultiRadioGroups($form['groups'] ?? []);
         } else {
@@ -98,7 +103,7 @@ final class Panel
         }
 
         $context = $selection === null ? '' : ' data-card-selection="' . htmlspecialchars($selection->context, ENT_QUOTES)
-            . '" data-card-min-select="' . $selection->minSelect . '"';
+            . '"';
         if ($selection !== null && $selection->battlefieldOwner !== null) {
             $context .= ' data-card-field-owner="' . htmlspecialchars($selection->battlefieldOwner, ENT_QUOTES) . '"';
         }
@@ -106,6 +111,25 @@ final class Panel
             . $hiddenHtml
             . $body
             . '</form>';
+    }
+
+    private static function renderCardSelectionGroup(CardSelectionGroup $group, bool $named): string
+    {
+        $items = $group->items;
+        foreach ($items as &$item) {
+            $item['checked'] = in_array($item['instanceId'] ?? $item['value'], $group->selected, true);
+        }
+        unset($item);
+
+        $html = '<div' . ($named ? ' class="multi-radio-group"' : '')
+            . ' data-selection-group="' . htmlspecialchars($group->id, ENT_QUOTES) . '"'
+            . ' data-selection-min="' . $group->minSelect . '" data-selection-max="' . $group->maxSelect . '">';
+        if ($group->label !== '') {
+            $html .= '<div class="multi-radio-label">' . htmlspecialchars($group->label, ENT_QUOTES) . '</div>';
+        }
+        $radio = $group->maxSelect === 1 && !$group->checkbox;
+        return $html . self::renderChoiceItems($items, $radio ? 'radio' : 'checkbox',
+            $group->field, $radio && $group->minSelect === 1) . '</div>';
     }
 
     private static function renderHidden(array $hidden): string
@@ -133,6 +157,7 @@ final class Panel
                 $side .= ' data-card-instance="' . (int) $it['instanceId']
                     . '" data-card-row="' . htmlspecialchars($it['row'], ENT_QUOTES) . '"';
             }
+            if (isset($it['submitOrder'])) $side .= ' data-selection-order="' . (int) $it['submitOrder'] . '"';
             $html .= '<label class="choice-radio"' . $side . '>'
                 . '<input type="' . htmlspecialchars($type, ENT_QUOTES) . '"'
                 . ' name="' . htmlspecialchars($name, ENT_QUOTES) . '"'

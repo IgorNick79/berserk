@@ -10,7 +10,8 @@ use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
 use Berserk\View\Ui\PanelSpec;
-use Berserk\View\Ui\Coords;
+use Berserk\Core\ActionResolution;
+use Berserk\View\Ui\{CardSelectionSpec, CreatureChoice};
 
 final class MultiHealChoice implements ChoiceHandlerInterface
 {
@@ -47,20 +48,12 @@ final class MultiHealChoice implements ChoiceHandlerInterface
         $max   = (int) $pmh['max_targets'];
         $value = (int) $pmh['value'];
 
-        $items = [];
-        foreach ($pmh['candidates'] as $tid) {
-            $tc = $state->getCard($tid);
-            if (!$tc) continue;
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-
-            $items[] = [
-                'value' => $tid,
-                'label' => $tn . ' (' . $tc->hp . '/' . $tc->hpMax . ')',
-                'label_html' => htmlspecialchars($tn, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
-                    . ' ' . Coords::renderResult($tc->row, $tc->col, $playerKey, $tc->owner)
-                    . ' (' . $tc->hp . '/' . $tc->hpMax . ')',
-            ];
+        $items = CreatureChoice::candidates($state, $pmh['candidates'], $playerKey, $cardsInfo, CardSelectionSpec::DEFAULT_MODE);
+        $submitOrder = array_flip($pmh['candidates']);
+        foreach ($items as &$item) {
+            $item['submitOrder'] = $submitOrder[$item['instanceId']];
         }
+        unset($item);
 
         $roleParam = $role === 'host' ? 'first' : 'second';
 
@@ -69,7 +62,6 @@ final class MultiHealChoice implements ChoiceHandlerInterface
             form: [
                 'type'   => 'checkbox',
                 'name'   => 'target_ids[]',
-                'items'  => $items,
                 'hidden' => [
                     $roleParam => '',
                     'game'     => $state->gameId,
@@ -78,6 +70,13 @@ final class MultiHealChoice implements ChoiceHandlerInterface
                 'submit' => 'Подтвердить',
                 'cancel' => $baseUrl . '&cmd=cancel_pending',
             ],
+            cardSelection: new CardSelectionSpec(
+                context: implode(':', [$state->gameId, $playerKey, 'multi-heal',
+                    $pmh['action'][ActionResolution::ID] ?? 'legacy-' . $state->version]),
+                candidates: $items,
+                maxSelect: $max,
+                battlefieldOwner: $playerKey,
+            ),
         );
     }
 

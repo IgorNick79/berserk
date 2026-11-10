@@ -204,8 +204,7 @@
                 if (choose) {
                     var controller = window.BerserkCardSelection;
                     var choice = controller?.pendingCandidate(root, selectedHeading?.dataset.panelCardId);
-                    if (!choice) return;
-                    controller.select(choice.form, choice.id);
+                    if (!choice || !controller.select(choice.form, choice.id, choice.group)) return;
                 }
                 closedCardId = selectedHeading ? Number(selectedHeading.dataset.panelCardId) : 0;
                 inspectedCombatCard = 0; combatCardViewOpen = false; hideHint(); syncCombatPanel();

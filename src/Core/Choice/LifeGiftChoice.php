@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CardSelectionGroup, CardSelectionSpec, CreatureChoice, PanelSpec};
 
 final class LifeGiftChoice implements ChoiceHandlerInterface
 {
@@ -41,43 +41,17 @@ final class LifeGiftChoice implements ChoiceHandlerInterface
             $amountItems[] = [
                 'value'   => $i,
                 'label'   => $i . ' монет',
-                'checked' => ($i === (int) $p['max_x']),
             ];
         }
 
-        // Враг — кого ранить
-        $enemyItems = [];
-        foreach ($p['enemies'] as $tid) {
-            $tc = $state->getCard((int) $tid);
-            if (!$tc) continue;
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-            $enemyItems[] = [
-                'value' => (int) $tid,
-                'label' => $tn . ' (' . $tc->row . ';' . $tc->col . ') — ' . $tc->hp . '/' . $tc->hpMax,
-            ];
-        }
-
-        // Союзник — кого лечить
-        $allyItems = [];
-        foreach ($p['allies'] as $tid) {
-            $tc = $state->getCard((int) $tid);
-            if (!$tc) continue;
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-            $allyItems[] = [
-                'value' => (int) $tid,
-                'label' => $tn . ' (' . $tc->row . ';' . $tc->col . ') — ' . $tc->hp . '/' . $tc->hpMax,
-            ];
-        }
+        $items = CreatureChoice::candidates($state, array_merge($p['enemies'], $p['allies']),
+            $playerKey, $cardsInfo, CardSelectionSpec::DEFAULT_MODE);
+        $enemyItems = array_values(array_filter($items, static fn(array $item): bool => in_array($item['instanceId'], $p['enemies'], true)));
+        $allyItems = array_values(array_filter($items, static fn(array $item): bool => in_array($item['instanceId'], $p['allies'], true)));
 
         return new PanelSpec(
             title: $srcName . ': предсмертный дар',
             form: [
-                'type'   => 'multi_radio',
-                'groups' => [
-                    ['name' => 'amount',   'label' => 'Сколько монет потратить', 'items' => $amountItems],
-                    ['name' => 'enemy_id', 'label' => 'Кого ранить',             'items' => $enemyItems],
-                    ['name' => 'ally_id',  'label' => 'Кого излечить',           'items' => $allyItems],
-                ],
                 'hidden' => [
                     $roleParam => '',
                     'game'     => $state->gameId,
@@ -86,6 +60,16 @@ final class LifeGiftChoice implements ChoiceHandlerInterface
                 'submit' => 'Применить',
                 'cancel' => $baseUrl . '&cmd=cancel_pending',
             ],
+            cardSelection: new CardSelectionSpec(
+                context: implode(':', [$state->gameId, $playerKey, 'life-gift', $p['card_id'],
+                    $p['opened_version'] ?? 'legacy-' . $state->version]),
+                battlefieldOwner: $playerKey,
+                groups: [
+                    new CardSelectionGroup('amount', 'amount', $amountItems, 'Сколько монет потратить', selected: [(int) $p['max_x']]),
+                    new CardSelectionGroup('enemy', 'enemy_id', $enemyItems, 'Кого ранить'),
+                    new CardSelectionGroup('ally', 'ally_id', $allyItems, 'Кого излечить'),
+                ],
+            ),
         );
     }
 

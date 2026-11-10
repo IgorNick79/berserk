@@ -13,15 +13,17 @@ final class CardSelectionSpec
     /**
      * @param list<array{instanceId:int,value:int|string,label:string,label_html:string,side:string,row:string}> $candidates
      * @param list<int> $selected Instance IDs, independent of command values.
+     * @param list<CardSelectionGroup> $groups Named groups for compound forms.
      */
     public function __construct(
         public string $context,
-        public array $candidates,
+        public array $candidates = [],
         public string $mode = self::DEFAULT_MODE,
         public int $minSelect = 1,
         public int $maxSelect = 1,
         public array $selected = [],
         public string $confirmation = self::CONFIRM,
         public ?string $battlefieldOwner = null,
+        public array $groups = [],
     ) {}
 }
