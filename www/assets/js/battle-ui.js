@@ -170,6 +170,10 @@
         var requestedCard = inspectedCombatCard || Number(content.dataset.inspectedCard) || 0;
         var inspect = !!(key && requestedCard && card && Number(card.dataset.panelCardId) === requestedCard && closedCardId !== requestedCard);
         combatCardViewOpen = inspect;
+        var choose = selected && selected.querySelector('[data-card-inspect-select]');
+        if (choose) {
+            choose.hidden = !inspect || !window.BerserkCardSelection?.pendingCandidate(root, card.dataset.panelCardId);
+        }
 
         var manuallyClosed = !!(card && closedCardId === Number(card.dataset.panelCardId));
         // The old fragment can survive until the selection snapshot arrives.
@@ -192,10 +196,17 @@
     if (combatHost) {
         root.addEventListener('click', function (event) {
             if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            var choose = event.target.closest('[data-card-inspect-select]:not([hidden])');
             var close = event.target.closest('[data-combat-back],[data-panel-card-close]');
-            if (close) {
+            if (close || choose) {
                 event.preventDefault(); event.stopImmediatePropagation();
                 var selectedHeading = combatHost.querySelector('[data-panel-card-id]');
+                if (choose) {
+                    var controller = window.BerserkCardSelection;
+                    var choice = controller?.pendingCandidate(root, selectedHeading?.dataset.panelCardId);
+                    if (!choice) return;
+                    controller.select(choice.form, choice.id);
+                }
                 closedCardId = selectedHeading ? Number(selectedHeading.dataset.panelCardId) : 0;
                 inspectedCombatCard = 0; combatCardViewOpen = false; hideHint(); syncCombatPanel();
                 var heading = combatHost.querySelector('.combat-panel-heading h3');

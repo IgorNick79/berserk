@@ -80,7 +80,6 @@ final class Panel
                 $body .= '</div>';
             }
             $body .= self::renderChoiceItems($items, 'radio', $form['name'], $selection->minSelect === 1);
-            $body .= '<p data-card-choice-status role="status" hidden>Выбранная карта скрыта фильтром</p>';
         } elseif ($type === 'multi_radio') {
             $body = self::renderMultiRadioGroups($form['groups'] ?? []);
         } else {

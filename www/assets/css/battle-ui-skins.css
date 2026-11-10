@@ -165,3 +165,5 @@
     outline:2px solid var(--ip-title,#b98542);
     outline-offset:-2px;
 }
+
+.battle-page [data-card-inspect-select][hidden]{display:none!important}

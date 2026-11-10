@@ -46,12 +46,17 @@
             if (!link.matches('.card-link') || url.origin !== location.origin || url.pathname !== location.pathname
                 || url.searchParams.has('cmd') || url.searchParams.get('inspect') !== card.dataset.dragCard) return null;
         }
+        var choice = pendingCandidate(root, card.dataset.dragCard, viewer);
+        return choice ? {form: choice.form, id: choice.id, card: card, link: link} : null;
+    }
+
+    function pendingCandidate(root, id, viewer) {
         var form = root.querySelector('form[data-card-selection][data-card-field-owner]');
-        if (!form || form.dataset.cardFieldOwner !== viewer) return null;
+        if (!form || (viewer && form.dataset.cardFieldOwner !== viewer)) return null;
         var row = Array.from(form.querySelectorAll('[data-card-instance]')).find(function (row) {
-            return row.dataset.cardInstance === card.dataset.dragCard;
+            return row.dataset.cardInstance === id;
         });
-        return row ? {form: form, id: row.dataset.cardInstance, card: card, link: link} : null;
+        return row ? {form: form, id: id} : null;
     }
 
     function paintField(form, selected) {
@@ -69,13 +74,22 @@
     }
 
     function selectCard(form, id) {
+        var row = Array.from(form.querySelectorAll('[data-card-instance]')).find(function (row) {
+            return row.dataset.cardInstance === id;
+        });
+        if (!row) return;
         updateSelection(form);
         activeSelection.selected = id;
+        activeSelection.side = row.dataset.creatureOwner;
+        if (activeSelection.row !== 'all' && activeSelection.row !== row.dataset.cardRow) {
+            activeSelection.row = row.dataset.cardRow || 'all';
+        }
         updateSelection(form);
     }
 
     window.BerserkCardSelection = {
         fieldChoice: fieldChoice,
+        pendingCandidate: pendingCandidate,
         select: selectCard
     };
     function updateSelection(form) {
@@ -110,7 +124,6 @@
                 || (state.row !== 'all' && row.dataset.cardRow !== state.row);
             row.querySelector('input').checked = row === selected;
         });
-        form.querySelector('[data-card-choice-status]').hidden = !selected || !selected.hidden;
         var submit = form.querySelector('button[type="submit"]');
         submit.disabled = !selected && form.dataset.cardMinSelect === '1';
         paintField(form, selected);

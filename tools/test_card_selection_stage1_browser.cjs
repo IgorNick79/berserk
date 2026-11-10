@@ -53,7 +53,6 @@ const styles = ['global.css', 'battle-ui-skins.css', 'battle-coordinates.css'].m
         assert.notEqual(await row.evaluate(el => getComputedStyle(el).outlineStyle), outline);
         await page.locator('[data-card-row-filter="1"]').click();
         assert.equal(await row.isHidden(), true);
-        assert.equal(await page.locator('[data-card-choice-status]').isVisible(), true);
         await page.locator('[data-creature-side="own"]').click();
         await page.locator('[data-card-row-filter="all"]').click();
         assert.equal(await row.locator('input').isChecked(), true);

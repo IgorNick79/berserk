@@ -91,8 +91,8 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
             await selectCard(3);
             assert.equal(await row(3).locator('input').isChecked(), true);
             assert.deepEqual(await selected(), ['3']);
-            assert.equal(await row(3).isHidden(), true);
-            assert.equal(await page.locator('[data-card-choice-status]').isVisible(), true);
+            assert.equal(await row(3).isVisible(), true);
+            assert.equal(await page.locator('[data-creature-side="own"]').getAttribute('aria-pressed'), 'true');
             assert.equal(posts.length, 0);
             await page.waitForTimeout(550);
             assert.equal(inspections.length, inspectionsBeforeGesture);
@@ -103,6 +103,16 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
             await inspect;
             await page.waitForFunction(() => document.querySelector('[data-card-instance="3"] input')?.checked);
             assert.deepEqual(await selected(), ['3']);
+            const reopen = page.waitForResponse(response => new URL(response.url()).searchParams.get('inspect') === '2');
+            await (cdp ? card(2).tap() : card(2).click());
+            await reopen;
+            await page.locator('[data-card-inspect-select]:visible').click();
+            assert.equal(await row(2).isVisible(), true);
+            assert.equal(await row(2).locator('input').isChecked(), true);
+            assert.deepEqual(await selected(), ['2']);
+            assert.equal(await page.locator('[data-card-inspect-select]:visible').count(), 0);
+            assert.equal(posts.length, 0);
+
             await row(14).click();
             assert.deepEqual(await selected(), ['14']);
             assert.equal(await card(14).isHidden(), true);
@@ -133,6 +143,7 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
             await (await normalSelection).finished();
             assert.equal(await page.locator('[data-card-selection]').count(), 0);
             assert.deepEqual(await selected(), []);
+            assert.equal(await page.locator('[data-card-inspect-select]:visible').count(), 0);
             assert.equal(posts.length, 2);
             assert.equal(navigations, 1);
             assert.deepEqual(errors, []);
