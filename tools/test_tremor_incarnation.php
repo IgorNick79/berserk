@@ -31,7 +31,12 @@ foreach($d['cases'] as $case){
  ck(($result['wound_amounts'][30]??null)===1 && $s->getCard(30)->hp===4,'actual wound amount retained');
  $view=(new \Berserk\View\Screen\BattleSnapshotRenderer(new \Berserk\View\Template(__DIR__.'/../templates')))
      ->render($s,'host','host',null,['neighbor'=>['name'=>'Сосед']])['fragments']['info_panel_html'];
- ck(str_contains($view,'/assets/images/card/heart.png') && str_contains($view,' 1</b><br>Сосед') && !str_contains($view,'Сосед #30'),'result shows HP and hides instance IDs');
+ ck(str_contains($view,'Получили раны ❤️ 1:<br>Сосед') && !str_contains($view,'Сосед #30'),'result shows HP and hides instance IDs');
+ $legacy=GameState::fromArray($s->toArray());
+ unset($legacy->battle['worm_results'][0]['wound_amounts']);
+ $legacyView=(new \Berserk\View\Screen\BattleSnapshotRenderer(new \Berserk\View\Template(__DIR__.'/../templates')))
+     ->render($legacy,'host','host',null,['neighbor'=>['name'=>'Сосед']])['fragments']['info_panel_html'];
+ ck(str_contains($legacyView,'Получили раны:<br>Сосед'),'legacy result has no placeholder amount');
  ck(strpos($view,'data-dismiss-battle-notice') < strpos($view,'<footer'),'dismissible result is above the footer');
  ck($s->getCard(1)->zone==='field'&&!$s->getCard(1)->closed&&$s->getCard(1)->hp===5,'open native arrival');
  ck(array_column(ZoneManager::markersAt($s,'3_3'),'id')===['b'],'one stable ID consumed');
