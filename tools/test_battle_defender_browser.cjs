@@ -27,7 +27,7 @@ const assert = (condition, message) => { if (!condition) throw new Error(message
                     .replace(/<script[\s\S]*?<\/script>/g, '').replace(/<link[^>]*>/g, '')
                     .replace(/{{(\w+)}}/g, (_, key) => data[key] || '');
                 const show = () => page.setContent('<html class="battle-page"><head><meta charset="utf-8">'
-                    + '<style>' + read('www/assets/css/global.css') + read('www/assets/css/battle-ui-skins.css').replace(/^@import[^;]+;/,'') + read('www/assets/css/battle-coordinates.css') + '</style></head>'
+                    + '<style>' + read('www/assets/css/global.css') + read('www/assets/css/battle-ui-skins.css').replace(/^@import[^;]+;/,'') + read('www/assets/css/battle-coordinates.css') + read('www/assets/css/battle-mini-card.css') + '</style></head>'
                     + '<body class="battle-page">' + html + '</body></html>');
                 await show();
                 const choices = page.locator('.defender-radio-list input[type=radio]');
@@ -64,7 +64,24 @@ const assert = (condition, message) => { if (!condition) throw new Error(message
                 await page.waitForURL(url => url.searchParams.get('cmd') === 'choose_defender');
                 const url = new URL(page.url());
                 assert(url.searchParams.get('defender_id') === '0' && !url.searchParams.has('choice'), 'Skip ignores selected radio');
-                console.log(`PASS ${width}px ${viewer}: creature radios, colored Roman coordinates, select and direct skip`);
+                if (width === 1600) {
+                    await show();
+                    await page.addScriptTag({ content: read('www/assets/js/creature-choice.js') });
+                    await page.evaluate(({ source, viewer }) => {
+                        const script = document.createElement('script');
+                        script.dataset.syncUrl = '/?game=42&ajax=battle_sync';
+                        script.dataset.viewerKey = viewer;
+                        script.dataset.version = '1';
+                        script.textContent = source;
+                        document.body.append(script);
+                    }, { source: read('www/assets/js/battle-sync.js'), viewer });
+                    await page.locator('[data-drag-card="4"]').dblclick({ timeout: 4000 });
+                    assert(await choices.nth(1).isChecked(), 'Double click on the field selects the defender radio');
+                    assert(await page.locator('[data-drag-card="4"][data-card-selection-highlight]').count() === 1,
+                        'Selected defender is highlighted on the field');
+                    assert(new URL(page.url()).searchParams.get('defender_id') === '0',
+                        'Selecting a defender on the field does not submit a command');
+                }
                 await page.close();
             }
         }

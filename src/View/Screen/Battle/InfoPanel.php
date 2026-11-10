@@ -2309,7 +2309,10 @@ final class InfoPanel
             return '';
         }
 
-        $body = '<div class="defender-radio-list">';
+        $fieldSelection = $skipDefender && $options !== [];
+        $body = '<div class="defender-radio-list"' . ($fieldSelection
+            ? ' data-selection-group="defender" data-selection-min="1" data-selection-max="1"'
+            : '') . '>';
         $cards = array_column(\Berserk\View\Ui\CreatureChoice::candidates(
             $this->state, array_column($options, 'card_id'), $this->playerKey, $this->cardsInfo,
             \Berserk\View\Ui\CardSelectionSpec::SIMPLE,
@@ -2320,7 +2323,8 @@ final class InfoPanel
             $labelHtml = \Berserk\View\Ui\Coords::text((string) ($cards[$id] ?? $option['label']));
             $coordsHtml = $card ? \Berserk\View\Ui\Coords::renderResult($card->row, $card->col, $this->playerKey,
                 $skipDefender ? null : $card->owner) : '';
-            $body .= '<label class="' . htmlspecialchars('choice-radio ' . ($option['class'] ?? ''), ENT_QUOTES) . '">'
+            $body .= '<label class="' . htmlspecialchars('choice-radio ' . ($option['class'] ?? ''), ENT_QUOTES) . '"'
+                . ($fieldSelection ? ' data-card-instance="' . $id . '"' : '') . '>'
                 . '<input type="radio" name="choice" value="' . htmlspecialchars($option['value'], ENT_QUOTES) . '"'
                 . ($index === 0 ? ' checked="checked"' : '') . '>'
                 . '<span class="defender-option-text">' . $labelHtml . '</span>' . $coordsHtml . '</label>';
@@ -2333,9 +2337,23 @@ final class InfoPanel
         }
         $body .= '</div>';
 
+        $formOptions = [];
+        if ($fieldSelection) {
+            $strike = $this->state->battle['strike'];
+            $formOptions = [
+                'selectionContext' => 'defender:' . implode(':', [
+                    $this->state->gameId, $this->state->battle['turn'] ?? 0,
+                    $strike['attacker_id'], $strike['target_id'],
+                    $strike[\Berserk\Core\ActionResolution::ID] ?? '',
+                ]),
+                'battlefieldOwner' => $this->playerKey,
+            ];
+        }
+
         return Form::form(
             Form::battleHidden($this->role, $this->state->gameId, 'choose_defender_option'),
-            $body
+            $body,
+            $formOptions
         );
     }
 

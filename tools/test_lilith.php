@@ -17,7 +17,21 @@ foreach($scenarios['incarnation'] as $inc){$s=ls();$e=new Engine();$c=$s->getCar
 $s=ls();$s->getCard(2)->row=6;$s->getCard(3)->row=1;$e=new Engine();$action=['type'=>'paired_ranged','effects'=>[['type'=>'discharge','value'=>1],['type'=>'throw','value'=>1]]];$s->getCard(1)->prop=['actions'=>[$action+['key'=>'pair']]];
 $open=$e->apply($s,'host',new Command('action',['card_id'=>1,'action_key'=>'pair']));lc($open->success,'real action opens: '.$open->error);
 foreach([2,3] as $id){$p=$s->battle[PairedRanged::PENDING];$cmd=new Command('choose_paired_ranged',['operation_id'=>$p['id'],'stage'=>$p['stage'],'target_id'=>$id]);lc($e->apply($s,'host',$cmd)->success,'select distinct target');lc(!$e->apply($s,'host',$cmd)->success,'replay rejected');}
-for($i=0;$i<8&&!empty($s->battle['strike']);$i++){$owner=in_array('host',$s->battle['strike']['confirmed']??[],true)?'player':'host';$s=GameState::fromArray($s->toArray());lc($e->apply($s,$owner,new Command('confirm_strike',['wait_id'=>InformationalWaitManager::token($s)]))->success,'ACK child');}
+for ($i = 0; $i < 8 && !empty($s->battle['strike']); $i++) {
+    $owner = in_array('host', $s->battle['strike']['confirmed'] ?? [], true) ? 'player' : 'host';
+    $s = GameState::fromArray($s->toArray());
+    $s->persistenceVersion = $i + 1;
+    $payload = ['wait_id' => InformationalWaitManager::token($s)];
+    if ($owner === 'player') {
+        $plan = \Berserk\Core\Combat\CombatDecisionPlanner::decide(
+            \Berserk\Core\Observation\PlayerObservation::build($s, $owner),
+            \Berserk\Core\Legal\LegalActions::build($s, $owner),
+        );
+        lc($plan['action'] === ['type' => 'confirm_strike', 'payload' => $payload],
+            'Bot acknowledges Lilith result without waiting for timeout: ' . $s->battle['strike']['kind']);
+    }
+    lc($e->apply($s, $owner, new Command('confirm_strike', $payload))->success, 'ACK child');
+}
 lc($s->getCard(2)->hp===19&&$s->getCard(3)->hp===19,'both native effects');lc($s->getCard(1)->closed,'one tap');lc(empty($s->battle['paired_ranged']),'operation completed');
 // A lethal first effect pauses the second effect through a serialized death choice.
 foreach([1,25] as $deathDamage){
