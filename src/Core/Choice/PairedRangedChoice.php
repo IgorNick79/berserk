@@ -16,7 +16,7 @@ final class PairedRangedChoice implements ChoiceHandlerInterface {
   if($death)$hidden['choice_id']=$p['choice_id'];else{$hidden['operation_id']=$p['id'];$hidden['stage']=$p['stage'];}
   $mode = CardSelectionSpec::DEFAULT_MODE;
   $items = CreatureChoice::candidates($s, $p['candidates'], $viewer, $info, $mode);
-  $cancel=$death?null:$base.'&cmd=choose_paired_ranged&operation_id='.rawurlencode($p['id']).'&stage='.$p['stage'].'&cancel=1';
+  $cancel=$death?null:$base.'&cmd=choose_paired_ranged&operation_id='.rawurlencode($p['id']).'&stage='.$p['stage']. '&cancel=1&mode=strike';
   return new PanelSpec(
       title: $title,
       form: ['name'=>'target_id', 'hidden'=>$hidden, 'submit'=>'Выбрать', 'cancel'=>$cancel],

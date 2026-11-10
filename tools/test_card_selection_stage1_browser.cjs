@@ -35,7 +35,7 @@ const styles = ['global.css', 'battle-ui-skins.css', 'battle-coordinates.css'].m
             await page.goto('https://choice.test/?first&game=970');
             await page.setContent('<style>' + styles + '</style><body class="battle-page"><main data-battle-sync-root data-panel-theme="grimoire">' +
                 keys.map(key => '<div data-battle-fragment="' + key + '">' + (key === 'info_panel_html' ? '<aside class="info-panel">' + panel + '</aside>' : '') + '</div>').join('') +
-                '</main><script data-sync-url="/?first&amp;game=970" data-version="1">' +
+                '</main><script data-sync-url="/?first&amp;game=970" data-version="1" data-mode="action:pair" data-mode-explicit="1">' +
                 read('www/assets/js/battle-sync.js') + '</script></body>');
             await page.addScriptTag({content: read('www/assets/js/creature-choice.js')});
         }
@@ -72,6 +72,7 @@ const styles = ['global.css', 'battle-ui-skins.css', 'battle-coordinates.css'].m
         await Promise.all([page.waitForResponse(response => response.request().method() === 'POST'), page.locator('a.skip').click()]);
         assert.equal(posts[1].get('cmd'), 'choose_paired_ranged');
         assert.equal(posts[1].get('cancel'), '1');
+        assert.equal(posts[1].get('mode'), 'strike');
         assert.equal(posts[1].has('target_id'), false);
         assert.equal(navigations, beforeCancel);
         assert.deepEqual(errors, []);
