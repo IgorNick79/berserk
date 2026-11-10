@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace Berserk\Core\Choice;
 use Berserk\Core\{GameState,Engine,Command,Result,PairedRanged,DamageResolver};
-use Berserk\View\Ui\{PanelSpec,CreatureChoice};
+use Berserk\View\Ui\{PanelSpec,CreatureChoice,CardSelectionSpec};
 final class PairedRangedChoice implements ChoiceHandlerInterface {
  public function pendingKey():string{return PairedRanged::PENDING;}
  public function commandTypes():array{return ['choose_paired_ranged','choose_paired_death'];}
@@ -14,9 +14,18 @@ final class PairedRangedChoice implements ChoiceHandlerInterface {
   if($p['owner']!==$viewer)return new PanelSpec(title:$title,isMine:false);
   parse_str((string)parse_url($base,PHP_URL_QUERY),$hidden);$hidden['cmd']=$death?'choose_paired_death':'choose_paired_ranged';
   if($death)$hidden['choice_id']=$p['choice_id'];else{$hidden['operation_id']=$p['id'];$hidden['stage']=$p['stage'];}
-  $items=[];foreach($p['candidates'] as $id){$c=$s->getCard($id);$items[]=CreatureChoice::item($c,$info[$c->ukid]['name']??$c->ukid,$viewer);}
+  $mode = CardSelectionSpec::DEFAULT_MODE;
+  $items = CreatureChoice::candidates($s, $p['candidates'], $viewer, $info, $mode);
   $cancel=$death?null:$base.'&cmd=choose_paired_ranged&operation_id='.rawurlencode($p['id']).'&stage='.$p['stage'].'&cancel=1';
-  return new PanelSpec(title:$title,form:['type'=>'radio','name'=>'target_id','hidden'=>$hidden,'items'=>$items,'submit'=>'Выбрать','side_toggle'=>true,'side_default'=>'enemy','cancel'=>$cancel]);
+  return new PanelSpec(
+      title: $title,
+      form: ['name'=>'target_id', 'hidden'=>$hidden, 'submit'=>'Выбрать', 'cancel'=>$cancel],
+      cardSelection: new CardSelectionSpec(
+          context: implode(':', [$s->gameId, $viewer, $hidden['cmd'], $p['choice_id'] ?? $p['id'], $p['stage'] ?? 'death']),
+          candidates: $items,
+          mode: $mode,
+      ),
+  );
  }
  public function apply(GameState $s,Engine $e,string $owner,Command $cmd):Result {
   if($cmd->type==='choose_paired_death'){if(empty($s->battle['paired_ranged']))return Result::error('Устаревший выбор');return (new DamageResolver($s))->chooseDeathTarget($owner,$cmd);}

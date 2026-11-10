@@ -157,3 +157,7 @@
 :is(:is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle,:is(.deal-page,.draft-page) [data-panel-theme] .pregame-main) .button.tremor-move-own:not(.green-btn){--btn-top:#50ad62;--btn-bottom:#26773b;--btn-edge:#91c78b}
 :is(:is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle,:is(.deal-page,.draft-page) [data-panel-theme] .pregame-main) .button.tremor-move-enemy:not(.green-btn){--btn-top:#c66a63;--btn-bottom:#913a38;--btn-edge:#df9a8b}
 :is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel .button.tremor-stay:not(.green-btn),:is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel .button.yellow:not(.green-btn){--btn-top:#dfbd54;--btn-bottom:#aa7e20;--btn-edge:#f1d680;color:#fff;text-shadow:0 1px 1px #0008}
+
+.battle-page [data-card-selection] .choice-radio:has(input:checked){outline:2px solid var(--ip-title,#b98542);outline-offset:-2px}
+.battle-page [data-card-selection] .choice-radio{cursor:pointer}
+.battle-page [data-card-rows]{flex-wrap:wrap}

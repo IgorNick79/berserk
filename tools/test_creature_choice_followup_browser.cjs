@@ -44,8 +44,11 @@ function fixture(stage){const file=stage==='heal'?'test_druid_tovi_target_ui.php
   await page.locator('[data-picker-side="enemy"]').click();await page.locator('[data-picker-row="3"]').click();
   check((await page.locator('[data-picker-group="enemy:3"] [data-picker-column]').first().getAttribute('href')).includes('cmd=choose_teleport_cell&cell=6_5'),'picker retains original system cell command');
   await page.screenshot({path:path.join(out,`door-${width}.png`)});
-  for(const stage of ['instant','stack']){
-   await show(stage);
+  await show('instant');
+  check(await page.locator('.info-panel-footer [data-instant-control]').isVisible(),'idle instant offer uses the persistent footer');
+  check(await page.locator('.info-panel-instants').count()===0,'idle instant offer does not open an instant window');
+  {
+   await show('stack');
    const b=await page.locator('.info-panel-instants').boundingBox(),f=await page.locator('.info-panel-content').boundingBox();
    check(b&&f&&b.y>=f.y && b.y+b.height<=f.y+f.height+1,'instant panel fits within shared scrollable content');
    check(await page.locator('.info-panel-instants').evaluate(e=>getComputedStyle(e).borderTopWidth)==='0px','no detached footer separator');
@@ -53,8 +56,17 @@ function fixture(stage){const file=stage==='heal'?'test_druid_tovi_target_ui.php
   await show('impact');check(await page.locator('.info-panel .dice-value').count()===0,'impact has no dice');
   await show('death');check(await page.locator('input[type="radio"][name="target_id"]').count()===3,'King of Dead uses radio choice');
   await show('vampire');
-  const colors=await page.locator('.vampire').evaluate(e=>({bg:getComputedStyle(e).backgroundColor,fg:getComputedStyle(e).color}));
-  check(colors.bg==='rgb(58, 48, 40)'&&colors.fg==='rgb(244, 238, 228)','vampirism uses readable theme colors');
+  const colors=await page.locator('.vampire').evaluate(e=>{
+   const style=getComputedStyle(e),probe=document.createElement('span');
+   probe.style.cssText='background:var(--ip-surface);color:var(--ip-text)';
+   e.append(probe);
+   const expected=getComputedStyle(probe);
+   const colors={bg:style.backgroundColor,fg:style.color,expectedBg:expected.backgroundColor,expectedFg:expected.color};
+   probe.remove();
+   return colors;
+  });
+  check(colors.bg===colors.expectedBg&&colors.fg===colors.expectedFg&&colors.bg!==colors.fg,
+   'vampirism uses the active panel theme colors');
   await page.screenshot({path:path.join(out,`vampire-${width}.png`)});
   await show('memory_notice');
   check(await page.locator('.memory-loss-notice').isVisible(),'memory alert visible');
@@ -70,7 +82,7 @@ function fixture(stage){const file=stage==='heal'?'test_druid_tovi_target_ui.php
   await page.screenshot({path:path.join(out,`area-impact-${width}.png`)});
   await show('heal');
   check(await page.locator('.creature-choice-health:visible').count()>0,'Druid healing shows current and maximum HP');
-  check(await page.locator('.creature-choice-health').first().innerText()==='❤ 8/10 HP','Druid health values are actual');
+  check(/8\/10 HP$/.test(await page.locator('.creature-choice-health:visible').first().innerText()),'Druid health values are actual');
   check(await page.locator('.info-panel .choice-radio').evaluateAll(rows=>rows.every(row=>row.scrollWidth<=row.clientWidth+1)),'Healing rows fit viewport');
   await page.screenshot({path:path.join(out,`healing-${width}.png`)});
   check(!errors.length,errors.join('\n'));console.log(`PASS ${width}px: side toggle/polling, compact rows, door grid, instant footer, no dice, death radios, vampire contrast`);

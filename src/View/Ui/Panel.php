@@ -43,7 +43,7 @@ final class Panel
         }
 
         if ($spec->form !== null) {
-            $body .= self::renderForm($spec->form);
+            $body .= self::renderForm($spec->form, $spec->cardSelection);
         }
 
         $pickerAttr = $spec->cellPicker !== null
@@ -54,14 +54,34 @@ final class Panel
             . '</div>';
     }
 
-    private static function renderForm(array $form): string
+    private static function renderForm(array $form, ?CardSelectionSpec $selection): string
     {
         $hidden     = $form['hidden'] ?? [];
         $hiddenHtml = self::renderHidden($hidden);
 
         $type = $form['type'] ?? 'radio';
 
-        if ($type === 'multi_radio') {
+        if ($selection !== null) {
+            if ($selection->maxSelect !== 1 || $selection->minSelect < 0 || $selection->minSelect > 1
+                || $selection->confirmation !== CardSelectionSpec::CONFIRM) {
+                throw new \LogicException('Panel supports only confirmed single-card selection');
+            }
+            $items = $selection->candidates;
+            foreach ($items as &$item) {
+                $item['checked'] = in_array($item['instanceId'], $selection->selected, true);
+            }
+            unset($item);
+            $body = count(array_unique(array_column($items, 'side'))) > 1 ? CreatureChoice::controls() : '';
+            if ($selection->mode === CardSelectionSpec::EXTENDED) {
+                $body .= '<div class="creature-choice-sides" data-card-rows hidden role="group" aria-label="Ряд существа">';
+                foreach (['all'=>'Все', '1'=>'I', '2'=>'II', '3'=>'III', 'fly'=>'Летающие'] as $row => $label) {
+                    $body .= '<button type="button" data-card-row-filter="' . $row . '" aria-pressed="false">' . $label . '</button>';
+                }
+                $body .= '</div>';
+            }
+            $body .= self::renderChoiceItems($items, 'radio', $form['name'], $selection->minSelect === 1);
+            $body .= '<p data-card-choice-status role="status" hidden>Выбранная карта скрыта фильтром</p>';
+        } elseif ($type === 'multi_radio') {
             $body = self::renderMultiRadioGroups($form['groups'] ?? []);
         } else {
             $name = (string) ($form['name'] ?? 'value');
@@ -78,7 +98,9 @@ final class Panel
             $body .= ' <a class="button skip" href="' . htmlspecialchars($cancel, ENT_QUOTES) . '">Отмена</a>';
         }
 
-        return '<form method="get" class="card-choice-form">'
+        $context = $selection === null ? '' : ' data-card-selection="' . htmlspecialchars($selection->context, ENT_QUOTES)
+            . '" data-card-min-select="' . $selection->minSelect . '"';
+        return '<form method="get" class="card-choice-form"' . $context . '>'
             . $hiddenHtml
             . $body
             . '</form>';
@@ -94,7 +116,7 @@ final class Panel
         return $html;
     }
 
-    private static function renderChoiceItems(array $items, string $type, string $name): string
+    private static function renderChoiceItems(array $items, string $type, string $name, bool $required = false): string
     {
         $html = '';
         foreach ($items as $it) {
@@ -105,10 +127,14 @@ final class Panel
             $disabled = !empty($it['disabled']) ? ' disabled' : '';
 
             $side = isset($it['side']) ? ' data-creature-owner="' . htmlspecialchars($it['side'], ENT_QUOTES) . '"' : '';
+            if (isset($it['instanceId'])) {
+                $side .= ' data-card-instance="' . (int) $it['instanceId']
+                    . '" data-card-row="' . htmlspecialchars($it['row'], ENT_QUOTES) . '"';
+            }
             $html .= '<label class="choice-radio"' . $side . '>'
                 . '<input type="' . htmlspecialchars($type, ENT_QUOTES) . '"'
                 . ' name="' . htmlspecialchars($name, ENT_QUOTES) . '"'
-                . ' value="' . $value . '"' . $checked . $disabled . '>'
+                . ' value="' . $value . '"' . $checked . $disabled . ($required ? ' required' : '') . '>'
                 . '<span>' . $label . '</span>'
                 . '</label>';
         }
