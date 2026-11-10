@@ -78,6 +78,8 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
             }
 
             await show('heal');
+            const counter = page.locator('[data-selection-count]');
+            assert.equal(await counter.textContent(), 'Выбрано: 0 / 2');
             assert.equal(await submit.isDisabled(), true);
             await row(3).scrollIntoViewIfNeeded();
             const bounds = await row(3).boundingBox();
@@ -87,12 +89,17 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
             assert.equal(await submit.isEnabled(), true);
             await gesture(2);
             assert.deepEqual(await selected(), ['2', '3']);
+            assert.equal(await counter.textContent(), 'Выбрано: 2 / 2');
+            assert.equal(await row(1).getAttribute('data-selection-at-limit'), '');
+            assert.equal(await row(2).getAttribute('data-selection-at-limit'), null);
             await gesture(1);
             assert.deepEqual(await selected(), ['2', '3']);
             await row(1).click();
             assert.deepEqual(await selected(), ['2', '3']);
             await gesture(3);
             assert.deepEqual(await selected(), ['2']);
+            assert.equal(await counter.textContent(), 'Выбрано: 1 / 2');
+            assert.equal(await row(1).getAttribute('data-selection-at-limit'), null);
             await row(3).click();
             assert.deepEqual(await selected(), ['2', '3']);
             snapshot = fixtures.reduced;

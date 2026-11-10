@@ -96,11 +96,14 @@ final class Panel
         $submit = $form['submit'] ?? 'Подтвердить';
         $cancel = $form['cancel'] ?? null;
 
+        if ($selection !== null) $body .= '<div class="card-selection-actions">';
         $body .= '<button type="submit" class="button">' . htmlspecialchars($submit, ENT_QUOTES) . '</button>';
 
         if ($cancel !== null) {
             $body .= ' <a class="button skip" href="' . htmlspecialchars($cancel, ENT_QUOTES) . '">' . htmlspecialchars($form['cancel_label'] ?? 'Отмена', ENT_QUOTES) . '</a>';
         }
+
+        if ($selection !== null) $body .= '</div>';
 
         $context = $selection === null ? '' : ' data-card-selection="' . htmlspecialchars($selection->context, ENT_QUOTES)
             . '"';
@@ -121,13 +124,18 @@ final class Panel
         }
         unset($item);
 
-        $html = '<div' . ($named ? ' class="multi-radio-group"' : '')
+        $html = '<div class="card-selection-group' . ($named ? ' multi-radio-group' : '') . '"'
             . ' data-selection-group="' . htmlspecialchars($group->id, ENT_QUOTES) . '"'
             . ' data-selection-min="' . $group->minSelect . '" data-selection-max="' . $group->maxSelect . '">';
         if ($group->label !== '') {
             $html .= '<div class="multi-radio-label">' . htmlspecialchars($group->label, ENT_QUOTES) . '</div>';
         }
         $radio = $group->maxSelect === 1 && !$group->checkbox;
+        if (!$radio && $group->maxSelect < PHP_INT_MAX) {
+            $html .= '<div class="card-selection-count" data-selection-count aria-live="polite">Выбрано: '
+                . count(array_filter($items, static fn(array $item): bool => $item['checked'] && empty($item['disabled'])))
+                . ' / ' . $group->maxSelect . '</div>';
+        }
         return $html . self::renderChoiceItems($items, $radio ? 'radio' : 'checkbox',
             $group->field, $radio && $group->minSelect === 1) . '</div>';
     }

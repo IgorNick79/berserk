@@ -169,3 +169,24 @@
 .battle-page [data-card-inspect-select][hidden]{display:none!important}
 
 .battle-page [data-panel-theme] .info-panel .battle-mode-buttons:has([data-card-inspect-select]:not([hidden])) [data-combat-back]{--btn-top:#b94a44;--btn-bottom:#82302b;--btn-edge:#d87c74}
+
+/* Confirmed card choices share a row layout without changing legacy forms. */
+.battle-page [data-card-selection] .card-selection-group>.choice-radio{
+    display:grid;grid-template-columns:16px minmax(0,1fr);align-items:center;gap:8px
+}
+.battle-page [data-card-selection] .card-selection-group>.choice-radio>input{margin:0;justify-self:start}
+.battle-page [data-card-selection] .card-selection-group>.choice-radio>span{
+    display:flex;flex-wrap:wrap;align-items:center;gap:3px 6px;min-width:0
+}
+.battle-page [data-card-selection] [data-card-row] .creature-choice-name{flex:0 1 auto;flex-basis:auto}
+.battle-page [data-card-selection] [data-card-row] .coords{flex:0 0 auto;margin-left:0}
+.battle-page [data-card-selection] [data-card-row] .creature-choice-health{order:1;margin-left:auto}
+.battle-page [data-card-selection] .choice-radio:is([data-selection-at-limit],:has(input:disabled)){
+    color:var(--ip-muted);cursor:not-allowed
+}
+.battle-page [data-card-selection] .choice-radio:has(input:focus-visible){
+    outline:2px solid var(--ip-title);outline-offset:-2px
+}
+.battle-page [data-card-selection] .card-selection-count{font-size:12px;color:var(--ip-muted);margin:0 0 5px}
+.battle-page .card-selection-actions{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:8px}
+.battle-page [data-card-selection] [data-card-rows] button[data-filter-empty]:not([aria-pressed=true]){opacity:.65}

@@ -77,6 +77,7 @@
         return Array.from(form.querySelectorAll('[data-selection-group]')).map(function (node) {
             return {
                 id: node.dataset.selectionGroup,
+                counter: node.querySelector('[data-selection-count]'),
                 min: Number(node.dataset.selectionMin),
                 max: Number(node.dataset.selectionMax),
                 options: Array.from(node.querySelectorAll('.choice-radio')).map(function (row) {
@@ -141,6 +142,12 @@
                 ? button.dataset.creatureSide === state.side
                 : button.dataset.cardRowFilter === state.row;
             button.setAttribute('aria-pressed', String(pressed));
+            var rowFilter = button.dataset.cardRowFilter;
+            if (rowFilter && rowFilter !== 'all') {
+                button.toggleAttribute('data-filter-empty', !rows.some(function (row) {
+                    return (!sides || row.dataset.creatureOwner === state.side) && row.dataset.cardRow === rowFilter;
+                }));
+            }
         });
 
         var selected = new Set();
@@ -152,6 +159,10 @@
                 return !option.input.disabled && (previous ? previous.has(option.key) : option.input.checked);
             }).slice(0, group.max).map(function (option) { return option.key; }));
             currentGroups.set(group.id, values);
+            if (group.counter) {
+                var countText = 'Выбрано: ' + values.size + ' / ' + group.max;
+                if (group.counter.textContent !== countText) group.counter.textContent = countText;
+            }
             if (values.size < group.min || values.size > group.max) valid = false;
             group.options.forEach(function (option) {
                 var row = option.row;
@@ -160,6 +171,8 @@
                         || (state.row !== 'all' && row.dataset.cardRow !== state.row);
                 }
                 option.input.checked = values.has(option.key);
+                option.row.toggleAttribute('data-selection-at-limit',
+                    option.input.type === 'checkbox' && values.size >= group.max && !option.input.checked);
                 if (option.input.checked && row.dataset.cardInstance) selected.add(row.dataset.cardInstance);
             });
         });
