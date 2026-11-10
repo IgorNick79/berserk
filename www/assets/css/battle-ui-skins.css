@@ -161,3 +161,7 @@
 .battle-page [data-card-selection] .choice-radio:has(input:checked){outline:2px solid var(--ip-title,#b98542);outline-offset:-2px}
 .battle-page [data-card-selection] .choice-radio{cursor:pointer}
 .battle-page [data-card-rows]{flex-wrap:wrap}
+.battle-page [data-battle-sync-root] [data-card-selection-highlight]{
+    outline:2px solid var(--ip-title,#b98542);
+    outline-offset:-2px;
+}

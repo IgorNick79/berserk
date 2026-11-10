@@ -24,6 +24,7 @@ final class PairedRangedChoice implements ChoiceHandlerInterface {
           context: implode(':', [$s->gameId, $viewer, $hidden['cmd'], $p['choice_id'] ?? $p['id'], $p['stage'] ?? 'death']),
           candidates: $items,
           mode: $mode,
+          battlefieldOwner: $viewer,
       ),
   );
  }

@@ -55,9 +55,10 @@ final class BattleScreen
         }
 
         // Возможные ходы/прыжки
+        $blockingChoice = ChoiceRegistry::current($state) !== null;
         $moveCells = [];
         $jumpCells = [];
-        if ($selectedCardId > 0 && $isActive && !$strike && !$instantContext) {
+        if ($selectedCardId > 0 && $isActive && !$strike && !$instantContext && !$blockingChoice) {
             $c = $state->getCard($selectedCardId);
             if ($c && $c->owner === $playerKey && in_array($c->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) {
                 $moveCells = BattleHelper::getMoveCells($state, $c);
@@ -128,7 +129,7 @@ final class BattleScreen
             && !$strike && !$instantContext && $mode === 'strike'
             && !\Berserk\Core\MatchPause::blocking($state)
             && \Berserk\Core\BattleWaitResolver::current($state) === null
-            && ChoiceRegistry::current($state) === null
+            && !$blockingChoice
             && empty($state->battle['matriarch_order'])
             && empty($state->battle['informational_wait'])
             && empty($state->battle['informational_wait_pending']);

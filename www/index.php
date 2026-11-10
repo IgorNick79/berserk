@@ -1377,7 +1377,7 @@ switch ($state->status) {
         $scriptsHtml = '<script src="/assets/js/battle-turn-timer.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-debug.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-match-pause.js?v={{rkey}}"></script>'
-            . '<script src="/assets/js/battle-sync.js?v=bot1-{{rkey}}"'
+            . '<script src="/assets/js/battle-sync.js?v=card-selection21-{{rkey}}"'
             . ' data-viewer-key="' . htmlspecialchars($playerKey, ENT_QUOTES) . '"'
             . ' data-turn-sound-url="' . htmlspecialchars($turnSoundUrl, ENT_QUOTES) . '"'
             . ' data-sync-url="' . htmlspecialchars($syncUrl, ENT_QUOTES) . '"'

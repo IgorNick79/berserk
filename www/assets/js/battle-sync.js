@@ -814,6 +814,94 @@
         if (drag) drag.refresh();
     }
 
+    // Capture before the InfoPanel's inspection listener. Only a candidate's
+    // mouse click is deferred; replaying the link preserves ordinary inspection.
+    var selectionGestures = {doubleClickMs: 500, holdMs: 500, driftPx: 10, suppressMs: 800};
+    var pendingInspection = null, hold = null, heldClick = null;
+    function fieldChoice(event) {
+        return !stopped && !commandInFlight() && window.BerserkCardSelection
+            && window.BerserkCardSelection.fieldChoice(root, event, script.dataset.viewerKey);
+    }
+    function sameDecision(first, second) {
+        return second && first.id === second.id
+            && first.form.dataset.cardSelection === second.form.dataset.cardSelection;
+    }
+    function consume(event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    }
+    function cancelInspection() {
+        if (pendingInspection) clearTimeout(pendingInspection.timer);
+        pendingInspection = null;
+    }
+    function cancelHold() {
+        if (hold) clearTimeout(hold.timer);
+        hold = null;
+    }
+    function plainPrimary(event) {
+        return !event.defaultPrevented && event.button === 0
+            && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+    }
+
+    document.addEventListener("click", function (event) {
+        if (!plainPrimary(event) || !root.contains(event.target) || !event.detail) return;
+        var touch = event.pointerType === "touch" || event.sourceCapabilities?.firesTouchEvents;
+        if (heldClick && touch && performance.now() <= heldClick.until
+            && event.target.closest("[data-drag-card]")?.dataset.dragCard === heldClick.id) {
+            heldClick = null;
+            consume(event);
+            return;
+        }
+        if (touch) return;
+        var choice = fieldChoice(event);
+        if (!choice) { cancelInspection(); return; }
+        consume(event);
+        if (event.detail > 1 && pendingInspection && sameDecision(pendingInspection.choice, choice)) return;
+        cancelInspection();
+        pendingInspection = {choice: choice, timer: setTimeout(function () {
+            pendingInspection = null;
+            if (sameDecision(choice, fieldChoice(event)) && choice.link?.isConnected) choice.link.click();
+        }, selectionGestures.doubleClickMs)};
+    }, true);
+    document.addEventListener("dblclick", function (event) {
+        if (!plainPrimary(event) || !root.contains(event.target)
+            || event.pointerType === "touch" || event.sourceCapabilities?.firesTouchEvents) return;
+        var choice = fieldChoice(event);
+        if (!choice) return;
+        consume(event);
+        cancelInspection();
+        window.BerserkCardSelection.select(choice.form, choice.id);
+    }, true);
+    document.addEventListener("pointerdown", function (event) {
+        if (event.pointerType !== "touch") return;
+        cancelHold();
+        if (!event.isPrimary) return;
+        heldClick = null;
+        var choice = fieldChoice(event);
+        if (!choice) return;
+        hold = {pointer: event.pointerId, card: choice.card, x: event.clientX, y: event.clientY, timer: setTimeout(function () {
+            cancelHold();
+            var current = fieldChoice(event);
+            if (!sameDecision(choice, current) || !choice.card.contains(document.elementFromPoint(event.clientX, event.clientY))) return;
+            heldClick = {id: choice.id, pointer: event.pointerId, until: Infinity};
+            window.BerserkCardSelection.select(current.form, current.id);
+        }, selectionGestures.holdMs)};
+    }, true);
+    document.addEventListener("pointermove", function (event) {
+        if (hold && hold.pointer === event.pointerId
+            && (Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > selectionGestures.driftPx
+                || !hold.card.contains(document.elementFromPoint(event.clientX, event.clientY)))) cancelHold();
+    }, true);
+    ["pointerup", "pointercancel"].forEach(function (type) {
+        document.addEventListener(type, function (event) {
+            if (hold?.pointer === event.pointerId) cancelHold();
+            if (heldClick?.pointer === event.pointerId) heldClick.until = performance.now() + selectionGestures.suppressMs;
+        }, true);
+    });
+    document.addEventListener("contextmenu", function (event) {
+        if ((hold || heldClick && performance.now() <= heldClick.until) && fieldChoice(event)) event.preventDefault();
+    }, true);
+
     root.addEventListener("click", function (event) {
         if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
             return;

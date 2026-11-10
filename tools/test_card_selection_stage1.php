@@ -17,6 +17,12 @@ foreach ([[1,'host',3,3,true], [2,'player',6,3,true], [3,'host',1,2,true], [4,'p
     $state->addCard(new CardInstance(instanceId:$id, ukid:'card'.$id, owner:$owner, zone:'field',
         row:$row, col:$col, hp:20, hpMax:20, strikeWeak:1, strikeMedium:2, strikeStrong:3, revealed:$visible));
 }
+if (in_array('--field', $argv, true)) {
+    for ($slot = 1; $slot <= 4; $slot++) {
+        $state->addCard(new CardInstance(instanceId: 10 + $slot, ukid: 'fly' . $slot, owner: 'player',
+            zone: 'flying', slot: $slot, hp: 20, hpMax: 20, revealed: true));
+    }
+}
 $state->getCard(1)->prop = ['actions'=>[['key'=>'pair', 'type'=>'paired_ranged', 'effects'=>[
     ['type'=>'discharge', 'value'=>1], ['type'=>'throw', 'value'=>1],
 ]]]];
@@ -44,4 +50,24 @@ if (array_column($simple, 'instanceId') !== [2, 3]
     throw new RuntimeException('Simple mode lost stable order or duplicate labels');
 }
 $spec->cardSelection->mode = CardSelectionSpec::EXTENDED;
-echo json_encode(['panel'=>$html, 'extended'=>Panel::render($spec)], JSON_THROW_ON_ERROR);
+$fixture = ['panel'=>$html, 'extended'=>Panel::render($spec)];
+if (in_array('--field', $argv, true)) {
+    $renderer = new \Berserk\View\Screen\BattleSnapshotRenderer(new \Berserk\View\Template(__DIR__ . '/../templates'));
+    $fixture['active'] = $renderer->render($state, 'host', 'host', null, $catalog)['fragments'];
+    $fixture['inspected'] = $renderer->render($state, 'host', 'host', null, $catalog, ['inspect'=>2])['fragments'];
+    $movement = $renderer->render($state, 'host', 'host', null, $catalog, ['sel'=>1])['fragments']['field_html'];
+    $blockedMove = $engine->apply(GameState::fromArray($state->toArray()), 'host', new Command('move', ['card_id'=>1, 'row'=>3, 'col'=>4]));
+    if ($blockedMove->success || !str_contains($movement, 'data-drag-enabled="0"')
+        || str_contains($movement, 'cmd=move') || str_contains($movement, 'cmd=jump')) {
+        throw new RuntimeException('Blocking choice permits movement');
+    }
+    $fixture['waiting'] = $renderer->render($state, 'player', 'player', null, $catalog)['fragments'];
+    $operation = $state->battle[\Berserk\Core\PairedRanged::PENDING];
+    $choice = new Command('choose_paired_ranged', ['operation_id'=>$operation['id'], 'stage'=>0, 'target_id'=>2]);
+    if (!$engine->apply($state, 'host', $choice)->success) throw new RuntimeException('Cannot open next step');
+    $fixture['next'] = $renderer->render($state, 'host', 'host', null, $catalog)['fragments'];
+    $cancel = new Command('choose_paired_ranged', ['operation_id'=>$operation['id'], 'stage'=>1, 'cancel'=>1]);
+    if (!$engine->apply($state, 'host', $cancel)->success) throw new RuntimeException('Cannot cancel next step');
+    $fixture['cancelled'] = $renderer->render($state, 'host', 'host', null, $catalog)['fragments'];
+}
+echo json_encode($fixture, JSON_THROW_ON_ERROR);

@@ -61,7 +61,7 @@ const styles = ['global.css', 'battle-ui-skins.css', 'battle-coordinates.css'].m
         await page.locator('form').evaluate((form, html) => { form.outerHTML = html; }, fixture.extended);
         await page.waitForFunction(() => document.querySelector('[data-card-instance="2"] input').checked);
         assert.equal(await row.isHidden(), true);
-        await Promise.all([page.waitForRequest(request => request.method() === 'POST'), page.locator('button[type="submit"]').click()]);
+        await Promise.all([page.waitForResponse(response => response.request().method() === 'POST'), page.locator('button[type="submit"]').click()]);
         assert.equal(posts[0].get('cmd'), 'choose_paired_ranged');
         assert.equal(posts[0].get('operation_id'), 'paired-1');
         assert.equal(posts[0].get('stage'), '0');
@@ -70,7 +70,7 @@ const styles = ['global.css', 'battle-ui-skins.css', 'battle-coordinates.css'].m
 
         await show(fixture.panel);
         const beforeCancel = navigations;
-        await Promise.all([page.waitForRequest(request => request.method() === 'POST'), page.locator('a.skip').click()]);
+        await Promise.all([page.waitForResponse(response => response.request().method() === 'POST'), page.locator('a.skip').click()]);
         assert.equal(posts[1].get('cmd'), 'choose_paired_ranged');
         assert.equal(posts[1].get('cancel'), '1');
         assert.equal(posts[1].has('target_id'), false);

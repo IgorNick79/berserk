@@ -22,5 +22,6 @@ final class CardSelectionSpec
         public int $maxSelect = 1,
         public array $selected = [],
         public string $confirmation = self::CONFIRM,
+        public ?string $battlefieldOwner = null,
     ) {}
 }

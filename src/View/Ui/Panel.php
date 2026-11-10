@@ -100,6 +100,9 @@ final class Panel
 
         $context = $selection === null ? '' : ' data-card-selection="' . htmlspecialchars($selection->context, ENT_QUOTES)
             . '" data-card-min-select="' . $selection->minSelect . '"';
+        if ($selection !== null && $selection->battlefieldOwner !== null) {
+            $context .= ' data-card-field-owner="' . htmlspecialchars($selection->battlefieldOwner, ENT_QUOTES) . '"';
+        }
         return '<form method="get" class="card-choice-form"' . $context . '>'
             . $hiddenHtml
             . $body

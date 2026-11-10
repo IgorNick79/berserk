@@ -33,6 +33,51 @@
         if (saved.size > 40) saved.delete(saved.keys().next().value);
     }
     var activeSelection = null;
+    var boardSelector = '[data-battle-fragment="field_html"], [data-battle-fragment="fly_zones_html"]';
+    var selectedCardSelector = '[data-drag-card][data-card-selection-highlight]';
+
+    function fieldChoice(root, event, viewer) {
+        if (event.target.closest('button, input, select, textarea, [role="button"], [data-mini-hint], .mini-indicator, [data-card-original]')) return null;
+        var card = event.target.closest('[data-drag-card]');
+        if (!card || !card.closest(boardSelector) || card.closest('[hidden]') || !root.contains(card)) return null;
+        var link = event.target.closest('a[href]');
+        if (link) {
+            var url = new URL(link.href);
+            if (!link.matches('.card-link') || url.origin !== location.origin || url.pathname !== location.pathname
+                || url.searchParams.has('cmd') || url.searchParams.get('inspect') !== card.dataset.dragCard) return null;
+        }
+        var form = root.querySelector('form[data-card-selection][data-card-field-owner]');
+        if (!form || form.dataset.cardFieldOwner !== viewer) return null;
+        var row = Array.from(form.querySelectorAll('[data-card-instance]')).find(function (row) {
+            return row.dataset.cardInstance === card.dataset.dragCard;
+        });
+        return row ? {form: form, id: row.dataset.cardInstance, card: card, link: link} : null;
+    }
+
+    function paintField(form, selected) {
+        var root = document.querySelector('[data-battle-sync-root]');
+        if (!root) return;
+        root.querySelectorAll(selectedCardSelector).forEach(function (card) {
+            card.removeAttribute('data-card-selection-highlight');
+        });
+        if (!form || !form.dataset.cardFieldOwner || !selected) return;
+        root.querySelectorAll(boardSelector).forEach(function (board) {
+            board.querySelectorAll('[data-drag-card="' + selected.dataset.cardInstance + '"]').forEach(function (card) {
+                card.setAttribute('data-card-selection-highlight', '');
+            });
+        });
+    }
+
+    function selectCard(form, id) {
+        updateSelection(form);
+        activeSelection.selected = id;
+        updateSelection(form);
+    }
+
+    window.BerserkCardSelection = {
+        fieldChoice: fieldChoice,
+        select: selectCard
+    };
     function updateSelection(form) {
         var context = form.dataset.cardSelection;
         var rows = Array.from(form.querySelectorAll('[data-card-instance]'));
@@ -68,12 +113,16 @@
         form.querySelector('[data-card-choice-status]').hidden = !selected || !selected.hidden;
         var submit = form.querySelector('button[type="submit"]');
         submit.disabled = !selected && form.dataset.cardMinSelect === '1';
+        paintField(form, selected);
     }
     function refresh() {
         queued = false;
         var selection = document.querySelector('[data-card-selection]');
         if (selection) updateSelection(selection);
-        else activeSelection = null;
+        else {
+            activeSelection = null;
+            paintField(null, null);
+        }
         document.querySelectorAll('.card-choice-form:not([data-card-selection])').forEach(function (f) { update(f); });
     }
     document.addEventListener('click', function (e) {
@@ -100,9 +149,7 @@
         }
         var row = e.target.closest('[data-card-instance]');
         if (!row) return;
-        updateSelection(form);
-        activeSelection.selected = row.dataset.cardInstance;
-        updateSelection(form);
+        selectCard(form, row.dataset.cardInstance);
     });
     new MutationObserver(function (records) {
         if (records.some(function (r) { return r.type === 'childList'; }) && !queued) { queued = true; requestAnimationFrame(refresh); }
