@@ -45,15 +45,25 @@ final class DiceChoiceChoice implements ChoiceHandlerInterface
 
         $url = $baseUrl . '&cmd=choose_dice_choice&choice=';
 
-        $strike=$state->battle['strike']??[];
-        $attacker=$state->getCard((int)($strike['attacker_id']??0));
-        $ownAttack=$attacker?->owner===$playerKey;
-        $own=\Berserk\View\Ui\DiceValue::render((int)($strike[$ownAttack?'attack_dice':'defend_dice']??0));
-        $enemy=\Berserk\View\Ui\DiceValue::render((int)($strike[$ownAttack?'defend_dice':'attack_dice']??0));
-        $buttons=[];
-        foreach(['plus:own'=>'+1 к своему кубику','minus:own'=>'−1 от своего кубика','plus:enemy'=>'+1 к чужому кубику','minus:enemy'=>'−1 от чужого кубика']as$key=>$label){
-            $mine=str_ends_with($key,':own');
-            $buttons[]=['label'=>$label,'label_html'=>($mine?$own:$enemy).'<span>'.(str_starts_with($key,'plus:')?'+1':'−1').'</span>','url'=>$url.$key,'class'=>'catcher-dice '.($mine?'catcher-own':'catcher-enemy')];
+        $strike = $state->battle['strike'] ?? [];
+        $attacker = $state->getCard((int) ($strike['attacker_id'] ?? 0));
+        $ownAttack = $attacker?->owner === $playerKey;
+        $attackDie = (int) ($strike['attack_dice'] ?? 0);
+        $defendDie = (int) ($strike['defend_dice'] ?? 0);
+        $buttons = [];
+        foreach (['plus:own'=>'+1 к своему кубику', 'minus:own'=>'−1 от своего кубика',
+            'plus:enemy'=>'+1 к чужому кубику', 'minus:enemy'=>'−1 от чужого кубика'] as $key => $label) {
+            $mine = str_ends_with($key, ':own');
+            $isAttack = $mine === $ownAttack;
+            $die = $isAttack ? $attackDie : $defendDie;
+            if ($die < 1) continue;
+            $buttons[] = [
+                'label' => $label,
+                'label_html' => \Berserk\View\Ui\DiceValue::render($die)
+                    . '<span>' . (str_starts_with($key, 'plus:') ? '+1' : '−1') . '</span>',
+                'url' => $url . $key,
+                'class' => 'catcher-dice ' . ($mine || $defendDie < 1 ? 'catcher-own' : 'catcher-enemy'),
+            ];
         }
         $buttons[]=['label'=>'Переброс','url'=>$url.'reroll:any','class'=>'catcher-reroll'];
         $buttons[]=['label'=>'Отмена','url'=>$baseUrl.'&cmd=cancel_pending','class'=>'skip'];
