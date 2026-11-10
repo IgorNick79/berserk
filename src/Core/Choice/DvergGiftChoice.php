@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class DvergGiftChoice implements ChoiceHandlerInterface
 {
@@ -37,12 +37,7 @@ final class DvergGiftChoice implements ChoiceHandlerInterface
         foreach ($p['candidates'] as $tid) {
             $tc = $state->getCard((int) $tid);
             if (!$tc) continue;
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-            $coords = ' (' . $tc->row . ';' . $tc->col . ')';
-            $items[] = [
-                'value' => (int) $tid,
-                'label' => $tn . $coords . ' — ' . $tc->hp . '/' . $tc->hpMax,
-            ];
+            $items[] = ['value' => (int) $tid];
         }
 
         $roleParam = $role === 'host' ? 'first' : 'second';
@@ -53,7 +48,7 @@ final class DvergGiftChoice implements ChoiceHandlerInterface
             form: [
                 'type'   => 'radio',
                 'name'   => 'target_id',
-                'items'  => $items,
+
                 'hidden' => [
                     $roleParam => '',
                     'game'     => $state->gameId,
@@ -61,6 +56,9 @@ final class DvergGiftChoice implements ChoiceHandlerInterface
                 ],
                 'submit' => 'Дать',
             ],
+            cardSelection: CreatureChoice::confirmed(
+                $state, $playerKey, $cardsInfo, $items, 'dverg-gift:' . $state->version,
+            ),
         );
     }
 

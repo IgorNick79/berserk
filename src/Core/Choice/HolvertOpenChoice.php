@@ -10,7 +10,7 @@ use Berserk\Core\Command;
 use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class HolvertOpenChoice implements ChoiceHandlerInterface
 {
@@ -49,12 +49,7 @@ final class HolvertOpenChoice implements ChoiceHandlerInterface
         foreach ((array) ($pending['candidate_ids'] ?? []) as $id) {
             $card = $state->getCard((int) $id);
             if (!$card) continue;
-
-            $name = $cardsInfo[$card->ukid]['name'] ?? $card->ukid;
-            $items[] = [
-                'value' => $card->instanceId,
-                'label' => $name . ' #' . $card->instanceId,
-            ];
+            $items[] = ['value' => $card->instanceId];
         }
 
         $roleParam = $role === 'host' ? 'first' : 'second';
@@ -64,7 +59,7 @@ final class HolvertOpenChoice implements ChoiceHandlerInterface
             form: [
                 'type' => 'radio',
                 'name' => 'target_id',
-                'items' => $items,
+
                 'hidden' => [
                     $roleParam => '',
                     'game' => $state->gameId,
@@ -72,6 +67,9 @@ final class HolvertOpenChoice implements ChoiceHandlerInterface
                 ],
                 'submit' => 'Открыть',
             ],
+            cardSelection: CreatureChoice::confirmed(
+                $state, $playerKey, $cardsInfo, $items, 'holvert-open:' . $state->version,
+            ),
         );
     }
 

@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class RowSpellPickChoice implements ChoiceHandlerInterface
 {
@@ -61,13 +61,7 @@ final class RowSpellPickChoice implements ChoiceHandlerInterface
         foreach ($p['candidates'] as $tid) {
             $tc = $state->getCard((int) $tid);
             if (!$tc) continue;
-            $info = $cardsInfo[$tc->ukid] ?? null;
-            $name = $info['name'] ?? '?';
-            $coord = \Berserk\View\Ui\BattlefieldPosition::label($tc->row, $tc->col, $playerKey);
-            $items[] = [
-                'value' => (int) $tid,
-                'label' => $name . ' ' . $coord . ' — ' . $tc->hp . '/' . $tc->hpMax,
-            ];
+            $items[] = ['value' => (int) $tid];
         }
 
         $roleParam = $role === 'host' ? 'first' : 'second';
@@ -78,7 +72,7 @@ final class RowSpellPickChoice implements ChoiceHandlerInterface
             form: [
                 'type'   => 'checkbox',
                 'name'   => 'target_ids[]',
-                'items'  => $items,
+
                 'hidden' => [
                     $roleParam => '',
                     'game'     => $state->gameId,
@@ -86,6 +80,9 @@ final class RowSpellPickChoice implements ChoiceHandlerInterface
                 ],
                 'submit' => 'Подтвердить',
             ],
+            cardSelection: CreatureChoice::confirmed(
+                $state, $playerKey, $cardsInfo, $items, 'row-spell:' . $state->version, $x, $x,
+            ),
         );
     }
 

@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class IncarnationWoundChoice implements ChoiceHandlerInterface
 {
@@ -49,17 +49,7 @@ final class IncarnationWoundChoice implements ChoiceHandlerInterface
             $tc = $state->getCard((int) $tid);
             if (!$tc) continue;
             if ($tc->dying || $tc->hp <= 0) continue;
-            $isOwn = ($tc->owner === $playerKey);
-
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-            $label = $tn . ' (' . $tc->row . ';' . $tc->col . ') — '
-                . $tc->hp . '/' . $tc->hpMax;
-            if ($isOwn) $label .= ' — моё';
-
-            $items[] = [
-                'value' => (int) $tid,
-                'label' => $label,
-            ];
+            $items[] = ['value' => (int) $tid];
         }
 
         $roleParam = $role === 'host' ? 'first' : 'second';
@@ -78,7 +68,7 @@ final class IncarnationWoundChoice implements ChoiceHandlerInterface
                 'side_toggle' => true,
                 'side_default' => 'enemy',
                 'name'   => 'target_ids[]',
-                'items'  => $items,
+
                 'hidden' => [
                     $roleParam => '',
                     'game'     => $state->gameId,
@@ -86,6 +76,9 @@ final class IncarnationWoundChoice implements ChoiceHandlerInterface
                 ],
                 'submit' => 'Ранить',
             ],
+            cardSelection: CreatureChoice::confirmed(
+                $state, $playerKey, $cardsInfo, $items, 'incarnation-wound:' . $state->version, $count, $count,
+            ),
         );
     }
 

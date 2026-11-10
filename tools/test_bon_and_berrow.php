@@ -145,7 +145,7 @@ foreach(['own','both','enemy','none'] as $side) {
  bbAssert(in_array(3,$p['candidates'],true)===in_array($side,['own','both'],true),'Own target eligibility '.$side);
  bbAssert(in_array(2,$p['candidates'],true)===in_array($side,['enemy','both'],true),'Enemy target eligibility '.$side);
  $spec=(new CoinAbilityChoice())->spec($s,'host',[],'?game=1','host');
- bbAssert(($spec->form['type']??'')==='radio' && $spec->form['name']==='target_id','Targets use radio');
+ bbAssert($spec->cardSelection?->maxSelect===1 && $spec->form['name']==='target_id','Targets use radio');
  bbAssert($spec->form['submit']==='Подтвердить' && !isset($spec->form['cancel']) && $spec->buttons===[],'One confirmation and no skip/cancel buttons');
  $html=(new Berserk\View\Screen\Battle\InfoPanel(new Berserk\View\Template(__DIR__.'/../templates')))->render($s,'host','host',$info,'?game=1');
  bbAssert(str_contains($html,'type="radio"') && str_contains($html,'Подтвердить'),'Actual radio HTML rendered');

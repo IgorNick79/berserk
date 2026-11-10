@@ -10,7 +10,7 @@ use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\DamageResolver;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CardSelectionSpec, CreatureChoice, PanelSpec};
 
 final class AnyDeathChoice implements ChoiceHandlerInterface
 {
@@ -77,18 +77,7 @@ final class AnyDeathChoice implements ChoiceHandlerInterface
         foreach ($item['candidates'] as $tid) {
             $tc = $state->getCard($tid);
             if (!$tc) continue;
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-
-            $label = $tn . ' (' . $tc->row . ';' . $tc->col . ')';
-            if ($tc->owner === $playerKey) {
-                $label .= ' — моё существо';
-            }
-
-            $items[] = [
-                'value'   => (int) $tid,
-                'label'   => $label,
-                'checked' => $first,
-            ];
+            $items[] = ['value' => (int) $tid, 'checked' => $first];
             $first = false;
         }
 
@@ -97,7 +86,6 @@ final class AnyDeathChoice implements ChoiceHandlerInterface
             form: [
                 'type'   => 'radio',
                 'name'   => 'target_id',
-                'items'  => $items,
                 'hidden' => [
                     $roleParam => '',
                     'game'     => $state->gameId,
@@ -106,6 +94,8 @@ final class AnyDeathChoice implements ChoiceHandlerInterface
                 'submit' => 'Отравить',
                 'cancel' => $baseUrl . '&cmd=choose_any_death_target&target_id=0',
             ],
+            cardSelection: CreatureChoice::confirmed($state, $playerKey, $cardsInfo, $items,
+                'any-death:' . $state->version, mode: CardSelectionSpec::SIMPLE),
         );
     }
 

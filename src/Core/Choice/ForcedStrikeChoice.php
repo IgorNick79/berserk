@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class ForcedStrikeChoice implements ChoiceHandlerInterface
 {
@@ -33,20 +33,17 @@ final class ForcedStrikeChoice implements ChoiceHandlerInterface
             return new PanelSpec(title: $attName . ' — обязательная атака', isMine: false);
         }
 
-        $buttons = [];
+        $links = [];
         foreach ($pf['candidates'] as $tid) {
-            $tc = $state->getCard($tid);
-            if (!$tc) continue;
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-            $buttons[] = [
-                'label' => $tn . ' (' . $tc->hp . '/' . $tc->hpMax . ')',
-                'url'   => "{$baseUrl}&cmd=choose_forced_strike&target_id={$tid}",
+            $links[] = [
+                'instanceId' => $tid,
+                'url' => "{$baseUrl}&cmd=choose_forced_strike&target_id={$tid}",
             ];
         }
 
         return new PanelSpec(
             title: $attName . ' — обязан атаковать закрытое существо:',
-            buttons: $buttons,
+            buttons: CreatureChoice::immediateButtons($state, $playerKey, $cardsInfo, $links),
         );
     }
 

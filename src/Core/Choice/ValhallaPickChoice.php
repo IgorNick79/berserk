@@ -9,8 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\Core\CardInstance;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class ValhallaPickChoice implements ChoiceHandlerInterface
 {
@@ -47,20 +46,14 @@ final class ValhallaPickChoice implements ChoiceHandlerInterface
         $vp = new \Berserk\Core\ValhallaProcessor($state, $engine = new Engine());
         $candidates = $vp->collectCandidates($card, $playerKey);
 
-        $buttons = [];
+        $links = [];
         foreach ($candidates as $tid) {
-            $tc = $state->getCard($tid);
-            if (!$tc) continue;
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-            $coords = $tc->zone === CardInstance::ZONE_FIELD
-                ? ' (' . $tc->row . ',' . $tc->col . ')' : '';
-
-            $buttons[] = [
-                'label' => $tn . $coords . ' (' . $tc->hp . '/' . $tc->hpMax . ')',
-                'url'   => "{$baseUrl}&cmd=valhalla_pick&target_id={$tid}",
+            $links[] = [
+                'instanceId' => $tid,
+                'url' => "{$baseUrl}&cmd=valhalla_pick&target_id={$tid}",
             ];
         }
-
+        $buttons = CreatureChoice::immediateButtons($state, $playerKey, $cardsInfo, $links);
         $buttons[] = [
             'label' => 'Отмена',
             'url'   => $baseUrl . '&cmd=cancel_pending',

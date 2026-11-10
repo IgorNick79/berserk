@@ -175,6 +175,37 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
             await command(submit);
             assert.equal(posts[4].get('own_id'), '2');
             assert.equal(navigations, grezyNav);
+            await show('discharge');
+            const dischargePosts = posts.length;
+            await gesture(4);
+            assert.deepEqual(await selected(), ['4']);
+            await command(submit);
+            assert.deepEqual(posts[dischargePosts].getAll('target_ids[]'), ['4']);
+            assert.equal(posts[dischargePosts].get('cmd'), 'choose_multi_discharge');
+
+            await show('rowSpell');
+            await row(4).click();
+            assert.equal(await submit.isDisabled(), true);
+            await row(5).click();
+            assert.equal(await submit.isEnabled(), true);
+            await command(submit);
+            assert.deepEqual(posts[dischargePosts + 1].getAll('target_ids[]'), ['4', '5']);
+            assert.equal(posts[dischargePosts + 1].get('cmd'), 'choose_row_spell_targets');
+
+            await show('grave');
+            await row(3).click();
+            assert.deepEqual(await selected(), []);
+            await command(submit);
+            assert.equal(posts[dischargePosts + 2].get('cmd'), 'choose_grave_ritual');
+            assert.equal(posts[dischargePosts + 2].get('operation_id'), 'ritual-test');
+            assert.equal(posts[dischargePosts + 2].get('target_id'), '3');
+
+            await show('forced');
+            const immediate = page.locator('a[href*="cmd=choose_forced_strike"][href*="target_id=4"]');
+            assert.equal(await page.locator('[data-card-selection]').count(), 0);
+            await command(immediate);
+            assert.equal(posts[dischargePosts + 3].get('cmd'), 'choose_forced_strike');
+            assert.equal(posts[dischargePosts + 3].get('target_id'), '4');
             assert.deepEqual(errors, []);
             console.log('PASS Stage 3 at ' + width + 'px');
             await page.close();

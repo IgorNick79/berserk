@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace Berserk\Core\Choice;
 use Berserk\Core\{CoinAbilities, Command, Engine, GameState, Result};
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CardSelectionSpec, CreatureChoice, PanelSpec};
 final class CoinAbilityChoice implements ChoiceHandlerInterface
 {
     public function pendingKey(): string { return 'pending_coin_ability'; }
@@ -24,17 +24,15 @@ final class CoinAbilityChoice implements ChoiceHandlerInterface
             foreach ($p['candidates'] as $id) {
                 $target = $state->getCard((int) $id);
                 if (!$target || $target->dying || $target->hp <= 0) continue;
-                $items[] = [
-                    'value' => $id,
-                    'label' => ($cardsInfo[$target->ukid]['name'] ?? 'Цель') . " ({$target->row},{$target->col})",
-                ];
+                $items[] = ['value' => $id];
             }
             return new PanelSpec(title: $title, form: [
-                'type' => 'radio', 'name' => 'target_id', 'items' => $items,
+                'name' => 'target_id',
                 'hidden' => array_merge(\Berserk\View\Ui\Form::battleHidden($role, $state->gameId, 'choose_coin_ability'),
                     ['choice_id' => $p['id']]),
                 'submit' => 'Подтвердить',
-            ]);
+            ], cardSelection: CreatureChoice::confirmed($state, $playerKey, $cardsInfo, $items,
+                'coin-discharge:' . $p['id'], mode: CardSelectionSpec::SIMPLE));
         } else {
             $buttons = [
                 ['label' => $p['kind'] === 'gain' ? 'Получить монетку' : 'Блокировать атаку',

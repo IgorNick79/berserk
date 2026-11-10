@@ -59,7 +59,7 @@ $serialized = json_encode($s->toArray(), JSON_THROW_ON_ERROR);
 $s = GameState::fromArray(json_decode($serialized, true, 512, JSON_THROW_ON_ERROR));
 check($s->battle[Strangulation::PENDING] === $p, 'pending survives JSON reload');
 $spec = (new StrangulationChoice())->spec($s, 'host', [], '?first&game=987612', 'host');
-check($spec->form['hidden']['choice_id'] === $p['id'] && count($spec->form['items']) === 1, 'form carries token and legal targets');
+check($spec->form['hidden']['choice_id'] === $p['id'] && count($spec->cardSelection->candidates) === 1, 'form carries token and legal targets');
 check(!(new StrangulationChoice())->spec($s, 'player', [], '?second', 'player')->isMine, 'opponent waits');
 $html = render($s, 2);
 check(str_contains(implode('', array_filter($html, 'is_string')), 'attack-target'), 'pending highlights field target');

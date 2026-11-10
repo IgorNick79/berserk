@@ -39,11 +39,62 @@ final class CreatureChoice
             if ($item['row'] === 'fly' && $counts[$name] > 1 && $card->slot > 0) {
                 $item['label_html'] .= '<span class="coords coords--' . $item['side'] . '">Слот ' . $card->slot . '</span>';
             }
+            if ($card->zone === 'graveyard' && $counts[$name] > 1 && ($card->owner === $viewer || $card->revealed)) {
+                $item['label_html'] .= '<span> #' . $id . '</span>';
+            }
             $items[] = $item;
         }
         usort($items, static fn(array $a, array $b): int =>
             strcmp(self::sortName($a['label']), self::sortName($b['label'])) ?: $a['instanceId'] <=> $b['instanceId']);
         return $items;
+    }
+
+    /**
+     * Opt in only for confirmed forms whose declared rows carry instance IDs.
+     * Keeps the wire values, defaults and original submission order.
+     */
+    public static function confirmed(
+        GameState $state, string $viewer, array $catalog, array $rows, string $decision,
+        int $min = 1, int $max = 1, string $mode = CardSelectionSpec::DEFAULT_MODE, bool $field = true
+    ): CardSelectionSpec {
+        $byId = [];
+        foreach (array_values($rows) as $order => $row) {
+            $byId[(int) ($row['instanceId'] ?? $row['value'])] = $row + ['submitOrder' => $order];
+        }
+        $items = self::candidates($state, array_keys($byId), $viewer, $catalog, $mode);
+        $selected = [];
+        foreach ($items as &$item) {
+            $legacy = $byId[$item['instanceId']];
+            $item['value'] = $legacy['value'];
+            $item['submitOrder'] = $legacy['submitOrder'];
+            $item['disabled'] = !empty($legacy['disabled']);
+            if (!empty($legacy['checked']) && !$item['disabled']) $selected[] = $item['instanceId'];
+            if (isset($legacy['suffix'])) {
+                $item['label_html'] .= '<span>' . htmlspecialchars($legacy['suffix'], ENT_QUOTES) . '</span>';
+            }
+        }
+        unset($item);
+
+        return new CardSelectionSpec(
+            context: implode(':', [$state->gameId, $viewer, $decision]),
+            candidates: $items, mode: $mode, minSelect: $min, maxSelect: $max, selected: $selected,
+            battlefieldOwner: $field ? $viewer : null,
+        );
+    }
+
+    /** Immediate links retain their caller-supplied URL and order. */
+    public static function immediateButtons(GameState $state, string $viewer, array $catalog, array $links): array
+    {
+        $items = array_column(self::candidates($state, array_column($links, 'instanceId'), $viewer, $catalog,
+            CardSelectionSpec::DEFAULT_MODE), null, 'instanceId');
+        $buttons = [];
+        foreach ($links as $link) {
+            $item = $items[$link['instanceId']] ?? null;
+            if (!$item) continue;
+            $suffix = htmlspecialchars((string) ($link['suffix'] ?? ''), ENT_QUOTES);
+            $buttons[] = $link + ['label' => $item['label'], 'label_html' => $item['label_html'] . $suffix];
+        }
+        return $buttons;
     }
 
     private static function sortName(string $name): string

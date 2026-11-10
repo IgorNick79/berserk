@@ -99,4 +99,32 @@ check(!str_contains($fixtures['grezy']['info_panel_html'], 'cmd=cancel_pending')
 check($engine->apply($grezy, 'host', new Command('grezy_pick', ['enemy_id'=>4]))->success, 'Confirm Grezy enemy');
 $fixtures['grezyAlly'] = $render($grezy);
 check($engine->apply($grezy, 'host', new Command('grezy_pick', ['own_id'=>2]))->success, 'Confirm Grezy ally');
+$discharge = fixture('multi_discharge');
+$fixtures['discharge'] = $render($discharge);
+check($engine->apply($discharge, 'host', new Command('choose_multi_discharge', ['target_ids'=>[4, 5]]))->success,
+    'Multi-discharge accepts the existing ordered array');
+$rowSpell = GameState::fromArray($cancelled->toArray());
+$rowSpell->battle['pending_row_spell_pick'] = [
+    'owner'=>'host', 'source_id'=>1, 'x'=>2, 'candidates'=>[4, 5], 'dice'=>4, 'level'=>'medium', 'val'=>1,
+];
+$fixtures['rowSpell'] = $render($rowSpell);
+check(!$engine->apply($rowSpell, 'host', new Command('choose_row_spell_targets', ['target_ids'=>[4]]))->success,
+    'Exact-count server rejects a partial choice');
+check($engine->apply($rowSpell, 'host', new Command('choose_row_spell_targets', ['target_ids'=>[4, 5]]))->success,
+    'Exact-count server accepts the existing array');
+$grave = GameState::fromArray($cancelled->toArray());
+$grave->getCard(2)->zone = 'graveyard';
+$grave->getCard(3)->zone = 'graveyard';
+$grave->battle['pending_grave_ritual'] = ['owner'=>'host', 'id'=>'ritual-test', 'candidates'=>[2, 3]];
+$graveCatalog = array_replace($catalog, ['card2'=>['name'=>'Нежить'], 'card3'=>['name'=>'Нежить']]);
+$fixtures['grave'] = $renderer->render($grave, 'host', 'host', null, $graveCatalog)['fragments'];
+check(str_contains($fixtures['grave']['info_panel_html'], '#2') && str_contains($fixtures['grave']['info_panel_html'], '#3')
+    && !str_contains($fixtures['grave']['info_panel_html'], 'data-card-field-owner'), 'Graveyard candidates have distinct labels and no battlefield binding');
+
+$forced = GameState::fromArray($cancelled->toArray());
+$forced->battle['pending_forced_strike'] = ['owner'=>'host', 'attacker_id'=>1, 'candidates'=>[4, 5]];
+$fixtures['forced'] = $render($forced);
+check(!str_contains($fixtures['forced']['info_panel_html'], 'data-card-selection')
+    && str_contains($fixtures['forced']['info_panel_html'], 'cmd=choose_forced_strike&amp;target_id=4')
+    && !str_contains($fixtures['forced']['info_panel_html'], 'Секретная'), 'Immediate link preserves command and masks the hidden card');
 echo json_encode($fixtures, JSON_THROW_ON_ERROR);

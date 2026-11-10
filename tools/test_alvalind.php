@@ -36,7 +36,7 @@ foreach($d['end_counts']as$count){
  ac($p['value']===1+2*$count,'discharge strength');ac(!in_array(5,$p['targets'],true),'orthogonal neighbor forbidden');
  ac(!$e->apply($s,'host',new Command('choose_alvalind_target',['operation_id'=>$p['id'],'target_id'=>5]))->success,'server rejects adjacent target');ac(!in_array(3,$p['targets'],true),'diagonal neighbor forbidden');ac(in_array(4,$p['targets'],true),'distant target allowed');
  ac($s->battle['active']==='host','owner not changed');
- $spec=(new \Berserk\Core\Choice\AlvalindChoice())->spec($s,'host',[],'/?game=1','host');ac($spec->form['side_default']==='enemy'&&$spec->form['side_toggle']&&$spec->buttons===[],'standard creature radio selector');ac($s->battle['turn_timer']['status']==='running','timer continues');
+ $spec=(new \Berserk\Core\Choice\AlvalindChoice())->spec($s,'host',[],'/?game=1','host');ac($spec->cardSelection?->battlefieldOwner==='host'&&str_contains(\Berserk\View\Ui\Panel::render($spec),'type="radio"')&&$spec->buttons===[],'standard creature radio selector');ac($s->battle['turn_timer']['status']==='running','timer continues');
  $effects=\Berserk\View\Ui\ActiveCardEffects::forCard($s->getCard(1),$s);ac(!array_filter($effects,static fn($v)=>str_contains($v,'Разряд')||str_contains($v,'Счётчики')),'no discharge or counters in buffs');
  ac(!$e->apply($s,'host',new Command('end_turn'))->success,'repeat end blocked');
  $s=GameState::fromArray(json_decode(json_encode($s->toArray()),true));$now=2000;

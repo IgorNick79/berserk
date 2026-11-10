@@ -54,7 +54,7 @@
         var form = root.querySelector('form[data-card-selection][data-card-field-owner]');
         if (!form || (viewer && form.dataset.cardFieldOwner !== viewer)) return null;
         var rows = Array.from(form.querySelectorAll('[data-card-instance]')).filter(function (row) {
-            return row.dataset.cardInstance === id;
+            return row.dataset.cardInstance === id && !row.querySelector('input').disabled;
         });
         return rows.length === 1 ? {form: form, id: id, group: rows[0].closest('[data-selection-group]').dataset.selectionGroup} : null;
     }
@@ -91,7 +91,7 @@
         var groups = selectionGroups(form);
         var group = groups.find(function (group) { return group.id === groupId; });
         var option = group?.options.find(function (option) { return option.key === id; });
-        if (!option) return false;
+        if (!option || option.input.disabled) return false;
         updateSelection(form, groups);
         var values = activeSelection.groups.get(groupId);
         var radio = option.input.type === 'radio';
@@ -149,7 +149,7 @@
         groups.forEach(function (group) {
             var previous = state.groups.get(group.id);
             var values = new Set(group.options.filter(function (option) {
-                return previous ? previous.has(option.key) : option.input.checked;
+                return !option.input.disabled && (previous ? previous.has(option.key) : option.input.checked);
             }).slice(0, group.max).map(function (option) { return option.key; }));
             currentGroups.set(group.id, values);
             if (values.size < group.min || values.size > group.max) valid = false;

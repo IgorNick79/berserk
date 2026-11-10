@@ -10,7 +10,7 @@ use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
 use Berserk\Core\CardStats;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class MultiDischargeChoice implements ChoiceHandlerInterface
 {
@@ -51,14 +51,13 @@ final class MultiDischargeChoice implements ChoiceHandlerInterface
         foreach ($pmd['candidates'] as $tid) {
             $tc = $state->getCard($tid);
             if (!$tc) continue;
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
 
             $defended = CardStats::hasDefense($state, $tc, 'discharge');
             $hint     = $defended ? ' (защита)' : '';
 
             $items[] = [
                 'value' => $tid,
-                'label' => $tn . ' (' . $tc->hp . '/' . $tc->hpMax . ')' . $hint,
+                'suffix' => $hint,
             ];
         }
 
@@ -69,15 +68,18 @@ final class MultiDischargeChoice implements ChoiceHandlerInterface
             form: [
                 'type'   => 'checkbox',
                 'name'   => 'target_ids[]',
-                'items'  => $items,
+
                 'hidden' => [
                     $roleParam => '',
                     'game'     => $state->gameId,
                     'cmd'      => 'choose_multi_discharge',
                 ],
                 'submit' => 'Подтвердить',
-                'cancel' => $baseUrl . '&cmd=cancel_pending',
+                'cancel' => $baseUrl . '&cmd=cancel_pending&mode=',
             ],
+            cardSelection: CreatureChoice::confirmed(
+                $state, $playerKey, $cardsInfo, $items, 'multi-discharge:' . ($pmd['action'][\Berserk\Core\ActionResolution::ID] ?? $state->version), 1, $max,
+            ),
         );
     }
 

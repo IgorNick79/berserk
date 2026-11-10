@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Berserk\Core\Choice;
 
 use Berserk\Core\{Command, Engine, GameState, Result, Strangulation};
-use Berserk\View\Ui\{BattlefieldPosition, PanelSpec};
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class StrangulationChoice implements ChoiceHandlerInterface
 {
@@ -20,15 +20,14 @@ final class StrangulationChoice implements ChoiceHandlerInterface
         foreach ($p['target_ids'] as $id) {
             $target = $state->getCard((int) $id);
             if (!$source || !Strangulation::validTarget($source, $target)) continue;
-            $items[] = ['value' => $id, 'checked' => (int) ($_GET['sel'] ?? 0) === $id, 'label' => ($cardsInfo[$target->ukid]['name'] ?? $target->ukid)
-                . ' ' . BattlefieldPosition::label($target->row, $target->col, $playerKey)];
+            $items[] = ['value' => $id, 'checked' => (int) ($_GET['sel'] ?? 0) === $id];
         }
         return new PanelSpec(title: 'Удушить — выберите соседнее рядовое существо противника', form: [
-            'type' => 'radio', 'name' => 'target_id', 'items' => $items,
+            'name' => 'target_id',
             'hidden' => [$role === 'host' ? 'first' : 'second' => '', 'game' => $state->gameId,
                 'cmd' => 'choose_strangulation', 'choice_id' => $p['id']],
             'submit' => 'Удушить', 'cancel' => $baseUrl . '&cmd=cancel_pending&choice_id=' . rawurlencode($p['id']),
-        ]);
+        ], cardSelection: CreatureChoice::confirmed($state, $playerKey, $cardsInfo, $items, 'strangulation:' . $p['id']));
     }
     public function apply(GameState $state, Engine $engine, string $playerKey, Command $cmd): Result
     {
