@@ -55,5 +55,10 @@ $plan = \Berserk\Core\Combat\CombatDecisionPlanner::decide(
 efCheck($plan['action'] === ['type' => 'close_prophecy', 'payload' => []], 'Bot closes the attack block reveal');
 efCheck($engine->apply($s, 'host', new \Berserk\Core\Command('close_prophecy'))->success, 'Native command closes block');
 efCheck(empty($s->battle['pending_prophecy']), 'The blocked attack no longer holds the game');
+$s = efRoundtrip($s);
+$panel = new \Berserk\View\Screen\Battle\InfoPanel(new \Berserk\View\Template(__DIR__ . '/../templates'));
+$html = $panel->render($s, 'player', 'second', [], '?game=1');
+efCheck(str_contains($html, 'атака заблокирована') && str_contains($html, 'data-dismiss-battle-notice'),
+    'Opponent can still see and dismiss the result after bot acknowledgement and reload');
 
 echo 'Prophecy deck order: ',$checks-$before," new checks passed\n";

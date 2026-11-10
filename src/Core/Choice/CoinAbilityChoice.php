@@ -35,9 +35,9 @@ final class CoinAbilityChoice implements ChoiceHandlerInterface
                 'coin-discharge:' . $p['id'], mode: CardSelectionSpec::SIMPLE));
         } else {
             $buttons = [
-                ['label' => $p['kind'] === 'gain' ? 'Получить монетку' : 'Блокировать атаку',
+                ['label' => $p['kind'] === 'gain' ? 'Да' : 'Блокировать атаку',
                     'url' => $baseUrl . '&cmd=choose_coin_ability&choice=yes'],
-                ['label' => $p['kind'] === 'gain' ? 'Не получать монетку' : 'Отмена',
+                ['label' => $p['kind'] === 'gain' ? 'Нет' : 'Отмена',
                     'url' => $baseUrl . '&cmd=choose_coin_ability&choice=no', 'class' => 'skip'],
             ];
         }

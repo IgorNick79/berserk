@@ -1157,10 +1157,21 @@ final class TurnProcessor
     public function closeProphecy(string $playerKey, Command $cmd): Result
     {
         $pp = new ProphecyProcessor($this->state, $this->engine);
+        $pending = $this->state->battle['pending_prophecy'] ?? null;
         $res = $pp->close($playerKey);
         if (!$res['ok']) return Result::error($res['error']);
 
         $context = $res['context'];
+        if ($context === 'block') {
+            $viewer = $this->state->getOpponentKey($playerKey);
+            $this->state->battle['prophecy_block_notice'][$viewer] = [
+                'turn' => $this->state->battle['turn'],
+                'id' => $this->state->version,
+                'source_ukid' => $pending['source_ukid'],
+                'title' => $pending['title'],
+                'shown_ukids' => $pending['shown_ukids'],
+            ];
+        }
         if ($context === 'swamp_queen' && is_array($res['swamp_queen'] ?? null)) {
             return (new SwampQueenProcessor($this->state, $this->engine))->finishProphecy($res['swamp_queen']);
         }

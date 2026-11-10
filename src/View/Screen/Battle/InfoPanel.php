@@ -93,7 +93,8 @@ final class InfoPanel
         if ($inInstantStack) $combatKey = 'instant:' . ($state->battle['turn'] ?? 0);
         if ($priority && $combatKey === '') $combatKey = 'information:' . ($state->battle['turn'] ?? 0);
         $body = $actionChoiceHtml !== '' ? $actionChoiceHtml : $this->renderOchiKrongaNotice() . $this->renderBody();
-        $body = $this->renderWormResults() . (!$inCombat ? $this->renderRagnarValhallaNotice() : '') . $body;
+        $body = $this->renderWormResults() . $this->renderProphecyBlockNotice()
+            . (!$inCombat ? $this->renderRagnarValhallaNotice() : '') . $body;
         $instantWindow = $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
         $turnInstant = !$inCombat && ($instantWindow
@@ -134,6 +135,28 @@ final class InfoPanel
             }
         }
         return '';
+    }
+
+    private function renderProphecyBlockNotice(): string
+    {
+        $notice = $this->state->battle['prophecy_block_notice'][$this->playerKey] ?? null;
+        if (!$notice || ($notice['turn'] ?? null) !== ($this->state->battle['turn'] ?? null)) return '';
+
+        $scope = 'prophecy-block:' . $this->state->gameId . ':' . $this->playerKey;
+        $source = $this->cardsInfo[$notice['source_ukid']]['name'] ?? 'Дочь Перламутра';
+        $title = htmlspecialchars($source . ': ' . $notice['title'], ENT_QUOTES);
+        $ui = new \Berserk\View\Ui\PrepareUi($this->tpl);
+        $cards = '';
+        foreach ($notice['shown_ukids'] as $ukid) {
+            $cards .= '<div class="prophecy-card" inert>'
+                . $ui->thumbnail($this->cardsInfo, ['ukid' => $ukid, 'element_in_cost' => true, 'link' => '#'])
+                . '</div>';
+        }
+
+        return '<section class="card-choice" data-battle-notice="' . htmlspecialchars($scope, ENT_QUOTES) . '">'
+            . '<div data-battle-notice-id="' . (int) $notice['id'] . '"><h3>' . $title . '</h3>'
+            . '<div class="prophecy-cards">' . $cards . '</div>'
+            . '<button type="button" class="button small cancel" data-dismiss-battle-notice>Закрыть</button></div></section>';
     }
 
     private function renderWormResults(): string

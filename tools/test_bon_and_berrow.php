@@ -77,7 +77,7 @@ $r=(new Engine())->apply($s,'player',new Command('action',['card_id'=>2,'target_
 $s=bbState();$v=new ValhallaProcessor($s,new Engine());$method=new ReflectionMethod($v,'applyEffect');$method->setAccessible(true);$method->invoke($v,$s->getCard(2),['type'=>'get_coins','target'=>'own_creature','value'=>1],'host',$s->getCard(1));bbAssert($s->getCard(1)->coins===0,'Valhalla cannot bypass deny');
 // UI labels, registry and ownership.
 $s=bbState();bbOffer($s);$h=new CoinAbilityChoice();$spec=$h->spec($s,'host',[],'?game=1','host');
-bbAssert($spec->buttons[0]['label']==='Получить монетку' && $spec->buttons[1]['label']==='Не получать монетку','Coin buttons');bbAssert(!$h->spec($s,'player',[],'?game=1','player')->isMine,'Other player sees waiting');bbAssert(ChoiceRegistry::current($s) instanceof CoinAbilityChoice,'Registered choice');
+bbAssert($spec->buttons[0]['label']==='Да' && $spec->buttons[1]['label']==='Нет','Coin buttons');bbAssert(!$h->spec($s,'player',[],'?game=1','player')->isMine,'Other player sees waiting');bbAssert(ChoiceRegistry::current($s) instanceof CoinAbilityChoice,'Registered choice');
 $s=bbState(true);(new CoinAbilities($s,new Engine()))->offerBlock($s->getCard(2),$s->getCard(1),'strike',['kind'=>'strike']);$spec=$h->spec($s,'host',[],'?game=1','host');bbAssert($spec->buttons[0]['label']==='Блокировать атаку' && $spec->buttons[1]['label']==='Отмена','Block buttons');
 
 // Defense keys retain their existing semantics: ignoring zoan alone does not ignore zoa.
@@ -98,7 +98,7 @@ $screen=new Berserk\View\Screen\BattleScreen(new Berserk\View\Template(__DIR__.'
 $info=['arbitrary_source'=>['name'=>'Бон и Берроу','health'=>10],'enemy'=>['name'=>'Противник','health'=>20]];
 foreach([false,true] as $coin){$s=bbState($coin);$_GET=['sel'=>1];$data=$screen->prepare($s,'host','host',null,$info)['data'];$html=implode('',array_filter($data,'is_string'));
  bbAssert(!str_contains($html,'Накопить монетку'),'No accumulate coin UI');bbAssert(str_contains($html,'mode=uchr')===!$coin,'UCHR visibility follows coins');bbAssert(!str_contains($html,'mode=action:triggered_discharge'),'Discharge not a standalone action');bbAssert(str_contains($html,$coin?'При нанесении ран ударом':'Без монетки: доступен удар через ряд'),'Current state description');}
-$s=bbState();bbOffer($s);$html=(new Berserk\View\Screen\Battle\InfoPanel(new Berserk\View\Template(__DIR__.'/../templates')))->render($s,'host','host',$info,'?game=1');bbAssert(str_contains($html,'Получить монетку') && str_contains($html,'Не получать монетку'),'Pending rendered in InfoPanel');
+$s=bbState();bbOffer($s);$html=(new Berserk\View\Screen\Battle\InfoPanel(new Berserk\View\Template(__DIR__.'/../templates')))->render($s,'host','host',$info,'?game=1');bbAssert(str_contains($html,'получить монетку?') && str_contains($html,'>Да</a>') && str_contains($html,'>Нет</a>'),'Pending rendered in InfoPanel');
 // Original combat result survives the normal ranged-redirection pending.
 $s=bbState(true);$s->getCard(2)->row=5;$s->getCard(2)->col=3;$s->getCard(2)->prop=['line'=>true];
 $s->addCard(new CardInstance(instanceId:3,ukid:'redirect',owner:'player',zone:'field',row:5,col:4,hp:10,hpMax:10,prop:['line'=>true,'attack_redirect'=>['attack_types'=>'ranged']]));
