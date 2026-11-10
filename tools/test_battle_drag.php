@@ -22,7 +22,7 @@ $tpl = new Template(__DIR__ . '/../templates');
 $before = serialize($state->toArray());
 $render = fn(array $ui) => (new BattleScreen($tpl))->prepare($state, 'host', 'host', null, $cardsInfo, $ui)['data'];
 $snapshot = fn(array $ui) => (new BattleSnapshotRenderer($tpl))->render($state, 'host', 'host', null, $cardsInfo, $ui);
-$cases = ['selected'=>$render(['sel'=>1]), 'unselected'=>$render(['sel'=>0]),
+$cases = ['targeting'=>$render(['sel'=>1, 'mode'=>'strike']), 'selected'=>$render(['sel'=>1]), 'unselected'=>$render(['sel'=>0]),
     'special'=>$render(['sel'=>1,'mode'=>'action:aimed_shot']), 'fly'=>$render(['sel'=>3])];
 battleSnapshotAssert(str_contains($cases['selected']['field_html'], 'data-drag-enabled="1"'), 'Ordinary turn enables drag');
 battleSnapshotAssert(str_contains($cases['special']['field_html'], 'data-drag-enabled="0"'), 'Special action disables drag');

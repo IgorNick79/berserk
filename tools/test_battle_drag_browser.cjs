@@ -72,7 +72,17 @@ const assert = (ok,msg) => {if (!ok) throw Error(msg);};
     release:()=>{releaseRecovery=true;},setDelay:n=>{delay=n;}};
  }
  try {
-  let t=await setup();
+  let t=await setup('targeting');
+  const reset = t.page.waitForResponse(response => {
+   const url = new URL(response.url());
+   return url.searchParams.get('ajax') === 'battle_sync' && url.searchParams.get('sel') === '0';
+  });
+  await t.page.getByRole('link', {name:'Отменить действие', exact:true}).click();
+  await reset;
+  await t.page.getByRole('link', {name:'Отменить действие', exact:true}).waitFor({state:'detached'});
+  assert(!t.posts() && await t.card(1).count(), 'Cancel targeting uses snapshot without command or reload');
+  await t.close('Cancel ordinary targeting over AJAX');
+  t=await setup();
   assert(await t.card(1).evaluate(e=>getComputedStyle(e).cursor==='grab'),'Grab cursor');
   const original=await t.card(1).evaluate(e=>e.outerHTML);await t.begin();
   await t.to(t.page.locator('.move-target').first());
