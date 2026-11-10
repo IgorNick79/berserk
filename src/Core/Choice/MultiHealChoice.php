@@ -68,7 +68,7 @@ final class MultiHealChoice implements ChoiceHandlerInterface
                     'cmd'      => 'choose_multi_heal',
                 ],
                 'submit' => 'Подтвердить',
-                'cancel' => $baseUrl . '&cmd=cancel_pending',
+                'cancel' => $baseUrl . '&cmd=cancel_pending&mode=',
             ],
             cardSelection: new CardSelectionSpec(
                 context: implode(':', [$state->gameId, $playerKey, 'multi-heal',

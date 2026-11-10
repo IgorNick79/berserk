@@ -20,14 +20,16 @@ function fixture(string $type): GameState
     $state = new GameState(970, 1, 2);
     $state->status = 'battle';
     $state->battle = ['active'=>'host', 'turn'=>2, 'strike'=>null, 'hidden_row_revealed'=>true];
-    $action = ['key'=>'stage3', 'type'=>$type, 'max_targets'=>2, 'value'=>1, 'min_x'=>1];
+    $action = ['key'=>'stage3', 'type'=>$type, 'max_targets'=>2, 'value'=>1, 'min_x'=>1, 'filter'=>'own_forest'];
     for ($id = 1; $id <= 5; $id++) {
         $own = $id <= 3;
         $state->addCard(new CardInstance(instanceId:$id, ukid:'card'.$id, owner:$own ? 'host' : 'player',
-            zone:'field', row:$own ? 3 : 4, col:$id, hp:8, hpMax:10, coins:$id === 1 ? 3 : 0,
+            zone:'field', element:$own ? 'forests' : 'plains', row:$own ? 3 : 4, col:$id, hp:8, hpMax:10, coins:$id === 1 ? 3 : 0,
             strikeWeak:1, strikeMedium:2, strikeStrong:3, revealed:$id !== 5,
             prop:$id === 1 ? ['actions'=>[$action]] : []));
     }
+    $state->addCard(new CardInstance(instanceId:6, ukid:'nonforest', owner:'host', zone:'field',
+        element:'plains', row:2, col:1, hp:8, hpMax:10));
     $result = (new Engine())->apply($state, 'host', new Command('action', ['card_id'=>1, 'action_key'=>'stage3']));
     check($result->success, 'Open ' . $type . ': ' . $result->error);
     return $state;
@@ -62,10 +64,16 @@ foreach ([[], [1, 2, 3], [4]] as $invalid) {
     check(!$engine->apply($heal, 'host', new Command('choose_multi_heal', ['target_ids'=>$invalid]))->success,
         'Reject invalid heal picks');
 }
+check($heal->battle['pending_multi_heal']['candidates'] === [1, 2, 3], 'Only own forest cards are eligible');
+$cancelLink = (new \Berserk\Core\Choice\MultiHealChoice())->spec($heal, 'host', $catalog, '?first&game=970', 'host')->form['cancel'];
+parse_str((string) parse_url($cancelLink, PHP_URL_QUERY), $cancelUi);
 $cancelled = GameState::fromArray($heal->toArray());
 check($engine->apply($cancelled, 'host', new Command('cancel_pending'))->success, 'Cancel heal');
 check(!$cancelled->getCard(1)->closed && $cancelled->getCard(2)->hp === 8, 'Cancel does not resolve heal');
-$fixtures['cancelled'] = $render($cancelled);
+$afterCancel = $renderer->render($cancelled, 'host', 'host', null, $catalog, ['sel'=>1, 'mode'=>$cancelUi['mode']]);
+check(!$afterCancel['ui']['mode_explicit'] && !str_contains($afterCancel['fragments']['info_panel_html'], 'name="target_id"'),
+    'Cancel clears the targeting mode without reopening a generic target picker');
+$fixtures['cancelled'] = $afterCancel['fragments'];
 check($engine->apply($heal, 'host', new Command('choose_multi_heal', ['target_ids'=>[2, 3]]))->success, 'Confirm heal');
 check($heal->getCard(2)->hp === 9, 'First heal target received healing');
 $giftRetry = GameState::fromArray($gift->toArray());

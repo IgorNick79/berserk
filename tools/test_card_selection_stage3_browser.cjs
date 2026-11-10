@@ -49,7 +49,7 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
                 await page.setContent('<style>' + styles + '</style><body class="battle-page"><main data-battle-sync-root data-panel-theme="grimoire">' +
                     Object.entries(snapshot).filter(([key]) => key !== 'panel_html').map(([key, html]) =>
                         '<div data-battle-fragment="' + key + '">' + html + '</div>').join('') + '</main>' +
-                    scripts.map(name => '<script data-viewer-key="host" data-version="1" data-sync-url="/?first&amp;game=970&amp;ajax=battle_sync">' +
+                    scripts.map(name => '<script data-viewer-key="host" data-version="1" data-mode="action:stage3" data-mode-explicit="1" data-sync-url="/?first&amp;game=970&amp;ajax=battle_sync">' +
                         read('www/assets/js/' + name + '.js') + '</script>').join(''));
             }
             const row = id => page.locator('[data-card-instance="' + id + '"]');
@@ -112,6 +112,8 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
             await row(3).click();
             await command(page.locator('[data-card-selection] a.skip'));
             assert.equal(posts[1].get('cmd'), 'cancel_pending');
+            assert.equal(posts[1].get('mode'), '');
+            assert.equal(await page.locator('.card-choice-form').count(), 0);
             assert.equal(posts[1].has('target_ids[]'), false);
 
             await show('gift');
