@@ -10,6 +10,7 @@ foreach($d['cases'] as $case){
  $s=new GameState(-401,1,2);$s->status='battle';$s->battle=['active'=>'host','turn'=>1,'strike'=>null];$e=new Engine();
  foreach([1,2] as $id){$s->addCard(new CardInstance(instanceId:$id,ukid:'worm',owner:'host',zone:'field',row:2,col:$id,hp:5,hpMax:5,prop:$d['prop'],flags:[Tremor::USED=>true]));(new ZoneManager($s))->toGraveyard($s->getCard($id));}
  foreach(['host','player'] as $i=>$owner)$s->addCard(new CardInstance(instanceId:10+$i,ukid:'alive',owner:$owner,zone:'field',row:6,col:$i+1,hp:10,hpMax:10));
+ $s->addCard(new CardInstance(instanceId:30,ukid:'neighbor',owner:'host',zone:'field',row:3,col:2,hp:5,hpMax:5));
  if($case['full_back'])for($c=1;$c<=5;$c++)$s->addCard(new CardInstance(instanceId:20+$c,ukid:'block',owner:'host',zone:'field',row:1,col:$c,hp:10,hpMax:10));
  foreach([['b','3_3'],['a','3_3'],['other','4_4'],['occupied','6_1']] as [$id,$cell]){[$r,$c]=array_map('intval',explode('_',$cell));ZoneManager::addMarker($s,$cell,['type'=>'tremor','id'=>$id,'owner'=>$case['marker_owner'],'row'=>$r,'col'=>$c]);}
  // Stage 4B permits occupants; a blocking bonfire still tests an illegal destination.
@@ -26,6 +27,12 @@ foreach($d['cases'] as $case){
  $targets=\Berserk\View\Ui\CellMarkerPicker::targets($s,'host','?game=1');ck(array_keys($targets)===['3_3','4_4'],'only valid cells highlighted');
  $s=GameState::fromArray(json_decode(json_encode($s->toArray()),true));
  ck($e->apply($s,'host',$cmd)->success,'incarnation succeeds');
+ $result=$s->battle['worm_results'][0];
+ ck(($result['wound_amounts'][30]??null)===1 && $s->getCard(30)->hp===4,'actual wound amount retained');
+ $view=(new \Berserk\View\Screen\BattleSnapshotRenderer(new \Berserk\View\Template(__DIR__.'/../templates')))
+     ->render($s,'host','host',null,['neighbor'=>['name'=>'Сосед']])['fragments']['info_panel_html'];
+ ck(str_contains($view,'Сосед — 1 HP') && !str_contains($view,'Сосед #30'),'result shows HP and hides instance IDs');
+ ck(strpos($view,'data-dismiss-battle-notice') < strpos($view,'<footer'),'dismissible result is above the footer');
  ck($s->getCard(1)->zone==='field'&&!$s->getCard(1)->closed&&$s->getCard(1)->hp===5,'open native arrival');
  ck(array_column(ZoneManager::markersAt($s,'3_3'),'id')===['b'],'one stable ID consumed');
  ck(count(ZoneManager::markersAt($s,'4_4'))===1,'other cell unchanged');

@@ -159,15 +159,6 @@ final class BattleScreen
             }
         }
         $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml, $pilePanelHtml, $actionChoice, $ui['inspect'] ?? 0);
-        foreach($state->battle['worm_results']??[] as $result) {
-            if(($result['turn']??null)!==($state->battle['turn']??null))continue;
-            $nameOf=static function($id)use($state,$cardsInfo){$card=$state->getCard((int)$id);return ($card?($cardsInfo[$card->ukid]['name']??$card->ukid):'Карта').' #'.$id;};
-            $destroyed=implode(', ',array_map($nameOf,$result['destroyed']));
-            $wounded=implode(', ',array_map($nameOf,$result['wounded']));
-            $text='Появился Скелетный червь на клетке '.\Berserk\View\Ui\BattlefieldPosition::label($result['row'],$result['col'],$playerKey)
-                . '. Уничтожены: '.($destroyed?:'нет').'. Получили раны: '.($wounded?:'нет').'.';
-            $infoPanelHtml .= \Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(title:'Инкарнация Скелетного червя',text:[htmlspecialchars($text,ENT_QUOTES,'UTF-8')]));
-        }
         $healingMessages = $state->battle['card_healing']['messages'] ?? [];
         if ($healingMessages) {
             $infoPanelHtml .= \Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(

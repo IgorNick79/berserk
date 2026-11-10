@@ -93,6 +93,7 @@ final class InfoPanel
         if ($inInstantStack) $combatKey = 'instant:' . ($state->battle['turn'] ?? 0);
         if ($priority && $combatKey === '') $combatKey = 'information:' . ($state->battle['turn'] ?? 0);
         $body = $actionChoiceHtml !== '' ? $actionChoiceHtml : $this->renderOchiKrongaNotice() . $this->renderBody();
+        $body = $this->renderWormResults() . $body;
         $instantWindow = $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
         $turnInstant = !$inCombat && ($instantWindow
@@ -119,6 +120,39 @@ final class InfoPanel
     }
 
     /** The per-card counter is persisted with gameplay; rendering never consumes it. */
+    private function renderWormResults(): string
+    {
+        $html = '';
+        $scope = htmlspecialchars('worm:' . $this->state->gameId . ':' . $this->playerKey, ENT_QUOTES);
+        foreach ($this->state->battle['worm_results'] ?? [] as $result) {
+            if (($result['turn'] ?? null) !== ($this->state->battle['turn'] ?? null)) continue;
+
+            $nameOf = function (int $id): string {
+                $card = $this->state->getCard($id);
+                if (!$card || (!$card->revealed && $card->owner !== $this->playerKey)) return 'Закрытое существо';
+                return htmlspecialchars($this->cardsInfo[$card->ukid]['name'] ?? $card->ukid, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            };
+            $operation = htmlspecialchars((string) $result['operation_id'], ENT_QUOTES);
+            $position = \Berserk\View\Ui\Coords::renderResult($result['row'], $result['col'], $this->playerKey);
+            $html .= '<section class="card-choice" data-battle-notice="' . $scope . '">'
+                . '<div data-battle-notice-id="' . $operation . '"><h3>Инкарнация Скелетного червя</h3>'
+                . '<p>Скелетный червь появился на клетке ' . $position . '.</p>';
+            if (!empty($result['destroyed'])) {
+                $html .= '<p>Уничтожены: ' . implode(', ', array_map($nameOf, $result['destroyed'])) . '.</p>';
+            }
+            if (!empty($result['wounded'])) {
+                $html .= '<p>Получили раны:</p><ul>';
+                foreach ($result['wounded'] as $id) {
+                    $amount = $result['wound_amounts'][$id] ?? null;
+                    $html .= '<li>' . $nameOf($id) . ($amount === null ? '' : ' — ' . (int) $amount . ' HP') . '</li>';
+                }
+                $html .= '</ul>';
+            }
+            $html .= '<button type="button" class="button small cancel" data-dismiss-battle-notice>Закрыть</button></div></section>';
+        }
+        return $html;
+    }
+
     private function renderOchiKrongaNotice(): string
     {
         $html = '';

@@ -100,7 +100,7 @@
 .battle-page .directional-target-option{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%}
 .battle-page .directional-target-option>span:first-child{min-width:0;overflow-wrap:anywhere}
 .battle-page .directional-target-option>.coords{flex:0 0 auto;margin-left:auto;white-space:nowrap}
-.battle-page .ochi-kronga-notice[hidden],.battle-page [data-ochi-opening][hidden]{display:none!important}
+.battle-page [data-battle-notice][hidden],.battle-page .ochi-kronga-notice[hidden],.battle-page [data-ochi-opening][hidden]{display:none!important}
 .battle-page .ochi-kronga-notice>summary h3{display:inline}
 .battle-page .info-panel-instants{flex:0 1 auto;min-height:0;max-height:45vh;overflow:auto;padding:12px;border-top:1px solid var(--ip-edge,#bbb)}
 .battle-page .info-panel-instants>.button{display:block;text-align:center}
