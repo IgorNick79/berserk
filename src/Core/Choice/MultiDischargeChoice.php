@@ -44,7 +44,10 @@ final class MultiDischargeChoice implements ChoiceHandlerInterface
             );
         }
 
-        $max   = (int) $pmd['max_targets'];
+        $series = \Berserk\Core\ActionResolver::isDischargeSeries($pmd);
+        $step = count($pmd['results'] ?? []) + 1;
+        $limit = (int) $pmd['max_targets'];
+        $max = $series ? 1 : $limit;
         $value = (int) $pmd['value'];
 
         $items = [];
@@ -64,9 +67,10 @@ final class MultiDischargeChoice implements ChoiceHandlerInterface
         $roleParam = $role === 'host' ? 'first' : 'second';
 
         return new PanelSpec(
-            title: $attName . ' — выбери до ' . $max . ' целей (по ' . $value . ' урона):',
+            title: $series ? $attName . ' — выберите цель разряда ' . $step . ' из ' . $limit
+                : $attName . ' — выбери до ' . $max . ' целей (по ' . $value . ' урона):',
             form: [
-                'type'   => 'checkbox',
+                'type'   => $series ? 'radio' : 'checkbox',
                 'name'   => 'target_ids[]',
 
                 'hidden' => [
@@ -75,10 +79,11 @@ final class MultiDischargeChoice implements ChoiceHandlerInterface
                     'cmd'      => 'choose_multi_discharge',
                 ],
                 'submit' => 'Подтвердить',
-                'cancel' => $baseUrl . '&cmd=cancel_pending&mode=',
+                'cancel' => $series ? null : $baseUrl . '&cmd=cancel_pending&mode=',
             ],
             cardSelection: CreatureChoice::confirmed(
-                $state, $playerKey, $cardsInfo, $items, 'multi-discharge:' . ($pmd['action'][\Berserk\Core\ActionResolution::ID] ?? $state->version), 1, $max,
+                $state, $playerKey, $cardsInfo, $items,
+                'multi-discharge:' . ($pmd['series_id'] ?? $state->version) . ':' . $step, 1, $max,
             ),
         );
     }
@@ -91,6 +96,9 @@ final class MultiDischargeChoice implements ChoiceHandlerInterface
     ): Result {
         $ar = new \Berserk\Core\ActionResolver($state, $engine);
         if ($cmd->type === 'cancel_pending') {
+            if (\Berserk\Core\ActionResolver::isDischargeSeries($state->battle[$this->pendingKey()] ?? [])) {
+                return Result::error('Обязательный выбор цели разряда');
+            }
             return $ar->cancelPending($playerKey, $cmd);
         }
         return $ar->chooseMultiDischarge($playerKey, $cmd);

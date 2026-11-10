@@ -2255,6 +2255,9 @@ final class ActionResolver
             'value'       => (int) ($action['value'] ?? 1),
         ];
 
+        if (($action['key'] ?? null) === 'triple_discharge') {
+            $this->state->battle['pending_multi_discharge']['series_id'] = $this->state->version;
+        }
         $this->state->bumpVersion();
         return Result::ok(['multi_discharge_started']);
     }
@@ -2262,6 +2265,10 @@ final class ActionResolver
     public function chooseMultiDischarge(string $playerKey, Command $cmd): Result
     {
         if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_multi_discharge', 'attacker_id')) return $skipped;
+        $pending = $this->state->battle['pending_multi_discharge'] ?? [];
+        if (self::isDischargeSeries($pending)) {
+            return $this->chooseDischargeSeriesTarget($playerKey, $cmd, $pending);
+        }
         $parsed = $this->parseMultiPick($playerKey, $cmd, 'pending_multi_discharge');
         if ($parsed instanceof Result) return $parsed;
 
@@ -2325,6 +2332,79 @@ final class ActionResolver
         $this->engine->flushDeadeatQueue($this->state);
         $this->state->bumpVersion();
         return Result::ok(['multi_discharge_done']);
+    }
+
+    public static function isDischargeSeries(array $pending): bool
+    {
+        return ($pending['action']['key'] ?? null) === 'triple_discharge';
+    }
+
+    private function chooseDischargeSeriesTarget(string $owner, Command $cmd, array $pending): Result
+    {
+        $source = $this->state->getCard((int) $pending['attacker_id']);
+        if (!$source || $source->owner !== $owner || !CardHealing::live($source)) {
+            return Result::error('Источник разряда недоступен');
+        }
+        $ids = $cmd->get('target_ids', []);
+        if (!is_array($ids) || count($ids) !== 1) return Result::error('Выберите одну цель');
+        $id = (int) reset($ids);
+        $target = $this->state->getCard($id);
+        if (!in_array($id, $pending['candidates'], true) || !CardHealing::live($target) || $target->owner === $owner) {
+            return Result::error('Неверная цель');
+        }
+
+        $action = [
+            'type'=>'discharge',
+            'name'=>$pending['action']['name'] ?? 'Тройной разряд',
+            'value'=>(int) $pending['value'],
+        ];
+        ActionResolution::bind($this->state, $action, $source, 'discharge', 'ordinary');
+        $pending[ActionResolution::ID] = $action[ActionResolution::ID];
+        $pending['series_id'] ??= $this->state->version;
+        $pending['results'] ??= [];
+        $pending['candidates'] = array_values(array_diff($pending['candidates'], [$id]));
+        unset($this->state->battle['pending_multi_discharge']);
+        $this->state->battle['multi_discharge_series'] = $pending;
+        return $this->triggeredDischarge($source, $target, $action);
+    }
+
+    /** Called at the same result acknowledgement boundary as the Hydra's series. */
+    public function finishDischargeSeriesStrike(array $strike): bool
+    {
+        $series = $this->state->battle['multi_discharge_series'] ?? null;
+        if (!$series || ($strike[ActionResolution::ID] ?? null) !== $series[ActionResolution::ID]) return false;
+        unset($this->state->battle['multi_discharge_series'], $series[ActionResolution::ID]);
+        $series['results'][] = [
+            'target_id'=>(int) ($strike['target_id'] ?? 0),
+            'dice'=>(int) ($strike['attack_dice'] ?? 0),
+            'damage'=>(int) ($strike['damage_total'] ?? $strike['damage'] ?? 0),
+            'defended'=>!empty($strike['defended']) || !empty($strike['first_strike_blocked'])
+                || !empty($strike['coin_blocked']) || !empty($strike['temple_defense']['blocked']),
+        ];
+        $source = $this->state->getCard((int) $series['attacker_id']);
+        $lastTarget = (int) ($strike['target_id'] ?? 0);
+        $series['candidates'] = array_values(array_filter($series['candidates'], function (int $id) use ($lastTarget): bool {
+            $card = $this->state->getCard($id);
+            return $id !== $lastTarget && CardHealing::live($card);
+        }));
+        if ($this->state->status !== 'battle' || $this->state->winner !== null) return true;
+        if (CardHealing::live($source) && !EffectiveFeatures::suppressed($source)
+            && count($series['results']) < (int) $series['max_targets'] && $series['candidates']) {
+            $this->state->battle['pending_multi_discharge'] = $series;
+            return true;
+        }
+        if (CardHealing::live($source)) $source->closed = true;
+        InformationalWaitManager::publish($this->state);
+        $this->state->battle['strike'] = [
+            'kind'=>'multi_discharge', 'state'=>'results', 'attacker_id'=>$series['attacker_id'],
+            'target_id'=>$series['results'][0]['target_id'], 'defender_id'=>null,
+            'action_name'=>($series['action']['name'] ?? 'Тройной разряд') . ' — итог',
+            'attack_dice'=>0, 'defend_dice'=>0, 'damage'=>0, 'confirmed'=>[],
+            'result'=>['attack'=>'', 'defend'=>'', 'winner'=>''],
+            'final'=>['attack'=>'', 'defend'=>'', 'decreased'=>false],
+            'discharged'=>$series['results'],
+        ];
+        return true;
     }
 
     public function cancelPending(string $playerKey, Command $cmd): Result

@@ -12,6 +12,7 @@ function mtFixture(string $kind = 'discharge'): GameState {
     $s->status = 'battle';
     $s->battle = ['active'=>'host', 'turn'=>2, 'strike'=>null];
     $action = ['key'=>'multi', 'type'=>'multi_discharge', 'value'=>1, 'max_targets'=>3];
+    if ($kind === 'acolyte') $action['key'] = 'triple_discharge';
     if ($kind === 'heal') $action = ['key'=>'multi', 'type'=>'heal', 'value'=>1, 'max_targets'=>3];
     for ($id=1; $id<=6; $id++) {
         $owner = ($id===1 || ($kind==='heal' && $id<6)) ? 'host' : 'player';
@@ -21,7 +22,7 @@ function mtFixture(string $kind = 'discharge'): GameState {
             prop:$id===1?['actions'=>[$action]]:[]));
     }
     $engine = new Engine();
-    mtAssert($engine->apply($s, 'host', new Command('action', ['card_id'=>1,'action_key'=>'multi']))->success, 'Open real multi-target action');
+    mtAssert($engine->apply($s, 'host', new Command('action', ['card_id'=>1,'action_key'=>$action['key']]))->success, 'Open real multi-target action');
     if ($kind === 'row') {
         unset($s->battle['pending_multi_discharge']);
         $s->battle['pending_row_spell_pick'] = ['owner'=>'host','source_id'=>1, 'x'=>3,
@@ -118,6 +119,39 @@ mtAssert(!$engine->apply($s,'player',new Command('cancel_pending'))->success && 
 $s=GameState::fromArray(json_decode(json_encode($s->toArray()),true));
 mtAssert($engine->apply($s,'host',new Command('cancel_pending'))->success && !isset($s->battle['pending_multi_discharge']), 'Owner cancels restored pending through Engine');
 mtAssert(!$engine->apply($s,'host',new Command('cancel_pending'))->success, 'Repeated cancel has no additional effect');
+$series = mtFixture('acolyte');
+$series->getCard(4)->prop['zor'] = true;
+$_SESSION['debug_roll'] = '2,4,6,1';
+\Berserk\Core\Dice::init();
+mtAssert(!$engine->apply($series, 'host', new Command('cancel_pending'))->success, 'Acolyte series cannot be cancelled');
+mtAssert(!$engine->apply($series, 'host', new Command('choose_multi_discharge',['target_ids'=>[2,3]]))->success,
+    'Acolyte requires one target per decision');
+foreach ([2,3,4] as $step => $targetId) {
+    $snapshot = (new \Berserk\View\Screen\BattleSnapshotRenderer(new \Berserk\View\Template(__DIR__ . '/../templates')))
+        ->render($series, 'host', 'host', null, [])['fragments']['info_panel_html'];
+    mtAssert(str_contains($snapshot, 'type="radio"') && !str_contains($snapshot, 'cmd=cancel_pending'), 'Single target with no cancel');
+    mtAssert($engine->apply($series, 'host', new Command('choose_multi_discharge',['target_ids'=>[$targetId]]))->success,
+        'Select a single target');
+    $strike = $series->battle['strike'];
+    mtAssert($strike['kind'] === 'discharge' && $strike['target_id'] === $targetId
+        && $strike['attack_dice'] === [2,4,6][$step] && empty($series->battle['pending_multi_discharge']),
+        'Native combat and one die before choosing the next target');
+    $combat = (new \Berserk\View\Screen\BattleSnapshotRenderer(new \Berserk\View\Template(__DIR__ . '/../templates')))
+        ->render($series, 'host', 'host', null, [])['fragments']['info_panel_html'];
+    mtAssert(str_contains($combat, '>Сражение</h3>') && str_contains($combat, 'dice_' . [2,4,6][$step] . '.svg')
+        && !str_contains($combat, 'cmd=choose_multi_discharge'), 'Combat pane shows this roll without a target form');
+    $series = GameState::fromArray($series->toArray());
+    foreach (['host','player'] as $side) {
+        $wait = \Berserk\Core\InformationalWaitManager::token($series);
+        $ack = $engine->apply($series, $side, new Command('confirm_strike',['wait_id'=>$wait]));
+        mtAssert($ack->success, 'Acknowledge individual discharge: ' . $ack->error);
+    }
+}
+mtAssert(array_column($series->battle['strike']['discharged'], 'damage') === [1,1,0]
+    && $series->getCard(1)->closed && empty($series->battle['multi_discharge_series'])
+    && empty($series->battle['pending_multi_discharge']), 'Summary preserves completed combats, including a protected last target');
+unset($_SESSION['debug_roll'], $_SESSION['debug_roll_state']);
+\Berserk\Core\Dice::init();
 foreach (['heal'=>'choose_multi_heal','row'=>'choose_row_spell_targets'] as $kind=>$cmd) {
     $s=mtFixture($kind);
     mtAssert((new Engine())->apply($s,'host',new Command($cmd,['target_ids'=>[2,3,4]]))->success, 'Other multi-target command works');

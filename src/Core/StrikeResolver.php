@@ -1692,6 +1692,14 @@ final class StrikeResolver
             return Result::ok(['after_strike_execute']);
         }
 
+        $dischargeSeries = $this->state->battle['multi_discharge_series'] ?? null;
+        if ($dischargeSeries && ($strike[ActionResolution::ID] ?? null) === $dischargeSeries[ActionResolution::ID]) {
+            if (empty($strike['continuation_frame'])) $this->state->historyRecorder?->combatFinished($this->state);
+            (new ActionResolver($this->state, $this->engine))->finishDischargeSeriesStrike($strike);
+            $this->state->bumpVersion();
+            return Result::ok(['multi_discharge_series_advanced']);
+        }
+
         if ($this->openAttackSeriesChoice($strike)) {
             if (empty($strike['continuation_frame'])) $this->state->historyRecorder?->combatFinished($this->state);
             $this->state->bumpVersion();
