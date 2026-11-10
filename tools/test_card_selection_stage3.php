@@ -88,4 +88,15 @@ check(!$engine->apply($gift, 'host', new Command('choose_life_gift', ['amount'=>
 check($engine->apply($gift, 'host', new Command('choose_life_gift', ['amount'=>2, 'enemy_id'=>4, 'ally_id'=>3]))->success,
     'Confirm life gift with exact existing fields');
 check($gift->getCard(1)->coins === 1 && $gift->getCard(4)->hp === 6, 'Life gift spent coins and wounded the enemy');
+$grezy = GameState::fromArray($cancelled->toArray());
+$grezy->getCard(5)->revealed = true;
+$grezy->battle['pending_grezy'] = [
+    'attacker_id'=>1, 'shown_ukid'=>'card4', 'price'=>1, 'enemies'=>[4, 5], 'allies'=>[2, 3],
+    'chosen_enemy'=>null, 'chosen_own'=>null, 'opened_version'=>$grezy->version,
+];
+$fixtures['grezy'] = $render($grezy);
+check(!str_contains($fixtures['grezy']['info_panel_html'], 'cmd=cancel_pending'), 'Grezy has no cancel link');
+check($engine->apply($grezy, 'host', new Command('grezy_pick', ['enemy_id'=>4]))->success, 'Confirm Grezy enemy');
+$fixtures['grezyAlly'] = $render($grezy);
+check($engine->apply($grezy, 'host', new Command('grezy_pick', ['own_id'=>2]))->success, 'Confirm Grezy ally');
 echo json_encode($fixtures, JSON_THROW_ON_ERROR);

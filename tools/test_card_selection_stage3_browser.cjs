@@ -31,7 +31,7 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
                     const params = new URLSearchParams(request.postData());
                     posts.push(params);
                     commandId = params.get('command_id');
-                    snapshot = fixtures.cancelled;
+                    snapshot = params.get('cmd') === 'grezy_pick' && params.has('enemy_id') ? fixtures.grezyAlly : fixtures.cancelled;
                     version++;
                 }
                 if (request.method() === 'GET' && !url.searchParams.has('force_snapshot')
@@ -157,6 +157,24 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
             version++;
             await page.locator('[data-card-selection]').waitFor({state: 'detached'});
             assert.deepEqual(await selected(), []);
+            await show('grezy');
+            const grezyNav = navigations;
+            assert.equal(await page.locator('[data-card-selection] a.skip').count(), 0);
+            await gesture(4);
+            assert.equal(await row(4).locator('input').isChecked(), true);
+            assert.equal(posts.length, 3);
+            const grezySync = page.waitForResponse(response => new URL(response.url()).searchParams.get('force_snapshot') === '1'
+                && new URL(response.url()).searchParams.get('since_version') === '2');
+            await Promise.all([page.waitForResponse(response => response.request().method() === 'POST'), submit.click()]);
+            await grezySync;
+            await page.locator('input[name=own_id]').first().waitFor();
+            assert.equal(posts[3].get('enemy_id'), '4');
+            assert.deepEqual(await selected(), []);
+            assert.equal(await page.locator('[data-card-selection] a.skip').count(), 0);
+            await gesture(2);
+            await command(submit);
+            assert.equal(posts[4].get('own_id'), '2');
+            assert.equal(navigations, grezyNav);
             assert.deepEqual(errors, []);
             console.log('PASS Stage 3 at ' + width + 'px');
             await page.close();

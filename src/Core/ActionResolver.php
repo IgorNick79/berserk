@@ -2949,6 +2949,7 @@ final class ActionResolver
         }
 
         $this->state->battle['pending_grezy'] = [
+            'opened_version' => $this->state->version,
             'attacker_id'  => $attacker->instanceId,
             'shown_ukid'   => $pp['shown_ukids'][0],
             'price'        => $price,

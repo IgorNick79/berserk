@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CardSelectionSpec, CreatureChoice, PanelSpec};
 
 final class GrezyChoice implements ChoiceHandlerInterface
 {
@@ -43,63 +43,35 @@ final class GrezyChoice implements ChoiceHandlerInterface
             );
         }
 
-        $price     = (int) $pg['price'];
-
-        $groups = [];
-
-        if (!empty($pg['enemies'])) {
-            $items = [];
-            foreach ($pg['enemies'] as $tid) {
-                $tc = $state->getCard($tid);
-                if (!$tc) continue;
-                $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-                $items[] = [
-                    'value'   => $tid,
-                    'label'   => $tn,
-                    'checked' => count($pg['enemies']) === 1,
-                ];
-            }
-            $groups[] = [
-                'name'  => 'enemy_id',
-
-                'items' => $items,
-            ];
-        } elseif (!empty($pg['allies'])) {
-            $items = [];
-            foreach ($pg['allies'] as $tid) {
-                $tc = $state->getCard($tid);
-                if (!$tc) continue;
-                $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-                $items[] = [
-                    'value'   => $tid,
-                    'label'   => $tn,
-                    'checked' => count($pg['allies']) === 1,
-                ];
-            }
-            $groups[] = [
-                'name'  => 'own_id',
-                'label' => '',
-                'items' => $items,
-            ];
-        }
+        $price = (int) $pg['price'];
+        $enemyStep = !empty($pg['enemies']);
+        $ids = $enemyStep ? $pg['enemies'] : $pg['allies'];
+        $field = $enemyStep ? 'enemy_id' : 'own_id';
+        $mode = CardSelectionSpec::SIMPLE;
 
         $roleParam = $role === 'host' ? 'first' : 'second';
 
         return new PanelSpec(
-            title: !empty($pg['enemies'])
+            title: $enemyStep
                 ? 'Грезы Архаля (цена ' . $price . ') : выберите карту противника для отравления на 1'
                 : '−1 от немагических атак',
             form: [
-                'type'   => 'multi_radio',
-                'groups' => $groups,
+                'name'   => $field,
                 'hidden' => [
                     $roleParam => '',
                     'game'     => $state->gameId,
                     'cmd'      => 'grezy_pick',
                 ],
-                'submit' => !empty($pg['enemies']) ? 'Отравить' : 'Усилить',
-                'cancel' => empty($pg['chosen_enemy']) ? $baseUrl . '&cmd=cancel_pending' : null,
+                'submit' => $enemyStep ? 'Отравить' : 'Усилить',
             ],
+            cardSelection: new CardSelectionSpec(
+                context: implode(':', [$state->gameId, $playerKey, 'grezy', $pg['attacker_id'], $field,
+                    $pg['opened_version'] ?? 'legacy-' . $state->version]),
+                candidates: CreatureChoice::candidates($state, $ids, $playerKey, $cardsInfo, $mode),
+                mode: $mode,
+                selected: count($ids) === 1 ? array_values($ids) : [],
+                battlefieldOwner: $playerKey,
+            ),
         );
     }
 
