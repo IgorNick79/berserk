@@ -22,4 +22,10 @@ lc(empty($s->battle['pending_grave_ritual']) && empty($s->battle['grave_ritual']
 $s->battle['pending_grave_ritual'] = ['id'=>'pick', 'owner'=>'host', 'candidates'=>[3]];
 $legal = \Berserk\Core\Legal\LegalActions::build($s, 'host');
 lc($legal['decision'] !== 'grave_ritual_ack', 'Target choice is not mistaken for a result');
+$notice = $s->battle['grave_ritual_notice']['player'] ?? null;
+lc(($notice['milled_ukid'] ?? null) === 'deck', 'Opponent retains milled card after bot acknowledgement');
+$html = (new \Berserk\View\Screen\Battle\InfoPanel(new \Berserk\View\Template(__DIR__ . '/../templates')))
+    ->render($s, 'player', 'second', ['deck'=>['name'=>'Отправленная карта']], '?game=1');
+lc(str_contains($html, 'Отправленная карта') && str_contains($html, 'data-dismiss-battle-notice'),
+    'Opponent sees a locally dismissible ritual notice');
 echo "Bot grave ritual acknowledgement passed.\n";

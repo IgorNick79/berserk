@@ -93,7 +93,7 @@ final class InfoPanel
         if ($inInstantStack) $combatKey = 'instant:' . ($state->battle['turn'] ?? 0);
         if ($priority && $combatKey === '') $combatKey = 'information:' . ($state->battle['turn'] ?? 0);
         $body = $actionChoiceHtml !== '' ? $actionChoiceHtml : $this->renderOchiKrongaNotice() . $this->renderBody();
-        $body = $this->renderWormResults() . $this->renderProphecyBlockNotice()
+        $body = $this->renderGraveRitualNotice() . $this->renderWormResults() . $this->renderProphecyBlockNotice()
             . (!$inCombat ? $this->renderRagnarValhallaNotice() : '') . $body;
         $instantWindow = $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
@@ -135,6 +135,20 @@ final class InfoPanel
             }
         }
         return '';
+    }
+
+    private function renderGraveRitualNotice(): string
+    {
+        $notice = $this->state->battle['grave_ritual_notice'][$this->playerKey] ?? null;
+        if (!$notice || $notice['turn'] !== ($this->state->battle['turn'] ?? null)) return '';
+        $source = $this->cardsInfo[$notice['source_ukid']]['name'] ?? $notice['source_ukid'];
+        $card = $this->cardsInfo[$notice['milled_ukid']]['name'] ?? $notice['milled_ukid'];
+        $scope = 'grave-ritual:' . $this->state->gameId . ':' . $this->playerKey;
+        return '<section class="card-choice" data-battle-notice="' . htmlspecialchars($scope, ENT_QUOTES) . '">'
+            . '<div data-battle-notice-id="' . htmlspecialchars($notice['id'], ENT_QUOTES) . '">'
+            . '<h3>' . htmlspecialchars($source, ENT_QUOTES) . '</h3><p>'
+            . htmlspecialchars($card, ENT_QUOTES) . ' — отправлена с верха колоды на кладбище.</p>'
+            . '<button type="button" class="button small cancel" data-dismiss-battle-notice>Закрыть</button></div></section>';
     }
 
     private function renderProphecyBlockNotice(): string
