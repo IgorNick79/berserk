@@ -131,13 +131,16 @@ final class InfoPanel
                 $scope = htmlspecialchars('ragnar-valhalla:' . $this->state->gameId . ':' . $this->playerKey, ENT_QUOTES);
                 $operation = htmlspecialchars($period . ':' . $card->instanceId, ENT_QUOTES);
                 return '<div data-battle-notice="' . $scope . '"><div data-battle-notice-id="' . $operation . '">'
+                    . '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon"'
+                    . ' src="/assets/images/battle/cell_info.svg" width="24" height="24" alt="">'
+                    . '<h3 class="panel-card-title">Информация</h3></div><div class="combat-panel-body">'
                     . Panel::render(new \Berserk\View\Ui\PanelSpec(
                         title: 'Вальхалла Рагнара',
                         text: [
                             'Первый простой удар вашего существа в этом ходу станет безответным.',
-                            '<button type="button" class="button small cancel" data-dismiss-battle-notice>Закрыть</button>',
+                            '<div class="card-selection-actions"><button type="button" class="button small" data-dismiss-battle-notice>Продолжить</button></div>',
                         ],
-                    )) . '</div></div>';
+                    )) . '</div></div></div>';
             }
         }
         return '';
