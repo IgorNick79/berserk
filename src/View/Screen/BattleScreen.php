@@ -877,10 +877,12 @@ final class BattleScreen
             && ChoiceRegistry::current($state) === null
             && empty($state->battle['turn_instant_stack']) && empty($state->battle['turn_instant_result'])) {
             $showHealth = false;
+            $confirmedBomb = false;
             $abilityName = substr($mode, 7);
             foreach ($c->effectiveProp()['actions'] ?? [] as $action) {
                 if (($action['key'] ?? $action['type'] ?? '') !== substr($mode, 7)) continue;
                 $showHealth = ($action['type'] ?? '') === 'heal';
+                $confirmedBomb = ($action['type'] ?? '') === 'bomb_shot';
                 $typeNames=['discharge'=>'Разряд','shot'=>'Выстрел','throw'=>'Метание','uchr'=>'Удар через ряд','magic'=>'Магический удар','tap'=>'Простой удар','heal'=>'Излечение'];
                 $abilityName = (string) ($action['name'] ?? $action['label'] ?? $typeNames[$action['type']??''] ?? $abilityName);
                 break;
@@ -905,6 +907,11 @@ final class BattleScreen
                     ]),
                     'submit' => 'Применить', 'cancel' => $baseUrl . '&sel=0',
                 ],
+                cardSelection: $confirmedBomb ? \Berserk\View\Ui\CreatureChoice::confirmed(
+                    $state, $playerKey, $cardsInfo, $items,
+                    'bomb-target:' . $c->instanceId . ':' . $mode . ':' . ($state->battle['turn'] ?? 0),
+                    mode: \Berserk\View\Ui\CardSelectionSpec::SIMPLE,
+                ) : null,
             ));
         }
         return '';

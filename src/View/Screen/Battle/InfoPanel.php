@@ -93,7 +93,7 @@ final class InfoPanel
         if ($inInstantStack) $combatKey = 'instant:' . ($state->battle['turn'] ?? 0);
         if ($priority && $combatKey === '') $combatKey = 'information:' . ($state->battle['turn'] ?? 0);
         $body = $actionChoiceHtml !== '' ? $actionChoiceHtml : $this->renderOchiKrongaNotice() . $this->renderBody();
-        $body = $this->renderGraveRitualNotice() . $this->renderWormResults() . $this->renderProphecyBlockNotice()
+        $body = $this->renderGateNotice() . $this->renderGraveRitualNotice() . $this->renderWormResults() . $this->renderProphecyBlockNotice()
             . (!$inCombat ? $this->renderRagnarValhallaNotice() : '') . $body;
         $instantWindow = $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
@@ -144,6 +144,27 @@ final class InfoPanel
             }
         }
         return '';
+    }
+
+    private function renderGateNotice(): string
+    {
+        $notice = $this->state->battle['gate_notice'] ?? null;
+        if (!$notice || $notice['turn'] !== ($this->state->battle['turn'] ?? null)) return '';
+        $cells = [];
+        foreach ($notice['cells'] as $cell) {
+            [$row, $col] = array_map('intval', explode('_', $cell));
+            $cells[] = \Berserk\View\Ui\Coords::renderResult($row, $col, $this->playerKey);
+        }
+        $scope = 'gates:' . $this->state->gameId . ':' . $this->playerKey;
+        return '<section data-battle-notice="' . htmlspecialchars($scope, ENT_QUOTES) . '">'
+            . '<div data-battle-notice-id="' . (int) $notice['id'] . '">'
+            . '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon"'
+            . ' src="/assets/images/battle/cell_info.svg" width="24" height="24" alt="">'
+            . '<h3 class="panel-card-title">Информация</h3></div>'
+            . '<div class="combat-panel-body"><div class="card-choice"><h3>Врата расставлены</h3>'
+            . '<p>Врата появились на клетках ' . implode(' ', $cells) . '.</p>'
+            . '<div class="card-selection-actions"><button type="button" class="button" data-dismiss-battle-notice>'
+            . 'Продолжить</button></div></div></div></div></section>';
     }
 
     private function renderGraveRitualNotice(): string

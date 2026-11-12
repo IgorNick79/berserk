@@ -3636,6 +3636,10 @@ final class ActionResolver
                     'timing' => 'end_of_opponent_turn',
                 ]);
             }
+            $this->state->battle['gate_notice'] = [
+                'turn'=>$this->state->battle['turn'], 'id'=>$this->state->version,
+                'cells'=>$this->state->battle['pending_gate_pick']['chosen'],
+            ];
             unset($this->state->battle['pending_gate_pick']);
 
             if (!empty($this->state->battle['turn_phase'])) {
