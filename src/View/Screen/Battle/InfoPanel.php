@@ -128,10 +128,16 @@ final class InfoPanel
             if ($card->owner === $this->playerKey && $card->zone === CardInstance::ZONE_GRAVEYARD
                 && ($card->flags['ragnar_valhalla_resolved_period'] ?? null) === $period
                 && empty($card->flags['ragnar_unanswer_used_this_turn'])) {
-                return Panel::render(new \Berserk\View\Ui\PanelSpec(
-                    title: 'Вальхалла Рагнара',
-                    text: ['Первый простой удар вашего существа в этом ходу станет безответным.'],
-                ));
+                $scope = htmlspecialchars('ragnar-valhalla:' . $this->state->gameId . ':' . $this->playerKey, ENT_QUOTES);
+                $operation = htmlspecialchars($period . ':' . $card->instanceId, ENT_QUOTES);
+                return '<div data-battle-notice="' . $scope . '"><div data-battle-notice-id="' . $operation . '">'
+                    . Panel::render(new \Berserk\View\Ui\PanelSpec(
+                        title: 'Вальхалла Рагнара',
+                        text: [
+                            'Первый простой удар вашего существа в этом ходу станет безответным.',
+                            '<button type="button" class="button small cancel" data-dismiss-battle-notice>Закрыть</button>',
+                        ],
+                    )) . '</div></div>';
             }
         }
         return '';
