@@ -1205,14 +1205,6 @@ final class BattleScreen
                 $statusHtml = '<p>Кликни по существу оппонента для атаки.</p>';
             }
         }
-        if (!empty($c->prop['on_wounding_strike'])) {
-            $effect = $c->prop['on_wounding_strike'];
-            $values = array_map('intval', (array) ($effect['strike'] ?? []));
-            $hint = $c->coins >= (int) ($effect['min_coins'] ?? 1)
-                ? 'При нанесении ран ударом — разряд ' . implode('–', $values) . ', дальность ' . (int) ($effect['range'] ?? 0) . '. Монетка сохраняется.'
-                : 'Без монетки: доступен удар через ряд; после него можно получить монетку.';
-            $statusHtml .= '<p>' . htmlspecialchars($hint, ENT_QUOTES) . '</p>';
-        }
         $strangulationHint = \Berserk\Core\Strangulation::hint($c);
         if ($strangulationHint !== '') $statusHtml .= '<p>' . htmlspecialchars($strangulationHint, ENT_QUOTES) . '</p>';
         $statusHtml .= $this->linkedRecruitBattleHint($state, $c, $cardsInfo);
@@ -1221,7 +1213,6 @@ final class BattleScreen
             $regen = (new \Berserk\Core\Engine())->getRegenerationAmount($c);
             if ($regen > 0) $statusHtml .= '<p>Регенерация ' . $regen . '.</p>';
             if (!empty($c->prop['zoal'])) $statusHtml .= '<p>ЗОАЛ — защита от атак летающих.</p>';
-            $statusHtml .= '<p>' . htmlspecialchars(\Berserk\Core\Choice\CellEffectDirectionChoice::DESCRIPTION, ENT_QUOTES) . '</p>';
             break;
         }
 
@@ -1361,6 +1352,7 @@ final class BattleScreen
             'move_max'     => $c->moveMax,
             'strike'       => $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
             'status_html'  => $statusHtml,
+            'effects_html' => \Berserk\View\Ui\ActiveCardEffects::render($c, $state, $playerKey),
         ]);
     }
 

@@ -8,9 +8,22 @@ final class ActiveCardEffects
 {
     public static function forCard(CardInstance $card, GameState $state): array
     {
-        $rows = []; $groups = [];
-        if($bonus=\Berserk\Core\GraveRitual::bonus($state,$card,'ova'))$rows[]='ОВА +'.$bonus;
-        if($bonus=\Berserk\Core\GraveRitual::bonus($state,$card,'strong'))$rows[]='Сильный удар +'.$bonus;
+        return array_column(self::entries($card, $state), 'short');
+    }
+
+    /** The single enumeration used by both the star and the selected-card panel. */
+    public static function entries(CardInstance $card, GameState $state): array
+    {
+        $rows = []; $groups = []; $descriptions = [];
+        foreach (['ova'=>'Опыт в атаке', 'strong'=>'Сильный удар'] as $stat => $title) {
+            $bonus = \Berserk\Core\GraveRitual::bonus($state, $card, $stat);
+            if (!$bonus) continue;
+            $rows[] = ($stat === 'ova' ? 'ОВА' : $title) . ' +' . $bonus;
+            $descriptions[count($rows) - 1] = [
+                'title'=>$title, 'description'=>$title . ' увеличен на ' . $bonus . '.',
+                'duration'=>'До конца хода владельца карты.',
+            ];
+        }
         if ($card->zone === CardInstance::ZONE_FIELD && !$card->dying && $card->hp > 0
             && count(CardStats::getLineGroup($state, $card)) > 1) {
             $rows[] = 'Строй';
@@ -29,10 +42,15 @@ final class ActiveCardEffects
             if ($stat === '') continue;
             if ($stat === 'ability_strike' && ($m['source'] ?? '') === 'prophecy_charge') {
                 $rows[] = 'Удар +' . (int) $m['value'];
+                $descriptions[count($rows) - 1] = [
+                    'title'=>'Усиление от пророчества',
+                    'description'=>'Простой удар усилен на ' . (int) $m['value'] . '.',
+                    'duration'=>'Накопленное усиление снимается после удара.',
+                ];
                 continue;
             }
             // Only combine records whose qualifiers and lifetime are identical.
-            $qualifiers = $m; unset($qualifiers['value'], $qualifiers['source']);
+            $qualifiers = $m; unset($qualifiers['value']);
             $key = json_encode($qualifiers, JSON_UNESCAPED_UNICODE);
             if (is_numeric($m['value'] ?? null)) {
                 if (!isset($groups[$key])) $groups[$key] = [$stat, 0, $qualifiers];
@@ -44,13 +62,16 @@ final class ActiveCardEffects
         foreach ($groups as [$stat, $value, $q]) {
             // Preserve zero/net-zero records: a conditional effect may still carry meaning.
             $label=$stat==='execute'?'Добивание':CardStats::statLabel($stat);
+            $description = self::modifierDescription($stat, $value, $q);
             if($stat==='execute')unset($q['expire'],$q['timing']);
             if ($stat === 'damage_reduction' && ($q['expire'] ?? null) === 'end_of_opponent_turn') {
                 $rows[] = (-$value) . ' от немагических атак';
+                $descriptions[count($rows) - 1] = $description;
                 continue;
             }
             $shortLabel = $stat === 'action_range';
             $rows[] = $label . ' ' . ($value > 0 ? '+' : '') . $value . ($shortLabel ? '' : self::details($q));
+            $descriptions[count($rows) - 1] = $description;
         }
         $names = ['stun'=>'Оглушение', 'spider_web'=>'Сеть', 'fire'=>'Огонь', 'hunt'=>'Охота',
             'tremor'=>'Дрожь', 'strangulation'=>'Удушение', 'rooted'=>'Обездвижен',
@@ -59,6 +80,16 @@ final class ActiveCardEffects
             if ($key === 'poison') continue;
             $label = $names[$key] ?? $key;
             $rows[] = $label . (is_array($marker) ? self::details($marker) : ': ' . self::value($marker));
+            $parameters = is_array($marker) ? $marker : ['value'=>$marker];
+            $description = '';
+            if (isset($parameters['value']) && is_numeric($parameters['value'])) {
+                $description = 'Значение эффекта — ' . $parameters['value'] . '.';
+            }
+            $descriptions[count($rows) - 1] = [
+                'title'=>$label,
+                'description'=>$description,
+                'duration'=>self::modifierDescription($key, 0, $parameters)['duration'],
+            ];
         }
         // These helpers evaluate actual line membership and source eligibility.
         foreach (['armor','zot','zoal','zov','zom','zoa','zoan','zoda','zoz','zor','ability','damage_reduction'] as $key) {
@@ -85,7 +116,73 @@ final class ActiveCardEffects
                 $rows[] = 'Условный бонус: ' . CardStats::statLabel($key) . ' +' . $active[$key];
             }
         }
-        return $rows;
+        $entries = [];
+        foreach ($rows as $index => $short) {
+            $entries[] = ['short'=>$short] + ($descriptions[$index] ?? [
+                'title'=>str_contains($short, ': ') ? explode(': ', $short, 2)[0] : $short,
+                'description'=>str_contains($short, ': ') ? explode(': ', $short, 2)[1] : '',
+                'duration'=>'',
+            ]);
+        }
+        return $entries;
+    }
+
+    private static function modifierDescription(string $stat, int $value, array $data): array
+    {
+        $title = CardStats::statLabel($stat);
+        $amount = ($value > 0 ? '+' : '') . $value;
+        $description = $title . ' ' . $amount . '.';
+        if ($stat === 'damage_reduction') {
+            $title = 'Уменьшение ран';
+            $description = 'Получаемые раны уменьшаются на ' . $value . '.';
+        }
+        $types = ['strike'=>'простой удар', 'shot'=>'выстрел', 'throw'=>'метание',
+            'tap'=>'магический удар', 'uchr'=>'удар через ряд', 'execute'=>'добивание',
+            'impact'=>'воздействие', 'discharge'=>'разряд', 'magic'=>'заклинание', 'cast'=>'заклинание'];
+        $applies = [];
+        foreach ($data['types'] ?? [] as $type) {
+            if (isset($types[$type])) $applies[] = $types[$type];
+        }
+        if ($applies) $description .= ' Применяется к действиям — ' . implode(', ', $applies) . '.';
+        $conditions = [
+            'enemy_front_row_empty'=>'первый ряд противника пуст',
+            'ally_opposite_no_wounds'=>'напротив находится союзник без ран',
+            'more_ally_near_than_enemy'=>'рядом больше союзников, чем противников',
+            'line_count_2_plus'=>'не менее двух соседей по строю',
+        ];
+        $condition = $data['condition'] ?? null;
+        if (is_string($condition) && isset($conditions[$condition])) {
+            $description .= ' Условие — ' . $conditions[$condition] . '.';
+        }
+        $duration = match ($data['expire'] ?? null) {
+            'end_of_turn' => 'До конца текущего хода.',
+            'end_of_opponent_turn' => 'До конца хода противника владельца карты.',
+            default => '',
+        };
+        if (!empty($data['consume'])) {
+            $duration = 'Расходуется при соответствующем действии.' . ($duration ? ' ' . $duration : '');
+        }
+        return ['title'=>$title, 'description'=>$description, 'duration'=>$duration];
+    }
+
+    public static function render(CardInstance $card, GameState $state, string $viewer): string
+    {
+        if ($card->owner !== $viewer && !$card->revealed) return '';
+        $effects = self::entries($card, $state);
+        if (!$effects) return '';
+        $html = '<section class="active-card-effects" aria-label="Активные эффекты"><h3>Активные эффекты</h3>';
+        foreach ($effects as $effect) {
+            $html .= '<article class="active-card-effect"><h4>' . self::escape($effect['title']) . '</h4>';
+            if ($effect['description'] !== '') $html .= '<p>' . self::escape($effect['description']) . '</p>';
+            if ($effect['duration'] !== '') $html .= '<p class="active-card-effect-duration">' . self::escape($effect['duration']) . '</p>';
+            $html .= '</article>';
+        }
+        return $html . '</section>';
+    }
+
+    private static function escape(string $text): string
+    {
+        return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     public static function poison(CardInstance $card): int

@@ -16,4 +16,5 @@
 <div class="panel-card-details">
     <div class="battle-mode-buttons"><button type="button" class="button" data-card-inspect-select hidden>Выбрать</button>{{mode_buttons}}</div>
     {{status_html}}
+    {{effects_html}}
 </div>
