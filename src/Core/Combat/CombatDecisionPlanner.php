@@ -136,6 +136,13 @@ final class CombatDecisionPlanner
         if ($decision === 'strike_mode' && $control === 'choice_required') {
             return self::strikeMode($observation['strike_mode_choice'] ?? [],$legalActions['actions']);
         }
+        if ($decision === 'grave_ritual_ack' && $control === 'choice_required') {
+            $action = $legalActions['actions'][0] ?? null;
+            if (count($legalActions['actions']) === 1 && ($action['type'] ?? null) === 'choose_grave_ritual'
+                && ($action['payload']['ack'] ?? null) === 1) {
+                return ['action'=>$action, 'reason'=>'acknowledge_grave_ritual', 'score'=>0, 'factors'=>[]];
+            }
+        }
         if ($decision === 'strike_ack' && $control === 'confirm_information') {
             foreach ($legalActions['actions'] as $action) {
                 if ($action['type'] === 'confirm_strike') {

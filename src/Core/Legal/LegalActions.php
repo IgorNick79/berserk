@@ -72,6 +72,17 @@ final class LegalActions
                 }
                 return $out;
             }
+            $ritual = $state->battle['pending_grave_ritual'] ?? null;
+            if ($handler instanceof \Berserk\Core\Choice\GraveRitualChoice
+                && $wait['source'] === 'pending_grave_ritual'
+                && ($ritual['owner'] ?? null) === $viewer
+                && ($ritual['result'] ?? null) === true && is_string($ritual['id'] ?? null)) {
+                $out['decision'] = 'grave_ritual_ack';
+                $out['coverage'] = 'partial';
+                $option = self::option('choose_grave_ritual', ['operation_id'=>$ritual['id'], 'ack'=>1]);
+                if (self::passesClock($state, $viewer, $option, $now)) $out['actions'][] = $option;
+                return $out;
+            }
             $prophecy = \Berserk\Core\Observation\ProphecyKnowledge::choice($state, $viewer, $wait);
             if ($prophecy !== null) {
                 $out['decision'] = $prophecy['kind'];

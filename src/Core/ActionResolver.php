@@ -4601,6 +4601,22 @@ final class ActionResolver
         return Result::ok(['particle_done']);
     }
 
+    /** Current living targets, shared by opening, rendering and confirmation. */
+    public function lifeGiftTargets(string $playerKey): array
+    {
+        $enemies = [];
+        $allies = [];
+        foreach ($this->state->cards as $card) {
+            if (!CardHealing::live($card)) continue;
+            if ($card->owner === $playerKey) {
+                $allies[] = $card->instanceId;
+            } else {
+                $enemies[] = $card->instanceId;
+            }
+        }
+        return ['enemies' => $enemies, 'allies' => $allies];
+    }
+
     private function startLifeGift(
         CardInstance $attacker, array $action,
         int $cardId, string $playerKey
@@ -4614,18 +4630,7 @@ final class ActionResolver
             return Result::error('Не хватает монет');
         }
 
-        $enemies = [];
-        $allies  = [];
-        foreach ($this->state->cards as $c) {
-            if ($c->zone !== CardInstance::ZONE_FIELD
-                && $c->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($c->dying || $c->hp <= 0) continue;
-            if ($c->owner === $playerKey) {
-                $allies[] = $c->instanceId;
-            } else {
-                $enemies[] = $c->instanceId;
-            }
-        }
+        ['enemies' => $enemies, 'allies' => $allies] = $this->lifeGiftTargets($playerKey);
 
         if (empty($enemies)) {
             return Result::error('Нет целей-врагов');
@@ -4680,6 +4685,12 @@ final class ActionResolver
         $ally  = $this->state->getCard($allyId);
         if (!$enemy || !$ally) {
             return Result::error('Цель не найдена');
+        }
+
+        $current = $this->lifeGiftTargets($playerKey);
+        if (!in_array($enemyId, $current['enemies'], true)
+            || !in_array($allyId, $current['allies'], true)) {
+            return Result::error('Цель больше недоступна');
         }
 
         unset($this->state->battle['pending_life_gift']);

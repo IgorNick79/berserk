@@ -152,14 +152,12 @@ const scripts = ['battle-drag', 'battle-sync', 'creature-choice', 'panel-seconda
             assert.equal(posts[2].get('ally_id'), '2');
 
             await show('ambiguous');
+            assert.equal(await page.locator('[data-selection-group=ally] [data-card-instance="4"]').count(), 0);
             await gesture(4);
-            assert.deepEqual(await selected(), []);
-            assert.equal(posts.length, 3);
-            await page.locator('[data-selection-group=enemy] [data-card-instance="4"]').click();
-            await page.locator('[data-selection-group=ally] [data-card-instance="4"]').click();
-            assert.equal(await page.locator('input[name=enemy_id][value="4"]').isChecked(), true);
-            assert.equal(await page.locator('input[name=ally_id][value="4"]').isChecked(), true);
             assert.deepEqual(await selected(), ['4']);
+            assert.equal(posts.length, 3);
+            assert.equal(await page.locator('input[name=enemy_id][value="4"]').isChecked(), true);
+            assert.equal(await page.locator('input[name=ally_id]:checked').count(), 0);
 
             snapshot = fixtures.waiting;
             version++;

@@ -44,6 +44,9 @@ final class LifeGiftChoice implements ChoiceHandlerInterface
             ];
         }
 
+        $current = (new \Berserk\Core\ActionResolver($state, new Engine()))->lifeGiftTargets($playerKey);
+        $p['enemies'] = array_values(array_intersect($p['enemies'], $current['enemies']));
+        $p['allies'] = array_values(array_intersect($p['allies'], $current['allies']));
         $items = CreatureChoice::candidates($state, array_merge($p['enemies'], $p['allies']),
             $playerKey, $cardsInfo, CardSelectionSpec::DEFAULT_MODE);
         $enemyItems = array_values(array_filter($items, static fn(array $item): bool => in_array($item['instanceId'], $p['enemies'], true)));
