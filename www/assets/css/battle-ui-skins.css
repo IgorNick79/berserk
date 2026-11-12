@@ -192,10 +192,12 @@
 .battle-page [data-card-selection] [data-card-rows] button[data-filter-empty]:not([aria-pressed=true]){opacity:.65}
 
 /* Selected-card effects reuse the panel's bronze surface, without nested frames. */
-.battle-page .active-card-effects{margin-top:14px;padding-top:12px;border-top:1px solid var(--ip-edge,#92724c);color:var(--ip-text,#f4eee4);overflow-wrap:anywhere}
+.battle-page .active-card-effects{margin:14px -12px 0;padding:12px 12px 0;border-top:1px solid var(--ip-edge,#92724c);color:var(--ip-text,#f4eee4);overflow-wrap:anywhere}
 .battle-page .active-card-effects>h3{margin:0 0 10px;font-size:16px;color:var(--ip-title,#efd7aa)}
-.battle-page .active-card-effect{padding:9px 0}
+.battle-page .active-card-effect{margin:0 -12px;padding:9px 12px}
 .battle-page .active-card-effect+.active-card-effect{border-top:1px solid color-mix(in srgb,var(--ip-edge,#92724c) 45%,transparent)}
 .battle-page .active-card-effect h4{margin:0 0 5px;font-size:14px;line-height:1.35;color:var(--ip-title,#efd7aa)}
 .battle-page .active-card-effect p{margin:0;font-size:13px;line-height:1.5}
 .battle-page .active-card-effect .active-card-effect-duration{margin-top:5px;font-size:12px;color:var(--ip-muted,#c8bbab)}
+
+.battle-page .battle-selected-card>.panel-card-heading{padding-block:6px}
