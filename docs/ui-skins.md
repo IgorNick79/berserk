@@ -16,6 +16,21 @@ If the table or connection is unavailable, the battle still uses the default the
 - Coordinate badges use a crosshair, Roman row and viewer-relative column. Known creatures use their actual owner for the border. Cell references retain their original field-side meaning. Journal badges format only existing historical coordinate text and never consult current card positions.
 - InfoPanel die values show the stored raw roll, a separate signed modifier and total. Zero/no-roll is a dash; values outside 1–6 remain numeric. Engine calculations and journal dice formatting are unchanged.
 
+
+## Эталон активных эффектов
+
+Project Lead утвердил оформление и пояснение эффекта Ревнителя как образец для дальнейших UI-правок.
+
+- Под звёздочкой на поле отображается краткое название и понятное числовое усиление, когда оно имеет игровой смысл.
+- В правой панели каждый эффект имеет бронзово-золотой заголовок, пояснение фактического действия и его числовую величину.
+- Применимые типы атак и условия перечисляются понятными игровыми терминами.
+- Подтверждённый срок или условие расходования выводится отдельной приглушённой строкой.
+- Разделительные линии проходят от края до края панели. Текст сохраняет боковые отступы.
+- Для маркеров используются заголовки вида Маркер «Добыча». Подпись источника и пояснение маркера компактны, шрифт 12 px. Русские кавычки — «ёлочки».
+- Информация берётся из действующего серверного состояния. Неизвестные сроки и условия пропускаются.
+- Состав эффектов на поле и справа формируется одним механизмом ActiveCardEffects.
+- При проверке следующих правок сравнивать результат с этим образцом на 1600 и 800 px.
+
 ## Validation
 
 - `php tools/test_ui_skins.php`

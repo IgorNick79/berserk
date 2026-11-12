@@ -64,6 +64,12 @@ const fixtures = JSON.parse(execFileSync(process.env.PHP_BINARY || 'C:/OSPanel/m
             await page.locator('.panel-stat-info').click();
             assert((await page.locator('#battle-stat-tooltip').textContent()).includes('Описание через информационный значок'));
             await page.mouse.click(1,1);
+            await show('markers',2);
+            assert.deepEqual(await page.locator('.active-card-effect h4').allTextContents(),
+                ['Маркер «Добыча»','Маркер «Охота»']);
+            assert.equal(await page.locator('.active-effect-strike-icon').count(),1);
+            assert.equal(await page.locator('.active-card-effect-source').first().evaluate(e=>getComputedStyle(e).fontSize),'12px');
+            await page.locator('.info-panel').screenshot({path:path.join(output,width+'-markers.png')});
             await show('changed',1);
             assert((await page.locator('.active-card-effects').textContent()).includes('на 3'));
             await show('other',0);

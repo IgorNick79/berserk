@@ -79,7 +79,15 @@ final class ActiveCardEffects
             $label = $names[$key] ?? $key;
             if (in_array($key, ['prey', 'hunt'], true)) {
                 $rows[] = $label;
-                $descriptions[count($rows) - 1] = ['title'=>$label, 'description'=>'', 'duration'=>'', 'marker'=>$key];
+                $description = $key === 'prey'
+                    ? 'Владыка небес получает +3 к простому удару по этому существу и наносит безответный удар.'
+                    : 'При нанесении ран летающим существом цель получает ещё '
+                        . (int) (is_array($marker) ? ($marker['bonus'] ?? 2) : 2) . ' раны.';
+                $descriptions[count($rows) - 1] = [
+                    'title'=>'Маркер «' . $label . '»', 'description'=>$description,
+                    'duration'=>$key === 'hunt' ? 'Маркер снимается после срабатывания.' : '',
+                    'marker'=>$key,
+                ];
                 continue;
             }
             $rows[] = $label;
@@ -181,8 +189,6 @@ final class ActiveCardEffects
         $html = '<section class="active-card-effects" aria-label="Активные эффекты"><h3>Активные эффекты</h3>';
         foreach ($effects as $effect) {
             $html .= '<article class="active-card-effect"><h4>' . self::escape($effect['title']) . '</h4>';
-            if ($effect['description'] !== '') $html .= '<p>' . self::escape($effect['description']) . '</p>';
-            if ($effect['duration'] !== '') $html .= '<p class="active-card-effect-duration">' . self::escape($effect['duration']) . '</p>';
             $marker = $effect['marker'] ?? null;
             $names = [];
             if ($marker === 'rooted') {
@@ -202,6 +208,17 @@ final class ActiveCardEffects
                     . self::escape((count($names) === 1 ? 'Маркер поставил ' : 'Маркеры поставили ') . implode(', ', array_unique($names)))
                     . '</p>';
             }
+            if ($effect['description'] !== '') {
+                $description = self::escape($effect['description']);
+                if ($marker === 'prey') {
+                    $description = str_replace('+3 к простому удару',
+                        '+3 <img class="active-effect-strike-icon" src="/assets/images/card/sword@2x.png"'
+                            . ' width="16" height="16" alt="к простому удару">', $description);
+                }
+                $class = in_array($marker, ['prey', 'hunt'], true) ? ' class="active-card-effect-source"' : '';
+                $html .= '<p' . $class . '>' . $description . '</p>';
+            }
+            if ($effect['duration'] !== '') $html .= '<p class="active-card-effect-duration">' . self::escape($effect['duration']) . '</p>';
             $html .= '</article>';
         }
         return $html . '</section>';

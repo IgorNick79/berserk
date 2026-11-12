@@ -43,7 +43,7 @@ lc($effects::render($card, $state, 'host') === '', 'Removing effects clears pane
 $card->markers = ['prey'=>['value'=>-1, 'expire'=>2, 'source'=>'player']];
 lc($effects::forCard($card, $state) === ['Добыча'], 'Prey star contains only the marker name');
 $html = $effects::render($card, $state, 'host');
-lc(str_contains($html, '<h4>Добыча</h4>') && !str_contains($html, 'Значение эффекта')
+lc(str_contains($html, '<h4>Маркер «Добыча»</h4>') && !str_contains($html, 'Значение эффекта')
     && !str_contains($html, '-1'), 'Prey technical value is not presented as a gameplay amount');
 $badge = $ns . 'Badge';
 lc(!str_contains($badge::forCard($card, $state), '-1'), 'Legacy prey is compact too');
@@ -99,6 +99,9 @@ if (($argv[1] ?? '') === '--fixtures') {
         $out[$key] = $view->prepare($s,'host','host',null,$catalog,['sel'=>1])['data'];
     }
     $s->getCard(1)->modifiers=[];
+    $s->getCard(1)->markers=['prey'=>['value'=>-1], 'hunt'=>['value'=>1,'bonus'=>2], 'poison'=>['value'=>3]];
+    $out['markers']=$view->prepare($s,'host','host',null,$catalog,['sel'=>1])['data'];
+    $s->getCard(1)->markers=['poison'=>['value'=>3]];
     $out['other']=$view->prepare($s,'host','host',null,$catalog,['sel'=>3])['data'];
     $s->getCard(2)->modifiers=$mods;
     $s->getCard(2)->revealed=true;

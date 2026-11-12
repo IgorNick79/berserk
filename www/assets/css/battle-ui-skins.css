@@ -201,3 +201,4 @@
 .battle-page .active-card-effect :is(.active-card-effect-duration,.active-card-effect-source){margin-top:5px;font-size:12px;color:var(--ip-muted,#c8bbab)}
 
 .battle-page .battle-selected-card>.panel-card-heading{padding-block:6px}
+.battle-page .active-effect-strike-icon{display:inline-block;vertical-align:middle;object-fit:contain;margin:0 2px}
