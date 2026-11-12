@@ -116,3 +116,9 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 :is(.battle-page,.draft-page) .temple-discarded{opacity:.35}:is(.battle-page,.draft-page) .temple-chosen{outline:2px solid #d5ad43;border-radius:4px}
 
 :is(.battle-page,.draft-page) .temple-block-die{display:inline-flex;margin-left:8px;padding-left:8px;border-left:1px solid #9d8054}
+
+/* Selection occupies the inner contour; attack colors remain on the cell and glow. */
+.battle-page [data-mini-card-design="v2"] :is(.field-cell,.fly-slot) .battle-mini-card[data-card-selection-highlight]:not(.mini-dying){
+    outline:2px solid var(--ip-title,#b98542);
+    outline-offset:-2px;
+}

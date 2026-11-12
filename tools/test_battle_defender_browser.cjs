@@ -27,7 +27,7 @@ const assert = (condition, message) => { if (!condition) throw new Error(message
                     .replace(/<script[\s\S]*?<\/script>/g, '').replace(/<link[^>]*>/g, '')
                     .replace(/{{(\w+)}}/g, (_, key) => data[key] || '');
                 const show = () => page.setContent('<html class="battle-page"><head><meta charset="utf-8">'
-                    + '<style>' + read('www/assets/css/global.css') + read('www/assets/css/battle-ui-skins.css').replace(/^@import[^;]+;/,'') + read('www/assets/css/battle-coordinates.css') + read('www/assets/css/battle-mini-card.css') + '</style></head>'
+                    + '<style>' + read('www/assets/css/global.css') + read('www/assets/css/game-menu.css') + read('www/assets/css/battle-ui-skins.css').replace(/^@import[^;]+;/,'') + read('www/assets/css/battle-coordinates.css') + read('www/assets/css/battle-mini-card.css') + '</style></head>'
                     + '<body class="battle-page">' + html + '</body></html>');
                 await show();
                 const choices = page.locator('.defender-radio-list input[type=radio]');
@@ -64,8 +64,9 @@ const assert = (condition, message) => { if (!condition) throw new Error(message
                 await page.waitForURL(url => url.searchParams.get('cmd') === 'choose_defender');
                 const url = new URL(page.url());
                 assert(url.searchParams.get('defender_id') === '0' && !url.searchParams.has('choice'), 'Skip ignores selected radio');
-                if (width === 1600) {
+                if (width === 1600 || width === 800) {
                     await show();
+                    await page.locator('[data-mini-card-design]').evaluate(el => { el.dataset.miniCardDesign = 'v2'; });
                     await page.addScriptTag({ content: read('www/assets/js/creature-choice.js') });
                     await page.evaluate(({ source, viewer }) => {
                         const script = document.createElement('script');
@@ -77,6 +78,21 @@ const assert = (condition, message) => { if (!condition) throw new Error(message
                     }, { source: read('www/assets/js/battle-sync.js'), viewer });
                     await page.locator('[data-drag-card="4"]').dblclick({ timeout: 4000 });
                     assert(await choices.nth(1).isChecked(), 'Double click on the field selects the defender radio');
+                    const target = page.locator('[data-drag-card="4"]');
+                    const style = await target.evaluate(el => {
+                        const s = getComputedStyle(el);
+                        return { outline: s.outlineColor, offset: s.outlineOffset,
+                            width: el.getBoundingClientRect().width, height: el.getBoundingClientRect().height,
+                            glow: s.boxShadow };
+                    });
+                    assert(style.outline === 'rgb(239, 215, 170)' && style.offset === '-2px',
+                        'V2 selection keeps the bronze inner contour');
+                    assert(style.width === 102 && style.height === 92 && style.glow !== 'none',
+                        'Selection preserves geometry and attack glow');
+                    await choices.first().check();
+                    const cleared = await target.evaluate(el => getComputedStyle(el).outlineColor);
+                    assert(cleared === 'rgb(204, 51, 51)', 'Switching defender restores the original red contour');
+                    await target.dblclick({ timeout: 4000 });
                     assert(await page.locator('[data-drag-card="4"][data-card-selection-highlight]').count() === 1,
                         'Selected defender is highlighted on the field');
                     assert(new URL(page.url()).searchParams.get('defender_id') === '0',
