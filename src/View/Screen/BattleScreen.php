@@ -1225,7 +1225,7 @@ final class BattleScreen
 
         $statValue = fn(string $stat, string $icon, string $value, string $label): string =>
             $this->tpl->parse('includes/battle/stat_value.tpl', [
-                'stat' => $stat, 'icon' => $icon,
+                'stat' => $stat, 'icon_url' => str_starts_with($icon, '/assets/') ? $icon : '/assets/images/card/' . $icon . '.png',
                 'value' => htmlspecialchars($value, ENT_QUOTES),
                 'label' => htmlspecialchars($label, ENT_QUOTES),
             ]);
@@ -1240,6 +1240,12 @@ final class BattleScreen
             'Простой удар: ' . $c->strikeWeak . '/' . $c->strikeMedium . '/' . $c->strikeStrong);
         if ($c->armorMax > 0 || $c->armor > 0) {
             $statValues .= $statValue('armor', 'armor@2x', (string) $c->armor, 'Броня: ' . $c->armor);
+        }
+
+        $poison = \Berserk\View\Ui\ActiveCardEffects::poison($c);
+        if ($poison > 0) {
+            $statValues .= $statValue('poison', '/assets/images/battle/mini/poison_compact_v2.svg',
+                (string) $poison, 'Яд: ' . $poison);
         }
 
         if ($hasCoins) {
@@ -1352,7 +1358,7 @@ final class BattleScreen
             'move_max'     => $c->moveMax,
             'strike'       => $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
             'status_html'  => $statusHtml,
-            'effects_html' => \Berserk\View\Ui\ActiveCardEffects::render($c, $state, $playerKey),
+            'effects_html' => \Berserk\View\Ui\ActiveCardEffects::render($c, $state, $playerKey, $cardsInfo),
         ]);
     }
 

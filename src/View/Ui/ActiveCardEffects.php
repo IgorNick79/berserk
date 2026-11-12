@@ -77,9 +77,9 @@ final class ActiveCardEffects
         foreach ($card->markers as $key => $marker) {
             if ($key === 'poison') continue;
             $label = $names[$key] ?? $key;
-            if ($key === 'prey') {
+            if (in_array($key, ['prey', 'hunt'], true)) {
                 $rows[] = $label;
-                $descriptions[count($rows) - 1] = ['title'=>$label, 'description'=>'', 'duration'=>''];
+                $descriptions[count($rows) - 1] = ['title'=>$label, 'description'=>'', 'duration'=>'', 'marker'=>$key];
                 continue;
             }
             $rows[] = $label;
@@ -89,13 +89,14 @@ final class ActiveCardEffects
             }
             $parameters = is_array($marker) ? $marker : ['value'=>$marker];
             $description = '';
-            if (isset($parameters['value']) && is_numeric($parameters['value'])) {
-                $description = 'Значение эффекта — ' . $parameters['value'] . '.';
+            if (in_array($key, ['strangulation', 'sand_claws'], true) && is_numeric($parameters['value'] ?? null)) {
+                $description = 'Количество маркеров — ' . $parameters['value'] . '.';
             }
             $descriptions[count($rows) - 1] = [
                 'title'=>$label,
                 'description'=>$description,
                 'duration'=>self::modifierDescription($key, 0, $parameters)['duration'],
+                'marker'=>$key,
             ];
         }
         // These helpers evaluate actual line membership and source eligibility.
@@ -172,7 +173,7 @@ final class ActiveCardEffects
         return ['title'=>$title, 'description'=>$description, 'duration'=>$duration];
     }
 
-    public static function render(CardInstance $card, GameState $state, string $viewer): string
+    public static function render(CardInstance $card, GameState $state, string $viewer, array $catalog = []): string
     {
         if ($card->owner !== $viewer && !$card->revealed) return '';
         $effects = self::entries($card, $state);
@@ -182,6 +183,25 @@ final class ActiveCardEffects
             $html .= '<article class="active-card-effect"><h4>' . self::escape($effect['title']) . '</h4>';
             if ($effect['description'] !== '') $html .= '<p>' . self::escape($effect['description']) . '</p>';
             if ($effect['duration'] !== '') $html .= '<p class="active-card-effect-duration">' . self::escape($effect['duration']) . '</p>';
+            $marker = $effect['marker'] ?? null;
+            $names = [];
+            if ($marker === 'rooted') {
+                foreach ($card->markers['rooted']['sources'] ?? [] as $id) {
+                    $source = $state->getCard((int) $id);
+                    if ($source && ($source->owner === $viewer || $source->revealed)
+                        && isset($catalog[$source->ukid]['name'])) {
+                        $names[] = $catalog[$source->ukid]['name'];
+                    }
+                }
+            } else {
+                $known = ['prey'=>'Владыка небес', 'hunt'=>'Гиррит'];
+                if (isset($known[$marker])) $names[] = $known[$marker];
+            }
+            if ($names) {
+                $html .= '<p class="active-card-effect-source">'
+                    . self::escape((count($names) === 1 ? 'Маркер поставил ' : 'Маркеры поставили ') . implode(', ', array_unique($names)))
+                    . '</p>';
+            }
             $html .= '</article>';
         }
         return $html . '</section>';

@@ -55,6 +55,10 @@ const fixtures = JSON.parse(execFileSync(process.env.PHP_BINARY || 'C:/OSPanel/m
             assert((await page.locator('.active-card-effects').textContent()).includes('снимается после удара'));
             await page.locator('.info-panel').screenshot({path:path.join(output,width+'-one.png')});
             await show('many',3);
+            assert.equal(await page.locator('[data-stat=poison] .panel-stat-number').textContent(),'3');
+            assert.equal(await page.locator('[data-stat=armor] .panel-stat-number').textContent(),'2');
+            assert.equal(await page.locator('[data-stat=coin] .panel-stat-number').count(),0);
+            assert.equal(await page.locator('[data-stat=coins] .panel-stat-number').textContent(),'1');
             assert((await page.locator('.active-card-effects').textContent()).includes('удар через ряд'));
             await page.locator('.info-panel').screenshot({path:path.join(output,width+'-many.png')});
             await page.locator('.panel-stat-info').click();

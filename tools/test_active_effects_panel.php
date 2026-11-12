@@ -63,8 +63,25 @@ lc(str_contains($html, 'первый ряд противника пуст') && s
     'Known conditions and duration remain in detailed panel');
 $card->modifiers = [];
 $card->markers = [];
+$card->markers = ['prey'=>['value'=>-1], 'hunt'=>['value'=>1]];
+$html = $effects::render($card, $state, 'host');
+lc(str_contains($html, 'Маркер поставил Владыка небес') && str_contains($html, 'Маркер поставил Гиррит'),
+    'Known marker provenance is shown in small secondary text');
+lc(!str_contains($html, 'Значение эффекта'), 'Marker presence is not a numerical buff');
+$card->markers = ['rooted'=>['sources'=>[3,2]]];
+$state->getCard(2)->revealed = false;
+$html = $effects::render($card, $state, 'host', [
+    'test3'=>['name'=>'Открытый источник'], 'test2'=>['name'=>'Скрытый источник'],
+]);
+lc(str_contains($html, 'Открытый источник') && !str_contains($html, 'Скрытый источник'),
+    'Source names respect visibility before HTML generation');
+$card->markers = [];
 if (($argv[1] ?? '') === '--fixtures') {
     $s = ls();
+    $s->getCard(1)->armor=2;
+    $s->getCard(1)->armorMax=2;
+    $s->getCard(1)->coins=1;
+    $s->getCard(1)->markers=['poison'=>['value'=>3]];
     $catalog = ['test1'=>['name'=>'Выбранное существо','descr'=>'Описание через информационный значок'],
         'test2'=>['name'=>'Существо противника'], 'test3'=>['name'=>'Другое существо']];
     $viewClass = 'Berserk' . chr(92) . 'View' . chr(92) . 'Screen' . chr(92) . 'BattleScreen';

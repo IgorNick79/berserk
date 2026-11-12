@@ -198,6 +198,6 @@
 .battle-page .active-card-effect+.active-card-effect{border-top:1px solid color-mix(in srgb,var(--ip-edge,#92724c) 45%,transparent)}
 .battle-page .active-card-effect h4{margin:0 0 5px;font-size:14px;line-height:1.35;color:var(--ip-title,#efd7aa)}
 .battle-page .active-card-effect p{margin:0;font-size:13px;line-height:1.5}
-.battle-page .active-card-effect .active-card-effect-duration{margin-top:5px;font-size:12px;color:var(--ip-muted,#c8bbab)}
+.battle-page .active-card-effect :is(.active-card-effect-duration,.active-card-effect-source){margin-top:5px;font-size:12px;color:var(--ip-muted,#c8bbab)}
 
 .battle-page .battle-selected-card>.panel-card-heading{padding-block:6px}
