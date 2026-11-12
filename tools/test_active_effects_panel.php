@@ -40,6 +40,29 @@ $card->revealed = true;
 lc($effects::render($card, $state, 'host') !== '', 'Revealed enemy can be inspected');
 $card->modifiers = [];
 lc($effects::render($card, $state, 'host') === '', 'Removing effects clears panel');
+$card->markers = ['prey'=>['value'=>-1, 'expire'=>2, 'source'=>'player']];
+lc($effects::forCard($card, $state) === ['Добыча'], 'Prey star contains only the marker name');
+$html = $effects::render($card, $state, 'host');
+lc(str_contains($html, '<h4>Добыча</h4>') && !str_contains($html, 'Значение эффекта')
+    && !str_contains($html, '-1'), 'Prey technical value is not presented as a gameplay amount');
+$badge = $ns . 'Badge';
+lc(!str_contains($badge::forCard($card, $state), '-1'), 'Legacy prey is compact too');
+$card->markers = [];
+$card->modifiers = [
+    ['stat'=>'ova', 'value'=>2, 'expire'=>'end_of_turn', 'condition'=>'enemy_front_row_empty'],
+    ['stat'=>'action_range', 'value'=>1, 'types'=>['throw'], 'expire'=>'end_of_turn'],
+];
+$card->markers = ['stun'=>['value'=>1, 'expire'=>2, 'timing'=>'owner_turn', 'sources'=>[12,13]]];
+foreach ($effects::forCard($card, $state) as $short) {
+    lc(!str_contains($short, '(') && !str_contains($short, 'expire')
+        && !str_contains($short, 'sources') && !str_contains($short, 'enemy_front_row_empty'),
+        'Shared short labels contain no technical qualifiers');
+}
+$html = $effects::render($card, $state, 'host');
+lc(str_contains($html, 'первый ряд противника пуст') && str_contains($html, 'До конца текущего хода'),
+    'Known conditions and duration remain in detailed panel');
+$card->modifiers = [];
+$card->markers = [];
 if (($argv[1] ?? '') === '--fixtures') {
     $s = ls();
     $catalog = ['test1'=>['name'=>'Выбранное существо','descr'=>'Описание через информационный значок'],

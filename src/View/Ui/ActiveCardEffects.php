@@ -56,21 +56,19 @@ final class ActiveCardEffects
                 if (!isset($groups[$key])) $groups[$key] = [$stat, 0, $qualifiers];
                 $groups[$key][1] += (int) $m['value'];
             } else {
-                $rows[] = CardStats::statLabel($stat) . ': ' . self::value($m['value'] ?? true) . self::details($qualifiers);
+                $rows[] = CardStats::statLabel($stat);
             }
         }
         foreach ($groups as [$stat, $value, $q]) {
             // Preserve zero/net-zero records: a conditional effect may still carry meaning.
             $label=$stat==='execute'?'Добивание':CardStats::statLabel($stat);
             $description = self::modifierDescription($stat, $value, $q);
-            if($stat==='execute')unset($q['expire'],$q['timing']);
             if ($stat === 'damage_reduction' && ($q['expire'] ?? null) === 'end_of_opponent_turn') {
                 $rows[] = (-$value) . ' от немагических атак';
                 $descriptions[count($rows) - 1] = $description;
                 continue;
             }
-            $shortLabel = $stat === 'action_range';
-            $rows[] = $label . ' ' . ($value > 0 ? '+' : '') . $value . ($shortLabel ? '' : self::details($q));
+            $rows[] = $label . ' ' . ($value > 0 ? '+' : '') . $value;
             $descriptions[count($rows) - 1] = $description;
         }
         $names = ['stun'=>'Оглушение', 'spider_web'=>'Сеть', 'fire'=>'Огонь', 'hunt'=>'Охота',
@@ -79,7 +77,16 @@ final class ActiveCardEffects
         foreach ($card->markers as $key => $marker) {
             if ($key === 'poison') continue;
             $label = $names[$key] ?? $key;
-            $rows[] = $label . (is_array($marker) ? self::details($marker) : ': ' . self::value($marker));
+            if ($key === 'prey') {
+                $rows[] = $label;
+                $descriptions[count($rows) - 1] = ['title'=>$label, 'description'=>'', 'duration'=>''];
+                continue;
+            }
+            $rows[] = $label;
+            if (in_array($key, ['strangulation', 'sand_claws'], true)) {
+                $amount = is_array($marker) ? ($marker['value'] ?? null) : $marker;
+                if (is_numeric($amount)) $rows[count($rows) - 1] .= ' ' . $amount;
+            }
             $parameters = is_array($marker) ? $marker : ['value'=>$marker];
             $description = '';
             if (isset($parameters['value']) && is_numeric($parameters['value'])) {
@@ -196,19 +203,10 @@ final class ActiveCardEffects
         if (is_bool($value)) return $value ? 'да' : 'нет';
         $terms = ['end_of_turn'=>'до конца хода', 'owner_turn'=>'ход владельца', 'permanent'=>'постоянно'];
         if (is_string($value) && isset($terms[$value])) return $terms[$value];
-        return is_scalar($value) ? (string) $value : (string) json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (is_array($value)) {
+            return is_numeric($value['value'] ?? null) ? (string) $value['value'] : '';
+        }
+        return is_scalar($value) ? (string) $value : '';
     }
 
-    private static function details(array $data): string
-    {
-        $labels = ['value'=>'значение', 'expire'=>'срок', 'timing'=>'момент', 'condition'=>'условие',
-            'element'=>'стихия', 'types'=>'типы', 'only'=>'действия', 'level'=>'уровень', 'sources'=>'источники'];
-        $parts = [];
-        foreach ($data as $key => $value) {
-            if ($key === 'stat' || $key === 'owner' || str_starts_with((string) $key, 'source') && $key !== 'sources' || str_ends_with((string) $key, '_id')) continue;
-            if ($key === 'sources' && is_array($value)) $value = count($value);
-            $parts[] = ($labels[$key] ?? $key) . ': ' . self::value($value);
-        }
-        return $parts ? ' (' . implode('; ', $parts) . ')' : '';
-    }
 }
