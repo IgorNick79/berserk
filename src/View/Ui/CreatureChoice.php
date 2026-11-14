@@ -25,7 +25,7 @@ final class CreatureChoice
             . '<button type="button" data-choice-parameter="hp" aria-label="Здоровье" aria-pressed="false"'
             . ($hp === '' ? ' disabled' : '') . '>♡</button>'
             . '<button type="button" data-choice-parameter="coords" aria-label="Координаты" aria-pressed="false"'
-            . ($coords === '' ? ' disabled' : '') . '>⌖</button>'
+            . ($coords === '' ? ' disabled' : '') . '><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 1v5m0 8v5M1 10h5m8 0h5" stroke="currentColor" stroke-width="2"/></svg></button>'
             . '<span class="choice-parameter-value" data-choice-hp="' . htmlspecialchars($hp, ENT_QUOTES)
             . '" data-choice-coords="' . htmlspecialchars($coords, ENT_QUOTES) . '">'
             . '</span></span>';

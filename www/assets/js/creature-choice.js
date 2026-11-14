@@ -26,7 +26,17 @@
         });
         var visible = rows.filter(function (r) { return !r.hidden; }).map(function (r) { return r.querySelector('input'); }).filter(function (i) { return i && !i.disabled; });
         var selected = visible.find(function (i) { return i.value === (chosen || previous.value); });
-        if (selected) selected.checked = true;
+        if (selected && selected.type === 'radio') {
+            rows.forEach(function (row) {
+                var input = row.querySelector('input');
+                if (input && input.type === 'radio' && input.name === selected.name) input.checked = input === selected;
+            });
+        } else if (selected) selected.checked = true;
+        if (selected && selected.type === 'radio') {
+            form.querySelectorAll('input[type="radio"]').forEach(function (input) {
+                if (input.name === selected.name && input !== selected) input.checked = false;
+            });
+        }
         if (visible.length && visible[0].type === 'radio' && !visible.some(function (i) { return i.checked; })) visible[0].checked = true;
         selected = visible.find(function (i) { return i.checked; });
         saved.set(key, {side: side, value: selected ? selected.value : ''});
@@ -40,10 +50,12 @@
         if (button.disabled) return;
         var controls = button.closest('[data-choice-parameters]');
         var value = controls.querySelector('.choice-parameter-value');
-        if (button.dataset.choiceParameter === 'hp') value.textContent = value.dataset.choiceHp;
+        var active = button.getAttribute('aria-pressed') === 'true';
+        if (active) value.textContent = '';
+        else if (button.dataset.choiceParameter === 'hp') value.textContent = value.dataset.choiceHp;
         else value.innerHTML = value.dataset.choiceCoords;
         controls.querySelectorAll('button').forEach(function (item) {
-            item.setAttribute('aria-pressed', String(item === button));
+            item.setAttribute('aria-pressed', String(!active && item === button));
         });
     }, true);
     var activeSelection = null;
