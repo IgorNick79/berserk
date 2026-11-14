@@ -22,13 +22,13 @@ final class CreatureChoice
             ? $card->hp . '/' . $card->hpMax . ' HP' : '';
         $coords = $known && $card->zone === 'field' ? Coords::renderResult($card->row, $card->col, $viewer, $card->owner) : '';
         return '<span class="choice-parameters" data-choice-parameters>'
-            . '<button type="button" data-choice-parameter="hp" aria-label="Здоровье" aria-pressed="true"'
+            . '<button type="button" data-choice-parameter="hp" aria-label="Здоровье" aria-pressed="false"'
             . ($hp === '' ? ' disabled' : '') . '>♡</button>'
             . '<button type="button" data-choice-parameter="coords" aria-label="Координаты" aria-pressed="false"'
             . ($coords === '' ? ' disabled' : '') . '>⌖</button>'
             . '<span class="choice-parameter-value" data-choice-hp="' . htmlspecialchars($hp, ENT_QUOTES)
             . '" data-choice-coords="' . htmlspecialchars($coords, ENT_QUOTES) . '">'
-            . ($hp !== '' ? htmlspecialchars($hp, ENT_QUOTES) : $coords) . '</span></span>';
+            . '</span></span>';
     }
 
     /** @param list<int> $ids */

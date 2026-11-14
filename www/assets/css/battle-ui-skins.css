@@ -227,3 +227,12 @@
 
 .battle-page .card-choice-form .choice-card-row{display:flex;align-items:center;gap:8px}
 .battle-page .card-choice-form .choice-card-row>.choice-card-content{flex:1;min-width:0}
+
+
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row>.choice-parameters{display:flex;flex-wrap:nowrap;flex:0 0 auto;margin-left:auto;gap:2px;justify-content:flex-end;min-height:28px}
+.battle-page .choice-parameters .choice-parameter-value{order:-1;min-width:0;min-height:0;margin-right:4px}
+.battle-page .choice-parameters .choice-parameter-value:empty{display:none}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row{min-height:46px}
+.battle-page .card-choice-form>.button[type=submit],.battle-page .card-choice-form>.button.skip{margin-top:12px}
+.battle-page .card-choice-form .card-selection-actions{margin-top:12px}
+.battle-page .defender-radio-list+.death-choice-buttons{margin-top:12px}
