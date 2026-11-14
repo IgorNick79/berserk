@@ -106,7 +106,7 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 }
 
 :is(.battle-page,.draft-page) .cell-bottom-strip{position:absolute;bottom:0;left:0;right:0;height:16px;display:flex;justify-content:flex-end;z-index:21;pointer-events:none}
-:is(.battle-page,.draft-page) .cell-marker-badge{position:absolute;bottom:8px;right:3px;z-index:22;display:inline-flex;align-items:center;box-sizing:border-box;width:20px;height:18px;padding:0;justify-content:center;border:1px solid #92724c;border-radius:3px;background:#241c15ed;color:#efd7aa;font:11px/14px system-ui,sans-serif;white-space:nowrap;cursor:pointer;pointer-events:auto;box-shadow:inset 0 1px #ffffff12}
+:is(.battle-page,.draft-page) .cell-marker-badge{position:absolute;bottom:calc(8px + (100% - 92px)/2);right:3px;z-index:22;display:inline-flex;align-items:center;box-sizing:border-box;width:20px;height:18px;padding:0;justify-content:center;border:1px solid #ad8854;border-radius:4px;background:rgba(16,17,14,.92);color:#efd7aa;font:11px/14px system-ui,sans-serif;white-space:nowrap;cursor:pointer;pointer-events:auto;box-shadow:inset 0 1px #ffffff12}
 :is(.battle-page,.draft-page) .cell-marker-badge:focus-visible{outline:2px solid #efd7aa;outline-offset:1px}
 
 :is(.battle-page,.draft-page) .cell-bottom-strip{justify-content:flex-start}
