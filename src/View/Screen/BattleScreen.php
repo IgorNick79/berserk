@@ -1840,37 +1840,32 @@ final class BattleScreen
 
     private function buildCellMarkersOverlay(GameState $state, string $key, int $count = 0): string
     {
-        $labels = ['bomb'=>'Бомба орка', 'reduce_attack'=>'Мороз, мгла, ливень',
-            'row_spell'=>'Цветущие руны', 'gate'=>'Врата', 'lantern_light'=>'Свет фонаря'];
-        $icons = ['bomb'=>'💣', 'reduce_attack'=>'❄', 'row_spell'=>'ᚱ', 'gate'=>'⛩', 'lantern_light'=>''];
-        $markers = ''; $fire = '';
+        $labels = ['bomb'=>'Бомба', 'reduce_attack'=>'Уменьшение атаки',
+            'row_spell'=>'Цветущие руны', 'gate'=>'Врата', 'tremor'=>'Дрожь',
+            'lantern_light'=>'Свет фонаря'];
+        $names = [];
+        $fire = '';
         foreach (ZoneManager::markersAt($state, $key) as $marker) {
             $type = (string) ($marker['type'] ?? '');
             if ($type === 'bonfire') {
                 $fire = '<span class="cell-bonfire" role="img" aria-label="Костёр">🔥</span>';
                 continue;
             }
-            if ($type === 'tremor') {
-                $owner = ($marker['owner'] ?? '') === 'host' ? 'host' : 'player';
-                $id = htmlspecialchars((string)($marker['id'] ?? ''), ENT_QUOTES, 'UTF-8');
-                $label = htmlspecialchars('Дрожь ' . ($marker['id'] ?? '') . ' — ' . ($owner === 'host' ? 'синяя сторона' : 'красная сторона'), ENT_QUOTES, 'UTF-8');
-                $markers .= '<span class="cell-marker cell-marker-tremor tremor-owner-' . $owner
-                    . '" data-tremor-id="' . $id . '" role="img" aria-label="' . $label . '"></span>';
-                continue;
-            }
-            $safe = htmlspecialchars($type, ENT_QUOTES);
-            $label = htmlspecialchars($labels[$type] ?? $type, ENT_QUOTES);
-            $markers .= '<span class="cell-marker cell-marker-' . $safe . '" data-mini-hint data-cell-hint role="button" tabindex="0" aria-expanded="false" aria-label="'
-                . $label . '">' . ($icons[$type] ?? '')
-                . '<span class="mini-hint-text" hidden>' . $label . '</span></span>';
+            $names[] = htmlspecialchars($labels[$type] ?? 'Маркер клетки', ENT_QUOTES, 'UTF-8');
+        }
+        $markers = '';
+        if ($names) {
+            $markers = '<span class="cell-marker-count" data-mini-hint data-cell-hint role="button"'
+                . ' tabindex="0" aria-expanded="false" aria-label="Маркеры клетки: ' . count($names) . '">'
+                . '✦ ' . count($names) . '<span class="mini-hint-text" hidden><strong>Маркеры клетки</strong><br>'
+                . implode('<br>', $names) . '</span></span>';
         }
         $switch = $count > 1 ? '<span class="cell-switch" aria-label="Существа в клетке">'
             . '<button type="button" data-cell-step="-1" aria-label="Предыдущее существо">‹</button>'
             . '<span data-cell-counter aria-live="polite">1/' . $count . '</span>'
             . '<button type="button" data-cell-step="1" aria-label="Следующее существо">›</button></span>' : '';
-        if ($markers === '' && $switch === '') return $fire;
-        $barClass = $count > 0 ? 'cell-bottom-strip' : 'cell-marker-island' . ($fire !== '' ? ' cell-marker-island--below-fire' : '');
-        return $fire . '<div class="' . $barClass . '"><div class="cell-markers">' . $markers . '</div>' . $switch . '</div>';
+        return $fire . $markers . ($switch !== '' ? '<div class="cell-bottom-strip">' . $switch . '</div>' : '');
+
     }
 
 }
