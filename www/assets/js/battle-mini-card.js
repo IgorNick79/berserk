@@ -134,7 +134,10 @@
         var card = cardAt(node) || node;
         var r = card.getBoundingClientRect();
         tip.style.left = Math.max(8, Math.min(r.left + r.width / 2 - tip.offsetWidth / 2, innerWidth - tip.offsetWidth - 8)) + 'px';
-        var top = hintKind === 'name' || node.hasAttribute('data-cell-hint') || node.hasAttribute('data-view-element') ? r.bottom + 8 : r.top + r.height / 2 - tip.offsetHeight / 2;
+        var inCellRow = node.closest('.cell-indicators');
+        var anchor = inCellRow ? node.getBoundingClientRect() : r;
+        var top = inCellRow || hintKind === 'name' || node.hasAttribute('data-cell-hint') || node.hasAttribute('data-view-element')
+            ? anchor.bottom + 8 : r.top + r.height / 2 - tip.offsetHeight / 2;
         var indicators = card.querySelector('.mini-indicators');
         if (hintKind === 'indicator' && indicators) top = Math.max(top, indicators.getBoundingClientRect().bottom + 4);
         tip.style.top = Math.max(8, Math.min(top, innerHeight - tip.offsetHeight - 8)) + 'px';
