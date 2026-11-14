@@ -1855,9 +1855,11 @@ final class BattleScreen
         }
         $markers = '';
         if ($names) {
-            $markers = '<span class="cell-marker-count" data-mini-hint data-cell-hint role="button"'
-                . ' tabindex="0" aria-expanded="false" aria-label="Маркеры клетки: ' . count($names) . '">'
-                . '✦ ' . count($names) . '<span class="mini-hint-text" hidden>'
+            $multiple = count($names) + ($fire !== '' ? 1 : 0) > 1;
+            $markers = '<span class="cell-marker-badge' . ($multiple ? ' cell-marker-badge--multiple' : '')
+                . '" data-mini-hint data-cell-hint role="button"'
+                . ' tabindex="0" aria-expanded="false" aria-label="' . implode(', ', $names) . '">'
+                . '<span class="cell-marker-star" aria-hidden="true">✦</span><span class="mini-hint-text" hidden>'
                 . implode('<br>', $names) . '</span></span>';
         }
         $switch = $count > 1 ? '<span class="cell-switch" aria-label="Существа в клетке">'
