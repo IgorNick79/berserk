@@ -106,5 +106,7 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 }
 
 :is(.battle-page,.draft-page) .cell-bottom-strip{position:absolute;bottom:0;left:0;right:0;height:16px;display:flex;justify-content:flex-end;z-index:21;pointer-events:none}
-:is(.battle-page,.draft-page) .cell-marker-count{position:absolute;top:3px;left:3px;z-index:22;display:inline-flex;align-items:center;box-sizing:border-box;min-height:17px;padding:1px 5px;border:1px solid #92724c;border-radius:3px;background:#241c15ed;color:#efd7aa;font:11px/14px system-ui,sans-serif;white-space:nowrap;cursor:pointer;pointer-events:auto;box-shadow:inset 0 1px #ffffff12}
+:is(.battle-page,.draft-page) .cell-marker-count{position:absolute;bottom:1px;right:1px;z-index:22;display:inline-flex;align-items:center;box-sizing:border-box;min-height:17px;padding:1px 5px;border:1px solid #92724c;border-radius:3px;background:#241c15ed;color:#efd7aa;font:11px/14px system-ui,sans-serif;white-space:nowrap;cursor:pointer;pointer-events:auto;box-shadow:inset 0 1px #ffffff12}
 :is(.battle-page,.draft-page) .cell-marker-count:focus-visible{outline:2px solid #efd7aa;outline-offset:1px}
+
+:is(.battle-page,.draft-page) .cell-bottom-strip{justify-content:flex-start}

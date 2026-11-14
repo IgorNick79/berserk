@@ -1857,7 +1857,7 @@ final class BattleScreen
         if ($names) {
             $markers = '<span class="cell-marker-count" data-mini-hint data-cell-hint role="button"'
                 . ' tabindex="0" aria-expanded="false" aria-label="Маркеры клетки: ' . count($names) . '">'
-                . '✦ ' . count($names) . '<span class="mini-hint-text" hidden><strong>Маркеры клетки</strong><br>'
+                . '✦ ' . count($names) . '<span class="mini-hint-text" hidden>'
                 . implode('<br>', $names) . '</span></span>';
         }
         $switch = $count > 1 ? '<span class="cell-switch" aria-label="Существа в клетке">'
