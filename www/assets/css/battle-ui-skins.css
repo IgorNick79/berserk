@@ -202,3 +202,25 @@
 
 .battle-page .battle-selected-card>.panel-card-heading{padding-block:6px}
 .battle-page .active-effect-strike-icon{display:inline-block;vertical-align:middle;object-fit:contain;margin:0 2px}
+
+/* Grimoire card-choice rows. Native controls retain keyboard and form semantics. */
+.battle-page [data-card-selection] .choice-radio{position:relative;min-height:46px;box-sizing:border-box;padding:9px 10px 9px 35px;display:flex;gap:8px;align-items:center;background:linear-gradient(115deg,#ffffff0b,transparent 55%),var(--ip-surface);border-radius:4px;box-shadow:inset 0 1px #efd7aa18,0 2px 3px #0003}
+.battle-page [data-card-selection] .choice-radio>input{position:absolute;width:1px;height:1px;opacity:0;margin:0;left:12px}
+.battle-page [data-card-selection] .choice-radio::before{content:"";position:absolute;left:11px;width:16px;color:var(--ip-title);font-size:18px;text-align:center}
+.battle-page [data-card-selection] .choice-radio:has(input:checked)::before{content:"✓"}
+.battle-page [data-card-selection] .choice-radio:has(input:checked){background:linear-gradient(110deg,#b985422b,transparent 80%),var(--ip-surface)}
+.battle-page [data-card-selection] .card-selection-group>.choice-card-row{display:flex}
+.battle-page [data-card-selection] .choice-card-row>.choice-card-content{display:block;flex:1;min-width:0}
+.battle-page [data-card-selection] .choice-card-row .creature-choice-name{display:inline;overflow-wrap:anywhere}
+.battle-page [data-card-selection] .choice-card-row .creature-choice-health,.battle-page [data-card-selection] .choice-card-row .coords{display:none}
+.battle-page [data-card-selection] .choice-card-row>.choice-parameters{display:grid;grid-template-columns:28px 28px;flex:0 0 82px;gap:0 2px;justify-content:end;align-items:center}
+.battle-page .choice-parameters button{width:28px;height:28px;padding:0;border:0;border-radius:3px;background:transparent;color:var(--ip-muted);font-size:19px;cursor:pointer}
+.battle-page .choice-parameters button[aria-pressed=true]{color:var(--ip-title);background:#efd7aa10}
+.battle-page .choice-parameters button:disabled{opacity:.25;cursor:default}
+.battle-page .choice-parameters button:focus-visible{outline:1px solid var(--ip-title)}
+.battle-page .choice-parameter-value{grid-column:1 / -1;text-align:right;white-space:nowrap;font-size:11px;color:var(--ip-muted);min-height:14px}
+.battle-page [data-card-selection] .choice-card-row>.choice-parameters{grid-template-columns:28px minmax(0,1fr);grid-template-rows:28px 28px;flex-basis:105px;gap:0 5px}
+.battle-page .choice-parameters [data-choice-parameter=hp]{grid-column:1;grid-row:1}
+.battle-page .choice-parameters [data-choice-parameter=coords]{grid-column:1;grid-row:2}
+.battle-page .choice-parameters .choice-parameter-value{grid-column:2;grid-row:1 / 3;align-self:center}
+.battle-page [data-card-selection] .choice-card-row .choice-parameter-value .coords{display:inline-flex;margin:0}

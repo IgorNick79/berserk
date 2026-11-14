@@ -32,6 +32,20 @@
         saved.set(key, {side: side, value: selected ? selected.value : ''});
         if (saved.size > 40) saved.delete(saved.keys().next().value);
     }
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-choice-parameter]');
+        if (!button) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (button.disabled) return;
+        var controls = button.closest('[data-choice-parameters]');
+        var value = controls.querySelector('.choice-parameter-value');
+        if (button.dataset.choiceParameter === 'hp') value.textContent = value.dataset.choiceHp;
+        else value.innerHTML = value.dataset.choiceCoords;
+        controls.querySelectorAll('button').forEach(function (item) {
+            item.setAttribute('aria-pressed', String(item === button));
+        });
+    }, true);
     var activeSelection = null;
     var boardSelector = '[data-battle-fragment="field_html"], [data-battle-fragment="fly_zones_html"]';
     var selectedCardSelector = '[data-drag-card][data-card-selection-highlight]';

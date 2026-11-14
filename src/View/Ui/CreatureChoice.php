@@ -34,6 +34,18 @@ final class CreatureChoice
             $name = $names[$id];
             $position = $card->zone === 'field' ? BattlefieldPosition::display($card->row, $card->col, $viewer) : null;
             $item = self::item($card, $name, $viewer, $mode !== CardSelectionSpec::SIMPLE, $position !== null && $counts[$name] > 1);
+            $known = $card->owner === $viewer || $card->revealed;
+            $hp = $known && $mode !== CardSelectionSpec::SIMPLE
+                ? $card->hp . '/' . $card->hpMax . ' HP' : '';
+            $coords = $known && $position !== null ? Coords::renderResult($card->row, $card->col, $viewer, $card->owner) : '';
+            $item['parameterHtml'] = '<span class="choice-parameters" data-choice-parameters>'
+                . '<button type="button" data-choice-parameter="hp" aria-label="Здоровье" aria-pressed="true"'
+                . ($hp === '' ? ' disabled' : '') . '>♡</button>'
+                . '<button type="button" data-choice-parameter="coords" aria-label="Координаты" aria-pressed="false"'
+                . ($coords === '' ? ' disabled' : '') . '>⌖</button>'
+                . '<span class="choice-parameter-value" data-choice-hp="' . htmlspecialchars($hp, ENT_QUOTES)
+                . '" data-choice-coords="' . htmlspecialchars($coords, ENT_QUOTES) . '">'
+                . ($hp !== '' ? htmlspecialchars($hp, ENT_QUOTES) : $coords) . '</span></span>';
             $item['instanceId'] = $id;
             $item['row'] = $card->zone === 'flying' ? 'fly' : (string) ($position['row'] ?? '');
             if ($item['row'] === 'fly' && $counts[$name] > 1 && $card->slot > 0) {

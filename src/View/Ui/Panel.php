@@ -166,11 +166,12 @@ final class Panel
                     . '" data-card-row="' . htmlspecialchars($it['row'], ENT_QUOTES) . '"';
             }
             if (isset($it['submitOrder'])) $side .= ' data-selection-order="' . (int) $it['submitOrder'] . '"';
-            $html .= '<label class="choice-radio"' . $side . '>'
+            $html .= '<label class="choice-radio' . (isset($it['parameterHtml']) ? ' choice-card-row' : '') . '"' . $side . '>'
                 . '<input type="' . htmlspecialchars($type, ENT_QUOTES) . '"'
                 . ' name="' . htmlspecialchars($name, ENT_QUOTES) . '"'
                 . ' value="' . $value . '"' . $checked . $disabled . ($required ? ' required' : '') . '>'
-                . '<span>' . $label . '</span>'
+                . '<span class="choice-card-content">' . $label . '</span>'
+                . ($it['parameterHtml'] ?? '')
                 . '</label>';
         }
         return $html;
