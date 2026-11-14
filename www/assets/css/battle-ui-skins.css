@@ -303,3 +303,11 @@
 .battle-page .info-panel-footer .info-actions{padding:0;align-items:center}
 .battle-page .info-panel-footer .button.green-btn{align-items:center}
 .battle-page .info-panel-footer{padding-top:16px;padding-bottom:16px}
+/* Unified informational status and empty-action handling. */
+.battle-page .panel-card-details:has(>.panel-card-status){padding-top:0}
+.battle-page .panel-card-details>.panel-card-status{width:fit-content;max-width:100%;box-sizing:border-box;margin:0 auto 10px;padding:7px 24px;border:1px solid var(--ip-edge,#92724c);border-top:0;border-radius:0 0 6px 6px;background:var(--ip-surface,#3a3028);color:var(--ip-muted,#c8bbab);font-size:12px;line-height:18px;text-align:center}
+.battle-page .panel-card-details>.battle-mode-buttons:not(:has(>a,>button:not([hidden]),>span:not([hidden]))){display:none;margin:0;padding:0}
+.battle-page .panel-card-details:not(:has(>.panel-card-status,>.active-card-effects,>p,>.battle-mode-buttons>a,>.battle-mode-buttons>button:not([hidden]),>.battle-mode-buttons>span:not([hidden]))){display:none;margin:0;padding:0}
+.battle-page .panel-card-details>.panel-card-status+.active-card-effects{margin-top:0;padding-top:10px}
+.battle-page .info-panel-footer{padding:16px 12px;position:relative;flex:0 0 auto}
+.battle-page .info-panel-footer .info-actions{padding:0;min-height:40px;align-items:center}

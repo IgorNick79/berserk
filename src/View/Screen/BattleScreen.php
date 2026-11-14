@@ -962,14 +962,13 @@ final class BattleScreen
 
         // Кнопки режимов
         $modeButtons = '';
-        $closedButtonShown = false;
+        $disabledStatus = '';
         if ($isActive && !$strike && $c->owner === $playerKey && in_array($c->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) {
             if (CardStats::isDisabled($c)) {
                 $reason = CardStats::disabledReason($c);
-                $closedButtonShown = $c->closed;
-                $modeButtons .= '<span class="button small disabled">'
-                    . htmlspecialchars($reason !== '' ? $reason : 'Карта не может действовать', ENT_QUOTES)
-                    . '</span> ';
+                $disabledStatus = $this->tpl->parse('includes/battle/panel_status.tpl', [
+                    'text'=>htmlspecialchars($reason !== '' ? $reason : 'Карта не может действовать', ENT_QUOTES),
+                ]);
             } else {
                 $abil = BattleHelper::abilities($c);
 
@@ -1200,9 +1199,7 @@ final class BattleScreen
         // Статус-строка
         $statusHtml = '';
         if ($c->closed) {
-            if (!$closedButtonShown) {
-                $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта закрыта']);
-            }
+            $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта закрыта']);
         } elseif (isset($c->markers['spider_web'])) {
             $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта находится в сети']);
         } elseif ($isActive && !$strike && $c->owner === $playerKey && in_array($c->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) {
@@ -1212,6 +1209,7 @@ final class BattleScreen
                 $statusHtml = '<p>Кликни по существу оппонента для атаки.</p>';
             }
         }
+        if ($disabledStatus !== '' && !$c->closed && !isset($c->markers['spider_web'])) $statusHtml = $disabledStatus;
         $strangulationHint = \Berserk\Core\Strangulation::hint($c);
         if ($strangulationHint !== '') $statusHtml .= '<p>' . htmlspecialchars($strangulationHint, ENT_QUOTES) . '</p>';
         $statusHtml .= $this->linkedRecruitBattleHint($state, $c, $cardsInfo);
