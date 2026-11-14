@@ -312,4 +312,4 @@
 .battle-page .info-panel-footer{padding:16px 12px;position:relative;flex:0 0 auto}
 .battle-page .info-panel-footer .info-actions{padding:0;min-height:40px;align-items:center}
 
-.battle-page .battle-selected-card>.panel-card-heading{padding-top:0;padding-bottom:6px;margin-top:0}
+.battle-page .info-panel{gap:0}
