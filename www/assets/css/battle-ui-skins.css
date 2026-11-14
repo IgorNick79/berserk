@@ -313,3 +313,5 @@
 .battle-page .info-panel-footer .info-actions{padding:0;min-height:40px;align-items:center}
 
 .battle-page .info-panel{gap:0}
+
+.battle-page .panel-card-details>.panel-card-status+.active-card-effects{border-top:0}

@@ -145,7 +145,7 @@ final class ActiveCardEffects
 
     private static function modifierDescription(string $stat, int $value, array $data): array
     {
-        $title = CardStats::statLabel($stat);
+        $title = match ($stat) { 'ova'=>'Опыт в атаке', 'ovz'=>'Опыт в защите', default=>CardStats::statLabel($stat) };
         $amount = ($value > 0 ? '+' : '') . $value;
         $description = $title . ' ' . $amount . '.';
         if ($stat === 'damage_reduction') {
