@@ -300,3 +300,5 @@
 .battle-page :is([data-card-selection],.card-choice-form) .choice-card-row>.choice-parameters{height:28px;min-height:28px;max-height:28px}
 .battle-page .choice-parameters .choice-parameter-value{height:24px;line-height:24px;box-sizing:border-box}
 .battle-page .choice-parameters .choice-parameter-value .coords{vertical-align:middle}
+.battle-page .info-panel-footer .info-actions{padding:0;align-items:center}
+.battle-page .info-panel-footer .button.green-btn{align-items:center}
