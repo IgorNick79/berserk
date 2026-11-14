@@ -236,3 +236,67 @@
 .battle-page .card-choice-form>.button[type=submit],.battle-page .card-choice-form>.button.skip{margin-top:12px}
 .battle-page .card-choice-form .card-selection-actions{margin-top:12px}
 .battle-page .defender-radio-list+.death-choice-buttons{margin-top:12px}
+
+
+/* Stage 5.3B sample: engraved bronze surfaces and a fixed selection gutter. */
+.battle-page :is([data-card-selection],.card-choice-form) .choice-radio{
+ min-height:50px;padding:8px 10px 8px 42px;border:1px solid var(--ip-edge,#92724c);border-radius:4px;
+ background:linear-gradient(105deg,#ffffff09,transparent 48%),linear-gradient(180deg,#ffffff04,#00000016),var(--ip-surface,#3a3028);
+ box-shadow:inset 0 1px #efd7aa1c,inset 0 -2px 4px #0002,0 2px 3px #0002;color:var(--ip-text,#f4eee4)
+}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-radio::before{
+ content:"";left:10px;top:50%;transform:translateY(-50%);width:22px;height:22px;
+ background:var(--ip-title,#efd7aa);opacity:0;
+ mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m5 12 4 4L19 6' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat
+}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-radio:has(input:checked)::before{content:"";opacity:1}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-radio:has(input:checked){
+ outline:1px solid var(--ip-title,#efd7aa);outline-offset:-2px;
+ background:linear-gradient(105deg,#b9854229,transparent 75%),linear-gradient(180deg,#efd7aa0a,#00000010),var(--ip-surface,#3a3028);
+ box-shadow:inset 0 1px #efd7aa35,inset 3px 0 #b9854266,0 2px 3px #0002
+}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-radio:has(input:checked) .creature-choice-name{color:var(--ip-title,#efd7aa)}
+.battle-page .choice-parameters button{display:inline-flex;align-items:center;justify-content:center;color:var(--ip-muted,#c8bbab);border-radius:3px}
+.battle-page .choice-parameters button svg{width:18px;height:18px;flex:none}
+.battle-page .choice-parameters button[aria-pressed=true]{color:var(--ip-title,#efd7aa);background:#b9854224;box-shadow:inset 0 0 0 1px #b9854244}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-radio:has(input:focus-visible){outline:2px solid var(--ip-title,#efd7aa);outline-offset:2px}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-radio:is([data-selection-at-limit],:has(input:disabled)){filter:saturate(.55);color:var(--ip-muted);box-shadow:inset 0 1px #ffffff08}
+@media(hover:hover){
+ .battle-page :is([data-card-selection],.card-choice-form) .choice-radio:not([data-selection-at-limit]):not(:has(input:disabled)):hover{border-color:var(--ip-title,#efd7aa)}
+ .battle-page .choice-parameters button:not(:disabled):hover{color:var(--ip-title,#efd7aa)}
+}
+.battle-page :is([data-card-selection],.card-choice-form) .card-selection-group>.choice-radio.choice-card-row{display:flex;grid-template-columns:none}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row>.choice-card-content{display:block;flex:1 1 0;min-width:0}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row>.choice-parameters{flex:0 0 auto;max-width:145px}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-radio.choice-card-row{
+ display:grid;grid-template-columns:minmax(0,1fr) 86px;column-gap:8px;height:54px;min-height:54px;padding:5px 8px 5px 38px
+}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row>.choice-card-content{
+ display:block;min-width:0;width:100%;overflow:hidden
+}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row .creature-choice-name,
+.battle-page .choice-card-row .defender-option-text{
+ display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;text-overflow:ellipsis;
+ overflow-wrap:normal;word-break:normal;line-height:20px;max-height:40px
+}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row>.choice-parameters{
+ display:grid;grid-template-columns:28px 28px;grid-template-rows:28px 17px;justify-content:end;gap:0 2px;
+ width:86px;max-width:86px;margin:0;min-width:0
+}
+.battle-page .choice-parameters [data-choice-parameter=hp]{grid-column:1;grid-row:1}
+.battle-page .choice-parameters [data-choice-parameter=coords]{grid-column:2;grid-row:1}
+.battle-page .choice-parameters .choice-parameter-value{grid-column:1 / -1;grid-row:2;order:0;min-height:17px;margin:0;font-size:11px;align-self:center}
+.battle-page .choice-parameters .choice-parameter-value:empty{display:block}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row>.choice-card-content .creature-choice-name{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:normal;word-break:normal;line-height:20px;max-height:40px}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-radio.choice-card-row{grid-template-columns:minmax(0,1fr) 124px}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row>.choice-parameters{
+ display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-end;width:124px;max-width:124px;gap:2px;min-height:28px
+}
+.battle-page .choice-parameters .choice-parameter-value{display:block;order:-1;flex:1;min-width:0;min-height:0;margin:0 4px 0 0;text-align:right;white-space:nowrap;font-size:11px}
+.battle-page .choice-parameters .choice-parameter-value:empty{display:block}
+.battle-page .choice-parameters button{flex:0 0 26px;width:26px;height:28px}
+.battle-page .choice-parameters button[aria-pressed=true]{background:transparent;box-shadow:none;color:var(--ip-title,#efd7aa)}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-radio.choice-card-row{height:54px;min-height:54px;max-height:54px;box-sizing:border-box}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row>.choice-parameters{height:28px;min-height:28px;max-height:28px}
+.battle-page .choice-parameters .choice-parameter-value{height:24px;line-height:24px;box-sizing:border-box}
+.battle-page .choice-parameters .choice-parameter-value .coords{vertical-align:middle}

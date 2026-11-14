@@ -9,7 +9,7 @@ final class CreatureChoice
     public static function item(CardInstance $card, string $name, string $viewer, bool $showHealth = false, bool $showCoords = true): array
     {
         return ['parameterHtml'=>self::parameters($card, $viewer, true), 'value' => $card->instanceId, 'label' => $name, 'side' => $card->owner === $viewer ? 'own' : 'enemy',
-            'label_html' => '<span class="creature-choice-name">' . htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>'
+            'label_html' => '<span class="creature-choice-name" title="' . htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">' . htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>'
                 . ($showHealth && ($card->owner === $viewer || $card->revealed)
                     ? '<span class="creature-choice-health">❤️ ' . $card->hp . '/' . $card->hpMax . ' HP</span>' : '')
                 . ($showCoords ? Coords::renderResult($card->row, $card->col, $viewer, $card->owner) : '')];
@@ -23,7 +23,7 @@ final class CreatureChoice
         $coords = $known && $card->zone === 'field' ? Coords::renderResult($card->row, $card->col, $viewer, $card->owner) : '';
         return '<span class="choice-parameters" data-choice-parameters>'
             . '<button type="button" data-choice-parameter="hp" aria-label="Здоровье" aria-pressed="false"'
-            . ($hp === '' ? ' disabled' : '') . '>♡</button>'
+            . ($hp === '' ? ' disabled' : '') . '><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 17 3 10C-2 4 5 0 10 5 15 0 22 4 17 10Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>'
             . '<button type="button" data-choice-parameter="coords" aria-label="Координаты" aria-pressed="false"'
             . ($coords === '' ? ' disabled' : '') . '><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 1v5m0 8v5M1 10h5m8 0h5" stroke="currentColor" stroke-width="2"/></svg></button>'
             . '<span class="choice-parameter-value" data-choice-hp="' . htmlspecialchars($hp, ENT_QUOTES)
