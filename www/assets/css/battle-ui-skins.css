@@ -158,8 +158,8 @@
 :is(:is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel,.room-page [data-panel-theme] .room-controls--battle,:is(.deal-page,.draft-page) [data-panel-theme] .pregame-main) .button.tremor-move-enemy:not(.green-btn){--btn-top:#c66a63;--btn-bottom:#913a38;--btn-edge:#df9a8b}
 :is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel .button.tremor-stay:not(.green-btn),:is(.battle-page,.view-deck-page,.roll-page) [data-panel-theme] .info-panel .button.yellow:not(.green-btn){--btn-top:#dfbd54;--btn-bottom:#aa7e20;--btn-edge:#f1d680;color:#fff;text-shadow:0 1px 1px #0008}
 
-.battle-page [data-card-selection] .choice-radio:has(input:checked){outline:2px solid var(--ip-title,#b98542);outline-offset:-2px}
-.battle-page [data-card-selection] .choice-radio{cursor:pointer}
+.battle-page  :is([data-card-selection],.card-choice-form) .choice-radio:has(input:checked){outline:2px solid var(--ip-title,#b98542);outline-offset:-2px}
+.battle-page  :is([data-card-selection],.card-choice-form) .choice-radio{cursor:pointer}
 .battle-page [data-card-rows]{flex-wrap:wrap}
 .battle-page [data-battle-sync-root] [data-card-selection-highlight]{
     outline:2px solid var(--ip-title,#b98542);
@@ -181,10 +181,10 @@
 .battle-page [data-card-selection] [data-card-row] .creature-choice-name{flex:0 1 auto;flex-basis:auto}
 .battle-page [data-card-selection] [data-card-row] .coords{flex:0 0 auto;margin-left:0}
 .battle-page [data-card-selection] [data-card-row] .creature-choice-health{order:1;margin-left:auto}
-.battle-page [data-card-selection] .choice-radio:is([data-selection-at-limit],:has(input:disabled)){
+.battle-page  :is([data-card-selection],.card-choice-form) .choice-radio:is([data-selection-at-limit],:has(input:disabled)){
     color:var(--ip-muted);cursor:not-allowed
 }
-.battle-page [data-card-selection] .choice-radio:has(input:focus-visible){
+.battle-page  :is([data-card-selection],.card-choice-form) .choice-radio:has(input:focus-visible){
     outline:2px solid var(--ip-title);outline-offset:-2px
 }
 .battle-page [data-card-selection] .card-selection-count{font-size:12px;color:var(--ip-muted);margin:0 0 5px}
@@ -204,23 +204,26 @@
 .battle-page .active-effect-strike-icon{display:inline-block;vertical-align:middle;object-fit:contain;margin:0 2px}
 
 /* Grimoire card-choice rows. Native controls retain keyboard and form semantics. */
-.battle-page [data-card-selection] .choice-radio{position:relative;min-height:46px;box-sizing:border-box;padding:9px 10px 9px 35px;display:flex;gap:8px;align-items:center;background:linear-gradient(115deg,#ffffff0b,transparent 55%),var(--ip-surface);border-radius:4px;box-shadow:inset 0 1px #efd7aa18,0 2px 3px #0003}
-.battle-page [data-card-selection] .choice-radio>input{position:absolute;width:1px;height:1px;opacity:0;margin:0;left:12px}
-.battle-page [data-card-selection] .choice-radio::before{content:"";position:absolute;left:11px;width:16px;color:var(--ip-title);font-size:18px;text-align:center}
-.battle-page [data-card-selection] .choice-radio:has(input:checked)::before{content:"✓"}
-.battle-page [data-card-selection] .choice-radio:has(input:checked){background:linear-gradient(110deg,#b985422b,transparent 80%),var(--ip-surface)}
-.battle-page [data-card-selection] .card-selection-group>.choice-card-row{display:flex}
-.battle-page [data-card-selection] .choice-card-row>.choice-card-content{display:block;flex:1;min-width:0}
-.battle-page [data-card-selection] .choice-card-row .creature-choice-name{display:inline;overflow-wrap:anywhere}
-.battle-page [data-card-selection] .choice-card-row .creature-choice-health,.battle-page [data-card-selection] .choice-card-row .coords{display:none}
-.battle-page [data-card-selection] .choice-card-row>.choice-parameters{display:grid;grid-template-columns:28px 28px;flex:0 0 82px;gap:0 2px;justify-content:end;align-items:center}
+.battle-page  :is([data-card-selection],.card-choice-form) .choice-radio{position:relative;min-height:46px;box-sizing:border-box;padding:9px 10px 9px 35px;display:flex;gap:8px;align-items:center;background:linear-gradient(115deg,#ffffff0b,transparent 55%),var(--ip-surface);border-radius:4px;box-shadow:inset 0 1px #efd7aa18,0 2px 3px #0003}
+.battle-page  :is([data-card-selection],.card-choice-form) .choice-radio>input{position:absolute;width:1px;height:1px;opacity:0;margin:0;left:12px}
+.battle-page  :is([data-card-selection],.card-choice-form) .choice-radio::before{content:"";position:absolute;left:11px;width:16px;color:var(--ip-title);font-size:18px;text-align:center}
+.battle-page  :is([data-card-selection],.card-choice-form) .choice-radio:has(input:checked)::before{content:"✓"}
+.battle-page  :is([data-card-selection],.card-choice-form) .choice-radio:has(input:checked){background:linear-gradient(110deg,#b985422b,transparent 80%),var(--ip-surface)}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row{display:flex}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row>.choice-card-content{display:block;flex:1;min-width:0}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row .creature-choice-name{display:inline;overflow-wrap:anywhere}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row .creature-choice-health,.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row .coords{display:none}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row>.choice-parameters{display:grid;grid-template-columns:28px 28px;flex:0 0 82px;gap:0 2px;justify-content:end;align-items:center}
 .battle-page .choice-parameters button{width:28px;height:28px;padding:0;border:0;border-radius:3px;background:transparent;color:var(--ip-muted);font-size:19px;cursor:pointer}
 .battle-page .choice-parameters button[aria-pressed=true]{color:var(--ip-title);background:#efd7aa10}
 .battle-page .choice-parameters button:disabled{opacity:.25;cursor:default}
 .battle-page .choice-parameters button:focus-visible{outline:1px solid var(--ip-title)}
 .battle-page .choice-parameter-value{grid-column:1 / -1;text-align:right;white-space:nowrap;font-size:11px;color:var(--ip-muted);min-height:14px}
-.battle-page [data-card-selection] .choice-card-row>.choice-parameters{grid-template-columns:28px minmax(0,1fr);grid-template-rows:28px 28px;flex-basis:105px;gap:0 5px}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row>.choice-parameters{grid-template-columns:28px minmax(0,1fr);grid-template-rows:28px 28px;flex-basis:105px;gap:0 5px}
 .battle-page .choice-parameters [data-choice-parameter=hp]{grid-column:1;grid-row:1}
 .battle-page .choice-parameters [data-choice-parameter=coords]{grid-column:1;grid-row:2}
 .battle-page .choice-parameters .choice-parameter-value{grid-column:2;grid-row:1 / 3;align-self:center}
-.battle-page [data-card-selection] .choice-card-row .choice-parameter-value .coords{display:inline-flex;margin:0}
+.battle-page :is([data-card-selection],.card-choice-form) .choice-card-row .choice-parameter-value .coords{display:inline-flex;margin:0}
+
+.battle-page .card-choice-form .choice-card-row{display:flex;align-items:center;gap:8px}
+.battle-page .card-choice-form .choice-card-row>.choice-card-content{flex:1;min-width:0}

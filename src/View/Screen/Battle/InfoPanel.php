@@ -2390,11 +2390,12 @@ final class InfoPanel
             $labelHtml = \Berserk\View\Ui\Coords::text((string) ($cards[$id] ?? $option['label']));
             $coordsHtml = $card ? \Berserk\View\Ui\Coords::renderResult($card->row, $card->col, $this->playerKey,
                 $skipDefender ? null : $card->owner) : '';
-            $body .= '<label class="' . htmlspecialchars('choice-radio ' . ($option['class'] ?? ''), ENT_QUOTES) . '"'
+            $body .= '<label class="' . htmlspecialchars('choice-radio choice-card-row ' . ($option['class'] ?? ''), ENT_QUOTES) . '"'
                 . ($fieldSelection ? ' data-card-instance="' . $id . '"' : '') . '>'
                 . '<input type="radio" name="choice" value="' . htmlspecialchars($option['value'], ENT_QUOTES) . '"'
                 . ($index === 0 ? ' checked="checked"' : '') . '>'
-                . '<span class="defender-option-text">' . $labelHtml . '</span>' . $coordsHtml . '</label>';
+                . '<span class="defender-option-text choice-card-content">' . $labelHtml . '</span>'
+                . ($card ? \Berserk\View\Ui\CreatureChoice::parameters($card, $this->playerKey) : $coordsHtml) . '</label>';
         }
         $body .= '</div>'
             . '<div class="death-choice-buttons' . ($skipDefender ? ' defender-choice-actions' : '') . '">';
