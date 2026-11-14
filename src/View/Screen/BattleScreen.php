@@ -1206,7 +1206,7 @@ final class BattleScreen
             if (empty($attackTargets)) {
                 $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Нет целей']);
             } else {
-                $statusHtml = '<p>Кликни по существу оппонента для атаки.</p>';
+                $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Выберите цель атаки']);
             }
         }
         if ($disabledStatus !== '' && !$c->closed && !isset($c->markers['spider_web'])) $statusHtml = $disabledStatus;
