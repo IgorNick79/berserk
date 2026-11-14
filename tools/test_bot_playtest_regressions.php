@@ -83,3 +83,28 @@ foreach (['host', 'player'] as $owner) {
 }
 
 echo "PASS special strike ACK and Greed gate lifecycle\n";
+
+
+foreach (['poison', 'close'] as $effect) {
+    $state = new GameState(-533, 1, 2);
+    $state->status = 'battle';
+    $state->persistenceVersion = 1;
+    $state->battle = ['active'=>'host', 'turn'=>0, 'hidden_row_revealed'=>false];
+    $state->addCard(new CardInstance(1, 's1_194', 'player', 'field', row:4, col:3, hp:7, hpMax:7));
+    foreach ([2, 3] as $id) {
+        $state->addCard(new CardInstance($id, 'enemy', 'host', 'field', row:3, col:$id,
+            hp:8, hpMax:8, revealed:false));
+    }
+    $state->battle['pending_intrigue_start'] = [[
+        'owner'=>'player', 'source_id'=>1, 'count'=>2,
+        'effect'=>['type'=>$effect, 'value'=>1], 'candidates'=>[1, 2, 3],
+    ]];
+    bot($engine, $state, 'player', 'choose_intrigue_start');
+    check(empty($state->battle['pending_intrigue_start']), 'Intrigue leaves pending queue');
+    foreach ([2, 3] as $id) {
+        $card = $state->getCard($id);
+        check($effect === 'poison' ? !empty($card->markers['poison']) : !empty($card->markers['stun']),
+            'Bot applies intrigue to enemy');
+    }
+}
+echo "PASS Aristocrat poison and close choices, including hidden targets\n";

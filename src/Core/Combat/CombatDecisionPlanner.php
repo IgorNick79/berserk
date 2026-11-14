@@ -16,6 +16,12 @@ final class CombatDecisionPlanner
             || ($observation['stage'] ?? null) !== 'battle' || ($legalActions['stage'] ?? null) !== 'battle') return $stop;
         $control = $observation['control']['status'] ?? null;
         $decision = $legalActions['decision'] ?? null;
+        if ($decision === 'intrigue_start' && $control === 'choice_required') {
+            $action = $legalActions['actions'][0] ?? null;
+            if (($action['type'] ?? null) === 'choose_intrigue_start') {
+                return ['action'=>$action, 'reason'=>'resolve_intrigue', 'score'=>0, 'factors'=>[]];
+            }
+        }
         if($decision==='root_auto_shot'&&$control==='choice_required')return self::rootAutoShot($observation,$legalActions['actions']);
         if ($decision === 'prophecy_transform_decline') {
             $window = $observation['prophecy_choice'] ?? [];

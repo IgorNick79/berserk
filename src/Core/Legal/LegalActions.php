@@ -83,6 +83,35 @@ final class LegalActions
                 if (self::passesClock($state, $viewer, $option, $now)) $out['actions'][] = $option;
                 return $out;
             }
+            if ($handler instanceof \Berserk\Core\Choice\IntrigueStartChoice
+                && $wait['source'] === 'pending_intrigue_start[0]') {
+                $item = $state->battle['pending_intrigue_start'][0] ?? [];
+                $count = (int) ($item['count'] ?? 0);
+                $targets = [];
+                foreach ($item['candidates'] ?? [] as $id) {
+                    $target = $state->getCard((int) $id);
+                    if (!$target || $target->dying || $target->hp <= 0) continue;
+                    // Rank only public facts. Hidden enemies remain anonymous legal targets.
+                    $known = $target->owner === $viewer || $target->revealed;
+                    $score = $target->owner !== $viewer ? 100 : 0;
+                    if ($known) {
+                        $score += min(20, $target->price);
+                        if (($item['effect']['type'] ?? '') === 'close' && $target->closed) $score -= 30;
+                        if (($item['effect']['type'] ?? '') === 'poison' && !empty($target->effectiveProp()['zoo'])) $score -= 50;
+                    }
+                    $targets[] = ['id'=>(int) $id, 'score'=>$score];
+                }
+                usort($targets, static fn(array $a, array $b): int => ($b['score'] <=> $a['score']) ?: ($a['id'] <=> $b['id']));
+                if (($item['owner'] ?? null) === $viewer && $count > 0 && count($targets) >= $count) {
+                    $option = self::option('choose_intrigue_start', ['target_ids'=>array_column(array_slice($targets, 0, $count), 'id')]);
+                    if (self::passesClock($state, $viewer, $option, $now)) {
+                        $out['decision'] = 'intrigue_start';
+                        $out['coverage'] = 'partial';
+                        $out['actions'][] = $option;
+                    }
+                }
+                return $out;
+            }
             $prophecy = \Berserk\Core\Observation\ProphecyKnowledge::choice($state, $viewer, $wait);
             if ($prophecy !== null) {
                 $out['decision'] = $prophecy['kind'];
