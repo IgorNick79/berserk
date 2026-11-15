@@ -16,7 +16,7 @@
             var interval = null, destroyed = false;
             var observedActiveRequest = null, seenResumes = new Set();
             var picker = document.createElement("dialog");
-            picker.className = "battle-pause-picker";
+            picker.className = "battle-pause-picker berserk-dialog";
             picker.setAttribute("aria-labelledby", "pause-picker-title");
             picker.innerHTML = '<h2 id="pause-picker-title">Пауза матча</h2><p>Соперник получит запрос. Пока он отвечает, время хода остановится.</p>'
                 + '<label for="pause-minutes">Продолжительность: <output for="pause-minutes">1 мин</output></label>'
