@@ -357,9 +357,7 @@ final class GameSettings
             if (!in_array($this->draft['stack_size'] ?? 6, [6, 8, '6', '8'], true)) {
                 return 'Размер стека должен быть 6 или 8';
             }
-            if ($this->draftPickMode() !== self::DRAFT_PICK_MODE_MANUAL) {
-                return 'Solomon использует ручной выбор и автоматическое завершение по таймеру';
-            }
+
         }
         if ($this->isGlimpseDraft() && (!in_array($this->draft['burn_mode'] ?? 'normal', ['normal','progressive'], true) || !in_array($this->draft['burn_count'] ?? 2, [2,3,'2','3'], true))) return 'Неверные настройки сжигания';
         $boosters = $this->draftBoosters();
