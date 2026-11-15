@@ -38,3 +38,5 @@
 
 .game-chat-toggle.messages-disabled { opacity: .4; }
 .game-chat-toggle.messages-disabled .game-chat-unread { display: none; }
+
+.battle-chat-anchor:empty { display:none; }
