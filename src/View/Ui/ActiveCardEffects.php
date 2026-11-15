@@ -27,6 +27,37 @@ final class ActiveCardEffects
         if ($card->zone === CardInstance::ZONE_FIELD && !$card->dying && $card->hp > 0
             && count(CardStats::getLineGroup($state, $card)) > 1) {
             $rows[] = 'Строй';
+            $bonuses = [];
+            foreach ($card->effectiveProp() as $stat => $config) {
+                if (!is_array($config)) continue;
+                foreach (array_is_list($config) ? $config : [$config] as $bonus) {
+                    if (!is_array($bonus) || empty($bonus['line'])) continue;
+                    $protection = [
+                        'zoal'=>'Защита от атак летающих существ.',
+                        'zot'=>'Защита от метания.', 'zov'=>'Защита от выстрелов.',
+                        'zom'=>'Защита от заклинаний.', 'zoa'=>'Защита от простых ударов.',
+                        'zoan'=>'Защита от немагических атак.', 'zoda'=>'Защита от дальних атак.',
+                        'zoz'=>'Защита от разрядов.', 'zor'=>'Защита от особых ударов.',
+                    ];
+                    $text = $protection[$stat] ?? self::modifierDescription(
+                        $stat === 'ability' ? 'ability_strike' : $stat, (int) ($bonus['value'] ?? 1), $bonus)['description'];
+                    $levels = ['weak'=>'слабому', 'medium'=>'среднему', 'strong'=>'сильному'];
+                    if (!empty($bonus['level'])) {
+                        $text .= ' Для уровней удара — ' . implode(', ', array_map(
+                            static fn(string $level): string => $levels[$level] ?? $level, (array) $bonus['level'])) . '.';
+                    }
+                    if (!empty($bonus['element'])) $text .= ' По существам стихии ' . $bonus['element'] . '.';
+                    if (array_key_exists('line_elite', $bonus)) {
+                        $text .= $bonus['line_elite'] ? ' При наличии элитного соседа по строю.' : ' При наличии рядового соседа по строю.';
+                    }
+                    $bonuses[] = $text;
+                }
+            }
+            $descriptions[count($rows) - 1] = [
+                'title'=>'Строй',
+                'description'=>implode(' ', $bonuses) ?: 'Карта находится в строю с союзными существами.',
+                'duration'=>'Пока выполняются условия строя.',
+            ];
         }
         if (in_array($card->zone, ['field', 'flying'], true) && !empty($card->flags['stitched_unique_loss'])) {
             $rows[] = 'Модифицировано Сшивателем плоти';
