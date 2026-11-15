@@ -35,43 +35,36 @@ final class LifeGiftChoice implements ChoiceHandlerInterface
 
         $roleParam = $role === 'host' ? 'first' : 'second';
 
-        // X — сколько монет
-        $amountItems = [];
-        for ($i = (int) $p['min_x']; $i <= (int) $p['max_x']; $i++) {
-            $amountItems[] = [
-                'value'   => $i,
-                'label'   => $i . ' монет',
-            ];
+        $step = $p['step'] ?? 'amount';
+        $title = $srcName . ' — предсмертный дар';
+        if ($step === 'amount') {
+            $buttons = [];
+            for ($i = (int) $p['min_x']; $i <= min((int) $p['max_x'], $src?->coins ?? 0); $i++) {
+                $buttons[] = ['label' => (string) $i,
+                    'url' => $baseUrl . '&cmd=choose_life_gift&amount=' . $i];
+            }
+            $buttons[] = ['label'=>'Отмена', 'url'=>$baseUrl . '&cmd=cancel_pending', 'class'=>'skip'];
+            return new PanelSpec(title: $title . ': сколько монет потратить?', buttons: $buttons);
         }
 
         $current = (new \Berserk\Core\ActionResolver($state, new Engine()))->lifeGiftTargets($playerKey);
-        $p['enemies'] = array_values(array_intersect($p['enemies'], $current['enemies']));
-        $p['allies'] = array_values(array_intersect($p['allies'], $current['allies']));
-        $items = CreatureChoice::candidates($state, array_merge($p['enemies'], $p['allies']),
-            $playerKey, $cardsInfo, CardSelectionSpec::DEFAULT_MODE);
-        $enemyItems = array_values(array_filter($items, static fn(array $item): bool => in_array($item['instanceId'], $p['enemies'], true)));
-        $allyItems = array_values(array_filter($items, static fn(array $item): bool => in_array($item['instanceId'], $p['allies'], true)));
-
+        $enemy = $step === 'enemy';
+        $key = $enemy ? 'enemies' : 'allies';
+        $ids = array_values(array_intersect($p[$key], $current[$key]));
+        $items = CreatureChoice::candidates($state, $ids, $playerKey, $cardsInfo, CardSelectionSpec::DEFAULT_MODE);
         return new PanelSpec(
-            title: $srcName . ': предсмертный дар',
+            title: $title . ($enemy ? ': выберите существо противника' : ': выберите своё существо'),
             form: [
-                'hidden' => [
-                    $roleParam => '',
-                    'game'     => $state->gameId,
-                    'cmd'      => 'choose_life_gift',
-                ],
-                'submit' => 'Применить',
+                'hidden' => [$roleParam=>'', 'game'=>$state->gameId, 'cmd'=>'choose_life_gift'],
+                'submit' => $enemy ? 'Далее' : 'Применить',
                 'cancel' => $baseUrl . '&cmd=cancel_pending',
             ],
             cardSelection: new CardSelectionSpec(
                 context: implode(':', [$state->gameId, $playerKey, 'life-gift', $p['card_id'],
-                    $p['opened_version'] ?? 'legacy-' . $state->version]),
+                    $p['opened_version'] ?? 'legacy-' . $state->version, $step]),
                 battlefieldOwner: $playerKey,
-                groups: [
-                    new CardSelectionGroup('amount', 'amount', $amountItems, 'Сколько монет потратить', selected: [(int) $p['max_x']]),
-                    new CardSelectionGroup('enemy', 'enemy_id', $enemyItems, 'Кого ранить'),
-                    new CardSelectionGroup('ally', 'ally_id', $allyItems, 'Кого излечить'),
-                ],
+                groups: [new CardSelectionGroup($step, $enemy ? 'enemy_id' : 'ally_id', $items,
+                    $enemy ? 'Кого ранить' : 'Кого излечить')],
             ),
         );
     }

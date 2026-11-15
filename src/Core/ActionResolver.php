@@ -4665,9 +4665,33 @@ final class ActionResolver
             return Result::error('Не ваш выбор');
         }
 
-        $x = (int) $cmd->get('amount', 0);
-        $enemyId = (int) $cmd->get('enemy_id', 0);
-        $allyId  = (int) $cmd->get('ally_id', 0);
+        $step = $p['step'] ?? 'amount';
+        if ($step === 'amount') {
+            $x = (int) $cmd->get('amount', 0);
+            $source = $this->state->getCard((int) $p['card_id']);
+            if (!$source || $x < (int) $p['min_x'] || $x > min((int) $p['max_x'], $source->coins)) {
+                return Result::error('Неверное количество монет');
+            }
+            $this->state->battle['pending_life_gift']['amount'] = $x;
+            $this->state->battle['pending_life_gift']['step'] = 'enemy';
+            $this->state->bumpVersion();
+            return Result::ok(['life_gift_enemy']);
+        }
+        if ($step === 'enemy') {
+            $enemyId = (int) $cmd->get('enemy_id', 0);
+            $current = $this->lifeGiftTargets($playerKey);
+            if (!in_array($enemyId, $p['enemies'], true) || !in_array($enemyId, $current['enemies'], true)) {
+                return Result::error('Неверная цель-враг');
+            }
+            $this->state->battle['pending_life_gift']['enemy_id'] = $enemyId;
+            $this->state->battle['pending_life_gift']['step'] = 'ally';
+            $this->state->bumpVersion();
+            return Result::ok(['life_gift_ally']);
+        }
+        if ($step !== 'ally') return Result::error('Неверный этап выбора');
+        $x = (int) $p['amount'];
+        $enemyId = (int) $p['enemy_id'];
+        $allyId = (int) $cmd->get('ally_id', 0);
 
         if ($x < (int) $p['min_x'] || $x > (int) $p['max_x']) {
             return Result::error('Неверное количество монет');
@@ -4695,6 +4719,11 @@ final class ActionResolver
         if (!in_array($enemyId, $current['enemies'], true)
             || !in_array($allyId, $current['allies'], true)) {
             return Result::error('Цель больше недоступна');
+        }
+
+        if (!CardHealing::live($attacker) || $attacker->owner !== $playerKey
+            || $attacker->closed || $attacker->coins < $x) {
+            return Result::error('Источник или монеты больше недоступны');
         }
 
         unset($this->state->battle['pending_life_gift']);
