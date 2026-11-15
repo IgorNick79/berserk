@@ -144,6 +144,16 @@
         return true;
     }
 
+    document.addEventListener('dblclick', function (event) {
+        if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        var root = document.querySelector('[data-battle-sync-root]');
+        if (!root) return;
+        var choice = fieldChoice(root, event);
+        if (!choice || !selectCard(choice.form, choice.id, choice.group)) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    }, true);
+
     window.BerserkCardSelection = {
         fieldChoice: fieldChoice,
         pendingCandidate: pendingCandidate,
