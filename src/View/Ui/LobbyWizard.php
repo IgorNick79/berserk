@@ -19,7 +19,31 @@ final class LobbyWizard
             .'<div class="wizard-scroll"><header class="wizard-heading"><h1>Создать игру</h1><p data-wizard-progress>Шаг 1 из 3</p><nav class="wizard-tabs" aria-label="Этапы создания">';
         foreach (['Режим','Общие настройки','Настройки режима'] as $i=>$title) $html.='<button type="button" data-step="'.$i.'" aria-current="'.($i===0?'step':'false').'">'.$title.'</button>';
         $html.='</nav></header><section data-page="0"><h2>Режим игры</h2><div class="wizard-modes">';
-        foreach (['sealed','draft','solomon','glimpse','lucktest','system'] as $mode) $html.='<label class="wizard-option"><input type="radio" name="setup_mode" value="'.$mode.'"'.($mode==='sealed'?' checked':'').'><span>'.RoomSetup::label($mode).'</span></label>';
+        $groups = [
+            'Классический режим' => [
+                ['sealed', RoomSetup::label('sealed'), false],
+                ['system', RoomSetup::label('system'), false],
+                ['constructed', 'Констрактед', true],
+            ],
+            'Драфт' => [
+                ['draft', RoomSetup::label('draft'), false],
+                ['solomon', RoomSetup::label('solomon'), false],
+                ['glimpse', RoomSetup::label('glimpse'), false],
+                ['stack', 'Stack Draft', true],
+            ],
+            'Оригинальный режим' => [
+                ['lucktest', 'Lucktest', false],
+                ['megachoise', 'Megachoise', true],
+            ],
+        ];
+        foreach ($groups as $title => $options) {
+            $html.='<fieldset class="wizard-mode-group"><legend>'.$e($title).'</legend><div class="wizard-mode-options">';
+            foreach ($options as [$mode, $label, $disabled]) {
+                $html.='<label class="wizard-option"><input type="radio" name="setup_mode" value="'.$e($mode).'"'
+                    .($mode==='sealed'?' checked':'').($disabled?' disabled':'').'><span>'.$e($label).'</span></label>';
+            }
+            $html.='</div></fieldset>';
+        }
         $html.='</div>';
         $html.='</section><section data-page="1" hidden><fieldset class="wizard-common-options" data-wizard-access><h2>Доступ к партии</h2><div class="wizard-options"><label class="wizard-option"><input type="radio" name="access" value="open" checked><span>Открытая партия</span></label><label class="wizard-option"><input type="radio" name="access" value="closed"><span>🔒 Закрытая партия</span></label></div>'
             .'<label class="wizard-invite" hidden>Никнейм приглашённого игрока<input name="invited_login" autocomplete="off" minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]{3,32}"><small>Только этот игрок сможет запросить участие. Создатель подтверждает заявку.</small></label>'
