@@ -76,6 +76,8 @@ final class ShaksiRollChoice implements ChoiceHandlerInterface
                 ],
                 'submit' => 'Подтвердить',
             ],
+            cardSelection: \Berserk\View\Ui\CreatureChoice::confirmed($state, $playerKey, $cardsInfo, $items,
+                'shaksi:' . $p['source_id'] . ':' . ($p['dice'] ?? 0) . ':' . $effectType),
         );
     }
 
