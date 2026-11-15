@@ -1535,6 +1535,9 @@ final class StrikeResolver
                 return Result::ok(['wounds_resolution_resumed']);
             }
 
+            if (!empty($this->state->battle['strike']['auto_parent_result'])) {
+                $this->state->battle['strike'] = $this->state->battle['strike']['auto_parent_result'];
+            }
             $continuation = $this->continueAfterStrikeResultAck($this->state->battle['strike']);
             if ($continuation instanceof Result) {
                 return $continuation;

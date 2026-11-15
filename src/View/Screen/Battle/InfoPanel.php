@@ -874,16 +874,17 @@ final class InfoPanel
                     form: [
                         'name' => 'target_id',
                         'items' => $items,
+                        'side_toggle' => true,
                         'hidden' => [
                             ($this->role === 'host' ? 'first' : 'second') => '',
                             'game' => $state->gameId,
                             'cmd' => 'choose_auto_target',
                         ],
                     ],
+                    cardSelection: \Berserk\View\Ui\CreatureChoice::confirmed($state, $playerKey, $cardsInfo, $items,
+                        'auto-shot:' . $source->instanceId . ':' . ($strike['_resolution_id'] ?? $state->battle['turn'])),
                 ));
-                $skipUrl = "{$baseUrl}&cmd=choose_auto_target&target_id=0";
-                $contentHtml = $diceHtml . '<div class="auto-choice">' . $choice
-                    . '<a class="button skip" href="' . $skipUrl . '">Пропустить</a></div>';
+                $contentHtml = $choice;
             } else {
                 $contentHtml = $diceHtml . '<p class="wait">Ожидание выбора цели...</p>';
             }

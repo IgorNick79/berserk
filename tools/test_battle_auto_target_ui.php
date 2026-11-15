@@ -146,9 +146,8 @@ autoTargetUiAssert(
     'Three auto targets should be rendered as radio options.'
 );
 autoTargetUiAssert(
-    str_contains($playerHtml['info_panel_html'], 'cmd=choose_auto_target&target_id=0')
-        && str_contains($playerHtml['info_panel_html'], 'Пропустить'),
-    'Skip auto target button should remain available.'
+    !str_contains($playerHtml['info_panel_html'], 'cmd=choose_auto_target&target_id=0'),
+    'Mandatory auto shot has no skip action.'
 );
 
 $hostState = autoTargetUiState(GameState::PLAYER_HOST, [
@@ -176,7 +175,7 @@ $flyState = autoTargetUiState(GameState::PLAYER_PLAYER, [
 ]);
 $flyHtml = autoTargetUiRender($flyState, GameState::PLAYER_PLAYER, 'player', $cardsInfo);
 autoTargetUiAssert(
-    str_contains($flyHtml['info_panel_html'], '[III:1]'),
+    str_contains($flyHtml['info_panel_html'], 'Летун'),
     'Flying auto target candidate should use viewer-relative coordinates when present.'
 );
 autoTargetUiAssert(
