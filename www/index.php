@@ -603,6 +603,7 @@ try {
     }
     $botBinding = $playerKey === 'host'
         ? \Berserk\Core\Combat\BotMatch::bound($db, $gameId, $userId, $configuredBot) : null;
+    if ($botBinding !== null) MatchPause::bindBot($gameId);
     $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     if (!in_array($requestMethod,['GET','POST'],true)) throw new DomainException('method_not_allowed',405);
     if ($requestMethod === 'POST') {
@@ -1447,7 +1448,7 @@ if (in_array($screenName,['battle','game_over'],true)
         .$state->gameId.'" defer></script>';
 }
 
-if (\Berserk\Core\GameChat::canRead($state->status)) {
+if ($botBinding === null && \Berserk\Core\GameChat::canRead($state->status)) {
     $screenHtml .= '<link rel="stylesheet" href="/assets/css/battle-chat.css?v=6">';
     $_SESSION['chat_csrf'] = GameTransport::$csrf;
     $screenHtml .= $tpl->parse('includes/game_chat.tpl', [

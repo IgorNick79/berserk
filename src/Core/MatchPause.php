@@ -11,6 +11,9 @@ final class MatchPause
     public const ACCEPTED_LIMIT = 2;
     public const RESPONSE_SECONDS = 20;
     public const COOLDOWN_SECONDS = 300;
+    private static array $botGames = [];
+    public static function bindBot(int $game): void { self::$botGames[$game] = true; }
+    public static function bot(GameState $s): bool { return isset(self::$botGames[$s->gameId]) || !empty($s->battle['match_pause']['bot']); }
     public const COMMANDS = ['request_pause', 'accept_pause', 'reject_pause', 'cancel_pause_request', 'pause_ready'];
 
     public static function supportsStage(string $stage): bool
@@ -32,6 +35,7 @@ final class MatchPause
     {
         if (!self::blocking($s)) return false;
         $p=$s->battle['match_pause'];
+        if (self::bot($s)) return !self::supportsStage($s->status) || $s->winner !== null;
         return !self::supportsStage($s->status) || $s->winner !== null
             || $now >= ($p['mode']==='requested' ? $p['request_deadline_at'] : $p['pause_deadline_at']);
     }
@@ -71,13 +75,13 @@ final class MatchPause
     private static function request(GameState $s, string $actor, Command $cmd, int $now): Result
     {
         if (self::blocking($s)) return Result::error('pause_busy');
-        $duration=$cmd->get('duration_seconds');
+        $duration=self::bot($s) ? 60 : $cmd->get('duration_seconds');
         if ((!is_int($duration) && (!is_string($duration) || !preg_match('/^[0-9]{2,3}$/D',$duration)))
             || (int)$duration<self::MIN_SECONDS || (int)$duration>self::MAX_SECONDS
             || (int)$duration%self::STEP_SECONDS!==0) return Result::error('pause_invalid_duration');
         $p=$s->battle['match_pause'] ?? self::initial();
-        if ($p['used'][$actor]>=self::ACCEPTED_LIMIT) return Result::error('pause_limit');
-        if ($now<$p['cooldown_until'][$actor]) return Result::error('pause_cooldown');
+        if (!self::bot($s) && $p['used'][$actor]>=self::ACCEPTED_LIMIT) return Result::error('pause_limit');
+        if (!self::bot($s) && $now<$p['cooldown_until'][$actor]) return Result::error('pause_cooldown');
         $timer=TurnTimer::snapshot($s,$now);
         if ($s->status==='draft' && \Berserk\Core\Prepare\DraftTimer::isExpired($s,$now)) return Result::error('pause_turn_expired');
         if ($s->status==='battle' && $timer===null && TurnTimer::enabled($s)) return Result::error('pause_invalid_timer');
@@ -101,6 +105,12 @@ final class MatchPause
             'used'=>$p['used'],'cooldown_until'=>$p['cooldown_until'],
             'last_result'=>$p['last_result'],'last_resume'=>$p['last_resume'],
         ];
+        if (self::bot($s)) {
+            $s->battle['match_pause']['bot'] = true;
+            $s->battle['match_pause']['mode'] = 'active';
+            $s->battle['match_pause']['accepted_at'] = $now;
+            $s->battle['match_pause']['ready'][$s->getOpponentKey($actor)] = true;
+        }
         $s->bumpVersion();
         return Result::ok(['request_pause']);
     }
@@ -176,7 +186,7 @@ final class MatchPause
         if ($active) $commands=['pause_ready'];
         $opponent=$participant?$s->getOpponentKey($viewer):null;
         return [
-            'mode'=>$p['mode'],'server_now'=>$now,'request_id'=>$p['request_id']??null,
+            'bot'=>self::bot($s), 'mode'=>$p['mode'],'server_now'=>$now,'request_id'=>$p['request_id']??null,
             'initiator'=>$p['initiator']??null,'recipient'=>isset($p['initiator'])?$s->getOpponentKey($p['initiator']):null,
             'duration_seconds'=>$p['duration_seconds']??null,'requested_at'=>$p['requested_at']??null,
             'request_deadline_at'=>$p['request_deadline_at']??null,'accepted_at'=>$p['accepted_at']??null,

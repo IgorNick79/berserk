@@ -324,7 +324,7 @@ final class InfoPanel
             ? ($p['ready_self'] ? 'Вы готовы, ожидаем соперника' : 'Когда вернётесь, нажмите «Вернулся / Готов».')
             : ($p['initiator'] === $this->playerKey ? 'Ожидаем ответа соперника.' : 'Соперник просит паузу на ' . intdiv($p['duration_seconds'], 60) . ' мин.');
         $html = '<section class="match-pause-content" data-match-pause-content><div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/pause_160.png" width="24" height="24" alt=""><h2 class="panel-card-title">' . $heading . '</h2></div>'
-            . '<div class="match-pause-countdown" data-pause-countdown role="timer">' . sprintf('%02d:%02d', intdiv($seconds, 60), $seconds % 60) . '</div>'
+            . '<div class="match-pause-countdown" data-pause-countdown role="timer"' . (!empty($p['bot']) ? ' hidden' : '') . '>' . sprintf('%02d:%02d', intdiv($seconds, 60), $seconds % 60) . '</div>'
             . '<p data-pause-description>' . $message . '</p><div class="match-pause-decisions">';
         foreach (['accept_pause'=>'Принять', 'reject_pause'=>'Отклонить', 'cancel_pause_request'=>'Отменить запрос'] as $cmd=>$label) {
             if (in_array($cmd, $p['allowed_commands'], true)) $html .= '<button class="button" type="button" data-pause-command="' . $cmd . '">' . $label . '</button>';

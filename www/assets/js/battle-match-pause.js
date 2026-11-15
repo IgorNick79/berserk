@@ -37,6 +37,7 @@
             });
             function seconds() {
                 if (!model || model.mode === "idle") return null;
+                if (model.bot) return null;
                 return Math.max(0, Math.ceil((expiresAt - performance.now()) / 1000));
             }
             function render() {
@@ -71,6 +72,7 @@
                 var remaining = seconds();
                 if (section) {
                     section.querySelector("h2").textContent = model.mode === "active" ? "Пауза" : "Запрос паузы";
+                    section.querySelector("[data-pause-countdown]").hidden = !!model.bot;
                     section.querySelector("[data-pause-countdown]").textContent = String(Math.floor(remaining / 60)).padStart(2, "0") + ":" + String(remaining % 60).padStart(2, "0");
                     var text = model.mode === "requested"
                         ? (model.allowed_commands.indexOf("cancel_pause_request") >= 0 ? "Ожидаем ответа соперника." : "Соперник просит паузу на " + model.duration_seconds / 60 + " мин.")
@@ -115,7 +117,7 @@
                     || ["idle", "requested", "active"].indexOf(next.mode) < 0 || !Number.isFinite(next.server_now)
                     || !Array.isArray(next.allowed_commands)) return;
                 if (next.mode !== "idle" && (typeof next.request_id !== "string"
-                    || !Number.isFinite(next.mode === "requested" ? next.request_deadline_at : next.pause_deadline_at))) return;
+                    || !next.bot && !Number.isFinite(next.mode === "requested" ? next.request_deadline_at : next.pause_deadline_at))) return;
                 if (model && nextVersion === version && next.server_now < model.server_now) return;
                 // A countdown is identified by its request, phase and deadline, not persistence version.
                 // Keep its monotonic local expiry: a sample may move it earlier, never later.
@@ -150,7 +152,10 @@
                 event.preventDefault(); event.stopImmediatePropagation();
                 if (node.disabled || busy() || !model) return;
                 if (node.hasAttribute("data-open-pause")) {
-                    if (model.allowed_commands.indexOf("request_pause") >= 0) picker.showModal();
+                    if (model.allowed_commands.indexOf("request_pause") >= 0) {
+                        if (model.bot) send(new URLSearchParams({cmd:'request_pause', duration_seconds:'60'}));
+                        else picker.showModal();
+                    }
                     return;
                 }
                 var cmd = node.dataset.pauseCommand;
