@@ -76,3 +76,23 @@
 .screen-draft--glimpse .glimpse-card-back { display:grid; place-items:center; background:#24251f; border-color:#607b69; }
 .screen-draft--glimpse .glimpse-card-back img { width:60%; height:60%; object-fit:contain; }
 .screen-draft--glimpse .glimpse-button-space { grid-column:1 / -1; height:32px; }
+
+/* Solomon uses the same compact, below-card action placement as Glimpse. */
+.draft-page .screen-draft--solomon .solomon-stack__card {
+    grid-template-rows: minmax(128px, 1fr) 28px;
+}
+.draft-page .screen-draft--solomon .solomon-stack__selection { height: 28px; }
+.draft-page .screen-draft--solomon .solomon-stack__select {
+    box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 28px; min-height: 24px; margin: 0; padding: 3px 6px;
+    font-size: 11px; line-height: 1.2;
+}
+
+/* Catalog rarity palette shared with the squad selection screen. */
+.draft-page .solomon-stack__card[data-rarity] { --draft-rarity-border: #607b69; }
+.draft-page .solomon-stack__card[data-rarity="uncommon"] { --draft-rarity-border: #548bdb; }
+.draft-page .solomon-stack__card[data-rarity="rare"] { --draft-rarity-border: #a475db; }
+.draft-page .solomon-stack__card[data-rarity="ultrarare"] { --draft-rarity-border: #f08a3e; }
+.draft-page .solomon-stack__card[data-rarity] .prepare-card.view-thumbnail {
+    border-color: var(--draft-rarity-border) !important;
+}

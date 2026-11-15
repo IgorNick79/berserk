@@ -112,13 +112,13 @@ final class DraftScreen
                 . (int) $state->gameId . '-' . $playerKey . '" data-preview-position="' . $selectedIdx . '" data-decision="' . (int) ($draft['decision_id'] ?? 1) . '">';
             foreach ($draft['grid'] as $position => $ukid) {
                 $info = $cardsInfo[$ukid] ?? ['name' => $ukid, 'strike' => []];
-                $gridHtml .= '<div class="solomon-stack__card" data-solomon-position="' . (int) $position . '">'
+                $gridHtml .= '<div class="solomon-stack__card" data-rarity="' . htmlspecialchars((string) ($info['rarity'] ?? 'common'), ENT_QUOTES) . '" data-solomon-position="' . (int) $position . '">'
+                    . $ui->thumbnail($cardsInfo, ['element_in_cost'=>true, 'ukid' => $ukid, 'info' => $info, 'link' => $baseUrl . '&card=' . (int) $position
+                        . '&card_ukid=' . rawurlencode($ukid) . '&card_version=' . $state->version])
                     . '<div class="solomon-stack__selection">'
                     . ($isMyTurn ? '<label class="solomon-stack__select button"><input type="checkbox" name="positions[]" value="' . (int) $position
                         . '" form="solomon-decision"><span>Выбрать</span></label>' : '')
                     . '</div>'
-                    . $ui->thumbnail($cardsInfo, ['element_in_cost'=>true, 'ukid' => $ukid, 'info' => $info, 'link' => $baseUrl . '&card=' . (int) $position
-                        . '&card_ukid=' . rawurlencode($ukid) . '&card_version=' . $state->version])
                     . '<template data-solomon-preview>' . $ui->informationWithControls(['ukid' => $ukid], $cardsInfo) . $cardActionsHtml . '</template></div>';
             }
             $gridHtml .= '</div>';
@@ -324,7 +324,7 @@ final class DraftScreen
             }
             $position = $bySlot[$slot];
             $ukid = $draft['grid'][$position];
-            $grid .= '<div class="solomon-stack__card pregame-grid-card" data-grid-occupied="1"' . ($active ? ' data-glimpse-card' : '') . '>'
+            $grid .= '<div class="solomon-stack__card pregame-grid-card" data-rarity="' . htmlspecialchars((string) ($cardsInfo[$ukid]['rarity'] ?? 'common'), ENT_QUOTES) . '" data-grid-occupied="1"' . ($active ? ' data-glimpse-card' : '') . '>'
                 . $ui->thumbnail($cardsInfo, ['element_in_cost'=>true, 'ukid'=>$ukid, 'info'=>$cardsInfo[$ukid] ?? [], 'link'=>'#'])
                 . '<template data-grid-preview>' . $ui->informationWithControls(['ukid'=>$ukid], $cardsInfo) . '</template>';
             if ($active) {
