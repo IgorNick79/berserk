@@ -16,3 +16,11 @@
 [data-panel-theme="parchment"],.panel-theme-option[data-theme-choice="parchment"]{--ip-base:#343029;--ip-surface:#484034;--ip-edge:#a69a78;--ip-title:#f4e5be;--ip-text:#f4eedf;--ip-muted:#d7cbb2;--ip-glow:#665b47}
 .panel-theme-options{display:grid;grid-template-columns:1fr 1fr;gap:12px}.panel-theme-option{position:relative;min-height:95px;padding:16px;border:2px solid var(--ip-edge);border-radius:6px;background:radial-gradient(ellipse at top,var(--ip-glow),transparent 65%),var(--ip-base);color:var(--ip-title);font:600 14px/1.4 system-ui;cursor:pointer}
 .panel-theme-option[aria-pressed="true"]{outline:2px solid #f4dfb5;outline-offset:2px}.panel-theme-option:focus-visible{outline:3px solid white;outline-offset:2px}.panel-theme-option:disabled{opacity:.55;cursor:wait}
+
+/* Full-width menu hit areas; spacing belongs to the rows. */
+.unified-menu-panel { padding: 8px 0; }
+.unified-menu-group { gap: 0; }
+.unified-menu a, .unified-menu button:not(.unified-menu-toggle) { padding: 10px 16px; border-radius: 0; }
+.unified-menu-account { margin: auto 0 -8px; padding: 8px 0; }
+.unified-menu-account > strong { padding: 8px 16px; }
+.unified-menu [data-menu-notice] { padding: 0 16px; }

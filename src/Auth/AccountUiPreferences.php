@@ -32,17 +32,17 @@ final class AccountUiPreferences
         try {$s->bind_param('is',$accountId,$mat);$s->execute();} finally {$s->close();}
         $s=$this->db->prepare('UPDATE account_ui_preferences SET playmat_id=?,revision=revision+1 WHERE account_id=? AND playmat_id IS NULL');
         try {$s->bind_param('si',$mat,$accountId);$s->execute();} finally {$s->close();}
-        $s=$this->db->prepare('SELECT panel_theme,playmat_id,sound_enabled,revision FROM account_ui_preferences WHERE account_id=?');
+        $s=$this->db->prepare('SELECT panel_theme,playmat_id,sound_enabled,messages_enabled,revision FROM account_ui_preferences WHERE account_id=?');
         try {$s->bind_param('i',$accountId);$s->execute();$r=$s->get_result()->fetch_assoc();} finally {$s->close();}
         if (!$r || !PanelTheme::valid($r['panel_theme']) || !isset(\Berserk\Core\PlaymatCatalog::ITEMS[$r['playmat_id']])) throw new \RuntimeException('invalid_preferences');
-        return ['theme'=>$r['panel_theme'],'playmat_id'=>$r['playmat_id'],'sound_enabled'=>(bool)$r['sound_enabled'],'revision'=>(int)$r['revision']];
+        return ['theme'=>$r['panel_theme'],'playmat_id'=>$r['playmat_id'],'sound_enabled'=>(bool)$r['sound_enabled'],'messages_enabled'=>(bool)$r['messages_enabled'],'revision'=>(int)$r['revision']];
     }
     public function save(int $accountId, string $key, mixed $value): array
     {
-        $columns=['sound_enabled'=>'sound_enabled','playmat_id'=>'playmat_id','theme'=>'panel_theme'];
+        $columns=['messages_enabled'=>'messages_enabled','sound_enabled'=>'sound_enabled','playmat_id'=>'playmat_id','theme'=>'panel_theme'];
         if (!isset($columns[$key]) || ($key==='theme' && !PanelTheme::valid($value))
             || ($key==='playmat_id' && (!is_string($value) || !isset(\Berserk\Core\PlaymatCatalog::ITEMS[$value])))
-            || ($key==='sound_enabled' && !in_array($value,['0','1'],true))) throw new \InvalidArgumentException('invalid_preference');
+            || (in_array($key,['sound_enabled','messages_enabled'],true) && !in_array($value,['0','1'],true))) throw new \InvalidArgumentException('invalid_preference');
         $this->snapshot($accountId);
         $s=$this->db->prepare('UPDATE account_ui_preferences SET '.$columns[$key].'=?,revision=revision+1 WHERE account_id=?');
         try {$s->bind_param('si',$value,$accountId);$s->execute();} finally {$s->close();}

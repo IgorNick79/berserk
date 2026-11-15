@@ -21,11 +21,11 @@
         if (navigating || !pending || !window.BerserkPreferences?.current) return;
         const event = pending; pending = null;
         try { sessionStorage.removeItem('berserk-room-sound-pending'); } catch (_) {}
-        if (!enabled() || Date.now() - event.at > 5000) return;
+        if (!enabled() || (String(event.key).startsWith('game-chat:') && window.BerserkPreferences.current.messages_enabled === false) || Date.now() - event.at > 5000) return;
         arm();
         const expectedGeneration = generation;
         const play = () => {
-            if (generation !== expectedGeneration || !enabled() || context?.state !== 'running' || Date.now() - event.at > 5000) return;
+            if ((String(event.key).startsWith('game-chat:') && window.BerserkPreferences.current?.messages_enabled === false) || generation !== expectedGeneration || !enabled() || context?.state !== 'running' || Date.now() - event.at > 5000) return;
             [880].forEach((frequency, index) => {
                 const oscillator = context.createOscillator(), gain = context.createGain();
                 const at = context.currentTime + index * 0.14;
@@ -43,7 +43,7 @@
         notify(key, afterNavigation = false) {
             if (seen.has(key)) return;
             seen.add(key);
-            pending = {at: Date.now()}; navigating = afterNavigation;
+            pending = {key, at: Date.now()}; navigating = afterNavigation;
             try {
                 sessionStorage.setItem('berserk-room-sounds', JSON.stringify([...seen].slice(-32)));
                 sessionStorage.setItem('berserk-room-sound-pending', JSON.stringify(pending));
