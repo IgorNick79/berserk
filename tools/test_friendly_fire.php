@@ -158,9 +158,9 @@ friendlyAssert(
     'Explicit strike mode should produce a friendly strike link.'
 );
 friendlyAssert(
-    str_contains($htmlWithMode['field_html'], 'onclick="return confirm(')
+    str_contains($htmlWithMode['field_html'], 'data-confirm="')
         && str_contains($htmlWithMode['field_html'], 'Атаковать свою карту'),
-    'Friendly target link should require browser confirmation.'
+    'Friendly target link should require styled confirmation.'
 );
 
 $strikeState = friendlyState();

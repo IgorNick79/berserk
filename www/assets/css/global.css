@@ -2247,3 +2247,50 @@ body.battle-page {
 :is(.battle-page,.view-deck-page,.roll-page) .match-pause-countdown { color: #fff; }
 .battle-page .death-choice-buttons:has(.catcher-dice) > .button { height: 40px; min-height: 40px; box-sizing: border-box; vertical-align: middle; display: inline-flex; align-items: center; justify-content: center; line-height: 1.2; }
 .battle-page .catcher-dice .panel-dice-face { width: 24px; height: 24px; }
+
+/* Shared confirmation / notification surface. Scoped against legacy button rules. */
+.berserk-dialog {
+    box-sizing: border-box; width: 540px; max-width: calc(100vw - 64px);
+    max-height: calc(100vh - 80px); overflow: auto;
+    color: #e6dfd2; padding: 38px 40px 30px; border: 1px solid #8d7350;
+    border-radius: 8px;
+    background:
+        radial-gradient(ellipse at 50% 0, #a1844a20, transparent 65%),
+        repeating-linear-gradient(116deg, #ffffff02 0 1px, transparent 1px 4px),
+        repeating-linear-gradient(23deg, #00000016 0 1px, transparent 1px 7px),
+        linear-gradient(145deg, #30312f, #1b1d1d 70%, #252724);
+    box-shadow: inset 0 0 0 5px #161817, inset 0 0 0 6px #77634360,
+        inset 0 0 45px #0005, 0 24px 80px #0009, 0 4px 16px #0006;
+}
+.berserk-dialog::before, .berserk-dialog::after {
+    content: ''; position: absolute; width: 20px; height: 20px;
+    border-color: #b6975c; border-style: solid; pointer-events: none;
+}
+.berserk-dialog::before { top: 11px; left: 11px; border-width: 2px 0 0 2px; }
+.berserk-dialog::after { bottom: 11px; right: 11px; border-width: 0 2px 2px 0; }
+.berserk-dialog::backdrop { background: #080c10b8; backdrop-filter: blur(2px); }
+.berserk-dialog h2 {
+    margin: 0 0 23px; padding: 0 0 19px; color: #d5b985;
+    font: 500 24px/1.3 Georgia, 'Times New Roman', serif; letter-spacing: .025em;
+    border-bottom: 1px solid #a087514d; text-shadow: 0 2px 3px #0008;
+}
+.berserk-dialog p { margin: 0 0 30px; font: 16px/1.65 system-ui, sans-serif; white-space: pre-wrap; overflow-wrap: anywhere; }
+.berserk-dialog > div { display: flex; justify-content: center; gap: 12px; }
+.berserk-dialog .button {
+    display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+    min-height: 44px; padding: 10px 22px; margin: 0; border: 1px solid #88724f;
+    border-radius: 5px; background: #806a44; color: #fff8e9; font: 600 14px/1.3 system-ui, sans-serif;
+    cursor: pointer; box-shadow: 0 2px 4px #0003; text-shadow: none;
+}
+.berserk-dialog .button:first-child { background: #303535; border-color: #58605e; color: #e0e3df; }
+.berserk-dialog .button:hover { filter: brightness(1.13); }
+.berserk-dialog .button:focus-visible { outline: 2px solid #e3ca96; outline-offset: 4px; }
+.berserk-dialog .button:disabled { opacity: .45; cursor: default; filter: none; }
+.berserk-dialog .button[hidden] { display: none !important; }
+
+.berserk-dialog h2::before {
+    content: ''; display: inline-block; width: 28px; height: 28px; margin-right: 12px;
+    background: url('/assets/images/battle/cell_info.svg') center / contain no-repeat;
+    vertical-align: -5px;
+}
+.berserk-dialog[data-kind="alert"] .button { min-width: 112px; }

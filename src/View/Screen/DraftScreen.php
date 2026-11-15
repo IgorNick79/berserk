@@ -160,7 +160,7 @@ final class DraftScreen
             $gridControls .= '<div class="pregame-grid-extra-actions">';
             if (!$isDiscrete) $passButton = '<button type="button" class="button skip secondary" data-grid-pick data-command="draft_pass" aria-pressed="false">Пас</button>';
             if ($hostPickedCount >= GameSettings::MIN_DECK_SIZE && $playerPickedCount >= GameSettings::MIN_DECK_SIZE) {
-                $finishHtml = '<div class="pregame-grid-finish" data-preparation-actions><a class="button" data-grid-finish href="' . $baseUrl . '&cmd=finish_draft" onclick="return window.confirm(\'Закончить драфт?\');">Закончить драфт</a></div>';
+                $finishHtml = '<div class="pregame-grid-finish" data-preparation-actions><a class="button" data-grid-finish href="' . $baseUrl . '&cmd=finish_draft" data-confirm="Закончить драфт?">Закончить драфт</a></div>';
             }
             $gridControls .= '</div></div>';
             $actionsHtml = '<form method="get" id="grid-decision" class="prepare-actions" data-preparation-actions>'

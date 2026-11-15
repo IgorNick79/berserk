@@ -109,7 +109,7 @@ final class DealScreen
         if (!$me->isConfirmed('deal') && $me->reshuffles < 3 && $pendingHtml === '') {
             $hint = 'Пересдать колоду (штраф: 1 золото, осталось: ' . (3 - $me->reshuffles) . ')';
             $reshuffleIcon .= '<a class="pregame-hint pregame-reshuffle" data-pregame-hint-action href="' . $baseUrl . '&cmd=reshuffle"'
-                . ' aria-label="' . $hint . '" onclick="return confirm(\'Пересдать карты?\')">'
+                . ' aria-label="' . $hint . '" data-confirm="Пересдать карты?">'
                 . '<img src="/assets/images/battle/reshuffle_160.png" alt="" width="28" height="28">'
                 . '<template data-pregame-hint>' . $hint . '</template></a>';
         }

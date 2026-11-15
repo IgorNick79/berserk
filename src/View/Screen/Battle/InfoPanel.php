@@ -293,7 +293,7 @@ final class InfoPanel
             'file' => 'surrender_160.png', 'label' => 'Сдаться',
         ]);
         $resign = $inBattle
-            ? '<a class="battle-icon-control resign" aria-label="Сдаться" href="' . $this->baseUrl . '&cmd=resign" onclick="return confirm(\'Сдаться?\')">' . $resignIcon . '</a>'
+            ? '<a class="battle-icon-control resign" aria-label="Сдаться" href="' . $this->baseUrl . '&cmd=resign" data-confirm="Сдаться?">' . $resignIcon . '</a>'
             : '<button class="battle-icon-control resign" aria-label="Сдаться" type="button" disabled>' . $resignIcon . '</button>';
         $journalRuntime=\Berserk\Core\BattleHistory\HistoryRuntime::load();
         $journalAllowed=$journalRuntime->journals($state->gameId) && $journalRuntime->journalSide($state->gameId,$state->hostId,$state->playerId,$_SESSION??[])===$this->playerKey;

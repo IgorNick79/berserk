@@ -994,7 +994,12 @@
         event.preventDefault();
         var params = new URLSearchParams();
         appendCommandParamsFromUrl(params, url);
-        submitCommand(params);
+        if (link.dataset.confirm) {
+            var version = syncVersion;
+            window.BerserkDialogs.confirm(link.dataset.confirm).then(function (accepted) {
+                if (accepted && link.isConnected && version === syncVersion && !commandInFlight()) submitCommand(params);
+            });
+        } else submitCommand(params);
     });
 
     root.addEventListener("submit", function (event) {
