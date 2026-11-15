@@ -2,18 +2,22 @@
     'use strict';
     const dialog = document.createElement('dialog');
     dialog.className = 'berserk-dialog';
-    dialog.setAttribute('aria-label', 'Berserk');
+    dialog.setAttribute('aria-labelledby', 'berserk-dialog-title');
+    const title = document.createElement('h2');
+    title.id = 'berserk-dialog-title';
     const message = document.createElement('p'), actions = document.createElement('div');
     const cancel = document.createElement('button'), ok = document.createElement('button');
     cancel.type = ok.type = 'button';
     cancel.className = ok.className = 'button';
-    actions.append(cancel, ok); dialog.append(message, actions); document.body.append(dialog);
+    actions.append(cancel, ok); dialog.append(title, message, actions); document.body.append(dialog);
     const queue = [], seen = new Set();
     let active = null;
     let leaving = false;
     function pump() {
         if (leaving || active || !queue.length || document.querySelector('dialog[open]')) return;
         active = queue.shift(); active.focus = document.activeElement;
+        dialog.dataset.kind = active.kind;
+        title.textContent = active.kind === 'confirm' ? 'Подтверждение действия' : (/^Ошибка[:.! ]/i.test(active.message) ? 'Ошибка' : 'Уведомление');
         message.textContent = active.message;
         cancel.textContent = 'Отмена'; cancel.hidden = active.kind !== 'confirm';
         ok.textContent = active.kind === 'confirm' ? 'Подтвердить' : 'ОК';
