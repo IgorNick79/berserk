@@ -2369,3 +2369,16 @@ body.battle-page {
     vertical-align: -5px;
 }
 .berserk-dialog[data-kind="alert"] .button { min-width: 112px; }
+
+/* Pause request is a form variation of the shared confirmation surface. */
+.battle-pause-picker.berserk-dialog label { margin: 0 0 10px; color: #d4caba; font: 15px/1.5 system-ui, sans-serif; }
+.battle-pause-picker.berserk-dialog output { margin-left: 6px; color: #d5b985; font: 600 25px/1.3 system-ui, sans-serif; }
+.battle-pause-picker.berserk-dialog input[type=range] { accent-color: #b6975c; margin-bottom: 16px; }
+.battle-pause-picker.berserk-dialog p { font-size: 14px; margin-bottom: 22px; }
+.battle-pause-picker.berserk-dialog .pause-picker-actions { margin-top: 24px; gap: 12px; }
+.battle-pause-picker.berserk-dialog .pause-picker-actions button { flex: 0 1 auto; min-width: 130px; }
+.battle-pause-picker.berserk-dialog [data-picker-send] { background: #806a44; color: #fff8e9; border: 1px solid #88724f; }
+.battle-pause-picker.berserk-dialog [data-picker-cancel],
+.battle-pause-picker.berserk-dialog [data-picker-cancel]:hover { background: #303535; color: #e0e3df; border: 1px solid #58605e; }
+
+.battle-pause-picker.berserk-dialog input[type=range]:is(:focus, :focus-visible) { outline: none; box-shadow: none; }
