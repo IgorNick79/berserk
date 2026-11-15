@@ -37,6 +37,7 @@ final class DraftSelectionEvaluator
     public function __construct(
         private array $cardsByUkid,
         private array $synergyByPair = [],
+        private bool $compositionAware = false,
     ) {}
 
     /**
@@ -64,7 +65,8 @@ final class DraftSelectionEvaluator
             + $this->singleContribution($currentUkids, $candidateCards)
             + $this->duplicateContribution($currentUkids, $candidateUkids, $candidateCards)
             + $this->synergyContribution($currentUkids, $candidateUkids)
-            + count($candidateCards) * 0.25;
+            + count($candidateCards) * 0.25
+            + ($this->compositionAware ? $this->compositionValue($afterCards) - $this->compositionValue($currentCards) : 0.0);
     }
 
     /**
@@ -101,6 +103,7 @@ final class DraftSelectionEvaluator
         return [
             'ukid'          => (string) ($card['ukid'] ?? ''),
             'power'         => $this->positiveFloat($card['power'] ?? null, self::DEFAULT_POWER),
+            'element_id'    => (int) ($card['element_id'] ?? 6),
             'single'        => !empty($card['single']),
             'price'         => max(0, (int) ($card['price'] ?? 0)),
             'health'        => max(0, (int) ($card['health'] ?? 0)),
@@ -111,6 +114,29 @@ final class DraftSelectionEvaluator
             'strike_strong' => max(0, (int) ($card['strike_strong'] ?? 0)),
             'prop'          => is_array($prop) ? $prop : [],
         ];
+    }
+
+    /** Soft marginal utility only. Legal choices remain owned by DraftProcessor. */
+    private function compositionValue(array $cards): float
+    {
+        $gold = 0; $counts = []; $elements = []; $score = 0.0;
+        foreach ($cards as $card) {
+            if ($card['elite']) $gold++;
+            $count = ($counts[$card['ukid']] ?? 0) + 1;
+            $counts[$card['ukid']] = $count;
+            if ($card['single'] && $count > 1) $score -= 1.8;
+            if ($card['element_id'] > 0 && $card['element_id'] !== 6) {
+                $elements[$card['element_id']] = ($elements[$card['element_id']] ?? 0) + 1;
+            }
+        }
+        // Neutral cards introduce no extra element; concentration has diminishing returns.
+        $colored = array_sum($elements);
+        if ($colored > 0) {
+            foreach ($elements as $count) $score += 0.30 * $count * ($count / $colored);
+        }
+        // One gold to two silver is a preference, never a quota or prohibition.
+        $excess = max(0.0, $gold - count($cards) / 3.0);
+        return $score - 0.65 * $excess;
     }
 
     private function positiveFloat(mixed $value, float $fallback): float

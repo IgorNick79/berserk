@@ -2220,6 +2220,7 @@ final class PrepareProcessor
         return new DraftAutoPicker(new DraftSelectionEvaluator(
             $cardsByUkid,
             $dataProvider->loadSynergyByPair($cardsByUkid),
+            $this->state->settings->draftType() !== GameSettings::DRAFT_TYPE_GRID,
         ));
     }
 
@@ -2239,7 +2240,7 @@ final class PrepareProcessor
 
     private function isDraftAutoControlled(string $playerKey): bool
     {
-        if ($this->state->settings->isSolomonDraft()) {
+        if ($this->state->settings->isSolomonDraft() && $this->state->settings->draftPickMode() !== GameSettings::DRAFT_PICK_MODE_RANDOM) {
             $timer = $this->state->draft['timer'] ?? null;
             return is_array($timer)
                 && (int) ($timer['elapsed']['host'] ?? 0) >= (int) $timer['total_limit']

@@ -148,7 +148,7 @@ final class SettingsScreen
             )
             . '</div>'
             . '</section>'
-            . ($isSolomon ? '' : '<section class="settings-section">'
+            . ('<section class="settings-section">'
             . '<h2>Автоматический выбор</h2>'
             . '<label class="settings-toggle">'
             . '<input type="checkbox" name="draft_pick_mode" value="' . GameSettings::DRAFT_PICK_MODE_RANDOM . '" data-settings-toggle="auto-draft"'
