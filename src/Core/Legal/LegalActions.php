@@ -254,7 +254,7 @@ final class LegalActions
                 $out['decision'] = 'combat_main_pass';
                 $out['coverage'] = 'partial';
                 $out['actions'] = [self::option('combat_instant_pass')];
-            } elseif ($handler === null && $wait['source'] === 'strike.results'
+            } elseif ($handler === null && in_array($wait['source'], ['strike.results', 'strike.waiting_push_ack'], true)
                 && (in_array($state->battle['strike']['kind'] ?? '', ['', 'shot', 'throw', 'tap', 'discharge', 'uchr', 'heal', 'multi_heal'], true)
                     || BasicMagic::resultAck($state,$viewer))
                 && in_array($state->battle['strike']['instant_result_stage'] ?? null,[null,'dice'],true)
