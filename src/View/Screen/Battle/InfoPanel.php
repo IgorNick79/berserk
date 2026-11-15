@@ -802,7 +802,8 @@ final class InfoPanel
 
                 $radio = '<label class="choice-radio">'
                     . '<input type="radio" name="choice" value="move" checked>'
-                    . '<span>Переместить на (' . $pp['new_row'] . ',' . $pp['new_col'] . ')</span>'
+                    . '<span>Переместить на ' . \Berserk\View\Ui\Coords::renderResult(
+                        $pp['new_row'], $pp['new_col'], $playerKey, $defCard->owner) . '</span>'
                     . '</label>'
                     . '<label class="choice-radio">'
                     . '<input type="radio" name="choice" value="damage">'
@@ -874,16 +875,17 @@ final class InfoPanel
                     form: [
                         'name' => 'target_id',
                         'items' => $items,
+                        'side_toggle' => true,
                         'hidden' => [
                             ($this->role === 'host' ? 'first' : 'second') => '',
                             'game' => $state->gameId,
                             'cmd' => 'choose_auto_target',
                         ],
                     ],
+                    cardSelection: \Berserk\View\Ui\CreatureChoice::confirmed($state, $playerKey, $cardsInfo, $items,
+                        'auto-shot:' . $source->instanceId . ':' . ($strike['_resolution_id'] ?? $state->battle['turn'])),
                 ));
-                $skipUrl = "{$baseUrl}&cmd=choose_auto_target&target_id=0";
-                $contentHtml = $diceHtml . '<div class="auto-choice">' . $choice
-                    . '<a class="button skip" href="' . $skipUrl . '">Пропустить</a></div>';
+                $contentHtml = $choice;
             } else {
                 $contentHtml = $diceHtml . '<p class="wait">Ожидание выбора цели...</p>';
             }

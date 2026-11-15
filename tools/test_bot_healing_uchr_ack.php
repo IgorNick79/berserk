@@ -3,11 +3,25 @@ declare(strict_types=1);
 ob_start();
 require __DIR__ . '/test_lilith.php';
 ob_end_clean();
-foreach (['heal', 'uchr'] as $kind) {
+foreach (['heal', 'uchr', 'life_gift'] as $kind) {
     $s = ls();
     $s->persistenceVersion = 1;
     $source = $s->getCard(1);
-    if ($kind === 'heal') {
+    if ($kind === 'life_gift') {
+        $source->coins = 2;
+        $source->prop = ['actions'=>[['key'=>'gift', 'type'=>'life_gift', 'min_x'=>1]]];
+        $s->getCard(3)->hp -= 3;
+        foreach ([
+            ['action', ['card_id'=>1, 'action_key'=>'gift']],
+            ['choose_life_gift', ['amount'=>2]],
+            ['choose_life_gift', ['enemy_id'=>2]],
+        ] as [$type, $payload]) {
+            $engine = new \Berserk\Core\Engine();
+            $r = $engine->apply($s, 'host', new \Berserk\Core\Command($type, $payload));
+            lc($r->success, 'Life gift step: ' . $r->error);
+        }
+        $command = new \Berserk\Core\Command('choose_life_gift', ['ally_id'=>3]);
+    } elseif ($kind === 'heal') {
         $target = $s->getCard(3);
         $target->row = 2;
         $target->col = 3;

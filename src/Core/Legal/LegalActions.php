@@ -83,6 +83,23 @@ final class LegalActions
                 if (self::passesClock($state, $viewer, $option, $now)) $out['actions'][] = $option;
                 return $out;
             }
+            if ($handler instanceof \Berserk\Core\Choice\ForcedDirectionalMoveChoice
+                && $wait['source'] === 'pending_forced_directional_move') {
+                $pending = $state->battle['pending_forced_directional_move'];
+                $resolver = new \Berserk\Core\Movement\ForcedMovementResolver($state, new \Berserk\Core\Engine());
+                $targets = $resolver->eligibleTargets($viewer, (int) $pending['delta_row'], (int) $pending['delta_col']);
+                $option = self::option('cancel_pending');
+                foreach ($targets as $target) {
+                    $option = self::option('choose_forced_directional_move', ['target_id'=>$target->instanceId]);
+                    break;
+                }
+                if (self::passesClock($state, $viewer, $option, $now)) {
+                    $out['decision'] = 'forced_directional_move';
+                    $out['coverage'] = 'partial';
+                    $out['actions'][] = $option;
+                }
+                return $out;
+            }
             $prophecy = \Berserk\Core\Observation\ProphecyKnowledge::choice($state, $viewer, $wait);
             if ($prophecy !== null) {
                 $out['decision'] = $prophecy['kind'];
@@ -237,8 +254,8 @@ final class LegalActions
                 $out['decision'] = 'combat_main_pass';
                 $out['coverage'] = 'partial';
                 $out['actions'] = [self::option('combat_instant_pass')];
-            } elseif ($handler === null && $wait['source'] === 'strike.results'
-                && (in_array($state->battle['strike']['kind'] ?? '', ['', 'shot', 'throw', 'tap', 'discharge', 'uchr', 'heal', 'multi_heal'], true)
+            } elseif ($handler === null && in_array($wait['source'], ['strike.results', 'strike.waiting_push_ack'], true)
+                && (in_array($state->battle['strike']['kind'] ?? '', ['', 'shot', 'throw', 'tap', 'discharge', 'uchr', 'heal', 'multi_heal', 'life_gift'], true)
                     || BasicMagic::resultAck($state,$viewer))
                 && in_array($state->battle['strike']['instant_result_stage'] ?? null,[null,'dice'],true)
                 && empty($state->battle['strike']['pending_wounds_resolution'])) {

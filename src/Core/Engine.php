@@ -1179,7 +1179,7 @@ final class Engine
             foreach ($state->cards as $target) {
                 if ($target->zone !== CardInstance::ZONE_FIELD
                     && $target->zone !== CardInstance::ZONE_FLYING) continue;
-                if ($target->owner === $attacker->owner) continue;
+                if ($target->dying || $target->hp <= 0) continue;
 
                 // Резчик: если есть перехватчики — только они
                 if (!empty($interceptorIds) && !in_array($target->instanceId, $interceptorIds, true)) {
@@ -1242,7 +1242,7 @@ final class Engine
 
         $targetId = (int) $cmd->get('target_id', 0);
 
-        // Пропуск (если игрок не хочет)
+        if ($targetId === 0 && !empty($pa['candidates'])) return Result::error('Выберите цель обязательного выстрела');
         if ($targetId === 0) {
             unset($state->battle['strike']['pending_auto']);
             if (!empty($state->battle['strike']['continuation_frame'])) {
@@ -1291,12 +1291,17 @@ final class Engine
             return Result::ok(["auto_target:{$targetId}"]);
         }
 
-        // Закрываем сражение
-        $this->closeForcedStrikeAttackerAfter($state);
-        CombatContinuation::localDone($state, $state->battle['strike'] ?? []);
-        $state->battle['strike'] = null;
-        $this->finalizeDying($state);
-
+        $parent = $state->battle['strike'];
+        $parent['continuation_auto_done'] = true;
+        $state->battle['strike'] = [
+            'kind'=>'shot', 'attacker_id'=>$source->instanceId, 'target_id'=>$targetId,
+            'defender_id'=>null, 'state'=>'results', 'attack_dice'=>0, 'defend_dice'=>0,
+            'result'=>['attack'=>'','defend'=>'','winner'=>'attack'],
+            'final'=>['attack'=>'','defend'=>'','decreased'=>false],
+            'damage'=>max(0, $hpBefore - $target->hp), 'damage_total'=>max(0, $hpBefore - $target->hp),
+            'confirmed'=>[], 'auto_parent_result'=>$parent,
+        ];
+        InformationalWaitManager::publish($state);
         $state->bumpVersion();
         return Result::ok(["auto_target:{$targetId}"]);
     }
