@@ -802,7 +802,8 @@ final class InfoPanel
 
                 $radio = '<label class="choice-radio">'
                     . '<input type="radio" name="choice" value="move" checked>'
-                    . '<span>Переместить на (' . $pp['new_row'] . ',' . $pp['new_col'] . ')</span>'
+                    . '<span>Переместить на ' . \Berserk\View\Ui\Coords::renderResult(
+                        $pp['new_row'], $pp['new_col'], $playerKey, $defCard->owner) . '</span>'
                     . '</label>'
                     . '<label class="choice-radio">'
                     . '<input type="radio" name="choice" value="damage">'
