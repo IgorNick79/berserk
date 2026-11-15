@@ -11,7 +11,7 @@
     if (roll) window.berserkRollTransport = {...script.dataset, setVersion:(v,stage)=>{script.dataset.version=String(v);script.dataset.stage=stage;}};
     let sending = false;
     const confirmations={confirm_deal:'Подтвердить отряд?',reshuffle:'Пересдать карты?',finish_draft:'Закончить драфт?'};
-    function confirmed(params, message) { const text=message || confirmations[params.get('cmd')]; return !text || window.confirm(text); }
+    async function confirmed(params, message) { const text=message || confirmations[params.get('cmd')]; return !text || window.BerserkDialogs.confirm(text); }
     // Existing non-draft waiting screens had no cross-browser stage notification.
     // This endpoint is metadata-only: no Engine, timers or automatic progression.
     if (script.dataset.stage !== 'draft' && !roll) {
@@ -44,20 +44,22 @@
         params.forEach((value,key) => {const input=document.createElement('input');input.type='hidden';input.name=key;input.value=value;form.append(input);});
         document.body.append(form); form.submit();
     }
-    document.addEventListener('click',event=>{
+    document.addEventListener('click',async event=>{
         const a=event.target.closest('a[href]');if(!a)return;
         const url=new URL(a.href,location.href);
         if(url.origin!==location.origin||url.pathname!==location.pathname||!url.searchParams.has('cmd'))return;
         event.preventDefault();event.stopImmediatePropagation();
-        if (!confirmed(url.searchParams,a.dataset.confirm)) return;
+        const version=script.dataset.version;
+        if (!await confirmed(url.searchParams,a.dataset.confirm) || !a.isConnected || version!==script.dataset.version) return;
         submit(url.searchParams);
     },true);
-    document.addEventListener('submit',event=>{
+    document.addEventListener('submit',async event=>{
         const form=event.target;if(!form.querySelector('[name="cmd"]'))return;
         event.preventDefault();event.stopImmediatePropagation();
         const data=new FormData(form);
         if(event.submitter?.name)data.set(event.submitter.name,event.submitter.value);
-        if (!confirmed(data,form.dataset.confirm)) return;
+        const version=script.dataset.version;
+        if (!await confirmed(data,form.dataset.confirm) || !form.isConnected || version!==script.dataset.version) return;
         submit(new URLSearchParams(data));
     },true);
 })();

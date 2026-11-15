@@ -709,7 +709,7 @@ final class BattleScreen
             return '';
         }
 
-        return ' onclick="return confirm(' . htmlspecialchars($json, ENT_QUOTES) . ')"';
+        return ' data-confirm="' . htmlspecialchars((string) json_decode($json), ENT_QUOTES) . '"';
     }
 
     /**
@@ -1551,7 +1551,7 @@ final class BattleScreen
             $endUrl    = "{$baseUrl}&cmd=end_turn";
             $resignUrl = "{$baseUrl}&cmd=resign";
             return '<a class="button wide" href="' . $endUrl . '">Завершить ход</a> '
-                . '<a class="button wide resign" href="' . $resignUrl . '" onclick="return confirm(\'Сдаться?\')">Сдаться</a>';
+                . '<a class="button wide resign" href="' . $resignUrl . '" data-confirm="Сдаться?">Сдаться</a>';
         }
 
         if ($isActive && $strike) {

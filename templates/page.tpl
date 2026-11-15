@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <link rel="stylesheet" href="/assets/css/global.css?v={{rkey}}">
     {{page_styles}}
+    <script src="/assets/js/ui-dialogs.js?v=1" defer></script>
 </head>
 <body class="{{page_class}}">
 <div class="screen">

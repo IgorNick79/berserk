@@ -90,6 +90,10 @@
                 location.assign(clean.href);
                 return;
             }
+            if (post) {
+                var rejection = documentNext.querySelector('.flash');
+                if (rejection && /^Ошибка:/.test(rejection.textContent.trim())) window.BerserkDialogs.alert(rejection.textContent.trim());
+            }
             var oldScreen = root.querySelector('[data-place-screen]');
             var content = root.querySelector('.pregame-panel-content');
             var scroll = oldScreen && oldScreen.dataset.placeView === 'list' && screen.dataset.placeView === 'list'

@@ -1,5 +1,6 @@
 (function () {
     "use strict";
+    var lastDialogError = null;
 
     var script = document.currentScript;
     if (!script) return;
@@ -53,6 +54,7 @@
                 if (data.ok === false) {
                     var flash = document.querySelector('.screen-draft .flash');
                     if (flash) flash.textContent = data.error || 'Не удалось продолжить драфт. Обновите страницу.';
+                    if (data.error && data.error !== lastDialogError) { lastDialogError = data.error; window.BerserkDialogs.alert(data.error); }
                     return;
                 }
                 if (data.version !== loadedVersion || data.changed || data.status !== "draft") {

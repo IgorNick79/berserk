@@ -94,7 +94,9 @@
             let data = await request(url('battle_command_status') + '&command_id=' + encodeURIComponent(pending.command_id));
             if (!data.command_status || data.command_status === 'unknown') data = await request(url('battle_command'), {method:'POST',body:encodeCommand(pending)});
             if (['committed','conflict','rejected','failed'].includes(data.command_status)) {
-                const result=data.command_status; pending=null;persist(); await refresh(true);
+                const result=data.command_status;
+                if (result !== 'committed' && data.error && (isDeal || isPlace || isDraft)) window.BerserkDialogs.alert(data.error);
+                pending=null;persist(); await refresh(true);
                 notice(result==='committed' ? '' : result==='conflict' ? 'Состояние изменилось. Данные обновлены; повторите действие.' : 'Действие не выполнено. Данные обновлены.');
             } else notice('Результат ещё уточняется. Повторного переноса не будет.');
         } catch (error) { notice('Связь прервана. Результат будет проверен автоматически.'); }
