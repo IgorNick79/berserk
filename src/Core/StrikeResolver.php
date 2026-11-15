@@ -1879,7 +1879,8 @@ final class StrikeResolver
 
         $defendCardId = $strike['defender_id'] ?? $strike['target_id'];
         $defendCard = $this->state->getCard($defendCardId);
-        if (!$defendCard) return false;
+        if (!$defendCard || $defendCard->dying || $defendCard->hp <= 0
+            || $defendCard->zone !== CardInstance::ZONE_FIELD) return false;
 
         $attacker = $this->state->getCard($strike['attacker_id']);
         if (!$attacker) return false;
@@ -1956,6 +1957,15 @@ final class StrikeResolver
         $defendCard = $this->state->getCard($pp['defender_id']);
         if (!$defendCard || $defendCard->owner !== $playerKey) {
             return Result::error('Не ваш выбор');
+        }
+
+        if ($defendCard->dying || $defendCard->hp <= 0 || $defendCard->zone !== CardInstance::ZONE_FIELD) {
+            unset($this->state->battle['strike']['pending_push']);
+            InformationalWaitManager::publish($this->state);
+            $this->state->battle['strike']['state'] = 'results';
+            $this->state->battle['strike']['confirmed'] = [];
+            $this->state->bumpVersion();
+            return Result::ok(['push_target_dead']);
         }
 
         $featureSource = $this->state->getCard((int) ($this->state->battle['strike']['attacker_id'] ?? 0));
