@@ -20,6 +20,12 @@ final class CombatDecisionPlanner
             $action = $legalActions['actions'][0] ?? null;
             if ($action !== null) return ['action'=>$action, 'reason'=>'resolve_tovi_movement', 'score'=>0, 'factors'=>[]];
         }
+        if ($decision === 'intrigue_start' && $control === 'choice_required') {
+            $action = $legalActions['actions'][0] ?? null;
+            if (($action['type'] ?? null) === 'choose_intrigue_start') {
+                return ['action'=>$action, 'reason'=>'resolve_intrigue', 'score'=>0, 'factors'=>[]];
+            }
+        }
         if($decision==='root_auto_shot'&&$control==='choice_required')return self::rootAutoShot($observation,$legalActions['actions']);
         if ($decision === 'prophecy_transform_decline') {
             $window = $observation['prophecy_choice'] ?? [];
