@@ -20,6 +20,17 @@
     function max(a,b) { return compare(a,b)>0?a:b; }
     function atBottom() { return history.scrollHeight-history.scrollTop-history.clientHeight < 24; }
     function visible() { return !panel.hidden && !document.hidden && document.hasFocus() && atBottom(); }
+    function messagesEnabled() { return window.BerserkPreferences?.current?.messages_enabled !== false; }
+    function paintMessages() {
+        var enabled = messagesEnabled();
+        toggle.classList.toggle('messages-disabled', !enabled);
+        toggle.setAttribute('aria-disabled', String(!enabled));
+        var hint = toggle.querySelector('.battle-icon-tooltip');
+        if (hint) hint.textContent = enabled ? 'Сообщения' : 'Сообщения выкл.';
+        toggle.setAttribute('aria-label', enabled ? (unread ? 'Сообщения: новые сообщения' : 'Сообщения') : 'Сообщения выкл.');
+        if (!enabled && !panel.hidden) open(false);
+    }
+    document.addEventListener('berserk:preferences', paintMessages);
     function badge(value) {
         unread=value;
         root.classList.toggle('has-unread',value);
@@ -27,7 +38,7 @@
         q('indicator').hidden=!q('indicator').dataset.loaded;
         q('indicator').setAttribute('aria-hidden',String(!value));
         q('unread-text').hidden=!value || !!q('indicator').dataset.loaded;
-        toggle.setAttribute('aria-label',value?'Сообщения: новые сообщения':'Сообщения');
+        paintMessages();
     }
     function imageReady(node, fallback) {
         function loaded() { node.dataset.loaded='1'; if (fallback) {node.hidden=false; fallback.hidden=true;} else badge(unread); }
@@ -112,8 +123,8 @@
             badge(data.unread && compare(lastRead,latest)<0);
             if(incoming) {
                 var battleRoot=document.querySelector('[data-battle-sync-root]');
-                if(battleRoot && battleRoot.berserkTurnTimer) battleRoot.berserkTurnTimer.notify();
-                else if(document.querySelector('[data-panel-dock-root]') && window.BerserkRoomSound) window.BerserkRoomSound.notify('game-chat:'+root.dataset.gameId+':'+latest);
+                if(messagesEnabled() && battleRoot && battleRoot.berserkTurnTimer) battleRoot.berserkTurnTimer.notify();
+                else if(messagesEnabled() && document.querySelector('[data-panel-dock-root]') && window.BerserkRoomSound) window.BerserkRoomSound.notify('game-chat:'+root.dataset.gameId+':'+latest);
             }
             markRead();
             if(!writable) status.textContent=isRoom?(data.read_only_reason==='awaiting_participant'?'Переписка станет доступна, когда появится второй участник.':'Партия создана. Переписка комнаты доступна для чтения.'):'Бой завершён. Чат доступен для чтения.';
@@ -137,7 +148,8 @@
         if(value) {history.scrollTop=history.scrollHeight; if(writable) input.focus(); else history.focus(); markRead();}
         else toggle.focus();
     }
-    toggle.addEventListener('click',function(){open(panel.hidden);});
+    toggle.addEventListener('click',function(){if(!messagesEnabled()){window.BerserkMenu?.open();return;}open(panel.hidden);});
+    paintMessages();
     q('close').addEventListener('click',function(){open(false);});
     input.addEventListener('keydown',function(e){
         if(e.key!=='Enter' || e.isComposing || e.keyCode===229) return;

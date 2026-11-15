@@ -35,3 +35,6 @@
 .game-chat .game-chat-close{display:inline-grid;place-items:center;width:32px;height:32px;padding:0;border:0;background:transparent;flex:0 0 32px;opacity:.8;transition:opacity .15s ease}
 .game-chat .game-chat-close:hover,.game-chat .game-chat-close:focus-visible{opacity:1}
 .game-chat .game-chat-close img{display:block;width:28px;height:28px}
+
+.game-chat-toggle.messages-disabled { opacity: .4; }
+.game-chat-toggle.messages-disabled .game-chat-unread { display: none; }

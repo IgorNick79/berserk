@@ -10,9 +10,9 @@
     function controls(){return [...panel.querySelectorAll('a[href],button:not(:disabled),summary')].filter(e=>!e.hidden);}
     function show(value,focus=true){open=value;menu.classList.toggle('is-open',open);toggle.setAttribute('aria-expanded',String(open));panel.inert=!open;if(open){if(config.authenticated)refresh();if(focus)controls()[0]?.focus();}else if(focus)toggle.focus();}
     function status(text){notice.textContent=text;if(dialog)dialog.querySelector('[data-picker-notice]').textContent=text;}
-    function paint(){menu.querySelectorAll('[data-preference]').forEach(b=>{b.disabled=!current||saving;if(b.dataset.preference==='sound')b.setAttribute('aria-pressed',String(!!current?.sound_enabled));});
+    function paint(){menu.querySelectorAll('[data-preference]').forEach(b=>{b.disabled=!current||saving;if(b.dataset.preference==='messages')b.setAttribute('aria-pressed',String(current?.messages_enabled!==false));if(b.dataset.preference==='sound')b.setAttribute('aria-pressed',String(!!current?.sound_enabled));});
         if(!current)return;
-        const values={sound:current.sound_enabled?'Вкл.':'Выкл.',playmat:'№ '+String(Object.keys(config.playmats).indexOf(current.playmat_id)+1),battle_theme:config.themes[current.theme]};
+        const values={messages:current.messages_enabled!==false?'Вкл.':'Выкл.',sound:current.sound_enabled?'Вкл.':'Выкл.',playmat:'№ '+String(Object.keys(config.playmats).indexOf(current.playmat_id)+1),battle_theme:config.themes[current.theme]};
         for(const [key,value] of Object.entries(values)){const node=menu.querySelector('[data-preference-value="'+key+'"]');if(node)node.textContent=value;}
         if(dialog)dialog.querySelectorAll('[data-choice]').forEach(b=>{b.disabled=saving;b.setAttribute('aria-pressed',String(b.dataset.choice===(dialog.dataset.kind==='playmat'?current.playmat_id:current.theme)));});
     }
@@ -43,7 +43,7 @@
         const message=document.createElement('p');message.dataset.pickerNotice='';message.setAttribute('role','status');dialog.append(close,title,options,message);document.body.append(dialog);paint();close.focus();
     }
     toggle.addEventListener('click',()=>{if(dialog)closePicker();show(!open);});
-    menu.addEventListener('click',e=>{const b=e.target.closest('[data-preference]');if(!b||b.disabled)return;if(b.dataset.preference==='sound')save('sound_enabled',current.sound_enabled?'0':'1');else picker(b.dataset.preference==='playmat'?'playmat':'theme');});
+    menu.addEventListener('click',e=>{const b=e.target.closest('[data-preference]');if(!b||b.disabled)return;if(b.dataset.preference==='sound')save('sound_enabled',current.sound_enabled?'0':'1');else if(b.dataset.preference==='messages')save('messages_enabled',current.messages_enabled!==false?'0':'1');else picker(b.dataset.preference==='playmat'?'playmat':'theme');});
     document.addEventListener('pointerdown',e=>{if(open&&!dialog&&!menu.contains(e.target))show(false,false);});
     document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(dialog){e.preventDefault();closePicker();}else if(open){e.preventDefault();show(false);}return;}
         if(dialog&&e.key==='Tab'){const items=[...dialog.querySelectorAll('button:not(:disabled)')],first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}return;}
@@ -53,5 +53,5 @@
     document.addEventListener('focusin',e=>{if(open&&!dialog&&!menu.contains(e.target))show(false,false);});
     window.addEventListener('focus',refresh);window.addEventListener('pageshow',refresh);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
     if(config.authenticated){refresh();setInterval(()=>{if(!document.hidden)refresh();},config.game?3000:15000);}
-    window.BerserkMenu={close:()=>{closePicker();show(false);}};
+    window.BerserkMenu={open:()=>show(true),close:()=>{closePicker();show(false);}};
 })();

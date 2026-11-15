@@ -20,7 +20,7 @@ try {
     if ($method==='POST') {
         if ((int)($_SERVER['CONTENT_LENGTH']??0)>1024 || array_diff(array_keys($_POST),['key','value','csrf'])) throw new DomainException('invalid_parameter',400);
         AuthSession::requireCsrf($_POST['csrf']??null);
-        if (!in_array($_POST['key']??null,['sound_enabled','playmat_id'],true) || !is_string($_POST['value']??null)) throw new DomainException('invalid_preference',400);
+        if (!in_array($_POST['key']??null,['sound_enabled','messages_enabled','playmat_id'],true) || !is_string($_POST['value']??null)) throw new DomainException('invalid_preference',400);
     }
     $csrf=AuthSession::csrf();session_write_close();
     $config=require __DIR__.'/../config/auth.local.php';$store=new AccountUiPreferences($config['db']);

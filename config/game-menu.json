@@ -23,6 +23,12 @@
           "requires": "authenticated"
         },
         {
+          "id": "messages",
+          "label": "Сообщения",
+          "type": "toggle",
+          "requires": "authenticated"
+        },
+        {
           "id": "playmat",
           "label": "Коврик",
           "type": "select",
