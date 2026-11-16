@@ -17,7 +17,7 @@ final class FlyingPreparationChoice implements ChoiceHandlerInterface
             'Вы можете закрыть его на текущий ход, чтобы на следующем своём ходу получить возможность атаковать любое летающее существо противника ближней атакой, если условия атаки сохранятся',
         ], buttons: [
             ['label'=>'Подтвердить', 'url'=>$url . '&confirm=1'],
-            ['label'=>'Отмена', 'url'=>$url . '&confirm=0'],
+            ['label'=>'Отмена', 'url'=>$url . '&confirm=0', 'class'=>'skip secondary'],
         ], isMine: $p['owner'] === $playerKey);
     }
     public function apply(GameState $state, Engine $engine, string $playerKey, Command $cmd): Result
