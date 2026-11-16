@@ -226,14 +226,14 @@
     function positionInstantControl() {
         if (!instantNode || !instantNode.isConnected) return;
         var area = instantNode.closest('.info-panel-main');
-        var panel = instantNode.querySelector('.instant-control-popover');
+        var panel = instantNode.querySelector('.instant-control-panel');
         var scrollport = area.querySelector('.info-panel-content');
         var box = area.getBoundingClientRect();
-        // Height follows the scrollport, so the popup cannot cover the footer/header.
-        panel.style.setProperty('--instant-popover-height', Math.max(48, Math.min(420, box.height - 76)) + 'px');
+        // Expanded controls occupy their own bottom block; the content remains scrollable above it.
+        panel.style.setProperty('--instant-panel-height', Math.max(48, Math.min(420, box.height * .6)) + 'px');
         var padding = scrollport.classList.contains('instant-scroll-clearance') ? 64 : 0;
         // A scroll tail only when content overflows; it consumes no panel layout height.
-        scrollport.classList.toggle('instant-scroll-clearance', scrollport.scrollHeight - padding > scrollport.clientHeight + 1);
+        scrollport.classList.toggle('instant-scroll-clearance', !instantNode.open && scrollport.scrollHeight - padding > scrollport.clientHeight + 1);
     }
     function syncInstantControl() {
         if (!combatHost) return;
@@ -275,6 +275,7 @@
             if (!instantNode || !instantNode.contains(event.target)) return;
             if (event.target === instantNode) {
                 instantOpen = instantNode.open;
+                positionInstantControl();
                 instantNode.querySelector('summary').setAttribute('aria-expanded', String(instantOpen));
                 if (instantOpen && secondary) root.secondaryPanel(null);
             } else if (event.target.matches('.instant-control-picker')) instantPickerOpen = event.target.open;

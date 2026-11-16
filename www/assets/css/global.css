@@ -1834,20 +1834,23 @@ body.battle-page > .screen {
 .battle-page .info-panel-footer .info-actions { margin: 0; }
 .battle-page .info-panel-footer .button { flex: 1 1 0; }
 .battle-page .info-panel-footer button:disabled { opacity: .5; cursor: default; }
-/* The controls overlay the scrollport, never participate in footer sizing. */
-.battle-page .info-panel-main { position: relative; display: flex; flex: 1 1 0; min-height: 0; min-width: 0; }
+/* Only the collapsed lightning overlays content. Expanded controls dock below it. */
+.battle-page .info-panel-main { position: relative; display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; min-width: 0; }
 .battle-page .info-panel-main > .info-panel-content { scroll-padding-bottom: 64px; }
 .battle-page .info-panel-main > .info-panel-content.instant-scroll-clearance { padding-bottom: 64px; }
 .battle-page .instant-control-layer { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
 .battle-page .instant-control { position: absolute; right: 12px; bottom: 12px; width: 40px; height: 40px; margin: 0; padding: 0; border: 0; pointer-events: auto; }
-.battle-page .instant-control > summary { list-style: none; background: var(--ip-base, #30281c); border: 1px solid var(--ip-edge, #a88749); box-shadow: 0 2px 8px #0009; box-sizing: border-box; }
+.battle-page .instant-control > summary { list-style: none; box-sizing: border-box; }
 .battle-page .instant-control > summary::-webkit-details-marker { display: none; }
 .battle-page .instant-control-indicator { display: none; position: absolute; right: -3px; top: -3px; width: 9px; height: 9px; border: 2px solid #292318; border-radius: 50%; background: #e5b943; }
 .battle-page .instant-control[data-instant-reserved="1"] .instant-control-indicator { display: block; background: #76c78a; }
 .battle-page .instant-control[data-instant-required="1"] > summary { border-color: #ffdc7b; box-shadow: 0 0 0 2px #d9aa5066, 0 2px 8px #0009; }
 .battle-page .instant-control[data-instant-required="1"] .instant-control-indicator { display: block; }
-.battle-page .instant-control-popover { position: absolute; right: 0; bottom: 50px; width: min(320px, calc(100vw - 32px)); max-height: var(--instant-popover-height, min(420px, 55vh)); overflow: auto; overscroll-behavior: contain; box-sizing: border-box; padding: 10px; border: 1px solid var(--ip-edge, #a88749); border-radius: 7px; background: var(--ip-base, #30281c); color: var(--ip-text, #f5e8ce); box-shadow: 0 6px 24px #000b; }
-.battle-page .instant-control:not([open]) > .instant-control-popover { display: none; }
+.battle-page .instant-control-layer:has(> .instant-control[open]) { position: relative; inset: auto; flex: 0 0 auto; min-height: 0; }
+.battle-page .instant-control[open] { position: static; width: auto; height: auto; margin: 0 12px 10px; }
+.battle-page .instant-control[open] > summary { display: none; }
+.battle-page .instant-control-panel { max-height: var(--instant-panel-height, min(420px, 50vh)); overflow: auto; overscroll-behavior: contain; box-sizing: border-box; padding: 8px; border: 1px solid var(--ip-edge, #a88749); border-radius: 6px; color: var(--ip-text, #f5e8ce); }
+.battle-page .instant-control:not([open]) > .instant-control-panel { display: none; }
 .battle-page .instant-control-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .battle-page .instant-control-heading h3 { margin: 0; font-size: 14px; }
 .battle-page .instant-control-heading .battle-icon-control { flex-basis: 28px; width: 28px; height: 28px; }

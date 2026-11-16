@@ -399,8 +399,8 @@ final class InfoPanel
             $context['next_sequence']??null,$p],JSON_THROW_ON_ERROR));
         $iconLabel=$required?'Инстант — требуется решение':($reserved?'Инстант — резерв зарегистрирован':'Инстант');
         return '<div class="instant-control-layer"><details class="instant-control" data-instant-control data-instant-key="'.$key.'" data-instant-required="'.(int)$required.'" data-instant-reserved="'.(int)$reserved.'" data-instant-phase="'.$esc($p['phase']).'"'.($required?' open':'').'>'
-            .'<summary class="battle-icon-control instant-control-toggle" aria-label="'.$iconLabel.'" aria-controls="instant-control-panel" title="'.$iconLabel.'"><img src="/assets/images/icons/icon-instant.png" width="40" height="40" alt=""><span class="instant-control-indicator" aria-hidden="true"></span></summary>'
-            .'<section id="instant-control-panel" class="instant-control-popover" aria-label="Инстант"><div class="instant-control-heading"><h3>Инстант</h3><button type="button" class="battle-icon-control" data-instant-close aria-label="Свернуть панель инстантов"><img src="/assets/images/battle/close.png" width="32" height="32" alt=""></button></div>'
+            .'<summary class="battle-icon-control instant-control-toggle" aria-label="'.$iconLabel.'" aria-controls="instant-control-panel" title="'.$iconLabel.'"><img src="/assets/images/battle/instant.svg" width="40" height="40" alt=""><span class="instant-control-indicator" aria-hidden="true"></span></summary>'
+            .'<section id="instant-control-panel" class="instant-control-panel" aria-label="Инстант"><div class="instant-control-heading"><h3>Инстант</h3><button type="button" class="battle-icon-control" data-instant-close aria-label="Свернуть панель инстантов"><img src="/assets/images/battle/close.png" width="32" height="32" alt=""></button></div>'
             .($meta===''?'':'<div class="instant-control-meta">'.$meta.'</div>')
             .'<div class="instant-control-actions">'.$action.$pass.$decline.'</div></section></details></div>';
     }

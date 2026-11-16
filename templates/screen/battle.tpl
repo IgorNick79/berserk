@@ -23,7 +23,7 @@
 <script src="/assets/js/cell-marker-picker.js?v=1" defer></script>
 <script src="/assets/js/creature-choice.js?v=2" defer></script>
 <script src="/assets/js/panel-secondary-view.js?v=1" defer></script>
-<script src="/assets/js/battle-ui.js?v=19" defer></script>
+<script src="/assets/js/battle-ui.js?v=20" defer></script>
 <script src="/assets/js/card-image-popup.js?v=2" defer></script>
 
 <script src="/assets/js/battle-mini-card.js?v=12" defer></script>
