@@ -90,6 +90,16 @@ final class SingleRoll
     {
         $roll=$this->state->battle['single_roll']??null;
         if (!$roll || !in_array($roll['stage'],['prepared','window'],true)) return Result::error('No resumable roll');
+        // The previous stack has already resolved and both players acknowledged it.
+        // Offer fresh decisions for the new dice without repeating any resolved item.
+        if (!empty($roll['reroll_response_pending'])) {
+            unset($this->state->battle['single_roll']['reroll_response_pending']);
+            if ((new InstantProcessor($this->state, $this->engine))->openWindow('combat', $roll['owner'], null, 'dice')) {
+                unset($this->state->battle['single_roll']['instant_summary']);
+                $this->state->battle['single_roll']['confirmed'] = [];
+                return Result::ok(['single_roll_waiting']);
+            }
+        }
         // Consume before dispatch: re-entry and a second command cannot apply this tail twice.
         unset($this->state->battle['single_roll']);
         $source=$this->state->getCard($roll['attacker_id']);

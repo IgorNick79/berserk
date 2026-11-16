@@ -1048,6 +1048,9 @@ final class InstantProcessor
         }
 
         unset($this->state->battle['pending_dice_choice']);
+        if ($choice === 'reroll:any') {
+            $this->combatContext()['reroll_response_pending'] = true;
+        }
         array_shift($this->combatContext()['instant_resolution']['queue']);
         if (empty($strike['matriarch_order']) || $this->combatItemRequiresTap($item)) $source->closed = true;
         unset($source->flags['in_stack']);
@@ -1405,6 +1408,16 @@ final class InstantProcessor
         $strike = $this->combatContext() ?? null;
         if (!$strike || ($strike['instant_result_stage'] ?? '') !== self::COMBAT_WINDOW_DICE) {
             return;
+        }
+
+        if (!empty($strike['reroll_response_pending'])) {
+            unset($this->combatContext()['reroll_response_pending']);
+            $attacker = $this->state->getCard((int) ($strike['attacker_id'] ?? 0));
+            if ($attacker && $this->openWindow('combat', $attacker->owner, null, self::COMBAT_WINDOW_DICE)) {
+                unset($this->combatContext()['instant_result_stage'], $this->combatContext()['instant_summary']);
+                $this->combatContext()['confirmed'] = [];
+                return;
+            }
         }
 
         unset($this->combatContext()['instant_result_stage']);

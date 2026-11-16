@@ -19,6 +19,14 @@ function c2ack(GameState &$s):void {
  c2cmd($s,'host','confirm_strike',['wait_id'=>$token]);c1check(isset($s->battle['single_roll']),'one ACK keeps continuation');
  c1check(!(new Engine())->apply($s,'host',new Command('confirm_strike',['wait_id'=>$token]))->success,'duplicate ACK rejected');
  c2cmd($s,'player','confirm_strike',['wait_id'=>$token]);
+ if (($s->battle['single_roll']['state']??null)==='waiting_instant') {
+  c1check(empty($s->battle['single_roll']['instant_stack']),'reroll reopens with fresh stack');
+  c1check($s->getCard(2)->hp===19,'reroll response precedes original damage');
+  $remaining=Dice::remaining();
+  $s=GameState::fromArray(json_decode(json_encode($s->toArray(),JSON_THROW_ON_ERROR),true));
+  c2drain($s,'plus:own');
+  c1check(Dice::remaining()===$remaining,'response passes never reroll');
+ }
  $before=$s->toArray();c1check(!(new Engine())->apply($s,'player',new Command('confirm_strike',['wait_id'=>$token]))->success&&$s->toArray()===$before,'old ACK cannot acknowledge resumed action');
 }
 if(defined('C2_FIXTURES_ONLY'))return;
