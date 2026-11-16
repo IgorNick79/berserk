@@ -2,6 +2,7 @@
 const fs=require('fs'),path=require('path'),assert=require('assert/strict');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE);
 const fixture=JSON.parse(fs.readFileSync(process.env.UI_RESULT_FIXTURE)),assets=path.resolve('www/assets');
+const confirmLabel=fixture.confirm_label||'Продолжить',expectedText=fixture.expected_text||'HP 19 -> 18';
 (async()=>{
  const browser=await chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});let checks=0;const errors=[];
  const check=(v,m)=>{assert.ok(v,m);checks++};
@@ -26,13 +27,13 @@ const fixture=JSON.parse(fs.readFileSync(process.env.UI_RESULT_FIXTURE)),assets=
   await page.evaluate(html=>document.querySelector('.info-panel').innerHTML=html,fixture.result);
   await page.locator('.info-panel-context').waitFor({state:'visible'});
   check(await page.locator('.battle-selected-card').isHidden(),'New result overrides stale inspection');
-  check((await page.locator('.info-panel-context').innerText()).includes('HP 19 -> 18'),'Visible result explains exact HP change');
-  check(await page.getByRole('link',{name:'Продолжить',exact:true}).isVisible(),'Required confirmation is reachable');
+  check((await page.locator('.info-panel-context').innerText()).includes(expectedText),'Visible result explains target and effect');
+  check(await page.getByRole('link',{name:confirmLabel,exact:true}).isVisible(),'Required confirmation is reachable');
   await page.locator('#inspect').click();check(await page.locator('.battle-selected-card').isVisible(),'Explicit inspection after result still works');
   await page.evaluate(html=>document.querySelector('.info-panel').innerHTML=html,fixture.result);
   check(await page.locator('.battle-selected-card').isVisible(),'Same snapshot preserves explicit inspection');
   await page.locator('[data-panel-card-close]').click();await page.locator('.info-panel-context').waitFor({state:'visible'});
-  check(await page.getByRole('link',{name:'Продолжить',exact:true}).isVisible(),'Close card returns to result');
+  check(await page.getByRole('link',{name:confirmLabel,exact:true}).isVisible(),'Close card returns to result');
   initial='result';await page.reload();await page.locator('[data-battle-ui-ready="true"]').waitFor();
   check(await page.locator('.info-panel-context').isVisible()&&await page.locator('.battle-selected-card').isHidden(),'F5 shows result instead of retained card');
   await ctx.close();

@@ -2048,11 +2048,11 @@ final class StrikeResolver
         if ($meta['all_elite'] && !empty($config['all_elite']['damage'])) {
             $dmg = (int) $config['all_elite']['damage'];
             $this->engine->applyDamage($this->state, $target, $dmg, 'strike', $attacker);
-            $title = 'обе элитные — ' . $target->ukid . ' получает +' . $dmg . ' урона';
+            $title = 'обе элитные — {target} получает +' . $dmg . ' урона';
         } elseif ($meta['all_ordinary'] && !empty($config['all_ordinary']['poison'])) {
             $poison = (int) $config['all_ordinary']['poison'];
             $this->engine->applyPoison($target, $poison, $attacker->owner);
-            $title = 'обе рядовые — отравление ' . $poison;
+            $title = 'обе рядовые — {target}: отравление ' . $poison;
         } else {
             $title = 'пророчество не сработало';
         }
@@ -2060,6 +2060,7 @@ final class StrikeResolver
         $actions = [['label' => 'Закрыть', 'cmd' => 'close_prophecy', 'class' => 'skip']];
 
         $pp->commit($attacker->owner, $attacker, $peeked, 'strike', $title, $actions);
+        $this->state->battle['pending_prophecy']['title_target_ukid'] = $target->ukid;
     }
 
     private function consumeRagnarUnanswerStrike(CardInstance $attacker, CardInstance $target, bool $friendlyFire, ?array $context = null): ?array
