@@ -55,7 +55,7 @@ final class LuckTestGenerator
                 $bestScore = $score;
             }
         }
-        if ($best === null) throw new \DomainException('Сценарий LuckTest: балансировка обязательных карт невозможна');
+        if ($best === null) throw new \DomainException('Сценарий LuckTest: заданные отряды несовместимы с балансировкой — один содержит летающих существ или стрелков, другой нет. Отключите балансировку отрядов или измените состав.');
         if ($settings->lucktest['balance_metals']) $this->balanceMetals($best['host'],$best['player'],$catalog,$fixed,$bestCategory,$target);
         $this->applyHandicap($best['player'],$catalog,$fixed['player'],$bestCategory,$settings->opponentHandicap());
         return ['host'=>$this->group($best['host']), 'player'=>$this->group($best['player'])];

@@ -165,6 +165,7 @@ final class TurnProcessor
      */
     public function afterEndPhase(string $endingKey, string $nextActiveKey): void
     {
+        FlyingPreparation::changeTurn($this->state, $endingKey, $nextActiveKey);
         TurnTimer::prepare($this->state, $nextActiveKey);
         InstantReservation::beginPeriod($this->state, $nextActiveKey);
         OchiKronga::startOwnTurn($this->state, $nextActiveKey);

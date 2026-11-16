@@ -24,6 +24,11 @@ final class ActiveCardEffects
                 'duration'=>'До конца хода владельца карты.',
             ];
         }
+        if ($card->zone === CardInstance::ZONE_FIELD && ($card->flags[\Berserk\Core\FlyingPreparation::FLAG] ?? null) === 'ready') {
+            $rows[] = 'Существо подготовлено к атаке летающих. В течение текущего хода оно может атаковать любое допустимое летающее существо противника ближней атакой, если отсутствуют обычные цели.';
+        } elseif (($card->flags[\Berserk\Core\FlyingPreparation::FLAG] ?? null) === 'waiting') {
+            $rows[] = 'Подготовка к атаке летающих: действует в следующий собственный ход.';
+        }
         if ($card->zone === CardInstance::ZONE_FIELD && !$card->dying && $card->hp > 0
             && count(CardStats::getLineGroup($state, $card)) > 1) {
             $rows[] = 'Строй';

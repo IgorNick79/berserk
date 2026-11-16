@@ -42,7 +42,7 @@ final class MatchCreator
                 $outcome = $journal->findById((int) $entry['id']);
                 if (($outcome['status'] ?? null) !== 'committed') {
                     $message = (string) ($outcome['error_message'] ?? '');
-                    throw new \DomainException(str_starts_with($message, 'LuckTest Smart:')
+                    throw new \DomainException((str_starts_with($message, 'LuckTest Smart:') || str_starts_with($message, 'Сценарий LuckTest:'))
                         ? $message : 'Не удалось завершить подготовку LuckTest', 400);
                 }
             });
