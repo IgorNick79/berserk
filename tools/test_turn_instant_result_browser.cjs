@@ -15,7 +15,7 @@ const confirmLabel=fixture.confirm_label||'Продолжить',expectedText=fi
     const mime={'.css':'text/css','.js':'application/javascript','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp'}[path.extname(file)]||'application/octet-stream';
     return route.fulfill({contentType:mime,body:fs.existsSync(file)?fs.readFileSync(file):Buffer.alloc(0)});
    }
-   return route.fulfill({contentType:'text/html',body:`<link rel="stylesheet" href="/assets/css/global.css"><body class="battle-page"><div class="battle-shell" data-battle-sync-root><div><a class="card-link" href="?game=9919&inspect=2" id="inspect">Осмотреть</a></div><aside class="info-panel" data-battle-fragment="info_panel_html">${fixture[initial]}</aside></div><script src="/assets/js/panel-secondary-view.js"></script><script src="/assets/js/battle-ui.js"></script></body>`});
+   return route.fulfill({contentType:'text/html',body:`<meta charset="UTF-8"><link rel="stylesheet" href="/assets/css/global.css"><body class="battle-page"><div class="battle-shell" data-battle-sync-root><div><a class="card-link" href="?game=9919&inspect=2" id="inspect">Осмотреть</a></div><aside class="info-panel" data-battle-fragment="info_panel_html">${fixture[initial]}</aside></div><script src="/assets/js/panel-secondary-view.js"></script><script src="/assets/js/battle-ui.js"></script></body>`});
   });
   const page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto('http://instant-result.test/?game=9919');
   await page.locator('[data-battle-ui-ready="true"]').waitFor();

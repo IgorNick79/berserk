@@ -179,6 +179,20 @@ final class ProphecyProcessor
             // Если order стоит — оставляем наверху
         }
 
+        // Preserve the already applied poison notice for an in-flight saved
+        // prophecy created before post-combat reporting was introduced.
+        $strike = $this->state->battle['strike'] ?? [];
+        if ($context === 'strike' && ($strike['attacker_id'] ?? null) === ($pp['source_id'] ?? null)
+            && empty($strike['prophecy_effect_result'])
+            && preg_match('/отравление\s+(\d+)/u', (string) ($pp['title'] ?? ''), $match)) {
+            $target = $this->state->getCard((int) (($strike['defender_id'] ?? 0) ?: ($strike['target_id'] ?? 0)));
+            if ($target) $this->state->battle['strike']['prophecy_effect_result'] = [
+                'type' => 'poison', 'value' => (int) $match[1], 'before' => null,
+                'after' => (int) ($target->markers['poison']['value'] ?? 0),
+                'source_id' => (int) $pp['source_id'], 'source_ukid' => (string) $pp['source_ukid'],
+                'target_id' => $target->instanceId, 'target_ukid' => $target->ukid,
+            ];
+        }
         unset($this->state->battle['pending_prophecy']);
 
         return ['ok' => true, 'context' => $context, 'swamp_queen' => $pp['swamp_queen'] ?? null];

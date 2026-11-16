@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 define('C1_FIXTURES_ONLY',true);require __DIR__.'/test_single_roll_c1.php';
-use Berserk\Core\{CardInstance,Dice,Engine,Command,GameState,ProphecyProcessor};
+use Berserk\Core\{CardInstance,Dice,Engine,Command,GameState,ProphecyProcessor,InformationalWaitManager as IW};
 use Berserk\View\{Template,Screen\BattleScreen};
 $fixtures=[];$screen=new BattleScreen(new Template(getcwd().'/templates'));
 foreach(['host','player']as$owner)foreach([true,false]as$elite){
@@ -26,13 +26,44 @@ foreach(['host','player']as$owner)foreach([true,false]as$elite){
   c1check($x->query('//a[contains(@href,"cmd=close_prophecy")]')->length===($viewer===$owner?1:0),'Only prophecy owner can close');
  }
  $result=$render($s,$owner);$hp=$s->getCard(2)->hp;$markers=$s->getCard(2)->markers;
+ if(!$elite){$old=GameState::fromArray(json_decode(json_encode($s->toArray(),JSON_THROW_ON_ERROR),true));unset($old->battle['strike']['prophecy_effect_result']);
+  c1check((new ProphecyProcessor($old,$e))->close($owner)['ok'],'Older in-flight poison prophecy closes');
+  c1check(($old->battle['strike']['prophecy_effect_result']['after']??null)===2&&$old->getCard(2)->markers===$markers,'Older save gets notice without reapplying poison');}
  $s=GameState::fromArray(json_decode(json_encode($s->toArray(),JSON_THROW_ON_ERROR),true));
  c1check(str_contains($render($s,$owner),$expected),'Names survive F5');
  $p=new ProphecyProcessor($s,$e);c1check(!$p->close($s->getOpponentKey($owner))['ok'],'Opponent close rejected');
- c1check($p->close($owner)['ok']&&$s->getCard(2)->hp===$hp&&$s->getCard(2)->markers===$markers,'Close never repeats damage or poison');
+ c1check($e->apply($s,$owner,new Command('close_prophecy'))->success&&$s->getCard(2)->hp===$hp&&$s->getCard(2)->markers===$markers,'Close never repeats damage or poison');
  $fixtures[$owner.($elite?'_damage':'_poison')]=['before'=>$before,'result'=>$result,'expected_text'=>$expected,'confirm_label'=>'Закрыть'];
  $legacy=GameState::fromArray(json_decode(json_encode($s->toArray(),JSON_THROW_ON_ERROR),true));$legacy->battle['pending_prophecy']=['owner'=>$owner,'source_id'=>1,'source_ukid'=>'s1_132','context'=>'strike','shown_ukids'=>[],'actions'=>[],'title'=>$elite?'обе элитные — s1_151 получает +2 урона':'обе рядовые — отравление 2'];
  c1check(str_contains($render($legacy,$owner),$expected),'Already saved damage/poison title resolves card name');
+ c1check(empty($s->battle['strike']['prophecy_effect_result_active']),'Extra information is not before battle results');
+ $normal=[];foreach(['host','player']as$viewer)$normal[$viewer]=$render($s,$viewer);
+ $token=IW::token($s);
+ c1check($e->apply($s,$owner,new Command('confirm_strike',['wait_id'=>$token]))->success,'First battle ACK');
+ c1check(empty($s->battle['strike']['prophecy_effect_result_active']),'One battle ACK does not advance');
+ $other=$s->getOpponentKey($owner);
+ c1check($e->apply($s,$other,new Command('confirm_strike',['wait_id'=>IW::token($s)]))->success,'Second battle ACK');
+ c1check(!empty($s->battle['strike']['prophecy_effect_result_active']),'New information follows battle results');
+ c1check($s->getCard(2)->hp===$hp&&$s->getCard(2)->markers===$markers,'Opening information never repeats effects');
+ $effectText=$elite?'Дополнительные раны от пророчества: 2':'Отравление: 2';
+ foreach(['host','player']as$viewer){$html=$render($s,$viewer);
+  c1check(str_contains($html,'data-strike-prophecy-result')&&str_contains($html,'Зомби'),'Both sides get named post-combat information');
+  c1check(str_contains($html,'cmd=confirm_strike'),'Both sides have confirmation');
+  $fixtures[$owner.($elite?'_damage':'_poison').'_after_'.$viewer]=['before'=>$normal[$viewer],'result'=>$html,'expected_text'=>$effectText];
+ }
+ $s=GameState::fromArray(json_decode(json_encode($s->toArray(),JSON_THROW_ON_ERROR),true));
+ c1check(str_contains($render($s,$other),'data-strike-prophecy-result'),'F5 preserves post-combat information');
+ $beforeStale=$s->toArray();c1check(!$e->apply($s,$owner,new Command('confirm_strike',['wait_id'=>$token]))->success&&$s->toArray()===$beforeStale,'Battle ACK cannot dismiss new information');
+ c1check($e->apply($s,$owner,new Command('confirm_strike',['wait_id'=>IW::token($s)]))->success,'First information ACK');
+ c1check(!empty($s->battle['strike']['prophecy_effect_result_active']),'Other player still must acknowledge');
+ $snapshot=$s->toArray();c1check(!$e->apply($s,$owner,new Command('confirm_strike',['wait_id'=>IW::token($s)]))->success&&$snapshot===$s->toArray(),'Duplicate information ACK inert');
+ c1check($e->apply($s,$other,new Command('confirm_strike',['wait_id'=>IW::token($s)]))->success,'Second information ACK');
+ c1check(empty($s->battle['strike'])&&$s->getCard(2)->hp===$hp&&$s->getCard(2)->markers===$markers,'Continue once without repeating poison or wounds');
+ $ui=['sel'=>1];$full=$screen->prepare($s,$owner,$owner,null,$info,$ui)['data'];
+ $ajax=(new \Berserk\View\Screen\BattleSnapshotRenderer(new Template(getcwd().'/templates')))->render($s,$owner,$owner,null,$info,$ui);
+ c1check($full['panel_html']===$ajax['fragments']['panel_html'],'Closed-card status identical on full page and AJAX');
+ c1check(str_contains($full['panel_html'],'class="panel-card-status" data-panel-card-status role="status">Карта закрыта'),'Closed card uses shared badge markup');
+ $fixtures['closed_status']=['full'=>$full['info_panel_html'],'fragments'=>$ajax['fragments']];
 }
 $dir=getenv('TROLL_UI_FIXTURES');if($dir)foreach($fixtures as$key=>$data)file_put_contents($dir.'/troll-'.$key.'.json',json_encode($data,JSON_THROW_ON_ERROR));
 echo "Troll prophecy UI: $checks checks passed\n";

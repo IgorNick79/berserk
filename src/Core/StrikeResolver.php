@@ -1528,6 +1528,19 @@ final class StrikeResolver
                 return Result::ok(['combat_dice_result_ack']);
             }
 
+            $strike = &$this->state->battle['strike'];
+            if (!empty($strike['prophecy_effect_result']) && empty($strike['prophecy_effect_acknowledged'])) {
+                if (empty($strike['prophecy_effect_result_active'])) {
+                    $strike['prophecy_effect_result_active'] = true;
+                    $strike['confirmed'] = [];
+                    InformationalWaitManager::publish($this->state);
+                    $this->state->bumpVersion();
+                    return Result::ok(['strike_prophecy_result']);
+                }
+                $strike['prophecy_effect_acknowledged'] = true;
+                unset($strike['prophecy_effect_result_active']);
+            }
+
             if (!empty($this->state->battle['strike']['pending_wounds_resolution'])) {
                 $this->state->battle['strike']['wounds_window_done'] = true; // Legacy announced entries retain their resolution.
                 $this->state->battle['strike']['wounds_after_result_ack'] = true;
@@ -2047,11 +2060,16 @@ final class StrikeResolver
 
         if ($meta['all_elite'] && !empty($config['all_elite']['damage'])) {
             $dmg = (int) $config['all_elite']['damage'];
+            $before = $target->hp;
             $this->engine->applyDamage($this->state, $target, $dmg, 'strike', $attacker);
+            $effectResult = ['type' => 'damage', 'value' => $dmg, 'before' => $before, 'after' => $target->hp];
             $title = 'обе элитные — {target} получает +' . $dmg . ' урона';
         } elseif ($meta['all_ordinary'] && !empty($config['all_ordinary']['poison'])) {
             $poison = (int) $config['all_ordinary']['poison'];
+            $before = (int) ($target->markers['poison']['value'] ?? 0);
             $this->engine->applyPoison($target, $poison, $attacker->owner);
+            $effectResult = ['type' => 'poison', 'value' => $poison, 'before' => $before,
+                'after' => (int) ($target->markers['poison']['value'] ?? 0)];
             $title = 'обе рядовые — {target}: отравление ' . $poison;
         } else {
             $title = 'пророчество не сработало';
@@ -2061,6 +2079,12 @@ final class StrikeResolver
 
         $pp->commit($attacker->owner, $attacker, $peeked, 'strike', $title, $actions);
         $this->state->battle['pending_prophecy']['title_target_ukid'] = $target->ukid;
+        if (isset($effectResult)) {
+            $this->state->battle['strike']['prophecy_effect_result'] = $effectResult + [
+                'source_id' => $attacker->instanceId, 'source_ukid' => $attacker->ukid,
+                'target_id' => $target->instanceId, 'target_ukid' => $target->ukid,
+            ];
+        }
     }
 
     private function consumeRagnarUnanswerStrike(CardInstance $attacker, CardInstance $target, bool $friendlyFire, ?array $context = null): ?array
