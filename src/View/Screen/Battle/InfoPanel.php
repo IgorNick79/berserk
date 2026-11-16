@@ -76,24 +76,16 @@ final class InfoPanel
                 . '<div class="info-panel-content"><div class="battle-selected-card" data-battle-fragment="panel_html" hidden></div>'
                 . $this->renderPauseBody() . '</div><footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
         }
-        if ((\Berserk\Core\BattleWaitResolver::current($state)['source']??null)==='single_roll.results') {
-            $roll=$state->battle['single_roll'];
-            $actionChoiceHtml=$this->renderInstantResolutionSummary($roll)
-                . (in_array($playerKey,$roll['confirmed']??[],true)?'<p>Ожидание подтверждения противника</p>':$this->confirmStrikeLink($state,$baseUrl));
-        }
-        if ((\Berserk\Core\BattleWaitResolver::current($state)['source']??null)==='single_roll.waiting_instant'
-            && isset($state->battle['single_roll']['computed_value'])) {
-            $actionChoiceHtml='<p>Изменение величины удара. Текущая величина: '
-                .(int)$state->battle['single_roll']['computed_value'].'.</p>'
-                .$this->renderCombatInstantStack($state->battle['single_roll'],true);
-        }
-        $inCombat = !empty($state->battle['strike']);
+        $singleWait = \Berserk\Core\BattleWaitResolver::current($state)['source'] ?? null;
+        $singlePanel = in_array($singleWait, ['single_roll.results', 'single_roll.waiting_instant'], true);
+        if ($singlePanel) $actionChoiceHtml = $this->renderSingleRoll();
+        $inCombat = $singlePanel || !empty($state->battle['strike']);
         $inInstantStack = !$inCombat && (!empty($state->battle['turn_instant_stack']) || !empty($state->battle['turn_instant_result']));
         $priority = self::hasRequiredInteraction($state) || $actionChoiceHtml !== '';
         $exclusive = $priority;
         $combatKey = '';
         if ($inCombat) {
-            $strike = $state->battle['strike'];
+            $strike = $singlePanel ? $state->battle['single_roll'] : $state->battle['strike'];
             $attacker = $state->getCard((int) ($strike['attacker_id'] ?? 0));
             $combatKey = implode(':', [
                 $state->battle['turn'] ?? 0, $strike['attacker_id'] ?? 0,
@@ -104,7 +96,7 @@ final class InfoPanel
         if ($inInstantStack) $combatKey = 'instant:' . ($state->battle['turn'] ?? 0);
         if ($priority && $combatKey === '') $combatKey = 'information:' . ($state->battle['turn'] ?? 0);
         $body = $actionChoiceHtml !== '' ? $actionChoiceHtml : $this->renderOchiKrongaNotice() . $this->renderBody();
-        $instantWindow = $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
+        $instantWindow = $singleWait === 'single_roll.waiting_instant' || $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
         $turnInstant = !$inCombat && ($instantWindow
             || ($state->battle['turn_phase']['sub']['parent_type'] ?? '') === 'instants');
@@ -403,6 +395,51 @@ final class InfoPanel
     }
 
     // ─── Окно сражения ───────────────────────────────────────
+
+    /** Present the persisted single die using the ordinary combat panel and controls. */
+    private function renderSingleRoll(): string
+    {
+        $roll = $this->state->battle['single_roll'];
+        $kind = $roll['kind'] ?? '';
+        $label = match ($kind) {
+            'tap' => 'Особый удар', 'magic' => 'Магический удар', 'uchr' => 'Удар через ряд',
+            'shot' => 'Выстрел', 'throw' => 'Метание', 'discharge' => 'Разряд',
+            'shaksi' => 'Шакси', 'row_spell' => 'Цветущие руны', default => 'Бросок',
+        };
+        $content = '<div class="instant-dice"><div class="dice-col"><span class="dice-label">'
+            . (in_array($kind, ['shaksi', 'row_spell'], true) ? 'Кубик способности' : 'Атакующий')
+            . '</span><span class="dice-value">'
+            . \Berserk\View\Ui\DiceValue::render((int) ($roll['attack_dice'] ?? 0), (int) ($roll['attack_mod'] ?? 0))
+            . '</span></div></div>';
+        if (isset($roll['computed_value'])) {
+            $content .= '<p>Текущая величина удара: <b>' . (int) $roll['computed_value'] . '</b></p>';
+        }
+        if (($roll['stage'] ?? '') === 'results') {
+            $content .= $this->renderInstantResolutionSummary($roll)
+                . (in_array($this->playerKey, $roll['confirmed'] ?? [], true)
+                    ? '<p class="wait">Ожидание подтверждения противника</p>'
+                    : $this->confirmStrikeLink($this->state, $this->baseUrl));
+        } else {
+            $window = match ($roll['combat_instant_window'] ?? 'dice') {
+                'dice' => 'Работа с кубиками', 'wounds' => 'После нанесения ран', default => 'Изменение величины удара',
+            };
+            $content .= '<p class="instant-window-label">' . $window . '</p>'
+                . $this->renderCombatInstantStack($roll, true)
+                . (($roll['instant_priority'] ?? null) === $this->playerKey
+                    ? '<p>Ваш приоритет. Выберите инстант или пас в нижнем блоке.</p>'
+                    : '<p class="wait">Ожидание — оппонент решает, сыграть инстант...</p>');
+        }
+        $name = fn (int $id): string => htmlspecialchars($this->cardNameById($id), ENT_QUOTES, 'UTF-8');
+        if (in_array($kind, ['shaksi', 'row_spell'], true)) {
+            return '<div class="strike-box"><p>' . $label . ': <b>' . $name((int) $roll['attacker_id'])
+                . '</b></p>' . $content . '</div>';
+        }
+        return $this->tpl->parse('includes/battle/strike.tpl', [
+            'header_text' => $label . ' — результат броска',
+            'attacker_name' => $name((int) $roll['attacker_id']),
+            'target_name' => $name((int) $roll['target_id']), 'content_html' => $content,
+        ]);
+    }
 
     private function renderStrike(): string {
         $state     = $this->state;
