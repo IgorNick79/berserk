@@ -220,6 +220,83 @@
         new MutationObserver(syncCombatPanel).observe(combatHost, {childList: true, subtree: true});
         syncCombatPanel();
     }
+    // Disclosure state is local UI only. Server-rendered rights and links are authoritative.
+    var instantNode = null, instantKey = null, instantOpen = false, instantPickerOpen = false, instantScroll = 0;
+    var instantArea = null, instantResize = null;
+    function positionInstantControl() {
+        if (!instantNode || !instantNode.isConnected) return;
+        var area = instantNode.closest('.info-panel-main');
+        var panel = instantNode.querySelector('.instant-control-popover');
+        var scrollport = area.querySelector('.info-panel-content');
+        var box = area.getBoundingClientRect();
+        // Height follows the scrollport, so the popup cannot cover the footer/header.
+        panel.style.setProperty('--instant-popover-height', Math.max(48, Math.min(420, box.height - 76)) + 'px');
+        var padding = scrollport.classList.contains('instant-scroll-clearance') ? 64 : 0;
+        // A scroll tail only when content overflows; it consumes no panel layout height.
+        scrollport.classList.toggle('instant-scroll-clearance', scrollport.scrollHeight - padding > scrollport.clientHeight + 1);
+    }
+    function syncInstantControl() {
+        if (!combatHost) return;
+        var next = combatHost.querySelector('[data-instant-control]');
+        if (next === instantNode) { positionInstantControl(); return; }
+        instantNode = next;
+        if (!next) {
+            if (instantResize) instantResize.disconnect();
+            instantArea = null;
+            instantKey = null; instantOpen = instantPickerOpen = false; instantScroll = 0; return;
+        }
+        var key = next.dataset.instantKey;
+        if (key !== instantKey) {
+            instantKey = key;
+            instantOpen = next.dataset.instantRequired === '1';
+            instantPickerOpen = false; instantScroll = 0;
+        }
+        next.open = instantOpen;
+        next.querySelector('summary').setAttribute('aria-expanded', String(instantOpen));
+        var picker = next.querySelector('.instant-control-picker');
+        if (picker) picker.open = instantPickerOpen;
+        var options = next.querySelector('.instant-control-options');
+        if (options) options.scrollTop = instantScroll;
+        var area = next.closest('.info-panel-main');
+        if (instantArea !== area) {
+            if (instantResize) instantResize.disconnect();
+            instantArea = area;
+            if (window.ResizeObserver) { instantResize = new ResizeObserver(positionInstantControl); instantResize.observe(area); }
+        }
+        positionInstantControl();
+    }
+    function collapseInstantControl() {
+        if (!instantNode) return;
+        instantOpen = false; instantNode.open = false;
+        instantNode.querySelector('summary').setAttribute('aria-expanded', 'false');
+    }
+    if (combatHost) {
+        combatHost.addEventListener('toggle', function (event) {
+            if (!instantNode || !instantNode.contains(event.target)) return;
+            if (event.target === instantNode) {
+                instantOpen = instantNode.open;
+                instantNode.querySelector('summary').setAttribute('aria-expanded', String(instantOpen));
+                if (instantOpen && secondary) root.secondaryPanel(null);
+            } else if (event.target.matches('.instant-control-picker')) instantPickerOpen = event.target.open;
+        }, true);
+        combatHost.addEventListener('scroll', function (event) {
+            if (instantNode && event.target.matches('.instant-control-options')) instantScroll = event.target.scrollTop;
+        }, true);
+        document.addEventListener('click', function (event) {
+            if (!instantNode) return;
+            if (event.target.closest('[data-instant-close]')) {
+                collapseInstantControl(); instantNode.querySelector('summary').focus({preventScroll:true});
+            } else if (!instantNode.contains(event.target)) collapseInstantControl();
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && instantNode && instantNode.open) {
+                collapseInstantControl(); instantNode.querySelector('summary').focus({preventScroll:true});
+            }
+        });
+        new MutationObserver(syncInstantControl).observe(combatHost, {childList:true, subtree:true});
+        syncInstantControl();
+        window.addEventListener('resize', positionInstantControl);
+    }
     // Pile pages are local presentation state; snapshots must not reset the page.
     var pilePanel = null, pileResize = null, pilePages = {}, paintPile = function () {};
     function mountPilePager() {
@@ -266,5 +343,3 @@
     window.addEventListener('resize', function () { paintPile(); });
     root.dataset.battleUiReady = "true";
 }());
-
-document.addEventListener("click",function(event){var button=event.target.closest("[data-instant-local-pass]");if(!button)return;var picker=button.closest("[data-instant-control]").querySelector("details");if(picker)picker.open=false;});

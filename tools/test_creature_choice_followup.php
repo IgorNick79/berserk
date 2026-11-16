@@ -84,7 +84,8 @@ foreach (['heal','close_target'] as $effect) {
     if ($effect==='close_target') uxCheck($ip->chooseTurnTarget('player',new Command('choose_instant_pick',['target_id'=>1]))->success,'Ice Guard chooses attacker');
     uxCheck($ip->passTurnInstant('player')->success,'before stack resolves');
     uxCheck($s->getCard(2)->closed,'turn instant pays closing');
-    uxCheck($ip->ackTurnInstantResult('player')->success,'before result ACK');
+    $ack=\Berserk\Core\TurnInstantResult::current($s->battle['turn_instant_result']);
+    uxCheck($ip->ackTurnInstantResult('player',new Command('turn_instant_result_ok',['ack_id'=>$ack['ack_id']]))->success,'before result ACK');
     if ($effect==='close_target') uxCheck(empty($s->battle['strike']) && $s->getCard(1)->closed,'Ice Guard stops combat by closing attacker');
     else uxCheck(!empty($s->battle['strike']) && isset($s->battle['strike']['attack_dice'])
         && ($s->battle['strike']['defend_dice']??0)===0,'combat continues against closed defender without defense roll');
@@ -96,7 +97,7 @@ $html=uxFixture('impact')['info_panel_html'];
 uxCheck(!str_contains($html,'class="strike-dice"') && !str_contains($html,'class="dice-value"'),'impact result has no dice');
 $html=uxFixture('instant')['info_panel_html'];
 $dom=new DOMDocument();@$dom->loadHTML($html);$x=new DOMXPath($dom);
-uxCheck($x->query('//footer//section[@data-instant-control]')->length===1,'instant offer is in the persistent footer');
+uxCheck($x->query('//footer//*[@data-instant-control]')->length===0 && $x->query('//div[@class="instant-control-layer"]//*[@data-instant-control]')->length===1,'instant offer floats outside footer and scroll content');
 $html=uxFixture('stack')['info_panel_html'];
 uxCheck(strpos($html,'Стек инстантов')>strpos($html,'info-panel-instants'),'actual instant stack uses shared context section');
 @$dom->loadHTML($html);uxCheck((new DOMXPath($dom))->query('//*[contains(@class,"info-panel-context")]//section[contains(@class,"info-panel-instants")]')->length===1,'active instant stack is in the same scrollable context');

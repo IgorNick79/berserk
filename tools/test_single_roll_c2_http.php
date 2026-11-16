@@ -99,6 +99,13 @@ foreach(['shaksi','row_spell'] as $passive){
  }
  $saved=ihState($game);$die=$saved['battle']['single_roll']['attack_dice'];$token=\Berserk\Core\InformationalWaitManager::token(\Berserk\Core\GameState::fromArray($saved));
  foreach(['host','player'] as $actor){$r=ihRun(ihHandle(18882,$game,$actor,'confirm_strike',c1version($game),['wait_id'=>$token]));c1check(($r['body']['command_status']??null)==='committed','passive ACK '.$actor);}
+ // Acknowledged rerolls now offer a fresh response window before the native passive tail.
+ for($i=0;$i<3 && (ihState($game)['battle']['single_roll']['state']??null)==='waiting_instant';$i++){
+  $fresh=ihState($game)['battle']['single_roll'];
+  c1check($fresh['attack_dice']===$die&&empty($fresh['instant_stack']),'fresh HTTP response retains die without replay');
+  $r=ihRun(ihHandle(18882,$game,$fresh['instant_priority'],'combat_instant_pass',c1version($game)));
+  c1check(($r['body']['command_status']??null)==='committed','passive reroll response pass');
+ }
  $state=ihState($game);$key=$passive==='shaksi'?'pending_shaksi_roll':'pending_row_spell_pick';
  c1check(($state['battle'][$key]['dice']??null)===$die,'passive receives final HTTP die');
  $pick=$passive==='shaksi'?['target_id'=>$state['battle'][$key]['candidates'][0]]:['target_ids'=>array_slice($state['battle'][$key]['candidates'],0,$state['battle'][$key]['x'])];
