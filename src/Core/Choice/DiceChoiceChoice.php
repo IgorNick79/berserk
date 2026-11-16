@@ -45,7 +45,7 @@ final class DiceChoiceChoice implements ChoiceHandlerInterface
 
         $url = $baseUrl . '&cmd=choose_dice_choice&choice=';
 
-        $strike = $state->battle['strike'] ?? [];
+        $strike = $state->battle['single_roll'] ?? $state->battle['strike'] ?? [];
         $attacker = $state->getCard((int) ($strike['attacker_id'] ?? 0));
         $ownAttack = $attacker?->owner === $playerKey;
         $attackDie = (int) ($strike['attack_dice'] ?? 0);

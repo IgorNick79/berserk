@@ -6,7 +6,7 @@ namespace Berserk\Core;
 final class InformationalWaitManager
 {
     public const LIMIT_SECONDS = 10;
-    private const SOURCES = ['strike.results', 'strike.waiting_push_ack'];
+    private const SOURCES = ['strike.results', 'strike.waiting_push_ack', 'single_roll.results'];
 
     /** Called at logical result publication, not on a partial ACK or a snapshot. */
     public static function publish(GameState $state): void
@@ -80,7 +80,7 @@ final class InformationalWaitManager
     public static function reconcile(GameState $state, int $now): void
     {
         if (MatchPause::blocking($state)) return;
-        if ((self::timer($state) === null && self::untimedTurn($state) === null) || empty($state->battle['strike'])) {
+        if ((self::timer($state) === null && self::untimedTurn($state) === null) || (empty($state->battle['strike']) && empty($state->battle['single_roll']))) {
             unset($state->battle['informational_wait'], $state->battle['informational_wait_pending']);
             return;
         }

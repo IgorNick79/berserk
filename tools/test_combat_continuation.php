@@ -13,6 +13,7 @@ function cs():GameState{
 }
 function cr(GameState $s):GameState{return GameState::fromArray(json_decode(json_encode($s->toArray(),JSON_THROW_ON_ERROR),true,512,JSON_THROW_ON_ERROR));}
 function cmd(GameState $s,string $p,string $t,array $a=[]):void{
+    if($t==='turn_instant_result_ok')$a['ack_id']=$s->battle['turn_instant_result']['confirmations'][$s->battle['turn_instant_result']['position']]['ack_id'];
  $a['wait_id']=\Berserk\Core\InformationalWaitManager::token($s);
  $r=(new Engine())->apply($s,$p,new Command($t,$a));ca($r->success,$t.':'.$r->error);
 }

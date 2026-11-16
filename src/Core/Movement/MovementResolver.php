@@ -333,7 +333,14 @@ final class MovementResolver
         if ($card->row === null || $card->col === null) return;
 
         $dice = \Berserk\Core\CardRoll::roll($this->state, $card);
+        if ((new \Berserk\Core\SingleRoll($this->state,$this->engine))->suspendPassive($card,'shaksi',$dice,
+            ['handler'=>'shaksi','config'=>$config])) return;
+        $this->continueJumpRoll($card, $playerKey, $config, $dice);
+    }
 
+    /** Post-jump/post-roll tail. C2 may suspend before this call, never replay executeJump(). */
+    public function continueJumpRoll(CardInstance $card, string $playerKey, array $config, int $dice): void
+    {
         $matchedKey = null;
         $effect = null;
         foreach ($config as $range => $eff) {

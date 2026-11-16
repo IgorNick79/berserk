@@ -125,6 +125,7 @@ final class ChoiceRegistry
     public static function current(GameState $state): ?ChoiceHandlerInterface
     {
         foreach (self::all() as $h) {
+            if (isset($state->battle['single_roll']) && $h->pendingKey()==='turn_phase') continue;
             // Если хендлер умеет isActive() — он сам знает, когда активен
             if (method_exists($h, 'isActive')) {
                 if ($h->isActive($state)) return $h;

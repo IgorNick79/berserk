@@ -491,7 +491,50 @@ final class ActionResolver
             $this->state->bumpVersion();
             return Result::ok(['coin_block_pending']);
         }
-        $dice   = CardRoll::roll($this->state, $attacker);
+        return (new SingleRoll($this->state,$this->engine))->begin($attacker,$target,'uchr',$uchrAction,'uchr',
+            ['mid_id'=>$midCard?->instanceId]);
+    }
+
+    /** Called only after SingleRoll consumes the persisted continuation. */
+    public function resumeSingleRoll(array $roll): Result
+    {
+        $source=$this->state->getCard($roll['attacker_id']);
+        $target=$this->state->getCard($roll['target_id']);
+        if (!$source || !$target) return Result::error('Roll participant missing');
+        $to=$roll['return_to'];
+        if ($to['handler']==='uchr') {
+            if ($roll['stage']==='window') {
+                $dr=abs($source->row-$target->row);$dc=abs($source->col-$target->col);
+                $legal=$source->zone===CardInstance::ZONE_FIELD && $target->zone===CardInstance::ZONE_FIELD
+                    && $dr+$dc===2 && ($dr===0 || $dc===0);
+                foreach ($this->state->cards as $card) {
+                    if ($card->zone===CardInstance::ZONE_FIELD && $card->row===(int)(($source->row+$target->row)/2)
+                        && $card->col===(int)(($source->col+$target->col)/2) && $card->owner!==$roll['owner']) $legal=false;
+                }
+                if (!$legal) {
+                    ActionResolution::resolve($this->state,$roll,'cancelled',['hit'=>false]);
+                    return Result::ok(['single_roll_target_lost']);
+                }
+            }
+            return $this->continueUchrRoll($source,$target,$to['action'],
+                $this->state->getCard((int)($to['mid_id']??0)),$roll['owner'],$roll['attack_dice']);
+        }
+        if ($to['handler']!=='damage') throw new \LogicException('Unknown roll continuation');
+        if ($roll['stage']==='window' && $this->validateTarget($source,$target,$to['action'],$roll['kind'],$roll['owner'])!==null) {
+            ActionResolution::resolve($this->state,$roll,'cancelled',['hit'=>false]);
+            return Result::ok(['single_roll_target_lost']);
+        }
+        return $this->continueDamageRoll($source,$target,$to['action'],$roll['kind'],$roll['owner'],
+            $to['forced_coin_spend']??null,$roll['attack_dice']);
+    }
+
+    /** Post-roll tail only: validation, closure and blocking were completed before the saved roll. */
+    private function continueUchrRoll(CardInstance $attacker, CardInstance $target, array $uchrAction,
+        ?CardInstance $midCard, string $playerKey, int $dice): Result
+    {
+        $cardId = $attacker->instanceId;
+        $targetId = $target->instanceId;
+        $coins = new CoinAbilities($this->state, $this->engine);
         $level  = BattleHelper::diceToLevel($dice);
         $strikeAura = CardStats::hasHorizontalStrikeReduction($this->state, $target);
         if ($strikeAura) $level = 'weak';
@@ -517,6 +560,10 @@ final class ActionResolver
             'damage'      => $val,
             'confirmed'   => [],
         ];
+        if (in_array($type ?? 'uchr',['tap','magic','uchr'],true) && !empty(($action ?? $uchrAction)['_instant_windows_allowed'])) {
+            $this->state->battle['strike']['wounds_received']=[];
+            $this->state->battle['strike']['stage_d_attack']=true;
+        }
         if ($strikeAura) $this->state->battle['strike']['strike_aura']['attack'] = true;
 
         if (TempleWarrior::rangedBlock($this->state,$target,'uchr')) {
@@ -529,11 +576,44 @@ final class ActionResolver
         $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, 'uchr');
         $val -= $reduction;
         if ($val < 0) $val = 0;
+        $type='uchr';$action=$uchrAction;$midId=$midCard?->instanceId;
+        $locals=compact('val','level','strikeAura','reduction','cardId','targetId','playerKey','dice','action','type','midId');
+        if ((new SingleRoll($this->state,$this->engine))->suspendValue($locals,'uchr_value')) {
+            $this->state->bumpVersion();return Result::ok(['strike_value_window']);
+        }
+        return $this->continueUchrValue($locals);
+    }
+
+    public function cancelAttackValue(array $roll): void
+    {
+        $locals=$roll['return_to']['locals'];$source=$this->state->getCard($locals['cardId']);
+        if ($source) {
+            if (empty($locals['action']['no_close'])) $source->closed=true;
+            $this->consumeNextActionBonuses($source,$locals['type']);
+        }
+        CombatContinuation::localDone($this->state,$this->state->battle['strike']??[]);
+        $this->state->battle['strike']=null;
+    }
+
+    public function resumeAttackValue(array $roll): Result
+    {
+        $locals=$roll['return_to']['locals'];$locals['val']=$roll['computed_value'];
+        if (isset($roll['damage_cap'])) $locals['damage_cap']=$roll['damage_cap'];
+        return $roll['return_to']['handler']==='uchr_value'?$this->continueUchrValue($locals):$this->continueDamageValue($locals);
+    }
+
+    private function continueUchrValue(array $locals): Result
+    {
+        extract($locals,EXTR_SKIP);
+        $attacker=$this->state->getCard($cardId);$target=$this->state->getCard($targetId);
+        $uchrAction=$action;$midCard=$this->state->getCard((int)($midId??0));
+        $coins=new CoinAbilities($this->state,$this->engine);
         $val = CardStats::setIncomingStrikeValue($this->state, $target, $val);
         if (isset($target->effectiveProp()['closed_strike_value']) && CardStats::combatClosed($this->state, $target)) {
             $this->state->battle['strike']['strike_value_set']['attack'] = $val;
         }
 
+        if (isset($locals['damage_cap'])) $val=min($val,(int)$locals['damage_cap']);
         $attackReduction = $this->engine->reduceAttackValueByCellMarkers($this->state, $attacker, $val);
         $val = (int) $attackReduction['value'];
         foreach ($attackReduction['events'] as $event) {
@@ -587,6 +667,7 @@ final class ActionResolver
         $this->state->bumpVersion();
         $coins->offerGain($attacker, $uchrAction);
         $coins->triggerDischarge($attacker, $woundsDealt, 'uchr');
+        if (!empty($this->state->battle['strike']['stage_d_attack'])) $this->state->battle['strike']['damage_applied']=true;
         return Result::ok(["uchr:{$playerKey}:{$cardId}->{$targetId}:dice={$dice}:dmg={$val}"]);
     }
 
@@ -1371,7 +1452,19 @@ final class ActionResolver
             $attacker->flags[$action['_granted_flag_key']]['used'] = true;
         }
 
-        $dice   = CardRoll::roll($this->state, $attacker);
+        if (in_array($type,['tap','magic','shot','throw','discharge'],true))
+            return (new SingleRoll($this->state,$this->engine))->begin($attacker,$target,$type,$action,'damage',
+                ['forced_coin_spend'=>$forcedCoinSpend]);
+        $dice = CardRoll::roll($this->state,$attacker);
+        return $this->continueDamageRoll($attacker,$target,$action,$type,$playerKey,$forcedCoinSpend,$dice);
+    }
+
+    /** Resume strictly after the primary roll; never repeats validation, action cost or redirection. */
+    private function continueDamageRoll(CardInstance $attacker, CardInstance $target, array $action,
+        string $type, string $playerKey, ?int $forcedCoinSpend, int $dice): Result
+    {
+        $cardId = $attacker->instanceId;
+        $targetId = $target->instanceId;
         $level  = BattleHelper::diceToLevel($dice);
         $strikeAura = in_array($type, ['tap', 'magic'], true)
             && CardStats::hasHorizontalStrikeReduction($this->state, $target);
@@ -1479,6 +1572,10 @@ final class ActionResolver
             'defended'    => $defended,
             'confirmed'   => [],
         ];
+        if (in_array($type ?? 'uchr',['tap','magic','uchr'],true) && !empty(($action ?? $uchrAction)['_instant_windows_allowed'])) {
+            $this->state->battle['strike']['wounds_received']=[];
+            $this->state->battle['strike']['stage_d_attack']=true;
+        }
         if ($strikeAura) $this->state->battle['strike']['strike_aura']['attack'] = true;
 
         $this->state->battle['strike'][ActionResolution::ID] = $action[ActionResolution::ID];
@@ -1536,6 +1633,18 @@ final class ActionResolver
         $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, $type, null, $extraIgnore);
         $val -= $reduction;
         if ($val < 0) $val = 0;
+        $locals=compact('val','level','strikeAura','reduction','cardId','targetId','playerKey','dice','action','type',
+            'defended','extraIgnore','abilityBonus','shotBonus','nextActionBonus','coinBonus','coinsSpent','rowsBonus','targetModifierBonus','flyingBonus');
+        if ((new SingleRoll($this->state,$this->engine))->suspendValue($locals,'damage_value')) {
+            $this->state->bumpVersion();return Result::ok(['strike_value_window']);
+        }
+        return $this->continueDamageValue($locals);
+    }
+
+    private function continueDamageValue(array $locals): Result
+    {
+        extract($locals,EXTR_SKIP);
+        $attacker=$this->state->getCard($cardId);$target=$this->state->getCard($targetId);
         if (in_array($type, ['tap', 'magic'], true) && !$defended) {
             $val = CardStats::setIncomingStrikeValue($this->state, $target, $val);
             if (isset($target->effectiveProp()['closed_strike_value']) && CardStats::combatClosed($this->state, $target)) {
@@ -1543,6 +1652,7 @@ final class ActionResolver
             }
         }
 
+        if (isset($locals['damage_cap'])) $val=min($val,(int)$locals['damage_cap']);
         $attackReduction = $this->engine->reduceAttackValueByCellMarkers($this->state, $attacker, $val);
         $val = (int) $attackReduction['value'];
         foreach ($attackReduction['events'] as $event) {
@@ -1616,6 +1726,7 @@ final class ActionResolver
         if (empty($action['_coin_post_combat'])) {
             (new CoinAbilities($this->state, $this->engine))->triggerDischarge($attacker, $woundsDealt, $type);
         }
+        if (!empty($this->state->battle['strike']['stage_d_attack'])) $this->state->battle['strike']['damage_applied']=true;
         return Result::ok(["action:{$playerKey}:{$type}:{$cardId}->{$targetId}:dmg={$val}"]);
     }
 
@@ -2451,6 +2562,13 @@ final class ActionResolver
 
     public function cancelPending(string $playerKey, Command $cmd): Result
     {
+        if (isset($this->state->battle['single_roll'],$this->state->battle['pending_dice_choice'])) {
+            if ($this->state->battle['pending_dice_choice']['owner']!==$playerKey) return Result::error('Не ваш выбор');
+            unset($this->state->battle['pending_dice_choice']);
+            (new InstantProcessor($this->state,$this->engine))->completePausedCombatItem(false,'отмена');
+            $this->state->bumpVersion();return Result::ok(['dice_choice_cancelled']);
+        }
+
         $state = $this->state;
         $resolutionPendingBefore = $state->battle;
 
@@ -5056,7 +5174,7 @@ final class ActionResolver
         $dice = isset($p['dice']) ? (int) $p['dice'] : 0;
         $level = isset($p['level']) ? (string) $p['level'] : '';
         $val = isset($p['val']) ? (int) $p['val'] : BattleHelper::actionStrikeValue($action, $level);
-        if ($dice < 1 || $dice > 6 || !in_array($level, ['weak', 'medium', 'strong'], true)) {
+        if ($dice < 1 || !in_array($level, ['weak', 'medium', 'strong'], true)) {
             return Result::error('Результат кубика не сохранён');
         }
 

@@ -131,6 +131,22 @@ final class CombatDecisionPlanner
             }
             return $best;
         }
+        if ($decision==='whip_target' && $control==='choice_required') {
+            $w=$observation['whip_choice']??[];$best=array_replace($stop,['reason'=>'unsupported_pending']);
+            if (($w['owner']??null)!==$observation['viewer']) return $best;
+            $targets=array_column($w['options']??[],null,'target_id');
+            foreach($legalActions['actions'] as $action){
+                if($action['type']==='cancel_pending' && ($w['can_cancel']??false)===true && $best['score']===null)
+                    $best=['action'=>$action,'reason'=>'decline_unsafe_whip','score'=>0,'factors'=>[]];
+                if($action['type']!=='choose_whip_target')continue;
+                $t=$targets[$action['payload']['target_id']]??null;
+                if(!$t || $t['closed'] || $t['hp']<=$t['damage'])continue;
+                $score=100+min(10,$t['hp'])-5*$t['damage'];
+                if($best['score']!==null&&$score<=$best['score'])continue;
+                $best=['action'=>$action,'reason'=>'whip_surviving_open_ally','score'=>$score,'factors'=>['damage'=>$t['damage'],'hp'=>$t['hp']]];
+            }
+            return $best;
+        }
         if ($decision === 'passive_task' && $control === 'choice_required') {
             return self::passiveTask($observation['passive_tasks'] ?? [],$legalActions['actions']);
         }
@@ -419,6 +435,7 @@ final class CombatDecisionPlanner
             if ($task === null) continue;
             $factors = match ($task['type']) {
                 'place_gates'=>['required_cells'=>-$task['gate_count']],
+                'whip'=>['start_task'=>0],
                 // Shared gates may be consumed by the first effect. Prefer the more vulnerable source.
                 'greed_teleport'=>['self_damage_risk'=>$task['potential_self_damage']-$task['source_hp']],
                 default=>null,
@@ -427,8 +444,8 @@ final class CombatDecisionPlanner
             $score = array_sum($factors);
             if ($best['score'] !== null && ($score < $best['score']
                 || ($score === $best['score'] && strcmp($id,$best['action']['payload']['task_id']) >= 0))) continue;
-            $best = ['action'=>$action,'reason'=>$task['type']==='place_gates'
-                ? 'prefer_fewer_required_gate_cells' : 'prioritize_vulnerable_passive_source',
+            $best = ['action'=>$action,'reason'=>$task['type']==='whip'?'resolve_whip_start_task':($task['type']==='place_gates'
+                ? 'prefer_fewer_required_gate_cells' : 'prioritize_vulnerable_passive_source'),
                 'score'=>$score,'factors'=>$factors + ['resource_cost'=>0]];
         }
         return $best;

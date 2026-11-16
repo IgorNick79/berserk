@@ -76,13 +76,16 @@ final class InfoPanel
                 . '<div class="info-panel-content"><div class="battle-selected-card" data-battle-fragment="panel_html" hidden></div>'
                 . $this->renderPauseBody() . '</div><footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
         }
-        $inCombat = !empty($state->battle['strike']);
+        $singleWait = \Berserk\Core\BattleWaitResolver::current($state)['source'] ?? null;
+        $singlePanel = in_array($singleWait, ['single_roll.results', 'single_roll.waiting_instant'], true);
+        if ($singlePanel) $actionChoiceHtml = $this->renderSingleRoll();
+        $inCombat = $singlePanel || !empty($state->battle['strike']);
         $inInstantStack = !$inCombat && (!empty($state->battle['turn_instant_stack']) || !empty($state->battle['turn_instant_result']));
         $priority = self::hasRequiredInteraction($state) || $actionChoiceHtml !== '';
         $exclusive = $priority;
         $combatKey = '';
         if ($inCombat) {
-            $strike = $state->battle['strike'];
+            $strike = $singlePanel ? $state->battle['single_roll'] : $state->battle['strike'];
             $attacker = $state->getCard((int) ($strike['attacker_id'] ?? 0));
             $combatKey = implode(':', [
                 $state->battle['turn'] ?? 0, $strike['attacker_id'] ?? 0,
@@ -95,7 +98,7 @@ final class InfoPanel
         $body = $actionChoiceHtml !== '' ? $actionChoiceHtml : $this->renderOchiKrongaNotice() . $this->renderBody();
         $body = $this->renderGateNotice() . $this->renderGraveRitualNotice() . $this->renderWormResults() . $this->renderProphecyBlockNotice()
             . (!$inCombat ? $this->renderRagnarValhallaNotice() : '') . $body;
-        $instantWindow = $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
+        $instantWindow = $singleWait === 'single_roll.waiting_instant' || $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
         $turnInstant = !$inCombat && ($instantWindow
             || ($state->battle['turn_phase']['sub']['parent_type'] ?? '') === 'instants');
@@ -111,12 +114,16 @@ final class InfoPanel
         $contextBody = $instantWindow
             ? '<section class="info-panel-instants" aria-label="Инстанты">' . $body . '</section>'
             : $body;
+        $resultAck = \Berserk\Core\TurnInstantResult::current($state->battle['turn_instant_result'] ?? null);
+        $resultKey = ($resultAck['owner'] ?? null) === $playerKey ? $resultAck['ack_id'] : '';
         return '<header class="info-panel-header">' . $this->renderStatusHeader() . $this->renderTimer() . '</header>'
-            . '<div class="info-panel-content" data-panel-priority="' . ($priority ? '1' : '0') . '" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" data-inspected-card="' . $inspectedCardId . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
+            . '<div class="info-panel-main">'
+            . '<div class="info-panel-content" data-panel-priority="' . ($priority ? '1' : '0') . '" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" data-instant-result="' . htmlspecialchars($resultKey, ENT_QUOTES) . '" data-inspected-card="' . $inspectedCardId . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
             . ($priority ? '' : $pileHtml)
             . '<div class="battle-selected-card" data-battle-fragment="panel_html"' . ($exclusive ? ' hidden' : '') . '>' . $selectedCardHtml . '</div>'
             . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/' . $contextIcon . '" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">' . $contextTitle . '</h3></div><div class="combat-panel-body">' : '') . $contextBody . ($exclusive ? '</div>' : '') . '</div>'
             . '</div>'
+            . $this->renderInstantControl() . '</div>'
             . '<footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
     }
 
@@ -311,7 +318,6 @@ final class InfoPanel
                 . '<button type="submit" class="button" data-http-resign>Сдаться</button></form>' : '';
         return '<noscript><style>[data-battle-sync-root] [data-open-pause], [data-battle-sync-root] [data-pause-command], [data-battle-sync-root] a.resign { display: none !important; }</style>'
             . '<p class="pause-noscript-notice">Управление паузой требует JavaScript. Сдаться можно без JavaScript.</p>' . $httpResign . '</noscript>'
-            . $this->renderInstantControl()
             . '<div class="info-actions">' . $end . '<div class="battle-icon-actions">' . $pauseIcon . '<span class="battle-chat-anchor" data-chat-anchor></span>' . $log . $resign . '</div></div>';
     }
     private function renderPauseBody(): string
@@ -486,7 +492,7 @@ final class InfoPanel
         if(!$p['visible'])return '';
         $esc=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
         $url=fn($cmd,$payload=[])=>$esc($this->baseUrl.'&'.http_build_query(['cmd'=>$cmd]+$payload));
-        $label=$esc($p['label']);
+        $label=$esc(!$p['combat'] && !$p['stack_open'] && $p['command']===null ? 'Сыграть' : $p['label']);
         $color=$p['cost']===null?'':($p['cost']==='Бесплатно'?' reserve-free':' reserve-paid');
         if($p['command']!==null)$action='<a class="button instant-control-main'.$color.'" aria-label="'.$esc($p['label']).'" href="'.$url($p['command'],$p['payload']).'">'.$label.'</a>';
         elseif($p['enabled']){
@@ -499,9 +505,23 @@ final class InfoPanel
             }
             $action='<details class="instant-control-picker"><summary class="button instant-control-main">'.$label.'</summary><div class="task-list instant-control-options">'.$cards.'</div></details>';
         }else $action='<button type="button" class="button instant-control-main" disabled>'.$label.'</button>';
-        $meta=$p['quota']===null?'':'<span class="instant-control-quota" aria-label="Остаток платных резервирований">'.$esc($p['quota']).'</span>';
-        $pass=$p['pass']===null?'':($p['pass']==='local'?'<button type="button" class="button skip" data-instant-local-pass>Пас</button>':'<a class="button skip" data-instant-pass href="'.$url($p['pass']).'">Пас</a>');
-        return '<section class="instant-control" data-instant-control data-instant-phase="'.$esc($p['phase']).'" aria-label="Мгновенное действие"><h3>Мгновенное действие '.$meta.'</h3><div class="instant-control-actions">'.$action.$pass.'</div></section>';
+        $meta=$p['quota']===null?'':'<span class="instant-control-quota" aria-label="Остаток платных резервирований">Осталось: '.$esc($p['quota']).'</span>';
+        if ($p['cost']!==null) $meta='<span class="instant-control-cost">'.$esc($p['cost']).'</span>'.$meta;
+        $pass=empty($p['pass']) || $p['pass']==='local' ? '' : '<a class="button skip" data-instant-pass href="'.$url($p['pass']).'">Пас</a>';
+        $decline=$p['decline']===null || $pass!==''?'':'<a class="button skip" href="'.$url($p['decline']['command'],$p['decline']['payload']).'">Отказаться</a>';
+        $required=$pass!=='' || $decline!=='';
+        $reserved=$p['command']==='cancel_instant_reservation';
+        $context=$this->state->battle['single_roll']??$this->state->battle['strike']??$this->state->battle['turn_instant_stack']??[];
+        // Viewer-only identity: identical snapshots preserve local disclosure state.
+        $key=hash('sha256',json_encode([$this->state->gameId,$this->state->battle['turn']??0,
+            $context['_resolution_id']??null,$context['attacker_id']??null,$context['target_id']??null,
+            $context['attack_dice']??null,$context['defend_dice']??null,$context['instant_next_sequence']??null,
+            $context['next_sequence']??null,$p],JSON_THROW_ON_ERROR));
+        $iconLabel=$required?'Инстант — требуется решение':($reserved?'Инстант — резерв зарегистрирован':'Инстант');
+        return '<div class="instant-control-layer"><details class="instant-control" data-instant-control data-instant-key="'.$key.'" data-instant-required="'.(int)$required.'" data-instant-reserved="'.(int)$reserved.'" data-instant-phase="'.$esc($p['phase']).'"'.($required?' open':'').'>'
+            .'<summary class="battle-icon-control instant-control-toggle" aria-label="'.$iconLabel.'" aria-controls="instant-control-panel" title="'.$iconLabel.'"><img src="/assets/images/battle/instant.svg" width="40" height="40" alt=""><span class="instant-control-indicator" aria-hidden="true"></span></summary>'
+            .'<section id="instant-control-panel" class="instant-control-panel" aria-label="Инстант"><div class="instant-control-heading"><h3>Инстант</h3>'.$meta.'<button type="button" class="battle-icon-control" data-instant-close aria-label="Свернуть панель инстантов"><img src="/assets/images/battle/close.png" width="32" height="32" alt=""></button></div>'
+            .'<div class="instant-control-actions">'.$action.$pass.$decline.'</div></section></details></div>';
     }
 
     private function cancelUrl(): string
@@ -510,6 +530,51 @@ final class InfoPanel
     }
 
     // ─── Окно сражения ───────────────────────────────────────
+
+    /** Present the persisted single die using the ordinary combat panel and controls. */
+    private function renderSingleRoll(): string
+    {
+        $roll = $this->state->battle['single_roll'];
+        $kind = $roll['kind'] ?? '';
+        $label = match ($kind) {
+            'tap' => 'Особый удар', 'magic' => 'Магический удар', 'uchr' => 'Удар через ряд',
+            'shot' => 'Выстрел', 'throw' => 'Метание', 'discharge' => 'Разряд',
+            'shaksi' => 'Шакси', 'row_spell' => 'Цветущие руны', default => 'Бросок',
+        };
+        $content = '<div class="instant-dice"><div class="dice-col"><span class="dice-label">'
+            . (in_array($kind, ['shaksi', 'row_spell'], true) ? 'Кубик способности' : 'Атакующий')
+            . '</span><span class="dice-value">'
+            . \Berserk\View\Ui\DiceValue::render((int) ($roll['attack_dice'] ?? 0), (int) ($roll['attack_mod'] ?? 0))
+            . '</span></div></div>';
+        if (isset($roll['computed_value'])) {
+            $content .= '<p>Текущая величина удара: <b>' . (int) $roll['computed_value'] . '</b></p>';
+        }
+        if (($roll['stage'] ?? '') === 'results') {
+            $content .= $this->renderInstantResolutionSummary($roll)
+                . (in_array($this->playerKey, $roll['confirmed'] ?? [], true)
+                    ? '<p class="wait">Ожидание подтверждения противника</p>'
+                    : $this->confirmStrikeLink($this->state, $this->baseUrl));
+        } else {
+            $window = match ($roll['combat_instant_window'] ?? 'dice') {
+                'dice' => 'Работа с кубиками', 'wounds' => 'После нанесения ран', default => 'Изменение величины удара',
+            };
+            $content .= '<p class="instant-window-label">' . $window . '</p>'
+                . $this->renderCombatInstantStack($roll, true)
+                . (($roll['instant_priority'] ?? null) === $this->playerKey
+                    ? '<p>Ваш приоритет. Выберите инстант или пас в нижнем блоке.</p>'
+                    : '<p class="wait">Ожидание — оппонент решает, сыграть инстант...</p>');
+        }
+        $name = fn (int $id): string => htmlspecialchars($this->cardNameById($id), ENT_QUOTES, 'UTF-8');
+        if (in_array($kind, ['shaksi', 'row_spell'], true)) {
+            return '<div class="strike-box"><p>' . $label . ': <b>' . $name((int) $roll['attacker_id'])
+                . '</b></p>' . $content . '</div>';
+        }
+        return $this->tpl->parse('includes/battle/strike.tpl', [
+            'header_text' => $label . ' — результат броска',
+            'attacker_name' => $name((int) $roll['attacker_id']),
+            'target_name' => $name((int) $roll['target_id']), 'content_html' => $content,
+        ]);
+    }
 
     private function renderStrike(): string {
         $state     = $this->state;
@@ -2185,6 +2250,7 @@ final class InfoPanel
         if ($type === 'dice_choice') {
             $attackBefore = (int) ($result['attack_before'] ?? 0);
             $attackAfter = (int) ($result['attack_after'] ?? 0);
+            if (!empty($result['single_die'])) return $name . ': кубик ' . $attackBefore . ' -> ' . $attackAfter;
             $defendBefore = (int) ($result['defend_before'] ?? 0);
             $defendAfter = (int) ($result['defend_after'] ?? 0);
             $parts = [];

@@ -135,17 +135,17 @@ final class Engine
                 else $state->battle[ActionResolution::KEY] = $resolutionBefore;
             }
         }
-        if ($result->success) (new AbyssMovement($state, $this))->advance();
-        if ($result->success) (new WormIncarnation($state, $this))->advance();
-        if ($result->success) (new CoinAbilities($state, $this))->advance();
-        if ($result->success) CombatContinuation::settle($state, $this);
-        if ($result->success) { (new AlvalindProcessor($state,$this))->advanceRecoil(); (new AlvalindProcessor($state,$this))->advanceEnd(); }
-        if ($result->success) (new PairedRanged($state,$this))->advance();
-        if ($result->success) (new GraveRitual($state,$this))->advance();
-        if ($result->success) (new MatriarchOrderProcessor($state, $this))->advance();
-        if ($result->success && ($state->battle['turn_timer']['pause_reason'] ?? null) === 'start_resolution') {
+        if ($result->success && empty($state->battle['single_roll'])) (new AbyssMovement($state, $this))->advance();
+        if ($result->success && empty($state->battle['single_roll'])) (new WormIncarnation($state, $this))->advance();
+        if ($result->success && empty($state->battle['single_roll'])) (new CoinAbilities($state, $this))->advance();
+        if ($result->success && empty($state->battle['single_roll'])) CombatContinuation::settle($state, $this);
+        if ($result->success && empty($state->battle['single_roll'])) { (new AlvalindProcessor($state,$this))->advanceRecoil(); (new AlvalindProcessor($state,$this))->advanceEnd(); }
+        if ($result->success && empty($state->battle['single_roll'])) (new PairedRanged($state,$this))->advance();
+        if ($result->success && empty($state->battle['single_roll'])) (new GraveRitual($state,$this))->advance();
+        if ($result->success && empty($state->battle['single_roll'])) (new MatriarchOrderProcessor($state, $this))->advance();
+        if ($result->success && empty($state->battle['single_roll']) && ($state->battle['turn_timer']['pause_reason'] ?? null) === 'start_resolution') {
             (new TurnProcessor($state, $this))->afterStartPhase($state->battle['turn_timer']['owner']);
-        } elseif ($result->success && !TurnTimer::enabled($state)
+        } elseif ($result->success && empty($state->battle['single_roll']) && !TurnTimer::enabled($state)
             && isset($state->battle['untimed_start_pending'])
             && ($state->battle['untimed_start_pending']['owner']??null)===($state->battle['active']??null)
             && ($state->battle['untimed_start_pending']['identity']??null)===($state->battle['turn']??0).':'.($state->battle['active']??'')) {
@@ -204,6 +204,9 @@ final class Engine
         if ($handler !== null) {
             return $handler->apply($state, $this, $playerKey, $cmd);
         }
+
+        if (!empty($state->battle['single_roll']) && !in_array($cmd->type,['combat_instant_play','combat_instant_pass','confirm_strike'],true))
+            return Result::error('Single roll resolution required');
 
         $strike = new StrikeResolver($state, $this);
         $action = new ActionResolver($state, $this);
@@ -491,6 +494,40 @@ final class Engine
     ): ?string {
         if ($source && EffectiveFeatures::suppressed($source)) return 'Потеря памяти';
         $type = $effect['type'] ?? '';
+        if (isset($state->battle['single_roll']) && in_array($type,['strike_value','damage_cap'],true)) {
+            $s=&$state->battle['single_roll'];$receiver=$state->getCard($s['target_id']);
+            if ($type==='strike_value') {
+                if ($source && (!EffectiveFeatures::onBattlefield($source) || $source->dying || $source->hp<=0)) return 'источник недоступен';
+                if (!$target || $target->instanceId!==$s['attacker_id'] || !isset($s['computed_value'])) return 'выбранный удар недоступен';
+                $old=$s['computed_value'];$s['computed_value']=max(0,($effect['mode']??'add')==='set'?(int)$effect['value']:$old+(int)$effect['value']);
+                if ($old===$s['computed_value']) return 'величина удара не изменилась';
+                if ($source && !empty($effect['gain_coins'])) (new CoinAbilities($state,$this))->gain($source,(int)$effect['gain_coins'],$source,true);
+            } else {
+                if (!$receiver || $receiver->owner!==$ownerKey || !in_array($s['kind'],['tap','magic'],true)) return 'неподходящий удар';
+                $s['damage_cap']=(int)($effect['value']??0);
+                if ($source && !empty($effect['self_wound']) && (empty($effect['except_element']) || !CardStats::hasElement($receiver,$effect['except_element'])))
+                    $this->applyDamage($state,$source,(int)$effect['self_wound'],'impact');
+            }
+            return null;
+        }
+        if (isset($state->battle['single_roll']) && in_array($type,['dice_choice','damage_on_dice'],true)) {
+            $roll=&$state->battle['single_roll'];
+            $roller=$state->getCard($roll['attacker_id']);
+            if (!$roller) return 'источник броска не найден';
+            if ($type==='dice_choice') {
+                [$op,$side]=array_pad(explode(':',$choice??''),2,'');
+                $expected=$roller->owner===$ownerKey?'own':'enemy';
+                if ($op==='reroll' && $side==='any') $roll['attack_dice']=Dice::roll();
+                elseif ($side!==$expected || !in_array($op,['plus','minus'],true)) return 'несуществующий кубик';
+                elseif ($op==='plus') ++$roll['attack_dice'];
+                else $roll['attack_dice']=max(1,$roll['attack_dice']-1);
+                return null;
+            }
+            if ($roller->owner===$ownerKey || $roll['attack_dice']+($roll['attack_mod']??0)!==(int)($effect['value']??0)) return 'промах: итог кубика противника';
+            if ($source) ActionResolution::effect($state,$source,(string)($effect['_resolution_type']??'instant'),'instant',['effect_type'=>$type]);
+            $this->applyDamage($state,$roller,(int)($effect['damage']??0),'damage_on_dice',$source);
+            return null;
+        }
         $strike = &$state->battle['strike'];
 
         switch ($type) {
@@ -604,6 +641,8 @@ final class Engine
                 return 'неверный mode';
 
             case 'damage_cap':
+                $receiver=$state->getCard((int)(($strike['defender_id']??0)?:($strike['target_id']??0)));
+                if (!$receiver || $receiver->owner!==$ownerKey) return 'цель удара не в вашем отряде';
                 if ($target !== null) {
                     $currentTargetId = (int) ($strike['defender_id'] ?: ($strike['target_id'] ?? 0));
                     if ($currentTargetId !== $target->instanceId) {

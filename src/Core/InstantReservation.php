@@ -158,7 +158,7 @@ final class InstantReservation
     {
         if ($s->status !== 'battle' || $s->winner !== null || MatchPause::blocking($s)
             || BattleWaitResolver::current($s) !== null || CombatContinuation::active($s)) return false;
-        foreach (['strike', 'turn_phase', 'turn_instant_stack', 'turn_instant_result', 'matriarch_order',
+        foreach (['single_roll', 'strike', 'turn_phase', 'turn_instant_stack', 'turn_instant_result', 'matriarch_order',
             'coin_post_combat_queue', 'coin_post_combat_continuation', 'informational_wait', 'informational_wait_pending'] as $key) {
             if (!empty($s->battle[$key])) return false;
         }
