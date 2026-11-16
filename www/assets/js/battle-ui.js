@@ -148,6 +148,14 @@
         if (!combatHost) return;
         var content = combatHost.querySelector('.info-panel-content');
         if (!content) return;
+        // Older AJAX fragments used a generic wait paragraph for card status.
+        // Normalize only the shared status messages, never effect descriptions.
+        content.querySelectorAll('.panel-card-details > p.wait').forEach(function (status) {
+            if (['Карта закрыта', 'Карта находится в сети', 'Нет целей', 'Выберите цель атаки'].indexOf(status.textContent.trim()) < 0) return;
+            status.classList.replace('wait', 'panel-card-status');
+            status.setAttribute('role', 'status');
+            status.setAttribute('data-panel-card-status', '');
+        });
         var key = content.dataset.combatKey || '';
         var resultKey = content.dataset.instantResult || '';
         if (resultKey !== instantResultKey) {

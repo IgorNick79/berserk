@@ -116,6 +116,21 @@ final class InfoPanel
             : $body;
         $resultAck = \Berserk\Core\TurnInstantResult::current($state->battle['turn_instant_result'] ?? null);
         $resultKey = ($resultAck['owner'] ?? null) === $playerKey ? $resultAck['ack_id'] : '';
+        $prophecyResult = $state->battle['pending_prophecy'] ?? null;
+        if (($prophecyResult['context'] ?? null) === 'strike') {
+            $resultKey = 'prophecy:' . hash('sha256', json_encode([
+                $prophecyResult['source_id'] ?? null, $prophecyResult['original_ids'] ?? [],
+                $prophecyResult['shown_ukids'] ?? [], $prophecyResult['title'] ?? '',
+            ], JSON_THROW_ON_ERROR));
+        }
+        if (!empty($state->battle['strike']['prophecy_effect_result_active'])) {
+            $contextTitle = 'Информация';
+            $contextIcon = 'cell_info.svg';
+            $resultKey = 'strike-prophecy:' . hash('sha256', json_encode([
+                $state->battle['turn'] ?? 0, $state->battle['strike']['_resolution_id'] ?? null,
+                $state->battle['strike']['prophecy_effect_result'],
+            ], JSON_THROW_ON_ERROR));
+        }
         return '<header class="info-panel-header">' . $this->renderStatusHeader() . $this->renderTimer() . '</header>'
             . '<div class="info-panel-main">'
             . '<div class="info-panel-content" data-panel-priority="' . ($priority ? '1' : '0') . '" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" data-instant-result="' . htmlspecialchars($resultKey, ENT_QUOTES) . '" data-inspected-card="' . $inspectedCardId . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
@@ -596,6 +611,24 @@ final class InfoPanel
 
         $contentHtml = '';
         $kind = $strike['kind'] ?? 'strike';
+
+        if (!empty($strike['prophecy_effect_result_active'])) {
+            $notice = $strike['prophecy_effect_result'];
+            $sourceName = htmlspecialchars($cardsInfo[$notice['source_ukid']]['name'] ?? 'Источник пророчества', ENT_QUOTES);
+            $targetName = htmlspecialchars($cardsInfo[$notice['target_ukid']]['name'] ?? 'Цель удара', ENT_QUOTES);
+            if ($notice['type'] === 'poison') {
+                $description = (int) $notice['after'] > (int) $notice['before']
+                    ? 'Отравление: <b>' . (int) $notice['after'] . '</b>'
+                    : ((int) $notice['after'] > 0 ? 'Отравление: <b>' . (int) $notice['after'] . '</b> (без изменения)' : 'Отравление не наложено');
+            } else {
+                $description = 'Дополнительные раны от пророчества: <b>' . max(0, (int) $notice['before'] - (int) $notice['after'])
+                    . '</b><br>HP: ' . (int) $notice['before'] . ' → ' . (int) $notice['after'];
+            }
+            $confirmation = in_array($playerKey, $strike['confirmed'] ?? [], true)
+                ? '<p class="wait">Ожидание подтверждения противника</p>' : $this->confirmStrikeLink($state, $baseUrl);
+            return '<div class="strike-box" data-strike-prophecy-result><p><b>' . $sourceName . '</b> — итог пророчества</p>'
+                . '<p>Цель: <b>' . $targetName . '</b></p><p>' . $description . '</p>' . $confirmation . '</div>';
+        }
 
         if ($kind === 'impact' && ($strike['effect'] ?? '') === 'memory_loss' && $strike['state'] === 'results') {
             $confirmed = $strike['confirmed'] ?? [];
@@ -1973,7 +2006,24 @@ final class InfoPanel
 
         $isMine     = ($pp['owner'] === $playerKey);
         $sourceName = $cardsInfo[$pp['source_ukid']]['name'] ?? '?';
-        $title      = $sourceName . ': ' . ($pp['title'] ?? 'Пророчество');
+        $resultTitle = (string) ($pp['title'] ?? 'Пророчество');
+        if (($pp['context'] ?? null) === 'strike') {
+            $targetUkid = $pp['title_target_ukid'] ?? null;
+            // Already saved damage notices used the card code directly in the title.
+            if ($targetUkid === null && preg_match('/\b(s\d+_\d+)\b/u', $resultTitle, $match)) $targetUkid = $match[1];
+            $strike = $state->battle['strike'] ?? [];
+            if ($targetUkid === null && ($strike['attacker_id'] ?? null) === ($pp['source_id'] ?? null)) {
+                $targetUkid = $state->getCard((int) (($strike['defender_id'] ?? 0) ?: ($strike['target_id'] ?? 0)))?->ukid;
+            }
+            $targetName = $targetUkid !== null ? ($cardsInfo[$targetUkid]['name'] ?? 'цель удара') : null;
+            if ($targetName !== null) {
+                $resultTitle = strtr($resultTitle, ['{target}' => $targetName, $targetUkid => $targetName]);
+                if (str_starts_with($resultTitle, 'обе рядовые — отравление ')) {
+                    $resultTitle = str_replace('обе рядовые — ', 'обе рядовые — ' . $targetName . ': ', $resultTitle);
+                }
+            }
+        }
+        $title = $sourceName . ': ' . $resultTitle;
 
         // ── Режим вызова Отряда ─────────────────────────────
         if (!empty($pp['summon_mode'])) {

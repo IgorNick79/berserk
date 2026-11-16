@@ -1,0 +1,15 @@
+const fs=require('fs'),path=require('path'),assert=require('assert/strict');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE),fixture=JSON.parse(fs.readFileSync(process.env.UI_RESULT_FIXTURE)),assets=path.resolve('www/assets');
+(async()=>{const browser=await chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});let checks=0;const errors=[];
+const check=(v,m)=>{assert.ok(v,m);checks++};
+try{for(const width of [1600,800]){const ctx=await browser.newContext({viewport:{width,height:900}});
+await ctx.route('**/*',route=>{const url=new URL(route.request().url());if(url.pathname.startsWith('/assets/')){const file=path.resolve('www','.'+url.pathname);if(!file.startsWith(assets+path.sep))throw Error('Outside assets');const mime={'.css':'text/css','.js':'application/javascript','.svg':'image/svg+xml','.png':'image/png'}[path.extname(file)]||'application/octet-stream';return route.fulfill({contentType:mime,body:fs.existsSync(file)?fs.readFileSync(file):Buffer.alloc(0)})}
+return route.fulfill({contentType:'text/html',body:`<meta charset="UTF-8"><link rel="stylesheet" href="/assets/css/global.css"><link rel="stylesheet" href="/assets/css/battle-ui-skins.css"><body class="battle-page"><div class="battle-shell" data-battle-sync-root><div></div><aside class="info-panel" data-battle-fragment="info_panel_html">${fixture.full}</aside></div><script src="/assets/js/panel-secondary-view.js"></script><script src="/assets/js/battle-ui.js"></script></body>`})});
+const page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto('http://closed-status.test/?game=9919');await page.locator('[data-battle-ui-ready="true"]').waitFor();
+await page.evaluate(f=>{const t=document.createElement('template');t.innerHTML=f.info_panel_html;const selected=t.content.querySelector('[data-battle-fragment="panel_html"]');selected.innerHTML=f.panel_html.replace(/<p class="panel-card-status"[^>]*>/,'<p class="wait">');document.querySelector('.info-panel').innerHTML=t.innerHTML},fixture.fragments);
+await page.locator('[data-panel-card-status]').waitFor({state:'visible'});check(await page.locator('.panel-card-status').innerText()==='Карта закрыта','AJAX shows closed card status');
+const metrics=()=>page.locator('.panel-card-status').evaluate(n=>{const s=getComputedStyle(n),r=n.getBoundingClientRect();return{font:s.fontSize,padding:s.padding,border:s.borderBottomWidth,radius:s.borderBottomLeftRadius,width:r.width,height:r.height}});
+const ajax=await metrics();check(ajax.border==='1px'&&ajax.radius==='6px','Legacy AJAX paragraph receives shared badge design');
+await page.reload();await page.locator('[data-battle-ui-ready="true"]').waitFor();await page.locator('.panel-card-status').waitFor({state:'visible'});const full=await metrics();
+check(JSON.stringify(ajax)===JSON.stringify(full),'AJAX badge equals F5 badge in geometry and style');await ctx.close();}
+check(errors.length===0,'No JS errors');console.log(`Closed card status browser: ${checks} checks passed`)}finally{await browser.close()}})().catch(e=>{console.error(e);process.exitCode=1});
