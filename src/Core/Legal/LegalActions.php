@@ -288,6 +288,18 @@ final class LegalActions
                 foreach ($options as $option) {
                     if (self::passesClock($state,$viewer,$option,$now)) $out['actions'][] = $option;
                 }
+            } elseif ($wait['source'] === 'strike.pending_close_or_damage') {
+                $pending = $state->battle['strike']['pending_close_or_damage'];
+                $target = $state->getCard((int) $pending['defender_id']);
+                if ($target && $target->owner === $viewer) {
+                    // Closing preserves the creature and avoids paying HP for an uncertain future action.
+                    $option = self::option('choose_close_or_damage', ['choice'=>'close']);
+                    if (self::passesClock($state, $viewer, $option, $now)) {
+                        $out['decision'] = 'close_or_damage';
+                        $out['coverage'] = 'partial';
+                        $out['actions'][] = $option;
+                    }
+                }
             } elseif (CombatMainPassKnowledge::window($state, $viewer, $now) !== null) {
                 $out['decision'] = 'combat_main_pass';
                 $out['coverage'] = 'partial';

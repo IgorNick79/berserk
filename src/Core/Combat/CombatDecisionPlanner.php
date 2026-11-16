@@ -26,6 +26,12 @@ final class CombatDecisionPlanner
                 return ['action'=>$action, 'reason'=>'resolve_intrigue', 'score'=>0, 'factors'=>[]];
             }
         }
+        if ($decision === 'close_or_damage' && $control === 'choice_required') {
+            $action = $legalActions['actions'][0] ?? null;
+            if (($action['type'] ?? null) === 'choose_close_or_damage') {
+                return ['action'=>$action, 'reason'=>'preserve_creature_hp', 'score'=>0, 'factors'=>[]];
+            }
+        }
         if($decision==='root_auto_shot'&&$control==='choice_required')return self::rootAutoShot($observation,$legalActions['actions']);
         if ($decision === 'prophecy_transform_decline') {
             $window = $observation['prophecy_choice'] ?? [];
