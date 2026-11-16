@@ -137,6 +137,7 @@
     // Local combat/card view survives snapshots without changing game/UI URLs.
     var combatHost = root.querySelector("[data-battle-fragment='info_panel_html']");
     var combatKey = null, inspectedCombatCard = 0, combatCardViewOpen = false, closedCardId = 0;
+    var instantResultKey = '', resultCardInspection = false;
     var secondaryDock=document.createElement('div'), secondary=null, prioritySignature='';
     secondaryDock.className='battle-secondary-view game-chat'; secondaryDock.hidden=true;
     root.secondaryPanel=function(panel){
@@ -148,6 +149,12 @@
         var content = combatHost.querySelector('.info-panel-content');
         if (!content) return;
         var key = content.dataset.combatKey || '';
+        var resultKey = content.dataset.instantResult || '';
+        if (resultKey !== instantResultKey) {
+            instantResultKey = resultKey;
+            resultCardInspection = false;
+            if (resultKey) { inspectedCombatCard = 0; combatCardViewOpen = false; }
+        }
         var priority = content.dataset.panelPriority === '1' || !!content.querySelector('[data-match-pause-content]');
         var eventBody=combatHost.querySelector('.info-panel-instants') || content.querySelector('.info-panel-context,[data-match-pause-content]');
         var eventCopy=eventBody && eventBody.cloneNode(true);
@@ -167,7 +174,7 @@
         var selected = content.querySelector("[data-battle-fragment='panel_html']");
         var context = content.querySelector('.info-panel-context');
         var card = selected && selected.querySelector('[data-panel-card-id]');
-        var requestedCard = inspectedCombatCard || Number(content.dataset.inspectedCard) || 0;
+        var requestedCard = instantResultKey && !resultCardInspection ? 0 : (inspectedCombatCard || Number(content.dataset.inspectedCard) || 0);
         var inspect = !!(key && requestedCard && card && Number(card.dataset.panelCardId) === requestedCard && closedCardId !== requestedCard);
         combatCardViewOpen = inspect;
 
@@ -197,6 +204,7 @@
                 event.preventDefault(); event.stopImmediatePropagation();
                 var selectedHeading = combatHost.querySelector('[data-panel-card-id]');
                 closedCardId = selectedHeading ? Number(selectedHeading.dataset.panelCardId) : 0;
+                resultCardInspection = false;
                 inspectedCombatCard = 0; combatCardViewOpen = false; hideHint(); syncCombatPanel();
                 var heading = combatHost.querySelector('.combat-panel-heading h3');
                 if (heading) heading.focus({preventScroll: true});
@@ -212,6 +220,7 @@
             } else if (link.classList.contains('card-link') && (url.searchParams.has('sel') || url.searchParams.has('inspect'))) {
                 if(secondary){secondary.hidden=true;secondary=null;secondaryDock.hidden=true;}
                 closedCardId = 0;
+                resultCardInspection = true;
                 inspectedCombatCard = Number(url.searchParams.get('inspect') || url.searchParams.get('sel')) || 0;
                 hideHint(); syncCombatPanel();
                 // Existing battle-sync handles selection and retrieves fresh card HTML.
