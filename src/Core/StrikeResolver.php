@@ -231,7 +231,7 @@ final class StrikeResolver
             return Result::error('Цель защищена от этой атаки');
         }
 
-        if (!$attackerIsFlying) {
+        if (!$attackerIsFlying && $target->zone !== CardInstance::ZONE_FLYING) {
             // Ограничение «только по карте напротив» (Циклоп)
             if (!empty($attacker->effectiveProp()['strike']['opposite'])) {
                 if (!CardStats::isOpposite($attacker, $target)) {
