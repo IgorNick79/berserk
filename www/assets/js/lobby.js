@@ -105,6 +105,7 @@
         } catch (error) {
             // Lost responses are recovered by READ; never automatically repeat the mutation.
             notice.textContent = error.message;
+            window.BerserkDialogs.alert('Ошибка: ' + error.message);
         } finally { clearTimeout(timeout); busy = false; render(); schedule(0); }
     }
     function schedule(ms = delay) { clearTimeout(timer); timer = setTimeout(poll, ms); }
