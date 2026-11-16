@@ -388,7 +388,7 @@ final class InfoPanel
         $meta=$p['quota']===null?'':'<span class="instant-control-quota" aria-label="Остаток платных резервирований">Осталось: '.$esc($p['quota']).'</span>';
         if ($p['cost']!==null) $meta='<span class="instant-control-cost">'.$esc($p['cost']).'</span>'.$meta;
         $pass=empty($p['pass']) || $p['pass']==='local' ? '' : '<a class="button skip" data-instant-pass href="'.$url($p['pass']).'">Пас</a>';
-        $decline=$p['decline']===null?'':'<a class="button skip" href="'.$url($p['decline']['command'],$p['decline']['payload']).'">Отказаться</a>';
+        $decline=$p['decline']===null || $pass!==''?'':'<a class="button skip" href="'.$url($p['decline']['command'],$p['decline']['payload']).'">Отказаться</a>';
         $required=$pass!=='' || $decline!=='';
         $reserved=$p['command']==='cancel_instant_reservation';
         $context=$this->state->battle['single_roll']??$this->state->battle['strike']??$this->state->battle['turn_instant_stack']??[];
@@ -400,8 +400,7 @@ final class InfoPanel
         $iconLabel=$required?'Инстант — требуется решение':($reserved?'Инстант — резерв зарегистрирован':'Инстант');
         return '<div class="instant-control-layer"><details class="instant-control" data-instant-control data-instant-key="'.$key.'" data-instant-required="'.(int)$required.'" data-instant-reserved="'.(int)$reserved.'" data-instant-phase="'.$esc($p['phase']).'"'.($required?' open':'').'>'
             .'<summary class="battle-icon-control instant-control-toggle" aria-label="'.$iconLabel.'" aria-controls="instant-control-panel" title="'.$iconLabel.'"><img src="/assets/images/battle/instant.svg" width="40" height="40" alt=""><span class="instant-control-indicator" aria-hidden="true"></span></summary>'
-            .'<section id="instant-control-panel" class="instant-control-panel" aria-label="Инстант"><div class="instant-control-heading"><h3>Инстант</h3><button type="button" class="battle-icon-control" data-instant-close aria-label="Свернуть панель инстантов"><img src="/assets/images/battle/close.png" width="32" height="32" alt=""></button></div>'
-            .($meta===''?'':'<div class="instant-control-meta">'.$meta.'</div>')
+            .'<section id="instant-control-panel" class="instant-control-panel" aria-label="Инстант"><div class="instant-control-heading"><h3>Инстант</h3>'.$meta.'<button type="button" class="battle-icon-control" data-instant-close aria-label="Свернуть панель инстантов"><img src="/assets/images/battle/close.png" width="32" height="32" alt=""></button></div>'
             .'<div class="instant-control-actions">'.$action.$pass.$decline.'</div></section></details></div>';
     }
 

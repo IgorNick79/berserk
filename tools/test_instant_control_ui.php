@@ -14,6 +14,9 @@ foreach(['host','player'] as $active){
         s4Check($x->query('//details[@data-instant-control and @open]')->length===0,'Ordinary availability never auto-opens');
         s4Check($x->query('//*[@data-instant-pass or @data-instant-local-pass]')->length===0,'No fake pass outside stack');
         s4Check(!str_contains($html,'Мгновенное действие'),'Old heading removed');
+        s4Check($x->query('//div[@class="instant-control-heading"]/h3[text()="Инстант"]')->length===1,'Both players share the Instant heading');
+        if($viewer===$p) s4Check($x->query('//div[@class="instant-control-heading"]/span[@class="instant-control-cost"]')->length===1
+            && $x->query('//div[@class="instant-control-heading"]/span[@class="instant-control-quota"]')->length===1,'Cost and quota are beside heading, not on a separate row');
         s4Check($viewer===$a?str_contains($html,'>Сыграть</summary>'):str_contains($html,'−1'),'Active play/passive cost');
     }
     fCmd($s,$p,'reserve_instant',['period_id'=>1]);$x=uiDom(s4Render($s,$p));
@@ -36,4 +39,10 @@ foreach(['host','player'] as $active){
     $s=fState($active);$s->winner=$a;
     s4Check(!str_contains(s4Render($s,$p),'data-instant-control'),'Finished match hides icon');
 }
+$s=irState();irGrant($s,'player',1);
+$ui=\Berserk\View\Screen\Battle\InstantControl::project($s,'player',1000);
+s4Check($ui['pass']==='pass_turn_instant'&&$ui['decline']!==null,'Reproduce server offering both pass and decline');
+$x=uiDom(s4Render($s,'player'));
+s4Check($x->query('//*[@data-instant-pass]')->length===1&&$x->query('//a[contains(@href,"decline_instant_priority")]')->length===0,'Only native pass is shown in empty reserved stack');
+s4Check($x->query('//div[@class="instant-control-actions"]/*')->length===2,'Empty reserved stack has only play and pass');
 echo "Floating instant UI: $stage4Checks checks passed\n";

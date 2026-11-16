@@ -1851,11 +1851,11 @@ body.battle-page > .screen {
 .battle-page .instant-control[open] > summary { display: none; }
 .battle-page .instant-control-panel { max-height: var(--instant-panel-height, min(420px, 50vh)); overflow: auto; overscroll-behavior: contain; box-sizing: border-box; padding: 8px; border: 1px solid var(--ip-edge, #a88749); border-radius: 6px; color: var(--ip-text, #f5e8ce); }
 .battle-page .instant-control:not([open]) > .instant-control-panel { display: none; }
-.battle-page .instant-control-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.battle-page .instant-control-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.battle-page .instant-control-heading > [data-instant-close] { margin-left: auto; }
 .battle-page .instant-control-heading h3 { margin: 0; font-size: 14px; }
 .battle-page .instant-control-heading .battle-icon-control { flex-basis: 28px; width: 28px; height: 28px; }
 .battle-page .instant-control-heading img { width: 28px; height: 28px; }
-.battle-page .instant-control-meta { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
 .battle-page .button.reserve-paid, .battle-page .button.catcher-reroll { background: linear-gradient(#edcb62,#af801f) !important; color: #fff !important; }
 .battle-page .button.reserve-free, .battle-page .button.catcher-own { background: linear-gradient(#65bb79,#237339) !important; color: #fff !important; }
 .battle-page .button.catcher-enemy { background: linear-gradient(#d66c64,#932f2a) !important; color: #fff !important; }
