@@ -45,7 +45,7 @@ final class DiceChoiceChoice implements ChoiceHandlerInterface
 
         $url = $baseUrl . '&cmd=choose_dice_choice&choice=';
 
-        $strike=$state->battle['strike']??[];
+        $strike=$state->battle['single_roll']??$state->battle['strike']??[];
         $attacker=$state->getCard((int)($strike['attacker_id']??0));
         $ownAttack=$attacker?->owner===$playerKey;
         $own=\Berserk\View\Ui\DiceValue::render((int)($strike[$ownAttack?'attack_dice':'defend_dice']??0));
@@ -53,6 +53,7 @@ final class DiceChoiceChoice implements ChoiceHandlerInterface
         $buttons=[];
         foreach(['plus:own'=>'+1 к своему кубику','minus:own'=>'−1 от своего кубика','plus:enemy'=>'+1 к чужому кубику','minus:enemy'=>'−1 от чужого кубика']as$key=>$label){
             $mine=str_ends_with($key,':own');
+            if (isset($state->battle['single_roll']) && $mine!==$ownAttack) continue;
             $buttons[]=['label'=>$label,'label_html'=>($mine?$own:$enemy).'<span>'.(str_starts_with($key,'plus:')?'+1':'−1').'</span>','url'=>$url.$key,'class'=>'catcher-dice '.($mine?'catcher-own':'catcher-enemy')];
         }
         $buttons[]=['label'=>'Переброс','url'=>$url.'reroll:any','class'=>'catcher-reroll'];

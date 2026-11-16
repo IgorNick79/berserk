@@ -1470,6 +1470,7 @@ final class StrikeResolver
 
     public function confirmStrike(string $playerKey, Command $cmd): Result
     {
+        if (isset($this->state->battle['single_roll'])) return (new SingleRoll($this->state,$this->engine))->confirm($playerKey,$cmd);
         if ($this->state->status !== 'battle') {
             return Result::error('Сейчас не бой');
         }

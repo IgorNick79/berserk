@@ -76,6 +76,17 @@ final class InfoPanel
                 . '<div class="info-panel-content"><div class="battle-selected-card" data-battle-fragment="panel_html" hidden></div>'
                 . $this->renderPauseBody() . '</div><footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
         }
+        if ((\Berserk\Core\BattleWaitResolver::current($state)['source']??null)==='single_roll.results') {
+            $roll=$state->battle['single_roll'];
+            $actionChoiceHtml=$this->renderInstantResolutionSummary($roll)
+                . (in_array($playerKey,$roll['confirmed']??[],true)?'<p>Ожидание подтверждения противника</p>':$this->confirmStrikeLink($state,$baseUrl));
+        }
+        if ((\Berserk\Core\BattleWaitResolver::current($state)['source']??null)==='single_roll.waiting_instant'
+            && isset($state->battle['single_roll']['computed_value'])) {
+            $actionChoiceHtml='<p>Изменение величины удара. Текущая величина: '
+                .(int)$state->battle['single_roll']['computed_value'].'.</p>'
+                .$this->renderCombatInstantStack($state->battle['single_roll'],true);
+        }
         $inCombat = !empty($state->battle['strike']);
         $inInstantStack = !$inCombat && (!empty($state->battle['turn_instant_stack']) || !empty($state->battle['turn_instant_result']));
         $priority = self::hasRequiredInteraction($state) || $actionChoiceHtml !== '';
@@ -2043,6 +2054,7 @@ final class InfoPanel
         if ($type === 'dice_choice') {
             $attackBefore = (int) ($result['attack_before'] ?? 0);
             $attackAfter = (int) ($result['attack_after'] ?? 0);
+            if (!empty($result['single_die'])) return $name . ': кубик ' . $attackBefore . ' -> ' . $attackAfter;
             $defendBefore = (int) ($result['defend_before'] ?? 0);
             $defendAfter = (int) ($result['defend_after'] ?? 0);
             $parts = [];

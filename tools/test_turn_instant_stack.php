@@ -78,8 +78,11 @@ function tisInstant(string $key, string $name, array $effect, string $target = '
 
 function tisAckTurnResult(GameState $state): void
 {
-    $result = (new InstantProcessor($state, new Engine()))->ackTurnInstantResult(GameState::PLAYER_HOST);
-    tisAssert($result->success, $result->error ?? 'Turn instant result OK should succeed.');
+    while (!empty($state->battle['turn_instant_result'])) {
+        $ack = \Berserk\Core\TurnInstantResult::current($state->battle['turn_instant_result']);
+        $result = (new InstantProcessor($state, new Engine()))->ackTurnInstantResult($ack['owner'], new Command('turn_instant_result_ok',['ack_id'=>$ack['ack_id']]));
+        tisAssert($result->success, $result->error ?? 'Turn result ACK');
+    }
 }
 
 // Same player can declare multiple turn instants before passing; opponent can answer with multiple too.
@@ -120,16 +123,16 @@ tisAssert(array_column($summary, 'label') === ['B', 'C', 'A'], 'Turn stack shoul
 tisAssert(empty($state->battle['turn_instant_stack']), 'Turn stack should close after resolution.');
 tisAssert(!empty($state->battle['turn_instant_result']), 'Resolved non-empty turn stack should wait for result OK.');
 tisAssert($a->hp === 4 && $b->hp === 4 && $c->hp === 4, 'Effects should apply during resolution.');
-$html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render($state, GameState::PLAYER_HOST, 'host', [
+$html = (new InfoPanel(new Template(__DIR__ . '/../templates/')))->render($state, GameState::PLAYER_PLAYER, 'player', [
     'card_1' => ['name' => 'A-card'],
     'card_2' => ['name' => 'B-card'],
     'card_3' => ['name' => 'C-card'],
 ], '/battle?game=9301');
 tisAssert(str_contains($html, 'Разрешение инстантов'), 'InfoPanel should render turn instant result title.');
-tisAssert(strpos($html, 'B-card') < strpos($html, 'C-card') && strpos($html, 'C-card') < strpos($html, 'A-card'), 'Result UI should preserve LIFO resolution order.');
+tisAssert(str_contains($html,'B-card') && !str_contains($html,'C-card'), 'Result UI shows only current LIFO result.');
 tisAssert(str_contains($html, 'instant-summary__item') && str_contains($html, 'Итог разрешения'), 'Result UI should use battle-style instant summary presentation.');
 tisAssert(!str_contains($html, 'instant-summary__list--plain'), 'Result UI should keep numbered/applied summary styling.');
-tisAssert(str_contains($html, 'instant-summary__who--mine') && str_contains($html, 'instant-summary__who--opp'), 'Result UI should distinguish own and opponent entries with battle-style badges.');
+tisAssert(str_contains($html, 'instant-summary__who--mine'), 'Current result belongs to viewer.');
 tisAssert(str_contains($html, 'cmd=turn_instant_result_ok'), 'Result UI should render OK command.');
 tisAckTurnResult($state);
 tisAssert(empty($state->battle['turn_instant_result']), 'Result OK should clear turn instant result.');
@@ -643,7 +646,7 @@ tisAssert($ip->passTurnInstant(GameState::PLAYER_HOST)->success, 'strike_after p
 tisAssert(!empty($state->battle['strike']), 'strike_after continuation must not clear strike before result OK.');
 tisAckTurnResult($state);
 tisAssert(empty($state->battle['strike']), 'strike_after continuation should clear strike after result OK.');
-$again = (new InstantProcessor($state, new Engine()))->ackTurnInstantResult(GameState::PLAYER_HOST);
+$again = (new InstantProcessor($state, new Engine()))->ackTurnInstantResult(GameState::PLAYER_HOST, new Command('turn_instant_result_ok'));
 tisAssert(!$again->success, 'Second result OK must not repeat continuation.');
 
 echo "Turn instant stack tests passed.\n";

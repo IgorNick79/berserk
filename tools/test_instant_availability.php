@@ -7,7 +7,7 @@ $iaChecks=0;
 function iaCheck(bool $ok,string $why):void {global$iaChecks;++$iaChecks;if(!$ok)throw new RuntimeException($why);}
 function iaInstant(string $type='turn',string $target='self'):array {
     return ['key'=>'probe','trigger'=>$type,'target'=>$target,'phase'=>'setter','coins'=>1,'uses_per_turn'=>1,
-        'effect'=>$type==='turn'?['type'=>'heal','value'=>1]:['type'=>'damage_cap','value'=>1]];
+        'effect'=>['type'=>'heal','value'=>1]];
 }
 function iaState(string $type='turn',?array $instant=null):GameState {
     $s=irState();foreach($s->cards as$c)$c->prop=['save_coins'=>true];$s->getCard(3)->coins=2;

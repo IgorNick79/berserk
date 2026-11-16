@@ -91,7 +91,8 @@ final class DamageResolver
             $target->flags['attack_wounds_this_turn'] = (int) ($target->flags['attack_wounds_this_turn'] ?? 0) + $realDamage;
         }
         if ($realDamage > 0) {
-            if (isset($this->state->battle['strike']['wounds_received'])) {
+            if (isset($this->state->battle['strike']['wounds_received'])
+                && in_array($actionType,['strike','answer','tap','magic','uchr'],true)) {
                 $id=$target->instanceId;
                 $this->state->battle['strike']['wounds_received'][$id]=(int)($this->state->battle['strike']['wounds_received'][$id]??0)+$realDamage;
             }

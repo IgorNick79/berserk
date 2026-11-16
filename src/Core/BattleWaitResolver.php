@@ -114,6 +114,12 @@ final class BattleWaitResolver
             return $owner === null ? self::prophecy($battle['pending_prophecy'])
                 : self::decision('pending_prophecy.transform_decline', $owner);
         }
+        if (!empty($battle['single_roll'])) {
+            if (($battle['single_roll']['stage']??null)==='results' && !self::playerList($battle['single_roll']['confirmed']??[])) return self::unknown('single_roll.results','invalid_confirmations');
+            if (($battle['single_roll']['stage']??null)==='results')
+                return self::projection('informational',array_values(array_diff(self::PLAYERS,$battle['single_roll']['confirmed']??[])),'single_roll.results');
+            return self::decision('single_roll.waiting_instant',$battle['single_roll']['instant_priority']??null);
+        }
         if (!empty($battle['strike'])) return self::strike($state, $battle['strike']);
         if (!empty($battle['pending_dive'])) {
             $pending = $battle['pending_dive'];

@@ -20,6 +20,7 @@ function iwState(string $owner='host'): GameState {
     TurnTimer::prepare($s,$owner);TurnTimer::resume($s,1,'start_phase',1000);return $s;
 }
 function iwApply(Engine $e,GameState $s,string $actor,string $cmd,array $payload=[]): void {
+    if($cmd==='turn_instant_result_ok')$payload['ack_id']=$s->battle['turn_instant_result']['confirmations'][$s->battle['turn_instant_result']['position']]['ack_id'];
     if($cmd==='confirm_strike' && !array_key_exists('wait_id',$payload))$payload['wait_id']=IW::token($s);
     $r=$e->apply($s,$actor,new Command($cmd,$payload));iwAssert($r->success,$cmd.': '.$r->error);
 }

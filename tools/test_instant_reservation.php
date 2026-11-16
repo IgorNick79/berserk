@@ -88,7 +88,7 @@ irCmd($s,'player','choose_instant_pick',['target_id'=>2]);
 irCmd($s,'player','decline_instant_priority',['request_id'=>$id],false);
 irCmd($s,'player','pass_turn_instant'); irCheck($s->battle['turn_instant_stack']['priority']==='host','First pass transfers priority');
 irCmd($s,'host','pass_turn_instant'); irCheck(!empty($s->battle['turn_instant_result']),'Second pass resolves');
-$s=irReload($s); irCmd($s,'player','turn_instant_result_ok');
+$s=irReload($s); irCmd($s,$s->battle['turn_instant_result']['confirmations'][$s->battle['turn_instant_result']['position']]['owner'],'turn_instant_result_ok',['ack_id'=>$s->battle['turn_instant_result']['confirmations'][$s->battle['turn_instant_result']['position']]['ack_id']]);
 irCheck(IR::snapshot($s)['status']==='idle' && IR::snapshot($s)['used']===1,'Native result ACK releases grant');
 
 // No opening during intermediate pending, combat, or deferred continuation storage.
@@ -152,7 +152,7 @@ irCheck(IR::snapshot($s)['status']==='granted'&&$s->getCard(4)->hp===5
 for($i=0;$i<60&&IR::snapshot($s)['status']==='granted';$i++) {
     $s=irReload($s);
     if(!empty($s->battle['turn_instant_stack']))irCmd($s,$s->battle['turn_instant_stack']['priority'],'pass_turn_instant');
-    elseif(!empty($s->battle['turn_instant_result']))irCmd($s,'player','turn_instant_result_ok');
+    elseif(!empty($s->battle['turn_instant_result']))irCmd($s,$s->battle['turn_instant_result']['confirmations'][$s->battle['turn_instant_result']['position']]['owner'],'turn_instant_result_ok',['ack_id'=>$s->battle['turn_instant_result']['confirmations'][$s->battle['turn_instant_result']['position']]['ack_id']]);
     elseif(!empty($s->battle['strike'])){
         $strike=$s->battle['strike'];$kind=$strike['state'];
         if($kind==='waiting_defender')irCmd($s,'player','choose_defender',['defender_id'=>0]);

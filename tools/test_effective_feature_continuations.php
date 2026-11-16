@@ -99,7 +99,7 @@ foreach (['normal', 'suppressed', 'released'] as $mode) {
     efCheck(!isset($s->getCard(2)->flags['row_spell_pending']), 'schedule consumed');
     if ($suppressed) {
         efCheck(empty($s->battle['pending_row_spell_pick']) && !empty($s->battle['turn_phase']['pending_ack']), 'suppressed schedule returns to technical ACK');
-        efCheck(fcCommand($s, 'host', 'turn_ack')->success, 'suppressed task ACK');
+        efCheck(fcCommand($s, 'host', 'turn_ack',['ack_id'=>$s->battle['turn_phase']['pending_ack']['ack_id']])->success, 'suppressed task ACK');
     } else {
         $val = $s->battle['pending_row_spell_pick']['val'];
         $s = efRoundtrip($s);
@@ -155,7 +155,7 @@ foreach (['normal', 'suppressed', 'released'] as $mode) {
     efCheck($s->getCard(2)->hp === ($suppressed ? 10 : 12) && $s->getCard(2)->coins === 2 && $s->getCard(2)->closed, 'instant effect and scheduled tap');
     efCheck($s->battle['turn_instant_result']['summary'][0]['applied'] === !$suppressed, 'honest instant summary');
     $s = efRoundtrip($s);
-    efCheck(fcCommand($s, 'host', 'turn_instant_result_ok')->success, 'instant result ACK');
+    efCheck(fcCommand($s, 'host', 'turn_instant_result_ok',['ack_id'=>\Berserk\Core\TurnInstantResult::current($s->battle['turn_instant_result'])['ack_id']])->success, 'instant result ACK');
     efCheck(!fcCommand($s, 'host', 'turn_instant_result_ok')->success && $s->getCard(2)->coins === 2, 'instant ACK retry no spend');
     fcSettled($s, $mode, 'host', 'turn_instant_result_ok');
 }

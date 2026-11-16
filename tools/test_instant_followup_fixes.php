@@ -14,7 +14,7 @@ foreach(['host','player']as$active){
     $pw=$s->battle['pending_wound_transfer'];followCheck($pw['step']==='amount'&&$pw['donor_id']===$h,'One current-battle donor skips source selection');
     followCheck($pw['donors']===[$h=>2],'Old wounds on another creature never enter current battle donors');
     irEngine()->applyDamage($s,$s->getCard(9),1,'damage_on_dice',$s->getCard($caster));
-    followCheck(($s->battle['strike']['wounds_received'][9]??0)===1,'Real damage adds only newly received wounds to the current combat ledger');
+    followCheck(($s->battle['strike']['wounds_received'][9]??0)===0,'Independent instant damage never enters the strike wound ledger');
     $spec=(new WoundTransferChoice())->spec($s,$p,[],'?game=1',$p);followCheck(str_contains($spec->form['items'][0]['label'],'❤'),'Wounds amounts use hearts');
     $s=s4Wounds($active);$s->addCard(clone$extra);$s->battle['strike']['wounds_received']=[$h=>2,9=>1];s4Acknowledge($s);
     fCmd($s,$p,'combat_instant_play',['card_id'=>$caster,'instant_key'=>'raneniya']);s4PassStack($s);

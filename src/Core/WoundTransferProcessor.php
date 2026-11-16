@@ -407,12 +407,27 @@ final class WoundTransferProcessor
             if ($donor->hp > $donor->hpMax) $donor->hp = $donor->hpMax;
         }
 
+        // Keep provenance when several announced Hermits redistribute the same action's wounds.
+        // Eligibility must not expose wounds the donor already had before this strike.
+        $combatLedger=($pw['options']['donor_filter']??'')==='damaged_this_strike'
+            && isset($this->state->battle['strike']['wounds_received']);
+        if ($combatLedger) {
+            $id=$donor->instanceId;
+            $this->state->battle['strike']['wounds_received'][$id]=max(0,
+                (int)($this->state->battle['strike']['wounds_received'][$id]??0)-max(0,$donor->hp-$resolutionHpBefore));
+        }
         if ($source) ActionResolution::healed($this->state, $source, $donor, $resolutionHpBefore, 'wound_transfer', $resolutionParent);
         foreach ($appliedTransfers as $t) {
             $target = $this->state->getCard($t['target_id']);
             if (!$target) continue;
 
+            $recipientHp=$target->hp;
             $this->engine->applyDamage($this->state, $target, (int) $t['amount'], $damageType, $source);
+            if ($combatLedger) {
+                $id=$target->instanceId;
+                $this->state->battle['strike']['wounds_received'][$id]=(int)($this->state->battle['strike']['wounds_received'][$id]??0)
+                    +max(0,$recipientHp-$target->hp);
+            }
         }
 
         // Закрываем источник только для отложенных flow (для main_phase уже закрыт в start)

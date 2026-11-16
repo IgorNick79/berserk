@@ -46,7 +46,7 @@ final class RowSpellPickChoice implements ChoiceHandlerInterface
         $x = (int) $p['x'];
         $dice = isset($p['dice']) ? (int) $p['dice'] : 0;
         $val = isset($p['val']) ? (int) $p['val'] : null;
-        if ($dice >= 1 && $dice <= 6 && $val !== null) {
+        if ($dice >= 1 && $val !== null) {
             $resultHtml = '<div class="dice-block">'
                 . '<div class="dice-column">'
                 . '<div class="label">Кубик</div>'

@@ -12,7 +12,7 @@ foreach([0,180,225,30] as $seconds){
  $now=1000;$engine=new Engine(null,static function()use(&$now){return $now;});$events=[];$serial=1;
  (new TurnProcessor($s,$engine))->startBattle();cw(!empty($s->battle['pending_row_spell_pick']),'real initial choice '.$seconds);
  $run=function(string $side,string $type,array $payload=[],bool $success=true)use(&$s,$engine,&$events,&$serial):void{
-  $s=GameState::fromArray($s->toArray());$s->historyRecorder=new Recorder(61,++$serial,[],[],true);
+  $s=GameState::fromArray($s->toArray());if($type==='turn_ack')$payload=['ack_id'=>$s->battle['turn_phase']['pending_ack']['ack_id']];$s->historyRecorder=new Recorder(61,++$serial,[],[],true);
   cw($engine->apply($s,$side,new Command($type,$payload))->success===$success,'command '.$type);
   foreach($s->historyRecorder->batch($s)->data()['events'] as $event)$events[]=$event['type'];
  };
@@ -35,7 +35,7 @@ foreach([0,180,225,30] as $seconds){
  $s->addCard(new CardInstance(instanceId:3,ukid:'opponent',owner:'player',zone:'field',row:4,col:2,hp:20,hpMax:20));
  $engine=new Engine(null,static fn()=>1000);(new TurnProcessor($s,$engine))->startBattle();$started=0;
  foreach([['choose_card_option',['option_index'=>0]],['turn_task',['task_id'=>'prophecy']],['turn_sub',['sub_id'=>'prophecy_1']],['close_prophecy',[]],['turn_task',['task_id'=>'turn_start_1_0']],['choose_whip_target',['target_id'=>1]],['turn_ack',[]]] as $index=>[$type,$payload]){
-  $s=GameState::fromArray($s->toArray());$s->historyRecorder=new Recorder(62,$index+1,[],[],true);cw($engine->apply($s,'host',new Command($type,$payload))->success,'multi pending '.$type);
+  $s=GameState::fromArray($s->toArray());if($type==='turn_ack')$payload=['ack_id'=>$s->battle['turn_phase']['pending_ack']['ack_id']];$s->historyRecorder=new Recorder(62,$index+1,[],[],true);cw($engine->apply($s,'host',new Command($type,$payload))->success,'multi pending '.$type);
   $started+=count(array_filter($s->historyRecorder->batch($s)->data()['events'],fn($e)=>$e['type']==='turn.started'));
   cw($started===($type==='turn_ack'?1:0),'start only after final nested ACK');
  }

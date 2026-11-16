@@ -79,14 +79,14 @@ ttAssert(!empty($s->battle['turn_phase']) && $s->battle['turn_timer']['status'] 
 (new TurnProcessor($s, $engine))->afterStartPhase('host');
 ttAssert($s->battle['turn_timer']['status'] === 'paused', 'An early callback cannot bypass an existing start phase');
 $now = 3100;
-(new TurnPhaseProcessor($s, $engine))->closeSub('host', new Command('close_turn_sub'));
+$engine->apply($s,'host',new Command('turn_sub',['sub_id'=>'prophecy_1']));
 ttAssert($s->battle['turn_timer']['anchor_at'] === 3100, 'Starts at phase finish');
 $now = 3110;
 $turn->endTurn('host', new Command('end_turn'));
 ttAssert($s->battle['active'] === 'player' && $s->battle['turn_timer']['owner'] === 'host'
     && $s->battle['turn_timer']['status'] === 'paused', 'Early active switch does not transfer clock');
 $now = 3300;
-(new TurnPhaseProcessor($s, $engine))->ackPending('host');
+(new TurnPhaseProcessor($s, $engine))->ackPending('host', new Command('turn_ack',['ack_id'=>$s->battle['turn_phase']['pending_ack']['ack_id']]));
 ttAssert($s->battle['turn_timer']['period_id'] === 2 && $s->battle['turn_timer']['owner'] === 'player'
     && $s->battle['turn_timer']['anchor_at'] === 3300, 'Next period starts only after lifecycle completes');
 $legacy = new GameState(1, 2, 3);
@@ -179,10 +179,10 @@ ttAssert($engine->apply($s, 'host', new Command('choose_whip_target', ['target_i
 ttAssert(!empty($s->battle['turn_phase']['pending_ack']) && $s->battle['turn_timer']['status'] === 'paused', 'Start result ACK still delays clock');
 $s = GameState::fromArray(json_decode(json_encode($s->toArray()), true));
 $now = 4540;
-ttAssert($engine->apply($s, 'host', new Command('turn_ack'))->success, 'Last start result ACK finishes phase');
+ttAssert($engine->apply($s, 'host', new Command('turn_ack',['ack_id'=>$s->battle['turn_phase']['pending_ack']['ack_id'] ?? 'expired']))->success, 'Last start result ACK finishes phase');
 ttAssert($s->battle['turn_timer']['period_id'] === 1 && $s->battle['turn_timer']['anchor_at'] === 4540, 'All start waits share one period and full budget');
 $now = 4550;
-ttAssert(!$engine->apply($s, 'host', new Command('turn_ack'))->success
+ttAssert(!$engine->apply($s, 'host', new Command('turn_ack',['ack_id'=>$s->battle['turn_phase']['pending_ack']['ack_id'] ?? 'expired']))->success
     && $s->battle['turn_timer']['remaining_seconds'] === 170, 'Repeated ACK cannot restart or refund the timer');
 
 // Start-phase instants retain the phase until stack resolution and result OK.
@@ -205,11 +205,11 @@ ttAssert($engine->apply($s, 'host', new Command('pass_turn_instant'))->success, 
 ttAssert(!empty($s->battle['turn_instant_result']) && $s->battle['turn_timer']['status'] === 'paused', 'Instant result still delays start');
 $s = GameState::fromArray(json_decode(json_encode($s->toArray()), true));
 $now = 4620;
-ttAssert($engine->apply($s, 'host', new Command('turn_instant_result_ok'))->success, 'Acknowledge instant result');
+ttAssert($engine->apply($s, 'host', new Command('turn_instant_result_ok',['ack_id'=>$s->battle['turn_instant_result']['confirmations'][$s->battle['turn_instant_result']['position']]['ack_id']]))->success, 'Acknowledge instant result');
 ttAssert(empty($s->battle['turn_phase']) && $s->battle['turn_timer']['anchor_at'] === 4620, 'Clock starts after instant continuation finishes phase');
 $now = 4630;
 ttAssert(!$engine->apply($s, 'host', new Command('turn_instant_result_ok'))->success
-    && $s->battle['turn_timer']['remaining_seconds'] === 170, 'Repeated instant result command cannot restart period');
+    && TurnTimer::snapshot($s,$now)['remaining_seconds'] === 170, 'Repeated instant result command cannot restart period');
 
 // A start task can finish its phase while its combat result still needs both ACKs.
 $s = new GameState(-918276, 101, 202);

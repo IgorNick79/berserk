@@ -1,8 +1,8 @@
 // Runs only against the disposable Stage 4 HTTP fixture; no working DB or browser profile.
 const fs=require('fs'),path=require('path'),assert=require('assert/strict');
 const root=process.env.IR_TEST_ROOT;
-if(!root||!root.replaceAll('\\','/').endsWith('/instant-stage4-validation'))throw Error('Stage 4 fixture root required');
-const {chromium}=require(path.join(root,'runtime/node_modules/playwright'));
+if(!root||!root.replaceAll('\\','/').match(/\/(instant-stage4-validation|instant-reservation-stage2-validation)$/))throw Error('Stage 4 fixture root required');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||path.join(root,'runtime/node_modules/playwright'));
 const e=JSON.parse(fs.readFileSync(path.join(root,'sql-evidence.json'))),http=JSON.parse(fs.readFileSync(path.join(root,'stage4-http-evidence.json'))),fixtures=http.ui_fixtures;
 if(!http.created_at||Date.now()/1000-http.created_at>120)throw Error('Fresh running-timer fixtures required: run test_instant_stage4_http.php first');
 (async()=>{
@@ -27,7 +27,7 @@ if(!http.created_at||Date.now()/1000-http.created_at>120)throw Error('Fresh runn
   check(c&&end&&c.y+c.height<=end.y+1,'Instant block directly precedes end turn');
  }
  try{
-  for(const width of [1280,390]){
+  for(const width of [1440,1024]){
    const {ctx,page}=await open('player',fixtures.normal,width);await footer(page);
    await page.getByRole('link',{name:'Резерв',exact:true}).click();await page.getByRole('link',{name:'Отменить резерв',exact:true}).waitFor();check(await page.locator('.instant-control-cost').count()===0,'Waiting reserve has no false price');
    await page.reload();await page.getByRole('link',{name:'Отменить резерв',exact:true}).waitFor();await footer(page);
