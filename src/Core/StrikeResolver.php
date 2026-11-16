@@ -199,6 +199,18 @@ final class StrikeResolver
             }
         }
 
+        if ($attacker->zone === CardInstance::ZONE_FIELD && $target->zone === CardInstance::ZONE_FLYING) {
+            $allowed = BattleHelper::getAttackTargets($this->state, $attacker, 'strike', $playerKey);
+            if (!isset($allowed[$targetId]) || $target->dying || $target->hp <= 0) return Result::error('Недоступная летающая цель');
+            if (!FlyingPreparation::canReach($this->state, $attacker)) {
+                if (!FlyingPreparation::canPrepare($this->state, $attacker)) return Result::error('Подготовка недоступна');
+                $this->state->battle['pending_flying_preparation'] = [
+                    'owner' => $playerKey, 'source_id' => $cardId, 'id' => bin2hex(random_bytes(12)),
+                ];
+                $this->state->bumpVersion();
+                return Result::ok(['flying_preparation_pending']);
+            }
+        }
         $this->engine->revealCard($this->state, $target);
 
         $attackerIsFlying = ($attacker->zone === CardInstance::ZONE_FLYING);

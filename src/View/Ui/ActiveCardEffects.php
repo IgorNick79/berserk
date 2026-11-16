@@ -9,6 +9,11 @@ final class ActiveCardEffects
     public static function forCard(CardInstance $card, GameState $state): array
     {
         $rows = []; $groups = [];
+        if ($card->zone === CardInstance::ZONE_FIELD && ($card->flags[\Berserk\Core\FlyingPreparation::FLAG] ?? null) === 'ready') {
+            $rows[] = 'Существо подготовлено к атаке летающих. В течение текущего хода оно может атаковать любое допустимое летающее существо противника ближней атакой, если отсутствуют обычные цели.';
+        } elseif (($card->flags[\Berserk\Core\FlyingPreparation::FLAG] ?? null) === 'waiting') {
+            $rows[] = 'Подготовка к атаке летающих: действует в следующий собственный ход.';
+        }
         if($bonus=\Berserk\Core\GraveRitual::bonus($state,$card,'ova'))$rows[]='ОВА +'.$bonus;
         if($bonus=\Berserk\Core\GraveRitual::bonus($state,$card,'strong'))$rows[]='Сильный удар +'.$bonus;
         if ($card->zone === CardInstance::ZONE_FIELD && !$card->dying && $card->hp > 0
