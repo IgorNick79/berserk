@@ -126,6 +126,7 @@ final class PlayerObservation
         if (($wait['reason'] ?? null)==='turn_ack_legacy_contract') $observation['control']['reason'] = 'turn_ack_legacy_contract';
         $teleport = self::greedTeleportChoice($state,$viewer,$wait);
         if ($teleport !== null) $observation['greed_teleport_choice'] = $teleport;
+        if (($whip=self::whipChoice($state,$viewer,$wait))!==null) $observation['whip_choice']=$whip;
         $tasks = self::passiveTasks($state,$viewer,$wait);
         if ($tasks !== []) $observation['passive_tasks'] = ['owner'=>$viewer,'options'=>$tasks];
         $instant = self::combatDiceWindow($state,$viewer,$wait);
@@ -182,24 +183,48 @@ final class PlayerObservation
             'consumes_pending_gates'=>true,'resource_cost'=>0,'final_effects'=>'unknown'];
     }
 
-    /** A confirmed subset of the current passive queue, with no task payloads or labels. */
+    /** Public facts only; the native pending list remains authoritative. */
+    public static function whipChoice(GameState $state, string $viewer, ?array $wait): ?array
+    {
+        $p=$state->battle['pending_whip']??null;
+        if (($wait['source']??null)!=='pending_whip' || ($wait['required_players']??[])!==[$viewer]
+            || !is_array($p) || ($p['owner']??null)!==$viewer || !is_array($p['targets']??null)
+            || !is_int($p['value']??null) || $p['value']<0) return null;
+        $options=[];$source=$state->getCard((int)($p['source_id']??0));
+        if ($source && $source->owner===$viewer && $source->zone==='field' && !$source->dying && $source->hp>0 && $source->row!==null && $source->col!==null) {
+            foreach ($p['targets'] as $id) {
+                $c=is_int($id)?$state->getCard($id):null;
+                if (!$c || $c->owner!==$viewer || $c->zone!=='field' || $c->dying || $c->hp<=0 || $c->row===null || $c->col===null
+                    || VisibilityPolicy::card($state,$c,$viewer)!=='known') continue;
+                if ($id!==$source->instanceId && (abs($c->row-$source->row)>1 || abs($c->col-$source->col)>1)) continue;
+                $options[]=['target_id'=>$id,'hp'=>$c->hp,'closed'=>$c->closed,'damage'=>$p['value']];
+            }
+        }
+        return ['owner'=>$viewer,'options'=>$options,'can_cancel'=>true];
+    }
+
+    /** Supported start/end tasks, with no private task payloads or labels. */
     public static function passiveTasks(GameState $state, string $viewer, ?array $wait): array
     {
-        if (($wait['source'] ?? null) !== 'turn_phase.passive_queue' || ($wait['kind'] ?? null) !== 'decision'
-            || $wait['required_players'] !== [$viewer]) return [];
-        $phase = $state->battle['turn_phase'];
-        if (!in_array($phase['phase'],['start','end'],true) || $phase['side'] !== 'passive' || $phase['passive_key'] !== $viewer) return [];
+        if (!in_array($wait['source']??null,['turn_phase.passive_queue','turn_phase.active_queue'],true)
+            || ($wait['kind']??null)!=='decision' || $wait['required_players']!==[$viewer]) return [];
+        $phase=$state->battle['turn_phase'];$side=$phase['side'];
+        if (!in_array($phase['phase'],['start','end'],true) || !in_array($side,['active','passive'],true)
+            || $phase[$side.'_key']!==$viewer) return [];
         $options = [];
-        foreach ($phase['passive_queue'] as $task) {
+        foreach ($phase[$side.'_queue'] as $task) {
             if (!empty($task['sub']) || !is_string($task['id'] ?? null) || $task['id'] === '') continue;
             $source = $state->getCard((int) ($task['card_id'] ?? 0));
             if ($source === null || $source->owner !== $viewer || VisibilityPolicy::card($state,$source,$viewer) !== 'known') continue;
             $option = ['task_id'=>$task['id'],'source_id'=>$source->instanceId,'resource_cost'=>0];
-            if ($phase['phase']==='start' && ($task['type'] ?? null)==='opponent_turn_start:place_gates') {
+            if ($side==='active' && $phase['phase']==='start' && ($task['type']??null)==='turn_start:whip'
+                && ($task['payload']['type']??null)==='whip') {
+                $options[]=$option+['type'=>'whip','effect'=>'may_open_whip_choice'];
+            } elseif ($side==='passive' && $phase['phase']==='start' && ($task['type'] ?? null)==='opponent_turn_start:place_gates') {
                 $count = (int) ($task['payload']['count'] ?? 3);
                 if ($count <= 0) continue;
                 $options[] = $option + ['type'=>'place_gates','gate_count'=>$count,'effect'=>'may_open_gate_cell_choice'];
-            } elseif ($phase['phase']==='end' && ($task['type'] ?? null)==='opponent_turn_end') {
+            } elseif ($side==='passive' && $phase['phase']==='end' && ($task['type'] ?? null)==='opponent_turn_end') {
                 // The executor prefers turn_end when both properties exist. Match its actual source.
                 $effects = $task['closed_effects'] ?? $source->effectiveProp()['turn_end'] ?? $source->effectiveProp()['opponent_turn_end'] ?? [];
                 if (!is_array($effects) || count($effects)!==1 || ($effects[0]['type'] ?? null)!=='greed_teleport') continue;

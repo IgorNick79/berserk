@@ -149,6 +149,15 @@ final class LegalActions
                     $option = self::option('choose_greed_teleport',$destination);
                     if (self::passesClock($state,$viewer,$option,$now)) $out['actions'][] = $option;
                 }
+            } elseif ($handler instanceof \Berserk\Core\Choice\WhipChoice
+                && ($whip=PlayerObservation::whipChoice($state,$viewer,$wait))!==null) {
+                $out['decision']='whip_target';$out['coverage']='partial';
+                foreach ($whip['options'] as $target) {
+                    $option=self::option('choose_whip_target',['target_id'=>$target['target_id']]);
+                    if(self::passesClock($state,$viewer,$option,$now))$out['actions'][]=$option;
+                }
+                $option=self::option('cancel_pending',[]);
+                if(self::passesClock($state,$viewer,$option,$now))$out['actions'][]=$option;
             } elseif ($handler instanceof GatePickChoice && $wait['source']==='pending_gate_pick') {
                 $pending = $state->battle['pending_gate_pick'];
                 $out['decision'] = 'gate_cell';
