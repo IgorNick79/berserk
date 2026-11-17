@@ -96,7 +96,7 @@ final class BattleScreen
 
         $actionChoice = $this->actionTargetChoice($state, $playerKey, $selectedCardId, $cardsInfo,
             $baseUrl, $mode, $isActive, $strike, $attackTargets, $explicitAttackMode);
-        $this->inspectionBase = (InfoPanel::hasRequiredInteraction($state) || ($actionChoice !== '' && $mode !== 'strike'))
+        $this->inspectionBase = (InfoPanel::hasRequiredInteraction($state) || ($actionChoice !== '' && !in_array($mode, ['strike', 'uchr'], true)))
             ? $baseUrl . '&sel=' . $selectedCardId . '&mode=' . rawurlencode($mode) : '';
 
         // Порядок осей
@@ -873,19 +873,19 @@ final class BattleScreen
         $c = $state->getCard($selectedCardId);
         if (!$c || InfoPanel::hasRequiredInteraction($state)) return '';
         // Additional UI entry point; field links still declare the strike immediately.
-        if ($mode === 'strike' && $explicitAttackMode && $isActive && !$strike && !empty($attackTargets)
+        if (in_array($mode, ['strike', 'uchr'], true) && $explicitAttackMode && $isActive && !$strike && !empty($attackTargets)
             && $c->owner === $playerKey && !\Berserk\Core\MatchPause::blocking($state)
             && !$this->hasActiveServerPending($state)
             && \Berserk\Core\BattleWaitResolver::current($state) === null
             && empty($state->battle['turn_instant_stack']) && empty($state->battle['turn_instant_result'])) {
             $sourceName = (string) ($cardsInfo[$c->ukid]['name'] ?? $c->ukid);
             return \Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(
-                title: $sourceName . ' — Простой удар: выберите цель',
+                title: $sourceName . ' — ' . ($mode === 'uchr' ? 'УЧР' : 'Простой удар') . ': выберите цель',
                 form: ['type' => 'radio', 'name' => 'target_id',
-                    'hidden' => \Berserk\View\Ui\Form::battleHidden($playerKey, $state->gameId, 'strike', [
+                    'hidden' => \Berserk\View\Ui\Form::battleHidden($playerKey, $state->gameId, $mode, [
                         'card_id' => $c->instanceId, 'sel' => $c->instanceId, 'mode' => $mode,
                     ]),
-                    'submit' => 'Атаковать', 'cancel' => $baseUrl,
+                    'submit' => 'Атаковать', 'cancel' => $baseUrl . '&sel=' . $c->instanceId,
                 ],
                 cardSelection: new \Berserk\View\Ui\CardSelectionSpec(
                     context: implode(':', [$state->gameId, $playerKey, $c->instanceId, $mode,
@@ -1008,7 +1008,7 @@ final class BattleScreen
                         $modeButtons .= $this->tpl->parse('includes/battle/mode_button.tpl', [
                             'label'  => 'Простой удар',
                             'link'   => "{$baseUrl}&sel={$c->instanceId}&mode=strike",
-                            'active' => $mode === 'strike' ? ' active' : '',
+                            'active' => $mode === 'strike' && $explicitAttackMode ? ' active' : '',
                         ]);
                     }
                 }
@@ -1225,7 +1225,9 @@ final class BattleScreen
             }
         } elseif (isset($c->markers['spider_web'])) {
             $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта находится в сети']);
-        } elseif ($isActive && !$strike && $c->owner === $playerKey && in_array($c->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) {
+        } elseif ($isActive && !$strike && $c->owner === $playerKey
+            && ($explicitAttackMode || !in_array($mode, ['strike', 'uchr'], true))
+            && in_array($c->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) {
             if (empty($attackTargets)) {
                 $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Нет целей']);
             } else {
