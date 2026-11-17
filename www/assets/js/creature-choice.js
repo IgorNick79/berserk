@@ -32,16 +32,77 @@
         saved.set(key, {side: side, value: selected ? selected.value : ''});
         if (saved.size > 40) saved.delete(saved.keys().next().value);
     }
-    function refresh() { queued = false; document.querySelectorAll('.card-choice-form').forEach(function (f) { update(f); }); }
+    var activeSelection = null;
+    function updateSelection(form) {
+        var context = form.dataset.cardSelection;
+        var rows = Array.from(form.querySelectorAll('[data-card-instance]'));
+        if (!activeSelection || activeSelection.context !== context) {
+            activeSelection = {
+                context: context,
+                selected: rows.find(function (row) { return row.querySelector('input').checked; })?.dataset.cardInstance,
+                side: 'enemy',
+                row: 'all'
+            };
+        }
+        var state = activeSelection;
+        var sides = form.querySelector('[data-creature-sides]');
+        var rowControls = form.querySelector('[data-card-rows]');
+        if (sides) sides.hidden = false;
+        if (rowControls) rowControls.hidden = false;
+        if (!rows.some(function (row) { return row.dataset.creatureOwner === state.side; })) {
+            state.side = rows[0]?.dataset.creatureOwner;
+        }
+        form.querySelectorAll('[data-creature-side], [data-card-row-filter]').forEach(function (button) {
+            var pressed = button.dataset.creatureSide
+                ? button.dataset.creatureSide === state.side
+                : button.dataset.cardRowFilter === state.row;
+            button.setAttribute('aria-pressed', String(pressed));
+        });
+        var selected = rows.find(function (row) { return row.dataset.cardInstance === state.selected; });
+        if (!selected) state.selected = undefined;
+        rows.forEach(function (row) {
+            row.hidden = Boolean(sides && row.dataset.creatureOwner !== state.side)
+                || (state.row !== 'all' && row.dataset.cardRow !== state.row);
+            row.querySelector('input').checked = row === selected;
+        });
+        form.querySelector('[data-card-choice-status]').hidden = !selected || !selected.hidden;
+        var submit = form.querySelector('button[type="submit"]');
+        submit.disabled = !selected && form.dataset.cardMinSelect === '1';
+    }
+    function refresh() {
+        queued = false;
+        var selection = document.querySelector('[data-card-selection]');
+        if (selection) updateSelection(selection);
+        else activeSelection = null;
+        document.querySelectorAll('.card-choice-form:not([data-card-selection])').forEach(function (f) { update(f); });
+    }
     document.addEventListener('click', function (e) {
-        var button = e.target.closest('[data-creature-side]');
-        if (button) update(button.closest('form'), button.dataset.creatureSide);
+        var button = e.target.closest('[data-creature-side], [data-card-row-filter]');
+        if (!button) return;
+        var form = button.closest('form');
+        if (!form) return;
+        if (!form.hasAttribute('data-card-selection')) {
+            update(form, button.dataset.creatureSide);
+            return;
+        }
+        updateSelection(form);
+        if (button.dataset.creatureSide) activeSelection.side = button.dataset.creatureSide;
+        else activeSelection.row = button.dataset.cardRowFilter;
+        updateSelection(form);
     });
     document.addEventListener('change', function (e) {
-        if (e.target.matches('input[type="radio"]')) {
-            var form = e.target.closest('.card-choice-form');
-            if (form) update(form, null, e.target.value);
+        if (!e.target.matches('input[type="radio"]')) return;
+        var form = e.target.closest('.card-choice-form');
+        if (!form) return;
+        if (!form.hasAttribute('data-card-selection')) {
+            update(form, null, e.target.value);
+            return;
         }
+        var row = e.target.closest('[data-card-instance]');
+        if (!row) return;
+        updateSelection(form);
+        activeSelection.selected = row.dataset.cardInstance;
+        updateSelection(form);
     });
     new MutationObserver(function (records) {
         if (records.some(function (r) { return r.type === 'childList'; }) && !queued) { queued = true; requestAnimationFrame(refresh); }

@@ -26,5 +26,6 @@ final class PanelSpec
         public bool   $isMine = true,
         public string $waitText = 'Ожидание выбора оппонента...',
         public ?array $cellPicker = null,
+        public ?CardSelectionSpec $cardSelection = null,
     ) {}
 }

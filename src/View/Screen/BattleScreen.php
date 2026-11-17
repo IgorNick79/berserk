@@ -96,7 +96,7 @@ final class BattleScreen
 
         $actionChoice = $this->actionTargetChoice($state, $playerKey, $selectedCardId, $cardsInfo,
             $baseUrl, $mode, $isActive, $strike, $attackTargets);
-        $this->inspectionBase = (InfoPanel::hasRequiredInteraction($state) || $actionChoice !== '')
+        $this->inspectionBase = (InfoPanel::hasRequiredInteraction($state) || ($actionChoice !== '' && $mode !== 'strike'))
             ? $baseUrl . '&sel=' . $selectedCardId . '&mode=' . rawurlencode($mode) : '';
 
         // Порядок осей
@@ -872,6 +872,32 @@ final class BattleScreen
     {
         $c = $state->getCard($selectedCardId);
         if (!$c || InfoPanel::hasRequiredInteraction($state)) return '';
+        // Additional UI entry point; field links still declare the strike immediately.
+        if ($mode === 'strike' && $isActive && !$strike && !empty($attackTargets)
+            && $c->owner === $playerKey && !\Berserk\Core\MatchPause::blocking($state)
+            && !$this->hasActiveServerPending($state)
+            && \Berserk\Core\BattleWaitResolver::current($state) === null
+            && empty($state->battle['turn_instant_stack']) && empty($state->battle['turn_instant_result'])) {
+            $sourceName = (string) ($cardsInfo[$c->ukid]['name'] ?? $c->ukid);
+            return \Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(
+                title: $sourceName . ' — Простой удар: выберите цель',
+                form: ['type' => 'radio', 'name' => 'target_id',
+                    'hidden' => \Berserk\View\Ui\Form::battleHidden($playerKey, $state->gameId, 'strike', [
+                        'card_id' => $c->instanceId, 'sel' => $c->instanceId, 'mode' => $mode,
+                    ]),
+                    'submit' => 'Атаковать', 'cancel' => $baseUrl,
+                ],
+                cardSelection: new \Berserk\View\Ui\CardSelectionSpec(
+                    context: implode(':', [$state->gameId, $playerKey, $c->instanceId, $mode,
+                        $state->battle['turn'] ?? 0, $state->battle['active'] ?? '']),
+                    candidates: \Berserk\View\Ui\CreatureChoice::candidates(
+                        $state, array_map('intval', array_keys($attackTargets)), $playerKey, $cardsInfo,
+                        \Berserk\View\Ui\CardSelectionSpec::SIMPLE
+                    ),
+                    mode: \Berserk\View\Ui\CardSelectionSpec::SIMPLE,
+                ),
+            ));
+        }
         // Use the exact same native candidate set as the battlefield highlights.
         if ($isActive && !$strike && str_starts_with($mode, 'action:') && !empty($attackTargets)
             && $c->owner === $playerKey && !\Berserk\Core\MatchPause::blocking($state)
