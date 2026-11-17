@@ -1212,7 +1212,7 @@ final class BattleScreen
         if ($this->canCancelTargetMode($state, $c, $playerKey, $mode, $isActive, $strike, $explicitAttackMode)) {
             $modeButtons .= $this->tpl->parse('includes/battle/mode_button.tpl', [
                 'label'  => 'Отменить действие',
-                'link'   => $baseUrl,
+                'link'   => in_array($mode, ['strike', 'uchr'], true) ? $baseUrl . '&sel=' . $c->instanceId : $baseUrl,
                 'active' => ' cancel',
             ]);
         }
