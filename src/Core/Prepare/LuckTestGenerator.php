@@ -31,6 +31,9 @@ final class LuckTestGenerator
         }
         foreach (['host','player'] as $owner) {
             $fixed[$owner] ??= [];
+            if (count(array_filter($fixed[$owner], static fn($c) => ($c['type'] ?? '') === 'terrain')) > 1) {
+                throw new \DomainException('В отряде может быть только одна местность');
+            }
             if (count($fixed[$owner]) > $count) throw new \DomainException('Сценарий LuckTest: обязательных карт больше K');
         }
         $best = null;
@@ -73,7 +76,9 @@ final class LuckTestGenerator
         for ($i=count($fixed);$i<count($cards);$i++) for ($attempt=0;$attempt<self::REPLACEMENTS_PER_CARD;$attempt++) {
             $old=$cards[$i];$replacement=$this->pick($catalog);
             if ($category===false && self::isSpecial($replacement)) continue;
-            $cards[$i]=$replacement;$sum=$totals($cards);
+            $cards[$i]=$replacement;
+            if (count(array_filter($cards, static fn($c) => ($c['type'] ?? '') === 'terrain')) > 1) {$cards[$i]=$old;continue;}
+            $sum=$totals($cards);
             $next=abs($sum['gold']-$target['gold'])+abs($sum['silver']-$target['silver']);
             if (($category===true && !self::hasSpecial($cards)) || $sum['gold']<$base['gold'] || $sum['silver']<$base['silver'] || $next>=$distance) {$cards[$i]=$old;continue;}
             $distance=$next;
@@ -96,6 +101,7 @@ final class LuckTestGenerator
                 $previous=$player[$i];$replacement=$this->pick($catalog);
                 if ($category===false && self::isSpecial($replacement)) continue;
                 $player[$i]=$replacement;
+                if (count(array_filter($player, static fn($c) => ($c['type'] ?? '') === 'terrain')) > 1) {$player[$i]=$previous;continue;}
                 $nextError=abs($this->cost($host)-$target)+abs($this->cost($player)-$target);
                 $nextDifference=$distance($host,$player);
                 if (($category===true && !self::hasSpecial($player)) || $nextError>$error || $nextDifference>=$difference) {
@@ -170,13 +176,13 @@ final class LuckTestGenerator
         $bestError = INF;
         for ($attempt = 0; $attempt < self::ATTEMPTS; $attempt++) {
             $cards = $fixed;
-            for ($i = count($fixed); $i < $count; $i++) $cards[] = $this->pick($pool);
-            if ($category === true && !self::hasSpecial($cards)) $cards[$this->random(count($fixed), $count - 1)] = $this->pick($special);
+            for ($i = count($fixed); $i < $count; $i++) $cards[] = $this->pick($pool, $cards);
+            if ($category === true && !self::hasSpecial($cards)) $cards[$this->random(count($fixed), $count - 1)] = $this->pick($special, $cards);
             $total = $this->cost($cards);
             // Random one-card improvements retain repeats and never require exact budget equality.
             for ($i = count($fixed); $i < $count; $i++) {
                 for ($j = 0; $j < self::REPLACEMENTS_PER_CARD; $j++) {
-                    $replacement = $this->pick($pool);
+                    $replacement = $this->pick($pool, array_diff_key($cards, [$i => true]));
                     $previous = $cards[$i];
                     $nextTotal = $total - $previous['price'] + $replacement['price'];
                     if (abs($nextTotal - $target) > abs($total - $target)) continue;
@@ -198,7 +204,14 @@ final class LuckTestGenerator
     }
 
     private function cost(array $cards): int { return array_sum(array_column($cards, 'price')); }
-    private function pick(array $cards): array { return $cards[$this->random(0, count($cards) - 1)]; }
+    private function pick(array $cards, array $army = []): array
+    {
+        if (array_filter($army, static fn($c) => ($c['type'] ?? '') === 'terrain')) {
+            $cards = array_values(array_filter($cards, static fn($c) => ($c['type'] ?? '') !== 'terrain'));
+        }
+        if ($cards === []) throw new \DomainException('Каталог не позволяет собрать отряд с одной местностью');
+        return $cards[$this->random(0, count($cards) - 1)];
+    }
     private function random(int $min, int $max): int
     {
         return $this->randomInt !== null ? ($this->randomInt)($min, $max) : random_int($min, $max);

@@ -20,6 +20,7 @@ final class CardInstance
     public const ZONE_GRAVEYARD = 'graveyard';
     public const ZONE_EXILE     = 'exile';
     public const ZONE_FLYING    = 'flying';
+    public const ZONE_TERRAIN   = 'terrain';
 
     public function __construct(
         public int $instanceId,
@@ -53,7 +54,13 @@ final class CardInstance
         public array $markers = [],
         public array $flags = [],
         public bool $single = false,
-    ) {}
+    ) {
+        // Numeric storage remains compatible; terrain has no health or basic movement/strike.
+        if ($this->type === 'terrain') {
+            $this->hp = $this->hpMax = $this->move = $this->moveMax = 0;
+            $this->strikeWeak = $this->strikeMedium = $this->strikeStrong = 0;
+        }
+    }
 
     public static function fromArray(array $data): self
     {

@@ -140,7 +140,7 @@ final class BattleScreen
         // Travel in the existing replaceable field fragment, including AJAX snapshots.
         $fieldHtml = '<span hidden data-battle-drag-state data-drag-enabled="' . ($dragAllowed ? '1' : '0')
             . '" data-drag-selected="' . $selectedCardId . '"></span>' . $fieldHtml;
-        $pilesHtml = $this->buildPiles($state, $playerKey, $oppKey, $baseUrl);
+        $pilesHtml = $this->buildPiles($state, $playerKey, $oppKey, $baseUrl, $cardsInfo);
         $panelHtml      = $this->buildPanel(
             $state, $playerKey, $ui['inspect'] ?? $selectedCardId, $cardsInfo,
             $baseUrl, $mode, $isActive, $strike, $attackTargets, $explicitAttackMode,
@@ -275,7 +275,7 @@ final class BattleScreen
 
     private function isSelectableBattleCard(CardInstance $card, string $playerKey): bool
     {
-        if ($card->zone !== CardInstance::ZONE_FIELD && $card->zone !== CardInstance::ZONE_FLYING) {
+        if ($card->zone !== CardInstance::ZONE_FIELD && $card->zone !== CardInstance::ZONE_FLYING && $card->zone !== CardInstance::ZONE_TERRAIN) {
             return false;
         }
 
@@ -658,7 +658,8 @@ final class BattleScreen
         GameState $state,
         string $playerKey,
         string $oppKey,
-        string $baseUrl
+        string $baseUrl,
+        array $cardsInfo
     ): string {
         $zone = new ZoneManager($state);
         $html = '';
@@ -674,9 +675,17 @@ final class BattleScreen
 
             $grave = $zone->countInZone($ownerKey, CardInstance::ZONE_GRAVEYARD);
             $exile = $zone->countInZone($ownerKey, CardInstance::ZONE_EXILE);
+            $terrain = $state->getCardsInZone($ownerKey, CardInstance::ZONE_TERRAIN)[0] ?? null;
+            $terrainHtml = '<img src="/assets/images/battle/terrain_empty.webp" width="56" height="56" alt="" draggable="false">';
+            if ($terrain) {
+                $name = htmlspecialchars((string) ($cardsInfo[$terrain->ukid]['name'] ?? $terrain->ukid), ENT_QUOTES);
+                $terrainHtml = '<a class="pile-open" href="' . htmlspecialchars($baseUrl . '&sel=' . $terrain->instanceId, ENT_QUOTES)
+                    . '">' . $name . '</a>';
+            }
             $html .= $this->tpl->parse('includes/battle/side_zones.tpl', [
                 'side' => $who,
-                'terrain_label' => $who === 'own' ? 'Своя местность: пусто' : 'Местность противника: пусто',
+                'terrain_label' => $terrain ? 'Местность' : ($who === 'own' ? 'Своя местность: пусто' : 'Местность противника: пусто'),
+                'terrain_html' => $terrainHtml,
                 'grave_count' => $grave,
                 'exile_count' => $exile,
                 'grave_details_html' => $details($grave, $baseUrl . '&pile=' . $who . '_grave', 'кладбище'),
@@ -1274,6 +1283,8 @@ final class BattleScreen
         if ($c->armorMax > 0 || $c->armor > 0) {
             $statValues .= $statValue('armor', 'armor@2x', (string) $c->armor, 'Броня: ' . $c->armor);
         }
+
+        if ($c->type === 'terrain') $statValues = '';
 
         $poison = \Berserk\View\Ui\ActiveCardEffects::poison($c);
         if ($poison > 0) {

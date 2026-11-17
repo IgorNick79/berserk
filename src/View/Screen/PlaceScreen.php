@@ -50,7 +50,7 @@ final class PlaceScreen
             $c = $state->getCard($selectedCardId);
             if (!$c
                 || $c->owner !== $playerKey
-                || !in_array($c->zone, [CardInstance::ZONE_SQUAD, CardInstance::ZONE_FIELD], true)) {
+                || !in_array($c->zone, [CardInstance::ZONE_SQUAD, CardInstance::ZONE_FIELD, CardInstance::ZONE_TERRAIN], true)) {
                 $selectedCardId = 0;
             } else {
                 $selectedCard = $c;
@@ -68,7 +68,7 @@ final class PlaceScreen
 
         // Разрешённые клетки
         $allowedCells = [];
-        if ($selectedCard && !$me->isConfirmed('place') && \Berserk\Core\PathfinderProcessor::canEdit($state,$playerKey)) {
+        if ($selectedCard && $selectedCard->type !== 'terrain' && !$me->isConfirmed('place') && \Berserk\Core\PathfinderProcessor::canEdit($state,$playerKey)) {
             $levels   = ZoneManager::cellLevels($playerKey);
             $occupied = [];
             foreach ($state->cards as $card) {
@@ -138,7 +138,7 @@ final class PlaceScreen
         // Отряд
         $squadCards = [];
         foreach ($state->cards as $card) {
-            if ($card->owner === $playerKey && $card->zone === CardInstance::ZONE_SQUAD) {
+            if ($card->owner === $playerKey && in_array($card->zone, [CardInstance::ZONE_SQUAD, CardInstance::ZONE_TERRAIN], true)) {
                 $info = $cardsInfo[$card->ukid] ?? null;
                 if ($info) $squadCards[] = ['card' => $card, 'info' => $info];
             }
@@ -155,7 +155,7 @@ final class PlaceScreen
             $squadHtml .= $this->miniature($state, $card, $playerKey, $info, $baseUrl, $selectedCardId);
         }
 
-        $squadCount = count($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD));
+        $squadCount = count(array_filter($state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD), static fn($c) => $c->type !== 'terrain'));
 
         if ($pf && $pf['owner'] !== $playerKey) {
             $confirmHtml = '<p>У соперника Следопыт, пожалуйста, подождите</p>';
@@ -222,10 +222,11 @@ final class PlaceScreen
     private function miniature(GameState $state, CardInstance $card, string $viewer, array $info, string $baseUrl, int $selected): string
     {
         $own = $card->owner === $viewer;
-        $source = $own && !$state->getPlayer($viewer)->isConfirmed('place') && \Berserk\Core\PathfinderProcessor::canEdit($state,$viewer);
+        $source = $card->type !== 'terrain' && $own && !$state->getPlayer($viewer)->isConfirmed('place') && \Berserk\Core\PathfinderProcessor::canEdit($state,$viewer);
         $name = htmlspecialchars((string)($info['name'] ?? $card->ukid),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
         $html = \Berserk\View\Ui\LiveBattleCard::render($card,$state,$viewer,false,$name,$card->hp.'/'.$card->hpMax);
         $html = preg_replace('/^(<\w+)/', '$1 data-drag-card="'.$card->instanceId.'" data-drag-owner="'.($own?'own':'enemy').'" data-drag-source="'.($source?'1':'0').'"', $html,1);
+        if ($card->type === 'terrain') $html .= '<span>Местность — размещается автоматически</span>';
         if (!$own) return '<span class="card-link">'.$html.'</span>';
         return '<a class="card-link'.($selected===$card->instanceId?' selected':'').'" data-place-card="'.$card->instanceId.'" href="'.htmlspecialchars($baseUrl.'&card='.$card->instanceId,ENT_QUOTES).'">'.$html.'</a>';
     }

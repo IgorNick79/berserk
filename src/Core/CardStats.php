@@ -24,6 +24,7 @@ final class CardStats
 
     public static function hasAnyStrike(CardInstance $card): bool
     {
+        if ($card->type === 'terrain') return false;
         if (!empty($card->effectiveProp()['copy_target_strike'])) return true;
 
         return $card->strikeWeak > 0

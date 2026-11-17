@@ -1,6 +1,6 @@
 <div class="piles {{side}}">
     <div class="battle-side-slot battle-terrain" aria-label="{{terrain_label}}">
-        <img src="/assets/images/battle/terrain_empty.webp" width="56" height="56" alt="" draggable="false">
+        {{terrain_html}}
     </div>
     <div class="battle-side-slot battle-grave">
         <span class="piles-label">Кладбище</span>

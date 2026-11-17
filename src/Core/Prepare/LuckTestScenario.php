@@ -69,6 +69,9 @@ final class LuckTestScenario
         $byId = array_column($catalog, null, 'ukid'); $fixed = ['host'=>[], 'player'=>[]];
         foreach ($entries as $entry) {
             if (!isset($byId[$entry['ukid']])) throw new \DomainException('Сценарий LuckTest: карта не найдена в каталоге');
+            if (($byId[$entry['ukid']]['type'] ?? '') === 'terrain' && (isset($entry['hp']) || isset($entry['row']))) {
+                throw new \DomainException('Местность не имеет HP и координат поля');
+            }
             if ((($entry['zone'] ?? null) === 'deck' ? 'deck' : 'cards') === $zone) $fixed[$entry['owner']][] = $byId[$entry['ukid']];
         }
         return $fixed;
@@ -100,7 +103,7 @@ final class LuckTestScenario
     {
         foreach ($state->lucktestDebug['bindings'] ?? [] as $entry) {
             $card = $state->getCard($entry['instance_id']);
-            if ($card === null || $card->owner !== $entry['owner'] || $card->ukid !== $entry['ukid'] || $card->zone !== (($entry['zone'] ?? null) === 'deck' ? CardInstance::ZONE_DECK : CardInstance::ZONE_FIELD)
+            if ($card === null || $card->owner !== $entry['owner'] || $card->ukid !== $entry['ukid'] || $card->zone !== (($entry['zone'] ?? null) === 'deck' ? CardInstance::ZONE_DECK : ($card->type === 'terrain' ? CardInstance::ZONE_TERRAIN : CardInstance::ZONE_FIELD))
                 || (isset($entry['row']) && ($card->row !== $entry['row'] || $card->col !== $entry['col']))) {
                 throw new \DomainException('Сценарий LuckTest: обязательная расстановка не выполнена');
             }

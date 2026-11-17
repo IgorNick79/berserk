@@ -509,6 +509,9 @@ final class PrepareProcessor
         $this->state->getPlayer('host')->clearConfirmations();
         $this->state->getPlayer('player')->clearConfirmations();
         if (!$luckTest) $this->dealCards();
+        else foreach ($this->state->cards as $card) {
+            if ($card->zone === CardInstance::ZONE_SQUAD && $card->type === 'terrain') (new ZoneManager($this->state))->toTerrain($card);
+        }
         $this->state->bumpVersion();
         return Result::ok([
             "side_chosen:{$playerKey}={$side}",
@@ -1331,6 +1334,8 @@ final class PrepareProcessor
             return Result::error('Уже подтверждено');
         }
 
+        if (($error = SquadRules::terrainError($this->state, $playerKey)) !== null) return Result::error($error);
+
         foreach ($this->state->cards as $card) {
             if ($card->owner === $playerKey && $card->zone === CardInstance::ZONE_HAND) {
                 (new ZoneManager($this->state))->toDeck($card);
@@ -1344,6 +1349,9 @@ final class PrepareProcessor
 
         if ($this->bothConfirmed('deal')) {
             $this->state->status = 'place';
+            foreach ($this->state->cards as $card) {
+                if ($card->zone === CardInstance::ZONE_SQUAD && $card->type === 'terrain') (new ZoneManager($this->state))->toTerrain($card);
+            }
             $this->state->getPlayer('host')->clearConfirmations();
             $this->state->getPlayer('player')->clearConfirmations();
             $events[] = 'stage_changed:place';
@@ -1371,6 +1379,8 @@ final class PrepareProcessor
         if (!$card || $card->owner !== $playerKey || !in_array($card->zone, [CardInstance::ZONE_SQUAD, CardInstance::ZONE_FIELD], true)) {
             return Result::error('Карта не в отряде');
         }
+
+        if ($card->type === 'terrain') return Result::error('Местность размещается автоматически в своей зоне');
 
         $reposition = $card->zone === CardInstance::ZONE_FIELD;
         if ($reposition && $card->row === $row && $card->col === $col) {
@@ -1451,8 +1461,9 @@ final class PrepareProcessor
             }
         }
 
+        if (($error = SquadRules::terrainError($this->state, $playerKey)) !== null) return $error;
         foreach ($this->state->cards as $card) {
-            if ($card->owner === $playerKey && $card->zone === CardInstance::ZONE_SQUAD) {
+            if ($card->owner === $playerKey && $card->zone === CardInstance::ZONE_SQUAD && $card->type !== 'terrain') {
                 return 'Не все карты расставлены';
             }
         }
@@ -1467,6 +1478,9 @@ final class PrepareProcessor
 
         $player = $this->state->getPlayer($playerKey);
 
+        foreach ($this->state->getCardsInZone($playerKey, CardInstance::ZONE_SQUAD) as $card) {
+            if ($card->type === 'terrain') (new ZoneManager($this->state))->toTerrain($card);
+        }
         $player->confirm('place');
         $this->state->bumpVersion();
 
@@ -1669,6 +1683,7 @@ final class PrepareProcessor
     private function validateLuckTestCards(string $owner, bool $placed): ?string
     {
         if ($this->state->settings->validateLuckTestSettings() !== null) return 'Некорректные настройки LuckTest';
+        if (($error = SquadRules::terrainError($this->state, $owner)) !== null) return $error;
         $count = $this->state->settings->lucktest['card_count'];
         $army = [];
         $reserve = 0;
@@ -1683,8 +1698,8 @@ final class PrepareProcessor
                 if ($card->zone !== CardInstance::ZONE_DECK || $card->row !== null || $card->col !== null) return 'Некорректный резерв LuckTest';
                 $reserve++;
             } else {
-                if (!in_array($card->zone, [CardInstance::ZONE_SQUAD, CardInstance::ZONE_FIELD], true)) return 'Некорректная зона отряда LuckTest';
-                if ($placed && $card->zone !== CardInstance::ZONE_FIELD) return 'Не все карты расставлены';
+                if (!in_array($card->zone, [CardInstance::ZONE_SQUAD, CardInstance::ZONE_FIELD, CardInstance::ZONE_TERRAIN], true)) return 'Некорректная зона отряда LuckTest';
+                if ($placed && $card->zone !== CardInstance::ZONE_FIELD && $card->type !== 'terrain') return 'Не все карты расставлены';
                 $army[] = $card;
             }
             $actual[$card->ukid] = ($actual[$card->ukid] ?? 0) + 1;
@@ -1710,6 +1725,7 @@ final class PrepareProcessor
         usort($army, fn($a, $b) => ($order["{$a->row}_{$a->col}"] ?? PHP_INT_MAX) <=> ($order["{$b->row}_{$b->col}"] ?? PHP_INT_MAX));
         $zone = new ZoneManager($scratch);
         foreach ($army as $card) {
+            if ($card->type === 'terrain') continue;
             if ($card->row === null || $card->col === null || !$zone->isCellAllowed($owner, $card->row, $card->col)
                 || $zone->isFieldOccupied($card->row, $card->col)) return 'Некорректная расстановка LuckTest';
             $zone->toField($scratch->getCard($card->instanceId), $card->row, $card->col);

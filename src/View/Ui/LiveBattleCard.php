@@ -35,7 +35,7 @@ final class LiveBattleCard
         if ($card->dying) $classes .= ' mini-dying';
         $label = $hidden ? 'Скрытая карта' : $nameHtml;
         $nameAttr = $hidden ? '' : ' data-mini-name="' . $nameHtml . '"';
-        $hp = ($hidden && $hpText === '?/?') ? '' : '<div class="mini-hp"><svg class="mini-heart" viewBox="0 0 20 18" aria-hidden="true"><path d="M10 17 2 9C-3 3 5-3 10 3 15-3 23 3 18 9Z"/></svg><span>' . self::e($hpText) . '</span></div>';
+        $hp = ($card->type === 'terrain' || ($hidden && $hpText === '?/?')) ? '' : '<div class="mini-hp"><svg class="mini-heart" viewBox="0 0 20 18" aria-hidden="true"><path d="M10 17 2 9C-3 3 5-3 10 3 15-3 23 3 18 9Z"/></svg><span>' . self::e($hpText) . '</span></div>';
         return '<div class="' . $classes . '" data-mini-card="' . $card->instanceId . '" role="group" aria-label="' . $label . '"' . $nameAttr . '>'
             . $art . ($hidden ? '' : '<img class="mini-frame" src="/assets/images/battle/mini/frame_' . $side . '_102x92_' . $frame . '.svg" alt="">')
             . ($indicators ? '<div class="mini-indicators">' . $indicators . '</div>' : '')

@@ -83,6 +83,7 @@ final class ZoneManager
 
     public function toField(CardInstance $card, int $row, int $col): void
     {
+        if ($card->type === 'terrain') throw new \DomainException('Местность не занимает клетку поля');
         $flyingOwner = $this->flyingOwnerBeforeTransition($card);
         $card->zone = CardInstance::ZONE_FIELD;
         $card->row  = $row;
@@ -94,6 +95,19 @@ final class ZoneManager
         // Воскрешение снимает готовность Вальхаллы
         unset($card->flags['valhalla_active']);
         unset($card->markers['valhalla']);
+    }
+
+    public function toTerrain(CardInstance $card): void
+    {
+        if ($card->type !== 'terrain') throw new \DomainException('Карта не является местностью');
+        foreach ($this->state->cards as $other) {
+            if ($other->owner === $card->owner && $other->zone === CardInstance::ZONE_TERRAIN
+                && $other->instanceId !== $card->instanceId) throw new \DomainException('В отряде может быть только одна местность');
+        }
+        $this->clearPosition($card);
+        $card->zone = CardInstance::ZONE_TERRAIN;
+        $card->hp = $card->hpMax = $card->move = $card->moveMax = 0;
+        $card->revealed = true;
     }
 
     public function toFlying(CardInstance $card): void

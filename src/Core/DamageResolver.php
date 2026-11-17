@@ -18,7 +18,7 @@ final class DamageResolver
         string $actionType = 'strike',
         ?CardInstance $attacker = null
     ): void {
-        if ($val <= 0) return;
+        if ($val <= 0 || $target->type === 'terrain') return;
 
         if ($actionType === 'answer' && !empty($target->effectiveProp()['block_strike_answer'])) {
             if (!empty($this->state->battle['strike'])) {

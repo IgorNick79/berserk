@@ -34,8 +34,21 @@ final class SquadRules
             $seenUnique[$card->ukid] = true;
         }
 
-        // TODO: terrain cards — enforce max 1 terrain card per squad
-        // when terrain card type is introduced/supported.
+        return self::terrainError($state, $playerKey, $additions);
+    }
+
+    /** Same terrain limit for recruitment, placement and Debug-generated squads. */
+    public static function terrainError(GameState $state, string $playerKey, array $additions = []): ?string
+    {
+        $terrains = [];
+        foreach (array_merge(array_values($state->cards), $additions) as $card) {
+            if ($card->owner === $playerKey && $card->type === 'terrain'
+                && (in_array($card, $additions, true) || in_array($card->zone,
+                    [CardInstance::ZONE_SQUAD, CardInstance::ZONE_FIELD, CardInstance::ZONE_TERRAIN], true))) {
+                $terrains[$card->instanceId] = true;
+            }
+        }
+        if (count($terrains) > 1) return 'В отряде может быть только одна местность';
 
         return null;
     }
