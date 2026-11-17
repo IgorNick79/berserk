@@ -64,11 +64,11 @@ for ($run=0;$run<5;$run++) {
     }
 }
 $deal=new GameState(555,1,2);$deal->status='deal';$deal->getPlayer('host')->resources=['gold'=>100,'silver'=>100];
-$deal->cards[1]=new CardInstance(1,'s2_t1','host','hand',type:'terrain',price:1);
-$deal->cards[2]=new CardInstance(2,'s2_t2','host','hand',type:'terrain',price:1);
+$deal->cards[1]=new CardInstance(1,'synthetic_terrain1','host','hand',type:'terrain',price:1);
+$deal->cards[2]=new CardInstance(2,'synthetic_terrain2','host','hand',type:'terrain',price:1);
 $recruit=new PrepareProcessor($deal);
-check($recruit->pickCard('host',new Command('pick_card',['ukid'=>'s2_t1']))->success,'real recruitment accepts first terrain');
-$before=$deal->toArray();check(!$recruit->pickCard('host',new Command('pick_card',['ukid'=>'s2_t2']))->success && $deal->toArray()===$before,'real recruitment rejects second without mutation');
+check($recruit->pickCard('host',new Command('pick_card',['ukid'=>'synthetic_terrain1']))->success,'real recruitment accepts first terrain');
+$before=$deal->toArray();check(!$recruit->pickCard('host',new Command('pick_card',['ukid'=>'synthetic_terrain2']))->success && $deal->toArray()===$before,'real recruitment rejects second without mutation');
 check($recruit->confirmDeal('host')->success && $recruit->confirmDeal('player')->success,'normal recruitment confirms');
 check($deal->getCard(1)->zone===CardInstance::ZONE_TERRAIN,'normal placement entry uses terrain zone');
 echo 'Terrain: '.($checks-$start)." checks passed (isolated; no live DB).\n";

@@ -679,8 +679,8 @@ final class BattleScreen
             $terrainHtml = '<img src="/assets/images/battle/terrain_empty.webp" width="56" height="56" alt="" draggable="false">';
             if ($terrain) {
                 $name = htmlspecialchars((string) ($cardsInfo[$terrain->ukid]['name'] ?? $terrain->ukid), ENT_QUOTES);
-                $terrainHtml = '<a class="pile-open" href="' . htmlspecialchars($baseUrl . '&sel=' . $terrain->instanceId, ENT_QUOTES)
-                    . '">' . $name . '</a>';
+                $terrainHtml = '<a class="card-link" href="' . htmlspecialchars($baseUrl . '&sel=' . $terrain->instanceId, ENT_QUOTES)
+                    . '">' . $this->buildBattleCard($terrain, $state, $cardsInfo[$terrain->ukid] ?? null, false, $name, '', $playerKey) . '</a>';
             }
             $html .= $this->tpl->parse('includes/battle/side_zones.tpl', [
                 'side' => $who,
@@ -984,11 +984,14 @@ final class BattleScreen
         $imgHtml = '';
         // Asset names follow the existing ukid convention; check the public root,
         // independently of the process working directory or HTTP document root.
+        $assetRoot = '/assets/cards/s' . max(1, (int) ($info['release_id'] ?? 1)) . '/';
         if (preg_match('/\A[a-zA-Z0-9_-]+\z/D', $c->ukid)
-            && is_file(dirname(__DIR__, 3) . '/www/assets/cards/s1/' . $c->ukid . '.webp')) {
+            && is_file(dirname(__DIR__, 3) . '/www' . $assetRoot . $c->ukid . '.webp')) {
             $imgHtml = $this->tpl->parse('includes/battle/card_preview.tpl', [
-                'preview_url' => '/assets/cards/s1/' . rawurlencode($c->ukid) . '.webp',
-                'original_url' => '/assets/cards/s1/original/' . rawurlencode($c->ukid) . '.png',
+                'preview_url' => $assetRoot . rawurlencode($c->ukid) . '.webp',
+                'original_url' => is_file(dirname(__DIR__, 3) . '/www' . $assetRoot . 'original/' . $c->ukid . '.png')
+                    ? $assetRoot . 'original/' . rawurlencode($c->ukid) . '.png'
+                    : $assetRoot . rawurlencode($c->ukid) . '.webp',
                 'name' => htmlspecialchars($info['name'], ENT_QUOTES),
 
 
@@ -1499,7 +1502,7 @@ final class BattleScreen
         string $viewer
     ): string {
         if (\Berserk\View\Ui\LiveBattleCard::enabled()) {
-            $markup = \Berserk\View\Ui\LiveBattleCard::render($card, $state, $viewer, $hidden, $nameHtml, $hpText);
+            $markup = \Berserk\View\Ui\LiveBattleCard::render($card, $state, $viewer, $hidden, $nameHtml, $hpText, isset($info['release_id']) ? (int) $info['release_id'] : null);
             return $this->withDragAttributes($markup, $card, $viewer);
         }
         $iconHtml = '';

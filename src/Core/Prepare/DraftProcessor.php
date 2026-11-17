@@ -647,8 +647,12 @@ final class DraftProcessor
         $playerUkids = $this->state->draft['picked']['player'];
         $builder = new DraftDeckBuilder($this->db);
 
-        $hostDeckCards = $builder->buildDeckCards($hostUkids);
-        $playerDeckCards = $builder->buildDeckCards($playerUkids);
+        try {
+            $hostDeckCards = $builder->buildDeckCards($hostUkids);
+            $playerDeckCards = $builder->buildDeckCards($playerUkids);
+        } catch (\RuntimeException $e) {
+            return Result::error($e->getMessage());
+        }
 
         if ($this->state->settings->isSolomonDraft() || $this->state->settings->isGlimpseDraft()) {
             if (!$this->canFinish($this->state->draft)

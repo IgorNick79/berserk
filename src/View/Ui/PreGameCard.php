@@ -31,7 +31,7 @@ final class PreGameCard
         }
         $card = $visibleCards[$ukid];
         $name = self::escape((string) ($card['name'] ?? $ukid));
-        $url = '/assets/cards/s1/' . rawurlencode($ukid) . '.webp';
+        $url = '/assets/cards/s' . max(1, (int) ($card['release_id'] ?? 1)) . '/' . rawurlencode($ukid) . '.webp';
         $image = self::assetExists($url)
             ? '<img class="pregame-card-image" src="' . $url . '" alt="' . $name . '" width="400" height="250">'
             : '<div class="pregame-card-image pregame-card-image--missing">Изображение недоступно</div>';

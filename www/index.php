@@ -541,7 +541,7 @@ function buildRenderCardInfo(Db $db, GameState $state): array
     if (!empty($ukids)) {
         $in = "'" . implode("','", array_map(fn ($u) => $db->escape($u), $ukids)) . "'";
         $rows = $db->fetchAll(
-            "SELECT ukid, name, price, health, move, elite, single,
+            "SELECT ukid, release_id, name, price, health, move, elite, single,
                     strike_weak, strike_medium, strike_strong,
                     element_id, descr, rarity, class, type
              FROM cards WHERE ukid IN ($in)"
@@ -549,6 +549,7 @@ function buildRenderCardInfo(Db $db, GameState $state): array
         foreach ($rows as $r) {
             $cardsInfo[$r['ukid']] = [
                 'name'    => $r['name'],
+                'release_id' => (int) ($r['release_id'] ?? 1),
                 'descr'   => (string) ($r['descr'] ?? ''),
                 'rarity' => (string) ($r['rarity'] ?? ''),
                 'class' => (string) ($r['class'] ?? ''),

@@ -11,7 +11,7 @@ final class DraftDeckBuilder
 {
     public function __construct(private Db $db) {}
 
-    public function buildDeckCards(array $ukids): array
+    public function buildDeckCards(array $ukids, bool $allowSet2Debug = false): array
     {
         if (empty($ukids)) return [];
 
@@ -29,7 +29,7 @@ final class DraftDeckBuilder
         }
 
         $rows = $this->db->fetchAll(
-            "SELECT ukid, price, health, move, elite, single, type, class,
+            "SELECT ukid, release_id, price, health, move, elite, single, type, class,
                     strike_weak, strike_medium, strike_strong, element_id, prop
              FROM cards WHERE ukid IN ($in)"
         );
@@ -40,9 +40,13 @@ final class DraftDeckBuilder
         foreach ($counts as $ukid => $count) {
             $r = $byUkid[$ukid] ?? null;
             if (!$r) continue;
+            if (!$allowSet2Debug && ((int) ($r['release_id'] ?? 1) === 2 || str_starts_with($ukid, 's2_'))) {
+                throw new \RuntimeException('Второй сет доступен только через Debug LuckTest');
+            }
 
             $result[] = [
                 'ukid'          => $ukid,
+                'release_id'    => (int) ($r['release_id'] ?? 1),
                 'count'         => $count,
                 'price'         => (int) $r['price'],
                 'elite'         => (bool) $r['elite'],

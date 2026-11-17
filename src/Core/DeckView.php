@@ -25,7 +25,7 @@ final class DeckView
             $payload[$prefix . '_mode'] = $mode;
             $payload[$prefix . '_id'] = $id;
             $payload[$cards] = in_array($id, $ids, true) ? array_map(static fn(array $c): array => [
-                'ukid'=>$c['ukid'], 'count'=>$c['count'], 'price'=>$c['price'], 'elite'=>$c['elite'],
+                'ukid'=>$c['ukid'], 'release_id'=>$c['release_id'], 'count'=>$c['count'], 'price'=>$c['price'], 'elite'=>$c['elite'],
                 'single'=>$c['single'] ?? false, 'element'=>$c['element'], 'health'=>$c['health'],
                 'move'=>$c['move'], 'strike_weak'=>$c['strike']['weak'],
                 'strike_medium'=>$c['strike']['medium'], 'strike_strong'=>$c['strike']['strong'],
@@ -94,7 +94,7 @@ final class DeckView
         )) . "'";
 
         $cardRows = $this->db->fetchAll(
-            "SELECT t1.ukid, t1.name, t1.element_id, t1.elite, t1.single, t1.price,
+            "SELECT t1.ukid, t1.release_id, t1.name, t1.element_id, t1.elite, t1.single, t1.price,
                     t1.health, t1.move, t1.strike_weak, t1.strike_medium, t1.strike_strong,
                     t1.prop, t1.type, t1.class, t1.descr, t1.rarity,
                     t2.code AS element_code, t2.name AS element_name
@@ -137,6 +137,7 @@ final class DeckView
 
             $result[] = [
                 'ukid'         => $ukid,
+                'release_id'   => (int) ($card['release_id'] ?? 1),
                 'name'         => $card['name'],
                 'descr'        => (string) ($card['descr'] ?? ''),
                 'rarity'       => (string) ($card['rarity'] ?? ''),

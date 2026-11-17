@@ -328,6 +328,12 @@ final class PrepareProcessor
             return Result::error('Состав деки недоступен');
         }
 
+        foreach (array_merge($deckCards, $otherCards) as $card) {
+            if ((int) ($card['release_id'] ?? 1) === 2 || str_starts_with((string) ($card['ukid'] ?? ''), 's2_')) {
+                return Result::error('Второй сет доступен только через Debug LuckTest');
+            }
+        }
+
         $host->deckId = $deckId;
         $host->deckCards = $deckCards;
         $this->createDeckInstances(GameState::PLAYER_HOST, $deckCards);
@@ -581,6 +587,7 @@ final class PrepareProcessor
         if (!$found) {
             return Result::error('Карта не найдена в раздаче');
         }
+        if (str_starts_with($found->ukid, 's2_')) return Result::error('Второй сет доступен только через Debug LuckTest');
 
         if ($this->dealLinkedRecruitConfig($found) !== null
             && empty($found->flags['deal_linked_recruit'])) {
@@ -1599,13 +1606,15 @@ final class PrepareProcessor
         if ($this->db === null) return Result::error('Db недоступен для LuckTest');
         try {
             $ids = array_column($this->db->fetchAll('SELECT ukid FROM cards ORDER BY ukid'), 'ukid');
-            $catalog = (new DraftDeckBuilder($this->db))->buildDeckCards($ids);
+            $catalog = (new DraftDeckBuilder($this->db))->buildDeckCards($ids, true);
             if (count($catalog) !== count($ids)) throw new \RuntimeException('Неполный каталог LuckTest');
             $generator = new LuckTestGenerator();
             $entries = \Berserk\Core\LuckTestDebug::scenario($this->state, $settings);
             $fixed = LuckTestScenario::fixed($entries, $catalog);
             $fixedDeck = LuckTestScenario::fixed($entries, $catalog, 'deck');
-            $squads = $legacy ? [] : $generator->generate($catalog, $settings, $fixed);
+            // Set 2 is available only through explicit, authorized Debug entries.
+            $randomCatalog = array_values(array_filter($catalog, static fn(array $c): bool => (int) ($c['release_id'] ?? 1) !== 2));
+            $squads = $legacy ? [] : $generator->generate($randomCatalog, $settings, $fixed);
             $working = GameState::fromArray($this->state->toArray());
             $working->settings = $settings;
             $working->draft = null;
@@ -1623,7 +1632,7 @@ final class PrepareProcessor
                 foreach ($working->getCardsInZone($owner, CardInstance::ZONE_SQUAD) as $card) {
                     $card->flags['lucktest_squad'] = true;
                 }
-                $reserve = $generator->generateReserve($catalog, GameSettings::MIN_DECK_SIZE - $settings->lucktest['card_count'], $fixedDeck[$owner]);
+                $reserve = $generator->generateReserve($randomCatalog, GameSettings::MIN_DECK_SIZE - $settings->lucktest['card_count'], $fixedDeck[$owner]);
                 $worker->createDeckInstances($owner, $reserve);
                 foreach ($working->getCardsInZone($owner, CardInstance::ZONE_DECK) as $card) {
                     $card->flags['lucktest_reserve'] = true;

@@ -224,7 +224,7 @@ final class PlaceScreen
         $own = $card->owner === $viewer;
         $source = $card->type !== 'terrain' && $own && !$state->getPlayer($viewer)->isConfirmed('place') && \Berserk\Core\PathfinderProcessor::canEdit($state,$viewer);
         $name = htmlspecialchars((string)($info['name'] ?? $card->ukid),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
-        $html = \Berserk\View\Ui\LiveBattleCard::render($card,$state,$viewer,false,$name,$card->hp.'/'.$card->hpMax);
+        $html = \Berserk\View\Ui\LiveBattleCard::render($card,$state,$viewer,false,$name,$card->hp.'/'.$card->hpMax,isset($info['release_id'])?(int)$info['release_id']:null);
         $html = preg_replace('/^(<\w+)/', '$1 data-drag-card="'.$card->instanceId.'" data-drag-owner="'.($own?'own':'enemy').'" data-drag-source="'.($source?'1':'0').'"', $html,1);
         if ($card->type === 'terrain') $html .= '<span>Местность — размещается автоматически</span>';
         if (!$own) return '<span class="card-link">'.$html.'</span>';

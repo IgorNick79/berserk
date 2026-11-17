@@ -8,7 +8,7 @@ final class LiveBattleCard
 {
     private static function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
     public static function enabled(): bool { return getenv('BERSERK_LEGACY_MINICARDS') !== '1'; }
-    public static function render(CardInstance $card, GameState $state, string $viewer, bool $hidden, string $nameHtml, string $hpText): string
+    public static function render(CardInstance $card, GameState $state, string $viewer, bool $hidden, string $nameHtml, string $hpText, ?int $releaseId = null): string
     {
         $side = $card->owner === $viewer ? 'friendly' : 'enemy';
         $indicators = '';
@@ -24,7 +24,7 @@ final class LiveBattleCard
         }
         $art = '';
         if (!$hidden && preg_match('/\As([0-9]+)_[a-zA-Z0-9_-]+\z/', $card->ukid, $set)) {
-            $path = '/assets/cards/s' . $set[1] . '/' . $card->ukid . '.webp';
+            $path = '/assets/cards/s' . max(1, $releaseId ?? (int) $set[1]) . '/' . $card->ukid . '.webp';
             if (is_file(dirname(__DIR__, 3) . '/www' . $path)) $art = '<img class="mini-art" src="' . self::e($path) . '" alt="">';
         }
         // Only visible cards render a cost frame.

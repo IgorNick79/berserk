@@ -10,7 +10,7 @@ $start=$checks;
 try {
     $s=fresh();
     $s->lucktestDebug=['scenario_account_id'=>11,'scenario'=>[['owner'=>'host','ukid'=>'s2_11']]];
-    $terrain=card('s2_11',4,'terrain');$terrain['health']=0;$terrain['move']=0;$terrain['single']=false;
+    $terrain=card('s2_11',4,'terrain');$terrain['release_id']=2;$terrain['health']=0;$terrain['move']=0;$terrain['single']=false;
     $terrain['strike_weak']=$terrain['strike_medium']=$terrain['strike_strong']=0;
     $creature=card('s1_test',3);$creature['single']=false;
     $s->historyRecorder=new Recorder($s->gameId,1,[],[],true);
