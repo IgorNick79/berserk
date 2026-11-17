@@ -95,7 +95,7 @@ final class BattleScreen
         $pendingAllyModifierTargets = $this->pendingAllyModifierTargets($state, $playerKey, $baseUrl);
 
         $actionChoice = $this->actionTargetChoice($state, $playerKey, $selectedCardId, $cardsInfo,
-            $baseUrl, $mode, $isActive, $strike, $attackTargets);
+            $baseUrl, $mode, $isActive, $strike, $attackTargets, $explicitAttackMode);
         $this->inspectionBase = (InfoPanel::hasRequiredInteraction($state) || ($actionChoice !== '' && $mode !== 'strike'))
             ? $baseUrl . '&sel=' . $selectedCardId . '&mode=' . rawurlencode($mode) : '';
 
@@ -868,12 +868,12 @@ final class BattleScreen
     // ─── Панель выбранной карты ──────────────────────────────
 
     private function actionTargetChoice(GameState $state, string $playerKey, int $selectedCardId, array $cardsInfo,
-        string $baseUrl, string $mode, bool $isActive, ?array $strike, array $attackTargets): string
+        string $baseUrl, string $mode, bool $isActive, ?array $strike, array $attackTargets, bool $explicitAttackMode): string
     {
         $c = $state->getCard($selectedCardId);
         if (!$c || InfoPanel::hasRequiredInteraction($state)) return '';
         // Additional UI entry point; field links still declare the strike immediately.
-        if ($mode === 'strike' && $isActive && !$strike && !empty($attackTargets)
+        if ($mode === 'strike' && $explicitAttackMode && $isActive && !$strike && !empty($attackTargets)
             && $c->owner === $playerKey && !\Berserk\Core\MatchPause::blocking($state)
             && !$this->hasActiveServerPending($state)
             && \Berserk\Core\BattleWaitResolver::current($state) === null
