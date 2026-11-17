@@ -41,7 +41,7 @@ final class ReplayState
             if (isset($ids[$card['instance_id']])) self::bad();
             $ids[$card['instance_id']] = true;
             if (!in_array($card['owner'], ['host','player'], true)) self::bad();
-            if (!in_array($card['zone'], ['deck','sideboard','hand','squad','field','discard','graveyard','exile','flying'], true)) self::bad();
+            if (!in_array($card['zone'], ['deck','sideboard','hand','squad','field','discard','graveyard','exile','flying','terrain'], true)) self::bad();
             foreach (['order','row','col','slot','hp','hp_max','move','move_max','armor','armor_max','coins'] as $key) {
                 if ($card[$key] !== null) self::integer($card[$key], $key === 'hp' ? PHP_INT_MIN : 0);
             }

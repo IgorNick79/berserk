@@ -43,3 +43,7 @@ src/Core/ZoneManager.php; src/View/Screen/BattleScreen.php;
 src/View/Screen/PlaceScreen.php; src/View/Ui/LiveBattleCard.php;
 src/View/Ui/PreGameCard.php; templates/includes/battle/side_zones.tpl;
 tools/test_terrain.php; docs/set2-terrain-stage1.md.
+
+## Production creation fix
+The first implementation missed the ReplayState zone whitelist. With the production-style Recorder attached, Debug JSON {"cards":[{"owner":"host","ukid":"s2_11"}]} caused initial snapshot validation to throw Invalid ReplayState v1; Engine converted this into the generic LuckTest preparation error. A regression test reproduced the failure before the fix.
+ReplayState now accepts the terrain zone. No journal bypass or weakened unknown-zone validation was introduced. tools/test_terrain_history.php passes 11 checks, covering the exact Debug scenario with Recorder, initial captures and all four projections, while unknown zones remain rejected. Existing terrain and LuckTest suites still pass. No production database or deployment was changed.
