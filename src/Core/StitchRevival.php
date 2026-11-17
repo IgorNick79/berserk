@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace Berserk\Core;
 
-use Berserk\View\Ui\{PanelSpec, BattlefieldPosition, Coords};
+use Berserk\View\Ui\{PanelSpec, BattlefieldPosition, Coords, CreatureChoice, Form};
 
 /** Three stages of the native revive pending; no resources move until the final choice. */
 final class StitchRevival
@@ -154,7 +154,7 @@ final class StitchRevival
     {
         $p = $state->battle['pending_revive']; $source = $state->getCard($p['healer_id']);
         if (!$source || $source->owner !== $viewer) return new PanelSpec(title: 'Сшивание плоти', isMine: false);
-        $buttons = []; $suffix = '&choice_id=' . rawurlencode($p['choice_id']);
+        $buttons = []; $rows = []; $suffix = '&choice_id=' . rawurlencode($p['choice_id']);
         if (self::available($state, $source, $p['action'])) {
             if ($p['step'] === 'cell') {
                 $reviveIds = self::candidates($state, $viewer, true);
@@ -169,9 +169,7 @@ final class StitchRevival
                 }
             } elseif ($p['step'] === 'card' || in_array($p['chosen_id'], self::candidates($state, $viewer, true), true)) {
                 foreach (self::candidates($state, $viewer, $p['step'] === 'card', (int) $p['chosen_id']) as $id) {
-                    $card = $state->getCard($id);
-                    $buttons[] = ['label' => (string) ($catalog[$card->ukid]['name'] ?? $card->ukid),
-                        'url' => "{$baseUrl}&cmd=choose_revive_target&target_id={$id}{$suffix}"];
+                    $rows[] = ['value'=>$id];
                 }
             }
         }
@@ -181,6 +179,13 @@ final class StitchRevival
             'exile' => 'Сшивание — выберите другое существо для изгнания',
             default => 'Сшивание — выберите соседнюю клетку возрождения',
         };
+        if ($p['step'] !== 'cell') {
+            return CreatureChoice::targetPanel(
+                $state, $viewer, $catalog, $rows, 'stitch:' . $p['choice_id'], $title,
+                Form::battleHidden($viewer, $state->gameId, 'choose_revive_target', ['choice_id'=>$p['choice_id']]),
+                $baseUrl . '&cmd=cancel_pending' . $suffix, field:false,
+            );
+        }
         return new PanelSpec(title: $title, buttons: $buttons);
     }
 }

@@ -108,7 +108,7 @@ try{
     iwApply($e,$s,'host','end_turn');
     iwAssert($s->battle['active']==='player' && $s->battle['turn_timer']['period_id']===1 && !empty($s->battle['turn_phase']),'End phase can remain pending');
     iwAssert(!TE::check($s,$now)['allowed'],'Ending phase blocks repeat');
-    iwApply($e,$s,'host','turn_ack');iwAssert($s->battle['turn_timer']['period_id']===2,'Phase continuation prepares next timer');
+    iwApply($e,$s,'host','turn_ack',['ack_id'=>$s->battle['turn_phase']['pending_ack']['ack_id']]);iwAssert($s->battle['turn_timer']['period_id']===2,'Phase continuation prepares next timer');
 }finally{$_SESSION=$sessionBefore;Dice::init();}
 $s=iwState();$now=1200;iwApply($e,$s,'host','resign');iwAssert($s->status==='game_over','Resign remains available');
 echo "T3 eligibility/expired command guard/forced strike/series/instants/end-phase tests passed\n";

@@ -116,6 +116,7 @@ function ajaxCommandPayload(): ?array
     $excluded = [
         'cmd' => true, 'csrf'=>true, 'prepare_version'=>true,
         'expected_version' => true,
+        'ui_turn' => true,
         'command_id' => true,
         'sel' => true,
         'pile' => true,
@@ -602,6 +603,7 @@ try {
     }
     $botBinding = $playerKey === 'host'
         ? \Berserk\Core\Combat\BotMatch::bound($db, $gameId, $userId, $configuredBot) : null;
+    if ($botBinding !== null) MatchPause::bindBot($gameId);
     $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     if (!in_array($requestMethod,['GET','POST'],true)) throw new DomainException('method_not_allowed',405);
     if ($requestMethod === 'POST') {
@@ -760,6 +762,7 @@ if ($isBattleSync) {
                 'sel' => ajaxParamInt('sel') ?? 0,
                 'inspect' => ajaxParamInt('inspect') ?? 0,
                 'mode' => ajaxParamString('mode', 64) ?? '',
+                'ui_turn' => ajaxParamString('ui_turn', 32) ?? '',
                 'pile' => ajaxParamString('pile', 32) ?? '',
             ]
         );
@@ -827,6 +830,7 @@ if ($isBattleCommand) {
             'sel' => ajaxPostParamInt('sel') ?? 0,
             'inspect' => ajaxPostParamInt('inspect') ?? 0,
             'mode' => ajaxPostParamString('mode', 64) ?? '',
+            'ui_turn' => ajaxPostParamString('ui_turn', 32) ?? '',
             'pile' => ajaxPostParamString('pile', 32) ?? '',
         ];
 
@@ -1377,7 +1381,7 @@ switch ($state->status) {
         $scriptsHtml = '<script src="/assets/js/battle-turn-timer.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-debug.js?v={{rkey}}"></script>'
             . '<script src="/assets/js/battle-match-pause.js?v={{rkey}}"></script>'
-            . '<script src="/assets/js/battle-sync.js?v=bot1-{{rkey}}"'
+            . '<script src="/assets/js/battle-sync.js?v=card-selection42-{{rkey}}"'
             . ' data-viewer-key="' . htmlspecialchars($playerKey, ENT_QUOTES) . '"'
             . ' data-turn-sound-url="' . htmlspecialchars($turnSoundUrl, ENT_QUOTES) . '"'
             . ' data-sync-url="' . htmlspecialchars($syncUrl, ENT_QUOTES) . '"'
@@ -1388,6 +1392,7 @@ switch ($state->status) {
             . ' data-sel="' . (int) ($ui['sel'] ?? 0) . '"'
             . ' data-inspect="' . (int) ($ui['inspect'] ?? 0) . '"'
             . ' data-mode="' . htmlspecialchars((string) ($ui['mode'] ?? 'strike'), ENT_QUOTES) . '"'
+            . ' data-ui-turn="' . htmlspecialchars((string) ($ui['turn_key'] ?? ''), ENT_QUOTES) . '"'
             . ' data-mode-explicit="' . (!empty($ui['mode_explicit']) ? '1' : '0') . '"'
             . ' data-pile="' . htmlspecialchars((string) ($ui['pile'] ?? ''), ENT_QUOTES) . '"'
             . ' defer></script>';
@@ -1443,7 +1448,7 @@ if (in_array($screenName,['battle','game_over'],true)
         .$state->gameId.'" defer></script>';
 }
 
-if (\Berserk\Core\GameChat::canRead($state->status)) {
+if ($botBinding === null && \Berserk\Core\GameChat::canRead($state->status)) {
     $screenHtml .= '<link rel="stylesheet" href="/assets/css/battle-chat.css?v=6">';
     $_SESSION['chat_csrf'] = GameTransport::$csrf;
     $screenHtml .= $tpl->parse('includes/game_chat.tpl', [

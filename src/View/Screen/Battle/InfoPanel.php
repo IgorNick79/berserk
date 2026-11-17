@@ -76,13 +76,16 @@ final class InfoPanel
                 . '<div class="info-panel-content"><div class="battle-selected-card" data-battle-fragment="panel_html" hidden></div>'
                 . $this->renderPauseBody() . '</div><footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
         }
-        $inCombat = !empty($state->battle['strike']);
+        $singleWait = \Berserk\Core\BattleWaitResolver::current($state)['source'] ?? null;
+        $singlePanel = in_array($singleWait, ['single_roll.results', 'single_roll.waiting_instant'], true);
+        if ($singlePanel) $actionChoiceHtml = $this->renderSingleRoll();
+        $inCombat = $singlePanel || !empty($state->battle['strike']);
         $inInstantStack = !$inCombat && (!empty($state->battle['turn_instant_stack']) || !empty($state->battle['turn_instant_result']));
         $priority = self::hasRequiredInteraction($state) || $actionChoiceHtml !== '';
         $exclusive = $priority;
         $combatKey = '';
         if ($inCombat) {
-            $strike = $state->battle['strike'];
+            $strike = $singlePanel ? $state->battle['single_roll'] : $state->battle['strike'];
             $attacker = $state->getCard((int) ($strike['attacker_id'] ?? 0));
             $combatKey = implode(':', [
                 $state->battle['turn'] ?? 0, $strike['attacker_id'] ?? 0,
@@ -93,7 +96,9 @@ final class InfoPanel
         if ($inInstantStack) $combatKey = 'instant:' . ($state->battle['turn'] ?? 0);
         if ($priority && $combatKey === '') $combatKey = 'information:' . ($state->battle['turn'] ?? 0);
         $body = $actionChoiceHtml !== '' ? $actionChoiceHtml : $this->renderOchiKrongaNotice() . $this->renderBody();
-        $instantWindow = $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
+        $body = $this->renderGateNotice() . $this->renderGraveRitualNotice() . $this->renderWormResults() . $this->renderProphecyBlockNotice()
+            . (!$inCombat ? $this->renderRagnarValhallaNotice() : '') . $body;
+        $instantWindow = $singleWait === 'single_roll.waiting_instant' || $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
         $turnInstant = !$inCombat && ($instantWindow
             || ($state->battle['turn_phase']['sub']['parent_type'] ?? '') === 'instants');
@@ -109,16 +114,151 @@ final class InfoPanel
         $contextBody = $instantWindow
             ? '<section class="info-panel-instants" aria-label="Инстанты">' . $body . '</section>'
             : $body;
+        $resultAck = \Berserk\Core\TurnInstantResult::current($state->battle['turn_instant_result'] ?? null);
+        $resultKey = ($resultAck['owner'] ?? null) === $playerKey ? $resultAck['ack_id'] : '';
+        $prophecyResult = $state->battle['pending_prophecy'] ?? null;
+        if (($prophecyResult['context'] ?? null) === 'strike') {
+            $resultKey = 'prophecy:' . hash('sha256', json_encode([
+                $prophecyResult['source_id'] ?? null, $prophecyResult['original_ids'] ?? [],
+                $prophecyResult['shown_ukids'] ?? [], $prophecyResult['title'] ?? '',
+            ], JSON_THROW_ON_ERROR));
+        }
+        if (!empty($state->battle['strike']['prophecy_effect_result_active'])) {
+            $contextTitle = 'Информация';
+            $contextIcon = 'cell_info.svg';
+            $resultKey = 'strike-prophecy:' . hash('sha256', json_encode([
+                $state->battle['turn'] ?? 0, $state->battle['strike']['_resolution_id'] ?? null,
+                $state->battle['strike']['prophecy_effect_result'],
+            ], JSON_THROW_ON_ERROR));
+        }
         return '<header class="info-panel-header">' . $this->renderStatusHeader() . $this->renderTimer() . '</header>'
-            . '<div class="info-panel-content" data-panel-priority="' . ($priority ? '1' : '0') . '" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" data-inspected-card="' . $inspectedCardId . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
+            . '<div class="info-panel-main">'
+            . '<div class="info-panel-content" data-panel-priority="' . ($priority ? '1' : '0') . '" data-combat-key="' . htmlspecialchars($combatKey, ENT_QUOTES) . '" data-instant-result="' . htmlspecialchars($resultKey, ENT_QUOTES) . '" data-inspected-card="' . $inspectedCardId . '" tabindex="0" aria-label="Контекст боя и выбранная карта">'
             . ($priority ? '' : $pileHtml)
             . '<div class="battle-selected-card" data-battle-fragment="panel_html"' . ($exclusive ? ' hidden' : '') . '>' . $selectedCardHtml . '</div>'
             . '<div class="info-panel-context' . ($exclusive ? ' info-panel-context--combat' : '') . '">' . ($exclusive ? '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/' . $contextIcon . '" width="24" height="24" alt=""><h3 class="panel-card-title" tabindex="-1">' . $contextTitle . '</h3></div><div class="combat-panel-body">' : '') . $contextBody . ($exclusive ? '</div>' : '') . '</div>'
             . '</div>'
+            . $this->renderInstantControl() . '</div>'
             . '<footer class="info-panel-footer">' . $this->renderFooter() . '</footer>';
     }
 
     /** The per-card counter is persisted with gameplay; rendering never consumes it. */
+    private function renderRagnarValhallaNotice(): string
+    {
+        $period = ($this->state->battle['turn'] ?? 0) . ':' . ($this->state->battle['active'] ?? '');
+        foreach ($this->state->cards as $card) {
+            if ($card->owner === $this->playerKey && $card->zone === CardInstance::ZONE_GRAVEYARD
+                && ($card->flags['ragnar_valhalla_resolved_period'] ?? null) === $period
+                && empty($card->flags['ragnar_unanswer_used_this_turn'])) {
+                $scope = htmlspecialchars('ragnar-valhalla:' . $this->state->gameId . ':' . $this->playerKey, ENT_QUOTES);
+                $operation = htmlspecialchars($period . ':' . $card->instanceId, ENT_QUOTES);
+                return '<div data-battle-notice="' . $scope . '"><div data-battle-notice-id="' . $operation . '">'
+                    . '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon"'
+                    . ' src="/assets/images/battle/cell_info.svg" width="24" height="24" alt="">'
+                    . '<h3 class="panel-card-title">Информация</h3></div><div class="combat-panel-body">'
+                    . Panel::render(new \Berserk\View\Ui\PanelSpec(
+                        title: 'Вальхалла Рагнара',
+                        text: [
+                            'Первый простой удар вашего существа в этом ходу станет безответным.',
+                            '<div class="card-selection-actions"><button type="button" class="button small" data-dismiss-battle-notice>Продолжить</button></div>',
+                        ],
+                    )) . '</div></div></div>';
+            }
+        }
+        return '';
+    }
+
+    private function renderGateNotice(): string
+    {
+        $notice = $this->state->battle['gate_notice'] ?? null;
+        if (!$notice || $notice['turn'] !== ($this->state->battle['turn'] ?? null)) return '';
+        $cells = [];
+        foreach ($notice['cells'] as $cell) {
+            [$row, $col] = array_map('intval', explode('_', $cell));
+            $cells[] = \Berserk\View\Ui\Coords::renderResult($row, $col, $this->playerKey);
+        }
+        $scope = 'gates:' . $this->state->gameId . ':' . $this->playerKey;
+        return '<section data-battle-notice="' . htmlspecialchars($scope, ENT_QUOTES) . '">'
+            . '<div data-battle-notice-id="' . (int) $notice['id'] . '">'
+            . '<div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon"'
+            . ' src="/assets/images/battle/cell_info.svg" width="24" height="24" alt="">'
+            . '<h3 class="panel-card-title">Информация</h3></div>'
+            . '<div class="combat-panel-body"><div class="card-choice"><h3>Врата расставлены</h3>'
+            . '<p>Врата появились на клетках ' . implode(' ', $cells) . '.</p>'
+            . '<div class="card-selection-actions"><button type="button" class="button" data-dismiss-battle-notice>'
+            . 'Продолжить</button></div></div></div></div></section>';
+    }
+
+    private function renderGraveRitualNotice(): string
+    {
+        $notice = $this->state->battle['grave_ritual_notice'][$this->playerKey] ?? null;
+        if (!$notice || $notice['turn'] !== ($this->state->battle['turn'] ?? null)) return '';
+        $source = $this->cardsInfo[$notice['source_ukid']]['name'] ?? $notice['source_ukid'];
+        $card = $this->cardsInfo[$notice['milled_ukid']]['name'] ?? $notice['milled_ukid'];
+        $scope = 'grave-ritual:' . $this->state->gameId . ':' . $this->playerKey;
+        return '<section class="card-choice" data-battle-notice="' . htmlspecialchars($scope, ENT_QUOTES) . '">'
+            . '<div data-battle-notice-id="' . htmlspecialchars($notice['id'], ENT_QUOTES) . '">'
+            . '<h3>' . htmlspecialchars($source, ENT_QUOTES) . '</h3><p>'
+            . htmlspecialchars($card, ENT_QUOTES) . ' — отправлена с верха колоды на кладбище.</p>'
+            . '<button type="button" class="button small cancel" data-dismiss-battle-notice>Закрыть</button></div></section>';
+    }
+
+    private function renderProphecyBlockNotice(): string
+    {
+        $notice = $this->state->battle['prophecy_block_notice'][$this->playerKey] ?? null;
+        if (!$notice || ($notice['turn'] ?? null) !== ($this->state->battle['turn'] ?? null)) return '';
+
+        $scope = 'prophecy-block:' . $this->state->gameId . ':' . $this->playerKey;
+        $source = $this->cardsInfo[$notice['source_ukid']]['name'] ?? 'Дочь Перламутра';
+        $title = htmlspecialchars($source . ': ' . $notice['title'], ENT_QUOTES);
+        $ui = new \Berserk\View\Ui\PrepareUi($this->tpl);
+        $cards = '';
+        foreach ($notice['shown_ukids'] as $ukid) {
+            $cards .= '<div class="prophecy-card" inert>'
+                . $ui->thumbnail($this->cardsInfo, ['ukid' => $ukid, 'element_in_cost' => true, 'link' => '#'])
+                . '</div>';
+        }
+
+        return '<section class="card-choice" data-battle-notice="' . htmlspecialchars($scope, ENT_QUOTES) . '">'
+            . '<div data-battle-notice-id="' . (int) $notice['id'] . '"><h3>' . $title . '</h3>'
+            . '<div class="prophecy-cards">' . $cards . '</div>'
+            . '<button type="button" class="button small cancel" data-dismiss-battle-notice>Закрыть</button></div></section>';
+    }
+
+    private function renderWormResults(): string
+    {
+        $html = '';
+        $scope = htmlspecialchars('worm:' . $this->state->gameId . ':' . $this->playerKey, ENT_QUOTES);
+        foreach ($this->state->battle['worm_results'] ?? [] as $result) {
+            if (($result['turn'] ?? null) !== ($this->state->battle['turn'] ?? null)) continue;
+
+            $nameOf = function (int $id): string {
+                $card = $this->state->getCard($id);
+                if (!$card || (!$card->revealed && $card->owner !== $this->playerKey)) return 'Закрытое существо';
+                return htmlspecialchars($this->cardsInfo[$card->ukid]['name'] ?? $card->ukid, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            };
+            $operation = htmlspecialchars((string) $result['operation_id'], ENT_QUOTES);
+            $position = \Berserk\View\Ui\Coords::renderResult($result['row'], $result['col'], $this->playerKey);
+            $html .= '<section class="card-choice" data-battle-notice="' . $scope . '">'
+                . '<div data-battle-notice-id="' . $operation . '"><h3>Инкарнация Скелетного червя</h3>'
+                . '<p>Скелетный червь появился на клетке ' . $position . '.</p>';
+            if (!empty($result['destroyed'])) {
+                $html .= '<p>Уничтожены: ' . implode(', ', array_map($nameOf, $result['destroyed'])) . '.</p>';
+            }
+            $woundedByAmount = [];
+            foreach ($result['wounded'] ?? [] as $id) {
+                $amount = $result['wound_amounts'][$id] ?? null;
+                $woundedByAmount[$amount ?? 'unknown'][] = $nameOf($id);
+            }
+            foreach ($woundedByAmount as $amount => $names) {
+                $amountLabel = $amount === 'unknown' ? '' : ' ❤️ ' . (int) $amount;
+                $html .= '<p>Получили раны' . $amountLabel . ':<br>' . implode('<br>', $names) . '</p>';
+            }
+            $html .= '<button type="button" class="button small cancel" data-dismiss-battle-notice>Закрыть</button></div></section>';
+        }
+        return $html;
+    }
+
     private function renderOchiKrongaNotice(): string
     {
         $html = '';
@@ -193,7 +333,6 @@ final class InfoPanel
                 . '<button type="submit" class="button" data-http-resign>Сдаться</button></form>' : '';
         return '<noscript><style>[data-battle-sync-root] [data-open-pause], [data-battle-sync-root] [data-pause-command], [data-battle-sync-root] a.resign { display: none !important; }</style>'
             . '<p class="pause-noscript-notice">Управление паузой требует JavaScript. Сдаться можно без JavaScript.</p>' . $httpResign . '</noscript>'
-            . $this->renderInstantControl()
             . '<div class="info-actions">' . $end . '<div class="battle-icon-actions">' . $pauseIcon . '<span class="battle-chat-anchor" data-chat-anchor></span>' . $log . $resign . '</div></div>';
     }
     private function renderPauseBody(): string
@@ -206,7 +345,7 @@ final class InfoPanel
             ? ($p['ready_self'] ? 'Вы готовы, ожидаем соперника' : 'Когда вернётесь, нажмите «Вернулся / Готов».')
             : ($p['initiator'] === $this->playerKey ? 'Ожидаем ответа соперника.' : 'Соперник просит паузу на ' . intdiv($p['duration_seconds'], 60) . ' мин.');
         $html = '<section class="match-pause-content" data-match-pause-content><div class="combat-panel-heading panel-card-heading"><img class="panel-information-icon" src="/assets/images/battle/pause_160.png" width="24" height="24" alt=""><h2 class="panel-card-title">' . $heading . '</h2></div>'
-            . '<div class="match-pause-countdown" data-pause-countdown role="timer">' . sprintf('%02d:%02d', intdiv($seconds, 60), $seconds % 60) . '</div>'
+            . '<div class="match-pause-countdown" data-pause-countdown role="timer"' . (!empty($p['bot']) ? ' hidden' : '') . '>' . sprintf('%02d:%02d', intdiv($seconds, 60), $seconds % 60) . '</div>'
             . '<p data-pause-description>' . $message . '</p><div class="match-pause-decisions">';
         foreach (['accept_pause'=>'Принять', 'reject_pause'=>'Отклонить', 'cancel_pause_request'=>'Отменить запрос'] as $cmd=>$label) {
             if (in_array($cmd, $p['allowed_commands'], true)) $html .= '<button class="button" type="button" data-pause-command="' . $cmd . '">' . $label . '</button>';
@@ -368,7 +507,7 @@ final class InfoPanel
         if(!$p['visible'])return '';
         $esc=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
         $url=fn($cmd,$payload=[])=>$esc($this->baseUrl.'&'.http_build_query(['cmd'=>$cmd]+$payload));
-        $label=$esc($p['label']);
+        $label=$esc(!$p['combat'] && !$p['stack_open'] && $p['command']===null ? 'Сыграть' : $p['label']);
         $color=$p['cost']===null?'':($p['cost']==='Бесплатно'?' reserve-free':' reserve-paid');
         if($p['command']!==null)$action='<a class="button instant-control-main'.$color.'" aria-label="'.$esc($p['label']).'" href="'.$url($p['command'],$p['payload']).'">'.$label.'</a>';
         elseif($p['enabled']){
@@ -381,9 +520,23 @@ final class InfoPanel
             }
             $action='<details class="instant-control-picker"><summary class="button instant-control-main">'.$label.'</summary><div class="task-list instant-control-options">'.$cards.'</div></details>';
         }else $action='<button type="button" class="button instant-control-main" disabled>'.$label.'</button>';
-        $meta=$p['quota']===null?'':'<span class="instant-control-quota" aria-label="Остаток платных резервирований">'.$esc($p['quota']).'</span>';
-        $pass=$p['pass']===null?'':($p['pass']==='local'?'<button type="button" class="button skip" data-instant-local-pass>Пас</button>':'<a class="button skip" data-instant-pass href="'.$url($p['pass']).'">Пас</a>');
-        return '<section class="instant-control" data-instant-control data-instant-phase="'.$esc($p['phase']).'" aria-label="Мгновенное действие"><h3>Мгновенное действие '.$meta.'</h3><div class="instant-control-actions">'.$action.$pass.'</div></section>';
+        $meta=$p['quota']===null?'':'<span class="instant-control-quota" aria-label="Остаток платных резервирований">Осталось: '.$esc($p['quota']).'</span>';
+        if ($p['cost']!==null) $meta='<span class="instant-control-cost">'.$esc($p['cost']).'</span>'.$meta;
+        $pass=empty($p['pass']) || $p['pass']==='local' ? '' : '<a class="button skip" data-instant-pass href="'.$url($p['pass']).'">Пас</a>';
+        $decline=$p['decline']===null || $pass!==''?'':'<a class="button skip" href="'.$url($p['decline']['command'],$p['decline']['payload']).'">Отказаться</a>';
+        $required=$pass!=='' || $decline!=='';
+        $reserved=$p['command']==='cancel_instant_reservation';
+        $context=$this->state->battle['single_roll']??$this->state->battle['strike']??$this->state->battle['turn_instant_stack']??[];
+        // Viewer-only identity: identical snapshots preserve local disclosure state.
+        $key=hash('sha256',json_encode([$this->state->gameId,$this->state->battle['turn']??0,
+            $context['_resolution_id']??null,$context['attacker_id']??null,$context['target_id']??null,
+            $context['attack_dice']??null,$context['defend_dice']??null,$context['instant_next_sequence']??null,
+            $context['next_sequence']??null,$p],JSON_THROW_ON_ERROR));
+        $iconLabel=$required?'Инстант — требуется решение':($reserved?'Инстант — резерв зарегистрирован':'Инстант');
+        return '<div class="instant-control-layer"><details class="instant-control" data-instant-control data-instant-key="'.$key.'" data-instant-required="'.(int)$required.'" data-instant-reserved="'.(int)$reserved.'" data-instant-phase="'.$esc($p['phase']).'"'.($required?' open':'').'>'
+            .'<summary class="battle-icon-control instant-control-toggle" aria-label="'.$iconLabel.'" aria-controls="instant-control-panel" title="'.$iconLabel.'"><img src="/assets/images/battle/instant.svg" width="40" height="40" alt=""><span class="instant-control-indicator" aria-hidden="true"></span></summary>'
+            .'<section id="instant-control-panel" class="instant-control-panel" aria-label="Инстант"><div class="instant-control-heading"><h3>Инстант</h3>'.$meta.'<button type="button" class="battle-icon-control" data-instant-close aria-label="Свернуть панель инстантов"><img src="/assets/images/battle/close.png" width="32" height="32" alt=""></button></div>'
+            .'<div class="instant-control-actions">'.$action.$pass.$decline.'</div></section></details></div>';
     }
 
     private function cancelUrl(): string
@@ -392,6 +545,51 @@ final class InfoPanel
     }
 
     // ─── Окно сражения ───────────────────────────────────────
+
+    /** Present the persisted single die using the ordinary combat panel and controls. */
+    private function renderSingleRoll(): string
+    {
+        $roll = $this->state->battle['single_roll'];
+        $kind = $roll['kind'] ?? '';
+        $label = match ($kind) {
+            'tap' => 'Особый удар', 'magic' => 'Магический удар', 'uchr' => 'Удар через ряд',
+            'shot' => 'Выстрел', 'throw' => 'Метание', 'discharge' => 'Разряд',
+            'shaksi' => 'Шакси', 'row_spell' => 'Цветущие руны', default => 'Бросок',
+        };
+        $content = '<div class="instant-dice"><div class="dice-col"><span class="dice-label">'
+            . (in_array($kind, ['shaksi', 'row_spell'], true) ? 'Кубик способности' : 'Атакующий')
+            . '</span><span class="dice-value">'
+            . \Berserk\View\Ui\DiceValue::render((int) ($roll['attack_dice'] ?? 0), (int) ($roll['attack_mod'] ?? 0))
+            . '</span></div></div>';
+        if (isset($roll['computed_value'])) {
+            $content .= '<p>Текущая величина удара: <b>' . (int) $roll['computed_value'] . '</b></p>';
+        }
+        if (($roll['stage'] ?? '') === 'results') {
+            $content .= $this->renderInstantResolutionSummary($roll)
+                . (in_array($this->playerKey, $roll['confirmed'] ?? [], true)
+                    ? '<p class="wait">Ожидание подтверждения противника</p>'
+                    : $this->confirmStrikeLink($this->state, $this->baseUrl));
+        } else {
+            $window = match ($roll['combat_instant_window'] ?? 'dice') {
+                'dice' => 'Работа с кубиками', 'wounds' => 'После нанесения ран', default => 'Изменение величины удара',
+            };
+            $content .= '<p class="instant-window-label">' . $window . '</p>'
+                . $this->renderCombatInstantStack($roll, true)
+                . (($roll['instant_priority'] ?? null) === $this->playerKey
+                    ? '<p>Ваш приоритет. Выберите инстант или пас в нижнем блоке.</p>'
+                    : '<p class="wait">Ожидание — оппонент решает, сыграть инстант...</p>');
+        }
+        $name = fn (int $id): string => htmlspecialchars($this->cardNameById($id), ENT_QUOTES, 'UTF-8');
+        if (in_array($kind, ['shaksi', 'row_spell'], true)) {
+            return '<div class="strike-box"><p>' . $label . ': <b>' . $name((int) $roll['attacker_id'])
+                . '</b></p>' . $content . '</div>';
+        }
+        return $this->tpl->parse('includes/battle/strike.tpl', [
+            'header_text' => $label . ' — результат броска',
+            'attacker_name' => $name((int) $roll['attacker_id']),
+            'target_name' => $name((int) $roll['target_id']), 'content_html' => $content,
+        ]);
+    }
 
     private function renderStrike(): string {
         $state     = $this->state;
@@ -413,6 +611,24 @@ final class InfoPanel
 
         $contentHtml = '';
         $kind = $strike['kind'] ?? 'strike';
+
+        if (!empty($strike['prophecy_effect_result_active'])) {
+            $notice = $strike['prophecy_effect_result'];
+            $sourceName = htmlspecialchars($cardsInfo[$notice['source_ukid']]['name'] ?? 'Источник пророчества', ENT_QUOTES);
+            $targetName = htmlspecialchars($cardsInfo[$notice['target_ukid']]['name'] ?? 'Цель удара', ENT_QUOTES);
+            if ($notice['type'] === 'poison') {
+                $description = (int) $notice['after'] > (int) $notice['before']
+                    ? 'Отравление: <b>' . (int) $notice['after'] . '</b>'
+                    : ((int) $notice['after'] > 0 ? 'Отравление: <b>' . (int) $notice['after'] . '</b> (без изменения)' : 'Отравление не наложено');
+            } else {
+                $description = 'Дополнительные раны от пророчества: <b>' . max(0, (int) $notice['before'] - (int) $notice['after'])
+                    . '</b><br>HP: ' . (int) $notice['before'] . ' → ' . (int) $notice['after'];
+            }
+            $confirmation = in_array($playerKey, $strike['confirmed'] ?? [], true)
+                ? '<p class="wait">Ожидание подтверждения противника</p>' : $this->confirmStrikeLink($state, $baseUrl);
+            return '<div class="strike-box" data-strike-prophecy-result><p><b>' . $sourceName . '</b> — итог пророчества</p>'
+                . '<p>Цель: <b>' . $targetName . '</b></p><p>' . $description . '</p>' . $confirmation . '</div>';
+        }
 
         if ($kind === 'impact' && ($strike['effect'] ?? '') === 'memory_loss' && $strike['state'] === 'results') {
             $confirmed = $strike['confirmed'] ?? [];
@@ -481,7 +697,7 @@ final class InfoPanel
                     $options[] = [
                         'value' => 'redirect:' . (int) $tid,
                         'label' => $this->battleCardLabel($tc, $ti, $playerKey),
-                        'label_html' => htmlspecialchars((string) ($ti['name'] ?? $tc->ukid), ENT_QUOTES) . ' ' . \Berserk\View\Ui\Coords::render($tc->row, $tc->col, $playerKey, $tc->owner),
+                        'card_id' => (int) $tid,
                         'class' => 'redirect-target',
                     ];
                 }
@@ -684,7 +900,8 @@ final class InfoPanel
 
                 $radio = '<label class="choice-radio">'
                     . '<input type="radio" name="choice" value="move" checked>'
-                    . '<span>Переместить на (' . $pp['new_row'] . ',' . $pp['new_col'] . ')</span>'
+                    . '<span>Переместить на ' . \Berserk\View\Ui\Coords::renderResult(
+                        $pp['new_row'], $pp['new_col'], $playerKey, $defCard->owner) . '</span>'
                     . '</label>'
                     . '<label class="choice-radio">'
                     . '<input type="radio" name="choice" value="damage">'
@@ -756,16 +973,17 @@ final class InfoPanel
                     form: [
                         'name' => 'target_id',
                         'items' => $items,
+                        'side_toggle' => true,
                         'hidden' => [
                             ($this->role === 'host' ? 'first' : 'second') => '',
                             'game' => $state->gameId,
                             'cmd' => 'choose_auto_target',
                         ],
                     ],
+                    cardSelection: \Berserk\View\Ui\CreatureChoice::confirmed($state, $playerKey, $cardsInfo, $items,
+                        'auto-shot:' . $source->instanceId . ':' . ($strike['_resolution_id'] ?? $state->battle['turn'])),
                 ));
-                $skipUrl = "{$baseUrl}&cmd=choose_auto_target&target_id=0";
-                $contentHtml = $diceHtml . '<div class="auto-choice">' . $choice
-                    . '<a class="button skip" href="' . $skipUrl . '">Пропустить</a></div>';
+                $contentHtml = $choice;
             } else {
                 $contentHtml = $diceHtml . '<p class="wait">Ожидание выбора цели...</p>';
             }
@@ -924,20 +1142,27 @@ final class InfoPanel
                     $resultText = $name;
                 }
             } elseif ($kind === 'multi_discharge') {
-                $name    = $strike['action_name'] ?? 'Тройной разряд';
-                $results = $strike['discharged'] ?? [];
-                $parts   = [];
-                foreach ($results as $r) {
+                $name = htmlspecialchars($strike['action_name'] ?? 'Тройной разряд', ENT_QUOTES);
+                $parts = [];
+                $dischargeDice = [];
+                foreach ($strike['discharged'] ?? [] as $r) {
                     $tc = $state->getCard($r['target_id']);
-                    $ti = $tc ? ($cardsInfo[$tc->ukid] ?? null) : null;
-                    $tn = $ti ? htmlspecialchars($ti['name'], ENT_QUOTES) : '?';
+                    $tn = htmlspecialchars($tc ? ($cardsInfo[$tc->ukid]['name'] ?? $tc->ukid) : '?', ENT_QUOTES);
+                    if (!empty($r['dice'])) {
+                        $dischargeDice[] = $this->tpl->parse('includes/battle/dice_column.tpl', [
+                            'label' => 'Разряд ' . (count($dischargeDice) + 1),
+                            'value' => \Berserk\View\Ui\DiceValue::render((int) $r['dice']),
+                        ]);
+                    }
                     if (!empty($r['defended'])) {
-                        $parts[] = $tn . ' — защита (0)';
-                    } else {
+                        $parts[] = $tn . ' — защита от разряда';
+                    } elseif (empty($strike['multi_discharge_blocked'])) {
                         $parts[] = $tn . ' −' . $r['damage'] . ' ❤️ HP';
                     }
                 }
-                $resultText = $name . ': ' . implode(', ', $parts);
+                $resultText = !empty($strike['multi_discharge_blocked'])
+                    ? $name . ' сорван. Никто не получил ран.' . ($parts ? '<br>' . implode(', ', $parts) : '')
+                    : $name . ': ' . implode(', ', $parts);
             } elseif ($kind === 'multi_heal') {
                 $name = $strike['action_name'] ?? 'Излечение';
                 $healed = $strike['healed'] ?? [];
@@ -1653,15 +1878,21 @@ final class InfoPanel
                 $chooserKey = $died ? $died->owner : null;
 
                 if ($playerKey === $chooserKey) {
-                    $buttons = [];
+                    $rows = [];
                     foreach ($pc['candidates'] as $tid) {
-                        $tc = $state->getCard($tid);
-                        if (!$tc) continue;
-                        $buttons[] = ['label' => $cardsInfo[$tc->ukid]['name'] ?? '?',
-                            'url' => "{$baseUrl}&cmd=choose_death_target&target_id={$tid}"];
+                        if ($state->getCard($tid)) $rows[] = ['value'=>$tid];
                     }
-                    $spec = new \Berserk\View\Ui\PanelSpec(title: (string) ($diedInfo['name'] ?? '?') . ': выберите существо', buttons: $buttons);
-                    \Berserk\View\Ui\CreatureChoice::decorate($spec, $state, $playerKey, $cardsInfo);
+                    $spec = new \Berserk\View\Ui\PanelSpec(
+                        title: (string) ($diedInfo['name'] ?? '?') . ': выберите существо',
+                        form: $rows ? [
+                            'name'=>'target_id', 'submit'=>'Выбрать',
+                            'hidden'=>Form::battleHidden($this->role, $state->gameId, 'choose_death_target'),
+                        ] : null,
+                        cardSelection: $rows ? \Berserk\View\Ui\CreatureChoice::confirmed(
+                            $state, $playerKey, $cardsInfo, $rows, 'death:' . ($pc['choice_id'] ?? $state->version),
+                            mode:\Berserk\View\Ui\CardSelectionSpec::SIMPLE, field:false,
+                        ) : null,
+                    );
                     $confirmHtml = Panel::render($spec);
                 } else {
                     $confirmHtml = '<p class="wait">Ожидание выбора цели оппонентом...</p>';
@@ -1670,6 +1901,12 @@ final class InfoPanel
                 $confirmHtml = $this->confirmStrikeLink($state, $baseUrl);
             } else {
                 $confirmHtml = '<p class="wait">Ожидание оппонента...</p>';
+            }
+
+            if (isset($strike['prepared_discharge_damage'])) {
+                $resultText = !empty($strike['defended'])
+                    ? 'Защита цели срывает всю серию. Никто не получает ран.'
+                    : 'Разряд подготовлен. Раны будут нанесены после завершения всей серии.';
             }
 
             if (!empty($strike['coin_blocked'])) $resultText .= '<br>Удар заблокирован за монетку.';
@@ -1691,7 +1928,10 @@ final class InfoPanel
             if (!empty($strike['temple_defense']['blocked'])) $resultText = 'Атака заблокирована';
 
             $noDiceKinds = ['impact', 'strangle', 'heal', 'modifier', 'execute', 'destroy_self_and_target', 'transfer_wounds', 'shield_light', 'self_wound', 'multi_heal', 'steal', 'sand_claws', 'multi_discharge', 'blood_tap', 'poison_target', 'damage_poisoned', 'place_cell_marker', 'dissonance', 'steal_coin', 'give_coin', 'become_fly', 'bomb_shot', 'apply_delayed_marker', 'particle', 'life_gift', 'poison_boost', 'damage_ranged', 'teleport_target', 'blood_storm', 'row_spell'];
-            if (!in_array($kind, $noDiceKinds, true)) {
+            if (!empty($dischargeDice)) {
+                $contentHtml = '<div class="dice-block">' . implode('', $dischargeDice) . '</div>'
+                    . $summaryHtml . '<p>' . $resultText . '</p>' . $extraResultHtml . $confirmHtml;
+            } elseif (!in_array($kind, $noDiceKinds, true)) {
                 $contentHtml = $this->tpl->parse('includes/battle/strike_dice.tpl', [
                     'attack_dice'      => $adText,
                     'defend_dice_html' => $defendDiceHtml,
@@ -1766,7 +2006,24 @@ final class InfoPanel
 
         $isMine     = ($pp['owner'] === $playerKey);
         $sourceName = $cardsInfo[$pp['source_ukid']]['name'] ?? '?';
-        $title      = $sourceName . ': ' . ($pp['title'] ?? 'Пророчество');
+        $resultTitle = (string) ($pp['title'] ?? 'Пророчество');
+        if (($pp['context'] ?? null) === 'strike') {
+            $targetUkid = $pp['title_target_ukid'] ?? null;
+            // Already saved damage notices used the card code directly in the title.
+            if ($targetUkid === null && preg_match('/\b(s\d+_\d+)\b/u', $resultTitle, $match)) $targetUkid = $match[1];
+            $strike = $state->battle['strike'] ?? [];
+            if ($targetUkid === null && ($strike['attacker_id'] ?? null) === ($pp['source_id'] ?? null)) {
+                $targetUkid = $state->getCard((int) (($strike['defender_id'] ?? 0) ?: ($strike['target_id'] ?? 0)))?->ukid;
+            }
+            $targetName = $targetUkid !== null ? ($cardsInfo[$targetUkid]['name'] ?? 'цель удара') : null;
+            if ($targetName !== null) {
+                $resultTitle = strtr($resultTitle, ['{target}' => $targetName, $targetUkid => $targetName]);
+                if (str_starts_with($resultTitle, 'обе рядовые — отравление ')) {
+                    $resultTitle = str_replace('обе рядовые — ', 'обе рядовые — ' . $targetName . ': ', $resultTitle);
+                }
+            }
+        }
+        $title = $sourceName . ': ' . $resultTitle;
 
         // ── Режим вызова Отряда ─────────────────────────────
         if (!empty($pp['summon_mode'])) {
@@ -2043,6 +2300,7 @@ final class InfoPanel
         if ($type === 'dice_choice') {
             $attackBefore = (int) ($result['attack_before'] ?? 0);
             $attackAfter = (int) ($result['attack_after'] ?? 0);
+            if (!empty($result['single_die'])) return $name . ': кубик ' . $attackBefore . ' -> ' . $attackAfter;
             $defendBefore = (int) ($result['defend_before'] ?? 0);
             $defendAfter = (int) ($result['defend_after'] ?? 0);
             $parts = [];
@@ -2236,18 +2494,26 @@ final class InfoPanel
             return '';
         }
 
-        $body = '<div class="defender-radio-list">';
+        $fieldSelection = $skipDefender && $options !== [];
+        $body = '<div class="defender-radio-list"' . ($fieldSelection
+            ? ' data-selection-group="defender" data-selection-min="1" data-selection-max="1"'
+            : '') . '>';
+        $cards = array_column(\Berserk\View\Ui\CreatureChoice::candidates(
+            $this->state, array_column($options, 'card_id'), $this->playerKey, $this->cardsInfo,
+            \Berserk\View\Ui\CardSelectionSpec::SIMPLE,
+        ), 'label', 'instanceId');
         foreach ($options as $index => $option) {
-            $labelHtml = $option['label_html'] ?? \Berserk\View\Ui\Coords::text((string) $option['label']);
-            $card = $this->state->getCard((int) ($option['card_id'] ?? 0));
-            $coordsHtml = $card !== null
-                ? \Berserk\View\Ui\Coords::renderResult($card->row, $card->col, $this->playerKey)
-                : '';
-
-            $body .= '<label class="' . htmlspecialchars('choice-radio ' . ($option['class'] ?? ''), ENT_QUOTES) . '">'
+            $id = (int) ($option['card_id'] ?? 0);
+            $card = $this->state->getCard($id);
+            $labelHtml = \Berserk\View\Ui\Coords::text((string) ($cards[$id] ?? $option['label']));
+            $coordsHtml = $card ? \Berserk\View\Ui\Coords::renderResult($card->row, $card->col, $this->playerKey,
+                $skipDefender ? null : $card->owner) : '';
+            $body .= '<label class="' . htmlspecialchars('choice-radio choice-card-row ' . ($option['class'] ?? ''), ENT_QUOTES) . '"'
+                . ($fieldSelection ? ' data-card-instance="' . $id . '"' : '') . '>'
                 . '<input type="radio" name="choice" value="' . htmlspecialchars($option['value'], ENT_QUOTES) . '"'
                 . ($index === 0 ? ' checked="checked"' : '') . '>'
-                . '<span class="defender-option-text">' . $labelHtml . '</span>' . $coordsHtml . '</label>';
+                . '<span class="defender-option-text choice-card-content">' . $labelHtml . '</span>'
+                . ($card ? \Berserk\View\Ui\CreatureChoice::parameters($card, $this->playerKey) : $coordsHtml) . '</label>';
         }
         $body .= '</div>'
             . '<div class="death-choice-buttons' . ($skipDefender ? ' defender-choice-actions' : '') . '">';
@@ -2257,9 +2523,23 @@ final class InfoPanel
         }
         $body .= '</div>';
 
+        $formOptions = [];
+        if ($fieldSelection) {
+            $strike = $this->state->battle['strike'];
+            $formOptions = [
+                'selectionContext' => 'defender:' . implode(':', [
+                    $this->state->gameId, $this->state->battle['turn'] ?? 0,
+                    $strike['attacker_id'], $strike['target_id'],
+                    $strike[\Berserk\Core\ActionResolution::ID] ?? '',
+                ]),
+                'battlefieldOwner' => $this->playerKey,
+            ];
+        }
+
         return Form::form(
             Form::battleHidden($this->role, $this->state->gameId, 'choose_defender_option'),
-            $body
+            $body,
+            $formOptions
         );
     }
 

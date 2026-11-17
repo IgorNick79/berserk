@@ -179,6 +179,7 @@ final class Badge
     private static function marker(string $type, $m): string
     {
         $name = self::MARKER_NAMES[$type] ?? $type;
+        if ($type === 'prey') return self::raw($type, $name);
         $val  = null;
 
         if (is_array($m)) {

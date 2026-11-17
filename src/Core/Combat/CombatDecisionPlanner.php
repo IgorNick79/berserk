@@ -16,6 +16,22 @@ final class CombatDecisionPlanner
             || ($observation['stage'] ?? null) !== 'battle' || ($legalActions['stage'] ?? null) !== 'battle') return $stop;
         $control = $observation['control']['status'] ?? null;
         $decision = $legalActions['decision'] ?? null;
+        if ($decision === 'forced_directional_move' && $control === 'choice_required') {
+            $action = $legalActions['actions'][0] ?? null;
+            if ($action !== null) return ['action'=>$action, 'reason'=>'resolve_tovi_movement', 'score'=>0, 'factors'=>[]];
+        }
+        if ($decision === 'intrigue_start' && $control === 'choice_required') {
+            $action = $legalActions['actions'][0] ?? null;
+            if (($action['type'] ?? null) === 'choose_intrigue_start') {
+                return ['action'=>$action, 'reason'=>'resolve_intrigue', 'score'=>0, 'factors'=>[]];
+            }
+        }
+        if ($decision === 'close_or_damage' && $control === 'choice_required') {
+            $action = $legalActions['actions'][0] ?? null;
+            if (($action['type'] ?? null) === 'choose_close_or_damage') {
+                return ['action'=>$action, 'reason'=>'preserve_creature_hp', 'score'=>0, 'factors'=>[]];
+            }
+        }
         if($decision==='root_auto_shot'&&$control==='choice_required')return self::rootAutoShot($observation,$legalActions['actions']);
         if ($decision === 'prophecy_transform_decline') {
             $window = $observation['prophecy_choice'] ?? [];
@@ -89,6 +105,15 @@ final class CombatDecisionPlanner
         if ($decision === 'greed_teleport' && $control === 'choice_required') {
             return self::greedTeleport($observation,$legalActions['actions']);
         }
+        if (in_array($decision, ['first_strike_movement', 'card_option'], true) && $control === 'choice_required') {
+            $command = $decision === 'card_option' ? 'choose_card_option' : 'choose_first_strike_movement';
+            foreach ($legalActions['actions'] as $action) {
+                if ($action['type'] === $command) {
+                    return ['action'=>$action, 'reason'=>$decision, 'score'=>0, 'factors'=>[]];
+                }
+            }
+            return array_replace($stop, ['reason'=>'unsupported_pending']);
+        }
         if ($decision === 'gate_cell' && $control === 'choice_required') {
             $best = $stop;
             $best['reason'] = 'unsupported_pending';
@@ -112,6 +137,22 @@ final class CombatDecisionPlanner
             }
             return $best;
         }
+        if ($decision==='whip_target' && $control==='choice_required') {
+            $w=$observation['whip_choice']??[];$best=array_replace($stop,['reason'=>'unsupported_pending']);
+            if (($w['owner']??null)!==$observation['viewer']) return $best;
+            $targets=array_column($w['options']??[],null,'target_id');
+            foreach($legalActions['actions'] as $action){
+                if($action['type']==='cancel_pending' && ($w['can_cancel']??false)===true && $best['score']===null)
+                    $best=['action'=>$action,'reason'=>'decline_unsafe_whip','score'=>0,'factors'=>[]];
+                if($action['type']!=='choose_whip_target')continue;
+                $t=$targets[$action['payload']['target_id']]??null;
+                if(!$t || $t['closed'] || $t['hp']<=$t['damage'])continue;
+                $score=100+min(10,$t['hp'])-5*$t['damage'];
+                if($best['score']!==null&&$score<=$best['score'])continue;
+                $best=['action'=>$action,'reason'=>'whip_surviving_open_ally','score'=>$score,'factors'=>['damage'=>$t['damage'],'hp'=>$t['hp']]];
+            }
+            return $best;
+        }
         if ($decision === 'passive_task' && $control === 'choice_required') {
             return self::passiveTask($observation['passive_tasks'] ?? [],$legalActions['actions']);
         }
@@ -126,6 +167,13 @@ final class CombatDecisionPlanner
         }
         if ($decision === 'strike_mode' && $control === 'choice_required') {
             return self::strikeMode($observation['strike_mode_choice'] ?? [],$legalActions['actions']);
+        }
+        if ($decision === 'grave_ritual_ack' && $control === 'choice_required') {
+            $action = $legalActions['actions'][0] ?? null;
+            if (count($legalActions['actions']) === 1 && ($action['type'] ?? null) === 'choose_grave_ritual'
+                && ($action['payload']['ack'] ?? null) === 1) {
+                return ['action'=>$action, 'reason'=>'acknowledge_grave_ritual', 'score'=>0, 'factors'=>[]];
+            }
         }
         if ($decision === 'strike_ack' && $control === 'confirm_information') {
             foreach ($legalActions['actions'] as $action) {
@@ -393,6 +441,7 @@ final class CombatDecisionPlanner
             if ($task === null) continue;
             $factors = match ($task['type']) {
                 'place_gates'=>['required_cells'=>-$task['gate_count']],
+                'whip'=>['start_task'=>0],
                 // Shared gates may be consumed by the first effect. Prefer the more vulnerable source.
                 'greed_teleport'=>['self_damage_risk'=>$task['potential_self_damage']-$task['source_hp']],
                 default=>null,
@@ -401,8 +450,8 @@ final class CombatDecisionPlanner
             $score = array_sum($factors);
             if ($best['score'] !== null && ($score < $best['score']
                 || ($score === $best['score'] && strcmp($id,$best['action']['payload']['task_id']) >= 0))) continue;
-            $best = ['action'=>$action,'reason'=>$task['type']==='place_gates'
-                ? 'prefer_fewer_required_gate_cells' : 'prioritize_vulnerable_passive_source',
+            $best = ['action'=>$action,'reason'=>$task['type']==='whip'?'resolve_whip_start_task':($task['type']==='place_gates'
+                ? 'prefer_fewer_required_gate_cells' : 'prioritize_vulnerable_passive_source'),
                 'score'=>$score,'factors'=>$factors + ['resource_cost'=>0]];
         }
         return $best;

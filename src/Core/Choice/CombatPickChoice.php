@@ -11,7 +11,7 @@ use Berserk\Core\Command;
 use Berserk\Core\Result;
 use Berserk\Core\CardInstance;
 use Berserk\Core\ZoneManager;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, Form, PanelSpec};
 
 final class CombatPickChoice implements ChoiceHandlerInterface
 {
@@ -55,7 +55,7 @@ final class CombatPickChoice implements ChoiceHandlerInterface
             }
         }
 
-        $buttons = [];
+        $rows = [];
         foreach ($state->cards as $c) {
             if ($c->zone !== CardInstance::ZONE_FIELD
                 && $c->zone !== CardInstance::ZONE_FLYING) continue;
@@ -68,25 +68,16 @@ final class CombatPickChoice implements ChoiceHandlerInterface
             if (($pc['target'] ?? '') === 'adjacent_ally' && !in_array($c->instanceId, $adjacentIds, true)) continue;
             if ($condition === 'target_not_moved' && !empty($c->flags['moved_this_turn'])) continue;
 
-            $name = $cardsInfo[$c->ukid]['name'] ?? '?';
-            $coords = $c->zone === CardInstance::ZONE_FIELD
-                ? ' (' . $c->row . ',' . $c->col . ')' : '';
-
-            $buttons[] = [
-                'label' => $name . $coords . ' (' . $c->hp . '/' . $c->hpMax . ')',
-                'url'   => "{$baseUrl}&cmd=choose_combat_pick&target_id={$c->instanceId}" . (isset($pc['pick_token']) ? '&pick_token=' . rawurlencode($pc['pick_token']) : ''),
-            ];
+            $rows[] = ['value'=>$c->instanceId];
         }
 
-        $buttons[] = [
-            'label' => 'Отмена',
-            'url'   => $baseUrl . '&cmd=cancel_pending' . (isset($pc['pick_token']) ? '&pick_token=' . rawurlencode($pc['pick_token']) : ''),
-            'class' => 'skip',
-        ];
-
-        return new PanelSpec(
-            title: $srcName . ': ' . ($pc['label'] ?? 'выбери цель'),
-            buttons: $buttons,
+        $token = isset($pc['pick_token']) ? ['pick_token'=>$pc['pick_token']] : [];
+        $cancel = $baseUrl . '&cmd=cancel_pending' . ($token ? '&pick_token=' . rawurlencode($pc['pick_token']) : '');
+        return CreatureChoice::targetPanel(
+            $state, $playerKey, $cardsInfo, $rows, 'choose_combat_pick:' . ($pc['pick_token'] ?? $state->version),
+            $srcName . ': ' . ($pc['label'] ?? 'выбери цель'),
+            Form::battleHidden($role, $state->gameId, 'choose_combat_pick', $token),
+            $cancel,
         );
     }
 

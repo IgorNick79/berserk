@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CardSelectionGroup, CardSelectionSpec, CreatureChoice, PanelSpec};
 
 final class LifeGiftChoice implements ChoiceHandlerInterface
 {
@@ -35,57 +35,37 @@ final class LifeGiftChoice implements ChoiceHandlerInterface
 
         $roleParam = $role === 'host' ? 'first' : 'second';
 
-        // X — сколько монет
-        $amountItems = [];
-        for ($i = (int) $p['min_x']; $i <= (int) $p['max_x']; $i++) {
-            $amountItems[] = [
-                'value'   => $i,
-                'label'   => $i . ' монет',
-                'checked' => ($i === (int) $p['max_x']),
-            ];
+        $step = $p['step'] ?? 'amount';
+        $title = $srcName . ' — предсмертный дар';
+        if ($step === 'amount') {
+            $buttons = [];
+            for ($i = (int) $p['min_x']; $i <= min((int) $p['max_x'], $src?->coins ?? 0); $i++) {
+                $buttons[] = ['label' => (string) $i,
+                    'url' => $baseUrl . '&cmd=choose_life_gift&amount=' . $i];
+            }
+            $buttons[] = ['label'=>'Отмена', 'url'=>$baseUrl . '&cmd=cancel_pending', 'class'=>'skip'];
+            return new PanelSpec(title: $title . ': сколько монет потратить?', buttons: $buttons);
         }
 
-        // Враг — кого ранить
-        $enemyItems = [];
-        foreach ($p['enemies'] as $tid) {
-            $tc = $state->getCard((int) $tid);
-            if (!$tc) continue;
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-            $enemyItems[] = [
-                'value' => (int) $tid,
-                'label' => $tn . ' (' . $tc->row . ';' . $tc->col . ') — ' . $tc->hp . '/' . $tc->hpMax,
-            ];
-        }
-
-        // Союзник — кого лечить
-        $allyItems = [];
-        foreach ($p['allies'] as $tid) {
-            $tc = $state->getCard((int) $tid);
-            if (!$tc) continue;
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-            $allyItems[] = [
-                'value' => (int) $tid,
-                'label' => $tn . ' (' . $tc->row . ';' . $tc->col . ') — ' . $tc->hp . '/' . $tc->hpMax,
-            ];
-        }
-
+        $current = (new \Berserk\Core\ActionResolver($state, new Engine()))->lifeGiftTargets($playerKey);
+        $enemy = $step === 'enemy';
+        $key = $enemy ? 'enemies' : 'allies';
+        $ids = array_values(array_intersect($p[$key], $current[$key]));
+        $items = CreatureChoice::candidates($state, $ids, $playerKey, $cardsInfo, CardSelectionSpec::DEFAULT_MODE);
         return new PanelSpec(
-            title: $srcName . ': предсмертный дар',
+            title: $title . ($enemy ? ': выберите существо противника' : ': выберите своё существо'),
             form: [
-                'type'   => 'multi_radio',
-                'groups' => [
-                    ['name' => 'amount',   'label' => 'Сколько монет потратить', 'items' => $amountItems],
-                    ['name' => 'enemy_id', 'label' => 'Кого ранить',             'items' => $enemyItems],
-                    ['name' => 'ally_id',  'label' => 'Кого излечить',           'items' => $allyItems],
-                ],
-                'hidden' => [
-                    $roleParam => '',
-                    'game'     => $state->gameId,
-                    'cmd'      => 'choose_life_gift',
-                ],
-                'submit' => 'Применить',
+                'hidden' => [$roleParam=>'', 'game'=>$state->gameId, 'cmd'=>'choose_life_gift'],
+                'submit' => $enemy ? 'Далее' : 'Применить',
                 'cancel' => $baseUrl . '&cmd=cancel_pending',
             ],
+            cardSelection: new CardSelectionSpec(
+                context: implode(':', [$state->gameId, $playerKey, 'life-gift', $p['card_id'],
+                    $p['opened_version'] ?? 'legacy-' . $state->version, $step]),
+                battlefieldOwner: $playerKey,
+                groups: [new CardSelectionGroup($step, $enemy ? 'enemy_id' : 'ally_id', $items,
+                    $enemy ? 'Кого ранить' : 'Кого излечить')],
+            ),
         );
     }
 

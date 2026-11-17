@@ -8,11 +8,27 @@ final class CreatureChoice
 {
     public static function item(CardInstance $card, string $name, string $viewer, bool $showHealth = false, bool $showCoords = true): array
     {
-        return ['value' => $card->instanceId, 'label' => $name, 'side' => $card->owner === $viewer ? 'own' : 'enemy',
-            'label_html' => '<span class="creature-choice-name">' . htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>'
+        return ['parameterHtml'=>self::parameters($card, $viewer, true), 'value' => $card->instanceId, 'label' => $name, 'side' => $card->owner === $viewer ? 'own' : 'enemy',
+            'label_html' => '<span class="creature-choice-name" title="' . htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">' . htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>'
                 . ($showHealth && ($card->owner === $viewer || $card->revealed)
                     ? '<span class="creature-choice-health">❤️ ' . $card->hp . '/' . $card->hpMax . ' HP</span>' : '')
                 . ($showCoords ? Coords::renderResult($card->row, $card->col, $viewer, $card->owner) : '')];
+    }
+
+    public static function parameters(CardInstance $card, string $viewer, bool $showHealth = true): string
+    {
+        $known = $card->owner === $viewer || $card->revealed;
+        $hp = $known && $showHealth
+            ? $card->hp . '/' . $card->hpMax . ' HP' : '';
+        $coords = $known && $card->zone === 'field' ? Coords::renderResult($card->row, $card->col, $viewer, $card->owner) : '';
+        return '<span class="choice-parameters" data-choice-parameters>'
+            . '<button type="button" data-choice-parameter="hp" aria-label="Здоровье" aria-pressed="false"'
+            . ($hp === '' ? ' disabled' : '') . '><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 17 3 10C-2 4 5 0 10 5 15 0 22 4 17 10Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>'
+            . '<button type="button" data-choice-parameter="coords" aria-label="Координаты" aria-pressed="false"'
+            . ($coords === '' ? ' disabled' : '') . '><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 1v5m0 8v5M1 10h5m8 0h5" stroke="currentColor" stroke-width="2"/></svg></button>'
+            . '<span class="choice-parameter-value" data-choice-hp="' . htmlspecialchars($hp, ENT_QUOTES)
+            . '" data-choice-coords="' . htmlspecialchars($coords, ENT_QUOTES) . '">'
+            . '</span></span>';
     }
 
     /** @param list<int> $ids */
@@ -39,11 +55,76 @@ final class CreatureChoice
             if ($item['row'] === 'fly' && $counts[$name] > 1 && $card->slot > 0) {
                 $item['label_html'] .= '<span class="coords coords--' . $item['side'] . '">Слот ' . $card->slot . '</span>';
             }
+            if ($card->zone === 'graveyard' && $counts[$name] > 1 && ($card->owner === $viewer || $card->revealed)) {
+                $item['label_html'] .= '<span> #' . $id . '</span>';
+            }
             $items[] = $item;
         }
         usort($items, static fn(array $a, array $b): int =>
             strcmp(self::sortName($a['label']), self::sortName($b['label'])) ?: $a['instanceId'] <=> $b['instanceId']);
         return $items;
+    }
+
+    /**
+     * Opt in only for confirmed forms whose declared rows carry instance IDs.
+     * Keeps the wire values, defaults and original submission order.
+     */
+    public static function confirmed(
+        GameState $state, string $viewer, array $catalog, array $rows, string $decision,
+        int $min = 1, int $max = 1, string $mode = CardSelectionSpec::DEFAULT_MODE, bool $field = true
+    ): CardSelectionSpec {
+        $byId = [];
+        foreach (array_values($rows) as $order => $row) {
+            $byId[(int) ($row['instanceId'] ?? $row['value'])] = $row + ['submitOrder' => $order];
+        }
+        $items = self::candidates($state, array_keys($byId), $viewer, $catalog, $mode);
+        $selected = [];
+        foreach ($items as &$item) {
+            $legacy = $byId[$item['instanceId']];
+            $item['value'] = $legacy['value'];
+            $item['submitOrder'] = $legacy['submitOrder'];
+            $item['disabled'] = !empty($legacy['disabled']);
+            if (!empty($legacy['checked']) && !$item['disabled']) $selected[] = $item['instanceId'];
+            if (isset($legacy['suffix'])) {
+                $item['label_html'] .= '<span>' . htmlspecialchars($legacy['suffix'], ENT_QUOTES) . '</span>';
+            }
+        }
+        unset($item);
+
+        return new CardSelectionSpec(
+            context: implode(':', [$state->gameId, $viewer, $decision]),
+            candidates: $items, mode: $mode, minSelect: $min, maxSelect: $max, selected: $selected,
+            battlefieldOwner: $field ? $viewer : null,
+        );
+    }
+
+    /** A confirmed target step with the existing standalone cancel link if no candidates remain. */
+    public static function targetPanel(
+        GameState $state, string $viewer, array $catalog, array $rows, string $decision,
+        string $title, array $hidden, string $cancel, string $mode = CardSelectionSpec::SIMPLE, bool $field = true
+    ): PanelSpec {
+        return new PanelSpec(
+            title: $title,
+            form: $rows ? ['name'=>'target_id', 'hidden'=>$hidden, 'submit'=>'Выбрать', 'cancel'=>$cancel] : null,
+            buttons: $rows ? [] : [['label'=>'Отмена', 'url'=>$cancel, 'class'=>'skip']],
+            cardSelection: $rows ? self::confirmed($state, $viewer, $catalog, $rows, $decision, mode:$mode, field:$field) : null,
+        );
+    }
+
+    /** Immediate links retain their caller-supplied URL and order. */
+    public static function immediateButtons(GameState $state, string $viewer, array $catalog, array $links): array
+    {
+        $items = array_column(self::candidates($state, array_column($links, 'instanceId'), $viewer, $catalog,
+            CardSelectionSpec::DEFAULT_MODE), null, 'instanceId');
+        $buttons = [];
+        foreach ($links as $link) {
+            $item = $items[$link['instanceId']] ?? null;
+            if (!$item) continue;
+            $prefix = htmlspecialchars((string) ($link['prefix'] ?? ''), ENT_QUOTES);
+            $suffix = htmlspecialchars((string) ($link['suffix'] ?? ''), ENT_QUOTES);
+            $buttons[] = $link + ['label' => $item['label'], 'label_html' => $prefix . $item['label_html'] . $suffix];
+        }
+        return $buttons;
     }
 
     private static function sortName(string $name): string
@@ -54,28 +135,6 @@ final class CreatureChoice
     public static function decorate(PanelSpec $spec, GameState $state, string $viewer, array $catalog): void
     {
         if (!$spec->isMine || $spec->cardSelection !== null) return;
-        if ($spec->form === null) {
-            $items = []; $remaining = []; $hidden = null;
-            foreach ($spec->buttons as $button) {
-                parse_str((string) parse_url($button['url'], PHP_URL_QUERY), $query);
-                if (!in_array($query['cmd'] ?? '', ['choose_instant_pick', 'choose_combat_pick', 'choose_revive_target', 'choose_death_target', 'attack_series_next'], true)
-                    || !isset($query['target_id']) || !$state->getCard((int) $query['target_id'])) {
-                    $remaining[] = $button; continue;
-                }
-                $card = $state->getCard((int) $query['target_id']);
-                $items[] = self::item($card, (string) ($catalog[$card->ukid]['name'] ?? $card->ukid), $viewer);
-                unset($query['target_id']); $hidden ??= $query;
-            }
-            if ($items) {
-                $spec->buttons = [];
-                foreach ($remaining as $button) {
-                    if (str_contains($button['url'],'cmd=cancel_pending')) $cancel=$button['url'];
-                    else $spec->buttons[]=$button;
-                }
-                $spec->form = ['type' => 'radio', 'name' => 'target_id', 'items' => $items, 'hidden' => $hidden, 'submit' => 'Выбрать'];
-                if (isset($cancel)) $spec->form['cancel']=$cancel;
-            }
-        }
         if ($spec->form === null || !in_array($spec->form['name'] ?? '', ['target_id', 'target_ids[]', 'card_id'], true)) return;
         $showHealth = in_array($spec->form['hidden']['cmd'] ?? '', ['choose_multi_heal', 'choose_wild_healer_heal', 'wt_target'], true)
             || (($spec->form['hidden']['cmd'] ?? '') === 'choose_instant_pick'

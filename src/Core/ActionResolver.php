@@ -491,7 +491,50 @@ final class ActionResolver
             $this->state->bumpVersion();
             return Result::ok(['coin_block_pending']);
         }
-        $dice   = CardRoll::roll($this->state, $attacker);
+        return (new SingleRoll($this->state,$this->engine))->begin($attacker,$target,'uchr',$uchrAction,'uchr',
+            ['mid_id'=>$midCard?->instanceId]);
+    }
+
+    /** Called only after SingleRoll consumes the persisted continuation. */
+    public function resumeSingleRoll(array $roll): Result
+    {
+        $source=$this->state->getCard($roll['attacker_id']);
+        $target=$this->state->getCard($roll['target_id']);
+        if (!$source || !$target) return Result::error('Roll participant missing');
+        $to=$roll['return_to'];
+        if ($to['handler']==='uchr') {
+            if ($roll['stage']==='window') {
+                $dr=abs($source->row-$target->row);$dc=abs($source->col-$target->col);
+                $legal=$source->zone===CardInstance::ZONE_FIELD && $target->zone===CardInstance::ZONE_FIELD
+                    && $dr+$dc===2 && ($dr===0 || $dc===0);
+                foreach ($this->state->cards as $card) {
+                    if ($card->zone===CardInstance::ZONE_FIELD && $card->row===(int)(($source->row+$target->row)/2)
+                        && $card->col===(int)(($source->col+$target->col)/2) && $card->owner!==$roll['owner']) $legal=false;
+                }
+                if (!$legal) {
+                    ActionResolution::resolve($this->state,$roll,'cancelled',['hit'=>false]);
+                    return Result::ok(['single_roll_target_lost']);
+                }
+            }
+            return $this->continueUchrRoll($source,$target,$to['action'],
+                $this->state->getCard((int)($to['mid_id']??0)),$roll['owner'],$roll['attack_dice']);
+        }
+        if ($to['handler']!=='damage') throw new \LogicException('Unknown roll continuation');
+        if ($roll['stage']==='window' && $this->validateTarget($source,$target,$to['action'],$roll['kind'],$roll['owner'])!==null) {
+            ActionResolution::resolve($this->state,$roll,'cancelled',['hit'=>false]);
+            return Result::ok(['single_roll_target_lost']);
+        }
+        return $this->continueDamageRoll($source,$target,$to['action'],$roll['kind'],$roll['owner'],
+            $to['forced_coin_spend']??null,$roll['attack_dice']);
+    }
+
+    /** Post-roll tail only: validation, closure and blocking were completed before the saved roll. */
+    private function continueUchrRoll(CardInstance $attacker, CardInstance $target, array $uchrAction,
+        ?CardInstance $midCard, string $playerKey, int $dice): Result
+    {
+        $cardId = $attacker->instanceId;
+        $targetId = $target->instanceId;
+        $coins = new CoinAbilities($this->state, $this->engine);
         $level  = BattleHelper::diceToLevel($dice);
         $strikeAura = CardStats::hasHorizontalStrikeReduction($this->state, $target);
         if ($strikeAura) $level = 'weak';
@@ -517,6 +560,10 @@ final class ActionResolver
             'damage'      => $val,
             'confirmed'   => [],
         ];
+        if (in_array($type ?? 'uchr',['tap','magic','uchr'],true) && !empty(($action ?? $uchrAction)['_instant_windows_allowed'])) {
+            $this->state->battle['strike']['wounds_received']=[];
+            $this->state->battle['strike']['stage_d_attack']=true;
+        }
         if ($strikeAura) $this->state->battle['strike']['strike_aura']['attack'] = true;
 
         if (TempleWarrior::rangedBlock($this->state,$target,'uchr')) {
@@ -529,11 +576,44 @@ final class ActionResolver
         $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, 'uchr');
         $val -= $reduction;
         if ($val < 0) $val = 0;
+        $type='uchr';$action=$uchrAction;$midId=$midCard?->instanceId;
+        $locals=compact('val','level','strikeAura','reduction','cardId','targetId','playerKey','dice','action','type','midId');
+        if ((new SingleRoll($this->state,$this->engine))->suspendValue($locals,'uchr_value')) {
+            $this->state->bumpVersion();return Result::ok(['strike_value_window']);
+        }
+        return $this->continueUchrValue($locals);
+    }
+
+    public function cancelAttackValue(array $roll): void
+    {
+        $locals=$roll['return_to']['locals'];$source=$this->state->getCard($locals['cardId']);
+        if ($source) {
+            if (empty($locals['action']['no_close'])) $source->closed=true;
+            $this->consumeNextActionBonuses($source,$locals['type']);
+        }
+        CombatContinuation::localDone($this->state,$this->state->battle['strike']??[]);
+        $this->state->battle['strike']=null;
+    }
+
+    public function resumeAttackValue(array $roll): Result
+    {
+        $locals=$roll['return_to']['locals'];$locals['val']=$roll['computed_value'];
+        if (isset($roll['damage_cap'])) $locals['damage_cap']=$roll['damage_cap'];
+        return $roll['return_to']['handler']==='uchr_value'?$this->continueUchrValue($locals):$this->continueDamageValue($locals);
+    }
+
+    private function continueUchrValue(array $locals): Result
+    {
+        extract($locals,EXTR_SKIP);
+        $attacker=$this->state->getCard($cardId);$target=$this->state->getCard($targetId);
+        $uchrAction=$action;$midCard=$this->state->getCard((int)($midId??0));
+        $coins=new CoinAbilities($this->state,$this->engine);
         $val = CardStats::setIncomingStrikeValue($this->state, $target, $val);
         if (isset($target->effectiveProp()['closed_strike_value']) && CardStats::combatClosed($this->state, $target)) {
             $this->state->battle['strike']['strike_value_set']['attack'] = $val;
         }
 
+        if (isset($locals['damage_cap'])) $val=min($val,(int)$locals['damage_cap']);
         $attackReduction = $this->engine->reduceAttackValueByCellMarkers($this->state, $attacker, $val);
         $val = (int) $attackReduction['value'];
         foreach ($attackReduction['events'] as $event) {
@@ -587,6 +667,7 @@ final class ActionResolver
         $this->state->bumpVersion();
         $coins->offerGain($attacker, $uchrAction);
         $coins->triggerDischarge($attacker, $woundsDealt, 'uchr');
+        if (!empty($this->state->battle['strike']['stage_d_attack'])) $this->state->battle['strike']['damage_applied']=true;
         return Result::ok(["uchr:{$playerKey}:{$cardId}->{$targetId}:dice={$dice}:dmg={$val}"]);
     }
 
@@ -1371,7 +1452,19 @@ final class ActionResolver
             $attacker->flags[$action['_granted_flag_key']]['used'] = true;
         }
 
-        $dice   = CardRoll::roll($this->state, $attacker);
+        if (in_array($type,['tap','magic','shot','throw','discharge'],true))
+            return (new SingleRoll($this->state,$this->engine))->begin($attacker,$target,$type,$action,'damage',
+                ['forced_coin_spend'=>$forcedCoinSpend]);
+        $dice = CardRoll::roll($this->state,$attacker);
+        return $this->continueDamageRoll($attacker,$target,$action,$type,$playerKey,$forcedCoinSpend,$dice);
+    }
+
+    /** Resume strictly after the primary roll; never repeats validation, action cost or redirection. */
+    private function continueDamageRoll(CardInstance $attacker, CardInstance $target, array $action,
+        string $type, string $playerKey, ?int $forcedCoinSpend, int $dice): Result
+    {
+        $cardId = $attacker->instanceId;
+        $targetId = $target->instanceId;
         $level  = BattleHelper::diceToLevel($dice);
         $strikeAura = in_array($type, ['tap', 'magic'], true)
             && CardStats::hasHorizontalStrikeReduction($this->state, $target);
@@ -1479,6 +1572,10 @@ final class ActionResolver
             'defended'    => $defended,
             'confirmed'   => [],
         ];
+        if (in_array($type ?? 'uchr',['tap','magic','uchr'],true) && !empty(($action ?? $uchrAction)['_instant_windows_allowed'])) {
+            $this->state->battle['strike']['wounds_received']=[];
+            $this->state->battle['strike']['stage_d_attack']=true;
+        }
         if ($strikeAura) $this->state->battle['strike']['strike_aura']['attack'] = true;
 
         $this->state->battle['strike'][ActionResolution::ID] = $action[ActionResolution::ID];
@@ -1536,6 +1633,18 @@ final class ActionResolver
         $reduction = CardStats::getDamageReduction($this->state, $attacker, $target, $type, null, $extraIgnore);
         $val -= $reduction;
         if ($val < 0) $val = 0;
+        $locals=compact('val','level','strikeAura','reduction','cardId','targetId','playerKey','dice','action','type',
+            'defended','extraIgnore','abilityBonus','shotBonus','nextActionBonus','coinBonus','coinsSpent','rowsBonus','targetModifierBonus','flyingBonus');
+        if ((new SingleRoll($this->state,$this->engine))->suspendValue($locals,'damage_value')) {
+            $this->state->bumpVersion();return Result::ok(['strike_value_window']);
+        }
+        return $this->continueDamageValue($locals);
+    }
+
+    private function continueDamageValue(array $locals): Result
+    {
+        extract($locals,EXTR_SKIP);
+        $attacker=$this->state->getCard($cardId);$target=$this->state->getCard($targetId);
         if (in_array($type, ['tap', 'magic'], true) && !$defended) {
             $val = CardStats::setIncomingStrikeValue($this->state, $target, $val);
             if (isset($target->effectiveProp()['closed_strike_value']) && CardStats::combatClosed($this->state, $target)) {
@@ -1543,6 +1652,7 @@ final class ActionResolver
             }
         }
 
+        if (isset($locals['damage_cap'])) $val=min($val,(int)$locals['damage_cap']);
         $attackReduction = $this->engine->reduceAttackValueByCellMarkers($this->state, $attacker, $val);
         $val = (int) $attackReduction['value'];
         foreach ($attackReduction['events'] as $event) {
@@ -1616,6 +1726,7 @@ final class ActionResolver
         if (empty($action['_coin_post_combat'])) {
             (new CoinAbilities($this->state, $this->engine))->triggerDischarge($attacker, $woundsDealt, $type);
         }
+        if (!empty($this->state->battle['strike']['stage_d_attack'])) $this->state->battle['strike']['damage_applied']=true;
         return Result::ok(["action:{$playerKey}:{$type}:{$cardId}->{$targetId}:dmg={$val}"]);
     }
 
@@ -2255,6 +2366,9 @@ final class ActionResolver
             'value'       => (int) ($action['value'] ?? 1),
         ];
 
+        if (($action['key'] ?? null) === 'triple_discharge') {
+            $this->state->battle['pending_multi_discharge']['series_id'] = $this->state->version;
+        }
         $this->state->bumpVersion();
         return Result::ok(['multi_discharge_started']);
     }
@@ -2262,6 +2376,10 @@ final class ActionResolver
     public function chooseMultiDischarge(string $playerKey, Command $cmd): Result
     {
         if ($skipped = $this->skipSuppressedChoice($playerKey, 'pending_multi_discharge', 'attacker_id')) return $skipped;
+        $pending = $this->state->battle['pending_multi_discharge'] ?? [];
+        if (self::isDischargeSeries($pending)) {
+            return $this->chooseDischargeSeriesTarget($playerKey, $cmd, $pending);
+        }
         $parsed = $this->parseMultiPick($playerKey, $cmd, 'pending_multi_discharge');
         if ($parsed instanceof Result) return $parsed;
 
@@ -2271,6 +2389,18 @@ final class ActionResolver
 
         $value   = (int) $pmd['value'];
         $results = [];
+        $targets = [];
+        foreach ($targetIds as $tid) {
+            $target = $this->state->getCard($tid);
+            if (!$target) continue;
+            $targets[$tid] = $target;
+            $results[$tid] = [
+                'target_id' => $tid,
+                'damage' => 0,
+                'defended' => CardStats::hasDefense($this->state, $target, 'discharge', $attacker),
+            ];
+        }
+        $blocked = in_array(true, array_column($results, 'defended'), true);
 
         InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
@@ -2289,38 +2419,156 @@ final class ActionResolver
             'confirmed'   => [],
         ];
 
-        ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'multi_discharge'], $pmd['action'] ?? []));
-        foreach ($targetIds as $tid) {
-            $target = $this->state->getCard($tid);
-            if (!$target) continue;
+        $action = array_replace(['type'=>'multi_discharge'], $pmd['action'] ?? []);
+        if ($blocked) {
+            $this->state->battle['strike'][ActionResolution::ID] = ActionResolution::bind($this->state, $action, $attacker, 'multi_discharge');
+            ActionResolution::resolve($this->state, $action, 'blocked', ['hit'=>false]);
+        } else {
+            ActionResolution::performed($this->state, $attacker, $action);
+        }
+        foreach ($targets as $tid => $target) {
+            $results[$tid]['dice'] = CardRoll::roll($this->state, $attacker);
+            if ($blocked) continue;
 
             $hpBefore = $target->hp;
-
-            if (CardStats::hasDefense($this->state, $target, 'discharge', $attacker)) {
-                $results[] = ['target_id' => $tid, 'damage' => 0, 'defended' => true];
-                continue;
-            }
-
             $this->engine->applyDamage($this->state, $target, $value, 'discharge', $attacker);
-
-            $results[] = [
-                'target_id' => $tid,
-                'damage'    => max(0, $hpBefore - $target->hp),
-                'defended'  => false,
-            ];
+            $results[$tid]['damage'] = max(0, $hpBefore - $target->hp);
         }
 
         $attacker->closed = true;
 
-        $this->state->battle['strike']['discharged'] = $results;
+        $this->state->battle['strike']['multi_discharge_blocked'] = $blocked;
+        $this->state->battle['strike']['discharged'] = array_values($results);
 
         $this->engine->flushDeadeatQueue($this->state);
         $this->state->bumpVersion();
         return Result::ok(['multi_discharge_done']);
     }
 
+    public static function isDischargeSeries(array $pending): bool
+    {
+        return ($pending['action']['key'] ?? null) === 'triple_discharge';
+    }
+
+    private function chooseDischargeSeriesTarget(string $owner, Command $cmd, array $pending): Result
+    {
+        $source = $this->state->getCard((int) $pending['attacker_id']);
+        if (!$source || $source->owner !== $owner || !CardHealing::live($source)) {
+            return Result::error('Источник разряда недоступен');
+        }
+        $ids = $cmd->get('target_ids', []);
+        if (!is_array($ids) || count($ids) !== 1) return Result::error('Выберите одну цель');
+        $id = (int) reset($ids);
+        $target = $this->state->getCard($id);
+        if (!in_array($id, $pending['candidates'], true) || !CardHealing::live($target) || $target->owner === $owner) {
+            return Result::error('Неверная цель');
+        }
+
+        $dice = CardRoll::roll($this->state, $source);
+        $level = BattleHelper::diceToLevel($dice);
+        $defended = CardStats::hasDefense($this->state, $target, 'discharge', $source);
+        $pending['series_id'] ??= $this->state->version;
+        $pending['results'] ??= [];
+        $pending['candidates'] = array_values(array_diff($pending['candidates'], [$id]));
+        $action = $pending['action'];
+        $pending[ActionResolution::ID] = ActionResolution::bind($this->state, $action, $source, 'multi_discharge');
+
+        unset($this->state->battle['pending_multi_discharge']);
+        $this->state->battle['multi_discharge_series'] = $pending;
+        InformationalWaitManager::publish($this->state);
+        $this->state->battle['strike'] = [
+            'kind'=>'discharge', 'state'=>'results', 'attacker_id'=>$source->instanceId,
+            'target_id'=>$id, 'defender_id'=>null, 'action_name'=>$action['name'] ?? 'Тройной разряд',
+            'attack_dice'=>$dice, 'defend_dice'=>0, 'damage'=>0, 'damage_total'=>0, 'confirmed'=>[],
+            'result'=>['attack'=>$level, 'defend'=>'', 'winner'=>'attack'],
+            'final'=>['attack'=>$level, 'defend'=>'', 'decreased'=>false],
+            'defended'=>$defended, 'prepared_discharge_damage'=>$defended ? 0 : (int) $pending['value'],
+            ActionResolution::ID=>$pending[ActionResolution::ID],
+        ];
+        $this->state->bumpVersion();
+        return Result::ok(['multi_discharge_prepared']);
+    }
+
+    /** Called at the same result acknowledgement boundary as the Hydra's series. */
+    public function finishDischargeSeriesStrike(array $strike): bool
+    {
+        $series = $this->state->battle['multi_discharge_series'] ?? null;
+        if (!$series || ($strike[ActionResolution::ID] ?? null) !== $series[ActionResolution::ID]) return false;
+        unset($this->state->battle['multi_discharge_series']);
+        $series['action'][ActionResolution::ID] = $series[ActionResolution::ID];
+        $series['results'][] = [
+            'target_id'=>(int) ($strike['target_id'] ?? 0),
+            'dice'=>(int) ($strike['attack_dice'] ?? 0),
+            'damage'=>(int) ($strike['damage_total'] ?? $strike['damage'] ?? 0),
+            'defended'=>!empty($strike['defended']) || !empty($strike['first_strike_blocked'])
+                || !empty($strike['coin_blocked']) || !empty($strike['temple_defense']['blocked']),
+        ];
+        if (isset($strike['prepared_discharge_damage'])) {
+            $series['results'][array_key_last($series['results'])]['prepared_damage'] = $strike['prepared_discharge_damage'];
+        }
+        $blocked = in_array(true, array_column($series['results'], 'defended'), true);
+        $source = $this->state->getCard((int) $series['attacker_id']);
+        $lastTarget = (int) ($strike['target_id'] ?? 0);
+        $series['candidates'] = array_values(array_filter($series['candidates'], function (int $id) use ($lastTarget): bool {
+            $card = $this->state->getCard($id);
+            return $id !== $lastTarget && CardHealing::live($card);
+        }));
+        if ($this->state->status !== 'battle' || $this->state->winner !== null) return true;
+        if (!$blocked && CardHealing::live($source) && !EffectiveFeatures::suppressed($source)
+            && count($series['results']) < (int) $series['max_targets'] && $series['candidates']) {
+            $this->state->battle['pending_multi_discharge'] = $series;
+            return true;
+        }
+        if (CardHealing::live($source) && !EffectiveFeatures::suppressed($source)) {
+            foreach ($series['results'] as &$result) {
+                $target = $this->state->getCard($result['target_id']);
+                if (isset($result['prepared_damage']) && CardHealing::live($target)
+                    && CardStats::hasDefense($this->state, $target, 'discharge', $source)) {
+                    $result['defended'] = true;
+                    $blocked = true;
+                }
+            }
+            unset($result);
+        } else {
+            $blocked = true;
+        }
+        if (CardHealing::live($source)) $source->closed = true;
+        InformationalWaitManager::publish($this->state);
+        $this->state->battle['strike'] = [
+            'kind'=>'multi_discharge', 'state'=>'results', 'attacker_id'=>$series['attacker_id'],
+            'target_id'=>$series['results'][0]['target_id'], 'defender_id'=>null,
+            'action_name'=>($series['action']['name'] ?? 'Тройной разряд') . ' — итог',
+            'attack_dice'=>0, 'defend_dice'=>0, 'damage'=>0, 'confirmed'=>[],
+            'result'=>['attack'=>'', 'defend'=>'', 'winner'=>''],
+            'final'=>['attack'=>'', 'defend'=>'', 'decreased'=>false],
+            'multi_discharge_blocked'=>$blocked, 'discharged'=>$series['results'],
+            ActionResolution::ID=>$series[ActionResolution::ID],
+        ];
+        if ($source && isset($strike['prepared_discharge_damage'])) {
+            ActionResolution::resolve($this->state, $series['action'], $blocked ? 'blocked' : 'performed', ['hit'=>!$blocked]);
+        }
+        if (!$blocked) {
+            foreach ($series['results'] as $index => $result) {
+                $target = $this->state->getCard($result['target_id']);
+                if (!isset($result['prepared_damage']) || !CardHealing::live($target)) continue;
+                $before = $target->hp;
+                $this->engine->applyDamage($this->state, $target, $result['prepared_damage'], 'discharge', $source);
+                $this->state->battle['strike']['discharged'][$index]['damage'] = max(0, $before - $target->hp);
+            }
+            $this->engine->flushDeadeatQueue($this->state);
+        }
+        return true;
+    }
+
     public function cancelPending(string $playerKey, Command $cmd): Result
     {
+        if (isset($this->state->battle['single_roll'],$this->state->battle['pending_dice_choice'])) {
+            if ($this->state->battle['pending_dice_choice']['owner']!==$playerKey) return Result::error('Не ваш выбор');
+            unset($this->state->battle['pending_dice_choice']);
+            (new InstantProcessor($this->state,$this->engine))->completePausedCombatItem(false,'отмена');
+            $this->state->bumpVersion();return Result::ok(['dice_choice_cancelled']);
+        }
+
         $state = $this->state;
         $resolutionPendingBefore = $state->battle;
 
@@ -2949,6 +3197,7 @@ final class ActionResolver
         }
 
         $this->state->battle['pending_grezy'] = [
+            'opened_version' => $this->state->version,
             'attacker_id'  => $attacker->instanceId,
             'shown_ukid'   => $pp['shown_ukids'][0],
             'price'        => $price,
@@ -3505,6 +3754,10 @@ final class ActionResolver
                     'timing' => 'end_of_opponent_turn',
                 ]);
             }
+            $this->state->battle['gate_notice'] = [
+                'turn'=>$this->state->battle['turn'], 'id'=>$this->state->version,
+                'cells'=>$this->state->battle['pending_gate_pick']['chosen'],
+            ];
             unset($this->state->battle['pending_gate_pick']);
 
             if (!empty($this->state->battle['turn_phase'])) {
@@ -4470,6 +4723,22 @@ final class ActionResolver
         return Result::ok(['particle_done']);
     }
 
+    /** Current living targets, shared by opening, rendering and confirmation. */
+    public function lifeGiftTargets(string $playerKey): array
+    {
+        $enemies = [];
+        $allies = [];
+        foreach ($this->state->cards as $card) {
+            if (!CardHealing::live($card)) continue;
+            if ($card->owner === $playerKey) {
+                $allies[] = $card->instanceId;
+            } else {
+                $enemies[] = $card->instanceId;
+            }
+        }
+        return ['enemies' => $enemies, 'allies' => $allies];
+    }
+
     private function startLifeGift(
         CardInstance $attacker, array $action,
         int $cardId, string $playerKey
@@ -4483,18 +4752,7 @@ final class ActionResolver
             return Result::error('Не хватает монет');
         }
 
-        $enemies = [];
-        $allies  = [];
-        foreach ($this->state->cards as $c) {
-            if ($c->zone !== CardInstance::ZONE_FIELD
-                && $c->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($c->dying || $c->hp <= 0) continue;
-            if ($c->owner === $playerKey) {
-                $allies[] = $c->instanceId;
-            } else {
-                $enemies[] = $c->instanceId;
-            }
-        }
+        ['enemies' => $enemies, 'allies' => $allies] = $this->lifeGiftTargets($playerKey);
 
         if (empty($enemies)) {
             return Result::error('Нет целей-врагов');
@@ -4504,6 +4762,7 @@ final class ActionResolver
         }
 
         $this->state->battle['pending_life_gift'] = [
+            'opened_version' => $this->state->version,
             'owner'     => $playerKey,
             'card_id'   => $cardId,
             'min_x'     => $min,
@@ -4524,9 +4783,33 @@ final class ActionResolver
             return Result::error('Не ваш выбор');
         }
 
-        $x = (int) $cmd->get('amount', 0);
-        $enemyId = (int) $cmd->get('enemy_id', 0);
-        $allyId  = (int) $cmd->get('ally_id', 0);
+        $step = $p['step'] ?? 'amount';
+        if ($step === 'amount') {
+            $x = (int) $cmd->get('amount', 0);
+            $source = $this->state->getCard((int) $p['card_id']);
+            if (!$source || $x < (int) $p['min_x'] || $x > min((int) $p['max_x'], $source->coins)) {
+                return Result::error('Неверное количество монет');
+            }
+            $this->state->battle['pending_life_gift']['amount'] = $x;
+            $this->state->battle['pending_life_gift']['step'] = 'enemy';
+            $this->state->bumpVersion();
+            return Result::ok(['life_gift_enemy']);
+        }
+        if ($step === 'enemy') {
+            $enemyId = (int) $cmd->get('enemy_id', 0);
+            $current = $this->lifeGiftTargets($playerKey);
+            if (!in_array($enemyId, $p['enemies'], true) || !in_array($enemyId, $current['enemies'], true)) {
+                return Result::error('Неверная цель-враг');
+            }
+            $this->state->battle['pending_life_gift']['enemy_id'] = $enemyId;
+            $this->state->battle['pending_life_gift']['step'] = 'ally';
+            $this->state->bumpVersion();
+            return Result::ok(['life_gift_ally']);
+        }
+        if ($step !== 'ally') return Result::error('Неверный этап выбора');
+        $x = (int) $p['amount'];
+        $enemyId = (int) $p['enemy_id'];
+        $allyId = (int) $cmd->get('ally_id', 0);
 
         if ($x < (int) $p['min_x'] || $x > (int) $p['max_x']) {
             return Result::error('Неверное количество монет');
@@ -4548,6 +4831,17 @@ final class ActionResolver
         $ally  = $this->state->getCard($allyId);
         if (!$enemy || !$ally) {
             return Result::error('Цель не найдена');
+        }
+
+        $current = $this->lifeGiftTargets($playerKey);
+        if (!in_array($enemyId, $current['enemies'], true)
+            || !in_array($allyId, $current['allies'], true)) {
+            return Result::error('Цель больше недоступна');
+        }
+
+        if (!CardHealing::live($attacker) || $attacker->owner !== $playerKey
+            || $attacker->closed || $attacker->coins < $x) {
+            return Result::error('Источник или монеты больше недоступны');
         }
 
         unset($this->state->battle['pending_life_gift']);
@@ -4880,7 +5174,7 @@ final class ActionResolver
         $dice = isset($p['dice']) ? (int) $p['dice'] : 0;
         $level = isset($p['level']) ? (string) $p['level'] : '';
         $val = isset($p['val']) ? (int) $p['val'] : BattleHelper::actionStrikeValue($action, $level);
-        if ($dice < 1 || $dice > 6 || !in_array($level, ['weak', 'medium', 'strong'], true)) {
+        if ($dice < 1 || !in_array($level, ['weak', 'medium', 'strong'], true)) {
             return Result::error('Результат кубика не сохранён');
         }
 

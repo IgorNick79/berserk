@@ -279,6 +279,8 @@ final class ValhallaProcessor
             case 'ragnar_first_strike_unanswer':
                 $source->flags['ragnar_valhalla_resolved_this_turn'] =
                     ((int) ($source->flags['ragnar_valhalla_resolved_this_turn'] ?? 0)) + 1;
+                $source->flags['ragnar_valhalla_resolved_period'] =
+                    ($this->state->battle['turn'] ?? 0) . ':' . ($this->state->battle['active'] ?? '');
                 break;
 
             case 'modifier':

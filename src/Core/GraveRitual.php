@@ -42,6 +42,11 @@ final class GraveRitual {
   $p=$this->s->battle[self::PENDING]??null;
   if($p&&!empty($p['result'])){
    if($p['owner']!==$owner||$cmd->get('operation_id')!==$p['id']||!$cmd->get('ack'))return Result::error('Устаревшее подтверждение');
+   $this->s->battle['grave_ritual_notice'][$this->s->getOpponentKey($owner)] = [
+    'turn'=>$this->s->battle['turn'], 'id'=>$p['id'],
+    'source_ukid'=>$this->s->getCard($p['source_id'])->ukid,
+    'milled_ukid'=>$this->s->getCard($p['milled_id'])->ukid,
+   ];
    unset($this->s->battle[self::PENDING]);$this->s->battle['grave_ritual']['stage']='acknowledged';$this->advance();$this->s->bumpVersion();return Result::ok();
   }
   $c=$this->s->getCard((int)$cmd->get('target_id'));

@@ -26,13 +26,48 @@
     var reduced = matchMedia('(prefers-reduced-motion:reduce)');
 
     // Presentation state only: never issues a command or changes a selected target.
+    function syncCellIndicators(stack) {
+        var row = stack.querySelector(':scope > .cell-indicators');
+        if (!row) {
+            row = document.createElement('div');
+            row.className = 'mini-indicators cell-indicators';
+            stack.append(row);
+        }
+        var old = row.querySelector('[data-indicator-home]');
+        if (old) {
+            var home = stack.querySelector('[data-cell-occupant="' + old.dataset.indicatorHome + '"] [data-mini-card]');
+            if (home) home.append(old);
+        }
+        var occupant = stack.querySelector(':scope > [data-cell-occupant]:not([hidden])');
+        var indicators = occupant && occupant.querySelector('.mini-indicators');
+        if (indicators) {
+            indicators.dataset.indicatorHome = occupant.dataset.cellOccupant;
+            row.prepend(indicators);
+        }
+        var star = stack.querySelector('.cell-marker-badge');
+        if (star && star.parentElement !== row) row.append(star);
+        var coin = row.querySelector('[data-indicator-kind="coin"]');
+        var effects = row.querySelector('[data-indicator-kind="effects"]');
+        var combined = Boolean(coin && effects && star
+            && row.querySelector('[data-indicator-kind="armor"]')
+            && row.querySelector('[data-indicator-kind="poison"]'));
+        if (coin) coin.hidden = combined;
+        row.querySelectorAll('[data-combined-coins]').forEach(function (node) { node.remove(); });
+        if (combined) {
+            var text = document.createElement('div');
+            text.dataset.combinedCoins = '';
+            text.textContent = coin.getAttribute('aria-label');
+            effects.querySelector('.mini-hint-text').append(text);
+        }
+    }
     var cellSelection = new Map();
     function showOccupant(stack, id) {
         var cards = Array.from(stack.querySelectorAll(':scope > [data-cell-occupant]'));
-        if (!cards.length) return;
+        if (!cards.length) { syncCellIndicators(stack); return; }
         var chosen = cards.find(function (card) { return card.dataset.cellOccupant === id; }) || cards[0];
         cards.forEach(function (card) { card.hidden = card !== chosen; });
         cellSelection.set(stack.dataset.cellStack, chosen.dataset.cellOccupant);
+        syncCellIndicators(stack);
         stack.closest('.field-cell').className = 'field-cell ' + chosen.dataset.occupantClass;
         var counter = stack.querySelector('[data-cell-counter]');
         if (counter) counter.textContent = (cards.indexOf(chosen) + 1) + '/' + cards.length;
@@ -99,7 +134,10 @@
         var card = cardAt(node) || node;
         var r = card.getBoundingClientRect();
         tip.style.left = Math.max(8, Math.min(r.left + r.width / 2 - tip.offsetWidth / 2, innerWidth - tip.offsetWidth - 8)) + 'px';
-        var top = hintKind === 'name' || node.hasAttribute('data-cell-hint') || node.hasAttribute('data-view-element') ? r.bottom + 8 : r.top + r.height / 2 - tip.offsetHeight / 2;
+        var inCellRow = node.closest('.cell-indicators');
+        var anchor = inCellRow ? node.getBoundingClientRect() : r;
+        var top = inCellRow || hintKind === 'name' || node.hasAttribute('data-cell-hint') || node.hasAttribute('data-view-element')
+            ? anchor.bottom + 8 : r.top + r.height / 2 - tip.offsetHeight / 2;
         var indicators = card.querySelector('.mini-indicators');
         if (hintKind === 'indicator' && indicators) top = Math.max(top, indicators.getBoundingClientRect().bottom + 4);
         tip.style.top = Math.max(8, Math.min(top, innerHeight - tip.offsetHeight - 8)) + 'px';

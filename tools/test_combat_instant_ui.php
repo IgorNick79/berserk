@@ -276,4 +276,33 @@ ciuAssert(str_contains($html, 'Черная метка: кубик 1 -&gt; +2 у
 ciuAssert(str_contains($html, 'Отвлекающая вспышка: без эффекта'), 'Result screen should show no-op instants.');
 ciuAssert(str_contains($html, 'Итого по цели: <b>5</b> урона'), 'Result screen should show final target damage including instant damage.');
 
+// The same combat presentation must remain visible before any single-roll instant is played.
+unset($state->battle['strike']);
+foreach (['tap', 'magic', 'uchr', 'shot', 'throw', 'discharge'] as $kind) {
+    $state->battle['single_roll'] = [
+        'kind' => $kind, 'attacker_id' => 1, 'target_id' => 2,
+        'owner' => GameState::PLAYER_HOST, 'target_owner' => GameState::PLAYER_PLAYER,
+        'attack_dice' => 5, 'attack_mod' => -1, 'original_dice' => 5,
+        'state' => 'waiting_instant', 'stage' => 'window',
+        'instant_phase' => 'combat', 'combat_instant_window' => 'dice',
+        'instant_priority' => GameState::PLAYER_HOST, 'instant_stack' => [],
+    ];
+    foreach ([GameState::PLAYER_HOST, GameState::PLAYER_PLAYER] as $viewer) {
+        $html = $screen->prepare($state, $viewer, $viewer, null, $cardsInfo)['data']['info_panel_html'];
+        ciuAssert(str_contains($html, '>Сражение</h3>'), "$kind: ordinary combat heading");
+        ciuAssert(str_contains($html, 'class="strike-box"'), "$kind: ordinary combat template");
+        ciuAssert(str_contains($html, 'dice_5.svg') && str_contains($html, '= 4'), "$kind: actual die and modifier");
+        ciuAssert(substr_count($html, 'class="dice-col"') === 1, "$kind: only one real die");
+        ciuAssert(str_contains($html, $viewer === GameState::PLAYER_HOST ? 'Ваш приоритет' : 'оппонент решает'), "$kind: priority instruction");
+    }
+    $state->battle['single_roll']['computed_value'] = 3;
+    $state->battle['single_roll']['combat_instant_window'] = 'main';
+    $html = $screen->prepare($state, GameState::PLAYER_HOST, 'host', null, $cardsInfo)['data']['info_panel_html'];
+    ciuAssert(str_contains($html, 'величина удара: <b>3</b>') && str_contains($html, 'dice_5.svg'), "$kind: value phase retains die");
+    $state->battle['single_roll']['stage'] = 'results';
+    $state->battle['single_roll']['state'] = 'results';
+    $state->battle['single_roll']['confirmed'] = [GameState::PLAYER_HOST];
+    $html = $screen->prepare($state, GameState::PLAYER_HOST, 'host', null, $cardsInfo)['data']['info_panel_html'];
+    ciuAssert(str_contains($html, 'Ожидание подтверждения противника') && str_contains($html, 'dice_5.svg'), "$kind: ACK retains combat context");
+}
 echo "Combat instant UI tests passed.\n";

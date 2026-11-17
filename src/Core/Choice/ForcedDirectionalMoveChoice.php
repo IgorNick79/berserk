@@ -56,6 +56,7 @@ final class ForcedDirectionalMoveChoice implements ChoiceHandlerInterface
             $items[] = [
                 'value' => $card->instanceId,
                 'label' => $name,
+                'suffix' => ' → ' . \Berserk\View\Ui\BattlefieldPosition::label($destination['row'], $destination['col'], $playerKey),
                 'label_html' => '<span class="directional-target-option"><span>'
                     . htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>'
                     . Coords::renderResult($destination['row'], $destination['col'], $playerKey, $card->owner) . '</span>',
@@ -68,7 +69,10 @@ final class ForcedDirectionalMoveChoice implements ChoiceHandlerInterface
                 'type' => 'radio', 'name' => 'target_id', 'items' => $items,
                 'hidden' => Form::battleHidden($role, $state->gameId, 'choose_forced_directional_move'),
                 'submit' => 'Переместить', 'cancel' => $baseUrl . '&cmd=cancel_pending',
+                'side_toggle' => false,
             ],
+            cardSelection: \Berserk\View\Ui\CreatureChoice::confirmed($state, $playerKey, $cardsInfo, $items,
+                'tovi:' . $pending['source_id'] . ':' . $deltaRow . ':' . $deltaCol),
         );
     }
 

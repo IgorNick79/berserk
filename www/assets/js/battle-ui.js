@@ -137,6 +137,7 @@
     // Local combat/card view survives snapshots without changing game/UI URLs.
     var combatHost = root.querySelector("[data-battle-fragment='info_panel_html']");
     var combatKey = null, inspectedCombatCard = 0, combatCardViewOpen = false, closedCardId = 0;
+    var instantResultKey = '', resultCardInspection = false;
     var secondaryDock=document.createElement('div'), secondary=null, prioritySignature='';
     secondaryDock.className='battle-secondary-view game-chat'; secondaryDock.hidden=true;
     root.secondaryPanel=function(panel){
@@ -147,7 +148,21 @@
         if (!combatHost) return;
         var content = combatHost.querySelector('.info-panel-content');
         if (!content) return;
+        // Older AJAX fragments used a generic wait paragraph for card status.
+        // Normalize only the shared status messages, never effect descriptions.
+        content.querySelectorAll('.panel-card-details > p.wait').forEach(function (status) {
+            if (['Карта закрыта', 'Карта находится в сети', 'Нет целей', 'Выберите цель атаки'].indexOf(status.textContent.trim()) < 0) return;
+            status.classList.replace('wait', 'panel-card-status');
+            status.setAttribute('role', 'status');
+            status.setAttribute('data-panel-card-status', '');
+        });
         var key = content.dataset.combatKey || '';
+        var resultKey = content.dataset.instantResult || '';
+        if (resultKey !== instantResultKey) {
+            instantResultKey = resultKey;
+            resultCardInspection = false;
+            if (resultKey) { inspectedCombatCard = 0; combatCardViewOpen = false; }
+        }
         var priority = content.dataset.panelPriority === '1' || !!content.querySelector('[data-match-pause-content]');
         var eventBody=combatHost.querySelector('.info-panel-instants') || content.querySelector('.info-panel-context,[data-match-pause-content]');
         var eventCopy=eventBody && eventBody.cloneNode(true);
@@ -167,9 +182,13 @@
         var selected = content.querySelector("[data-battle-fragment='panel_html']");
         var context = content.querySelector('.info-panel-context');
         var card = selected && selected.querySelector('[data-panel-card-id]');
-        var requestedCard = inspectedCombatCard || Number(content.dataset.inspectedCard) || 0;
+        var requestedCard = instantResultKey && !resultCardInspection ? 0 : (inspectedCombatCard || Number(content.dataset.inspectedCard) || 0);
         var inspect = !!(key && requestedCard && card && Number(card.dataset.panelCardId) === requestedCard && closedCardId !== requestedCard);
         combatCardViewOpen = inspect;
+        var choose = selected && selected.querySelector('[data-card-inspect-select]');
+        if (choose) {
+            choose.hidden = !inspect || !window.BerserkCardSelection?.pendingCandidate(root, card.dataset.panelCardId);
+        }
 
         var manuallyClosed = !!(card && closedCardId === Number(card.dataset.panelCardId));
         // The old fragment can survive until the selection snapshot arrives.
@@ -192,11 +211,18 @@
     if (combatHost) {
         root.addEventListener('click', function (event) {
             if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            var choose = event.target.closest('[data-card-inspect-select]:not([hidden])');
             var close = event.target.closest('[data-combat-back],[data-panel-card-close]');
-            if (close) {
+            if (close || choose) {
                 event.preventDefault(); event.stopImmediatePropagation();
                 var selectedHeading = combatHost.querySelector('[data-panel-card-id]');
+                if (choose) {
+                    var controller = window.BerserkCardSelection;
+                    var choice = controller?.pendingCandidate(root, selectedHeading?.dataset.panelCardId);
+                    if (!choice || !controller.select(choice.form, choice.id, choice.group)) return;
+                }
                 closedCardId = selectedHeading ? Number(selectedHeading.dataset.panelCardId) : 0;
+                resultCardInspection = false;
                 inspectedCombatCard = 0; combatCardViewOpen = false; hideHint(); syncCombatPanel();
                 var heading = combatHost.querySelector('.combat-panel-heading h3');
                 if (heading) heading.focus({preventScroll: true});
@@ -212,6 +238,7 @@
             } else if (link.classList.contains('card-link') && (url.searchParams.has('sel') || url.searchParams.has('inspect'))) {
                 if(secondary){secondary.hidden=true;secondary=null;secondaryDock.hidden=true;}
                 closedCardId = 0;
+                resultCardInspection = true;
                 inspectedCombatCard = Number(url.searchParams.get('inspect') || url.searchParams.get('sel')) || 0;
                 hideHint(); syncCombatPanel();
                 // Existing battle-sync handles selection and retrieves fresh card HTML.
@@ -219,6 +246,84 @@
         }, true);
         new MutationObserver(syncCombatPanel).observe(combatHost, {childList: true, subtree: true});
         syncCombatPanel();
+    }
+    // Disclosure state is local UI only. Server-rendered rights and links are authoritative.
+    var instantNode = null, instantKey = null, instantOpen = false, instantPickerOpen = false, instantScroll = 0;
+    var instantArea = null, instantResize = null;
+    function positionInstantControl() {
+        if (!instantNode || !instantNode.isConnected) return;
+        var area = instantNode.closest('.info-panel-main');
+        var panel = instantNode.querySelector('.instant-control-panel');
+        var scrollport = area.querySelector('.info-panel-content');
+        var box = area.getBoundingClientRect();
+        // Expanded controls occupy their own bottom block; the content remains scrollable above it.
+        panel.style.setProperty('--instant-panel-height', Math.max(48, Math.min(420, box.height * .6)) + 'px');
+        var padding = scrollport.classList.contains('instant-scroll-clearance') ? 64 : 0;
+        // A scroll tail only when content overflows; it consumes no panel layout height.
+        scrollport.classList.toggle('instant-scroll-clearance', !instantNode.open && scrollport.scrollHeight - padding > scrollport.clientHeight + 1);
+    }
+    function syncInstantControl() {
+        if (!combatHost) return;
+        var next = combatHost.querySelector('[data-instant-control]');
+        if (next === instantNode) { positionInstantControl(); return; }
+        instantNode = next;
+        if (!next) {
+            if (instantResize) instantResize.disconnect();
+            instantArea = null;
+            instantKey = null; instantOpen = instantPickerOpen = false; instantScroll = 0; return;
+        }
+        var key = next.dataset.instantKey;
+        if (key !== instantKey) {
+            instantKey = key;
+            instantOpen = next.dataset.instantRequired === '1';
+            instantPickerOpen = false; instantScroll = 0;
+        }
+        next.open = instantOpen;
+        next.querySelector('summary').setAttribute('aria-expanded', String(instantOpen));
+        var picker = next.querySelector('.instant-control-picker');
+        if (picker) picker.open = instantPickerOpen;
+        var options = next.querySelector('.instant-control-options');
+        if (options) options.scrollTop = instantScroll;
+        var area = next.closest('.info-panel-main');
+        if (instantArea !== area) {
+            if (instantResize) instantResize.disconnect();
+            instantArea = area;
+            if (window.ResizeObserver) { instantResize = new ResizeObserver(positionInstantControl); instantResize.observe(area); }
+        }
+        positionInstantControl();
+    }
+    function collapseInstantControl() {
+        if (!instantNode) return;
+        instantOpen = false; instantNode.open = false;
+        instantNode.querySelector('summary').setAttribute('aria-expanded', 'false');
+    }
+    if (combatHost) {
+        combatHost.addEventListener('toggle', function (event) {
+            if (!instantNode || !instantNode.contains(event.target)) return;
+            if (event.target === instantNode) {
+                instantOpen = instantNode.open;
+                positionInstantControl();
+                instantNode.querySelector('summary').setAttribute('aria-expanded', String(instantOpen));
+                if (instantOpen && secondary) root.secondaryPanel(null);
+            } else if (event.target.matches('.instant-control-picker')) instantPickerOpen = event.target.open;
+        }, true);
+        combatHost.addEventListener('scroll', function (event) {
+            if (instantNode && event.target.matches('.instant-control-options')) instantScroll = event.target.scrollTop;
+        }, true);
+        document.addEventListener('click', function (event) {
+            if (!instantNode) return;
+            if (event.target.closest('[data-instant-close]')) {
+                collapseInstantControl(); instantNode.querySelector('summary').focus({preventScroll:true});
+            } else if (!instantNode.contains(event.target)) collapseInstantControl();
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && instantNode && instantNode.open) {
+                collapseInstantControl(); instantNode.querySelector('summary').focus({preventScroll:true});
+            }
+        });
+        new MutationObserver(syncInstantControl).observe(combatHost, {childList:true, subtree:true});
+        syncInstantControl();
+        window.addEventListener('resize', positionInstantControl);
     }
     // Pile pages are local presentation state; snapshots must not reset the page.
     var pilePanel = null, pileResize = null, pilePages = {}, paintPile = function () {};
@@ -266,5 +371,3 @@
     window.addEventListener('resize', function () { paintPile(); });
     root.dataset.battleUiReady = "true";
 }());
-
-document.addEventListener("click",function(event){var button=event.target.closest("[data-instant-local-pass]");if(!button)return;var picker=button.closest("[data-instant-control]").querySelector("details");if(picker)picker.open=false;});

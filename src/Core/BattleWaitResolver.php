@@ -94,6 +94,7 @@ final class BattleWaitResolver
             }
             if (isset(self::CARD_PENDING[$key])) return self::cardDecision($state, $key, $pending[self::CARD_PENDING[$key]] ?? null);
             if ($key==='pending_paired_ranged') {if(!empty($battle[$key]))return self::decision($key,$pending['owner']);return self::cardDecision($state,'strike.pending_choice',$battle['strike']['pending_choice']['died_id']);}
+            if ($key==='pending_flying_preparation') return self::decision($key,$pending['owner']);
             if ($key==='pending_grave_ritual') return self::decision($key,$pending['owner']);
             if ($key==='pending_deck_reorder') return self::decision($key,$pending['owner']);
             if ($key==='pending_alvalind_end') {
@@ -113,6 +114,12 @@ final class BattleWaitResolver
             $owner = Observation\ProphecyKnowledge::transformDeclineOwner($state);
             return $owner === null ? self::prophecy($battle['pending_prophecy'])
                 : self::decision('pending_prophecy.transform_decline', $owner);
+        }
+        if (!empty($battle['single_roll'])) {
+            if (($battle['single_roll']['stage']??null)==='results' && !self::playerList($battle['single_roll']['confirmed']??[])) return self::unknown('single_roll.results','invalid_confirmations');
+            if (($battle['single_roll']['stage']??null)==='results')
+                return self::projection('informational',array_values(array_diff(self::PLAYERS,$battle['single_roll']['confirmed']??[])),'single_roll.results');
+            return self::decision('single_roll.waiting_instant',$battle['single_roll']['instant_priority']??null);
         }
         if (!empty($battle['strike'])) return self::strike($state, $battle['strike']);
         if (!empty($battle['pending_dive'])) {

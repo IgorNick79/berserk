@@ -8,12 +8,61 @@ final class ActiveCardEffects
 {
     public static function forCard(CardInstance $card, GameState $state): array
     {
-        $rows = []; $groups = [];
-        if($bonus=\Berserk\Core\GraveRitual::bonus($state,$card,'ova'))$rows[]='ОВА +'.$bonus;
-        if($bonus=\Berserk\Core\GraveRitual::bonus($state,$card,'strong'))$rows[]='Сильный удар +'.$bonus;
+        return array_column(self::entries($card, $state), 'short');
+    }
+
+    /** The single enumeration used by both the star and the selected-card panel. */
+    public static function entries(CardInstance $card, GameState $state): array
+    {
+        $rows = []; $groups = []; $descriptions = [];
+        foreach (['ova'=>'Опыт в атаке', 'strong'=>'Сильный удар'] as $stat => $title) {
+            $bonus = \Berserk\Core\GraveRitual::bonus($state, $card, $stat);
+            if (!$bonus) continue;
+            $rows[] = ($stat === 'ova' ? 'ОВА' : $title) . ' +' . $bonus;
+            $descriptions[count($rows) - 1] = [
+                'title'=>$title, 'description'=>$title . ' увеличен на ' . $bonus . '.',
+                'duration'=>'До конца хода владельца карты.',
+            ];
+        }
+        if ($card->zone === CardInstance::ZONE_FIELD && ($card->flags[\Berserk\Core\FlyingPreparation::FLAG] ?? null) === 'ready') {
+            $rows[] = 'Существо подготовлено к атаке летающих. В течение текущего хода оно может атаковать любое допустимое летающее существо противника ближней атакой, если отсутствуют обычные цели.';
+        } elseif (($card->flags[\Berserk\Core\FlyingPreparation::FLAG] ?? null) === 'waiting') {
+            $rows[] = 'Подготовка к атаке летающих: действует в следующий собственный ход.';
+        }
         if ($card->zone === CardInstance::ZONE_FIELD && !$card->dying && $card->hp > 0
             && count(CardStats::getLineGroup($state, $card)) > 1) {
             $rows[] = 'Строй';
+            $bonuses = [];
+            foreach ($card->effectiveProp() as $stat => $config) {
+                if (!is_array($config)) continue;
+                foreach (array_is_list($config) ? $config : [$config] as $bonus) {
+                    if (!is_array($bonus) || empty($bonus['line'])) continue;
+                    $protection = [
+                        'zoal'=>'Защита от атак летающих существ.',
+                        'zot'=>'Защита от метания.', 'zov'=>'Защита от выстрелов.',
+                        'zom'=>'Защита от заклинаний.', 'zoa'=>'Защита от простых ударов.',
+                        'zoan'=>'Защита от немагических атак.', 'zoda'=>'Защита от дальних атак.',
+                        'zoz'=>'Защита от разрядов.', 'zor'=>'Защита от особых ударов.',
+                    ];
+                    $text = $protection[$stat] ?? self::modifierDescription(
+                        $stat === 'ability' ? 'ability_strike' : $stat, (int) ($bonus['value'] ?? 1), $bonus)['description'];
+                    $levels = ['weak'=>'слабому', 'medium'=>'среднему', 'strong'=>'сильному'];
+                    if (!empty($bonus['level'])) {
+                        $text .= ' Для уровней удара — ' . implode(', ', array_map(
+                            static fn(string $level): string => $levels[$level] ?? $level, (array) $bonus['level'])) . '.';
+                    }
+                    if (!empty($bonus['element'])) $text .= ' По существам стихии ' . $bonus['element'] . '.';
+                    if (array_key_exists('line_elite', $bonus)) {
+                        $text .= $bonus['line_elite'] ? ' При наличии элитного соседа по строю.' : ' При наличии рядового соседа по строю.';
+                    }
+                    $bonuses[] = $text;
+                }
+            }
+            $descriptions[count($rows) - 1] = [
+                'title'=>'Строй',
+                'description'=>implode(' ', $bonuses) ?: 'Карта находится в строю с союзными существами.',
+                'duration'=>'Пока выполняются условия строя.',
+            ];
         }
         if (in_array($card->zone, ['field', 'flying'], true) && !empty($card->flags['stitched_unique_loss'])) {
             $rows[] = 'Модифицировано Сшивателем плоти';
@@ -29,28 +78,34 @@ final class ActiveCardEffects
             if ($stat === '') continue;
             if ($stat === 'ability_strike' && ($m['source'] ?? '') === 'prophecy_charge') {
                 $rows[] = 'Удар +' . (int) $m['value'];
+                $descriptions[count($rows) - 1] = [
+                    'title'=>'Усиление от пророчества',
+                    'description'=>'Простой удар усилен на ' . (int) $m['value'] . '.',
+                    'duration'=>'Накопленное усиление снимается после удара.',
+                ];
                 continue;
             }
             // Only combine records whose qualifiers and lifetime are identical.
-            $qualifiers = $m; unset($qualifiers['value'], $qualifiers['source']);
+            $qualifiers = $m; unset($qualifiers['value']);
             $key = json_encode($qualifiers, JSON_UNESCAPED_UNICODE);
             if (is_numeric($m['value'] ?? null)) {
                 if (!isset($groups[$key])) $groups[$key] = [$stat, 0, $qualifiers];
                 $groups[$key][1] += (int) $m['value'];
             } else {
-                $rows[] = CardStats::statLabel($stat) . ': ' . self::value($m['value'] ?? true) . self::details($qualifiers);
+                $rows[] = CardStats::statLabel($stat);
             }
         }
         foreach ($groups as [$stat, $value, $q]) {
             // Preserve zero/net-zero records: a conditional effect may still carry meaning.
             $label=$stat==='execute'?'Добивание':CardStats::statLabel($stat);
-            if($stat==='execute')unset($q['expire'],$q['timing']);
+            $description = self::modifierDescription($stat, $value, $q);
             if ($stat === 'damage_reduction' && ($q['expire'] ?? null) === 'end_of_opponent_turn') {
                 $rows[] = (-$value) . ' от немагических атак';
+                $descriptions[count($rows) - 1] = $description;
                 continue;
             }
-            $shortLabel = $stat === 'action_range';
-            $rows[] = $label . ' ' . ($value > 0 ? '+' : '') . $value . ($shortLabel ? '' : self::details($q));
+            $rows[] = $label . ' ' . ($value > 0 ? '+' : '') . $value;
+            $descriptions[count($rows) - 1] = $description;
         }
         $names = ['stun'=>'Оглушение', 'spider_web'=>'Сеть', 'fire'=>'Огонь', 'hunt'=>'Охота',
             'tremor'=>'Дрожь', 'strangulation'=>'Удушение', 'rooted'=>'Обездвижен',
@@ -58,7 +113,35 @@ final class ActiveCardEffects
         foreach ($card->markers as $key => $marker) {
             if ($key === 'poison') continue;
             $label = $names[$key] ?? $key;
-            $rows[] = $label . (is_array($marker) ? self::details($marker) : ': ' . self::value($marker));
+            if (in_array($key, ['prey', 'hunt'], true)) {
+                $rows[] = $label;
+                $description = $key === 'prey'
+                    ? 'Владыка небес получает +3 к простому удару по этому существу и наносит безответный удар.'
+                    : 'При нанесении ран летающим существом цель получает ещё '
+                        . (int) (is_array($marker) ? ($marker['bonus'] ?? 2) : 2) . ' раны.';
+                $descriptions[count($rows) - 1] = [
+                    'title'=>'Маркер «' . $label . '»', 'description'=>$description,
+                    'duration'=>$key === 'hunt' ? 'Маркер снимается после срабатывания.' : '',
+                    'marker'=>$key,
+                ];
+                continue;
+            }
+            $rows[] = $label;
+            if (in_array($key, ['strangulation', 'sand_claws'], true)) {
+                $amount = is_array($marker) ? ($marker['value'] ?? null) : $marker;
+                if (is_numeric($amount)) $rows[count($rows) - 1] .= ' ' . $amount;
+            }
+            $parameters = is_array($marker) ? $marker : ['value'=>$marker];
+            $description = '';
+            if (in_array($key, ['strangulation', 'sand_claws'], true) && is_numeric($parameters['value'] ?? null)) {
+                $description = 'Количество маркеров — ' . $parameters['value'] . '.';
+            }
+            $descriptions[count($rows) - 1] = [
+                'title'=>$label,
+                'description'=>$description,
+                'duration'=>self::modifierDescription($key, 0, $parameters)['duration'],
+                'marker'=>$key,
+            ];
         }
         // These helpers evaluate actual line membership and source eligibility.
         foreach (['armor','zot','zoal','zov','zom','zoa','zoan','zoda','zoz','zor','ability','damage_reduction'] as $key) {
@@ -85,7 +168,101 @@ final class ActiveCardEffects
                 $rows[] = 'Условный бонус: ' . CardStats::statLabel($key) . ' +' . $active[$key];
             }
         }
-        return $rows;
+        $entries = [];
+        foreach ($rows as $index => $short) {
+            $entries[] = ['short'=>$short] + ($descriptions[$index] ?? [
+                'title'=>str_contains($short, ': ') ? explode(': ', $short, 2)[0] : $short,
+                'description'=>str_contains($short, ': ') ? explode(': ', $short, 2)[1] : '',
+                'duration'=>'',
+            ]);
+        }
+        return $entries;
+    }
+
+    private static function modifierDescription(string $stat, int $value, array $data): array
+    {
+        $title = match ($stat) { 'ova'=>'Опыт в атаке', 'ovz'=>'Опыт в защите', default=>CardStats::statLabel($stat) };
+        $amount = ($value > 0 ? '+' : '') . $value;
+        $description = $title . ' ' . $amount . '.';
+        if ($stat === 'damage_reduction') {
+            $title = 'Уменьшение ран';
+            $description = 'Получаемые раны уменьшаются на ' . $value . '.';
+        }
+        $types = ['strike'=>'простой удар', 'shot'=>'выстрел', 'throw'=>'метание',
+            'tap'=>'магический удар', 'uchr'=>'удар через ряд', 'execute'=>'добивание',
+            'impact'=>'воздействие', 'discharge'=>'разряд', 'magic'=>'заклинание', 'cast'=>'заклинание'];
+        $applies = [];
+        foreach ($data['types'] ?? [] as $type) {
+            if (isset($types[$type])) $applies[] = $types[$type];
+        }
+        if ($applies) $description .= ' Применяется к действиям — ' . implode(', ', $applies) . '.';
+        $conditions = [
+            'enemy_front_row_empty'=>'первый ряд противника пуст',
+            'ally_opposite_no_wounds'=>'напротив находится союзник без ран',
+            'more_ally_near_than_enemy'=>'рядом больше союзников, чем противников',
+            'line_count_2_plus'=>'не менее двух соседей по строю',
+        ];
+        $condition = $data['condition'] ?? null;
+        if (is_string($condition) && isset($conditions[$condition])) {
+            $description .= ' Условие — ' . $conditions[$condition] . '.';
+        }
+        $duration = match ($data['expire'] ?? null) {
+            'end_of_turn' => 'До конца текущего хода.',
+            'end_of_opponent_turn' => 'До конца хода противника владельца карты.',
+            default => '',
+        };
+        if (!empty($data['consume'])) {
+            $duration = 'Расходуется при соответствующем действии.' . ($duration ? ' ' . $duration : '');
+        }
+        return ['title'=>$title, 'description'=>$description, 'duration'=>$duration];
+    }
+
+    public static function render(CardInstance $card, GameState $state, string $viewer, array $catalog = []): string
+    {
+        if ($card->owner !== $viewer && !$card->revealed) return '';
+        $effects = self::entries($card, $state);
+        if (!$effects) return '';
+        $html = '<section class="active-card-effects" aria-label="Активные эффекты"><h3>Активные эффекты</h3>';
+        foreach ($effects as $effect) {
+            $html .= '<article class="active-card-effect"><h4>' . self::escape($effect['title']) . '</h4>';
+            $marker = $effect['marker'] ?? null;
+            $names = [];
+            if ($marker === 'rooted') {
+                foreach ($card->markers['rooted']['sources'] ?? [] as $id) {
+                    $source = $state->getCard((int) $id);
+                    if ($source && ($source->owner === $viewer || $source->revealed)
+                        && isset($catalog[$source->ukid]['name'])) {
+                        $names[] = $catalog[$source->ukid]['name'];
+                    }
+                }
+            } else {
+                $known = ['prey'=>'Владыка небес', 'hunt'=>'Гиррит'];
+                if (isset($known[$marker])) $names[] = $known[$marker];
+            }
+            if ($names) {
+                $html .= '<p class="active-card-effect-source">'
+                    . self::escape((count($names) === 1 ? 'Маркер поставил ' : 'Маркеры поставили ') . implode(', ', array_unique($names)))
+                    . '</p>';
+            }
+            if ($effect['description'] !== '') {
+                $description = self::escape($effect['description']);
+                if ($marker === 'prey') {
+                    $description = str_replace('+3 к простому удару',
+                        '+3 <img class="active-effect-strike-icon" src="/assets/images/card/sword@2x.png"'
+                            . ' width="16" height="16" alt="к простому удару">', $description);
+                }
+                $class = in_array($marker, ['prey', 'hunt'], true) ? ' class="active-card-effect-source"' : '';
+                $html .= '<p' . $class . '>' . $description . '</p>';
+            }
+            if ($effect['duration'] !== '') $html .= '<p class="active-card-effect-duration">' . self::escape($effect['duration']) . '</p>';
+            $html .= '</article>';
+        }
+        return $html . '</section>';
+    }
+
+    private static function escape(string $text): string
+    {
+        return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     public static function poison(CardInstance $card): int
@@ -99,19 +276,10 @@ final class ActiveCardEffects
         if (is_bool($value)) return $value ? 'да' : 'нет';
         $terms = ['end_of_turn'=>'до конца хода', 'owner_turn'=>'ход владельца', 'permanent'=>'постоянно'];
         if (is_string($value) && isset($terms[$value])) return $terms[$value];
-        return is_scalar($value) ? (string) $value : (string) json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (is_array($value)) {
+            return is_numeric($value['value'] ?? null) ? (string) $value['value'] : '';
+        }
+        return is_scalar($value) ? (string) $value : '';
     }
 
-    private static function details(array $data): string
-    {
-        $labels = ['value'=>'значение', 'expire'=>'срок', 'timing'=>'момент', 'condition'=>'условие',
-            'element'=>'стихия', 'types'=>'типы', 'only'=>'действия', 'level'=>'уровень', 'sources'=>'источники'];
-        $parts = [];
-        foreach ($data as $key => $value) {
-            if ($key === 'stat' || $key === 'owner' || str_starts_with((string) $key, 'source') && $key !== 'sources' || str_ends_with((string) $key, '_id')) continue;
-            if ($key === 'sources' && is_array($value)) $value = count($value);
-            $parts[] = ($labels[$key] ?? $key) . ': ' . self::value($value);
-        }
-        return $parts ? ' (' . implode('; ', $parts) . ')' : '';
-    }
 }

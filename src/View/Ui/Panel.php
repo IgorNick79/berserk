@@ -62,16 +62,19 @@ final class Panel
         $type = $form['type'] ?? 'radio';
 
         if ($selection !== null) {
-            if ($selection->maxSelect !== 1 || $selection->minSelect < 0 || $selection->minSelect > 1
-                || $selection->confirmation !== CardSelectionSpec::CONFIRM) {
-                throw new \LogicException('Panel supports only confirmed single-card selection');
+            if ($selection->confirmation !== CardSelectionSpec::CONFIRM) {
+                throw new \LogicException('Panel supports confirmed selection');
             }
-            $items = $selection->candidates;
-            foreach ($items as &$item) {
-                $item['checked'] = in_array($item['instanceId'], $selection->selected, true);
+            $groups = $selection->groups ?: [new CardSelectionGroup(
+                id: 'default', field: $form['name'], items: $selection->candidates,
+                minSelect: $selection->minSelect, maxSelect: $selection->maxSelect, selected: $selection->selected,
+                checkbox: $type === 'checkbox',
+            )];
+            $sides = [];
+            foreach ($groups as $group) {
+                $sides = array_merge($sides, array_column($group->items, 'side'));
             }
-            unset($item);
-            $body = count(array_unique(array_column($items, 'side'))) > 1 ? CreatureChoice::controls() : '';
+            $body = ($form['side_toggle'] ?? count(array_unique($sides)) > 1) ? CreatureChoice::controls() : '';
             if ($selection->mode === CardSelectionSpec::EXTENDED) {
                 $body .= '<div class="creature-choice-sides" data-card-rows hidden role="group" aria-label="Ряд существа">';
                 foreach (['all'=>'Все', '1'=>'I', '2'=>'II', '3'=>'III', 'fly'=>'Летающие'] as $row => $label) {
@@ -79,8 +82,9 @@ final class Panel
                 }
                 $body .= '</div>';
             }
-            $body .= self::renderChoiceItems($items, 'radio', $form['name'], $selection->minSelect === 1);
-            $body .= '<p data-card-choice-status role="status" hidden>Выбранная карта скрыта фильтром</p>';
+            foreach ($groups as $group) {
+                $body .= self::renderCardSelectionGroup($group, $selection->groups !== []);
+            }
         } elseif ($type === 'multi_radio') {
             $body = self::renderMultiRadioGroups($form['groups'] ?? []);
         } else {
@@ -92,20 +96,51 @@ final class Panel
         $submit = $form['submit'] ?? 'Подтвердить';
         $cancel = $form['cancel'] ?? null;
 
-        $submitDisabled = $selection !== null && $selection->minSelect === 1
-            && !array_filter($items, static fn(array $item): bool => !empty($item['checked'])) ? ' disabled' : '';
+        if ($selection !== null) $body .= '<div class="card-selection-actions">';
+        $submitDisabled = $selection !== null && $selection->groups === [] && $selection->minSelect === 1
+            && !array_filter($selection->candidates, static fn(array $item): bool =>
+                in_array($item['instanceId'], $selection->selected, true) && empty($item['disabled'])) ? ' disabled' : '';
         $body .= '<button type="submit" class="button"' . $submitDisabled . '>' . htmlspecialchars($submit, ENT_QUOTES) . '</button>';
 
         if ($cancel !== null) {
-            $body .= ' <a class="button skip" href="' . htmlspecialchars($cancel, ENT_QUOTES) . '">Отмена</a>';
+            $body .= ' <a class="button skip" href="' . htmlspecialchars($cancel, ENT_QUOTES) . '">' . htmlspecialchars($form['cancel_label'] ?? 'Отмена', ENT_QUOTES) . '</a>';
         }
 
+        if ($selection !== null) $body .= '</div>';
+
         $context = $selection === null ? '' : ' data-card-selection="' . htmlspecialchars($selection->context, ENT_QUOTES)
-            . '" data-card-min-select="' . $selection->minSelect . '"';
+            . '"';
+        if ($selection !== null && $selection->battlefieldOwner !== null) {
+            $context .= ' data-card-field-owner="' . htmlspecialchars($selection->battlefieldOwner, ENT_QUOTES) . '"';
+        }
         return '<form method="get" class="card-choice-form"' . $context . '>'
             . $hiddenHtml
             . $body
             . '</form>';
+    }
+
+    private static function renderCardSelectionGroup(CardSelectionGroup $group, bool $named): string
+    {
+        $items = $group->items;
+        foreach ($items as &$item) {
+            $item['checked'] = in_array($item['instanceId'] ?? $item['value'], $group->selected, true);
+        }
+        unset($item);
+
+        $html = '<div class="card-selection-group' . ($named ? ' multi-radio-group' : '') . '"'
+            . ' data-selection-group="' . htmlspecialchars($group->id, ENT_QUOTES) . '"'
+            . ' data-selection-min="' . $group->minSelect . '" data-selection-max="' . $group->maxSelect . '">';
+        if ($group->label !== '') {
+            $html .= '<div class="multi-radio-label">' . htmlspecialchars($group->label, ENT_QUOTES) . '</div>';
+        }
+        $radio = $group->maxSelect === 1 && !$group->checkbox;
+        if (!$radio && $group->maxSelect < PHP_INT_MAX) {
+            $html .= '<div class="card-selection-count" data-selection-count aria-live="polite">Выбрано: '
+                . count(array_filter($items, static fn(array $item): bool => $item['checked'] && empty($item['disabled'])))
+                . ' / ' . $group->maxSelect . '</div>';
+        }
+        return $html . self::renderChoiceItems($items, $radio ? 'radio' : 'checkbox',
+            $group->field, $radio && $group->minSelect === 1) . '</div>';
     }
 
     private static function renderHidden(array $hidden): string
@@ -133,11 +168,13 @@ final class Panel
                 $side .= ' data-card-instance="' . (int) $it['instanceId']
                     . '" data-card-row="' . htmlspecialchars($it['row'], ENT_QUOTES) . '"';
             }
-            $html .= '<label class="choice-radio"' . $side . '>'
+            if (isset($it['submitOrder'])) $side .= ' data-selection-order="' . (int) $it['submitOrder'] . '"';
+            $html .= '<label class="choice-radio' . (isset($it['parameterHtml']) ? ' choice-card-row' : '') . '"' . $side . '>'
                 . '<input type="' . htmlspecialchars($type, ENT_QUOTES) . '"'
                 . ' name="' . htmlspecialchars($name, ENT_QUOTES) . '"'
                 . ' value="' . $value . '"' . $checked . $disabled . ($required ? ' required' : '') . '>'
-                . '<span>' . $label . '</span>'
+                . '<span class="choice-card-content">' . $label . '</span>'
+                . ($it['parameterHtml'] ?? '')
                 . '</label>';
         }
         return $html;

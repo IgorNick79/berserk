@@ -6,7 +6,7 @@ namespace Berserk\Core\Observation;
 use Berserk\Core\{BattleWaitResolver, Command, ExpiredCommandGuard, GameState, InstantReservation, MatchPause};
 use Berserk\Core\Choice\ChoiceRegistry;
 
-/** Read-only proof for the narrow closing pass in an empty main window. */
+/** Read-only proof for the narrow closing pass in an terminal main or wounds window. */
 final class CombatMainPassKnowledge
 {
     public static function window(GameState $s, string $side, ?int $now = null): ?array
@@ -14,14 +14,17 @@ final class CombatMainPassKnowledge
         if ($s->status!=='battle' || $s->winner!==null || MatchPause::blocking($s)) return null;
         $wait=BattleWaitResolver::current($s);
         $strike=$s->battle['strike']??[];
+        $window = $strike['combat_instant_window'] ?? null;
         if (($wait['source']??null)!=='strike.waiting_instant' || $wait['kind']!=='decision'
             || $wait['required_players']!==[$side] || ChoiceRegistry::current($s)!==null
             || ($strike['state']??null)!=='waiting_instant' || ($strike['instant_phase']??null)!=='combat'
-            || ($strike['combat_instant_window']??null)!=='main' || ($strike['instant_priority']??null)!==$side
+            || !in_array($window, ['main', 'wounds'], true) || ($strike['instant_priority']??null)!==$side
             || ($strike['instant_stack']??null)!==[] || ($strike['instant_played']??null)!==[]
             || !empty($strike['instant_resolution'])
             || !empty($strike['pending_wounds_resolution']) || !empty($strike['instant_result_stage'])
-            || !empty($strike['damage_applied']) || !empty($strike['continuation_frame'])
+            || ($window === 'main' && !empty($strike['damage_applied']))
+            || ($window === 'wounds' && (empty($strike['damage_applied']) || empty($strike['wounds_window_done'])))
+            || !empty($strike['continuation_frame'])
             || !empty($strike['friendly_fire']) || !empty($strike['matriarch_order'])
             || !empty($s->battle['matriarch_order']) || !in_array($strike['kind']??'strike',['','strike'],true)) return null;
         $participants=$strike['instant_participants']??[];

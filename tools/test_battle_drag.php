@@ -22,7 +22,7 @@ $tpl = new Template(__DIR__ . '/../templates');
 $before = serialize($state->toArray());
 $render = fn(array $ui) => (new BattleScreen($tpl))->prepare($state, 'host', 'host', null, $cardsInfo, $ui)['data'];
 $snapshot = fn(array $ui) => (new BattleSnapshotRenderer($tpl))->render($state, 'host', 'host', null, $cardsInfo, $ui);
-$cases = ['selected'=>$render(['sel'=>1]), 'unselected'=>$render(['sel'=>0]),
+$cases = ['targeting'=>$render(['sel'=>1, 'mode'=>'strike']), 'selected'=>$render(['sel'=>1]), 'unselected'=>$render(['sel'=>0]),
     'special'=>$render(['sel'=>1,'mode'=>'action:aimed_shot']), 'fly'=>$render(['sel'=>3])];
 battleSnapshotAssert(str_contains($cases['selected']['field_html'], 'data-drag-enabled="1"'), 'Ordinary turn enables drag');
 battleSnapshotAssert(str_contains($cases['special']['field_html'], 'data-drag-enabled="0"'), 'Special action disables drag');
@@ -49,8 +49,17 @@ battleSnapshotAssert(str_contains($cases['expired']['field_html'], 'data-drag-en
 unset($state->battle['turn_timer']);
 $state->battle['active'] = 'player';
 $cases['inactive'] = $render(['sel'=>1]);
+$cases['inactiveTargeting'] = $render(['sel'=>1, 'mode'=>'action:aimed_shot']);
+$cases['passedTurn'] = $render(['sel'=>1, 'mode'=>'action:aimed_shot', 'ui_turn'=>$cases['special']['ui']['turn_key']]);
 battleSnapshotAssert(str_contains($cases['inactive']['field_html'], 'data-drag-enabled="0"'), 'Inactive player cannot drag');
 $state->battle['active'] = 'host';
+$cases['receivedTurn'] = $render(['sel'=>1, 'mode'=>'action:aimed_shot', 'ui_turn'=>$cases['inactiveTargeting']['ui']['turn_key']]);
+foreach (['receivedTurn', 'passedTurn'] as $side) {
+    battleSnapshotAssert($cases[$side]['ui']['sel'] === 0 && !$cases[$side]['ui']['mode_explicit']
+        && !str_contains($cases[$side]['info_panel_html'], 'name="target_id"'), 'Stale target mode is cleared on both sides');
+}
+battleSnapshotAssert($render(['sel'=>1, 'mode'=>'action:aimed_shot', 'ui_turn'=>$cases['special']['ui']['turn_key']])['ui']['mode_explicit'],
+    'Same-turn targeting still works');
 $state->getCard(1)->closed = true;
 $cases['closed'] = $render(['sel'=>1]);
 battleSnapshotAssert(str_contains($cases['closed']['field_html'], 'data-drag-card="1" data-drag-owner="own" data-drag-source="0"'), 'Closed source disabled');

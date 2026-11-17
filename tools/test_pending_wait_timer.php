@@ -84,10 +84,20 @@ foreach ([1030,1200] as $now) {
     pwWait($s,'decision',['player'],'pending_first_strike_jump');
     $expired=$now===1200;
     pwAssert($s->battle['turn_timer']['status']===($expired?'expired':'paused'),'Opponent jump pauses only a live timer');
+    $s->persistenceVersion = 1;
+    $planMovement = static function (string $owner) use ($s, &$now): array {
+        $observation = \Berserk\Core\Observation\PlayerObservation::build($s, $owner);
+        $legal = \Berserk\Core\Legal\LegalActions::build($s, $owner, $now);
+        return \Berserk\Core\Combat\CombatDecisionPlanner::decide($observation, $legal);
+    };
+    pwAssert(($planMovement('player')['action']['type'] ?? null) === 'choose_first_strike_movement'
+        && $planMovement('host')['action'] === null, 'Bot can jump only for the decision owner');
     $now+=10;$p=$s->battle['pending_first_strike_jump'];
     pwAssert($engine->apply($s,'player',new Command('choose_first_strike_movement',[
         'choice_id'=>$p['id'],'row'=>2,'col'=>3]))->success,'Jump completes, including after zero');
     pwWait($s,'decision',['host'],'pending_first_strike_jump');
+    pwAssert(($planMovement('host')['action']['payload']['target_id'] ?? null) === 1
+        && $planMovement('player')['action'] === null, 'Bot can resolve the pull after the owner handoff');
     pwAssert($s->battle['turn_timer']['status']===($expired?'expired':'running'),'Own pull resumes the same timer');
     $now+=10;$p=$s->battle['pending_first_strike_jump'];
     pwAssert($engine->apply($s,'host',new Command('choose_first_strike_movement',[
@@ -277,7 +287,16 @@ pwAssert($s->battle['turn_timer']['period_id']===2 && $s->battle['turn_timer']['
 $s=pwState();$s->getCard(2)->prop['pre_turn_start']=['options'=>[['modifiers'=>[]]]];
 $now=1020;pwApply($engine,$s,'host','end_turn');
 pwAssert($s->battle['turn_timer']['pause_reason']==='start_phase','Next period preserves start pause despite own pending');
-$now=1200;pwApply($engine,$s,'player','choose_card_option',['option_index'=>0]);
+$now=1200;
+$s->persistenceVersion = 1;
+foreach (['host', 'player'] as $viewer) {
+    $legal = \Berserk\Core\Legal\LegalActions::build($s, $viewer, $now);
+    $observation = \Berserk\Core\Observation\PlayerObservation::build($s, $viewer);
+    $plan = \Berserk\Core\Combat\CombatDecisionPlanner::decide($observation, $legal);
+    $expected = $viewer === 'player' ? ['type'=>'choose_card_option','payload'=>['card_id'=>2,'option_index'=>0]] : null;
+    pwAssert($plan['action'] === $expected, 'Only the owner can choose the required card option');
+}
+pwApply($engine,$s,'player',$plan['action']['type'],$plan['action']['payload']);
 pwAssert($s->battle['turn_timer']['anchor_at']===1200 && $s->battle['turn_timer']['remaining_seconds']===180,'Start effects finish through existing lifecycle');
 $s=pwState();unset($s->battle['turn_timer']);
 $s->getCard(1)->prop['actions']=[['key'=>'bonfire','type'=>'place_cell_marker','marker'=>'bonfire']];

@@ -7,8 +7,9 @@ final class CombatStrikeValue
 {
     public static function side(GameState $state, int $hitterId): ?string
     {
-        $s = $state->battle['strike'] ?? [];
+        $s = $state->battle['single_roll'] ?? $state->battle['strike'] ?? [];
         if ((int) ($s['attacker_id'] ?? 0) === $hitterId) return 'attack';
+        if (isset($state->battle['single_roll'])) return null;
         if ((int) (($s['defender_id'] ?? 0) ?: ($s['target_id'] ?? 0)) === $hitterId) return 'defend';
         return null;
     }
@@ -25,7 +26,8 @@ final class CombatStrikeValue
 
     public static function current(GameState $state, string $side): ?int
     {
-        $s = $state->battle['strike'] ?? [];
+        $s = $state->battle['single_roll'] ?? $state->battle['strike'] ?? [];
+        if (isset($state->battle['single_roll'])) return $side==='attack' ? ($s['computed_value']??null) : null;
         $a = $state->getCard((int) ($s['attacker_id'] ?? 0));
         $d = $state->getCard((int) (($s['defender_id'] ?? 0) ?: ($s['target_id'] ?? 0)));
         $level = $s['result'][$side] ?? '';

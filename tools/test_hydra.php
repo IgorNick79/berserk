@@ -122,6 +122,11 @@ hydraAssert(($state->battle['strike']['defend_dice'] ?? null) === 0, 'Hydra stri
 
 hydraConfirmBoth($state);
 $pending = $state->battle['pending_attack_series_choice'] ?? null;
+$series = (new \Berserk\Core\Choice\AttackSeriesContinueChoice())->spec($state, 'host', [], '?first&game=1', 'host');
+$seriesHtml = \Berserk\View\Ui\Panel::render($series);
+hydraAssert(preg_match('/<form\b[^>]*>.*<button[^>]+type="submit"[^>]*>Выбрать<\/button>.*cmd=attack_series_end[^>]*>Закончить серию<\/a>.*<\/form>/su', $seriesHtml) === 1,
+    'End series link is next to confirmation inside the same form');
+
 hydraAssert(is_array($pending), 'Hydra should open attack-series choice after strike ack.');
 hydraAssert(($pending['owner'] ?? null) === GameState::PLAYER_HOST, 'Hydra series choice should belong to Hydra owner.');
 hydraAssert(in_array($targetB->instanceId, $pending['candidates'] ?? [], true), 'Hydra should offer an unhit adjacent enemy.');

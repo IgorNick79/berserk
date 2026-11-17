@@ -75,7 +75,10 @@ scAssert($pull['from_row'] === 3 && $pull['from_col'] === 3 && $pull['id'] !== $
 scAssert(!scChoose($s,'host',['target_id'=>1,'choice_id'=>$p['id']])->success, 'Old jump cannot accept next pending');
 scAssert(!scChoose($s,'player',['target_id'=>1])->success && !scChoose($s,'host',['target_id'=>2])->success && !scChoose($s,'host',['target_id'=>999])->success, 'Pull owner and candidates validated');
 $spec = $handler->spec($s,'host',['arbitrary_enemy'=>['name'=>'Враг']], '?game=991','host');
-scAssert(str_contains($spec->buttons[0]['label'], 'Враг (3, 2)') && !str_contains(json_encode($spec), 'cancel_pending'), 'Pull UI identifies card without decline');
+$html = \Berserk\View\Ui\Panel::render($spec);
+scAssert(str_contains($html, 'Враг') && str_contains($html, 'name="target_id" value="1"')
+    && !str_contains($html, 'data-creature-sides') && !str_contains($html, '(3, 2)')
+    && !str_contains($html, 'cancel_pending'), 'Pull uses own-card selection without toggle or decline');
 $s = scReload($s);
 scAssert(scChoose($s,'host',['target_id'=>1])->success, 'Pull resumes');
 scAssert($s->getCard(1)->row === 3 && $s->getCard(1)->col === 3 && $s->getCard(1)->closed && $s->getCard(1)->flags['attacks_used_this_turn'] === 1, 'Forced move retains action state');

@@ -140,7 +140,8 @@ $snapshot = $renderer->render(
 );
 
 battleSnapshotAssert(
-    $snapshot['ui'] === ['sel' => 0, 'mode' => 'strike', 'pile' => 'own_grave', 'mode_explicit' => false],
+    $snapshot['ui'] === ['sel' => 0, 'mode' => 'strike', 'pile' => 'own_grave', 'mode_explicit' => false,
+        'turn_key' => $state->battle['turn'] . ':' . $state->battle['active']],
     'Explicit UI state should override $_GET and be returned as normalized UI state.'
 );
 
@@ -209,7 +210,8 @@ $invalid = $renderer->render(
     ['sel' => 999, 'mode' => 'not_a_mode', 'pile' => 'broken']
 );
 battleSnapshotAssert(
-    $invalid['ui'] === ['sel' => 0, 'mode' => 'strike', 'pile' => '', 'mode_explicit' => false],
+    $invalid['ui'] === ['sel' => 0, 'mode' => 'strike', 'pile' => '', 'mode_explicit' => false,
+        'turn_key' => $state->battle['turn'] . ':' . $state->battle['active']],
     'Invalid selection, mode and pile should normalize to safe defaults.'
 );
 

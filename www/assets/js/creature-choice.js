@@ -26,27 +26,149 @@
         });
         var visible = rows.filter(function (r) { return !r.hidden; }).map(function (r) { return r.querySelector('input'); }).filter(function (i) { return i && !i.disabled; });
         var selected = visible.find(function (i) { return i.value === (chosen || previous.value); });
-        if (selected) selected.checked = true;
+        if (selected && selected.type === 'radio') {
+            rows.forEach(function (row) {
+                var input = row.querySelector('input');
+                if (input && input.type === 'radio' && input.name === selected.name) input.checked = input === selected;
+            });
+        } else if (selected) selected.checked = true;
+        if (selected && selected.type === 'radio') {
+            form.querySelectorAll('input[type="radio"]').forEach(function (input) {
+                if (input.name === selected.name && input !== selected) input.checked = false;
+            });
+        }
         if (visible.length && visible[0].type === 'radio' && !visible.some(function (i) { return i.checked; })) visible[0].checked = true;
         selected = visible.find(function (i) { return i.checked; });
         saved.set(key, {side: side, value: selected ? selected.value : ''});
         if (saved.size > 40) saved.delete(saved.keys().next().value);
     }
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-choice-parameter]');
+        if (!button) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (button.disabled) return;
+        var controls = button.closest('[data-choice-parameters]');
+        var value = controls.querySelector('.choice-parameter-value');
+        var active = button.getAttribute('aria-pressed') === 'true';
+        if (active) value.textContent = '';
+        else if (button.dataset.choiceParameter === 'hp') value.textContent = value.dataset.choiceHp;
+        else value.innerHTML = value.dataset.choiceCoords;
+        controls.querySelectorAll('button').forEach(function (item) {
+            item.setAttribute('aria-pressed', String(!active && item === button));
+        });
+    }, true);
     var activeSelection = null;
-    function updateSelection(form) {
-        var context = form.dataset.cardSelection;
-        var rows = Array.from(form.querySelectorAll('[data-card-instance]'));
-        if (!activeSelection || activeSelection.context !== context) {
-            activeSelection = {
-                context: context,
-                selected: rows.find(function (row) { return row.querySelector('input').checked; })?.dataset.cardInstance,
-                side: 'enemy',
-                row: 'all'
+    var boardSelector = '[data-battle-fragment="field_html"], [data-battle-fragment="fly_zones_html"]';
+    var selectedCardSelector = '[data-drag-card][data-card-selection-highlight]';
+
+    function fieldChoice(root, event, viewer) {
+        if (event.target.closest('button, input, select, textarea, [role="button"], [data-mini-hint], .mini-indicator, [data-card-original]')) return null;
+        var card = event.target.closest('[data-drag-card]');
+        if (!card || !card.closest(boardSelector) || card.closest('[hidden]') || !root.contains(card)) return null;
+        var link = event.target.closest('a[href]');
+        if (link) {
+            var url = new URL(link.href);
+            if (!link.matches('.card-link') || url.origin !== location.origin || url.pathname !== location.pathname
+                || url.searchParams.has('cmd') || (url.searchParams.get('inspect') !== card.dataset.dragCard
+                    && url.searchParams.get('sel') !== card.dataset.dragCard)) return null;
+        }
+        var choice = pendingCandidate(root, card.dataset.dragCard, viewer);
+        return choice ? {...choice, card: card, link: link} : null;
+    }
+
+    function pendingCandidate(root, id, viewer) {
+        var form = root.querySelector('form[data-card-selection][data-card-field-owner]');
+        if (!form || (viewer && form.dataset.cardFieldOwner !== viewer)) return null;
+        var rows = Array.from(form.querySelectorAll('[data-card-instance]')).filter(function (row) {
+            return row.dataset.cardInstance === id && !row.querySelector('input').disabled;
+        });
+        return rows.length === 1 ? {form: form, id: id, group: rows[0].closest('[data-selection-group]').dataset.selectionGroup} : null;
+    }
+
+    function paintField(form, selected) {
+        var root = document.querySelector('[data-battle-sync-root]');
+        if (!root) return;
+        root.querySelectorAll(selectedCardSelector).forEach(function (card) {
+            card.removeAttribute('data-card-selection-highlight');
+        });
+        if (!form?.dataset.cardFieldOwner || !selected.size) return;
+        root.querySelectorAll(boardSelector).forEach(function (board) {
+            board.querySelectorAll('[data-drag-card]').forEach(function (card) {
+                if (selected.has(card.dataset.dragCard)) card.setAttribute('data-card-selection-highlight', '');
+            });
+        });
+    }
+
+    function selectionGroups(form) {
+        return Array.from(form.querySelectorAll('[data-selection-group]')).map(function (node) {
+            return {
+                id: node.dataset.selectionGroup,
+                counter: node.querySelector('[data-selection-count]'),
+                min: Number(node.dataset.selectionMin),
+                max: Number(node.dataset.selectionMax),
+                options: Array.from(node.querySelectorAll('.choice-radio')).map(function (row) {
+                    var input = row.querySelector('input');
+                    return {row: row, input: input, key: row.dataset.cardInstance ?? input.value};
+                })
             };
+        });
+    }
+
+    function selectCard(form, id, groupId, checked) {
+        var groups = selectionGroups(form);
+        var group = groups.find(function (group) { return group.id === groupId; });
+        var option = group?.options.find(function (option) { return option.key === id; });
+        if (!option || option.input.disabled) return false;
+        updateSelection(form, groups);
+        var values = activeSelection.groups.get(groupId);
+        var radio = option.input.type === 'radio';
+        var add = checked ?? (radio || !values.has(id));
+        if (!add) {
+            values.delete(id);
+        } else if (radio) {
+            values.clear();
+            values.add(id);
+        } else if (!values.has(id) && values.size >= group.max) {
+            return false;
+        } else {
+            values.add(id);
+        }
+        if (add && option.row.dataset.cardInstance) {
+            activeSelection.side = option.row.dataset.creatureOwner;
+            if (activeSelection.row !== 'all' && activeSelection.row !== option.row.dataset.cardRow) {
+                activeSelection.row = option.row.dataset.cardRow || 'all';
+            }
+        }
+        updateSelection(form, groups);
+        return true;
+    }
+
+    document.addEventListener('dblclick', function (event) {
+        if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        var root = document.querySelector('[data-battle-sync-root]');
+        if (!root) return;
+        var choice = fieldChoice(root, event);
+        if (!choice || !selectCard(choice.form, choice.id, choice.group)) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    }, true);
+
+    window.BerserkCardSelection = {
+        fieldChoice: fieldChoice,
+        pendingCandidate: pendingCandidate,
+        select: selectCard
+    };
+
+    function updateSelection(form, groups = selectionGroups(form)) {
+        var context = form.dataset.cardSelection;
+        if (!activeSelection || activeSelection.context !== context) {
+            activeSelection = {context: context, groups: new Map(), side: 'enemy', row: 'all'};
         }
         var state = activeSelection;
         var sides = form.querySelector('[data-creature-sides]');
         var rowControls = form.querySelector('[data-card-rows]');
+        var rows = Array.from(form.querySelectorAll('[data-card-instance]'));
         if (sides) sides.hidden = false;
         if (rowControls) rowControls.hidden = false;
         if (!rows.some(function (row) { return row.dataset.creatureOwner === state.side; })) {
@@ -57,23 +179,71 @@
                 ? button.dataset.creatureSide === state.side
                 : button.dataset.cardRowFilter === state.row;
             button.setAttribute('aria-pressed', String(pressed));
+            var rowFilter = button.dataset.cardRowFilter;
+            if (rowFilter && rowFilter !== 'all') {
+                button.toggleAttribute('data-filter-empty', !rows.some(function (row) {
+                    return (!sides || row.dataset.creatureOwner === state.side) && row.dataset.cardRow === rowFilter;
+                }));
+            }
         });
-        var selected = rows.find(function (row) { return row.dataset.cardInstance === state.selected; });
-        if (!selected) state.selected = undefined;
-        rows.forEach(function (row) {
-            row.hidden = Boolean(sides && row.dataset.creatureOwner !== state.side)
-                || (state.row !== 'all' && row.dataset.cardRow !== state.row);
-            row.querySelector('input').checked = row === selected;
+
+        var selected = new Set();
+        var valid = true;
+        var currentGroups = new Map();
+        groups.forEach(function (group) {
+            var previous = state.groups.get(group.id);
+            var values = new Set(group.options.filter(function (option) {
+                return !option.input.disabled && (previous ? previous.has(option.key) : option.input.checked);
+            }).slice(0, group.max).map(function (option) { return option.key; }));
+            currentGroups.set(group.id, values);
+            if (group.counter) {
+                var countText = 'Выбрано: ' + values.size + ' / ' + group.max;
+                if (group.counter.textContent !== countText) group.counter.textContent = countText;
+            }
+            if (values.size < group.min || values.size > group.max) valid = false;
+            group.options.forEach(function (option) {
+                var row = option.row;
+                if (row.dataset.cardInstance) {
+                    row.hidden = Boolean(sides && row.dataset.creatureOwner !== state.side)
+                        || (state.row !== 'all' && row.dataset.cardRow !== state.row);
+                }
+                option.input.checked = values.has(option.key);
+                option.row.toggleAttribute('data-selection-at-limit',
+                    option.input.type === 'checkbox' && values.size >= group.max && !option.input.checked);
+                if (option.input.checked && row.dataset.cardInstance) selected.add(row.dataset.cardInstance);
+            });
         });
-        form.querySelector('[data-card-choice-status]').hidden = !selected || !selected.hidden;
-        var submit = form.querySelector('button[type="submit"]');
-        submit.disabled = !selected && form.dataset.cardMinSelect === '1';
+        state.groups = currentGroups;
+        form.querySelector('button[type="submit"]').disabled = !valid;
+        paintField(form, selected);
     }
+
+    // Display order is alphabetical. Some effects consume the submitted list
+    // sequentially, so preserve the original order for explicitly ranked rows.
+    document.addEventListener('formdata', function (event) {
+        var form = event.target;
+        if (!form.matches('form[data-card-selection]')) return;
+        var ordered = new Map();
+        form.querySelectorAll('[data-selection-order] input:checked:not(:disabled)').forEach(function (input) {
+            if (!ordered.has(input.name)) ordered.set(input.name, []);
+            ordered.get(input.name).push(input);
+        });
+        ordered.forEach(function (inputs, name) {
+            inputs.sort(function (a, b) {
+                return Number(a.parentNode.dataset.selectionOrder) - Number(b.parentNode.dataset.selectionOrder);
+            });
+            event.formData.delete(name);
+            inputs.forEach(function (input) { event.formData.append(name, input.value); });
+        });
+    }, true);
     function refresh() {
         queued = false;
         var selection = document.querySelector('[data-card-selection]');
         if (selection) updateSelection(selection);
-        else activeSelection = null;
+        else {
+            activeSelection = null;
+            paintField(null, null);
+        }
         document.querySelectorAll('.card-choice-form:not([data-card-selection])').forEach(function (f) { update(f); });
     }
     document.addEventListener('click', function (e) {
@@ -91,18 +261,17 @@
         updateSelection(form);
     });
     document.addEventListener('change', function (e) {
-        if (!e.target.matches('input[type="radio"]')) return;
+        if (!e.target.matches('input[type="radio"], input[type="checkbox"]')) return;
         var form = e.target.closest('.card-choice-form');
         if (!form) return;
         if (!form.hasAttribute('data-card-selection')) {
-            update(form, null, e.target.value);
+            if (e.target.type === 'radio') update(form, null, e.target.value);
             return;
         }
-        var row = e.target.closest('[data-card-instance]');
-        if (!row) return;
-        updateSelection(form);
-        activeSelection.selected = row.dataset.cardInstance;
-        updateSelection(form);
+        var row = e.target.closest('.choice-radio');
+        var group = row?.closest('[data-selection-group]');
+        if (!group) return;
+        selectCard(form, row.dataset.cardInstance ?? e.target.value, group.dataset.selectionGroup, e.target.checked);
     });
     new MutationObserver(function (records) {
         if (records.some(function (r) { return r.type === 'childList'; }) && !queued) { queued = true; requestAnimationFrame(refresh); }

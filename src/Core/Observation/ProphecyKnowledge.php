@@ -49,6 +49,18 @@ final class ProphecyKnowledge
     /** Called only at the resolver's prophecy priority boundary. */
     public static function closeOwner(GameState $state): ?string
     {
+        $pending = $state->battle['pending_prophecy'] ?? null;
+        if (($pending['context'] ?? null) === 'block') {
+            $owner = $pending['owner'] ?? null;
+            $actions = $pending['actions'] ?? null;
+            if ($state->status !== 'battle' || $state->winner !== null || MatchPause::blocking($state)
+                || !VisibilityPolicy::isSide($owner)
+                || !empty($pending['reorder_mode']) || !empty($pending['summon_mode'])
+                || !is_array($actions) || !array_is_list($actions) || count($actions) !== 1
+                || ($actions[0]['cmd'] ?? null) !== 'close_prophecy'
+                || ($actions[0]['params'] ?? []) !== []) return null;
+            return $owner;
+        }
         return self::revealOwner($state, false);
     }
 

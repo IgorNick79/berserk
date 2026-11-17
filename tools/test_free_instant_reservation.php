@@ -45,7 +45,11 @@ function fDrain(GameState &$s,int $now=1000,?int $woundsCaster=null):array {
     for($i=0;$i<100;$i++){
         $s=irReload($s);$stack=$s->battle['turn_instant_stack']??null;
         if($stack){$trace[]='turn:'.$stack['phase'];fCmd($s,$stack['priority'],'pass_turn_instant',[],true,$now);continue;}
-        if(!empty($s->battle['turn_instant_result'])){fCmd($s,$s->getOpponentKey($s->battle['active']),'turn_instant_result_ok',[],true,$now);continue;}
+        if(!empty($s->battle['turn_instant_result'])){
+            $ack=\Berserk\Core\TurnInstantResult::current($s->battle['turn_instant_result']);
+            fCheck($ack!==null,'Current persisted turn instant acknowledgement');
+            fCmd($s,$ack['owner'],'turn_instant_result_ok',['ack_id'=>$ack['ack_id']],true,$now);continue;
+        }
         if(!empty($s->battle['pending_wound_transfer'])){
             $trace[]='combat:wounds';fCheck($alreadyGranted||IR::snapshot($s)['status']==='requested','Wounds continuation cannot grant a new turn stack');
             fCmd($s,$s->battle['pending_wound_transfer']['owner'],'cancel_pending',[],true,$now);continue;
@@ -117,7 +121,12 @@ fCmd($s,$p,'choose_revive_target',['target_id'=>5]);fCmd($s,$p,'choose_revive_ce
 $s->getCard($h)->prop['instants']=[['key'=>'low','name'=>'Low','trigger'=>'turn','no_close'=>true,'target'=>'enemy','effect'=>['type'=>'damage','value'=>1]]];
 foreach([[$h,'low'],[$caster,'free']]as[$card,$key]){fCmd($s,$p,'play_turn_instant',['card_id'=>$card,'instant_key'=>$key]);fCmd($s,$p,'choose_instant_pick',['target_id'=>$attacker]);}
 fCmd($s,$p,'pass_turn_instant');fCheck(array_column($s->battle['turn_instant_result']['summary'],'label')===['Free','Low'],'LIFO order preserved');
-fCmd($s,$p,'turn_instant_result_ok');fCheck(IR::snapshot($s)['status']==='idle'&&$s->getCard($attacker)->hp===28,'Free LIFO returns to ordinary game');
+while(!empty($s->battle['turn_instant_result'])){
+    $ack=\Berserk\Core\TurnInstantResult::current($s->battle['turn_instant_result']);
+    fCheck($ack!==null,'LIFO result has current acknowledgement');
+    fCmd($s,$ack['owner'],'turn_instant_result_ok',['ack_id'=>$ack['ack_id']]);
+}
+fCheck(IR::snapshot($s)['status']==='idle'&&$s->getCard($attacker)->hp===28,'Free LIFO returns to ordinary game');
 
 // A real mandatory jump then pull changes decision owner, never the reservation's owner/reason.
 foreach(['host','player']as$active){

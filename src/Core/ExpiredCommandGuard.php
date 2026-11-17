@@ -29,6 +29,8 @@ final class ExpiredCommandGuard
                 'reorder_card_up','reorder_card_down','summon_start','summon_cell','summon_creature','summon_cancel'],true)
                 ? null : 'Время хода истекло. Можно только завершить уже начатое действие.';
         }
+        if (!empty($s->battle['single_roll'])) return in_array($cmd->type,['combat_instant_play','combat_instant_pass','confirm_strike'],true)
+            ? null : 'Single roll resolution required';
         $strike=$s->battle['strike']??null;
         if(is_array($strike) && $strike!==[]) {
             // Nested death decisions take priority even when strike.state is results.

@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class WhipChoice implements ChoiceHandlerInterface
 {
@@ -43,20 +43,15 @@ final class WhipChoice implements ChoiceHandlerInterface
             );
         }
 
-        $buttons = [];
+        $links = [];
         foreach ($pw['targets'] as $tid) {
-            $tc = $state->getCard($tid);
-            if (!$tc) continue;
-            $ti = $cardsInfo[$tc->ukid] ?? null;
-            $tn = $ti ? $ti['name'] : '?';
-            $suffix = ($tc->instanceId === $pw['source_id']) ? ' (сам)' : '';
-
-            $buttons[] = [
-                'label' => $tn . $suffix . ' (' . $tc->hp . '/' . $tc->hpMax . ')',
-                'url'   => "{$baseUrl}&cmd=choose_whip_target&target_id={$tid}",
+            $links[] = [
+                'instanceId' => $tid,
+                'url' => "{$baseUrl}&cmd=choose_whip_target&target_id={$tid}",
+                'suffix' => (int) $tid === (int) $pw['source_id'] ? ' (сам)' : '',
             ];
         }
-
+        $buttons = CreatureChoice::immediateButtons($state, $playerKey, $cardsInfo, $links);
         $buttons[] = [
             'label' => 'Отмена',
             'url'   => $baseUrl . '&cmd=cancel_pending',

@@ -31,12 +31,23 @@ final class FirstStrikeJumpChoice implements ChoiceHandlerInterface
             }
         } else {
             $valid = (new FirstStrikeJump($state, new Engine()))->candidates($p);
+            $items = [];
             foreach ($p['candidates'] as $id) {
                 if (!in_array($id, $valid, true)) continue;
                 $card = $state->getCard((int) $id);
-                $name = $cardsInfo[$card->ukid]['name'] ?? $card->ukid;
-                $buttons[] = ['label' => $name . " ({$card->row}, {$card->col})", 'url' => $url . '&target_id=' . $id];
+                if (!$card || $card->owner !== $playerKey) continue;
+                $items[] = ['value'=>(int) $id];
             }
+            return new PanelSpec(title: $title, form: [
+                'name'=>'target_id',
+                'hidden'=>\Berserk\View\Ui\Form::battleHidden($role, $state->gameId,
+                    'choose_first_strike_movement', ['choice_id'=>$p['id']]),
+                'submit'=>'Выбрать', 'side_toggle'=>false,
+            ], cardSelection: \Berserk\View\Ui\CreatureChoice::confirmed(
+                $state, $playerKey, $cardsInfo, $items, 'first-strike-follow:' . $p['id'],
+                mode: \Berserk\View\Ui\CardSelectionSpec::SIMPLE,
+            ));
+
         }
         return new PanelSpec(title: $title, buttons: $buttons);
     }

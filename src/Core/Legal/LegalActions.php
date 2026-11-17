@@ -72,6 +72,63 @@ final class LegalActions
                 }
                 return $out;
             }
+            $ritual = $state->battle['pending_grave_ritual'] ?? null;
+            if ($handler instanceof \Berserk\Core\Choice\GraveRitualChoice
+                && $wait['source'] === 'pending_grave_ritual'
+                && ($ritual['owner'] ?? null) === $viewer
+                && ($ritual['result'] ?? null) === true && is_string($ritual['id'] ?? null)) {
+                $out['decision'] = 'grave_ritual_ack';
+                $out['coverage'] = 'partial';
+                $option = self::option('choose_grave_ritual', ['operation_id'=>$ritual['id'], 'ack'=>1]);
+                if (self::passesClock($state, $viewer, $option, $now)) $out['actions'][] = $option;
+                return $out;
+            }
+            if ($handler instanceof \Berserk\Core\Choice\ForcedDirectionalMoveChoice
+                && $wait['source'] === 'pending_forced_directional_move') {
+                $pending = $state->battle['pending_forced_directional_move'];
+                $resolver = new \Berserk\Core\Movement\ForcedMovementResolver($state, new \Berserk\Core\Engine());
+                $targets = $resolver->eligibleTargets($viewer, (int) $pending['delta_row'], (int) $pending['delta_col']);
+                $option = self::option('cancel_pending');
+                foreach ($targets as $target) {
+                    $option = self::option('choose_forced_directional_move', ['target_id'=>$target->instanceId]);
+                    break;
+                }
+                if (self::passesClock($state, $viewer, $option, $now)) {
+                    $out['decision'] = 'forced_directional_move';
+                    $out['coverage'] = 'partial';
+                    $out['actions'][] = $option;
+                }
+                return $out;
+            }
+            if ($handler instanceof \Berserk\Core\Choice\IntrigueStartChoice
+                && $wait['source'] === 'pending_intrigue_start[0]') {
+                $item = $state->battle['pending_intrigue_start'][0] ?? [];
+                $count = (int) ($item['count'] ?? 0);
+                $targets = [];
+                foreach ($item['candidates'] ?? [] as $id) {
+                    $target = $state->getCard((int) $id);
+                    if (!$target || $target->dying || $target->hp <= 0) continue;
+                    // Rank only public facts. Hidden enemies remain anonymous legal targets.
+                    $known = $target->owner === $viewer || $target->revealed;
+                    $score = $target->owner !== $viewer ? 100 : 0;
+                    if ($known) {
+                        $score += min(20, $target->price);
+                        if (($item['effect']['type'] ?? '') === 'close' && $target->closed) $score -= 30;
+                        if (($item['effect']['type'] ?? '') === 'poison' && !empty($target->effectiveProp()['zoo'])) $score -= 50;
+                    }
+                    $targets[] = ['id'=>(int) $id, 'score'=>$score];
+                }
+                usort($targets, static fn(array $a, array $b): int => ($b['score'] <=> $a['score']) ?: ($a['id'] <=> $b['id']));
+                if (($item['owner'] ?? null) === $viewer && $count > 0 && count($targets) >= $count) {
+                    $option = self::option('choose_intrigue_start', ['target_ids'=>array_column(array_slice($targets, 0, $count), 'id')]);
+                    if (self::passesClock($state, $viewer, $option, $now)) {
+                        $out['decision'] = 'intrigue_start';
+                        $out['coverage'] = 'partial';
+                        $out['actions'][] = $option;
+                    }
+                }
+                return $out;
+            }
             $prophecy = \Berserk\Core\Observation\ProphecyKnowledge::choice($state, $viewer, $wait);
             if ($prophecy !== null) {
                 $out['decision'] = $prophecy['kind'];
@@ -149,6 +206,34 @@ final class LegalActions
                     $option = self::option('choose_greed_teleport',$destination);
                     if (self::passesClock($state,$viewer,$option,$now)) $out['actions'][] = $option;
                 }
+            } elseif ($handler instanceof \Berserk\Core\Choice\CardChoice
+                && $wait['source'] === $handler->pendingKey()) {
+                $pending = $state->battle[$handler->pendingKey()];
+                $card = $state->getCard((int) ($pending['card_id'] ?? 0));
+                if ($card && $card->owner === $viewer) {
+                    $out['decision'] = 'card_option';
+                    $out['coverage'] = 'complete';
+                    foreach ($pending['options'] ?? [] as $index => $option) {
+                        if (!is_int($index) || $index < 0 || !is_array($option)) continue;
+                        $action = self::option('choose_card_option', ['card_id'=>$card->instanceId, 'option_index'=>$index]);
+                        if (self::passesClock($state, $viewer, $action, $now)) $out['actions'][] = $action;
+                    }
+                }
+            } elseif ($handler instanceof \Berserk\Core\Choice\FirstStrikeJumpChoice
+                && $wait['source'] === \Berserk\Core\FirstStrikeJump::PENDING) {
+                $pending = $state->battle[$handler->pendingKey()];
+                $out['decision'] = 'first_strike_movement';
+                $out['coverage'] = 'complete';
+                $out['actions'] = self::firstStrikeMovement($state, $viewer, $pending, $now);
+            } elseif ($handler instanceof \Berserk\Core\Choice\WhipChoice
+                && ($whip=PlayerObservation::whipChoice($state,$viewer,$wait))!==null) {
+                $out['decision']='whip_target';$out['coverage']='partial';
+                foreach ($whip['options'] as $target) {
+                    $option=self::option('choose_whip_target',['target_id'=>$target['target_id']]);
+                    if(self::passesClock($state,$viewer,$option,$now))$out['actions'][]=$option;
+                }
+                $option=self::option('cancel_pending',[]);
+                if(self::passesClock($state,$viewer,$option,$now))$out['actions'][]=$option;
             } elseif ($handler instanceof GatePickChoice && $wait['source']==='pending_gate_pick') {
                 $pending = $state->battle['pending_gate_pick'];
                 $out['decision'] = 'gate_cell';
@@ -203,12 +288,24 @@ final class LegalActions
                 foreach ($options as $option) {
                     if (self::passesClock($state,$viewer,$option,$now)) $out['actions'][] = $option;
                 }
+            } elseif ($wait['source'] === 'strike.pending_close_or_damage') {
+                $pending = $state->battle['strike']['pending_close_or_damage'];
+                $target = $state->getCard((int) $pending['defender_id']);
+                if ($target && $target->owner === $viewer) {
+                    // Closing preserves the creature and avoids paying HP for an uncertain future action.
+                    $option = self::option('choose_close_or_damage', ['choice'=>'close']);
+                    if (self::passesClock($state, $viewer, $option, $now)) {
+                        $out['decision'] = 'close_or_damage';
+                        $out['coverage'] = 'partial';
+                        $out['actions'][] = $option;
+                    }
+                }
             } elseif (CombatMainPassKnowledge::window($state, $viewer, $now) !== null) {
                 $out['decision'] = 'combat_main_pass';
                 $out['coverage'] = 'partial';
                 $out['actions'] = [self::option('combat_instant_pass')];
-            } elseif ($handler === null && $wait['source'] === 'strike.results'
-                && (in_array($state->battle['strike']['kind'] ?? '', ['', 'shot', 'tap', 'discharge'], true)
+            } elseif ($handler === null && in_array($wait['source'], ['strike.results', 'strike.waiting_push_ack'], true)
+                && (in_array($state->battle['strike']['kind'] ?? '', ['', 'shot', 'throw', 'tap', 'discharge', 'uchr', 'heal', 'multi_heal', 'life_gift'], true)
                     || BasicMagic::resultAck($state,$viewer))
                 && in_array($state->battle['strike']['instant_result_stage'] ?? null,[null,'dice'],true)
                 && empty($state->battle['strike']['pending_wounds_resolution'])) {
@@ -477,6 +574,37 @@ final class LegalActions
                 if (self::passesClock($state, $viewer, $option, $now)) $actions[] = $option;
             }
             break;
+        }
+        return $actions;
+    }
+
+    private static function firstStrikeMovement(GameState $state, string $viewer, array $pending, int $now): array
+    {
+        $id = $pending['id'] ?? null;
+        if (($pending['owner'] ?? null) !== $viewer || !is_string($id) || $id === '') return [];
+        $engine = new \Berserk\Core\Engine();
+        $payloads = [];
+        if (($pending['stage'] ?? null) === 'jump') {
+            $card = $state->getCard((int) $pending['card_id']);
+            if (!$card || $card->owner !== $viewer
+                || $card->row !== $pending['from_row'] || $card->col !== $pending['from_col']) return [];
+            $cells = (new \Berserk\Core\Movement\MovementResolver($state, $engine))
+                ->triggeredJumpCells($card, (int) $pending['range']);
+            foreach ($pending['cells'] as $cell) {
+                if (!isset($cells[$cell])) continue;
+                [$row, $col] = array_map('intval', explode('_', $cell));
+                $payloads[] = ['choice_id'=>$id, 'row'=>$row, 'col'=>$col];
+            }
+        } elseif (($pending['stage'] ?? null) === 'pull') {
+            $valid = (new \Berserk\Core\FirstStrikeJump($state, $engine))->candidates($pending);
+            foreach (array_intersect($pending['candidates'], $valid) as $targetId) {
+                $payloads[] = ['choice_id'=>$id, 'target_id'=>$targetId];
+            }
+        }
+        $actions = [];
+        foreach ($payloads as $payload) {
+            $option = self::option('choose_first_strike_movement', $payload);
+            if (self::passesClock($state, $viewer, $option, $now)) $actions[] = $option;
         }
         return $actions;
     }

@@ -221,6 +221,7 @@ final class TurnPhaseProcessor
 
     public function resume(): void
     {
+        if (!empty($this->state->battle['single_roll'])) return;
         if (WormIncarnation::operation($this->state)) return;
         if (!empty($this->state->battle[Tremor::PENDING])) {
             $this->state->battle[Tremor::PENDING]['resume_turn'] = true;
@@ -248,6 +249,7 @@ final class TurnPhaseProcessor
 
     private function advance(): void
     {
+        if (!empty($this->state->battle['single_roll'])) return;
         $tp = &$this->state->battle['turn_phase'];
         if (!$tp) return;
 
@@ -1062,7 +1064,7 @@ final class TurnPhaseProcessor
         }
         if ($base === 'instant' && !empty($battle['pending_instant_pick'])) return true;
         if ($base === 'bombs' && !empty($battle['pending_any_death'])) return true;
-        if ($base === 'row_spell' && !empty($battle['pending_row_spell_pick'])) return true;
+        if ($base === 'row_spell' && (!empty($battle['pending_row_spell_pick']) || !empty($battle['single_roll']))) return true;
 
         return false;
     }
@@ -1311,6 +1313,16 @@ final class TurnPhaseProcessor
         }
 
         $dice = CardRoll::roll($this->state, $card);
+        if ((new SingleRoll($this->state,$this->engine))->suspendPassive($card,'row_spell',$dice,
+            ['handler'=>'row_spell','action'=>$action,'x'=>$x,'enemies'=>$enemies,'events'=>$events]))
+            return ['label'=>'Цветущие руны','items'=>[]];
+        return $this->continueRowSpellRoll($card, $activeKey, $action, $x, $enemies, $events, $dice);
+    }
+
+    /** Prepared schedule/markers are already consumed; only the die-dependent tail remains. */
+    public function continueRowSpellRoll(CardInstance $card, string $activeKey, array $action,
+        int $x, array $enemies, array $events, int $dice): array
+    {
         $level = BattleHelper::diceToLevel($dice);
         $val = BattleHelper::actionStrikeValue($action, $level);
         $events[] = ['standalone_text' => "Кубик: {$dice}, урон: {$val} на цель"];

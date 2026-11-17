@@ -116,7 +116,7 @@ final class Form
      * Обёртка <form method="get"> с hidden-полями.
      *
      * @param array<string, mixed> $hidden  hidden-поля (name => value)
-     * @param array{class?:string} $opts
+     * @param array{class?:string, selectionContext?:string, battlefieldOwner?:string} $opts
      */
     public static function form(array $hidden, string $body, array $opts = []): string
     {
@@ -128,7 +128,12 @@ final class Form
                 . '" value="' . self::esc((string) $value) . '">';
         }
 
-        return '<form method="get" class="' . self::esc($class) . '">'
+        $selectionAttrs = isset($opts['selectionContext'], $opts['battlefieldOwner'])
+            ? ' data-card-selection="' . self::esc($opts['selectionContext'])
+                . '" data-card-field-owner="' . self::esc($opts['battlefieldOwner']) . '"'
+            : '';
+
+        return '<form method="get" class="' . self::esc($class) . '"' . $selectionAttrs . '>'
             . $hiddenHtml
             . $body
             . '</form>';

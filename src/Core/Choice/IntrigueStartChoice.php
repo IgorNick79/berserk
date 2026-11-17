@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class IntrigueStartChoice implements ChoiceHandlerInterface
 {
@@ -55,14 +55,7 @@ final class IntrigueStartChoice implements ChoiceHandlerInterface
             $isOwn = ($tc->owner === $playerKey);
             if ($effectType === 'poison' && $side === 'enemy' && $isOwn) continue;
 
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-            $coords = $tc->zone === \Berserk\Core\CardInstance::ZONE_FIELD
-                ? ' (' . $tc->row . ';' . $tc->col . ')'
-                : '';
-            $label = $tn . $coords . ' — ' . $tc->hp . '/' . $tc->hpMax;
-            if ($isOwn) $label .= ' — моё';
-
-            $items[] = ['value' => (int) $tid, 'label' => $label];
+            $items[] = ['value'=>(int) $tid];
         }
 
         $roleParam = $role === 'host' ? 'first' : 'second';
@@ -94,7 +87,7 @@ final class IntrigueStartChoice implements ChoiceHandlerInterface
             form: [
                 'type'   => 'checkbox',
                 'name'   => 'target_ids[]',
-                'items'  => $items,
+                'side_toggle' => false,
                 'hidden' => [
                     $roleParam => '',
                     'game'     => $state->gameId,
@@ -103,6 +96,8 @@ final class IntrigueStartChoice implements ChoiceHandlerInterface
                 ],
                 'submit' => $actionLabel,
             ],
+            cardSelection: CreatureChoice::confirmed($state, $playerKey, $cardsInfo, $items,
+                'intrigue-start:' . $state->version, $count, $count),
         );
     }
 

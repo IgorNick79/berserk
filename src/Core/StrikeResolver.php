@@ -199,6 +199,18 @@ final class StrikeResolver
             }
         }
 
+        if ($attacker->zone === CardInstance::ZONE_FIELD && $target->zone === CardInstance::ZONE_FLYING) {
+            $allowed = BattleHelper::getAttackTargets($this->state, $attacker, 'strike', $playerKey);
+            if (!isset($allowed[$targetId]) || $target->dying || $target->hp <= 0) return Result::error('Недоступная летающая цель');
+            if (!FlyingPreparation::canReach($this->state, $attacker)) {
+                if (!FlyingPreparation::canPrepare($this->state, $attacker)) return Result::error('Подготовка недоступна');
+                $this->state->battle['pending_flying_preparation'] = [
+                    'owner' => $playerKey, 'source_id' => $cardId, 'id' => bin2hex(random_bytes(12)),
+                ];
+                $this->state->bumpVersion();
+                return Result::ok(['flying_preparation_pending']);
+            }
+        }
         $this->engine->revealCard($this->state, $target);
 
         $attackerIsFlying = ($attacker->zone === CardInstance::ZONE_FLYING);
@@ -219,7 +231,7 @@ final class StrikeResolver
             return Result::error('Цель защищена от этой атаки');
         }
 
-        if (!$attackerIsFlying) {
+        if (!$attackerIsFlying && $target->zone !== CardInstance::ZONE_FLYING) {
             // Ограничение «только по карте напротив» (Циклоп)
             if (!empty($attacker->effectiveProp()['strike']['opposite'])) {
                 if (!CardStats::isOpposite($attacker, $target)) {
@@ -1470,6 +1482,7 @@ final class StrikeResolver
 
     public function confirmStrike(string $playerKey, Command $cmd): Result
     {
+        if (isset($this->state->battle['single_roll'])) return (new SingleRoll($this->state,$this->engine))->confirm($playerKey,$cmd);
         if ($this->state->status !== 'battle') {
             return Result::error('Сейчас не бой');
         }
@@ -1527,6 +1540,19 @@ final class StrikeResolver
                 return Result::ok(['combat_dice_result_ack']);
             }
 
+            $strike = &$this->state->battle['strike'];
+            if (!empty($strike['prophecy_effect_result']) && empty($strike['prophecy_effect_acknowledged'])) {
+                if (empty($strike['prophecy_effect_result_active'])) {
+                    $strike['prophecy_effect_result_active'] = true;
+                    $strike['confirmed'] = [];
+                    InformationalWaitManager::publish($this->state);
+                    $this->state->bumpVersion();
+                    return Result::ok(['strike_prophecy_result']);
+                }
+                $strike['prophecy_effect_acknowledged'] = true;
+                unset($strike['prophecy_effect_result_active']);
+            }
+
             if (!empty($this->state->battle['strike']['pending_wounds_resolution'])) {
                 $this->state->battle['strike']['wounds_window_done'] = true; // Legacy announced entries retain their resolution.
                 $this->state->battle['strike']['wounds_after_result_ack'] = true;
@@ -1535,6 +1561,9 @@ final class StrikeResolver
                 return Result::ok(['wounds_resolution_resumed']);
             }
 
+            if (!empty($this->state->battle['strike']['auto_parent_result'])) {
+                $this->state->battle['strike'] = $this->state->battle['strike']['auto_parent_result'];
+            }
             $continuation = $this->continueAfterStrikeResultAck($this->state->battle['strike']);
             if ($continuation instanceof Result) {
                 return $continuation;
@@ -1690,6 +1719,14 @@ final class StrikeResolver
         if ($this->openAfterStrikeExecute($strike)) {
             $this->state->bumpVersion();
             return Result::ok(['after_strike_execute']);
+        }
+
+        $dischargeSeries = $this->state->battle['multi_discharge_series'] ?? null;
+        if ($dischargeSeries && ($strike[ActionResolution::ID] ?? null) === $dischargeSeries[ActionResolution::ID]) {
+            if (empty($strike['continuation_frame'])) $this->state->historyRecorder?->combatFinished($this->state);
+            (new ActionResolver($this->state, $this->engine))->finishDischargeSeriesStrike($strike);
+            $this->state->bumpVersion();
+            return Result::ok(['multi_discharge_series_advanced']);
         }
 
         if ($this->openAttackSeriesChoice($strike)) {
@@ -1868,7 +1905,8 @@ final class StrikeResolver
 
         $defendCardId = $strike['defender_id'] ?? $strike['target_id'];
         $defendCard = $this->state->getCard($defendCardId);
-        if (!$defendCard) return false;
+        if (!$defendCard || $defendCard->dying || $defendCard->hp <= 0
+            || $defendCard->zone !== CardInstance::ZONE_FIELD) return false;
 
         $attacker = $this->state->getCard($strike['attacker_id']);
         if (!$attacker) return false;
@@ -1945,6 +1983,15 @@ final class StrikeResolver
         $defendCard = $this->state->getCard($pp['defender_id']);
         if (!$defendCard || $defendCard->owner !== $playerKey) {
             return Result::error('Не ваш выбор');
+        }
+
+        if ($defendCard->dying || $defendCard->hp <= 0 || $defendCard->zone !== CardInstance::ZONE_FIELD) {
+            unset($this->state->battle['strike']['pending_push']);
+            InformationalWaitManager::publish($this->state);
+            $this->state->battle['strike']['state'] = 'results';
+            $this->state->battle['strike']['confirmed'] = [];
+            $this->state->bumpVersion();
+            return Result::ok(['push_target_dead']);
         }
 
         $featureSource = $this->state->getCard((int) ($this->state->battle['strike']['attacker_id'] ?? 0));
@@ -2025,12 +2072,17 @@ final class StrikeResolver
 
         if ($meta['all_elite'] && !empty($config['all_elite']['damage'])) {
             $dmg = (int) $config['all_elite']['damage'];
+            $before = $target->hp;
             $this->engine->applyDamage($this->state, $target, $dmg, 'strike', $attacker);
-            $title = 'обе элитные — ' . $target->ukid . ' получает +' . $dmg . ' урона';
+            $effectResult = ['type' => 'damage', 'value' => $dmg, 'before' => $before, 'after' => $target->hp];
+            $title = 'обе элитные — {target} получает +' . $dmg . ' урона';
         } elseif ($meta['all_ordinary'] && !empty($config['all_ordinary']['poison'])) {
             $poison = (int) $config['all_ordinary']['poison'];
+            $before = (int) ($target->markers['poison']['value'] ?? 0);
             $this->engine->applyPoison($target, $poison, $attacker->owner);
-            $title = 'обе рядовые — отравление ' . $poison;
+            $effectResult = ['type' => 'poison', 'value' => $poison, 'before' => $before,
+                'after' => (int) ($target->markers['poison']['value'] ?? 0)];
+            $title = 'обе рядовые — {target}: отравление ' . $poison;
         } else {
             $title = 'пророчество не сработало';
         }
@@ -2038,6 +2090,13 @@ final class StrikeResolver
         $actions = [['label' => 'Закрыть', 'cmd' => 'close_prophecy', 'class' => 'skip']];
 
         $pp->commit($attacker->owner, $attacker, $peeked, 'strike', $title, $actions);
+        $this->state->battle['pending_prophecy']['title_target_ukid'] = $target->ukid;
+        if (isset($effectResult)) {
+            $this->state->battle['strike']['prophecy_effect_result'] = $effectResult + [
+                'source_id' => $attacker->instanceId, 'source_ukid' => $attacker->ukid,
+                'target_id' => $target->instanceId, 'target_ukid' => $target->ukid,
+            ];
+        }
     }
 
     private function consumeRagnarUnanswerStrike(CardInstance $attacker, CardInstance $target, bool $friendlyFire, ?array $context = null): ?array

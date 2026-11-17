@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CardSelectionSpec, CreatureChoice, PanelSpec};
 
 final class AttackSeriesContinueChoice implements ChoiceHandlerInterface
 {
@@ -40,31 +40,28 @@ final class AttackSeriesContinueChoice implements ChoiceHandlerInterface
             );
         }
 
-        $buttons = [];
+        $items = [];
         foreach ($p['candidates'] as $tid) {
-            $tc = $state->getCard((int) $tid);
-            if (!$tc) continue;
-            if ($tc->dying || $tc->hp <= 0) continue;
-
-            $tn = $cardsInfo[$tc->ukid]['name'] ?? '?';
-            $pos = $tc->row . ';' . $tc->col;
-
-            $buttons[] = [
-                'label' => $tn . ' (' . $pos . ') — ' . $tc->hp . '/' . $tc->hpMax,
-                'url'   => $baseUrl . '&cmd=attack_series_next&target_id=' . $tid,
-            ];
+            $target = $state->getCard((int) $tid);
+            if (!$target || $target->dying || $target->hp <= 0) continue;
+            $items[] = ['value'=>$target->instanceId];
         }
-
-        $buttons[] = [
-            'label' => 'Закончить серию',
-            'url'   => $baseUrl . '&cmd=attack_series_end',
-            'class' => 'skip',
-        ];
+        $endUrl = $baseUrl . '&cmd=attack_series_end';
 
         return new PanelSpec(
             title: $hName . ': продолжить серию атак?',
             text: ['Атакуй следующего соседа или закончи серию — тогда Гидра закроется.'],
-            buttons: $buttons,
+            form: $items ? [
+                'type' => 'radio',
+                'name' => 'target_id',
+                'hidden' => \Berserk\View\Ui\Form::battleHidden($role, $state->gameId, 'attack_series_next'),
+                'submit' => 'Выбрать',
+                'cancel' => $endUrl,
+                'cancel_label' => 'Закончить серию',
+            ] : null,
+            cardSelection: $items ? CreatureChoice::confirmed($state, $playerKey, $cardsInfo, $items,
+                'attack-series:' . $state->version, mode:CardSelectionSpec::SIMPLE) : null,
+            buttons: $items ? [] : [['label'=>'Закончить серию', 'url'=>$endUrl, 'class'=>'skip']],
         );
     }
 

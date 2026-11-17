@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class ParticlePickChoice implements ChoiceHandlerInterface
 {
@@ -37,7 +37,7 @@ final class ParticlePickChoice implements ChoiceHandlerInterface
         foreach ($p['candidates'] as $tid) {
             $tc = $state->getCard((int) $tid);
             if (!$tc) continue;
-            $items[] = ['value' => $tc->instanceId, 'label' => $cardsInfo[$tc->ukid]['name'] ?? '?'];
+            $items[] = ['value' => $tc->instanceId];
         }
 
         $roleParam = $role === 'host' ? 'first' : 'second';
@@ -48,7 +48,7 @@ final class ParticlePickChoice implements ChoiceHandlerInterface
             form: [
                 'type'   => 'checkbox',
                 'name'   => 'target_ids[]',
-                'items'  => $items,
+
                 'side_toggle' => true,
                 'side_default' => 'enemy',
                 'hidden' => [
@@ -57,8 +57,11 @@ final class ParticlePickChoice implements ChoiceHandlerInterface
                     'cmd'      => 'choose_particle_pick',
                 ],
                 'submit' => 'Применить',
-                'cancel' => $baseUrl . '&cmd=cancel_pending',
+                'cancel' => $baseUrl . '&cmd=cancel_pending&mode=',
             ],
+            cardSelection: CreatureChoice::confirmed(
+                $state, $playerKey, $cardsInfo, $items, 'particle:' . $state->version, 1, $max,
+            ),
         );
     }
 

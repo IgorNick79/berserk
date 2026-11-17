@@ -483,7 +483,7 @@ final class BattleHelper
             if (!self::hasAnyStrike($card)) return [];
 
             $attackerIsFlying = ($card->zone === CardInstance::ZONE_FLYING);
-            $canAttackFlying  = CardStats::canAttackFlying($state, $card);
+            $canAttackFlying  = FlyingPreparation::canReach($state, $card) || FlyingPreparation::canPrepare($state, $card);
 
             // Берсерк: вторая атака — только по другой цели.
             // Первую цель не подсвечиваем, чтобы UI не расходился с declare.
@@ -512,6 +512,7 @@ final class BattleHelper
                 if ($target->owner === $playerKey && !$allowFriendlyFire) continue;
 
                 $targetIsFlying = ($target->zone === CardInstance::ZONE_FLYING);
+                if ($targetIsFlying && ($target->dying || $target->hp <= 0)) continue;
 
                 if ($forced !== null) {
                     $dr = abs($target->row - $card->row);

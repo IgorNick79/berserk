@@ -11,7 +11,7 @@ use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\Result;
 use Berserk\Core\StrikeResolver;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class AfterStrikeExecuteChoice implements ChoiceHandlerInterface
 {
@@ -44,18 +44,18 @@ final class AfterStrikeExecuteChoice implements ChoiceHandlerInterface
             return new PanelSpec(title: $title, isMine: false);
         }
 
-        $buttons = [];
+        $links = [];
         foreach ((array) ($pending['candidate_ids'] ?? []) as $targetId) {
             $target = $state->getCard((int) $targetId);
             if (!$source || !$target || !CardStats::canExecuteTarget($state, $source, $target, $value)) continue;
 
-            $targetName = $cardsInfo[$target->ukid]['name'] ?? $target->ukid;
-            $relation = $target->owner === ($pending['owner'] ?? null) ? 'Свой' : 'Чужой';
-            $buttons[] = [
-                'label' => $relation . ': ' . $targetName,
+            $links[] = [
+                'instanceId' => $target->instanceId,
+                'prefix' => ($target->owner === $playerKey ? 'Свой' : 'Чужой') . ': ',
                 'url' => $baseUrl . '&cmd=choose_after_strike_execute&target_id=' . $target->instanceId,
             ];
         }
+        $buttons = CreatureChoice::immediateButtons($state, $playerKey, $cardsInfo, $links);
 
         return new PanelSpec(title: $title, buttons: $buttons);
     }

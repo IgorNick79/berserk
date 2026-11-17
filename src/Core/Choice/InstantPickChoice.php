@@ -11,7 +11,7 @@ use Berserk\Core\Command;
 use Berserk\Core\Result;
 use Berserk\Core\CardInstance;
 use Berserk\Core\InstantProcessor;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CardSelectionSpec, CreatureChoice, Form, PanelSpec};
 
 final class InstantPickChoice implements ChoiceHandlerInterface
 {
@@ -48,7 +48,7 @@ final class InstantPickChoice implements ChoiceHandlerInterface
         $condition = $pi['effect']['condition'] ?? null;
         $instantProcessor = new InstantProcessor($state, new Engine());
 
-        $buttons = [];
+        $rows = [];
         foreach ($state->cards as $c) {
             if ($c->zone !== CardInstance::ZONE_FIELD
                 && $c->zone !== CardInstance::ZONE_FLYING) continue;
@@ -65,25 +65,16 @@ final class InstantPickChoice implements ChoiceHandlerInterface
             if ($condition === 'target_not_moved' && !empty($c->flags['moved_this_turn'])) continue;
             if ($condition === 'target_closed' && !$c->closed) continue;
 
-            $name = $cardsInfo[$c->ukid]['name'] ?? '?';
-            $coords = $c->zone === CardInstance::ZONE_FIELD
-                ? ' (' . $c->row . ',' . $c->col . ')' : '';
-
-            $buttons[] = [
-                'label' => $name . $coords . ' (' . $c->hp . '/' . $c->hpMax . ')',
-                'url'   => "{$baseUrl}&cmd=choose_instant_pick&target_id={$c->instanceId}",
-            ];
+            $rows[] = ['value'=>$c->instanceId];
         }
 
-        $buttons[] = [
-            'label' => 'Отмена',
-            'url'   => $baseUrl . '&cmd=cancel_pending',
-            'class' => 'skip',
-        ];
-
-        return new PanelSpec(
-            title: $srcName . ': ' . ($pi['label'] ?? 'выбери цель'),
-            buttons: $buttons,
+        $cancel = $baseUrl . '&cmd=cancel_pending';
+        return CreatureChoice::targetPanel(
+            $state, $playerKey, $cardsInfo, $rows, 'choose_instant_pick:' . $state->version,
+            $srcName . ': ' . ($pi['label'] ?? 'выбери цель'),
+            Form::battleHidden($role, $state->gameId, 'choose_instant_pick'),
+            $cancel,
+            mode: ($pi['effect']['type'] ?? '') === 'heal' ? CardSelectionSpec::DEFAULT_MODE : CardSelectionSpec::SIMPLE,
         );
     }
 

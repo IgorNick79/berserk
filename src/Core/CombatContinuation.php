@@ -58,7 +58,7 @@ final class CombatContinuation
 
     public static function busy(GameState $state): bool
     {
-        if (!empty($state->battle['strike']) || Choice\ChoiceRegistry::current($state) !== null) return true;
+        if (!empty($state->battle['single_roll']) || !empty($state->battle['strike']) || Choice\ChoiceRegistry::current($state) !== null) return true;
         foreach ($state->battle as $key => $value) {
             if (str_starts_with((string) $key, 'pending_') && !empty($value)) return true;
         }

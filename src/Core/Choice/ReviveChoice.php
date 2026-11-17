@@ -10,7 +10,7 @@ use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
 use Berserk\Core\CardInstance;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, Form, PanelSpec};
 
 final class ReviveChoice implements ChoiceHandlerInterface
 {
@@ -50,27 +50,17 @@ final class ReviveChoice implements ChoiceHandlerInterface
         $step = $pr['step'] ?? 'card';
 
         if ($step === 'card') {
-            $buttons = [];
+            $rows = [];
             foreach ($pr['candidates'] as $tid) {
-                $tc = $state->getCard($tid);
-                if (!$tc) continue;
-                $tn   = $cardsInfo[$tc->ukid]['name'] ?? '?';
-                $type = $tc->type === 'fly' ? ' (летун)' : '';
-
-                $buttons[] = [
-                    'label' => $tn . $type,
-                    'url'   => "{$baseUrl}&cmd=choose_revive_target&target_id={$tid}",
-                ];
+                $card = $state->getCard((int) $tid);
+                if (!$card) continue;
+                $rows[] = ['value'=>$card->instanceId, 'suffix'=>$card->type === 'fly' ? ' (летун)' : ''];
             }
-            $buttons[] = [
-                'label' => 'Отмена',
-                'url'   => $baseUrl . '&cmd=cancel_pending',
-                'class' => 'skip',
-            ];
-
-            return new PanelSpec(
-                title: $healerName . ' возрождает — выбери существо с кладбища:',
-                buttons: $buttons,
+            return CreatureChoice::targetPanel(
+                $state, $playerKey, $cardsInfo, $rows, 'revive:' . $state->version,
+                $healerName . ' возрождает — выбери существо с кладбища:',
+                Form::battleHidden($role, $state->gameId, 'choose_revive_target'),
+                $baseUrl . '&cmd=cancel_pending', field:false,
             );
         }
 

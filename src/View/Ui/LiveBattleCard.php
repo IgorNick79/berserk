@@ -45,7 +45,7 @@ final class LiveBattleCard
     private static function indicator(string $key, int $value, string $label, string $html = ''): string
     {
         $asset = in_array($key, ['coin', 'poison'], true) ? $key . '_compact_v2' : $key . '_compact';
-        return '<span class="mini-indicator" data-mini-hint tabindex="0" role="button" aria-label="' . $label . '" aria-expanded="false">'
+        return '<span class="mini-indicator" data-indicator-kind="' . $key . '" data-mini-hint tabindex="0" role="button" aria-label="' . $label . '" aria-expanded="false">'
             . '<img src="/assets/images/battle/mini/' . $asset . '.svg" alt=""><span>' . $value . '</span>'
             . '<span class="mini-hint-text" hidden>' . ($html ?: $label) . '</span></span>';
     }

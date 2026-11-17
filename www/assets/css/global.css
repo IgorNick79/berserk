@@ -1834,29 +1834,50 @@ body.battle-page > .screen {
 .battle-page .info-panel-footer .info-actions { margin: 0; }
 .battle-page .info-panel-footer .button { flex: 1 1 0; }
 .battle-page .info-panel-footer button:disabled { opacity: .5; cursor: default; }
-.battle-page .instant-control { border: 1px solid var(--ip-edge, #aaa); border-radius: 6px; padding: 8px; margin: 0 0 10px; min-width: 0; }
-.battle-page .instant-control h3 { margin: 0 0 6px; font-size: 13px; }
-.battle-page .instant-control h3 { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+/* Only the collapsed lightning overlays content. Expanded controls dock below it. */
+.battle-page .info-panel-main { position: relative; display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; min-width: 0; }
+.battle-page .info-panel-main > .info-panel-content { scroll-padding-bottom: 64px; }
+.battle-page .info-panel-main > .info-panel-content.instant-scroll-clearance { padding-bottom: 64px; }
+.battle-page .instant-control-layer { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
+.battle-page .instant-control { position: absolute; right: 12px; bottom: 12px; width: 40px; height: 40px; margin: 0; padding: 0; border: 0; pointer-events: auto; }
+.battle-page .instant-control > summary { list-style: none; box-sizing: border-box; }
+.battle-page .instant-control > summary::-webkit-details-marker { display: none; }
+.battle-page .instant-control-indicator { display: none; position: absolute; right: -3px; top: -3px; width: 9px; height: 9px; border: 2px solid #292318; border-radius: 50%; background: #e5b943; }
+.battle-page .instant-control[data-instant-reserved="1"] .instant-control-indicator { display: block; background: #76c78a; }
+.battle-page .instant-control[data-instant-required="1"] > summary { border-color: #ffdc7b; box-shadow: 0 0 0 2px #d9aa5066, 0 2px 8px #0009; }
+.battle-page .instant-control[data-instant-required="1"] .instant-control-indicator { display: block; }
+.battle-page .instant-control-layer:has(> .instant-control[open]) { position: relative; inset: auto; flex: 0 0 auto; min-height: 0; }
+.battle-page .instant-control[open] { position: static; width: auto; height: auto; margin: 0 12px 10px; }
+.battle-page .instant-control[open] > summary { display: none; }
+.battle-page .instant-control-panel { max-height: var(--instant-panel-height, min(420px, 50vh)); overflow: auto; overscroll-behavior: contain; box-sizing: border-box; padding: 8px; border: 1px solid var(--ip-edge, #a88749); border-radius: 6px; color: var(--ip-text, #f5e8ce); }
+.battle-page .instant-control:not([open]) > .instant-control-panel { display: none; }
+.battle-page .instant-control-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.battle-page .instant-control-heading > [data-instant-close] { margin-left: auto; }
+.battle-page .instant-control-heading h3 { margin: 0; font-size: 14px; }
+.battle-page .instant-control-heading .battle-icon-control { flex-basis: 28px; width: 28px; height: 28px; }
+.battle-page .instant-control-heading img { width: 28px; height: 28px; }
 .battle-page .button.reserve-paid, .battle-page .button.catcher-reroll { background: linear-gradient(#edcb62,#af801f) !important; color: #fff !important; }
 .battle-page .button.reserve-free, .battle-page .button.catcher-own { background: linear-gradient(#65bb79,#237339) !important; color: #fff !important; }
 .battle-page .button.catcher-enemy { background: linear-gradient(#d66c64,#932f2a) !important; color: #fff !important; }
 .battle-page .button.catcher-dice { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .battle-page .catcher-dice .panel-dice-value { flex: 0 0 auto; }
-.battle-page .instant-control-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 6px; }
+.battle-page .instant-control-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); align-items: start; gap: 6px; }
 .battle-page .instant-control-main { white-space: normal; overflow-wrap: normal; word-break: normal; }
 .battle-page .instant-control-actions > .instant-control-main { flex: 1 1 0; min-width: 0; text-align: center; }
 .battle-page .instant-control-picker { display: contents; }
 .battle-page .instant-control-picker::details-content { display: contents; }
 .battle-page .instant-control-picker:not([open]) > .instant-control-options { display: none; }
-.battle-page .instant-control-actions > [data-instant-pass], .battle-page .instant-control-actions > [data-instant-local-pass] { flex: 1 1 0; min-width: 0; text-align: center; }
+.battle-page .instant-control-actions > [data-instant-pass] { min-width: 0; text-align: center; }
 .battle-page .instant-control-picker > summary { grid-column: 1; grid-row: 2; display: block; text-align: center; cursor: pointer; list-style: none; }
-.battle-page .instant-control-actions:has(.instant-control-picker) > [data-instant-pass], .battle-page .instant-control-actions:has(.instant-control-picker) > [data-instant-local-pass] { grid-column: 2; grid-row: 2; }
+.battle-page .instant-control-actions:has(.instant-control-picker) > [data-instant-pass] { grid-column: 2; grid-row: 2; }
 .battle-page .instant-control-picker > summary::-webkit-details-marker { display: none; }
 .battle-page .instant-control-options { grid-column: 1 / -1; grid-row: 1; min-width: 0; max-height: min(28vh, 220px); overflow-y: auto; margin-bottom: 2px; }
 .battle-page .instant-control-options .task-card__hint { color: inherit; opacity: .85; }
 .battle-page .instant-control-cost, .battle-page .instant-control-quota { font-size: 12px; white-space: nowrap; }
 .battle-page .instant-control-quota { margin-left: auto; }
 .battle-page .battle-selected-card h3 { margin: 0 0 10px; }
+.battle-page .panel-card-details:has(>.panel-card-status){padding-top:0}
+.battle-page .panel-card-details>.panel-card-status{width:fit-content;max-width:100%;box-sizing:border-box;margin:0 auto 10px;padding:6px 24px;border:1px solid var(--ip-edge,#92724c);border-top:0;border-radius:0 0 6px 6px;background:var(--ip-surface,#3a3028);color:var(--ip-muted,#c8bbab);font-size:12px;line-height:18px;text-align:center}
 
 
 .battle-page .battle-debug-overlay {
@@ -2382,3 +2403,5 @@ body.battle-page {
 .battle-pause-picker.berserk-dialog [data-picker-cancel]:hover { background: #303535; color: #e0e3df; border: 1px solid #58605e; }
 
 .battle-pause-picker.berserk-dialog input[type=range]:is(:focus, :focus-visible) { outline: none; box-shadow: none; }
+
+.berserk-dialog, .berserk-dialog * { user-select: none; -webkit-user-select: none; }

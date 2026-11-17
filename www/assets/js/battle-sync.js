@@ -58,6 +58,7 @@
         if (drag) drag.observe(data);
     }
 
+    var uiTurn = script.dataset.uiTurn || "";
     var uiState = {
         sel: parseInt(script.dataset.sel || "0", 10) || 0,
         inspect: parseInt(script.dataset.inspect || "0", 10) || 0,
@@ -65,6 +66,23 @@
         modeExplicit: script.dataset.modeExplicit === "1",
         pile: script.dataset.pile || ""
     };
+
+    function clearUiUrl() {
+        var url = new URL(window.location.href);
+        ["sel", "inspect", "mode", "pile", "in_side", "ui_turn"].forEach(function (key) { url.searchParams.delete(key); });
+        window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    }
+
+    if (uiTurn) {
+        var initialUrl = new URL(window.location.href);
+        var previousTurn = initialUrl.searchParams.get("ui_turn");
+        if (previousTurn && previousTurn !== uiTurn) {
+            clearUiUrl();
+        } else if (["sel", "inspect", "mode", "pile"].some(function (key) { return initialUrl.searchParams.has(key); })) {
+            initialUrl.searchParams.set("ui_turn", uiTurn);
+            window.history.replaceState(null, "", initialUrl.pathname + initialUrl.search + initialUrl.hash);
+        }
+    }
 
     var uiRevision = 0;
     var requestSequence = 0;
@@ -158,6 +176,10 @@
         url.searchParams.set("render_token", renderToken);
         url.searchParams.set("since_version", String(Math.max(0, syncVersion)));
         url.searchParams.delete("settings_sync_id");
+        var intrigueSide = new URL(window.location.href).searchParams.get("in_side");
+        if (intrigueSide === "all" || intrigueSide === "enemy") url.searchParams.set("in_side", intrigueSide);
+        else url.searchParams.delete("in_side");
+        if (uiTurn) url.searchParams.set("ui_turn", uiTurn);
         url.searchParams.set("sel", String(uiState.sel || 0));
         url.searchParams.set("inspect", String(uiState.inspect || 0));
         if (uiState.modeExplicit) {
@@ -201,6 +223,7 @@
 
     function addUiAndVersion(params) {
         params.set("expected_version", String(Math.max(0, syncVersion)));
+        if (uiTurn) params.set("ui_turn", uiTurn);
         params.set("sel", String(uiState.sel || 0));
         params.set("inspect", String(uiState.inspect || 0));
         if (!params.has("mode") && uiState.modeExplicit) {
@@ -320,6 +343,10 @@
 
         syncVersion = incomingVersion;
         if (data.render_token) renderToken = data.render_token;
+        if (typeof data.ui.turn_key === "string" && data.ui.turn_key !== uiTurn) {
+            if (uiTurn) clearUiUrl();
+            uiTurn = data.ui.turn_key;
+        }
         uiState = normalizeUi(data.ui);
         if (drag) drag.afterSnapshot();
         updateTurnTimer(data);
@@ -470,6 +497,13 @@
         if (!pendingCommand || stopped) return;
         if (forcedSyncInFlight) return;
 
+        if (pendingCommand.type === "choose_intrigue_start" && !pendingCommand.finalError) {
+            var url = new URL(window.location.href);
+            if (url.searchParams.has("in_side")) {
+                url.searchParams.delete("in_side");
+                window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+            }
+        }
         commandState = "syncing";
         clearStatusTimer();
         clearForcedSyncTimer();
@@ -683,7 +717,8 @@
         }
         return url.searchParams.has("sel")
             || url.searchParams.has("mode")
-            || url.searchParams.has("pile");
+            || url.searchParams.has("pile")
+            || url.searchParams.has("in_side");
     }
 
     function isCommandUrl(url) {
@@ -747,6 +782,11 @@
             return;
         }
 
+        if (params.get("cmd") === "end_turn") {
+            uiState = normalizeUi({});
+            params.delete("mode");
+            clearUiUrl();
+        }
         uiState.inspect = 0;
         var commandUiRevision = uiRevision;
         if (drag) drag.cancel();
@@ -801,6 +841,11 @@
 
     function updateUiFromUrl(url, fromDrag) {
         if (drag && !fromDrag) drag.cancel();
+        var previousTurn = url.searchParams.get("ui_turn");
+        if (uiTurn && previousTurn && previousTurn !== uiTurn) {
+            ["sel", "inspect", "mode", "pile", "in_side"].forEach(function (key) { url.searchParams.delete(key); });
+        }
+        if (uiTurn) url.searchParams.set("ui_turn", uiTurn);
         uiState = {
             sel: url.searchParams.has("sel") ? (parseInt(url.searchParams.get("sel") || "0", 10) || 0) : 0,
             inspect: parseInt(url.searchParams.get("inspect") || "0", 10) || 0,
@@ -813,6 +858,94 @@
         uiRevision++;
         if (drag) drag.refresh();
     }
+
+    // Capture before the InfoPanel's inspection listener. Only a candidate's
+    // mouse click is deferred; replaying the link preserves ordinary inspection.
+    var selectionGestures = {doubleClickMs: 500, holdMs: 500, driftPx: 10, suppressMs: 800};
+    var pendingInspection = null, hold = null, heldClick = null;
+    function fieldChoice(event) {
+        return !stopped && !commandInFlight() && window.BerserkCardSelection
+            && window.BerserkCardSelection.fieldChoice(root, event, script.dataset.viewerKey);
+    }
+    function sameDecision(first, second) {
+        return second && first.id === second.id && first.group === second.group
+            && first.form.dataset.cardSelection === second.form.dataset.cardSelection;
+    }
+    function consume(event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    }
+    function cancelInspection() {
+        if (pendingInspection) clearTimeout(pendingInspection.timer);
+        pendingInspection = null;
+    }
+    function cancelHold() {
+        if (hold) clearTimeout(hold.timer);
+        hold = null;
+    }
+    function plainPrimary(event) {
+        return !event.defaultPrevented && event.button === 0
+            && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+    }
+
+    document.addEventListener("click", function (event) {
+        if (!plainPrimary(event) || !root.contains(event.target) || !event.detail) return;
+        var touch = event.pointerType === "touch" || event.sourceCapabilities?.firesTouchEvents;
+        if (heldClick && touch && performance.now() <= heldClick.until
+            && event.target.closest("[data-drag-card]")?.dataset.dragCard === heldClick.id) {
+            heldClick = null;
+            consume(event);
+            return;
+        }
+        if (touch) return;
+        var choice = fieldChoice(event);
+        if (!choice) { cancelInspection(); return; }
+        consume(event);
+        if (event.detail > 1 && pendingInspection && sameDecision(pendingInspection.choice, choice)) return;
+        cancelInspection();
+        pendingInspection = {choice: choice, timer: setTimeout(function () {
+            pendingInspection = null;
+            if (sameDecision(choice, fieldChoice(event)) && choice.link?.isConnected) choice.link.click();
+        }, selectionGestures.doubleClickMs)};
+    }, true);
+    document.addEventListener("dblclick", function (event) {
+        if (!plainPrimary(event) || !root.contains(event.target)
+            || event.pointerType === "touch" || event.sourceCapabilities?.firesTouchEvents) return;
+        var choice = fieldChoice(event);
+        if (!choice) return;
+        consume(event);
+        cancelInspection();
+        window.BerserkCardSelection.select(choice.form, choice.id, choice.group);
+    }, true);
+    document.addEventListener("pointerdown", function (event) {
+        if (event.pointerType !== "touch") return;
+        cancelHold();
+        if (!event.isPrimary) return;
+        heldClick = null;
+        var choice = fieldChoice(event);
+        if (!choice) return;
+        hold = {pointer: event.pointerId, card: choice.card, x: event.clientX, y: event.clientY, timer: setTimeout(function () {
+            cancelHold();
+            var current = fieldChoice(event);
+            if (!sameDecision(choice, current) || !choice.card.contains(document.elementFromPoint(event.clientX, event.clientY))) return;
+            heldClick = {id: choice.id, pointer: event.pointerId, until: Infinity};
+            window.BerserkCardSelection.select(current.form, current.id, current.group);
+        }, selectionGestures.holdMs)};
+    }, true);
+    document.addEventListener("pointermove", function (event) {
+        if (hold && hold.pointer === event.pointerId
+            && (Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > selectionGestures.driftPx
+                || !hold.card.contains(document.elementFromPoint(event.clientX, event.clientY)))) cancelHold();
+    }, true);
+    ["pointerup", "pointercancel"].forEach(function (type) {
+        document.addEventListener(type, function (event) {
+            if (hold?.pointer === event.pointerId) cancelHold();
+            if (heldClick?.pointer === event.pointerId) heldClick.until = performance.now() + selectionGestures.suppressMs;
+        }, true);
+    });
+    document.addEventListener("contextmenu", function (event) {
+        if ((hold || heldClick && performance.now() <= heldClick.until) && fieldChoice(event)) event.preventDefault();
+    }, true);
 
     root.addEventListener("click", function (event) {
         if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {

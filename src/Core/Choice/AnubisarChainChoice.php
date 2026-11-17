@@ -10,7 +10,7 @@ use Berserk\Core\Engine;
 use Berserk\Core\GameState;
 use Berserk\Core\Result;
 use Berserk\Core\StrikeResolver;
-use Berserk\View\Ui\PanelSpec;
+use Berserk\View\Ui\{CreatureChoice, PanelSpec};
 
 final class AnubisarChainChoice implements ChoiceHandlerInterface
 {
@@ -48,14 +48,7 @@ final class AnubisarChainChoice implements ChoiceHandlerInterface
         foreach (($pending['candidate_ids'] ?? []) as $targetId) {
             $target = $state->getCard((int) $targetId);
             if (!$target || $target->dying || $target->hp <= 0) continue;
-            $name = $cardsInfo[$target->ukid]['name'] ?? '?';
-            $coord = $target->row !== null && $target->col !== null
-                ? ' (' . $target->row . ',' . $target->col . ')'
-                : '';
-            $items[] = [
-                'value' => $target->instanceId,
-                'label' => $name . $coord . ' — ' . $target->hp . '/' . $target->hpMax,
-            ];
+            $items[] = ['value' => $target->instanceId];
         }
 
         $roleParam = $role === 'host' ? 'first' : 'second';
@@ -65,7 +58,7 @@ final class AnubisarChainChoice implements ChoiceHandlerInterface
             form: [
                 'type' => 'checkbox',
                 'name' => 'target_ids[]',
-                'items' => $items,
+
                 'hidden' => [
                     $roleParam => '',
                     'game' => $state->gameId,
@@ -73,6 +66,9 @@ final class AnubisarChainChoice implements ChoiceHandlerInterface
                 ],
                 'submit' => 'Подтвердить',
             ],
+            cardSelection: CreatureChoice::confirmed(
+                $state, $playerKey, $cardsInfo, $items, 'anubisar:' . $state->version, (int) ($pending['max_targets'] ?? 2), (int) ($pending['max_targets'] ?? 2),
+            ),
         );
     }
 

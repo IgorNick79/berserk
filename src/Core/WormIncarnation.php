@@ -38,7 +38,7 @@ final class WormIncarnation
                     continue;
                 }
                 if($o['adjacent_index']>=count($o['adjacent_ids'])) {
-                    $this->state->battle['worm_results'][]=['operation_id'=>$o['id'],'turn'=>$this->state->battle['turn']??0,'worm_id'=>$o['worm_id'],'row'=>$o['row'],'col'=>$o['col'],'destroyed'=>$o['destroyed']??[],'wounded'=>$o['wounded']??[]];
+                    $this->state->battle['worm_results'][]=['operation_id'=>$o['id'],'turn'=>$this->state->battle['turn']??0,'worm_id'=>$o['worm_id'],'row'=>$o['row'],'col'=>$o['col'],'destroyed'=>$o['destroyed']??[],'wounded'=>$o['wounded']??[],'wound_amounts'=>$o['wound_amounts']??[]];
                     $this->state->battle['worm_results']=array_slice($this->state->battle['worm_results'],-10);
                     $o['stage']='complete';$this->engine->checkGameOver($this->state);
                     $worm=$this->state->getCard($o['worm_id']);$row=$o['row'];$col=$o['col'];
@@ -55,7 +55,10 @@ final class WormIncarnation
                     'attack_dice'=>0,'defend_dice'=>0,'damage'=>0];
                 $hpBefore=$target->hp;
                 $this->engine->applyDamage($this->state,$target,1,'impact',$this->state->getCard($o['worm_id']));
-                if($target->hp<$hpBefore)$o['wounded'][]=$target->instanceId;
+                if ($target->hp < $hpBefore) {
+                    $o['wounded'][] = $target->instanceId;
+                    $o['wound_amounts'][$target->instanceId] = $hpBefore - $target->hp;
+                }
                 continue;
             }
             if($o['stage']==='effects') {

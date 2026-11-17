@@ -55,9 +55,10 @@ final class BattleScreen
         }
 
         // Возможные ходы/прыжки
+        $blockingChoice = ChoiceRegistry::current($state) !== null;
         $moveCells = [];
         $jumpCells = [];
-        if ($selectedCardId > 0 && $isActive && !$strike && !$instantContext) {
+        if ($selectedCardId > 0 && $isActive && !$strike && !$instantContext && !$blockingChoice) {
             $c = $state->getCard($selectedCardId);
             if ($c && $c->owner === $playerKey && in_array($c->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) {
                 $moveCells = BattleHelper::getMoveCells($state, $c);
@@ -128,7 +129,7 @@ final class BattleScreen
             && !$strike && !$instantContext && $mode === 'strike'
             && !\Berserk\Core\MatchPause::blocking($state)
             && \Berserk\Core\BattleWaitResolver::current($state) === null
-            && ChoiceRegistry::current($state) === null
+            && !$blockingChoice
             && empty($state->battle['matriarch_order'])
             && empty($state->battle['informational_wait'])
             && empty($state->battle['informational_wait_pending']);
@@ -158,15 +159,6 @@ final class BattleScreen
             }
         }
         $infoPanelHtml = (new InfoPanel($this->tpl))->render($state, $playerKey, $role, $cardsInfo, $baseUrl, $panelHtml, $pilePanelHtml, $actionChoice, $ui['inspect'] ?? 0);
-        foreach($state->battle['worm_results']??[] as $result) {
-            if(($result['turn']??null)!==($state->battle['turn']??null))continue;
-            $nameOf=static function($id)use($state,$cardsInfo){$card=$state->getCard((int)$id);return ($card?($cardsInfo[$card->ukid]['name']??$card->ukid):'Карта').' #'.$id;};
-            $destroyed=implode(', ',array_map($nameOf,$result['destroyed']));
-            $wounded=implode(', ',array_map($nameOf,$result['wounded']));
-            $text='Появился Скелетный червь на клетке '.\Berserk\View\Ui\BattlefieldPosition::label($result['row'],$result['col'],$playerKey)
-                . '. Уничтожены: '.($destroyed?:'нет').'. Получили раны: '.($wounded?:'нет').'.';
-            $infoPanelHtml .= \Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(title:'Инкарнация Скелетного червя',text:[htmlspecialchars($text,ENT_QUOTES,'UTF-8')]));
-        }
         $healingMessages = $state->battle['card_healing']['messages'] ?? [];
         if ($healingMessages) {
             $infoPanelHtml .= \Berserk\View\Ui\Panel::render(new \Berserk\View\Ui\PanelSpec(
@@ -193,6 +185,7 @@ final class BattleScreen
                     'mode' => $ui['mode'],
                     'pile' => $ui['pile'],
                     'mode_explicit' => $ui['mode_explicit'],
+                    'turn_key' => $ui['turn_key'],
                     ...(isset($ui['inspect']) ? ['inspect' => $ui['inspect']] : []),
                 ],
                 'mini_card_design' => \Berserk\View\Ui\LiveBattleCard::enabled() ? 'v2' : 'legacy',
@@ -220,7 +213,7 @@ final class BattleScreen
     }
 
     /**
-     * @return array{sel:int,mode:string,pile:string,mode_explicit:bool}
+     * @return array{sel:int,mode:string,pile:string,mode_explicit:bool,turn_key:string}
      */
     private function normalizeUiState(
         GameState $state,
@@ -228,6 +221,11 @@ final class BattleScreen
         ?array $uiState
     ): array {
         $source = $uiState ?? $_GET;
+        $turnKey = (string) ($state->battle['turn'] ?? 0) . ':' . ($state->battle['active'] ?? '');
+        if (isset($source['ui_turn']) && $source['ui_turn'] !== '' && $source['ui_turn'] !== $turnKey) {
+            $source = [];
+        }
+
 
         $pile = $this->normalizePile((string) ($source['pile'] ?? ''));
         $selectedCardId = (int) ($source['sel'] ?? 0);
@@ -262,6 +260,7 @@ final class BattleScreen
             'mode' => $mode,
             'pile' => $pile,
             'mode_explicit' => $modeExplicit,
+            'turn_key' => $turnKey,
             ...($inspect > 0 ? ['inspect' => $inspect] : []),
         ];
     }
@@ -904,10 +903,12 @@ final class BattleScreen
             && ChoiceRegistry::current($state) === null
             && empty($state->battle['turn_instant_stack']) && empty($state->battle['turn_instant_result'])) {
             $showHealth = false;
+            $confirmedBomb = false;
             $abilityName = substr($mode, 7);
             foreach ($c->effectiveProp()['actions'] ?? [] as $action) {
                 if (($action['key'] ?? $action['type'] ?? '') !== substr($mode, 7)) continue;
                 $showHealth = ($action['type'] ?? '') === 'heal';
+                $confirmedBomb = ($action['type'] ?? '') === 'bomb_shot';
                 $typeNames=['discharge'=>'Разряд','shot'=>'Выстрел','throw'=>'Метание','uchr'=>'Удар через ряд','magic'=>'Магический удар','tap'=>'Простой удар','heal'=>'Излечение'];
                 $abilityName = (string) ($action['name'] ?? $action['label'] ?? $typeNames[$action['type']??''] ?? $abilityName);
                 break;
@@ -930,8 +931,13 @@ final class BattleScreen
                         'card_id' => $c->instanceId, 'action_key' => substr($mode, 7),
                         'sel' => $c->instanceId, 'mode' => $mode,
                     ]),
-                    'submit' => 'Применить', 'cancel' => $baseUrl,
+                    'submit' => 'Применить', 'cancel' => $baseUrl . '&sel=0',
                 ],
+                cardSelection: $confirmedBomb ? \Berserk\View\Ui\CreatureChoice::confirmed(
+                    $state, $playerKey, $cardsInfo, $items,
+                    'bomb-target:' . $c->instanceId . ':' . $mode . ':' . ($state->battle['turn'] ?? 0),
+                    mode: \Berserk\View\Ui\CardSelectionSpec::SIMPLE,
+                ) : null,
             ));
         }
         return '';
@@ -982,14 +988,13 @@ final class BattleScreen
 
         // Кнопки режимов
         $modeButtons = '';
-        $closedButtonShown = false;
+        $disabledStatus = '';
         if ($isActive && !$strike && $c->owner === $playerKey && in_array($c->zone, [CardInstance::ZONE_FIELD, CardInstance::ZONE_FLYING], true)) {
             if (CardStats::isDisabled($c)) {
                 $reason = CardStats::disabledReason($c);
-                $closedButtonShown = $c->closed;
-                $modeButtons .= '<span class="button small disabled">'
-                    . htmlspecialchars($reason !== '' ? $reason : 'Карта не может действовать', ENT_QUOTES)
-                    . '</span> ';
+                $disabledStatus = $this->tpl->parse('includes/battle/panel_status.tpl', [
+                    'text'=>htmlspecialchars($reason !== '' ? $reason : 'Карта не может действовать', ENT_QUOTES),
+                ]);
             } else {
                 $abil = BattleHelper::abilities($c);
 
@@ -1212,7 +1217,7 @@ final class BattleScreen
         if ($this->canCancelTargetMode($state, $c, $playerKey, $mode, $isActive, $strike, $explicitAttackMode)) {
             $modeButtons .= $this->tpl->parse('includes/battle/mode_button.tpl', [
                 'label'  => 'Отменить действие',
-                'link'   => in_array($mode, ['strike', 'uchr'], true) ? $baseUrl . '&sel=' . $c->instanceId : $baseUrl,
+                'link'   => in_array($mode, ['strike', 'uchr'], true) ? $baseUrl . '&sel=' . $c->instanceId : $baseUrl . '&sel=0',
                 'active' => ' cancel',
             ]);
         }
@@ -1220,9 +1225,7 @@ final class BattleScreen
         // Статус-строка
         $statusHtml = '';
         if ($c->closed) {
-            if (!$closedButtonShown) {
-                $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта закрыта']);
-            }
+            $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта закрыта']);
         } elseif (isset($c->markers['spider_web'])) {
             $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Карта находится в сети']);
         } elseif ($isActive && !$strike && $c->owner === $playerKey
@@ -1231,17 +1234,10 @@ final class BattleScreen
             if (empty($attackTargets)) {
                 $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Нет целей']);
             } else {
-                $statusHtml = '<p>Кликни по существу оппонента для атаки.</p>';
+                $statusHtml = $this->tpl->parse('includes/battle/panel_status.tpl', ['text' => 'Выберите цель атаки']);
             }
         }
-        if (!empty($c->prop['on_wounding_strike'])) {
-            $effect = $c->prop['on_wounding_strike'];
-            $values = array_map('intval', (array) ($effect['strike'] ?? []));
-            $hint = $c->coins >= (int) ($effect['min_coins'] ?? 1)
-                ? 'При нанесении ран ударом — разряд ' . implode('–', $values) . ', дальность ' . (int) ($effect['range'] ?? 0) . '. Монетка сохраняется.'
-                : 'Без монетки: доступен удар через ряд; после него можно получить монетку.';
-            $statusHtml .= '<p>' . htmlspecialchars($hint, ENT_QUOTES) . '</p>';
-        }
+        if ($disabledStatus !== '' && !$c->closed && !isset($c->markers['spider_web'])) $statusHtml = $disabledStatus;
         $strangulationHint = \Berserk\Core\Strangulation::hint($c);
         if ($strangulationHint !== '') $statusHtml .= '<p>' . htmlspecialchars($strangulationHint, ENT_QUOTES) . '</p>';
         $statusHtml .= $this->linkedRecruitBattleHint($state, $c, $cardsInfo);
@@ -1250,7 +1246,6 @@ final class BattleScreen
             $regen = (new \Berserk\Core\Engine())->getRegenerationAmount($c);
             if ($regen > 0) $statusHtml .= '<p>Регенерация ' . $regen . '.</p>';
             if (!empty($c->prop['zoal'])) $statusHtml .= '<p>ЗОАЛ — защита от атак летающих.</p>';
-            $statusHtml .= '<p>' . htmlspecialchars(\Berserk\Core\Choice\CellEffectDirectionChoice::DESCRIPTION, ENT_QUOTES) . '</p>';
             break;
         }
 
@@ -1263,7 +1258,7 @@ final class BattleScreen
 
         $statValue = fn(string $stat, string $icon, string $value, string $label): string =>
             $this->tpl->parse('includes/battle/stat_value.tpl', [
-                'stat' => $stat, 'icon' => $icon,
+                'stat' => $stat, 'icon_url' => str_starts_with($icon, '/assets/') ? $icon : '/assets/images/card/' . $icon . '.png',
                 'value' => htmlspecialchars($value, ENT_QUOTES),
                 'label' => htmlspecialchars($label, ENT_QUOTES),
             ]);
@@ -1278,6 +1273,12 @@ final class BattleScreen
             'Простой удар: ' . $c->strikeWeak . '/' . $c->strikeMedium . '/' . $c->strikeStrong);
         if ($c->armorMax > 0 || $c->armor > 0) {
             $statValues .= $statValue('armor', 'armor@2x', (string) $c->armor, 'Броня: ' . $c->armor);
+        }
+
+        $poison = \Berserk\View\Ui\ActiveCardEffects::poison($c);
+        if ($poison > 0) {
+            $statValues .= $statValue('poison', '/assets/images/battle/mini/poison_compact_v2.svg',
+                (string) $poison, 'Яд: ' . $poison);
         }
 
         if ($hasCoins) {
@@ -1390,6 +1391,7 @@ final class BattleScreen
             'move_max'     => $c->moveMax,
             'strike'       => $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
             'status_html'  => $statusHtml,
+            'effects_html' => \Berserk\View\Ui\ActiveCardEffects::render($c, $state, $playerKey, $cardsInfo),
         ]);
     }
 
@@ -1866,37 +1868,34 @@ final class BattleScreen
 
     private function buildCellMarkersOverlay(GameState $state, string $key, int $count = 0): string
     {
-        $labels = ['bomb'=>'Бомба орка', 'reduce_attack'=>'Мороз, мгла, ливень',
-            'row_spell'=>'Цветущие руны', 'gate'=>'Врата', 'lantern_light'=>'Свет фонаря'];
-        $icons = ['bomb'=>'💣', 'reduce_attack'=>'❄', 'row_spell'=>'ᚱ', 'gate'=>'⛩', 'lantern_light'=>''];
-        $markers = ''; $fire = '';
+        $labels = ['bomb'=>'Бомба', 'reduce_attack'=>'Уменьшение атаки',
+            'row_spell'=>'Цветущие руны', 'gate'=>'Врата', 'tremor'=>'Дрожь',
+            'lantern_light'=>'Свет фонаря'];
+        $names = [];
+        $fire = '';
         foreach (ZoneManager::markersAt($state, $key) as $marker) {
             $type = (string) ($marker['type'] ?? '');
             if ($type === 'bonfire') {
                 $fire = '<span class="cell-bonfire" role="img" aria-label="Костёр">🔥</span>';
                 continue;
             }
-            if ($type === 'tremor') {
-                $owner = ($marker['owner'] ?? '') === 'host' ? 'host' : 'player';
-                $id = htmlspecialchars((string)($marker['id'] ?? ''), ENT_QUOTES, 'UTF-8');
-                $label = htmlspecialchars('Дрожь ' . ($marker['id'] ?? '') . ' — ' . ($owner === 'host' ? 'синяя сторона' : 'красная сторона'), ENT_QUOTES, 'UTF-8');
-                $markers .= '<span class="cell-marker cell-marker-tremor tremor-owner-' . $owner
-                    . '" data-tremor-id="' . $id . '" role="img" aria-label="' . $label . '"></span>';
-                continue;
-            }
-            $safe = htmlspecialchars($type, ENT_QUOTES);
-            $label = htmlspecialchars($labels[$type] ?? $type, ENT_QUOTES);
-            $markers .= '<span class="cell-marker cell-marker-' . $safe . '" data-mini-hint data-cell-hint role="button" tabindex="0" aria-expanded="false" aria-label="'
-                . $label . '">' . ($icons[$type] ?? '')
-                . '<span class="mini-hint-text" hidden>' . $label . '</span></span>';
+            $names[] = htmlspecialchars($labels[$type] ?? 'Маркер клетки', ENT_QUOTES, 'UTF-8');
+        }
+        $markers = '';
+        if ($names) {
+            $multiple = count($names) + ($fire !== '' ? 1 : 0) > 1;
+            $markers = '<span class="cell-marker-badge' . ($multiple ? ' cell-marker-badge--multiple' : '')
+                . '" data-mini-hint data-cell-hint role="button"'
+                . ' tabindex="0" aria-expanded="false" aria-label="' . implode(', ', $names) . '">'
+                . '<span class="cell-marker-star" aria-hidden="true">✦</span><span class="mini-hint-text" hidden>'
+                . implode('<br>', $names) . '</span></span>';
         }
         $switch = $count > 1 ? '<span class="cell-switch" aria-label="Существа в клетке">'
             . '<button type="button" data-cell-step="-1" aria-label="Предыдущее существо">‹</button>'
             . '<span data-cell-counter aria-live="polite">1/' . $count . '</span>'
             . '<button type="button" data-cell-step="1" aria-label="Следующее существо">›</button></span>' : '';
-        if ($markers === '' && $switch === '') return $fire;
-        $barClass = $count > 0 ? 'cell-bottom-strip' : 'cell-marker-island' . ($fire !== '' ? ' cell-marker-island--below-fire' : '');
-        return $fire . '<div class="' . $barClass . '"><div class="cell-markers">' . $markers . '</div>' . $switch . '</div>';
+        return $fire . $markers . ($switch !== '' ? '<div class="cell-bottom-strip">' . $switch . '</div>' : '');
+
     }
 
 }

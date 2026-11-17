@@ -10,7 +10,7 @@ final class InstantControl
     public static function project(GameState $s,string $actor,int $now): array
     {
         $r=InstantReservation::controls($s,$actor,$now);
-        $stack=$s->battle['turn_instant_stack']??[];$strike=$s->battle['strike']??[];
+        $stack=$s->battle['turn_instant_stack']??[];$strike=$s->battle['single_roll']??$s->battle['strike']??[];
         $combat=!empty($strike)||in_array($stack['phase']??'', ['before','after'],true)
             ||!empty($stack['continuation']['combat_origin_strike']);
         $out=['visible'=>false,'label'=>$combat?'Инстант':'Сыграть','enabled'=>false,'command'=>null,'payload'=>[],
@@ -21,7 +21,7 @@ final class InstantControl
         $mageOptions=in_array($wait['source']??'', ['strike.waiting_defender','strike.waiting_redirect'],true)
             ?(new StrikeResolver($s,new Engine()))->getMageRedirectOptions($actor):[];
         $nativeWindow=(($stack['state']??'')==='ordering'&&($wait['source']??null)==='turn_instant_stack')
-            ||(($strike['state']??'')==='waiting_instant'&&($wait['source']??null)==='strike.waiting_instant'&&empty($strike['instant_resolution']))||!empty($mageOptions);
+            ||(($strike['state']??'')==='waiting_instant'&&in_array($wait['source']??null,['strike.waiting_instant','single_roll.waiting_instant'],true)&&empty($strike['instant_resolution']))||!empty($mageOptions);
         if($r['can_cancel']&&!$combat&&empty($s->battle['turn_instant_result'])&&!$nativeWindow&&!$out['stack_open']&&empty($s->battle['pending_instant_pick'])&&empty($s->battle['pending_combat_pick'])&&empty($s->battle['pending_forced_strike_adjacent']))return array_replace($out,['visible'=>true,'enabled'=>true,'label'=>'Отменить резерв',
             'command'=>'cancel_instant_reservation','payload'=>['request_id'=>$r['request_id']],'quota'=>$r['remaining'].'/'.$r['limit']]);
         if($r['can_cancel'])$out['cancel']=['command'=>'cancel_instant_reservation','payload'=>['request_id'=>$r['request_id']]];
@@ -31,7 +31,7 @@ final class InstantControl
             $potential=$ip->getInstants($actor,$stack['phase'],'turn');$priority=($stack['priority']??null)===$actor;
             $command='play_turn_instant';if($priority)$out['pass']='pass_turn_instant';
         }elseif(($strike['state']??'')==='waiting_instant'){
-            if(($wait['source']??null)!=='strike.waiting_instant'||!empty($strike['instant_resolution']))return$out;
+            if(!in_array($wait['source']??null,['strike.waiting_instant','single_roll.waiting_instant'],true)||!empty($strike['instant_resolution']))return$out;
             $potential=$ip->getInstants($actor,$strike['instant_phase']??'combat',($strike['instant_phase']??'combat')==='combat'?'combat':'turn');
             $priority=($strike['instant_priority']??null)===$actor;$command='combat_instant_play';
             if($priority)$out['pass']='combat_instant_pass';

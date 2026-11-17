@@ -15,8 +15,10 @@ final class AlvalindChoice implements ChoiceHandlerInterface {
   parse_str((string)parse_url($base,PHP_URL_QUERY),$hidden);
   $hidden['cmd']=$death?'choose_alvalind_death':'choose_alvalind_target';
   $hidden[$death?'choice_id':'operation_id']=$death?$p['choice_id']:$p['id'];
-  $items=[];foreach($death?$p['candidates']:$p['targets'] as $id){$t=$s->getCard($id);$items[]=\Berserk\View\Ui\CreatureChoice::item($t,$info[$t->ukid]['name']??$t->ukid,$viewer);}
-  return new PanelSpec(title:$title,form:['type'=>'radio','name'=>'target_id','items'=>$items,'hidden'=>$hidden,'submit'=>'Выбрать','side_toggle'=>true,'side_default'=>'enemy']);
+  $items = array_map(static fn($id): array => ['value'=>$id], $death ? $p['candidates'] : $p['targets']);
+  return new PanelSpec(title:$title,form:['name'=>'target_id','hidden'=>$hidden,'submit'=>'Выбрать'],
+      cardSelection:\Berserk\View\Ui\CreatureChoice::confirmed($s, $viewer, $info, $items,
+          $hidden['cmd'] . ':' . ($p['choice_id'] ?? $p['id']), mode:\Berserk\View\Ui\CardSelectionSpec::SIMPLE));
  }
  public function apply(GameState $s,Engine $e,string $viewer,Command $cmd):Result {
   if($cmd->type==='choose_alvalind_death'){

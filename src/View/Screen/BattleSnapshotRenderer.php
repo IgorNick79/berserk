@@ -23,7 +23,7 @@ final class BattleSnapshotRenderer
      * @return array{
      *     turn_timer: ?array,
      *     match_pause: array,
-     *     ui: array{sel:int,mode:string,pile:string,mode_explicit:bool},
+     *     ui: array{sel:int,mode:string,pile:string,mode_explicit:bool,turn_key:string},
      *     fragments: array{
      *         field_html:string,
      *         fly_zones_html:string,
