@@ -200,6 +200,7 @@ final class DamageResolver
 
         $target->hp = 0;
         $target->dying = true;
+        SymbioteProcessor::refresh($this->state);
         $this->state->historyRecorder?->combatEvent($this->state,'combat.death',[
             'card_id'=>$target->instanceId,'cause'=>$cause,'source_id'=>$source?->instanceId,
         ],array_values(array_filter([$target->instanceId,$source?->instanceId])));

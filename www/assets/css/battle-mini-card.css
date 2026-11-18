@@ -121,3 +121,10 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 :is(.battle-page,.draft-page) .cell-indicators .mini-indicator[hidden]{display:none}
 :is(.battle-page,.draft-page) .cell-indicators .cell-marker-badge{flex:0 0 16px;width:16px;height:16px;border:0;border-radius:3px;background:rgba(24,20,15,.92);box-shadow:none}
 :is(.battle-page,.draft-page) .cell-indicators{font-family:var(--battle-body-font,inherit)}
+
+/* Existing cell switch: arrows flank the card; total count joins cell indicators. */
+.battle-page .cell-switch{pointer-events:none;position:absolute;left:0;right:0;top:38px;display:flex;justify-content:space-between}
+.battle-page .cell-bottom-strip{top:0;bottom:0;height:auto}
+@media(max-width:1024px){.battle-page .cell-switch button{display:none}.battle-page [data-cell-stack]:not([data-cell-count="0"]):not([data-cell-count="1"]){touch-action:pan-y}}
+
+.battle-page .cell-switch button{pointer-events:auto}

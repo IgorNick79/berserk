@@ -67,7 +67,7 @@ final class BattleHelper
      */
     public static function getMoveCells(GameState $state, CardInstance $card): array
     {
-        if ($card->type === 'artifact' || Strangulation::count($card) > 0 || CardStats::isDisabled($card) || $card->move <= 0 || isset($card->markers['rooted'])) {
+        if (SymbioteProcessor::subtype($card) !== null || SymbioteProcessor::hasRootedFollower($state,$card) || $card->type === 'artifact' || Strangulation::count($card) > 0 || CardStats::isDisabled($card) || $card->move <= 0 || isset($card->markers['rooted'])) {
             return [];
         }
 
@@ -133,6 +133,7 @@ final class BattleHelper
 
     public static function getJumpCells(GameState $state, CardInstance $card, ?int $triggeredRange = null): array
     {
+        if (SymbioteProcessor::subtype($card) !== null || SymbioteProcessor::hasRootedFollower($state,$card)) return [];
         $probe = clone $card;
         if ($triggeredRange !== null) $probe->closed = false;
         if (Strangulation::count($card) > 0 || CardStats::isDisabled($probe) || ($triggeredRange === null && !empty($card->flags['moved_this_turn'])) || isset($card->markers['rooted'])) {
@@ -369,6 +370,7 @@ final class BattleHelper
                     if (!CardStats::isOpposite($card, $target)) continue;
                     if ($target->zone !== CardInstance::ZONE_FIELD) continue;
                 } elseif ($type === 'teleport_target') {
+                    if (SymbioteProcessor::subtype($target)!==null || SymbioteProcessor::hasRootedFollower($state,$target)) continue;
                     if ($target->instanceId === $card->instanceId && Strangulation::count($card) > 0) continue;
                     if ($target->zone !== CardInstance::ZONE_FIELD) continue;
                     if ($target->dying || $target->hp <= 0) continue;

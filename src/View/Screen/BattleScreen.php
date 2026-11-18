@@ -417,7 +417,7 @@ final class BattleScreen
                 $cellContent = '';
                 $cellClass   = '';
                 $occupants = $fieldMap[$key] ?? [];
-                usort($occupants, static fn($a, $b) => $a->instanceId <=> $b->instanceId);
+                usort($occupants, static fn($a, $b) => [(int) ($a->flags['symbiote_host_id'] ?? $a->instanceId), isset($a->flags['symbiote_host_id']), $a->instanceId] <=> [(int) ($b->flags['symbiote_host_id'] ?? $b->instanceId), isset($b->flags['symbiote_host_id']), $b->instanceId]);
                 $card = $occupants[0] ?? null;
 
                 if ($card) {
@@ -522,7 +522,7 @@ final class BattleScreen
 
                 // ─── ОВЕРЛЕЙ: всегда в конце, на уровне клетки ───
                 $cellContent .= $this->buildCellMarkersOverlay($state, $key, count($occupants));
-                $cellContent = '<div class="cell-presentation" data-cell-stack="' . $key . '">' . $cellContent . '</div>';
+                $cellContent = '<div class="cell-presentation" data-cell-stack="' . $key . '" data-cell-count="' . count($occupants) . '">' . $cellContent . '</div>';
 
                 $rowCells .= $this->tpl->parse('includes/battle_cell.tpl', [
                     'cl'      => $cellClass,
@@ -1904,10 +1904,10 @@ final class BattleScreen
                 . '<span class="cell-marker-star" aria-hidden="true">✦</span><span class="mini-hint-text" hidden>'
                 . implode('<br>', $names) . '</span></span>';
         }
-        $switch = $count > 1 ? '<span class="cell-switch" aria-label="Существа в клетке">'
-            . '<button type="button" data-cell-step="-1" aria-label="Предыдущее существо">‹</button>'
-            . '<span data-cell-counter aria-live="polite">1/' . $count . '</span>'
-            . '<button type="button" data-cell-step="1" aria-label="Следующее существо">›</button></span>' : '';
+        $switch = $count > 1 ? '<span class="cell-switch" aria-label="Карты в клетке">'
+            . '<button type="button" data-cell-step="-1" aria-label="Предыдущая карта">‹</button>'
+            . '<span class="cell-marker-badge" data-cell-counter aria-label="Карт в клетке: ' . $count . '">' . $count . '</span>'
+            . '<button type="button" data-cell-step="1" aria-label="Следующая карта">›</button></span>' : '';
         return $fire . $markers . ($switch !== '' ? '<div class="cell-bottom-strip">' . $switch . '</div>' : '');
 
     }

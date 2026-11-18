@@ -18,6 +18,7 @@ final class MovementEffectResolver
 
     public function apply(MovementContext $context): void
     {
+        \Berserk\Core\SymbioteProcessor::follow($this->state,$this->engine,$context);
         \Berserk\Core\AbyssMovement::enqueue($this->state,$context);
         \Berserk\Core\ActionResolution::effect($this->state, $context->card, $context->movementType,
             $context->origin,
@@ -41,6 +42,7 @@ final class MovementEffectResolver
 
     public function applyForcedPositionChange(MovementContext $context): void
     {
+        \Berserk\Core\SymbioteProcessor::follow($this->state,$this->engine,$context);
         \Berserk\Core\AbyssMovement::enqueue($this->state,$context);
         \Berserk\Core\ActionResolution::effect($this->state, $context->card, $context->movementType,
             'forced',

@@ -135,6 +135,7 @@ final class Engine
                 else $state->battle[ActionResolution::KEY] = $resolutionBefore;
             }
         }
+        if ($result->success) SymbioteProcessor::refresh($state, $this);
         if ($result->success && empty($state->battle['single_roll'])) (new AbyssMovement($state, $this))->advance();
         if ($result->success && empty($state->battle['single_roll'])) (new WormIncarnation($state, $this))->advance();
         if ($result->success && empty($state->battle['single_roll'])) (new CoinAbilities($state, $this))->advance();

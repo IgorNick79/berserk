@@ -43,9 +43,9 @@ final class ForcedMovementResolver
     public function canMove(CardInstance $card, int $deltaRow, int $deltaCol): bool
     {
         if ($card->zone !== CardInstance::ZONE_FIELD) return false;
-        if ($card->type !== 'creature') return false;
+        if ($card->type !== 'creature' || \Berserk\Core\SymbioteProcessor::subtype($card) !== null) return false;
         if ($card->dying || $card->hp <= 0) return false;
-        if (isset($card->markers['rooted'])) return false;
+        if (\Berserk\Core\SymbioteProcessor::hasRootedFollower($this->state,$card) || isset($card->markers['rooted'])) return false;
         if ($this->checkMovesLimit($card) !== null) return false;
 
         return $this->destination($card, $deltaRow, $deltaCol) !== null;

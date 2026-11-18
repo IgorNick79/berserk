@@ -45,6 +45,7 @@ final class ZoneManager
         $card->zone = CardInstance::ZONE_HAND;
         EffectiveFeatures::leftBattlefield($this->state, $card);
         $this->normalizeFlyingSlots($flyingOwner);
+        SymbioteProcessor::refresh($this->state);
         Strangulation::refresh($this->state);
     }
 
@@ -56,6 +57,7 @@ final class ZoneManager
         $card->zone = CardInstance::ZONE_SQUAD;
         EffectiveFeatures::leftBattlefield($this->state, $card);
         $this->normalizeFlyingSlots($flyingOwner);
+        SymbioteProcessor::refresh($this->state);
         Strangulation::refresh($this->state);
     }
 
@@ -67,6 +69,7 @@ final class ZoneManager
         $card->zone = CardInstance::ZONE_DECK;
         EffectiveFeatures::leftBattlefield($this->state, $card);
         $this->normalizeFlyingSlots($flyingOwner);
+        SymbioteProcessor::refresh($this->state);
         Strangulation::refresh($this->state);
     }
 
@@ -78,6 +81,7 @@ final class ZoneManager
         $card->zone = CardInstance::ZONE_SIDEBOARD;
         EffectiveFeatures::leftBattlefield($this->state, $card);
         $this->normalizeFlyingSlots($flyingOwner);
+        SymbioteProcessor::refresh($this->state);
         Strangulation::refresh($this->state);
     }
 
@@ -90,6 +94,7 @@ final class ZoneManager
         $card->col  = $col;
         $card->slot = 0;
         $this->normalizeFlyingSlots($flyingOwner);
+        SymbioteProcessor::refresh($this->state);
         Strangulation::refresh($this->state);
 
         // Воскрешение снимает готовность Вальхаллы
@@ -114,7 +119,8 @@ final class ZoneManager
     {
         if ($card->zone === CardInstance::ZONE_FLYING) {
             $this->normalizeFlyingSlots($card->owner);
-        Strangulation::refresh($this->state);
+            SymbioteProcessor::refresh($this->state);
+            Strangulation::refresh($this->state);
             return;
         }
 
@@ -124,6 +130,7 @@ final class ZoneManager
         $card->slot = $this->nextFlyingSlot($card->owner);
 
         $this->normalizeFlyingSlots($card->owner);
+        SymbioteProcessor::refresh($this->state);
         Strangulation::refresh($this->state);
     }
 
@@ -184,6 +191,7 @@ final class ZoneManager
 
         $this->normalizeFlyingSlots($flyingOwner);
         if ($completedDeath) CardRoll::arm($this->state, $card, false);
+        SymbioteProcessor::refresh($this->state);
         Strangulation::refresh($this->state);
     }
 
@@ -206,6 +214,7 @@ final class ZoneManager
         $card->flags = MemoryLoss::persistentFlags($card);
         $this->clearPosition($card);
         $this->normalizeFlyingSlots($flyingOwner);
+        SymbioteProcessor::refresh($this->state);
         Strangulation::refresh($this->state);
     }
 

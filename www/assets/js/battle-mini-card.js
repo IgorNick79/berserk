@@ -44,8 +44,10 @@
             indicators.dataset.indicatorHome = occupant.dataset.cellOccupant;
             row.prepend(indicators);
         }
-        var star = stack.querySelector('.cell-marker-badge');
+        var star = stack.querySelector('.cell-marker-badge:not([data-cell-counter])');
         if (star && star.parentElement !== row) row.append(star);
+        var count = stack.querySelector('[data-cell-counter]');
+        if (count) row.prepend(count);
         var coin = row.querySelector('[data-indicator-kind="coin"]');
         var effects = row.querySelector('[data-indicator-kind="effects"]');
         var combined = Boolean(coin && effects && star
@@ -70,13 +72,15 @@
         syncCellIndicators(stack);
         stack.closest('.field-cell').className = 'field-cell ' + chosen.dataset.occupantClass;
         var counter = stack.querySelector('[data-cell-counter]');
-        if (counter) counter.textContent = (cards.indexOf(chosen) + 1) + '/' + cards.length;
+        if (counter) counter.textContent = String(cards.length);
     }
     function restoreOccupants() {
-        var live = new Set();
+        var live = new Set(), previousIds = new Set(cellSelection.values());
         document.querySelectorAll('[data-cell-stack]').forEach(function (stack) {
             live.add(stack.dataset.cellStack);
-            showOccupant(stack, cellSelection.get(stack.dataset.cellStack));
+            var cards = Array.from(stack.querySelectorAll(':scope > [data-cell-occupant]'));
+            var previous = cards.find(function (card) { return previousIds.has(card.dataset.cellOccupant); });
+            showOccupant(stack, cellSelection.get(stack.dataset.cellStack) || (previous && previous.dataset.cellOccupant));
         });
         cellSelection.forEach(function (_, key) { if (!live.has(key)) cellSelection.delete(key); });
     }
@@ -92,6 +96,32 @@
         var next = (current + Number(button.dataset.cellStep) + cards.length) % cards.length;
         refresh();
         showOccupant(stack, cards[next].dataset.cellOccupant);
+    }, true);
+    // Touch changes presentation only; vertical scrolling remains native.
+    var swipe = null, suppressSwipeClick = null;
+    document.addEventListener('pointerdown', function (event) {
+        if (event.pointerType !== 'touch' || !window.matchMedia('(max-width:1024px)').matches) return;
+        var stack = event.target.closest('[data-cell-stack]');
+        if (!stack || Number(stack.dataset.cellCount) < 2) return;
+        swipe = {stack:stack, id:event.pointerId, x:event.clientX, y:event.clientY};
+    });
+    document.addEventListener('pointerup', function (event) {
+        var start = swipe; swipe = null;
+        if (!start || start.id !== event.pointerId || !start.stack.isConnected) return;
+        var dx = event.clientX - start.x, dy = event.clientY - start.y;
+        if (Math.abs(dx) < 35 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        var cards = Array.from(start.stack.querySelectorAll(':scope > [data-cell-occupant]'));
+        var current = cards.findIndex(function (card) { return !card.hidden; });
+        showOccupant(start.stack, cards[(current + (dx < 0 ? 1 : -1) + cards.length) % cards.length].dataset.cellOccupant);
+        suppressSwipeClick = start.stack;
+        event.preventDefault();
+        setTimeout(function () { suppressSwipeClick = null; }, 500);
+    });
+    document.addEventListener('pointercancel', function () { swipe = null; });
+    document.addEventListener('click', function (event) {
+        if (suppressSwipeClick && suppressSwipeClick.contains(event.target)) {
+            event.preventDefault(); event.stopImmediatePropagation(); suppressSwipeClick = null;
+        }
     }, true);
     document.addEventListener('berserk:battle-updated', restoreOccupants);
     restoreOccupants();

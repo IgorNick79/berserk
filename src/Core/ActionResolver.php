@@ -5545,6 +5545,7 @@ final class ActionResolver
     ): Result {
         $target = $this->state->getCard($targetId);
         if (!$target) return Result::error('Цель не найдена');
+        if (SymbioteProcessor::subtype($target)!==null || SymbioteProcessor::hasRootedFollower($this->state,$target)) return Result::error('Нельзя переместить симбиота отдельно от хозяина или обездвиженную связку');
         if ($target->zone !== CardInstance::ZONE_FIELD) {
             return Result::error('Только нелетающее существо на земле');
         }

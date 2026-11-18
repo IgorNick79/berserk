@@ -20,6 +20,7 @@ final class ChoiceRegistry
         static $handlers = null;
         if ($handlers === null) {
             $handlers = [
+                new SymbioteSeatingChoice(),
                 new FlyingPreparationChoice(),
                 new PairedRangedChoice(),
                 new GraveRitualChoice(),

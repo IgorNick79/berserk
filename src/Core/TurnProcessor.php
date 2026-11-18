@@ -66,6 +66,15 @@ final class TurnProcessor
             'hidden_row_revealed' => false
         ];
 
+        if ((new SymbioteProcessor($this->state, $this->engine))->begin()) return;
+        $this->finishReveal();
+    }
+
+    /** Continue the same initial battle boundary after mandatory symbiote seating. */
+    public function finishReveal(): void
+    {
+        if ($this->state->status === 'game_over') return;
+        $activeKey = $this->state->battle['active'];
         TurnTimer::prepare($this->state, $activeKey);
         InstantReservation::beginPeriod($this->state, $activeKey);
         OchiKronga::startOwnTurn($this->state, $activeKey);

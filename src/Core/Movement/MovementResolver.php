@@ -38,6 +38,7 @@ final class MovementResolver
         if (!$card || $card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_FIELD) {
             return Result::error('Карта не на поле');
         }
+        if (\Berserk\Core\SymbioteProcessor::subtype($card) !== null) return Result::error('Симбиот не может двигаться отдельно от хозяина');
         if ($card->type === 'artifact') return Result::error('Артефакт не может самостоятельно перемещаться');
         if (CardStats::isDisabled($card)) {
             $reason = CardStats::disabledReason($card);
@@ -55,7 +56,7 @@ final class MovementResolver
         if (\Berserk\Core\Strangulation::count($card) > 0) {
             return Result::error('Самостоятельное передвижение запрещено маркерами удушения');
         }
-        if (isset($card->markers['rooted'])) {
+        if (\Berserk\Core\SymbioteProcessor::hasRootedFollower($this->state,$card) || isset($card->markers['rooted'])) {
             return Result::error('Карта обездвижена');
         }
         if ($card->move <= 0) {
@@ -114,6 +115,8 @@ final class MovementResolver
 
     public function jump(string $playerKey, Command $cmd): Result
     {
+        $source=$this->state->getCard((int)$cmd->get('card_id',0));
+        if ($source && \Berserk\Core\SymbioteProcessor::subtype($source)!==null) return Result::error('Симбиот не может перемещаться отдельно от хозяина');
         if ($error = $this->validateTurn($playerKey)) {
             return $error;
         }
@@ -136,7 +139,7 @@ final class MovementResolver
         if (\Berserk\Core\Strangulation::count($card) > 0) {
             return Result::error('Самостоятельное передвижение запрещено маркерами удушения');
         }
-        if (isset($card->markers['rooted'])) {
+        if (\Berserk\Core\SymbioteProcessor::hasRootedFollower($this->state,$card) || isset($card->markers['rooted'])) {
             return Result::error('Карта обездвижена');
         }
 
