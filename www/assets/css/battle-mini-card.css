@@ -125,6 +125,10 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 /* Existing cell switch: arrows flank the card; total count joins cell indicators. */
 .battle-page .cell-switch{pointer-events:none;position:absolute;left:0;right:0;top:38px;display:flex;justify-content:space-between}
 .battle-page .cell-bottom-strip{top:0;bottom:0;height:auto}
-@media(max-width:1024px){.battle-page .cell-switch button{display:none}.battle-page [data-cell-stack]:not([data-cell-count="0"]):not([data-cell-count="1"]){touch-action:pan-y}}
+
 
 .battle-page .cell-switch button{pointer-events:auto}
+
+.battle-page [data-cell-counter]{font-size:10px;font-weight:400;color:#c5b99f;border-color:#766b52;background:rgba(29,27,23,.88);cursor:help}
+.battle-page .cell-switch button{width:18px;height:24px;line-height:22px;border:1px solid #766b52;border-radius:3px;background:rgba(29,27,23,.88);color:#d3c6ad}
+.battle-page .cell-switch button:hover,.battle-page .cell-switch button:focus-visible{color:#fff0d0;border-color:#b69b6d}

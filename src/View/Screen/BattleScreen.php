@@ -1904,10 +1904,15 @@ final class BattleScreen
                 . '<span class="cell-marker-star" aria-hidden="true">✦</span><span class="mini-hint-text" hidden>'
                 . implode('<br>', $names) . '</span></span>';
         }
+        $countHint = 'Карт в клетке: ' . $count;
         $switch = $count > 1 ? '<span class="cell-switch" aria-label="Карты в клетке">'
-            . '<button type="button" data-cell-step="-1" aria-label="Предыдущая карта">‹</button>'
-            . '<span class="cell-marker-badge" data-cell-counter aria-label="Карт в клетке: ' . $count . '">' . $count . '</span>'
-            . '<button type="button" data-cell-step="1" aria-label="Следующая карта">›</button></span>' : '';
+            . '<button type="button" data-cell-step="-1" data-mini-hint data-cell-hint aria-expanded="false" aria-label="Показать предыдущую карту">'
+            . '<span aria-hidden="true">‹</span><span class="mini-hint-text" hidden>Показать предыдущую карту</span></button>'
+            . '<span class="cell-marker-badge" data-cell-counter data-mini-hint data-cell-hint role="button" tabindex="0" aria-expanded="false" aria-label="' . $countHint . '">'
+            . '<span data-cell-count-value>' . $count . '</span><span class="mini-hint-text" hidden>' . $countHint . '</span></span>'
+            . '<button type="button" data-cell-step="1" data-mini-hint data-cell-hint aria-expanded="false" aria-label="Показать следующую карту">'
+            . '<span aria-hidden="true">›</span><span class="mini-hint-text" hidden>Показать следующую карту</span></button></span>' : '';
+
         return $fire . $markers . ($switch !== '' ? '<div class="cell-bottom-strip">' . $switch . '</div>' : '');
 
     }

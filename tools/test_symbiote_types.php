@@ -31,7 +31,7 @@ try{
  check(empty($s->battle[SymbioteProcessor::PENDING]),'both real subtype cards seated');
  $catalog=[];foreach($s->cards as$c)$catalog[$c->ukid]=['name'=>$c->ukid,'price'=>1];
  $d=(new BattleScreen(new Template(__DIR__.'/../templates')))->prepare($s,'host','host',null,$catalog)['data'];
- check(substr_count($d['field_html'],'data-cell-counter aria-label="Карт в клетке: 2">2</span>')===2,'both cells display total marker 2');
+ check(substr_count($d['field_html'],'<span data-cell-count-value>2</span>')===2,'both cells display total marker 2');
  foreach(['creature','fly','companion','parasite']as$type)check((new CardInstance(100,'probe','host',type:$type))->isCreature(),'creature family: '.$type);
  foreach(['artifact','terrain']as$type)check(!(new CardInstance(100,'probe','host',type:$type))->isCreature(),'not creature: '.$type);
  $old=new CardInstance(100,'old','host',prop:['symbiote'=>'companion']);check(SymbioteProcessor::subtype($old)===null,'type is authoritative, JSON does not reclassify ordinary card');

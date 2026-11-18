@@ -56,7 +56,7 @@ $s=syState();$s->getPlayer('player')->side=1;$s->getPlayer('host')->side=2;syAdd
 $s=syState();syAdd($s,1);$s->cards[1]->flags['symbiote_host_id']=10;$s->cards[1]->row=2;$s->cards[1]->col=2;$s->cards[1]->owner='player';$s->battle=['active'=>'host','turn'=>1];
 $info=[];foreach($s->cards as$c)$info[$c->ukid]=['name'=>$c->ukid,'price'=>1];
 $d=(new BattleScreen(new Template(__DIR__.'/../templates')))->prepare($s,'host','host',null,$info,['sel'=>1])['data'];
-syCheck(str_contains($d['field_html'],'data-cell-counter aria-label="Карт в клетке: 2">2</span>'),'marker is total 2');
+syCheck(str_contains($d['field_html'],'<span data-cell-count-value>2</span>'),'marker is total 2');
 syCheck(strpos($d['field_html'],'data-cell-occupant="10"')<strpos($d['field_html'],'data-cell-occupant="1"'),'host displayed first even with larger ID');
 syCheck(str_contains($d['panel_html'],'sym1'),'selected parasite retains own panel');
 syCheck($s->cards[1]->owner==='player'&&$s->cards[10]->owner==='host','ownership remains independent');
