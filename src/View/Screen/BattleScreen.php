@@ -1907,12 +1907,12 @@ final class BattleScreen
         $countHint = 'Карт в клетке: ' . $count;
         $switch = $count > 1 ? '<span class="cell-switch" aria-label="Карты в клетке">'
             . '<button type="button" data-cell-step="-1" data-mini-hint data-cell-hint aria-expanded="false" aria-label="Показать предыдущую карту">'
-            . '<span aria-hidden="true">‹</span><span class="mini-hint-text" hidden>Показать предыдущую карту</span></button>'
+            . '<img src="/assets/images/berserk-chevron-gold.svg" width="12" height="12" alt="" aria-hidden="true"><span class="mini-hint-text" hidden>Показать предыдущую карту</span></button>'
             . '<span class="cell-marker-badge" data-cell-counter data-mini-hint data-cell-hint role="button" tabindex="0" aria-expanded="false" aria-label="' . $countHint . '">'
-            . '<svg width="10" height="11" viewBox="0 0 12 13" fill="none" stroke="currentColor" aria-hidden="true"><rect x="1" y="1" width="7" height="9" rx="1"/><rect x="4" y="3" width="7" height="9" rx="1"/></svg>'
+            . '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="10" height="11" fill="none" aria-hidden="true"><rect x="7" y="5" width="27" height="34" rx="4" fill="#34312B" stroke="#907752" stroke-width="2"/><rect x="14" y="11" width="27" height="32" rx="4" fill="#212729" stroke="#C1A477" stroke-width="2.3"/><rect x="19" y="17" width="17" height="20" rx="1" stroke="#7D6C50" stroke-width="1" opacity=".65"/><path d="M23 26L27.5 22L32 26L27.5 30Z" fill="#B69A6C"/></svg>'
             . '<span data-cell-count-value>' . $count . '</span><span class="mini-hint-text" hidden>' . $countHint . '</span></span>'
             . '<button type="button" data-cell-step="1" data-mini-hint data-cell-hint aria-expanded="false" aria-label="Показать следующую карту">'
-            . '<span aria-hidden="true">›</span><span class="mini-hint-text" hidden>Показать следующую карту</span></button></span>' : '';
+            . '<img src="/assets/images/berserk-chevron-gold.svg" width="12" height="12" alt="" aria-hidden="true"><span class="mini-hint-text" hidden>Показать следующую карту</span></button></span>' : '';
 
         return $fire . $markers . ($switch !== '' ? '<div class="cell-bottom-strip">' . $switch . '</div>' : '');
 
