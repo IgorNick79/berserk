@@ -30,3 +30,8 @@ src/Core/ActionResolver.php; src/Core/BattleHelper.php; src/Core/CardStats.php;
 src/Core/Movement/MovementResolver.php; src/Core/StrikeResolver.php;
 src/View/Screen/BattleScreen.php; src/View/Ui/PreGameCard.php;
 tools/test_artifact.php; docs/set2-artifact-stage2.md.
+
+## Bot settings error reporting follow-up
+The submitted Debug JSON for s2_24 contained a trailing comma after the card object. Strict server parsing correctly rejects it; no lenient parser or silent input repair was added. The corrected JSON is {"cards":[{"owner":"host","ukid":"s2_24"}]}.
+The bot settings catch handler previously wrote errors to the bottom of the form. It now uses existing BerserkDialogs.alert, as do the wizard create/invite/withdraw error handlers. The lobby script cache version is bumped. No new dialog component or styles.
+tools/test_lobby_wizard_alerts.cjs exercises the actual bot submit handler with a mock DOM/fetch: server/network alert, unchanged JSON, no inline error, retry, successful redirect and duplicate-submit guard. tools/test_artifact_debug.php passes 7 checks (plus 186 reused LuckTest checks), reproducing trailing-comma rejection and corrected s2_24 preparation with Recorder and a synthetic catalog. No full browser or live bot-match/DB test was performed.
