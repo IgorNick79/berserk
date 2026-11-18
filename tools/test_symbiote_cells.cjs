@@ -20,7 +20,7 @@ const ck=(v,m)=>{if(!v)throw Error(m)};
  ck(await stack.locator('[data-cell-count-value]').textContent()==='2','total count 2');
  ck(await stack.locator('[data-cell-step="1"]').isVisible(),'desktop arrows');
  for(const step of ['-1','1'])ck(await stack.locator('[data-cell-step="'+step+'"]').evaluate(e=>{const a=e.getBoundingClientRect(),b=e.querySelector('img').getBoundingClientRect();return Math.abs((a.left+a.right-b.left-b.right)/2)<.6&&Math.abs((a.top+a.bottom-b.top-b.bottom)/2)<.6;}),'shared SVG chevron centered in square');
- ck(await stack.locator('[data-cell-counter] svg').getAttribute('viewBox')==='0 0 48 48','requested stack icon');
+ ck(await stack.locator('[data-cell-counter] svg').getAttribute('viewBox')==='0 0 24 24','requested stack icon');
 
  ck(await stack.locator('[data-cell-counter] svg').count()===1,'stack icon present');
  ck(await stack.locator('[data-cell-counter]').evaluate(e=>getComputedStyle(e).cursor)==='pointer','count hand cursor');
