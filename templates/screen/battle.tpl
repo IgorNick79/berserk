@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="/assets/css/battle-fonts.css?v=1">
 <link rel="stylesheet" href="/assets/css/battle-ui-skins.css?v=38">
 <link rel="stylesheet" href="/assets/css/battle-mini-nameplate.css?v=2">
-<link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=31">
+<link rel="stylesheet" href="/assets/css/battle-mini-card.css?v=32">
 <div class="battle-sync-root battle-shell" data-battle-sync-root data-panel-theme="grimoire" data-mini-card-design="{{mini_card_design}}" {{pause_root_attr}}>
     <div class="battle-ajax-message" data-battle-message hidden></div>
     <div class="battle-main">
@@ -26,7 +26,7 @@
 <script src="/assets/js/battle-ui.js?v=24" defer></script>
 <script src="/assets/js/card-image-popup.js?v=2" defer></script>
 
-<script src="/assets/js/battle-mini-card.js?v=18" defer></script>
+<script src="/assets/js/battle-mini-card.js?v=19" defer></script>
 <script src="/assets/js/battle-drag.js?v=2" defer></script>
 
 <script src="/assets/js/battle-notices.js?v=2" defer></script>

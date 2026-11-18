@@ -142,3 +142,8 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 .battle-page .cell-switch [data-cell-step="1"]>img{transform:rotate(-90deg)}
 
 .battle-page [data-cell-count-value]{color:#fff}
+
+.battle-page .panel-cell-step{box-sizing:border-box;top:50%;right:8px;transform:translateY(-50%);text-decoration:none}
+.battle-page .panel-cell-step[data-panel-cell-step="-1"]{left:8px;right:auto}
+.battle-page .panel-cell-step[data-panel-cell-step="-1"] img{transform:rotate(90deg)}
+.battle-page .panel-cell-step[data-panel-cell-step="1"] img{transform:rotate(-90deg)}

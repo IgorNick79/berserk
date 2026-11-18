@@ -66,6 +66,9 @@ const ck=(v,m)=>{if(!v)throw Error(m)};
  const cardBox=await visible().locator('[data-mini-card]').boundingBox();
  await page.mouse.move(cardBox.x+45,cardBox.y+55);await page.mouse.down();await page.mouse.move(cardBox.x+65,cardBox.y+55);
  ck(await page.evaluate(()=>dragStarts===1),'native card drag still starts');await page.mouse.up();
+ await page.evaluate(id=>{const media=document.createElement('div');media.className='panel-card-media';media.innerHTML='<button class="panel-card-close" data-panel-card-close>×</button><a class="panel-card-close panel-cell-step card-link" data-panel-cell-step="1" data-panel-cell-target="'+id+'" href="?sel='+id+'&inspect='+id+'" title="Показать следующую карту"><img src="/assets/images/berserk-chevron-gold.svg" width="28" height="28"></a>';document.body.append(media);},data.ids[1]);
+ const panelArrow=page.locator('[data-panel-cell-target]');await panelArrow.click();ck(await id()===String(data.ids[1]),'panel arrow synchronizes visible instance');
+ ck(await panelArrow.evaluate(e=>{const c=e.getBoundingClientRect(),b=document.querySelector('[data-panel-card-close]').getBoundingClientRect();return c.width===b.width&&c.height===b.height;}),'panel arrow same dimensions as close control');
  const output=process.env.SYMBIOTE_SCREENSHOTS;
  if(output){fs.mkdirSync(output,{recursive:true});await page.screenshot({path:path.join(output,'cells-800.png')});await page.setViewportSize({width:1600,height:950});await page.screenshot({path:path.join(output,'cells-1600.png')});}
  ck(errors.length===0,'no browser JS errors: '+errors.join(','));console.log('PASS headless Edge: desktop 1600, tablet 800 touch, count, exact ID, AJAX/reorder/removal, no switch commands');

@@ -6,7 +6,7 @@
     <h3 class="panel-card-title">{{name}}</h3>
     <div class="panel-card-heading-icons">{{stat_icons_html}}</div>
 </div>
-<div class="panel-card-media">{{image_html}}
+<div class="panel-card-media">{{image_html}}{{cell_navigation_html}}
     <button type="button" class="panel-card-close" data-panel-card-close aria-label="Закрыть информацию о карте"><img src="/assets/images/battle/close.png" alt="" width="28" height="28"></button>
 </div>
 <div class="panel-card-stats" aria-label="Характеристики карты">

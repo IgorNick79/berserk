@@ -981,6 +981,24 @@ final class BattleScreen
         $info = $cardsInfo[$c->ukid] ?? null;
         if (!$info) return '';
 
+        $cellNavigation = '';
+        if ($c->zone === CardInstance::ZONE_FIELD) {
+            $siblings = array_values(array_filter($state->cards, fn($other) =>
+                $other->zone === CardInstance::ZONE_FIELD && $other->row === $c->row && $other->col === $c->col
+                && ($other->owner === $playerKey || $other->revealed)));
+            usort($siblings, static fn($a, $b) => $a->instanceId <=> $b->instanceId);
+            if (count($siblings) > 1) {
+                $index = array_search($c->instanceId, array_column($siblings, 'instanceId'), true);
+                foreach ([-1 => 'Показать предыдущую карту', 1 => 'Показать следующую карту'] as $step => $label) {
+                    $next = $siblings[($index + $step + count($siblings)) % count($siblings)];
+                    $url = ($this->inspectionBase !== '' ? $this->inspectionBase : $baseUrl . '&sel=' . $next->instanceId)
+                        . '&inspect=' . $next->instanceId;
+                    $cellNavigation .= '<a class="panel-card-close panel-cell-step card-link" data-panel-cell-step="' . $step
+                        . '" data-panel-cell-target="' . $next->instanceId . '" href="' . htmlspecialchars($url, ENT_QUOTES)
+                        . '" title="' . $label . '" aria-label="' . $label . '"><img src="/assets/images/berserk-chevron-gold.svg" width="28" height="28" alt=""></a>';
+                }
+            }
+        }
         $imgHtml = '';
         // Asset names follow the existing ukid convention; check the public root,
         // independently of the process working directory or HTTP document root.
@@ -1386,6 +1404,7 @@ final class BattleScreen
         return $this->tpl->parse('includes/battle/panel.tpl', [
             'card_id' => $c->instanceId,
             'image_html'   => $imgHtml,
+            'cell_navigation_html' => $cellNavigation,
             'stat_values_html' => $statValues,
             'stat_icons_html' => $statIcons,
             'cost_icon_url' => '/assets/images/card/' . (!empty($info['elite']) ? 'elite' : 'ordinary') . (!empty($info['single']) ? '-unique' : '') . '.png',

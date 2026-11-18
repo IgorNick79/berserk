@@ -88,6 +88,12 @@
         cellSelection.forEach(function (_, key) { if (!live.has(key)) cellSelection.delete(key); });
     }
     document.addEventListener('click', function (event) {
+        var panelStep = event.target.closest('[data-panel-cell-target]');
+        if (panelStep) {
+            var target = document.querySelector('[data-cell-occupant="' + panelStep.dataset.panelCellTarget + '"]');
+            if (target) showOccupant(target.closest('[data-cell-stack]'), target.dataset.cellOccupant);
+            return; // Existing AJAX link handler owns card inspection.
+        }
         var button = event.target.closest('[data-cell-step]');
         if (!button) return;
         event.preventDefault();
