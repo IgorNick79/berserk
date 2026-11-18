@@ -47,7 +47,7 @@
         var star = stack.querySelector('.cell-marker-badge:not([data-cell-counter])');
         if (star && star.parentElement !== row) row.append(star);
         var count = stack.querySelector('[data-cell-counter]');
-        if (count) row.prepend(count);
+        if (count) { if (star) row.insertBefore(count, star); else row.append(count); }
         var coin = row.querySelector('[data-indicator-kind="coin"]');
         var effects = row.querySelector('[data-indicator-kind="effects"]');
         var combined = Boolean(coin && effects && star

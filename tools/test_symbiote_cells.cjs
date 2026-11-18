@@ -19,6 +19,11 @@ const ck=(v,m)=>{if(!v)throw Error(m)};
  const update=async html=>{await page.evaluate(html=>{document.querySelector('.battle-field').innerHTML=html;document.dispatchEvent(new Event('berserk:battle-updated'));},html);};
  ck(await stack.locator('[data-cell-count-value]').textContent()==='2','total count 2');
  ck(await stack.locator('[data-cell-step="1"]').isVisible(),'desktop arrows');
+ ck(await stack.locator('[data-cell-counter] svg').count()===1,'stack icon present');
+ ck(await stack.locator('[data-cell-counter]').evaluate(e=>getComputedStyle(e).cursor)==='pointer','count hand cursor');
+ ck(await stack.locator('[data-cell-step="1"]').evaluate(e=>{const c=getComputedStyle(e);return c.width===c.height&&c.cursor==='pointer';}),'square arrows with hand cursor');
+ ck(await stack.evaluate(e=>{const row=e.querySelector('.cell-indicators'),count=row.querySelector('[data-cell-counter]'),buff=row.querySelector('[data-indicator-home]');return !buff||Boolean(buff.compareDocumentPosition(count)&Node.DOCUMENT_POSITION_FOLLOWING); }),'count after buffs');
+
  await stack.locator('[data-cell-step="1"]').focus();
  ck((await page.locator('.battle-mini-tooltip:not([hidden])').textContent()).includes('Показать следующую карту'),'arrow uses existing tooltip');
  await page.keyboard.press('Escape');

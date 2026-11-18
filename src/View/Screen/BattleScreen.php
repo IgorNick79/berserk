@@ -1909,6 +1909,7 @@ final class BattleScreen
             . '<button type="button" data-cell-step="-1" data-mini-hint data-cell-hint aria-expanded="false" aria-label="Показать предыдущую карту">'
             . '<span aria-hidden="true">‹</span><span class="mini-hint-text" hidden>Показать предыдущую карту</span></button>'
             . '<span class="cell-marker-badge" data-cell-counter data-mini-hint data-cell-hint role="button" tabindex="0" aria-expanded="false" aria-label="' . $countHint . '">'
+            . '<svg width="10" height="11" viewBox="0 0 12 13" fill="none" stroke="currentColor" aria-hidden="true"><rect x="1" y="1" width="7" height="9" rx="1"/><rect x="4" y="3" width="7" height="9" rx="1"/></svg>'
             . '<span data-cell-count-value>' . $count . '</span><span class="mini-hint-text" hidden>' . $countHint . '</span></span>'
             . '<button type="button" data-cell-step="1" data-mini-hint data-cell-hint aria-expanded="false" aria-label="Показать следующую карту">'
             . '<span aria-hidden="true">›</span><span class="mini-hint-text" hidden>Показать следующую карту</span></button></span>' : '';
