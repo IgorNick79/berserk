@@ -1328,6 +1328,12 @@ final class BattleScreen
                 'label' => 'Летающее существо',
             ]);
         }
+        if (CardStats::isIncorporeal($c)) {
+            $statValues .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
+                'url' => '/assets/images/card/incorpeal@2x.png',
+                'label' => 'Бестелесное существо',
+            ]);
+        }
         // Element and rarity finish the stats row, in that order.
         $statIcons = '';
         $elementIcon = $this->elementIconPath($c);
