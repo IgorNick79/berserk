@@ -1334,6 +1334,16 @@ final class BattleScreen
                 'label' => 'Бестелесное существо',
             ]);
         }
+        $typeLabel = [
+            'parasite' => 'Паразит', 'terrain' => 'Местность',
+            'artifact' => 'Артефакт', 'companion' => 'Компаньон',
+        ][$c->type] ?? null;
+        if ($typeLabel !== null) {
+            $statValues .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
+                'url' => '/assets/images/card/' . $c->type . '@2x.png',
+                'label' => $typeLabel,
+            ]);
+        }
         // Element and rarity finish the stats row, in that order.
         $statIcons = '';
         $elementIcon = $this->elementIconPath($c);
