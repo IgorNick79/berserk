@@ -140,3 +140,5 @@ html[data-battle-dragging],html[data-battle-dragging] *{cursor:grabbing!importan
 .battle-page .cell-switch button>img{display:block;flex:none}
 .battle-page .cell-switch [data-cell-step="-1"]>img{transform:rotate(90deg)}
 .battle-page .cell-switch [data-cell-step="1"]>img{transform:rotate(-90deg)}
+
+.battle-page [data-cell-count-value]{color:#fff}
