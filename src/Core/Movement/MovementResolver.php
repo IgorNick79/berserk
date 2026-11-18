@@ -38,6 +38,7 @@ final class MovementResolver
         if (!$card || $card->owner !== $playerKey || $card->zone !== CardInstance::ZONE_FIELD) {
             return Result::error('Карта не на поле');
         }
+        if ($card->type === 'artifact') return Result::error('Артефакт не может самостоятельно перемещаться');
         if (CardStats::isDisabled($card)) {
             $reason = CardStats::disabledReason($card);
             return Result::error($reason !== '' ? $reason : 'Карта не может двигаться');

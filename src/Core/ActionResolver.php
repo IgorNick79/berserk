@@ -396,6 +396,7 @@ final class ActionResolver
         if (!$attacker || $attacker->owner !== $playerKey || $attacker->zone !== CardInstance::ZONE_FIELD) {
             return Result::error('Атакующий не на поле');
         }
+        if ($attacker->type === 'artifact') return Result::error('Артефакт не может выполнять УЧР');
         if (!$coinBlockChecked && CardStats::isDisabled($attacker)) {
             $reason = CardStats::disabledReason($attacker);
             return Result::error($reason !== '' ? $reason : 'Атакующий не может действовать');

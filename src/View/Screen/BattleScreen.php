@@ -1277,11 +1277,11 @@ final class BattleScreen
         $hpMax = $this->displayHpMax($c, $info);
         $statValues = $statValue('hp', 'heart@2x', $c->hp . '/' . $hpMax,
             'Здоровье: ' . $c->hp . '/' . $hpMax);
-        if (!CardStats::isFlyingCreature($c)) {
+        if ($c->type !== 'artifact' && !CardStats::isFlyingCreature($c)) {
             $statValues .= $statValue('move', 'move@2x', $c->move . '/' . $c->moveMax,
                 'Ходов: ' . $c->move . '/' . $c->moveMax);
         }
-        $statValues .= $statValue('strike', 'sword@2x', $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
+        if ($c->type !== 'artifact') $statValues .= $statValue('strike', 'sword@2x', $c->strikeWeak . '-' . $c->strikeMedium . '-' . $c->strikeStrong,
             'Простой удар: ' . $c->strikeWeak . '/' . $c->strikeMedium . '/' . $c->strikeStrong);
         if ($c->armorMax > 0 || $c->armor > 0) {
             $statValues .= $statValue('armor', 'armor@2x', (string) $c->armor, 'Броня: ' . $c->armor);

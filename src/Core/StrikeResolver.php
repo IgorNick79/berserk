@@ -148,6 +148,7 @@ final class StrikeResolver
                 && $attacker->zone !== CardInstance::ZONE_FLYING)) {
             return Result::error('Атакующий не на поле');
         }
+        if ($attacker->type === 'artifact') return Result::error('Артефакт не имеет простого удара');
         if (CardStats::isDisabled($attacker)) {
             $reason = CardStats::disabledReason($attacker);
             return Result::error($reason !== '' ? $reason : 'Атакующий не может действовать');
@@ -377,6 +378,7 @@ final class StrikeResolver
             || $target->hp <= 0) {
             return Result::error('Цель не на поле');
         }
+        if ($attacker->type === 'artifact') return Result::error('Артефакт не имеет простого удара');
         if ($attacker->closed && !$order) {
             return Result::error('Атакующий закрыт');
         }

@@ -51,8 +51,9 @@ final class BattleHelper
     public static function abilities(CardInstance $card): array
     {
         $hasUchr = false;
+        $canBasicAttack = !in_array($card->type, ['terrain', 'artifact'], true);
         foreach ($card->effectiveProp()['actions'] ?? [] as $a) {
-            if (($a['type'] ?? '') === 'uchr' && CoinAbilities::actionAvailable($card, $a)) { $hasUchr = true; break; }
+            if ($canBasicAttack && ($a['type'] ?? '') === 'uchr' && CoinAbilities::actionAvailable($card, $a)) { $hasUchr = true; break; }
         }
         return [
             'has_strike' => self::hasAnyStrike($card),
@@ -66,7 +67,7 @@ final class BattleHelper
      */
     public static function getMoveCells(GameState $state, CardInstance $card): array
     {
-        if (Strangulation::count($card) > 0 || CardStats::isDisabled($card) || $card->move <= 0 || isset($card->markers['rooted'])) {
+        if ($card->type === 'artifact' || Strangulation::count($card) > 0 || CardStats::isDisabled($card) || $card->move <= 0 || isset($card->markers['rooted'])) {
             return [];
         }
 

@@ -37,10 +37,10 @@ final class PreGameCard
             : '<div class="pregame-card-image pregame-card-image--missing">Изображение недоступно</div>';
         $strike = (array) ($card['strike'] ?? []);
         $stats = self::stat('hp', 'heart', self::value($card['health'] ?? null), 'Здоровье');
-        if (($card['type'] ?? '') !== 'fly') {
+        if (!in_array($card['type'] ?? '', ['fly', 'artifact'], true)) {
             $stats .= self::stat('move', 'move', self::value($card['move'] ?? null), 'Ходов');
         }
-        $stats .= self::stat('strike', 'sword', implode('-', array_map(fn($key) => self::value($strike[$key] ?? null), ['weak', 'medium', 'strong'])), 'Простой удар');
+        if (($card['type'] ?? '') !== 'artifact') $stats .= self::stat('strike', 'sword', implode('-', array_map(fn($key) => self::value($strike[$key] ?? null), ['weak', 'medium', 'strong'])), 'Простой удар');
         if (($card['type'] ?? '') === 'fly') $stats .= self::hint('/assets/images/card/fly.png', 'Летающее существо');
         if (($card['type'] ?? '') === 'terrain') $stats = '';
         $description = CardDescription::render((string) ($card['descr'] ?? ''));
