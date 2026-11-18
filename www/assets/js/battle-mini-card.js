@@ -278,7 +278,7 @@
             void z.offsetWidth;
             z.classList.add('is-open');
             if (!pinned && hoverReady) contextHint(document.elementFromPoint(pointerX, pointerY) || card);
-        }, card.hasAttribute("data-mini-art-only") ? 300 : 200);
+        }, card.hasAttribute("data-mini-art-only") ? 300 : (Number(card.closest('[data-cell-stack]')?.dataset.cellCount) > 1 ? 500 : 200));
     }
     document.addEventListener('pointerdown', function (e) {
         if (e.button === 0 && !e.target.closest('[data-mini-hint]')) suppressViewHover(e.target);

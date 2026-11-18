@@ -26,7 +26,7 @@
 <script src="/assets/js/battle-ui.js?v=24" defer></script>
 <script src="/assets/js/card-image-popup.js?v=2" defer></script>
 
-<script src="/assets/js/battle-mini-card.js?v=19" defer></script>
+<script src="/assets/js/battle-mini-card.js?v=20" defer></script>
 <script src="/assets/js/battle-drag.js?v=2" defer></script>
 
 <script src="/assets/js/battle-notices.js?v=2" defer></script>
