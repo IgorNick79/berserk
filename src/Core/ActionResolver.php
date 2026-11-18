@@ -3602,6 +3602,7 @@ final class ActionResolver
     ): Result {
         $target = $this->state->getCard($targetId);
         if (!$target) return Result::error('Цель не найдена');
+        if (CardStats::isIncorporeal($target)) return Result::error('Бестелесное существо нельзя отравить');
         if ($target->zone !== CardInstance::ZONE_FIELD
             && $target->zone !== CardInstance::ZONE_FLYING) {
             return Result::error('Цель не на поле');

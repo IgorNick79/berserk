@@ -78,7 +78,7 @@ final class MovementResolver
             return Result::error('Только на соседнюю клетку');
         }
 
-        if ($error = $this->validateDestination($row, $col)) {
+        if ($error = $this->validateDestination($row, $col, CardStats::isIncorporeal($card))) {
             return $error;
         }
 
@@ -110,6 +110,10 @@ final class MovementResolver
         $this->state->bumpVersion();
 
         $this->state->historyRecorder?->moved($this->state,$card,$oldRow,$oldCol);
+        if (CardStats::isIncorporeal($card) && $card->move <= 0 && CardStats::sharesCell($this->state,$card)) {
+            (new ZoneManager($this->state))->exileIncorporeal($card, 'occupied');
+            $this->engine->checkGameOver($this->state);
+        }
         return Result::ok(["card_moved:{$playerKey}:{$cardId}:{$row}_{$col}"]);
     }
 
@@ -251,14 +255,14 @@ final class MovementResolver
         return null;
     }
 
-    private function validateDestination(int $row, int $col): ?Result
+    private function validateDestination(int $row, int $col, bool $allowOccupied = false): ?Result
     {
         if ($row < 1 || $row > 6 || $col < 1 || $col > 5) {
             return Result::error('За пределами поля');
         }
 
         $zone = new ZoneManager($this->state);
-        if ($zone->isFieldOccupied($row, $col)) {
+        if (!$allowOccupied && $zone->isFieldOccupied($row, $col)) {
             return Result::error('Клетка занята');
         }
         if (ZoneManager::hasBlockingMarker($this->state, "{$row}_{$col}")) {

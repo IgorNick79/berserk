@@ -467,6 +467,10 @@ final class BattleScreen
                         } elseif (isset($pendingAllyModifierTargets[$card->instanceId])) {
                             $cellClass  .= ' attack-target pending-ally-modifier-target';
                             $cellContent = '<a class="card-link" href="' . $pendingAllyModifierTargets[$card->instanceId] . '">' . $cardBody . '</a>';
+                        } elseif (isset($moveCells[$key]) && !$explicitAttackMode && $mode === 'strike'
+                            && ($moving = $state->getCard($selectedCardId)) && CardStats::isIncorporeal($moving)) {
+                            $cellClass .= ' move-target';
+                            $cellContent = '<a class="card-link" href="' . htmlspecialchars($baseUrl . '&cmd=move&card_id=' . $selectedCardId . '&row=' . $r . '&col=' . $c . '&sel=' . $selectedCardId, ENT_QUOTES) . '">' . $cardBody . '</a>';
                         } elseif (isset($attackTargets[$card->instanceId]) && $selectedCardId > 0 && $card->instanceId !== $selectedCardId) {
                             if (str_starts_with($mode, 'action:')) {
                                 $actionKey = substr($mode, 7);

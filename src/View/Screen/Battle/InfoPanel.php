@@ -96,7 +96,7 @@ final class InfoPanel
         if ($inInstantStack) $combatKey = 'instant:' . ($state->battle['turn'] ?? 0);
         if ($priority && $combatKey === '') $combatKey = 'information:' . ($state->battle['turn'] ?? 0);
         $body = $actionChoiceHtml !== '' ? $actionChoiceHtml : $this->renderOchiKrongaNotice() . $this->renderBody();
-        $body = $this->renderGateNotice() . $this->renderGraveRitualNotice() . $this->renderWormResults() . $this->renderProphecyBlockNotice()
+        $body = $this->renderIncorporealNotices() . $this->renderGateNotice() . $this->renderGraveRitualNotice() . $this->renderWormResults() . $this->renderProphecyBlockNotice()
             . (!$inCombat ? $this->renderRagnarValhallaNotice() : '') . $body;
         $instantWindow = $singleWait === 'single_roll.waiting_instant' || $inInstantStack || ($state->battle['strike']['state'] ?? '') === 'waiting_instant'
             || !empty($state->battle['pending_instant_pick']) || !empty($state->battle['pending_combat_pick']);
@@ -166,6 +166,24 @@ final class InfoPanel
             }
         }
         return '';
+    }
+
+    private function renderIncorporealNotices(): string
+    {
+        $items = '';
+        foreach ($this->state->battle['incorporeal_notices'] ?? [] as $notice) {
+            $card = $this->state->getCard((int)$notice['card_id']);
+            if (!$card) continue;
+            $name = htmlspecialchars((string)($this->cardsInfo[$card->ukid]['name'] ?? $card->ukid), ENT_QUOTES);
+            $reason = $notice['reason'] === 'occupied'
+                ? 'единицы движения закончились, а клетка занята другой картой'
+                : 'бестелесное существо изгоняется вместо гибели';
+            $items .= '<p data-battle-notice-id="' . (int)$notice['id'] . '">' . $name . ' изгнан: ' . $reason . '.</p>';
+        }
+        if ($items === '') return '';
+        return '<section data-battle-notice="incorporeal:' . $this->state->gameId . ':' . $this->playerKey . '">'
+            . Panel::render(new \Berserk\View\Ui\PanelSpec(title:'Изгнание бестелесного', text:[$items,
+                '<button type="button" class="button" data-dismiss-battle-notice>Понятно</button>'])) . '</section>';
     }
 
     private function renderGateNotice(): string

@@ -97,7 +97,7 @@ final class BattleHelper
             $cc = $card->col + $dc;
             if ($r < 1 || $r > 6 || $cc < 1 || $cc > 5) continue;
             if (ZoneManager::hasBlockingMarker($state, "{$r}_{$cc}")) continue;
-            if (isset($occupied["{$r}_{$cc}"])) continue;
+            if (!CardStats::isIncorporeal($card) && isset($occupied["{$r}_{$cc}"])) continue;
 
              // Басаарг: нельзя уходить от обязательной цели
             if ($forced !== null) {
@@ -123,7 +123,7 @@ final class BattleHelper
             $targetCol = ($card->col === 1) ? 5 : 1;
             $key       = "{$card->row}_{$targetCol}";
 
-            if (!ZoneManager::hasBlockingMarker($state, $key) && !isset($occupied[$key])) {
+            if (!ZoneManager::hasBlockingMarker($state, $key) && (CardStats::isIncorporeal($card) || !isset($occupied[$key]))) {
                 $result[$key] = true;
             }
         }
@@ -405,6 +405,7 @@ final class BattleHelper
                     if ($target->zone !== CardInstance::ZONE_FIELD
                         && $target->zone !== CardInstance::ZONE_FLYING) continue;
                 } elseif ($type === 'poison_target') {
+                    if (CardStats::isIncorporeal($target)) continue;
                     if ($target->zone !== CardInstance::ZONE_FIELD
                         && $target->zone !== CardInstance::ZONE_FLYING) continue;
                     // любой — свой или чужой

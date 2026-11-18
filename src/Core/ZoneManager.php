@@ -140,6 +140,7 @@ final class ZoneManager
      */
     public function toGraveyard(CardInstance $card): void
     {
+        if (CardStats::isIncorporeal($card)) { $this->exileIncorporeal($card, 'death'); return; }
         $completedDeath = $card->dying;
         $flyingOwner = $this->flyingOwnerBeforeTransition($card);
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
@@ -193,6 +194,20 @@ final class ZoneManager
         if ($completedDeath) CardRoll::arm($this->state, $card, false);
         SymbioteProcessor::refresh($this->state);
         Strangulation::refresh($this->state);
+    }
+
+    public function exileIncorporeal(CardInstance $card, string $reason): void
+    {
+        $id = (int) ($this->state->battle['incorporeal_notice_seq'] ?? 0) + 1;
+        $this->state->battle['incorporeal_notice_seq'] = $id;
+        $this->state->battle['incorporeal_notices'][] = ['id'=>$id,'card_id'=>$card->instanceId,'reason'=>$reason];
+        $this->state->battle['incorporeal_notices'] = array_slice($this->state->battle['incorporeal_notices'], -20);
+        // This mechanic is outside the certified simple replay; retain the normal recording-gap boundary.
+        $this->state->historyRecorder?->unsupported($this->state, 'incorporeal_exile');
+        $this->toExile($card);
+        $damage = new DamageResolver($this->state);
+        $damage->clearRootedBySource($card->instanceId);
+        $damage->refreshArmor();
     }
 
     public function toExile(CardInstance $card): void

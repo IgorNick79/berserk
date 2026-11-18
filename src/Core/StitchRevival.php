@@ -22,6 +22,7 @@ final class StitchRevival
 
     public static function legalHealTarget(CardInstance $source, CardInstance $target, array $action): bool
     {
+        if (CardStats::isIncorporeal($target)) return false;
         if (empty($action['heal_gain_coin'])) return true;
         return $target->owner === $source->owner && $target->element === 'dark'
             && $target->isCreature()

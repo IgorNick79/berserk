@@ -22,6 +22,22 @@ final class CardStats
         return $card->closed;
     }
 
+    public static function isIncorporeal(CardInstance $card): bool
+    {
+        return $card->isCreature() && !empty($card->effectiveProp()['incorporeal']);
+    }
+
+    public static function sharesCell(GameState $state, CardInstance $card): bool
+    {
+        if ($card->zone !== CardInstance::ZONE_FIELD) return false;
+        foreach ($state->cards as $other) {
+            if ($other->instanceId !== $card->instanceId && $other->zone === CardInstance::ZONE_FIELD
+                && $other->row === $card->row && $other->col === $card->col
+                && (int) ($other->flags['symbiote_host_id'] ?? 0) !== $card->instanceId) return true;
+        }
+        return false;
+    }
+
     public static function hasAnyStrike(CardInstance $card): bool
     {
         if (in_array($card->type, ['terrain', 'artifact'], true)) return false;

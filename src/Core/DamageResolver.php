@@ -111,6 +111,7 @@ final class DamageResolver
 
         $vampireTypes = ['strike', 'tap', 'magic', 'execute'];
         if ($attacker
+            && !CardStats::isIncorporeal($target) && !CardStats::isIncorporeal($attacker)
             && !empty($attacker->effectiveProp()['vampire'])
             && in_array($actionType, $vampireTypes, true)
             && $attacker->instanceId !== $target->instanceId
@@ -198,6 +199,11 @@ final class DamageResolver
             return;
         }
 
+        if (CardStats::isIncorporeal($target)) {
+            (new ZoneManager($this->state))->exileIncorporeal($target, 'death');
+            $this->state->bumpVersion();
+            return; // Replacement precedes death events, Valhalla and death triggers.
+        }
         $target->hp = 0;
         $target->dying = true;
         SymbioteProcessor::refresh($this->state);
@@ -212,6 +218,7 @@ final class DamageResolver
         $this->clearRootedBySource($target->instanceId);
 
         if ($source
+            && !CardStats::isIncorporeal($source)
             && !empty($source->effectiveProp()['deadeat'])
             && $this->shouldTriggerDeadeat($cause)
             && $source->hp > 0) {

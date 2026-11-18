@@ -209,6 +209,31 @@ final class Engine
         if (!empty($state->battle['single_roll']) && !in_array($cmd->type,['combat_instant_play','combat_instant_pass','confirm_strike'],true))
             return Result::error('Single roll resolution required');
 
+        if ($state->status === 'battle' && ($state->battle['active'] ?? null) === $playerKey
+            && empty($state->battle['strike']) && empty($state->battle['turn_phase'])
+            && empty($state->battle['turn_instant_stack']) && empty($state->battle['turn_instant_result'])
+            && in_array($cmd->type, ['move','strike','uchr','action','jump','gain_coin','end_turn','open_turn_instants'], true)) {
+            $exile = [];
+            foreach ($state->cards as $card) {
+                if ($card->owner !== $playerKey || $card->dying || $card->hp <= 0
+                    || !CardStats::isIncorporeal($card) || SymbioteProcessor::subtype($card) !== null
+                    || !CardStats::sharesCell($state, $card)) continue;
+                if ($cmd->type === 'move' && (int)$cmd->get('card_id') === $card->instanceId
+                    && isset(BattleHelper::getMoveCells($state,$card)[$cmd->get('row').'_'. $cmd->get('col')])) {
+                    $exile = []; break;
+                }
+                if ($card->move > 0) {
+                    if (BattleHelper::getMoveCells($state, $card) !== []) return Result::error('Бестелесное существо обязано сначала покинуть занятую клетку');
+                    continue;
+                }
+                $exile[] = $card;
+            }
+            foreach ($exile as $card) (new ZoneManager($state))->exileIncorporeal($card, 'occupied');
+            if ($exile) {
+                $state->bumpVersion(); $this->checkGameOver($state);
+                if ($state->winner !== null || in_array((int)$cmd->get('card_id'),array_column($exile,'instanceId'),true)) return Result::ok(['incorporeal_exiled']);
+            }
+        }
         $strike = new StrikeResolver($state, $this);
         $action = new ActionResolver($state, $this);
         $movement = new MovementResolver($state, $this);
@@ -1064,6 +1089,7 @@ final class Engine
 
     public function applyPoison(CardInstance $target, int $value, string $sourceKey): void
     {
+        if (CardStats::isIncorporeal($target)) return;
         if ($value <= 0) return;
 
         if (!empty($target->effectiveProp()['zoo'])) {

@@ -25,6 +25,7 @@ final class CardHealing
     {
         if (!empty($this->state->battle[self::PENDING]) || !empty($this->state->battle['pending_heal_instead_wound']['card_heal']))
             throw new \LogicException('Unfinished card healing operation');
+        if (CardStats::isIncorporeal($target)) $amount = 0;
         $active=$this->state->battle['active']??'host';$turn=(int)($this->state->battle['turn']??0);
         $phase=$this->state->battle['turn_phase']??[];
         // Native endTurn preselects the next active player before running the ending turn's effects.
@@ -151,7 +152,7 @@ final class CardHealing
     {
         $target=$this->state->getCard($op['target_id']);$source=$this->state->getCard((int)$op['source_id']);
         $before=$target?->hp??0;$opened=false;
-        if(!$replaced && self::live($target) && ($op['modified']>0 || !empty($op['options']['full']))) {
+        if(!$replaced && self::live($target) && !CardStats::isIncorporeal($target) && ($op['modified']>0 || !empty($op['options']['full']))) {
             $config=$target->effectiveProp()['on_heal_instead_open']??null;
             if(!empty($op['options']['allow_open']) && is_array($config) && $target->hp >= $target->hpMax
                 && (empty($config['once_per_turn'])||empty($target->flags['on_heal_open_used_this_turn']))) {
