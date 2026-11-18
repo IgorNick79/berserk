@@ -14,7 +14,7 @@ function syState():GameState{
  return$s;
 }
 function syAdd(GameState$s,int$id,string$owner='host',string$kind='companion'):CardInstance{
- return $s->cards[$id]=new CardInstance($id,'sym'.$id,$owner,'field',row:$owner==='host'?1:6,col:1,hp:3,hpMax:3,move:5,moveMax:5,strikeWeak:1,prop:['symbiote'=>$kind]);
+ return $s->cards[$id]=new CardInstance($id,'sym'.$id,$owner,'field',row:$owner==='host'?1:6,col:1,hp:3,hpMax:3,move:5,moveMax:5,strikeWeak:1,type:$kind);
 }
 function syChoose(GameState$s,int$target):void{
  $p=$s->battle[SymbioteProcessor::PENDING];$r=(new Engine())->apply($s,$p['owner'],new Command('choose_symbiote_host',['choice_id'=>$p['id'],'target_id'=>$target]));syCheck($r->success,$r->error??'choice failed');

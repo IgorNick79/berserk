@@ -4,7 +4,7 @@
 Branch feature/set2-terrain; accepted artifact/base commit 385584e. No main or working DB changes.
 Rules consulted: https://proberserk.ru/rule/185 (211.1–211.11). Ground-host eligibility, occupancy limit, reveal seating, unseated death and linked movement come from that text. The ordering FIRST player then SECOND player is the Project Lead's explicit decision in this chat; the cited section does not specify the inter-player ordering. A player chooses which of several eligible symbiotes to seat next; a host is never automatically selected, even when only one exists.
 
-The local catalog audit found only creature/fly/artifact/terrain type values, with no structured symbiote subtype. Existing deal_linked_recruit companion roles belong to Linnet recruitment and are not symbiote subtypes. They are preserved. New structural metadata is prop.symbiote = companion or parasite on type=creature. No concrete card definitions or live records were changed. The prop.incorporeal flag is checked only for host eligibility (no live catalog entries with it were found); no incorporeal movement, damage or co-occupancy rules were added.
+The local catalog audit found only creature/fly/artifact/terrain type values, with no structured symbiote subtype. Existing deal_linked_recruit companion roles belong to Linnet recruitment and are not symbiote subtypes. They are preserved. The final structural metadata is cards.type=companion or cards.type=parasite (superseding the initial prop.symbiote design). No concrete card definitions or live records were changed. The prop.incorporeal flag is checked only for host eligibility (no live catalog entries with it were found); no incorporeal movement, damage or co-occupancy rules were added.
 
 Before Stage 3, BattleScreen already rendered independent data-cell-occupant variants, battle-mini-card.js already switched them and retained instance IDs across AJAX, and cell markers already had badge styling. The old counter was current/total and touch swipe was absent. These existing components were extended rather than replaced.
 
@@ -42,3 +42,13 @@ src/Core/Movement/MovementEffectResolver.php; src/View/Screen/BattleScreen.php;
 www/assets/js/battle-mini-card.js; www/assets/css/battle-mini-card.css;
 templates/screen/battle.tpl; tools/test_symbiotes.php; tools/test_symbiote_cells.cjs;
 docs/set2-symbiotes-stage3.md.
+
+## Type-column correction
+Per Project Lead, subtype is now authoritative in cards.type: companion/parasite, alongside creature/fly/artifact/terrain. prop.symbiote is no longer read. CardInstance::isCreature groups creature/fly/companion/parasite for existing generic creature effects, elimination and timer counting. Ground-host predicates remain narrow. Existing resurrection/summoning exclusions remain unchanged; no host-less revival behavior is introduced. The flight, artifact and terrain behavior remains unchanged.
+
+Local DB only: changed type for the following existing second-set rows, preserving every other column. Reference: https://proberserk.ru/edition/d1f15 (type/subtype column). No production writes.
+- companion: s2_4 Разумный вихрь; s2_56 Шипокрыл; s2_94 Хрумг; s2_111 Торфяной змей; s2_139 Могильный жук; s2_140 Саламандра; s2_171 Ури.
+- parasite: s2_6 Карлик Унд; s2_115 Ядовитый плющ; s2_175 Йоро.
+This metadata enables basic seating only; printed abilities remain outside Stage 3.
+
+Validation: tools/test_symbiote_types.php passes 24 checks including full Debug/catalog/instance/seating/marker path for s2_4 and s2_6 with NULL props, both owner restrictions, creature-family classification and authoritative type over legacy JSON. The 48 seating tests now use type=companion/parasite. Artifact (27), terrain history (11), LuckTest (186), damage lifecycle, dynamic flying lifecycle, bot flight ACK (22), headless Edge cell UI (1600/800), PHP lint and diff whitespace checks pass.

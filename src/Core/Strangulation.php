@@ -30,7 +30,7 @@ final class Strangulation
     }
     public static function validTarget(CardInstance $source, ?CardInstance $target): bool
     {
-        return $target !== null && in_array($target->type, ['creature', 'fly'], true)
+        return $target !== null && $target->isCreature()
             && !$target->elite && $target->owner !== $source->owner && self::adjacent($source, $target);
     }
     public static function targets(GameState $state, CardInstance $source): array
@@ -71,7 +71,7 @@ final class Strangulation
     {
         return $state->status === 'battle' && ($state->battle['active'] ?? null) === $source->owner
             && empty($state->battle['strike']) && self::onField($source)
-            && in_array($source->type, ['creature', 'fly'], true) && !CardStats::isDisabled($source)
+            && $source->isCreature() && !CardStats::isDisabled($source)
             && !CardStats::hasCannotAttack($source) && self::isStrangler($source);
     }
     public static function start(GameState $state, CardInstance $source, string $key): Result

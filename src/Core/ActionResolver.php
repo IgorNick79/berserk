@@ -763,7 +763,7 @@ final class ActionResolver
             if (!StitchRevival::legalHealTarget($attacker, $target, $action)) {
                 return Result::error('Нужно своё раненое тёмное существо');
             }
-            if ($target->type !== 'creature' && $target->type !== 'fly') {
+            if (!$target->isCreature()) {
                 return Result::error('Можно лечить только существ');
             }
             if (!empty($action['own']) && $target->owner !== $playerKey) {
@@ -800,7 +800,7 @@ final class ActionResolver
             }
         } elseif ($type === 'impact') {
             if (MemoryLoss::isAction($action)
-                && (!in_array($target->type, ['creature', 'fly'], true) || $target->dying || $target->hp <= 0)) {
+                && (!$target->isCreature() || $target->dying || $target->hp <= 0)) {
                 return Result::error('Цель должна быть живым существом');
             }
             if (CardStats::hasDefense($this->state, $target, 'impact', $attacker)) {
@@ -1807,7 +1807,7 @@ final class ActionResolver
                 if ($candidate->owner !== $source->owner) continue;
                 if ($candidate->zone !== CardInstance::ZONE_FIELD) continue;
                 if ($candidate->dying || $candidate->hp <= 0) continue;
-                if ($candidate->type !== 'creature' && $candidate->type !== 'fly') continue;
+                if (!$candidate->isCreature()) continue;
 
                 $key = (string) $candidate->instanceId;
                 if (isset($seen[$key])) continue;
@@ -3457,7 +3457,7 @@ final class ActionResolver
             return false;
         }
         if ($target->dying || $target->hp <= 0) return false;
-        return $target->type === 'creature' || $target->type === 'fly';
+        return $target->isCreature();
     }
 
     private function startBloodTap(

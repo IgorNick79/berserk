@@ -241,7 +241,7 @@ final class CardStats
         $universal = ['zoa'];
         if ($attacker !== null) {
             $attackerType = $attacker->type ?? 'creature';
-            if ($attackerType === 'creature') $universal[] = 'zoan';
+            if (in_array($attackerType, ['creature', 'companion', 'parasite'], true)) $universal[] = 'zoan';
             if ($attackerType === 'fly')      $universal[] = 'zoal';
         }
 

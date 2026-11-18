@@ -151,6 +151,11 @@ final class CardInstance
         return EffectiveFeatures::modifiers($this);
     }
 
+    public function isCreature(): bool
+    {
+        return in_array($this->type, ['creature', 'fly', 'companion', 'parasite'], true);
+    }
+
     public function isAlive(): bool
     {
         return $this->hp > 0 && $this->zone !== self::ZONE_GRAVEYARD;

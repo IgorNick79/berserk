@@ -24,7 +24,7 @@ final class StitchRevival
     {
         if (empty($action['heal_gain_coin'])) return true;
         return $target->owner === $source->owner && $target->element === 'dark'
-            && in_array($target->type, ['creature', 'fly'], true)
+            && $target->isCreature()
             && EffectiveFeatures::onBattlefield($target) && !$target->dying
             && $target->hp > 0 && $target->hp < $target->hpMax;
     }

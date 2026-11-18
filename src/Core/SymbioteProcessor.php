@@ -2,15 +2,14 @@
 declare(strict_types=1);
 namespace Berserk\Core;
 
-/** Reveal seating only; subtype data stays in prop, instance links in serialized flags. */
+/** Reveal seating only; subtype is cards.type, links are serialized instance flags. */
 final class SymbioteProcessor
 {
     public const PENDING='pending_symbiote_seating';
     public function __construct(private GameState $state, private Engine $engine) {}
     public static function subtype(CardInstance $card): ?string
     {
-        $kind=$card->prop['symbiote']??null;
-        return $card->type==='creature' && in_array($kind,['companion','parasite'],true)?$kind:null;
+        return in_array($card->type,['companion','parasite'],true)?$card->type:null;
     }
     public static function corporeal(CardInstance $card): bool { return empty($card->effectiveProp()['incorporeal']); }
     public function hosts(CardInstance $sym): array

@@ -79,7 +79,7 @@ final class CardHealing
     public static function neighbours(GameState $s,CardInstance $target): array
     {
         $ids=[];
-        foreach($s->cards as $c) if(self::live($c) && in_array($c->type,['creature','fly'],true)
+        foreach($s->cards as $c) if(self::live($c) && $c->isCreature()
             && ZoneManager::areAdjacentFieldCards($target,$c)) $ids[]=$c->instanceId;
         return $ids;
     }

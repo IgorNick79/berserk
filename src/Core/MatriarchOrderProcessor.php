@@ -11,7 +11,7 @@ final class MatriarchOrderProcessor
     {
         return $card !== null && $card->zone === CardInstance::ZONE_FIELD && !$card->dying
             && $card->hp > 0 && $card->row !== null && $card->col !== null
-            && in_array($card->type, ['creature','fly'], true);
+            && $card->isCreature();
     }
 
     public static function adjacent(CardInstance $a, CardInstance $b): bool

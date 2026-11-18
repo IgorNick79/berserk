@@ -307,7 +307,7 @@ final class InstantProcessor
 
     private function isCreature(CardInstance $card): bool
     {
-        return $card->type === 'creature' || $card->type === 'fly';
+        return $card->isCreature();
     }
 
     /** @return int[] */

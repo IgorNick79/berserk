@@ -332,7 +332,7 @@ final class DamageResolver
             if ($card->dying) continue;
             if ($card->zone !== CardInstance::ZONE_FIELD
                 && $card->zone !== CardInstance::ZONE_FLYING) continue;
-            if ($card->type !== 'creature' && $card->type !== 'fly') continue;
+            if (!$card->isCreature()) continue;
             return true;
         }
         return false;
@@ -537,7 +537,7 @@ final class DamageResolver
     private function matchFilter(CardInstance $card, string $filter): bool
     {
         return match ($filter) {
-            'enemy_creature_not_flying' => $card->type === 'creature',
+            'enemy_creature_not_flying' => $card->isCreature() && $card->type !== 'fly',
             'own_creature'              => true,
             'own_yordling'              => CardStats::hasClass($card, 'Йордлинг'),
             default                     => true,

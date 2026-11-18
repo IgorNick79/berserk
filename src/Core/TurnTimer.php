@@ -31,7 +31,7 @@ final class TurnTimer
                 $count=0;
                 foreach ($state->cards as $card) if ($card->owner===$owner && !$card->dying && $card->isAlive()
                     && in_array($card->zone,[CardInstance::ZONE_FIELD,CardInstance::ZONE_FLYING],true)
-                    && in_array($card->type,['creature','fly'],true)) $count++;
+                    && $card->isCreature()) $count++;
                 $limit=$count*$state->settings->battle['turn_creature_seconds'];
             }
         }

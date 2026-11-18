@@ -91,7 +91,7 @@ final class OchiKronga
             if ($kind === null) { unset($memory); continue; }
             $eligible = $kind !== 'other' && (int)($event['actor_id'] ?? 0) !== $source->instanceId
                 && ($event['owner'] ?? null) === $source->owner
-                && in_array($event['actor_type'] ?? '', ['creature','fly'], true)
+                && in_array($event['actor_type'] ?? '', ['creature','fly','companion','parasite'], true)
                 && ($event['element'] ?? null) === 'forests';
             if (!$eligible) { $memory['sequence'] = []; unset($memory); continue; }
             if (in_array($kind, $memory['sequence'], true)) $memory['sequence'] = [];

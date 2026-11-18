@@ -1090,7 +1090,7 @@ final class PrepareProcessor
         if ($candidate->zone !== CardInstance::ZONE_HAND) {
             return 'Существо должно быть в раздаче';
         }
-        if (!in_array($candidate->type, ['creature', 'fly'], true)) {
+        if (!$candidate->isCreature()) {
             return 'Можно выбрать только существо';
         }
         if (!$candidate->elite) {

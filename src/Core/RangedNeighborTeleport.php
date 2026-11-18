@@ -11,7 +11,7 @@ final class RangedNeighborTeleport
     public static function record(GameState $state, CardInstance $attacker, CardInstance $target, string $type, int $wounds): void
     {
         if ($wounds < 1 || !in_array($type, ['shot', 'throw', 'discharge'], true)
-            || !in_array($target->type, ['creature', 'fly'], true) || empty($state->battle['strike'])) return;
+            || !$target->isCreature() || empty($state->battle['strike'])) return;
         foreach ($state->cards as $card) {
             $config = $card->effectiveProp()['on_ranged_neighbor_wounded'] ?? null;
             if (!is_array($config) || !in_array($type, $config['types'] ?? [], true)

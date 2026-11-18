@@ -13,7 +13,7 @@ final class TemporaryHealth
     public static function legal(GameState $state, CardInstance $source, CardInstance $target, array $action): bool
     {
         return EffectiveFeatures::onBattlefield($target) && !$target->dying && $target->hp > 0
-            && in_array($target->type, ['creature','fly'], true) && $target->owner !== $source->owner
+            && $target->isCreature() && $target->owner !== $source->owner
             && (empty($action['no_attack_wounds_this_turn']) || empty($target->flags['attack_wounds_this_turn']))
             && !CardStats::hasDefense($state, $target, 'cast', $source);
     }

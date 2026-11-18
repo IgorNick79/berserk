@@ -1079,7 +1079,7 @@ final class TurnProcessor
     /** Called only after a successful incarnation's zone/reset/own abilities, before continuation. */
     private function applyAlliedIncarnationEffects(CardInstance $recipient): void
     {
-        if (!in_array($recipient->type, ['creature', 'fly'], true)
+        if (!$recipient->isCreature()
             || !EffectiveFeatures::onBattlefield($recipient)
             || $recipient->dying || $recipient->hp <= 0) return;
 

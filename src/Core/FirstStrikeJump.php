@@ -31,7 +31,7 @@ final class FirstStrikeJump
         $types = $config['types'] ?? ['strike', 'uchr', 'tap', 'magic', 'answer'];
         if (!is_array($types) || !in_array($type, $types, true)
             || !in_array($type, ['strike', 'uchr', 'tap', 'magic', 'answer', 'shot', 'throw', 'discharge'], true)) return false;
-        if ($source->owner === $target->owner || !in_array($source->type, ['creature', 'fly'], true)) return false;
+        if ($source->owner === $target->owner || !$source->isCreature()) return false;
         if ($target->dying || $target->hp <= 0 || self::used($this->state, $target)) return false;
 
         // The first qualifying strike is consumed even when its protection is ignored.

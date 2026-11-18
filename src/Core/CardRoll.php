@@ -21,7 +21,7 @@ final class CardRoll
     }
     public static function arm(GameState $state, CardInstance $event, bool $incarnation): void
     {
-        if (!in_array($event->type,['creature','fly'],true)) return;
+        if (!in_array($event->type,['creature','fly','companion','parasite'],true)) return;
         foreach ($state->cards as $card) {
             if (!CardHealing::live($card) || empty($card->effectiveProp()['next_six_on_enemy_death_or_ally_incarnation'])) continue;
             if (($card->owner === $event->owner) === $incarnation) {

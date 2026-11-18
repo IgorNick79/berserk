@@ -61,7 +61,7 @@ final class AlvalindProcessor {
   foreach(['attacker_id','defender_id'] as $field){
    if($field==='defender_id' && empty($strike['defend_dice']))continue;
    $id=$strike[$field]??null;if(!$id&&$field==='defender_id')$id=$strike['target_id']??null;
-   $actor=$this->s->getCard((int)$id);if(!$actor||$actor->owner!==($this->s->battle['active']??null)||!in_array($actor->type,['creature','fly'],true))continue;
+   $actor=$this->s->getCard((int)$id);if(!$actor||$actor->owner!==($this->s->battle['active']??null)||!$actor->isCreature())continue;
    if((int)($strike['actual_strike_wounds'][$actor->instanceId]??0)>0)continue;
    foreach($this->s->cards as $source){
     $cfg=self::config($source);if(!$cfg||empty($cfg['miss'])||$source->owner!==$actor->owner||!CardHealing::live($source))continue;

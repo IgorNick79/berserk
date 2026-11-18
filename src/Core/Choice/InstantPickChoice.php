@@ -59,7 +59,7 @@ final class InstantPickChoice implements ChoiceHandlerInterface
             if (($pi['target'] ?? 'enemy') === 'enemy_open_creature') {
                 if ($c->owner === $playerKey) continue;
                 if ($c->closed) continue;
-                if ($c->type !== 'creature' && $c->type !== 'fly') continue;
+                if (!$c->isCreature()) continue;
                 if (empty($instantProcessor->findForcedStrikeAdjacentTargets($c))) continue;
             }
             if ($condition === 'target_not_moved' && !empty($c->flags['moved_this_turn'])) continue;
