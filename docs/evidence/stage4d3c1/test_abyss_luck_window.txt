@@ -1,0 +1,1 @@
+PASS 19 real combat-window checks; FAIL 0

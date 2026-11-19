@@ -1,0 +1,27 @@
+[
+  {
+    "suite": "test_stage31_fixes",
+    "baseline_exit": 1,
+    "patched_exit": 1
+  },
+  {
+    "suite": "test_nested_combat_ownership",
+    "baseline_exit": 255,
+    "patched_exit": 255
+  },
+  {
+    "suite": "test_pending_wait_timer",
+    "baseline_exit": 255,
+    "patched_exit": 255
+  },
+  {
+    "suite": "test_gloomy_noblewoman",
+    "baseline_exit": 255,
+    "patched_exit": 255
+  },
+  {
+    "suite": "test_ochi_informer_multi_heal",
+    "baseline_exit": 255,
+    "patched_exit": 255
+  }
+]

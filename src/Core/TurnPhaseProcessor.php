@@ -703,6 +703,7 @@ final class TurnPhaseProcessor
             if ($card->hp > $card->hpMax) $card->hp = $card->hpMax;
 
             ActionResolution::healed($this->state, $card, $card, $hpBefore, 'regeneration');
+            $this->state->historyRecorder?->healed($this->state,$card,$hpBefore,$card,'regeneration');
             $affected[] = ['instance_id' => $card->instanceId, 'delta' => $card->hp - $hpBefore, 'unit'=>'hp'];
         }
 
@@ -1312,7 +1313,7 @@ final class TurnPhaseProcessor
             return ['label' => 'Цветущие руны', 'items' => $events];
         }
 
-        $dice = CardRoll::roll($this->state, $card);
+        $dice = CardRoll::roll($this->state, $card,'row_spell');
         if ((new SingleRoll($this->state,$this->engine))->suspendPassive($card,'row_spell',$dice,
             ['handler'=>'row_spell','action'=>$action,'x'=>$x,'enemies'=>$enemies,'events'=>$events]))
             return ['label'=>'Цветущие руны','items'=>[]];
@@ -1323,6 +1324,7 @@ final class TurnPhaseProcessor
     public function continueRowSpellRoll(CardInstance $card, string $activeKey, array $action,
         int $x, array $enemies, array $events, int $dice): array
     {
+        $this->state->historyRecorder?->die($this->state,$card,'final',$dice);
         $level = BattleHelper::diceToLevel($dice);
         $val = BattleHelper::actionStrikeValue($action, $level);
         $events[] = ['standalone_text' => "Кубик: {$dice}, урон: {$val} на цель"];

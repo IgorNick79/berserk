@@ -1,0 +1,6 @@
+
+Fatal error: Uncaught ErrorException: Undefined array key 0 in C:\Users\mi\Documents\Berserk\health-regression-review\baseline\tools\test_instant_followup_fixes.php:22
+Stack trace:
+#0 C:\Users\mi\Documents\Berserk\health-regression-review\baseline\tools\test_instant_followup_fixes.php(22): {closure}(2, 'Undefined array key 0', 'C:\\Users\\mi\\Documents\\Berserk\\health-regression-review\\baseline\\tools\\test_instant_followup_fixes.php', 22)
+#1 {main}
+  thrown in C:\Users\mi\Documents\Berserk\health-regression-review\baseline\tools\test_instant_followup_fixes.php on line 22

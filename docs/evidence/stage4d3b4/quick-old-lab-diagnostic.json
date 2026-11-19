@@ -1,0 +1,140 @@
+[
+    {
+        "schema": "lobby_204015587100",
+        "game": 2,
+        "cards": [
+            "s1_17",
+            "s1_128",
+            "s1_181",
+            "s1_1"
+        ],
+        "pending": [],
+        "turn_phase": null
+    },
+    {
+        "schema": "lobby_695286719200",
+        "game": 2,
+        "cards": [
+            "s1_17",
+            "s1_128",
+            "s1_1",
+            "s1_1"
+        ],
+        "pending": [],
+        "turn_phase": null
+    },
+    {
+        "schema": "lobby_851304754900",
+        "game": 8,
+        "cards": [
+            "s1_155",
+            "card_32",
+            "s1_6",
+            "s1_179",
+            "card_51",
+            "s1_161",
+            "card_49",
+            "card_54",
+            "card_92",
+            "card_24",
+            "card_31",
+            "card_33",
+            "card_54",
+            "card_38",
+            "card_13",
+            "card_9",
+            "s1_111",
+            "card_68",
+            "s1_27",
+            "s1_54",
+            "card_30",
+            "card_4",
+            "s1_179",
+            "s1_54",
+            "card_79",
+            "card_2",
+            "card_5",
+            "card_67",
+            "card_19",
+            "s1_10",
+            "s1_42",
+            "s1_174",
+            "card_54",
+            "card_11",
+            "card_85",
+            "card_39",
+            "card_14",
+            "s1_147",
+            "s1_69",
+            "card_97",
+            "card_25",
+            "s1_20",
+            "s1_107",
+            "s1_41",
+            "card_62",
+            "card_37",
+            "card_31",
+            "s1_181",
+            "card_85",
+            "s1_153",
+            "s1_6",
+            "s1_83",
+            "s1_68",
+            "s1_1",
+            "card_40",
+            "s1_41",
+            "card_35",
+            "s1_174",
+            "s1_10",
+            "s1_25"
+        ],
+        "pending": [
+            "turn_phase"
+        ],
+        "turn_phase": {
+            "phase": "start",
+            "active_key": "player",
+            "passive_key": "host",
+            "side": "active",
+            "passive_queue": [],
+            "active_queue": [],
+            "sub": {
+                "parent_type": "instants",
+                "remaining": [
+                    {
+                        "id": "instant_32_pirate_valor",
+                        "card_id": 32,
+                        "ukid": "s1_174",
+                        "row": 4,
+                        "col": 3,
+                        "label": "Пиратская удаль",
+                        "payload": {
+                            "key": "pirate_valor",
+                            "name": "Пиратская удаль",
+                            "effect": {
+                                "type": "damage",
+                                "value": 1
+                            },
+                            "target": "enemy",
+                            "trigger": "turn"
+                        }
+                    }
+                ],
+                "can_close": true
+            },
+            "pending_ack": null
+        }
+    },
+    {
+        "schema": "lobby_909327671200",
+        "game": 2,
+        "cards": [
+            "s1_17",
+            "s1_128",
+            "s1_181",
+            "s1_1"
+        ],
+        "pending": [],
+        "turn_phase": null
+    }
+]

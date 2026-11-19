@@ -27,7 +27,14 @@ function gnPath(GameState $s,string $path):mixed{
  $data=$s->toArray();foreach(explode('.',$path)as$key){if(!is_array($data)||!array_key_exists($key,$data))return null;$data=$data[$key];}return$data;
 }
 function gnCmd(GameState$s,string$owner,string$type,array$payload=[]):Result{
+ if($type==='choose_life_gift' && isset($payload['amount'],$payload['enemy_id'],$payload['ally_id'])) {
+  foreach(['amount','enemy_id','ally_id'] as $field){$r=gnCmd($s,$owner,$type,[$field=>$payload[$field]]);if(!$r->success)return $r;}
+  return $r;
+ }
+
  if(($payload['heal_token']??null)==='$current')$payload['heal_token']=$s->battle['pending_card_heal']['token']??$s->battle['pending_heal_instead_wound']['token']??'';
+ if($type==='turn_ack' && !isset($payload['ack_id']))$payload['ack_id']=$s->battle['turn_phase']['pending_ack']['ack_id']??'';
+ if(in_array($type,['confirm_strike'],true) && !isset($payload['wait_id']))$payload['wait_id']=InformationalWaitManager::token($s);
  if(($payload['wait_id']??null)==='$wait')$payload['wait_id']=InformationalWaitManager::token($s);
  if(($payload['heal_token']??null)==='$notice')$payload['heal_token']=$s->battle['pending_card_heal_notice']['token']??'';
  return(new Engine(null,fn()=>1800000000))->apply($s,$owner,new Command($type,$payload));

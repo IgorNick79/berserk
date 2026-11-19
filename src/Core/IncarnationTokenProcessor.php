@@ -30,6 +30,7 @@ final class IncarnationTokenProcessor
             $card->markers['incarnation']=$marker;
         }
         $value=++$card->markers['incarnation']['value'];
+        if($card->zone==='graveyard')$this->state->historyRecorder?->liveEvent($this->state,'marker.changed',['target_id'=>$card->instanceId,'marker'=>'incarnation','before'=>$value-1,'after'=>$value,'reason'=>'effect'],[$card->instanceId]);
         $this->onTokenGranted($card,$value);
     }
 

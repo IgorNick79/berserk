@@ -13,7 +13,8 @@ final class SingleRoll
         if (!in_array($type,['tap','magic','shot','throw','discharge','uchr'],true)
             || $handler !== ($type==='uchr'?'uchr':'damage')) throw new \LogicException('Unsupported single roll');
         if (isset($this->state->battle['single_roll'])) return Result::error('single_roll_already_pending');
-        $dice = CardRoll::roll($this->state, $source);
+        $this->state->historyRecorder?->attackEvent($this->state,$source,$target,$type,'declared');
+        $dice = CardRoll::roll($this->state, $source, $type);
         ActionResolution::bind($this->state, $action, $source, $type);
         $this->state->battle['single_roll'] = [
             'kind'=>$type, 'attacker_id'=>$source->instanceId, 'target_id'=>$target->instanceId,
@@ -108,12 +109,15 @@ final class SingleRoll
             || !$source || !$target || $source->dying || $target->dying || $source->hp<=0 || $target->hp<=0
             || $source->owner!==$roll['owner'] || $target->owner!==$roll['target_owner']
             || !in_array($source->zone,['field','flying'],true) || !in_array($target->zone,['field','flying'],true))) {
+            if ($target && in_array($roll['return_to']['handler'],['damage','uchr','damage_value','uchr_value'],true)) $this->state->historyRecorder?->attackEvent($this->state,$source,$target,$roll['kind'],'result',['outcome'=>'cancelled','value'=>0]);
             if($source) ActionResolution::resolve($this->state,$roll,'cancelled',['hit'=>false]);
             if (in_array($roll['return_to']['handler'],['damage_value','uchr_value'],true)) (new ActionResolver($this->state,$this->engine))->cancelAttackValue($roll);
             $this->engine->finalizeDying($this->state);
             if ($roll['kind']==='row_spell') (new TurnPhaseProcessor($this->state,$this->engine))->resume();
             return Result::ok(['single_roll_cancelled']);
         }
+        if ($source && in_array($roll['return_to']['handler'],['damage','uchr'],true))
+            $this->state->historyRecorder?->die($this->state,$source,'final',(int)$roll['attack_dice']+(int)($roll['attack_mod']??0),['original'=>(int)$roll['original_dice'],'modifier'=>(int)($roll['attack_mod']??0)]);
         if (in_array($roll['return_to']['handler'],['damage_value','uchr_value'],true))
             return (new ActionResolver($this->state,$this->engine))->resumeAttackValue($roll);
         if (isset($roll['return_to']['action'])) {

@@ -1,0 +1,1 @@
+{"status":"PASS","journal_id":29,"types":["journal_effect.started","card.healed","health.replaced","health.prevented","health.armor","journal_effect.interrupted","recording_gap.started","recording_gap.settled","journal_effect.started","combat.wounds","combat.death","health.maximum","card.healed","health.transfer_out","combat.wounds","journal_effect.settled"]}

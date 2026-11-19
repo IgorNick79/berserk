@@ -1,0 +1,6 @@
+
+Fatal error: Uncaught RuntimeException: Row spell choice should show saved dice in C:\Users\mi\Documents\Berserk\health-regression-review\baseline\tools\test_row_spell_pending_dice.php:26
+Stack trace:
+#0 C:\Users\mi\Documents\Berserk\health-regression-review\baseline\tools\test_row_spell_pending_dice.php(133): rowSpellAssert(false, 'Row spell choice should show saved dice')
+#1 {main}
+  thrown in C:\Users\mi\Documents\Berserk\health-regression-review\baseline\tools\test_row_spell_pending_dice.php on line 26

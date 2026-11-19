@@ -206,6 +206,7 @@ final class DegascaProcessor
         }
 
         $this->addLearned($source, $card->ukid, $effects);
+        $this->state->historyRecorder?->liveEvent($this->state,'capability.learned',['target_id'=>$source->instanceId,'_private_owner'=>$source->owner],[$source->instanceId]);
         $this->shuffleDeck($source->owner);
         $this->finishSequence($pending, null, true);
         $this->state->bumpVersion();

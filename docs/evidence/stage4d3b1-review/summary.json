@@ -1,0 +1,13 @@
+{
+  "http": 96,
+  "regression_matrix_runs": 84,
+  "adapted_suites": 16,
+  "adapted_runs": 64,
+  "original_failure_runs": 20,
+  "health_pairs": 22,
+  "rollback_card_healed": "PASS",
+  "browser_health": "PASS",
+  "runtime_changes_during_review": false,
+  "lab_ports_closed": true,
+  "private_lab_configs_removed": true
+}

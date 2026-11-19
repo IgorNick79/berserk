@@ -444,6 +444,7 @@ final class StrikeResolver
             if ($ragnar !== null) $this->state->battle['strike']['ragnar_unanswer'] = $ragnar;
             $this->state->historyRecorder?->combatStarted($this->state, $this->state->battle['strike']);
         }
+        if (!$order) $this->state->historyRecorder?->forcedCombatStarted($this->state, $this->state->battle['strike']);
         ActionResolution::bind($this->state, $this->state->battle['strike'], $attacker, 'strike', 'forced');
         CombatContinuation::begin($this->state, $order);
         $ip = new InstantProcessor($this->state, $this->engine);
@@ -730,7 +731,7 @@ final class StrikeResolver
             return;
         }
         $strike['coin_block_checked'] = true;
-        $attackDice = CardRoll::roll($this->state, $attacker);
+        $attackDice = CardRoll::roll($this->state, $attacker,!empty($attacker->effectiveProp()['combat_choose_two'])?'temple_primary':null);
 
         $defendWhileClosed = !empty($defendCard->effectiveProp()['defend_while_closed']);
         $isClosed = CardStats::combatClosed($this->state, $defendCard) && !$defendWhileClosed;
@@ -740,14 +741,15 @@ final class StrikeResolver
             || $isClosed
             || $hasUnanswer
             || !empty($strike['ragnar_unanswer']);
-        $defendDice = $noDefendDice ? 0 : CardRoll::roll($this->state, $defendCard);
+        $defendDice = $noDefendDice ? 0 : CardRoll::roll($this->state, $defendCard,!empty($defendCard->effectiveProp()['combat_choose_two'])?'temple_primary':null);
 
         $strike['attack_dice']=$attackDice;$strike['defend_dice']=$defendDice;
         $strike['temple_no_defend']=$noDefendDice;
         $choices=[];
         foreach([['attack',$attacker,$attackDice],['defend',$defendCard,$defendDice]] as [$side,$card,$first]) {
             if(!$first||empty($card->effectiveProp()['combat_choose_two']))continue;
-            $second=Dice::roll();$strike['temple_rolls'][$side]=['card_id'=>$card->instanceId,'values'=>[$first,$second]];
+            $second=Dice::roll();
+            $this->state->historyRecorder?->die($this->state,$card,'rolled',$second,['context'=>'temple_alternative']);$strike['temple_rolls'][$side]=['card_id'=>$card->instanceId,'values'=>[$first,$second]];
             if($first!==$second)$choices[]=['side'=>$side,'owner'=>$card->owner,'values'=>[$first,$second]];
             else $strike['temple_rolls'][$side]['chosen']=$first;
         }
@@ -790,6 +792,7 @@ final class StrikeResolver
         $strike['result'] = $table;
         $this->state->historyRecorder?->combatEvent($this->state,'combat.dice',[
             'attack'=>$attackDice,'defend'=>$defendDice,'attack_mod'=>$attackMod,'defend_mod'=>$defendMod,
+            'attack_origin'=>$strike['primary_rolls'][$attackerId]['source']??'ordinary','defend_origin'=>$strike['primary_rolls'][$defendCard->instanceId]['source']??'ordinary',
         ],[$attackerId,$defendCard->instanceId]);
 
         // Окно 2 — сначала dice-инстанты, затем остальные combat-инстанты.
@@ -859,6 +862,9 @@ final class StrikeResolver
             'defend'    => $defendStrike,
             'decreased' => $decrease,
         ];
+        foreach ([['attack',$attacker],['defend',$defendCard]] as [$side,$roller]) {
+            if (!empty($strike[$side.'_dice'])) $this->state->historyRecorder?->die($this->state,$roller,'final',(int)$strike[$side.'_dice']+(int)($strike[$side.'_mod']??0),['original'=>(int)($strike['primary_rolls'][$roller->instanceId]['die']??$strike[$side.'_dice']),'modifier'=>(int)($strike[$side.'_mod']??0)]);
+        }
         $this->state->historyRecorder?->combatEvent($this->state,'combat.result',$strike['final'],[$attacker->instanceId,$defendCard->instanceId]);
 
         ActionResolution::bind($this->state, $strike, $attacker, 'strike');
@@ -867,7 +873,7 @@ final class StrikeResolver
             ['hit'=>!$resolutionBlocked && $attackStrike !== '', 'level'=>$attackStrike, 'target_id'=>$defendCard->instanceId]);
 
         // Эффекты от удара (включая промах)
-        if (empty($strike['coin_blocked']) && empty($strike['first_strike_blocked'])) $this->engine->applyStrikeEffects($attacker, $defendCard, $attackStrike);
+        if (empty($strike['coin_blocked']) && empty($strike['first_strike_blocked'])) $this->engine->applyStrikeEffects($attacker, $defendCard, $attackStrike, null, $this->state);
 
         if ($attackStrike !== '') {
             if (!empty($attacker->effectiveProp()['copy_target_strike'])) {
@@ -1230,7 +1236,7 @@ final class StrikeResolver
         int $woundsDealt = 0
     ): void {
         if (EffectiveFeatures::suppressed($attacker)) return;
-        $this->engine->applyStrikeEffects($attacker, $target, $attackStrike, $effects);
+        $this->engine->applyStrikeEffects($attacker, $target, $attackStrike, $effects, $this->state);
         $this->applyStrongStrikeFollowUpEffects($attacker, $target, $attackStrike, $effects, $woundsDealt);
     }
 
@@ -2256,7 +2262,9 @@ final class StrikeResolver
         }
 
         if ($choice === 'close') {
+            $journalClosedBefore=$defCard->closed;
             $defCard->closed = true;
+            if(!$journalClosedBefore)$this->state->historyRecorder?->liveEvent($this->state,'status.changed',['target_id'=>$defCard->instanceId,'closed'=>true],[$defCard->instanceId]);
             $this->state->battle['strike']['close_or_damage_result'] = ['type' => 'closed'];
         } else {
             $dmg = (int) $pcod['damage'];

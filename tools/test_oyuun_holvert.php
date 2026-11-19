@@ -172,7 +172,8 @@ function ohResolveTurnStack(GameState $state, string $firstPass = GameState::PLA
 
 function ohAckTurnInstantResult(GameState $state): void
 {
-    $result = ohApply($state, GameState::PLAYER_HOST, new Command('turn_instant_result_ok'));
+    $ack=\Berserk\Core\TurnInstantResult::current($state->battle['turn_instant_result']);
+    $result = ohApply($state, $ack['owner'], new Command('turn_instant_result_ok',['ack_id'=>$ack['ack_id']]));
     ohAssert($result->success, $result->error ?? 'Turn instant result OK should succeed.');
 }
 

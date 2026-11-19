@@ -151,7 +151,7 @@ final class CardHealing
     private function finish(array $op,bool $replaced=false,int $wounds=0): array
     {
         $target=$this->state->getCard($op['target_id']);$source=$this->state->getCard((int)$op['source_id']);
-        $before=$target?->hp??0;$opened=false;
+        $before=$target?->hp??0;$journalClosedBefore=$target?->closed??false;$opened=false;
         if(!$replaced && self::live($target) && !CardStats::isIncorporeal($target) && ($op['modified']>0 || !empty($op['options']['full']))) {
             $config=$target->effectiveProp()['on_heal_instead_open']??null;
             if(!empty($op['options']['allow_open']) && is_array($config) && $target->hp >= $target->hpMax
@@ -164,9 +164,15 @@ final class CardHealing
             'restored'=>max(0,($target?->hp??0)-$before),'replaced'=>$replaced,'wounds'=>$wounds,
             'opened'=>$opened,'message'=>$op['message'],'before'=>$before,'target_id'=>$op['target_id'],
             'replacement_target_id'=>$op['replacement_target_id']??null];
+        if($target) $this->state->historyRecorder?->healed($this->state,$target,$before,$source,$op['ability']);
         if($target && empty($op['options']['active'])) {
             if($source)ActionResolution::healed($this->state,$source,$target,$before,$op['ability'],$op['options']['parent']??null);
-            $this->state->historyRecorder?->healed($this->state,$target,$before,$source,$op['ability']);
+        }
+        if($target) {
+            if($opened && $journalClosedBefore && !$target->closed) $this->state->historyRecorder?->healthEvent($this->state,$target,'health.replaced',['result'=>'opened']);
+            elseif($replaced) $this->state->historyRecorder?->healthEvent($this->state,$target,'health.replaced',['result'=>'wounds']);
+            elseif($op['declared']>0 && $op['modified']===0 && self::live($target))
+                $this->state->historyRecorder?->healthEvent($this->state,$target,'health.replaced',['result'=>'prevented']);
         }
         if($op['message']!==null)$this->state->battle['card_healing']['messages'][]=$op['message'];
         $this->event($op,'completed',$r);

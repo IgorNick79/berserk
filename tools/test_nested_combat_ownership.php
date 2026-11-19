@@ -111,7 +111,19 @@ try {
         ncAssert($s->battle['turn_timer']['remaining_seconds']===$expectedRemaining,'Wrong time charged for '.$case);
         ncAssert($s->battle['turn_timer']['period_id']===1 && $s->battle['turn_timer']['owner']===$attacker,'Decision replaced timer period');
         if ($case==='auto') {
-            ncAssert(empty($s->battle['strike']) && $s->battle['turn_timer']['status']==='running','Auto target completion resumes combat owner');
+            $wait=BattleWaitResolver::current($s);
+            ncAssert(($s->battle['strike']['kind']??null)==='shot' && $wait['kind']==='informational','Auto shot publishes its own real result');
+            ncAssert($s->battle['turn_timer']['status']==='paused','Auto result waits for opponent ACK');
+            for($ack=0;$ack<8 && !empty($s->battle['strike']);$ack++) {
+                foreach([$opponent,$attacker] as $who) {
+                    if(empty($s->battle['strike']))break;
+                    if(in_array($who,$s->battle['strike']['confirmed']??[],true))continue;
+                    $now=$who===$opponent?1200:1210;
+                    ncApply($engine,$s,$who,'confirm_strike');
+                }
+            }
+            ncAssert(empty($s->battle['strike']) && $s->battle['turn_timer']['status']==='running','Acknowledged auto and parent results return control');
+
         } else {
             $p=BattleWaitResolver::current($s);
             ncAssert($p['kind']==='informational' && $p['required_players']===['host','player'],'Nested decision must reveal parent result');

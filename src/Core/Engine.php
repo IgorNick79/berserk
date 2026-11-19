@@ -518,6 +518,8 @@ final class Engine
         ?string $choice = null,
         ?CardInstance $target = null
     ): ?string {
+        $state->historyRecorder?->statusCheckpoint($state);
+        try {
         if ($source && EffectiveFeatures::suppressed($source)) return 'Потеря памяти';
         $type = $effect['type'] ?? '';
         if (isset($state->battle['single_roll']) && in_array($type,['strike_value','damage_cap'],true)) {
@@ -543,10 +545,12 @@ final class Engine
             if ($type==='dice_choice') {
                 [$op,$side]=array_pad(explode(':',$choice??''),2,'');
                 $expected=$roller->owner===$ownerKey?'own':'enemy';
+                $before=(int)$roll['attack_dice'];
                 if ($op==='reroll' && $side==='any') $roll['attack_dice']=Dice::roll();
                 elseif ($side!==$expected || !in_array($op,['plus','minus'],true)) return 'несуществующий кубик';
                 elseif ($op==='plus') ++$roll['attack_dice'];
                 else $roll['attack_dice']=max(1,$roll['attack_dice']-1);
+                if ($op==='reroll' || $before!==(int)$roll['attack_dice']) $state->historyRecorder?->die($state,$roller,'changed',(int)$roll['attack_dice'],['before'=>$before,'operation'=>$op]);
                 return null;
             }
             if ($roller->owner===$ownerKey || $roll['attack_dice']+($roll['attack_mod']??0)!==(int)($effect['value']??0)) return 'промах: итог кубика противника';
@@ -716,6 +720,7 @@ final class Engine
                     $isAttackDice = !$isAttackerSide;
                 }
 
+                $beforeDice=['attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice']];
                 $sr = new StrikeResolver($state, $this);
 
                 if ($op === 'reroll') {
@@ -729,9 +734,9 @@ final class Engine
                         'debug_queue_active'=>$debugQueueActive,
                         'debug_infinite'=>Dice::isInfiniteMode()];
                     $sr->recalcTable();
-                    $state->historyRecorder?->liveEvent($state,'combat.dice_changed',[
-                        'attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice'],'operation'=>$op],
-                        array_values(array_filter([$strike['attacker_id'],$strike['defender_id']?:$strike['target_id'],$source?->instanceId])));
+                    if ($op==='reroll' || $beforeDice!==['attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice']]) $state->historyRecorder?->liveEvent($state,'combat.dice_changed',[
+                        'attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice'],'operation'=>$op,'before'=>$beforeDice,'attack_mod'=>$strike['attack_mod']??0,'defend_mod'=>$strike['defend_mod']??0],
+                        [$strike['attacker_id'],$strike['defender_id']?:$strike['target_id']]);
                     return null;
                 }
 
@@ -739,9 +744,9 @@ final class Engine
                     if ($isAttackDice) $strike['attack_dice']++;
                     else               $strike['defend_dice']++;
                     $sr->recalcTable();
-                    $state->historyRecorder?->liveEvent($state,'combat.dice_changed',[
-                        'attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice'],'operation'=>$op],
-                        array_values(array_filter([$strike['attacker_id'],$strike['defender_id']?:$strike['target_id'],$source?->instanceId])));
+                    if ($op==='reroll' || $beforeDice!==['attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice']]) $state->historyRecorder?->liveEvent($state,'combat.dice_changed',[
+                        'attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice'],'operation'=>$op,'before'=>$beforeDice,'attack_mod'=>$strike['attack_mod']??0,'defend_mod'=>$strike['defend_mod']??0],
+                        [$strike['attacker_id'],$strike['defender_id']?:$strike['target_id']]);
                     return null;
                 }
 
@@ -752,9 +757,9 @@ final class Engine
                         $strike['defend_dice'] = max(1, (int) $strike['defend_dice'] - 1);
                     }
                     $sr->recalcTable();
-                    $state->historyRecorder?->liveEvent($state,'combat.dice_changed',[
-                        'attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice'],'operation'=>$op],
-                        array_values(array_filter([$strike['attacker_id'],$strike['defender_id']?:$strike['target_id'],$source?->instanceId])));
+                    if ($op==='reroll' || $beforeDice!==['attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice']]) $state->historyRecorder?->liveEvent($state,'combat.dice_changed',[
+                        'attack'=>$strike['attack_dice'],'defend'=>$strike['defend_dice'],'operation'=>$op,'before'=>$beforeDice,'attack_mod'=>$strike['attack_mod']??0,'defend_mod'=>$strike['defend_mod']??0],
+                        [$strike['attacker_id'],$strike['defender_id']?:$strike['target_id']]);
                     return null;
                 }
                 return 'неверная операция';
@@ -797,10 +802,13 @@ final class Engine
                 return null;
         }
         return 'неизвестный эффект: ' . $type;
+            } finally { $state->historyRecorder?->statusCheckpoint($state,'instant',$source); }
     }
 
     public function applyInstantEffect(GameState $state, array $effect, ?CardInstance $source, CardInstance $target, string $ownerKey): void
     {
+        $state->historyRecorder?->statusCheckpoint($state);
+        try {
         if ($source && EffectiveFeatures::suppressed($source)) return;
         $type = $effect['type'] ?? '';
         $journalHpBefore=$target->hp;
@@ -851,12 +859,8 @@ final class Engine
                 break;
         }
         if (in_array($type,['heal','heal_turn_wounds'],true) && $source) ActionResolution::healed($state, $source, $target, $journalHpBefore, $type);
-        if (in_array($type,['heal','heal_turn_wounds'],true)) $state->historyRecorder?->healed($state,$target,$journalHpBefore,$source,$type);
-        if ($target->closed!==$journalClosedBefore || $type==='marker') {
-            $state->historyRecorder?->liveEvent($state,'card.status',[
-                'target_id'=>$target->instanceId,'closed'=>$target->closed,'effect'=>$type,
-                '_private_owner'=>$source?->owner??$ownerKey],array_values(array_filter([$target->instanceId,$source?->instanceId])));
-        }
+        if ($target->closed!==$journalClosedBefore) $state->historyRecorder?->liveEvent($state,'status.changed',['target_id'=>$target->instanceId,'closed'=>$target->closed],[$target->instanceId]);
+        } finally { $state->historyRecorder?->statusCheckpoint($state,'instant',$source); }
     }
 
     public function openCard(CardInstance $card): void
@@ -1162,20 +1166,24 @@ final class Engine
 
     public function moveToFlyingZone(GameState $state, CardInstance $card): void
     {
+        $journalFrom=$card->zone;
         (new ZoneManager($state))->toFlying($card);
+        $state->historyRecorder?->zoneChanged($state,$card,$journalFrom);
     }
 
     public function applyStrikeEffects(
         CardInstance $attacker,
         CardInstance $target,
         string $level,
-        ?array $effects = null
+        ?array $effects = null,
+        ?GameState $journalState = null
     ): void {
         if (EffectiveFeatures::suppressed($attacker)) return;
         $effects = $effects ?? ($attacker->effectiveProp()['strike_effects'] ?? []);
         if (!is_array($effects)) return;
 
         foreach ($effects as $effect) {
+            $journalClosedBefore=$target->closed;
             $levels = $effect['levels'] ?? null;
             if ($levels !== null && !in_array($level, $levels, true)) continue;
 
@@ -1204,6 +1212,8 @@ final class Engine
                     $target->markers['rooted']['sources'][] = $attacker->instanceId;
                 }
             }
+            if($target->closed!==$journalClosedBefore)$journalState?->historyRecorder?->liveEvent($journalState,'status.changed',['target_id'=>$target->instanceId,'closed'=>$target->closed],[$target->instanceId]);
+            if($journalState)$journalState->historyRecorder?->statusCheckpoint($journalState,'strike_effect',$attacker);
         }
     }
 
@@ -1339,8 +1349,10 @@ final class Engine
 
         ActionResolution::effect($state, $source, 'shot', 'passive', ['hit'=>$val > 0, 'target_id'=>$targetId, 'ability'=>'auto']);
         // Применяем урон
+        $state->historyRecorder?->attackEvent($state,$source,$target,'shot','declared');
         $hpBefore = $target->hp;
         $this->applyDamage($state, $target, $val, 'shot', $source);
+        $state->historyRecorder?->attackEvent($state,$source,$target,'shot','result',['value'=>$val,'outcome'=>$val>0?'hit':'miss']);
 
         // Записываем результат
         $state->battle['strike']['auto_effects'][] = [

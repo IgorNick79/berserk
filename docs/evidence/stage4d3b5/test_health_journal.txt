@@ -1,0 +1,27 @@
+{
+    "status": "PASS",
+    "checks": [
+        "heal cap 1",
+        "heal cap 3",
+        "heal cap 99",
+        "hidden healer visible target",
+        "regeneration",
+        "armor 1",
+        "armor 4",
+        "prevent answer",
+        "prevent shield",
+        "deadeat 0",
+        "deadeat 1",
+        "heal opens Serk",
+        "transfer s1_3",
+        "transfer s1_109",
+        "transfer s1_110",
+        "transfer s1_184",
+        "satyr replacement actual pending",
+        "noble blocks healing after pending",
+        "full HP no fictitious heal",
+        "explicit full healing",
+        "hidden source wounds remain public",
+        "hidden transfer recipient projection"
+    ]
+}

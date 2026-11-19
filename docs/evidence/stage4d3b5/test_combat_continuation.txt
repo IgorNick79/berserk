@@ -1,0 +1,5 @@
+simple/reload passed
+before/after no coin/reload passed
+child/two remaining items/reload passed
+after/coin/reload passed
+Degasca/reload passed

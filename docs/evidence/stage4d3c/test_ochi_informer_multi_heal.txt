@@ -1,0 +1,2 @@
+AJAX multi-target parser/Engine tests passed
+Ochi informer and fairy cancel/coordinate regressions passed

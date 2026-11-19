@@ -1,0 +1,1 @@
+Row spell pending dice tests passed.

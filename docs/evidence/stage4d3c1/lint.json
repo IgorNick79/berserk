@@ -1,0 +1,850 @@
+[
+  {
+    "file": "src\\Core\\AbyssMovement.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\ActionResolution.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\ActionResolver.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\AlvalindProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Autoloader.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\AutomaticBattleProgress.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\AutomaticCommandResult.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\AutomaticMatchPause.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\AutomaticTurnEnd.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BattleHelper.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BattleWaitResolver.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BoosterSettings.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\CardHealing.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\CardInstance.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\CardRoll.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\CardStats.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\CoinAbilities.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\CombatContinuation.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\CombatStrikeValue.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Command.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\CommandJournalException.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\CommandJournalRepository.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\DamageResolver.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Db.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\DbQueryException.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\DeathEffectContext.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\DeckReorderProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\DeckView.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\DegascaProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Dice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\EffectiveFeatures.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Engine.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\ExpiredCommandGuard.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\FirstStrikeJump.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\FlyingPreparation.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\FreeInstantWindows.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\GameChat.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\GameLog.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\GameRepository.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\GameSettings.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\GameState.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\GraveRitual.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\HttpBattleProgress.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\IncarnationTokenProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\InformationalAutoAck.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\InformationalWaitManager.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\InstantProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\InstantReservation.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\LuckTestDebug.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\LuckTestDice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\MatchPause.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\MatriarchOrderProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\MemoryLoss.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\OchiKronga.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\PairedRanged.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\PathfinderProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\PermanentFeatures.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\PlayerState.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\PlaymatCatalog.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\ProphecyProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\RangedNeighborTeleport.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\ResourceCalculator.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Result.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\SingleRoll.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\StaleStateException.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\StitchRevival.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Strangulation.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\StrikeResolver.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\SwampQueenProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\SymbioteProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\TempleWarrior.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\TemporaryHealth.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\TransactionCommitUnknownException.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\TransactionRollbackUnknownException.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Tremor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\TurnInstantResult.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\TurnPhaseAck.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\TurnPhaseProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\TurnProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\TurnTimeoutEligibility.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\TurnTimer.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\ValhallaProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\View.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\WormIncarnation.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\WoundTransferProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\ZoneManager.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BattleHistory\\HistoryBatch.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BattleHistory\\HistoryRepository.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BattleHistory\\HistoryRuntime.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BattleHistory\\JournalCardNames.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BattleHistory\\JournalInvitations.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BattleHistory\\JournalText.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BattleHistory\\LiveJournal.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BattleHistory\\Recorder.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BattleHistory\\ReplayPreview.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BattleHistory\\ReplayState.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\BattleHistory\\ReplayStateBuilder.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\AbyssMovementChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\AfterStrikeExecuteChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\AlvalindChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\AnubisarChainChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\AnyDeathChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\AttackSeriesContinueChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\BloodStormChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\BloodTapChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\CardChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\CardHealChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\CellEffectDirectionChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\CellMarkerChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\ChoiceHandlerInterface.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\ChoiceRegistry.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\CoinAbilityChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\CoinSpendChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\CombatPickChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\DealLinkedRecruitChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\DealScoutRecruitChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\DealVariableRecruitChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\DeckReorderChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\DegascaSequenceChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\DestroySelfAndTargetChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\DiceChoiceChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\DvergGiftChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\FirstStrikeJumpChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\FlyingPreparationChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\ForcedDirectionalMoveChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\ForcedStrikeAdjacentChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\ForcedStrikeChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\GatePickChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\GraveRitualChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\GreedTeleportChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\GrezyChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\HealInsteadWoundChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\HolvertOpenChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\IncarnationAckChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\IncarnationChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\IncarnationWoundChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\InstantPickChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\IntrigueStartChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\KoboldHealChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\LifeGiftChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\MatriarchOrderChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\MultiDischargeChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\MultiHealChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\NokamiWoundChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\OpponentRowMarkerChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\PairedRangedChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\ParticlePickChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\RangedAttackRedirectChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\RangedNeighborTeleportChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\ReviveChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\RowPickChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\RowSpellPickChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\SeggerShieldChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\SelfWoundChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\ShaksiRollChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\StrangulationChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\SwampQueenSummonChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\SymbioteSeatingChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\TalionIncarnationChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\TeleportTargetChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\TempleDiceChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\TremorChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\TurnAckChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\TurnInstantResultChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\TurnInstantStackChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\TurnPhaseChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\TurnSubChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\ValhallaPickChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\WhipChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\WildHealerMoveChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Choice\\WoundTransferChoice.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Combat\\BotMatch.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Combat\\CombatDecisionPlanner.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Combat\\ContactOnlyDetour.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Combat\\PositionalProgressFallback.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Filter\\TargetFilter.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Legal\\BasicGroundStrikeSource.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Legal\\LegalActions.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Movement\\ForcedMovementResolver.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Movement\\MovementContext.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Movement\\MovementEffectResolver.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Movement\\MovementResolver.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Observation\\BasicMagic.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Observation\\CombatMainPassKnowledge.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Observation\\CombatPowerKnowledge.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Observation\\ForcedStrikeKnowledge.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Observation\\KnownCardProperties.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Observation\\OrdinaryShots.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Observation\\OwnActionInventory.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Observation\\PlayerObservation.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Observation\\ProphecyKnowledge.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Observation\\RootAutoShotKnowledge.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Observation\\StrikeRedirectKnowledge.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Observation\\TurnInstantKnowledge.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Observation\\VisibilityPolicy.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Placement\\SmartPlacementPlanner.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Prepare\\BoosterGenerator.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Prepare\\DraftAutoPicker.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Prepare\\DraftCopyRules.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Prepare\\DraftDeckBuilder.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Prepare\\DraftProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Prepare\\DraftSelectionDataProvider.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Prepare\\DraftSelectionEvaluator.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Prepare\\DraftTimer.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Prepare\\LuckTestGenerator.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Prepare\\LuckTestScenario.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Prepare\\PrepareProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Prepare\\RandomDraftProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src\\Core\\Prepare\\SquadRules.php",
+    "exit": 0
+  },
+  {
+    "file": "tools\\closure_transaction_probe.php",
+    "exit": 0
+  },
+  {
+    "file": "tools\\test_coverage_closure_journal.php",
+    "exit": 0
+  },
+  {
+    "file": "tools\\test_integration_closure_journal.php",
+    "exit": 0
+  }
+]

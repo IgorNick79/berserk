@@ -14,7 +14,9 @@ final class GraveRitual {
   $peek=(new ProphecyProcessor($this->s,$this->e))->peek($source->owner,1);if(!$peek)return ['skip_ack'=>true];
   $card=$peek['cards'][0];$demon=CardStats::hasClass($card,$cfg['demon_class']);$undead=CardStats::hasClass($card,$cfg['undead_class']);
   $this->s->battle['grave_ritual']=['id'=>$id,'owner'=>$source->owner,'source_id'=>$source->instanceId,'milled_id'=>$card->instanceId,'stage'=>'milled','demon'=>$demon,'undead'=>$undead,'cfg'=>$cfg];
+  $journalFrom=$card->zone;
   (new ZoneManager($this->s))->toGraveyard($card);
+  $this->s->historyRecorder?->zoneChanged($this->s,$card,$journalFrom,'grave_ritual');
   $this->advance();if(!empty($this->s->battle['grave_ritual']))$this->s->battle['grave_ritual_waiting']=true;return ['skip_ack'=>true];
  }
  public function advance():void {
@@ -24,6 +26,7 @@ final class GraveRitual {
   if($p['stage']==='milled'){
    $this->s->battle['grave_ritual']['stage']='token';
    if($p['undead'])$this->s->battle['class_turn_bonuses'][]=['owner'=>$p['owner'],'turn'=>$this->s->battle['turn'],'class'=>$cfg['demon_class'],'strong'=>(int)($cfg['strong']??1),'ova'=>(int)($cfg['ova']??1)];
+   if($p['undead'])$this->s->historyRecorder?->liveEvent($this->s,'rule.class_bonus',['owner'=>$p['owner'],'class'=>$cfg['demon_class'],'strong'=>(int)($cfg['strong']??1),'ova'=>(int)($cfg['ova']??1),'active'=>true]);
    if($p['demon']){
     $ids=[];foreach($this->s->cards as $c)if($c->owner===$p['owner']&&$c->zone==='graveyard'&&CardStats::hasClass($c,$cfg['undead_class']))$ids[]=$c->instanceId;
     if(count($ids)>1){$this->s->battle[self::PENDING]=['id'=>$p['id'],'owner'=>$p['owner'],'candidates'=>$ids];return;}

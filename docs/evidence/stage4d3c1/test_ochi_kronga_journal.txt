@@ -1,0 +1,1 @@
+Ochi Kronga: native opening DTO identical with/without mandatory Recorder; status recorded once

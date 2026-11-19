@@ -1,0 +1,11 @@
+auto attacker=host owner=host passed
+push attacker=host owner=player passed
+close attacker=host owner=player passed
+ally attacker=host owner=host passed
+death attacker=host owner=player passed
+auto attacker=player owner=player passed
+push attacker=player owner=host passed
+close attacker=player owner=host passed
+ally attacker=player owner=player passed
+death attacker=player owner=host passed
+Nested combat ownership verified through Engine (10 deterministic real combat paths)

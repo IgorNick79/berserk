@@ -1,0 +1,89 @@
+{
+    "status": "PASS",
+    "chains": [
+        {
+            "scenario": "6 Hydra series",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 20
+        },
+        {
+            "scenario": "7 Ragnar independent recipients",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 17
+        },
+        {
+            "scenario": "8 prophecy private rearrangement",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 7
+        },
+        {
+            "scenario": "4 Matriarch nested combat",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 36
+        },
+        {
+            "scenario": "5 hidden source private continuation",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "1 strike instant death passive",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 21
+        },
+        {
+            "scenario": "2 prevention then actual answer",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 14
+        },
+        {
+            "scenario": "10 hypnosis actual continuation",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 23
+        },
+        {
+            "scenario": "9 movement into light then real ranged wounds",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 25
+        },
+        {
+            "scenario": "3 summon native ability then self destruction zone",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 27
+        },
+        {
+            "scenario": "10 actual forest strike shot healing opens Ochi",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 33
+        },
+        {
+            "scenario": "4 Matriarch nested combat actual response instant",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 48
+        },
+        {
+            "scenario": "5 private prophecy real opponent reveal continuation",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 31
+        },
+        {
+            "scenario": "8 private view rearrange then public summon",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 8
+        }
+    ]
+}

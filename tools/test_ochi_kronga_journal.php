@@ -17,7 +17,7 @@ s31check(count($opens)===1&&$opens[0]['payload']['closed']===false,'existing jou
 foreach (['host','player','public'] as $viewer) {
     s31check(is_array($opens[0][$viewer]), 'opening visible in journal to '.$viewer);
     $text=\Berserk\Core\BattleHistory\JournalText::format('card.status',$opens[0][$viewer],$viewer);
-    s31check($text === 'Fixture 9 открывается.', 'readable opening text for '.$viewer);
+    s31check($text === 'Fixture 9 открывается. Причина: Очи Кронга.', 'readable opening text for '.$viewer);
 }
 
 echo "Ochi Kronga: native opening DTO identical with/without mandatory Recorder; status recorded once\n";

@@ -573,6 +573,7 @@ final class InstantProcessor
         $cost = max(0, (int) ($inst['coins'] ?? 0));
         if ($cost > 0) {
             $card->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost',$card);
             $this->engine->syncCoinBonus($card);
         }
         $this->markInstantUsed($card, (string) ($inst['key'] ?? ''));
@@ -1195,13 +1196,8 @@ final class InstantProcessor
         array $effectResult = []
     ): void
     {
-        if ($applied && $source) {
-            $strike=$this->combatContext()??[];
-            $this->state->historyRecorder?->liveEvent($this->state,'ability.applied',[
-                'source_id'=>$source->instanceId,'ability'=>$item['label']??'Инстант',
-                '_private_owner'=>$source->owner],array_values(array_unique(array_filter([
-                    $source->instanceId,$strike['attacker_id']??null,($strike['defender_id']??null)?:($strike['target_id']??null)]))));
-        }
+        $this->state->historyRecorder?->statusCheckpoint($this->state,'instant');
+        $this->state->historyRecorder?->instantResult($this->state,$item,$applied,$reason,$effectResult,$source);
         $this->combatContext()['instant_summary'][] = [
             'label'     => $item['label'] ?? 'Инстант',
             'card_ukid' => $source ? $source->ukid : '',
@@ -1898,6 +1894,7 @@ final class InstantProcessor
         $cost = (int) ($inst['cost'] ?? 0);
         if ($cost > 0) {
             $card->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost',$card);
             $this->engine->syncCoinBonus($card);
         }
 
@@ -2005,10 +2002,8 @@ final class InstantProcessor
                 }
             }
 
-            if ($applied && $source && $target) {
-                $this->state->historyRecorder?->liveEvent($this->state,'ability.applied',[
-                    'source_id'=>$source->instanceId,'ability'=>$label,'_private_owner'=>$source->owner],[$source->instanceId,$target->instanceId]);
-            }
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'instant');
+            $this->state->historyRecorder?->instantResult($this->state,$item,$applied,$reason,$effectResult,$source,$target);
 
             if ($source && !empty($item['close_source'])) {
                 $source->closed = true;

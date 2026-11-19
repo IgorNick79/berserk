@@ -1,0 +1,1 @@
+Movement effect regression tests passed.

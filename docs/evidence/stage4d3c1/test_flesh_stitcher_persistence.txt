@@ -1,0 +1,2 @@
+OK: flesh stitcher (199 checks)
+OK: flesh stitcher persistence, native repository lock/CAS/rollback/retry/duplicate (in-memory DB adapter; 224 cumulative checks)

@@ -20,6 +20,7 @@ final class DeckReorderProcessor {
    if($action!=='show')return Result::error('Неверное действие');
    $peek=(new ProphecyProcessor($this->s,$this->e))->peek($owner,$p['count']);
    $p['remaining']=array_map(static fn($c)=>$c->instanceId,$peek['cards']??[]);$p['stage']='view';
+   $this->s->historyRecorder?->prophecyCards($this->s,$owner,'prophecy.viewed',$peek['cards']??[]);
   }elseif($p['stage']==='view'){
    $direction=$cmd->get('direction');if(!in_array($direction,['top','bottom'],true)||!in_array($action,['next','finish'],true))return Result::error('Неверное направление');
    $p['direction']=$direction;$p['stage']='order';
@@ -33,6 +34,7 @@ final class DeckReorderProcessor {
    $rest=array_values(array_filter(array_map(static fn($c)=>$c->instanceId,$deck['cards']??[]),static fn($id)=>!in_array($id,$edge,true)));
    $ids=$p['direction']==='top'?array_merge($edge,$rest):array_merge($rest,array_reverse($edge));
    foreach($ids as $order=>$id)$this->s->getCard($id)->order=$order;
+   $this->s->historyRecorder?->prophecyCards($this->s,$owner,'prophecy.reordered',array_map(fn($id)=>$this->s->getCard($id),$edge),['destination'=>$p['direction']]);
    unset($this->s->battle[self::PENDING]);
   }else{++$p['revision'];$this->s->battle[self::PENDING]=$p;}
   $this->s->bumpVersion();return Result::ok();

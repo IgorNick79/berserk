@@ -50,6 +50,7 @@ final class AlvalindProcessor {
   }
   if(CombatContinuation::busy($this->s))return;
   $source=$this->s->getCard($p['source_id']);$source->coins=0;
+  $this->s->historyRecorder?->statusCheckpoint($this->s,'counter_reset',$source);
   $this->s->battle['alvalind_end_done'][$p['owner']]=$p['turn_key'];unset($this->s->battle['alvalind_end']);
   $this->e->checkGameOver($this->s);
   if($this->s->status==='battle')(new TurnProcessor($this->s,$this->e))->endTurn($p['owner'],new Command('end_turn'));
@@ -66,8 +67,10 @@ final class AlvalindProcessor {
    foreach($this->s->cards as $source){
     $cfg=self::config($source);if(!$cfg||empty($cfg['miss'])||$source->owner!==$actor->owner||!CardHealing::live($source))continue;
     $value=self::count($source)+1;$source->coins=$value;
+    $this->s->historyRecorder?->statusCheckpoint($this->s,'miss_counter',$source);
     if($value<(int)($cfg['threshold']??3))continue;
     $source->coins=0;
+    $this->s->historyRecorder?->statusCheckpoint($this->s,'counter_reset',$source);
     $this->s->battle['alvalind_recoil']=['id'=>'recoil-'.($this->s->battle['alvalind_recoil_sequence']=(int)($this->s->battle['alvalind_recoil_sequence']??0)+1),
      'source_id'=>$source->instanceId,'stage'=>'adjacent_wounds','jobs'=>[],'next_choice'=>0,'saved_strike'=>$this->s->battle['strike']];
     $this->s->battle['strike']=['kind'=>'alvalind_recoil','action_name'=>'Всё пропало','state'=>'results','worm_operation'=>$this->s->battle['alvalind_recoil']['id'],'attacker_id'=>$source->instanceId,'target_id'=>$source->instanceId,'defender_id'=>null,

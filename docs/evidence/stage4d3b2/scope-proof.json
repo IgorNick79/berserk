@@ -1,0 +1,12 @@
+{
+  "www/index.php": {
+    "unchanged_from_HEAD_normalized_line_endings": true
+  },
+  "src/View/Screen/BattleSnapshotRenderer.php": {
+    "unchanged_from_HEAD_normalized_line_endings": true
+  },
+  "fixtures": {
+    "tools/special-s1-fixture.json": "a4f56d50e9ffd2311da3602594533e9cebbedc726f0d651d78af3ae8bedbb6ec",
+    "tools/health-s1-fixture.json": "bae5d4f7e9181170f96d16e087ef3de94f347a24c9b1a1999089f866d38be7d5"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "php_files": [
+    "src/Core/ActionResolver.php",
+    "src/Core/BattleHistory/JournalText.php",
+    "src/Core/BattleHistory/Recorder.php",
+    "src/Core/CardHealing.php",
+    "src/Core/DamageResolver.php",
+    "src/Core/Engine.php",
+    "src/Core/TurnPhaseProcessor.php",
+    "src/Core/WoundTransferProcessor.php",
+    "tools/stage31_fixtures.php",
+    "tools/test_gloomy_noblewoman.php",
+    "tools/test_nested_combat_ownership.php",
+    "tools/test_ochi_informer_multi_heal.php",
+    "tools/test_pending_wait_timer.php",
+    "tools/test_stage31_fixes.php",
+    "tools/health_http_probe.php"
+  ]
+}

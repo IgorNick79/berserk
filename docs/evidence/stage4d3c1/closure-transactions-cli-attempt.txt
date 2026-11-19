@@ -1,0 +1,7 @@
+
+Warning: require(config/db.php): Failed to open stream: No such file or directory in Command line code on line 1
+
+Fatal error: Uncaught Error: Failed opening required 'config/db.php' (include_path='.;C:/OSPanel_new/data/PHP-8.1/default/composer') in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1

@@ -6,17 +6,19 @@ namespace Berserk\Core;
 final class CardRoll
 {
     public const READY = 'abyss_next_six_ready';
-    public static function roll(GameState $state, CardInstance $card): int
+    public static function roll(GameState $state, CardInstance $card, ?string $context=null): int
     {
         if (!empty($card->effectiveProp()['next_six_on_enemy_death_or_ally_incarnation']) && !empty($card->flags[self::READY])) {
             $card->flags[self::READY] = false;
             self::trace($state,$card,['event'=>'consume','die'=>6]);
             if (!empty($state->battle['strike'])) $state->battle['strike']['primary_rolls'][$card->instanceId] = ['die'=>6,'source'=>'prepared_six','ready_after'=>false];
+            if ($context!==null || !empty($state->battle['strike'])) $state->historyRecorder?->die($state,$card,'assigned',6,['context'=>$context]);
             return 6;
         }
         $die = Dice::roll();
         if (!empty($card->effectiveProp()['next_six_on_enemy_death_or_ally_incarnation'])) self::trace($state,$card,['event'=>'ordinary_roll','die'=>$die]);
         if (!empty($state->battle['strike'])) $state->battle['strike']['primary_rolls'][$card->instanceId] = ['die'=>$die,'source'=>'ordinary','ready_after'=>!empty($card->flags[self::READY])];
+        if ($context!==null) $state->historyRecorder?->die($state,$card,'rolled',$die,['context'=>$context]);
         return $die;
     }
     public static function arm(GameState $state, CardInstance $event, bool $incarnation): void

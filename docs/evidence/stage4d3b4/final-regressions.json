@@ -1,0 +1,247 @@
+[
+  {
+    "suite": "test_stage31_fixes",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_hydra",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_ragnar",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_combat_instant_phases",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_volkhv_wound_transfer",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_nested_combat_ownership",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_pending_wait_timer",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_turn_instant_stack",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_turn_timer",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_lucktest_recorder_atomicity",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_live_battle_journal",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_journal_gap_causes",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_live_journal_restoration",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_gloomy_noblewoman",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_kersam_satyr_wild_healer",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_ochi_informer_multi_heal",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_single_roll_c1",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_dice",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_shaksi",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_temple_ranged",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_temple_combat",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_row_spell_pending_dice",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_health_journal",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_special_attack_journal",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_journal_cosmetics",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_movement_journal",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_single_roll_c2",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_abyss_movement",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_battle_helper_movement",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_forced_directional_movement",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_dynamic_flying_lifecycle",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_flesh_stitcher",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_flesh_stitcher_persistence",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_movement_effects",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_riala_movement",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_prophecy_deck_order",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_tremor_movement",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_tremor_incarnation",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_abyss_luck_window",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_abyss_double_reroll",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_abyss_card_roll",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_instant_followup_fixes",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_instant_stage4",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_instant_availability",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_turn_instant_result_visibility",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_instant_reservation",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_free_instant_reservation",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_cell_marker_cancel",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_status_journal",
+    "exit": 0,
+    "tail": ""
+  }
+]

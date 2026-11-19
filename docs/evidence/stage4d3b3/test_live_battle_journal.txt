@@ -1,0 +1,24 @@
+PASS journal uses authenticated participant identity only
+PASS missing definition uses safe visible label and old projection is not enriched
+PASS nested uncertified combat never throws or creates a fake snapshot
+PASS actual dice modification emits once and table recalculation emits no additional dice
+{
+    "checks": [
+        {
+            "name": "journal uses authenticated participant identity only",
+            "status": "PASS"
+        },
+        {
+            "name": "missing definition uses safe visible label and old projection is not enriched",
+            "status": "PASS"
+        },
+        {
+            "name": "nested uncertified combat never throws or creates a fake snapshot",
+            "status": "PASS"
+        },
+        {
+            "name": "actual dice modification emits once and table recalculation emits no additional dice",
+            "status": "PASS"
+        }
+    ]
+}

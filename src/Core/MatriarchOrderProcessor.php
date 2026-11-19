@@ -86,6 +86,8 @@ final class MatriarchOrderProcessor
             unset($this->state->battle[self::PENDING]);
             ActionResolution::effect($this->state, $source, 'impact', 'ordinary', ['ability'=>'matriarch_order']);
             $source->coins-=1;$source->closed=true;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost',$source);
+            $this->state->historyRecorder?->chainEvent($this->state,$source,$target,'Приказ матриарха','started');
             $this->state->battle['matriarch_order']=['order_id'=>$p['id'],'source_id'=>$source->instanceId,'owner'=>$owner,
                 'target_id'=>$id,'initial_ids'=>$ids,'completed_ids'=>[],'excluded'=>[], 'current_id'=>null,
                 'step'=>0,'stage'=>'choosing_participant','cost_paid'=>true,'combat_ref'=>null];
@@ -125,6 +127,7 @@ final class MatriarchOrderProcessor
         if(!in_array($id,$this->remaining(),true)){$this->advance();return;}
         $o=&$this->state->battle['matriarch_order'];$o['current_id']=$id;$o['step']++;
         $o['stage']='waiting_combat';$o['combat_ref']=['kind'=>'matriarch_order','order_id'=>$o['order_id'],'step'=>$o['step']];
+        $this->state->historyRecorder?->chainEvent($this->state,$this->state->getCard($o['source_id']),$this->state->getCard($id),'Приказ матриарха','combat');
         $result=(new StrikeResolver($this->state,$this->engine))->declareForcedAdjacent(
             $this->state->getCard($id),$this->state->getCard($o['target_id']),false,$o['combat_ref']);
         if(!$result->success)throw new \LogicException('Validated matriarch combat could not start: '.$result->error);
@@ -134,6 +137,8 @@ final class MatriarchOrderProcessor
     {
         if(empty($this->state->battle['matriarch_order']))return;
         if($this->state->status!=='battle'||$this->state->winner!==null){
+            $o=$this->state->battle['matriarch_order'];
+            $this->state->historyRecorder?->chainEvent($this->state,$this->state->getCard($o['source_id']),$this->state->getCard($o['target_id']),'Приказ матриарха','finished');
             unset($this->state->battle['matriarch_order'],$this->state->battle[self::PENDING],$this->state->battle['combat_completion']);return;
         }
         $o=&$this->state->battle['matriarch_order'];
@@ -146,7 +151,10 @@ final class MatriarchOrderProcessor
         }
         if(CombatContinuation::busy($this->state))return;
         $ids=$this->remaining();
-        if(!$ids){unset($this->state->battle['matriarch_order'],$this->state->battle[self::PENDING]);return;}
+        if(!$ids){
+            $this->state->historyRecorder?->chainEvent($this->state,$this->state->getCard($o['source_id']),$this->state->getCard($o['target_id']),'Приказ матриарха','finished');
+            unset($this->state->battle['matriarch_order'],$this->state->battle[self::PENDING]);return;
+        }
         if(count($ids)===1){$this->launch($ids[0]);return;}
         $this->state->battle[self::PENDING]=['owner'=>$o['owner'],'source_id'=>$o['source_id'],'order_id'=>$o['order_id'],
             'kind'=>'participant','ids'=>$ids,'id'=>bin2hex(random_bytes(16))];

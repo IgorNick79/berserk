@@ -10,7 +10,7 @@ if(base!=='http://127.0.0.1:33672'||!out||!game||!['host','player'].includes(fir
    const context=contexts[side]=await browser.newContext(),p=pages[side]=await context.newPage();
    await p.goto(base+'/auth.php');await p.locator('[name=login]').fill(login);await p.locator('[name=password]').fill('LobbyFixture123');await p.getByRole('button',{name:'Войти',exact:true}).click();await p.waitForURL('**/lobby.php');
    await p.goto(base+'/index.php?game='+game);await p.locator('[data-action="battle-log"]').click();await p.locator('[data-journal-entries] li').first().waitFor();
-   await p.evaluate(()=>window.savedJournal=document.getElementById('battle-journal'));p.on('framenavigated',f=>{if(f===p.mainFrame())navigations++;});
+   await p.evaluate(()=>window.savedJournal=document.getElementById('battle-journal'));p.on('request',req=>{if(req.isNavigationRequest() && req.frame()===p.mainFrame() && req.resourceType()==='document')navigations++;});
   }
   const before={};for(const side of ['host','player'])before[side]=await pages[side].locator('[data-journal-entries] li').count();
   for(const side of [first,first==='host'?'player':'host']){

@@ -19,7 +19,7 @@ foreach(['host','player']as$active){
     $s=s4Wounds($active);$s->addCard(clone$extra);$s->battle['strike']['wounds_received']=[$h=>2,9=>1];s4Acknowledge($s);
     fCmd($s,$p,'combat_instant_play',['card_id'=>$caster,'instant_key'=>'raneniya']);s4PassStack($s);
     followCheck($s->battle['pending_wound_transfer']['step']==='source','Two actual battle donors retain choice');
-    $spec=(new WoundTransferChoice())->spec($s,$p,[],'?game=1',$p);followCheck(str_contains($spec->buttons[0]['label_html'],'❤'),'Donor buttons show hearts');
+    $spec=(new WoundTransferChoice())->spec($s,$p,[],'?game=1',$p);followCheck(str_contains($spec->form['items'][0]['label_html'],'❤'),'Donor buttons show hearts');
     $s=fState($active);[$a,$p,$h,$caster,$attacker]=fIds($s);
     $s->getCard($attacker)->row=3;$s->getCard($attacker)->col=3;$s->getCard($h)->row=4;$s->getCard($h)->col=3;$s->getCard($caster)->row=3;$s->getCard($caster)->col=4;
     fCmd($s,$a,'strike',['card_id'=>$attacker,'target_id'=>$h]);followCheck(!empty($s->battle['turn_instant_stack']),'Before window opens before defender admission');

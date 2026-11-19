@@ -1,0 +1,52 @@
+[
+  {
+    "suite": "test_abyss_luck_window",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_abyss_double_reroll",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_abyss_card_roll",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_instant_followup_fixes",
+    "exit": 255,
+    "tail": "\nFatal error: Uncaught ErrorException: Undefined array key 0 in C:\\Users\\mi\\Documents\\Berserk\\health-stage4d3-lab\\tools\\test_instant_followup_fixes.php:22\nStack trace:\n#0 C:\\Users\\mi\\Documents\\Berserk\\health-stage4d3-lab\\tools\\test_instant_followup_fixes.php(22): {closure}(2, 'Undefined array key 0', 'C:\\\\Users\\\\mi\\\\Documents\\\\Berserk\\\\health-stage4d3-lab\\\\tools\\\\test_instant_followup_fixes.php', 22)\n#1 {main}\n  thrown in C:\\Users\\mi\\Documents\\Berserk\\health-stage4d3-lab\\tools\\test_instant_followup_fixes.php on line 22\n"
+  },
+  {
+    "suite": "test_instant_stage4",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_instant_availability",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_turn_instant_result_visibility",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_instant_reservation",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_free_instant_reservation",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_cell_marker_cancel",
+    "exit": 0,
+    "tail": ""
+  }
+]

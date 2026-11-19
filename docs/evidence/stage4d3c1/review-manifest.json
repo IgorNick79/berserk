@@ -1,0 +1,2345 @@
+{
+  "base": "f7454d2e738fd8d402f229e1af4a3e4f8c8c9ade",
+  "files": [
+    {
+      "file": "src/Core/ActionResolver.php",
+      "sha256": "8b8ceaf841fd9a71314049eea961373e2d69ce9cdd40a79653bb2ac6f9791039",
+      "bytes": 275614
+    },
+    {
+      "file": "src/Core/AlvalindProcessor.php",
+      "sha256": "58902c966c66256dde72500f947e756988a36310588397288db40495032fc220",
+      "bytes": 7302
+    },
+    {
+      "file": "src/Core/BattleHistory/JournalText.php",
+      "sha256": "fdeb88756a45c9558ba3f7d99b209d1122e359860dd02f377e0b6fa8e6d4aa9e",
+      "bytes": 20415
+    },
+    {
+      "file": "src/Core/BattleHistory/Recorder.php",
+      "sha256": "1b85c160befade17089e0a87bd4a26863de99a4c924efce7b0e9f6dc035ce084",
+      "bytes": 30867
+    },
+    {
+      "file": "src/Core/CardHealing.php",
+      "sha256": "33ccdddd1e3efa077c432db3232666e4f530c70a07a771434699aa55e030857f",
+      "bytes": 13781
+    },
+    {
+      "file": "src/Core/CardRoll.php",
+      "sha256": "8ba6e0a4472eabd6fd087ae3d02a28a4dfbff69e85ba3e0ce8a35aab89c54797",
+      "bytes": 2506
+    },
+    {
+      "file": "src/Core/CoinAbilities.php",
+      "sha256": "69fefdc130301597df6c7724aecf79a5666b2ab0109741a8b33fa71175e609a1",
+      "bytes": 15746
+    },
+    {
+      "file": "src/Core/DamageResolver.php",
+      "sha256": "7772dee903e87e492bd69db5713ac3da577af54df2f88e09d5ec4c7465d6e774",
+      "bytes": 52452
+    },
+    {
+      "file": "src/Core/DeckReorderProcessor.php",
+      "sha256": "e9e8da19b5ea0c04f35c9602e3d45b8afa9522a67703b2eb2fea6dc0fad35ae1",
+      "bytes": 3234
+    },
+    {
+      "file": "src/Core/DegascaProcessor.php",
+      "sha256": "41ba6fd935765b6fd95657cf24f09b6dac40e301e7f005e638c895d067dc7663",
+      "bytes": 23180
+    },
+    {
+      "file": "src/Core/Engine.php",
+      "sha256": "3d952b43ac738a206835ba9d3349ebc98d3a022c8525bc98ec5b48c8d869b1f6",
+      "bytes": 76515
+    },
+    {
+      "file": "src/Core/GraveRitual.php",
+      "sha256": "11866796fe7dbf02c3bd81988b9de09701857b276d786fae2fb04270129c8f84",
+      "bytes": 4635
+    },
+    {
+      "file": "src/Core/IncarnationTokenProcessor.php",
+      "sha256": "d69a81f29ca06df972b032fcd7acf4f5ba99a0dfa1060f162008222a0d1a687b",
+      "bytes": 4217
+    },
+    {
+      "file": "src/Core/InstantProcessor.php",
+      "sha256": "5fa2070ed8b8157a8377ec6a9d758486fefebc2491faaa02ca1eefd68fa1989c",
+      "bytes": 105435
+    },
+    {
+      "file": "src/Core/MatriarchOrderProcessor.php",
+      "sha256": "2b33e45c1a130341cb717cf7d52902256263ee2b633402d69245c2fe88cbe9ed",
+      "bytes": 9507
+    },
+    {
+      "file": "src/Core/Movement/MovementEffectResolver.php",
+      "sha256": "7fbf206ef20f2325dee03b073bd85b24b9b20a80994285e14866862955df6517",
+      "bytes": 15235
+    },
+    {
+      "file": "src/Core/Movement/MovementResolver.php",
+      "sha256": "4537793dedbdfdbbf4c588cf991ff93685555042ced5043c98873aded365b882",
+      "bytes": 15858
+    },
+    {
+      "file": "src/Core/OchiKronga.php",
+      "sha256": "1f970924d697ec390d99639d3f74303d609553367f644d51d47205e2276b2c62",
+      "bytes": 6053
+    },
+    {
+      "file": "src/Core/ProphecyProcessor.php",
+      "sha256": "2b9dabe9f843c70458580e89af242336ceefd52fa72f18e080ae69f781206414",
+      "bytes": 27750
+    },
+    {
+      "file": "src/Core/SingleRoll.php",
+      "sha256": "ed10ea7db3d334b020894821651b3aafe8a3ed3b4740cbde0448d23911bf7b89",
+      "bytes": 9423
+    },
+    {
+      "file": "src/Core/StitchRevival.php",
+      "sha256": "e2aba5af5a2fc18275c12cb84235659f58c755f831709a9be802bc8313827477",
+      "bytes": 11113
+    },
+    {
+      "file": "src/Core/StrikeResolver.php",
+      "sha256": "f20c6d9384a7fb83c505833b60e72059db700957707457dac068aacb12b46de5",
+      "bytes": 116008
+    },
+    {
+      "file": "src/Core/TempleWarrior.php",
+      "sha256": "30c74d465015cd099b1222a776fda6325f24189624e80507896fa0c3d6be451b",
+      "bytes": 695
+    },
+    {
+      "file": "src/Core/TurnPhaseProcessor.php",
+      "sha256": "5c3072e8a910b4237fe0805f286b679f1209945c73013c3f4d3d9662e9d55f8d",
+      "bytes": 63964
+    },
+    {
+      "file": "src/Core/TurnProcessor.php",
+      "sha256": "2e8a00f7a0845991cc69b2ec39670d64f6c2f384bcba5e186f69af9ef050a364",
+      "bytes": 57347
+    },
+    {
+      "file": "src/Core/ValhallaProcessor.php",
+      "sha256": "9b38999686cd77347d02402e72ddb651749217a139cd15fee3a6b8bbf8095a0b",
+      "bytes": 15143
+    },
+    {
+      "file": "src/Core/WoundTransferProcessor.php",
+      "sha256": "6a1eb19ac722717cb883fb8fa3ef730aeb2952a02f63a183de467fc2f2e87ca0",
+      "bytes": 21732
+    },
+    {
+      "file": "src/Core/ZoneManager.php",
+      "sha256": "228876922a33c9d8e6821460efe403421a420c34da895cec8c1225e8a20c0966",
+      "bytes": 22113
+    },
+    {
+      "file": "tools/stage31_fixtures.php",
+      "sha256": "f95bbafbf30ac7ac961d80fb8a3ea7c7f9e28647470f7d79dd58d70f7051e386",
+      "bytes": 5072
+    },
+    {
+      "file": "tools/test_gloomy_noblewoman.php",
+      "sha256": "1999ecedaf263e35d750196f830683d115e604a6d1373a8ed5794539550b5101",
+      "bytes": 7821
+    },
+    {
+      "file": "tools/test_instant_followup_fixes.php",
+      "sha256": "76a78b882c9467f7c475b54485ffdde40c1011da7e9a9d2fcd6cca5883fc2d4c",
+      "bytes": 3078
+    },
+    {
+      "file": "tools/test_live_journal_restoration_browser.cjs",
+      "sha256": "eb37192d9e1270ffac9a7e47d80b48d12f9f6f555ac6e1d828f4e4e5923c266a",
+      "bytes": 4261
+    },
+    {
+      "file": "tools/test_live_journal_restoration_http.py",
+      "sha256": "2ea4d312afed2f30f52a459a4fa9c03509713c99238f40d0c1df4ed4e90dbe11",
+      "bytes": 56318
+    },
+    {
+      "file": "tools/test_live_journal_restoration_live_browser.cjs",
+      "sha256": "e15fb993d0592b43524e3331b229dca3c75239d09b761c52cdb9627d8c12437e",
+      "bytes": 3301
+    },
+    {
+      "file": "tools/test_nested_combat_ownership.php",
+      "sha256": "f73f683b6c56748581e1aeb4e86fa01845becaadb568c54daaffa849d3733be5",
+      "bytes": 10624
+    },
+    {
+      "file": "tools/test_ochi_informer_multi_heal.php",
+      "sha256": "9a7e5be28bdec53fcefe04c4ee8a10a7305d107eafa41fba462ea6ec61b32bd3",
+      "bytes": 4465
+    },
+    {
+      "file": "tools/test_ochi_kronga_journal.php",
+      "sha256": "37be3841004b11ad418ab2e91d459335bebbb420ab479de73c618ae23d1834e8",
+      "bytes": 2211
+    },
+    {
+      "file": "tools/test_oyuun_holvert.php",
+      "sha256": "76be3289a1b5463bf1be0394d3694e0691522b52e65fa687fc04098d6965786a",
+      "bytes": 24256
+    },
+    {
+      "file": "tools/test_pending_wait_timer.php",
+      "sha256": "fe5ae92fede1e85094dc071ca4bb5ea5207f00c43c1ee2fc0d116a3792c5da4a",
+      "bytes": 24751
+    },
+    {
+      "file": "tools/test_row_spell_pending_dice.php",
+      "sha256": "c244d7929d6e8d8a33ac5a6b8a7476002c85fc52725b6f0a5ca7970c90ff4882",
+      "bytes": 6584
+    },
+    {
+      "file": "tools/test_single_roll_c2.php",
+      "sha256": "ec5dad30f674080e00d8b393cb8293b44bfcf27c6d04a65fbf972b2a344c907d",
+      "bytes": 11639
+    },
+    {
+      "file": "tools/test_stage31_fixes.php",
+      "sha256": "ed48b6a6bd7f6ac2b5c1d13f94da52f16c29039298c44cd6ed0bd915b65569c2",
+      "bytes": 16341
+    },
+    {
+      "file": "tools/test_swamp_queen.php",
+      "sha256": "2bea7f7271e3a22abfca02789c4a247aa0298d4b0f4eaa35f9f6febefce3a046",
+      "bytes": 15007
+    },
+    {
+      "file": "docs/battle-stage4d3b1-health-events.md",
+      "sha256": "fea6b297afd50442afd8851ea2e7f74d472e6fd36a026d204458501e5c75f89b",
+      "bytes": 14510
+    },
+    {
+      "file": "docs/battle-stage4d3b1-verification-review.md",
+      "sha256": "01c384396aac9de504e4e87a86167a784b2c4af6cda9907b486be637e7d03c71",
+      "bytes": 15992
+    },
+    {
+      "file": "docs/battle-stage4d3b2-special-attacks.md",
+      "sha256": "ef2957d2744873df44ffa2e84172d9d7d1fde84ff8fe3942ddb3df12ccc1090e",
+      "bytes": 15810
+    },
+    {
+      "file": "docs/battle-stage4d3b3-movement-zones.md",
+      "sha256": "1974d55b35f1c19f821dfbafc8017cbe82bb2f7c0fcdf48459d50c3571bb8ffe",
+      "bytes": 17322
+    },
+    {
+      "file": "docs/battle-stage4d3b4-instants-statuses-coins.md",
+      "sha256": "31fbf022d7151d35acd83654c9f82ec57cb80ea96579749d5e65d491133b2eda",
+      "bytes": 21887
+    },
+    {
+      "file": "docs/battle-stage4d3b5-complex-chains.md",
+      "sha256": "f2f852d1154613819563e59ea48a587c3acaacf257d0fb2fdbc7799419dc32e8",
+      "bytes": 8982
+    },
+    {
+      "file": "docs/battle-stage4d3b5-coverage.json",
+      "sha256": "e63701661db473e66856def5f6722620f6ca8b43f83c8073ad179e818385e2c1",
+      "bytes": 1317463
+    },
+    {
+      "file": "docs/battle-stage4d3b5-coverage.md",
+      "sha256": "6d4deebeca24d80edec78b195a56fe18f4d755fe634cf6c7970944e09d62274a",
+      "bytes": 147589
+    },
+    {
+      "file": "docs/battle-stage4d3c-acceptance.md",
+      "sha256": "c367f5a9ef9f8a9d7ad93720f84614495ff387da1c825f042826e3d30430dbc1",
+      "bytes": 8467
+    },
+    {
+      "file": "docs/battle-stage4d3c-coverage.json",
+      "sha256": "d26e073d643c93fba3848b11ce1f6fd5bd1e54ccc4c832346dd68c8a327c8348",
+      "bytes": 258236
+    },
+    {
+      "file": "docs/battle-stage4d3c1-48-branches.md",
+      "sha256": "bc4817c0be316bced84a5aec64575d21c64bfddd83b693877b26b7e6d4fea156",
+      "bytes": 19061
+    },
+    {
+      "file": "docs/battle-stage4d3c1-coverage-closure.md",
+      "sha256": "a621599bc794cc0db0dcb81f5979a8bc80d844b4309d5dd05bcd60972f5bf487",
+      "bytes": 17432
+    },
+    {
+      "file": "docs/battle-stage4d3c1-coverage.json",
+      "sha256": "6bc00aa1ad7254d436a88f0c6557f40e2d264a02ce9a272b538f7cd0d55a50bf",
+      "bytes": 348394
+    },
+    {
+      "file": "docs/battle-stage4d3c1-journal-examples.md",
+      "sha256": "fcd74966f42d0fe1b4992fb345f8996b35d21993f00d1aed24c615f7a96e4dae",
+      "bytes": 10838
+    },
+    {
+      "file": "docs/evidence/stage4d3b1-review/baseline-matrix.json",
+      "sha256": "1b24f5c26bb6d1f644755c5b4cba70beedc2f9ac38b90bfcb8af98ba72c7fb14",
+      "bytes": 14265
+    },
+    {
+      "file": "docs/evidence/stage4d3b1-review/browser-results.json",
+      "sha256": "237f3a72898ab9173e7d029a52dd4b142ace87eaa003c7a22015ec97ff0abc94",
+      "bytes": 314
+    },
+    {
+      "file": "docs/evidence/stage4d3b1-review/health-http-output.txt",
+      "sha256": "32b8f8afe12dcaadc958b96dcf2a7d497b869222958e0b6c742ae552bf6176fc",
+      "bytes": 361
+    },
+    {
+      "file": "docs/evidence/stage4d3b1-review/health-pairs.json",
+      "sha256": "95abf39e5732a640b3fb5a957c7c0df738876514440b6505603267f162c63e7e",
+      "bytes": 698
+    },
+    {
+      "file": "docs/evidence/stage4d3b1-review/health-transaction-review.txt",
+      "sha256": "c42d6dcaaa1e7da7fba35b68121d1bae9fc06b13444697957fa2712cd81f6269",
+      "bytes": 87
+    },
+    {
+      "file": "docs/evidence/stage4d3b1-review/http-results.json",
+      "sha256": "1720de8c3d63165a2fe93a186bbcecdeaaccb718f3adda6bf74a509aa4b0079e",
+      "bytes": 8303
+    },
+    {
+      "file": "docs/evidence/stage4d3b1-review/lint.json",
+      "sha256": "9c3bb4eb05db2a3dfb3d624429963f1bbc67f0d06201e222320e088f70438da7",
+      "bytes": 641
+    },
+    {
+      "file": "docs/evidence/stage4d3b1-review/live-browser-results.json",
+      "sha256": "bf806a96f8e6d52bb1f668120c0d119bba60c9fc26c85e4402cf35bcd014e6c1",
+      "bytes": 337
+    },
+    {
+      "file": "docs/evidence/stage4d3b1-review/player-projections.json",
+      "sha256": "56ddf583cb4f5d98b97ea52a886ce8f359399757fa3413a663fcf48762bb3924",
+      "bytes": 7936
+    },
+    {
+      "file": "docs/evidence/stage4d3b1-review/summary.json",
+      "sha256": "5c843e01f27f988b13094f2b556f2566cc538b4f5dac6cba2c4b4f1ab473a103",
+      "bytes": 330
+    },
+    {
+      "file": "docs/evidence/stage4d3b1-review/unchanged-health-runtime.json",
+      "sha256": "ece041990e54eebce122b16370e7f0d827f632cad9eb0ae067688c2e32d1d96c",
+      "bytes": 839
+    },
+    {
+      "file": "docs/evidence/stage4d3b1-review/verification-output.zip",
+      "sha256": "e73d9456160e67f01903b447bba9c28b4be310cfd4b05150e1b32fdb870b5008",
+      "bytes": 4664274
+    },
+    {
+      "file": "docs/evidence/stage4d3b1/baseline-comparison.json",
+      "sha256": "07cfdfd3347888c58eb395a127186be1092cfb6759dded2a733b6546b59c3f77",
+      "bytes": 524
+    },
+    {
+      "file": "docs/evidence/stage4d3b1/health-pairs.json",
+      "sha256": "95abf39e5732a640b3fb5a957c7c0df738876514440b6505603267f162c63e7e",
+      "bytes": 698
+    },
+    {
+      "file": "docs/evidence/stage4d3b1/regression-output.zip",
+      "sha256": "76a4e51c69f249c4b59512d01c6fbec487607d89bc4a4121c5c6baa9c9b40ff3",
+      "bytes": 9155
+    },
+    {
+      "file": "docs/evidence/stage4d3b1/regressions.json",
+      "sha256": "65f72c140734f5f873acc9f3eb07e20fbc143b49644acee5caf4467113c3db3d",
+      "bytes": 1083
+    },
+    {
+      "file": "docs/evidence/stage4d3b1/transaction-results.txt",
+      "sha256": "c42d6dcaaa1e7da7fba35b68121d1bae9fc06b13444697957fa2712cd81f6269",
+      "bytes": 87
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/cleanup-proof.json",
+      "sha256": "17aad5d561a18455ca51f3778f72ff9565166c5c35afc7a004d1eae08e0c3865",
+      "bytes": 266
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/http-health-http-output.txt",
+      "sha256": "32b8f8afe12dcaadc958b96dcf2a7d497b869222958e0b6c742ae552bf6176fc",
+      "bytes": 361
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/http-journal-browser-results.json",
+      "sha256": "59794cd89f796a004f40f85855f2a576ce2cf2883d8cc0fd82ba7365c1d2b542",
+      "bytes": 316
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/http-journal-live-browser-results.json",
+      "sha256": "bf806a96f8e6d52bb1f668120c0d119bba60c9fc26c85e4402cf35bcd014e6c1",
+      "bytes": 337
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/http-projections.json",
+      "sha256": "cf4a1a1dac67a6953dbdddb0c351223c65f53fa41f1219fd07b785e0255acb9e",
+      "bytes": 17407
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/http-results.json",
+      "sha256": "7f9009bc717b73bd7b25c278fd3d3f99cb35f6bcd57cf271b6976ddb45064a79",
+      "bytes": 9555
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/http-special-http-output.txt",
+      "sha256": "bf43bec4573387880731fd3eb62b6dfabf81dd1d305a148af72d166af8cf005c",
+      "bytes": 71
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/lint.json",
+      "sha256": "4d652d36dd935968e493ea71b44aabbe08a6e2e8ed287df7410f55acb4a95be5",
+      "bytes": 1978
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/regressions.json",
+      "sha256": "5320aaddee4f85a40e1f973378136af9760bd3f1daff7b8ec4bc773d6f77ead9",
+      "bytes": 2066
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/row-spell-baseline-adapted.txt",
+      "sha256": "9d9f272875d1faf9040be4ae697e7c32e3115b1025980b98f9cc8a5c965d8dcc",
+      "bytes": 37
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/row-spell-baseline.txt",
+      "sha256": "512d26a26b889c224aec29c302e644d5c57f601c61c7877a4754a77ce56d0edc",
+      "bytes": 513
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/scope-proof.json",
+      "sha256": "d887d240e0d0ea4c4dccfcd4228adb5f8f40509c39eea709450c9b5d043f9de3",
+      "bytes": 435
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_combat_instant_phases.txt",
+      "sha256": "96a663568c0259d4be78427390816778f0298e808786a5396050b54c2f253310",
+      "bytes": 35
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_dice.txt",
+      "sha256": "e843c869eb943e65455e01a0bd68df252acaa6a2c2db2ba71f1e8ff752477ced",
+      "bytes": 18
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_gloomy_noblewoman.txt",
+      "sha256": "f6733332dd5d2e8970489c7ccae001b149c1f22e739e6eceda559ab60ac0e5a3",
+      "bytes": 53
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_health_journal.txt",
+      "sha256": "95abf39e5732a640b3fb5a957c7c0df738876514440b6505603267f162c63e7e",
+      "bytes": 698
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_hydra.txt",
+      "sha256": "a48e682c28012e24039153fdcdd56200e48a4da4a5238b56c9ce8010f74be559",
+      "bytes": 31
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_journal_cosmetics.txt",
+      "sha256": "0f7f64ab20fd54c24cdf9e805731f9633eabfbdd11fe79384185dfd62692f167",
+      "bytes": 244
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_journal_gap_causes.txt",
+      "sha256": "0190f4cc9528fa712e18e79dce0b976d5f60f9286236d41e3ff3c8811157eeb5",
+      "bytes": 16153
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_kersam_satyr_wild_healer.txt",
+      "sha256": "67ad8d07a20cfec0d384804f6d94c783ece6d7d9dfae4ef7fa75562f40acc308",
+      "bytes": 39
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_live_battle_journal.txt",
+      "sha256": "378b828574c4631f8093e7605d600022c9059fee48aa30e6c2d01c892e78d98d",
+      "bytes": 901
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_live_journal_restoration.txt",
+      "sha256": "cce07daced07af1cc04c52da4f02e80d3bed3fd813984c4961556f2f31ed03d2",
+      "bytes": 531
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_lucktest_recorder_atomicity.txt",
+      "sha256": "37b18e728d923c8095bd521b96502fcbedaf31b5b0c006545a026567d27bb0cb",
+      "bytes": 133
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_nested_combat_ownership.txt",
+      "sha256": "e565d40424a0c0d771df0629198d951015279161121fa1a684d3f95310da05b9",
+      "bytes": 479
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_ochi_informer_multi_heal.txt",
+      "sha256": "e72e94741f9dd38e26deae85c961d3a27cfc6e8ef851c7c2ec62d04703b902ac",
+      "bytes": 106
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_pending_wait_timer.txt",
+      "sha256": "0081f76f94eab51c205ec3ddf3189ee5dfe8d87ca3332d874975e5cc00fa9be6",
+      "bytes": 99
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_ragnar.txt",
+      "sha256": "db581f29be41959f1e00eac0efd77fda726c9af6df06f269a16b396b8b729d57",
+      "bytes": 20
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_row_spell_pending_dice-adapted.txt",
+      "sha256": "9d9f272875d1faf9040be4ae697e7c32e3115b1025980b98f9cc8a5c965d8dcc",
+      "bytes": 37
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_row_spell_pending_dice.txt",
+      "sha256": "9d9f272875d1faf9040be4ae697e7c32e3115b1025980b98f9cc8a5c965d8dcc",
+      "bytes": 37
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_shaksi.txt",
+      "sha256": "a1d6078337ae6ca95e13ee60dbcef97a88a183d2a8a9ca0bcf503f5b665551fa",
+      "bytes": 21
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_single_roll_c1.txt",
+      "sha256": "f27927b101a53c31913c398c26c98b1b675c17e2af0f6d00b12f39a593caf784",
+      "bytes": 34
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_single_roll_c2.txt",
+      "sha256": "9f84823895434304fc76f79601c8e9a9003625abf8838703a42742564a224afb",
+      "bytes": 38
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_special_attack_journal.txt",
+      "sha256": "72e3d0248c71b2b464db923359423c72e15d95b29d7fc8d63159c63445a2a322",
+      "bytes": 57189
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_stage31_fixes.txt",
+      "sha256": "986a78a7ae0c23162a0acef0a5b71a16993a48c0fd1b8dc7ba005bec7251c212",
+      "bytes": 2654
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_temple_combat.txt",
+      "sha256": "d4d88f435bf46a5c671f38dc2ea42c67770569750c94b623378e522b2546f5b0",
+      "bytes": 23
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_temple_ranged.txt",
+      "sha256": "13ae4d71c9b1079b90edd07500e512fb32d07e7f98ad6808763cbcfefbf63b42",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_turn_instant_stack.txt",
+      "sha256": "90b2e5d8b7bded0de8548358533e20fc24c5d813a4c94b32fc1d48c7f3031845",
+      "bytes": 33
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_turn_timer.txt",
+      "sha256": "714d449812fe6ee9d6e2f87d4d5e0623411ea74340325df2b3ac41bfe3e8673e",
+      "bytes": 14
+    },
+    {
+      "file": "docs/evidence/stage4d3b2/test_volkhv_wound_transfer.txt",
+      "sha256": "5581e0ce36bfb2d76cae29f268603e17116ca8df283e74b8b67a02309b69519a",
+      "bytes": 35
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/cleanup-proof.json",
+      "sha256": "17aad5d561a18455ca51f3778f72ff9565166c5c35afc7a004d1eae08e0c3865",
+      "bytes": 266
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/final-regressions.json",
+      "sha256": "09f734b8ef1cda705c4953da58d0f059f0e0584e96af8c7e71cd7cf363d668e2",
+      "bytes": 3163
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/http-health-http-output.txt",
+      "sha256": "32b8f8afe12dcaadc958b96dcf2a7d497b869222958e0b6c742ae552bf6176fc",
+      "bytes": 361
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/http-journal-browser-results.json",
+      "sha256": "4fb6198d2aee8d82b2f2ffdd1493620a27bd41fbf7cab5965e02f73604f7db80",
+      "bytes": 316
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/http-journal-live-browser-results.json",
+      "sha256": "bf806a96f8e6d52bb1f668120c0d119bba60c9fc26c85e4402cf35bcd014e6c1",
+      "bytes": 337
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/http-movement-http-output.txt",
+      "sha256": "9ad9a0d4bfa96397c1d6e9f0b4c82a851764c0386aa40217c53458e00ffaac54",
+      "bytes": 278
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/http-projections.json",
+      "sha256": "888fbf04dc0363f690dfabae1ae4c86e6ca1b0057b3ac9af39528ed5cd72a36a",
+      "bytes": 19722
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/http-results.json",
+      "sha256": "6a18dc509676296ab7cfee0706035bf7150b1895b8b07a7c73a15c65cf1f7921",
+      "bytes": 10398
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/http-special-http-output.txt",
+      "sha256": "bf43bec4573387880731fd3eb62b6dfabf81dd1d305a148af72d166af8cf005c",
+      "bytes": 71
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/lint.json",
+      "sha256": "f23c0f913e9c526c59400235435fc933f8eb4fa4562c5d17c9ef87807a2139ca",
+      "bytes": 2119
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/movement-pairs.json",
+      "sha256": "005ed061d5d4cfb98a34e644aeca2f031435e3323480c78c730d8243dfff21be",
+      "bytes": 1048
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/movement-regressions.json",
+      "sha256": "c62e1dda91bcc43dc1703af558aeb1afb0e141caedd182bda9158ef0a8a8fed5",
+      "bytes": 938
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/regressions.json",
+      "sha256": "7530c563656f4d1056f85003ff69ef0184c45ed4c2542211d6d35f0340aeca0c",
+      "bytes": 2228
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_abyss_movement.txt",
+      "sha256": "1eaafc604c1424b17e3ec319d1573a69583bf2687040c9165e5e0ceee68c93b4",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_battle_helper_movement.txt",
+      "sha256": "54677ea0260066592f9383ec39135d12eb36b94276fb118bfa2c8a56c3db5ac4",
+      "bytes": 47
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_combat_instant_phases.txt",
+      "sha256": "96a663568c0259d4be78427390816778f0298e808786a5396050b54c2f253310",
+      "bytes": 35
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_dice.txt",
+      "sha256": "e843c869eb943e65455e01a0bd68df252acaa6a2c2db2ba71f1e8ff752477ced",
+      "bytes": 18
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_dynamic_flying_lifecycle.txt",
+      "sha256": "1f14d31da38217535f2d185ca3f88e916b63f932cee30997224e1f3662d94d6b",
+      "bytes": 39
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_flesh_stitcher.txt",
+      "sha256": "429c16abbfcaa0b616ba677f45dd7038a465575540dc9e3f54bd8acba7ebaa3b",
+      "bytes": 32
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_flesh_stitcher_persistence.txt",
+      "sha256": "47d514289eb455c682d5a12caba98e5637bb74ac82bff07c4c690a5c709a94ba",
+      "bytes": 162
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_forced_directional_movement.txt",
+      "sha256": "10bc35175fcf0bc8bccf20042e59c298aa8e14a03af13f8e9646fd2fc44b0cb3",
+      "bytes": 53
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_gloomy_noblewoman.txt",
+      "sha256": "f6733332dd5d2e8970489c7ccae001b149c1f22e739e6eceda559ab60ac0e5a3",
+      "bytes": 53
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_health_journal.txt",
+      "sha256": "95abf39e5732a640b3fb5a957c7c0df738876514440b6505603267f162c63e7e",
+      "bytes": 698
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_hydra.txt",
+      "sha256": "a48e682c28012e24039153fdcdd56200e48a4da4a5238b56c9ce8010f74be559",
+      "bytes": 31
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_journal_cosmetics.txt",
+      "sha256": "0f7f64ab20fd54c24cdf9e805731f9633eabfbdd11fe79384185dfd62692f167",
+      "bytes": 244
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_journal_gap_causes.txt",
+      "sha256": "f3ab18bcd532ad146e30de47a24781b3d42b730e170c090893e13c4741213d4e",
+      "bytes": 17363
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_kersam_satyr_wild_healer.txt",
+      "sha256": "67ad8d07a20cfec0d384804f6d94c783ece6d7d9dfae4ef7fa75562f40acc308",
+      "bytes": 39
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_live_battle_journal.txt",
+      "sha256": "378b828574c4631f8093e7605d600022c9059fee48aa30e6c2d01c892e78d98d",
+      "bytes": 901
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_live_journal_restoration.txt",
+      "sha256": "cce07daced07af1cc04c52da4f02e80d3bed3fd813984c4961556f2f31ed03d2",
+      "bytes": 531
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_lucktest_recorder_atomicity.txt",
+      "sha256": "37b18e728d923c8095bd521b96502fcbedaf31b5b0c006545a026567d27bb0cb",
+      "bytes": 133
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_movement_effects.txt",
+      "sha256": "649c8bb24568bc3febef1eff8e52182e914733bca0b6176eaa3b7d615cd646d4",
+      "bytes": 41
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_movement_journal.txt",
+      "sha256": "0047faea55d72ecffc1f132b67526c801ea1f489f9bfe0930a4b8d067e989f1c",
+      "bytes": 61140
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_nested_combat_ownership.txt",
+      "sha256": "e565d40424a0c0d771df0629198d951015279161121fa1a684d3f95310da05b9",
+      "bytes": 479
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_ochi_informer_multi_heal.txt",
+      "sha256": "e72e94741f9dd38e26deae85c961d3a27cfc6e8ef851c7c2ec62d04703b902ac",
+      "bytes": 106
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_pending_wait_timer.txt",
+      "sha256": "0081f76f94eab51c205ec3ddf3189ee5dfe8d87ca3332d874975e5cc00fa9be6",
+      "bytes": 99
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_prophecy_deck_order.txt",
+      "sha256": "a146d7ed9ab2077459074bb6b2de3a348e551478635feaefd768f4e9bedf21e7",
+      "bytes": 79
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_ragnar.txt",
+      "sha256": "db581f29be41959f1e00eac0efd77fda726c9af6df06f269a16b396b8b729d57",
+      "bytes": 20
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_riala_movement.txt",
+      "sha256": "56b625f736c2dcda73271ebd371940a1ac841c3ed99713102c70c9d8d4d69490",
+      "bytes": 40
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_row_spell_pending_dice.txt",
+      "sha256": "9d9f272875d1faf9040be4ae697e7c32e3115b1025980b98f9cc8a5c965d8dcc",
+      "bytes": 37
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_shaksi.txt",
+      "sha256": "a1d6078337ae6ca95e13ee60dbcef97a88a183d2a8a9ca0bcf503f5b665551fa",
+      "bytes": 21
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_single_roll_c1.txt",
+      "sha256": "f27927b101a53c31913c398c26c98b1b675c17e2af0f6d00b12f39a593caf784",
+      "bytes": 34
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_single_roll_c2.txt",
+      "sha256": "9f84823895434304fc76f79601c8e9a9003625abf8838703a42742564a224afb",
+      "bytes": 38
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_special_attack_journal.txt",
+      "sha256": "3e45354f910745a8f60ba10e716837099d0870d09c9187b7ac98f2fb2a1863b6",
+      "bytes": 57909
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_stage31_fixes.txt",
+      "sha256": "986a78a7ae0c23162a0acef0a5b71a16993a48c0fd1b8dc7ba005bec7251c212",
+      "bytes": 2654
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_temple_combat.txt",
+      "sha256": "d4d88f435bf46a5c671f38dc2ea42c67770569750c94b623378e522b2546f5b0",
+      "bytes": 23
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_temple_ranged.txt",
+      "sha256": "13ae4d71c9b1079b90edd07500e512fb32d07e7f98ad6808763cbcfefbf63b42",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_tremor_incarnation.txt",
+      "sha256": "f47b3cb759c2790badded7f5a1e557e9918a96f2f467990be21ae85d387f4dfb",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_tremor_movement.txt",
+      "sha256": "97f86ffaf36c299cd9e6be0bc806e0b484fa4d9ab4502139f3f849589a2ddedf",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_turn_instant_stack.txt",
+      "sha256": "90b2e5d8b7bded0de8548358533e20fc24c5d813a4c94b32fc1d48c7f3031845",
+      "bytes": 33
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_turn_timer.txt",
+      "sha256": "714d449812fe6ee9d6e2f87d4d5e0623411ea74340325df2b3ac41bfe3e8673e",
+      "bytes": 14
+    },
+    {
+      "file": "docs/evidence/stage4d3b3/test_volkhv_wound_transfer.txt",
+      "sha256": "5581e0ce36bfb2d76cae29f268603e17116ca8df283e74b8b67a02309b69519a",
+      "bytes": 35
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/cleanup-proof.json",
+      "sha256": "17aad5d561a18455ca51f3778f72ff9565166c5c35afc7a004d1eae08e0c3865",
+      "bytes": 266
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/final-regressions.json",
+      "sha256": "2cf7620041a50c3d14f1bbc65a74d044b30dc1b039ffc71469c3b5d82c6bb3b1",
+      "bytes": 4101
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/http-health-http-output.txt",
+      "sha256": "8f4635f6689b5eac993a3426e01df5786a6535722b569706c62a0cd7f514b552",
+      "bytes": 477
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/http-journal-browser-results.json",
+      "sha256": "abd8441f529b17860672d287fc93aa79c4315ed5c67d0806aaa1cdeb1f3e3d9f",
+      "bytes": 316
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/http-journal-live-browser-results.json",
+      "sha256": "bf806a96f8e6d52bb1f668120c0d119bba60c9fc26c85e4402cf35bcd014e6c1",
+      "bytes": 337
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/http-movement-http-output.txt",
+      "sha256": "61b404b6d2b672d8ab095a9d7687b8d04879ef618a5c3ef5695d29b9461d9e8b",
+      "bytes": 297
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/http-projections.json",
+      "sha256": "fbffcdc5b9731e6e7c23ec370b42e97569979784b7a33e0f1530d1e565aef823",
+      "bytes": 24156
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/http-results.json",
+      "sha256": "4bbd205a04ef4fac57bf2284f941b9178bd1b9fb270d7d21adc2a04cd4f3d0f5",
+      "bytes": 10910
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/http-special-http-output.txt",
+      "sha256": "bf43bec4573387880731fd3eb62b6dfabf81dd1d305a148af72d166af8cf005c",
+      "bytes": 71
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/http-status-http-output.txt",
+      "sha256": "9b4e999404a9b4f23d51051511aa1ee1940b172d27319b490de6c793f38ca8a7",
+      "bytes": 414
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/instant-followup-adapted-baseline.txt",
+      "sha256": "9a134495318615f4df9ceabec5c2a821c4a36de3b2469a61b4b9e0c43410e1cf",
+      "bytes": 42
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/instant-followup-adapted-patched.txt",
+      "sha256": "9a134495318615f4df9ceabec5c2a821c4a36de3b2469a61b4b9e0c43410e1cf",
+      "bytes": 42
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/instant-followup-original-baseline.txt",
+      "sha256": "807ec777ee785c8352bf52034cfddca4fb615206b7fab7e83ac4ecdd7dae040f",
+      "bytes": 582
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/instant-regressions.json",
+      "sha256": "dfbfdde7346abdbf846ec3dcc524b05c4e1e3a3363db15136c9568c7d3e255dc",
+      "bytes": 1429
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/lint.json",
+      "sha256": "fe7ec1c6a9ad2601e7bf328f751113b7c0889038eb502522497809bb382df452",
+      "bytes": 2267
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/quick-old-lab-diagnostic.json",
+      "sha256": "8830fcc6a1c62b94f4006c8b38be3108c927d503eec0dd0024df321851786b8b",
+      "bytes": 3377
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/regressions.json",
+      "sha256": "09f734b8ef1cda705c4953da58d0f059f0e0584e96af8c7e71cd7cf363d668e2",
+      "bytes": 3163
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/scope-proof.json",
+      "sha256": "5eb22c11e394b71b7a16e4f34a7a3d67e64040ab9d8a8bfe16a500757b6cee8c",
+      "bytes": 397
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_abyss_card_roll.txt",
+      "sha256": "72d8ef2e87cf8d67660842070895cab9a3ff037f7b62527bbbc65c82ba910db9",
+      "bytes": 23
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_abyss_double_reroll.txt",
+      "sha256": "98cae734aa5bf8fb30d2bc85a0feca79ea4aed4125c60265c89541d5ef485b86",
+      "bytes": 42
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_abyss_luck_window.txt",
+      "sha256": "4aa101f91ea8fbd9b6070b332d288e637fa4e78459dccb7eb369b1226816a5f7",
+      "bytes": 42
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_abyss_movement.txt",
+      "sha256": "1eaafc604c1424b17e3ec319d1573a69583bf2687040c9165e5e0ceee68c93b4",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_battle_helper_movement.txt",
+      "sha256": "54677ea0260066592f9383ec39135d12eb36b94276fb118bfa2c8a56c3db5ac4",
+      "bytes": 47
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_cell_marker_cancel.txt",
+      "sha256": "5d43bab373a2dd979458197f587beb1a1014d8e91478c5076502a45545384df6",
+      "bytes": 46
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_combat_instant_phases.txt",
+      "sha256": "96a663568c0259d4be78427390816778f0298e808786a5396050b54c2f253310",
+      "bytes": 35
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_dice.txt",
+      "sha256": "e843c869eb943e65455e01a0bd68df252acaa6a2c2db2ba71f1e8ff752477ced",
+      "bytes": 18
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_dynamic_flying_lifecycle.txt",
+      "sha256": "1f14d31da38217535f2d185ca3f88e916b63f932cee30997224e1f3662d94d6b",
+      "bytes": 39
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_flesh_stitcher.txt",
+      "sha256": "429c16abbfcaa0b616ba677f45dd7038a465575540dc9e3f54bd8acba7ebaa3b",
+      "bytes": 32
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_flesh_stitcher_persistence.txt",
+      "sha256": "47d514289eb455c682d5a12caba98e5637bb74ac82bff07c4c690a5c709a94ba",
+      "bytes": 162
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_forced_directional_movement.txt",
+      "sha256": "10bc35175fcf0bc8bccf20042e59c298aa8e14a03af13f8e9646fd2fc44b0cb3",
+      "bytes": 53
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_free_instant_reservation.txt",
+      "sha256": "b84505a596ac2d9c366b9e35468e1fcd7dbebdc4dec0dc9a3a2d8fc1a5b9edb1",
+      "bytes": 53
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_gloomy_noblewoman.txt",
+      "sha256": "f6733332dd5d2e8970489c7ccae001b149c1f22e739e6eceda559ab60ac0e5a3",
+      "bytes": 53
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_health_journal.txt",
+      "sha256": "95abf39e5732a640b3fb5a957c7c0df738876514440b6505603267f162c63e7e",
+      "bytes": 698
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_hydra.txt",
+      "sha256": "a48e682c28012e24039153fdcdd56200e48a4da4a5238b56c9ce8010f74be559",
+      "bytes": 31
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_instant_availability.txt",
+      "sha256": "e3dcf3618f605fe33f1b5db9ce12234822f67c7e8af7bdd167f2373b3539cf7e",
+      "bytes": 49
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_instant_followup_fixes.txt",
+      "sha256": "9a134495318615f4df9ceabec5c2a821c4a36de3b2469a61b4b9e0c43410e1cf",
+      "bytes": 42
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_instant_reservation.txt",
+      "sha256": "ca5387bca225f9b6fd06cba38af341cb9b77c2aa3ba4c699742ecf175db12f12",
+      "bytes": 39
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_instant_stage4.txt",
+      "sha256": "130757432ce23d23d3d3d3eec76943481ccb68a2e6c5fc8517a7ca4f0b724345",
+      "bytes": 65
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_journal_cosmetics.txt",
+      "sha256": "0f7f64ab20fd54c24cdf9e805731f9633eabfbdd11fe79384185dfd62692f167",
+      "bytes": 244
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_journal_gap_causes.txt",
+      "sha256": "f3ab18bcd532ad146e30de47a24781b3d42b730e170c090893e13c4741213d4e",
+      "bytes": 17363
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_kersam_satyr_wild_healer.txt",
+      "sha256": "67ad8d07a20cfec0d384804f6d94c783ece6d7d9dfae4ef7fa75562f40acc308",
+      "bytes": 39
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_live_battle_journal.txt",
+      "sha256": "378b828574c4631f8093e7605d600022c9059fee48aa30e6c2d01c892e78d98d",
+      "bytes": 901
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_live_journal_restoration.txt",
+      "sha256": "cce07daced07af1cc04c52da4f02e80d3bed3fd813984c4961556f2f31ed03d2",
+      "bytes": 531
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_lucktest_recorder_atomicity.txt",
+      "sha256": "37b18e728d923c8095bd521b96502fcbedaf31b5b0c006545a026567d27bb0cb",
+      "bytes": 133
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_movement_effects.txt",
+      "sha256": "649c8bb24568bc3febef1eff8e52182e914733bca0b6176eaa3b7d615cd646d4",
+      "bytes": 41
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_movement_journal.txt",
+      "sha256": "559a81076913a4a20ecab67ede8ed81f7dbcfa2aa5760f4354312db22edc279c",
+      "bytes": 61620
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_nested_combat_ownership.txt",
+      "sha256": "e565d40424a0c0d771df0629198d951015279161121fa1a684d3f95310da05b9",
+      "bytes": 479
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_ochi_informer_multi_heal.txt",
+      "sha256": "e72e94741f9dd38e26deae85c961d3a27cfc6e8ef851c7c2ec62d04703b902ac",
+      "bytes": 106
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_pending_wait_timer.txt",
+      "sha256": "0081f76f94eab51c205ec3ddf3189ee5dfe8d87ca3332d874975e5cc00fa9be6",
+      "bytes": 99
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_prophecy_deck_order.txt",
+      "sha256": "a146d7ed9ab2077459074bb6b2de3a348e551478635feaefd768f4e9bedf21e7",
+      "bytes": 79
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_ragnar.txt",
+      "sha256": "db581f29be41959f1e00eac0efd77fda726c9af6df06f269a16b396b8b729d57",
+      "bytes": 20
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_riala_movement.txt",
+      "sha256": "56b625f736c2dcda73271ebd371940a1ac841c3ed99713102c70c9d8d4d69490",
+      "bytes": 40
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_row_spell_pending_dice.txt",
+      "sha256": "9d9f272875d1faf9040be4ae697e7c32e3115b1025980b98f9cc8a5c965d8dcc",
+      "bytes": 37
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_shaksi.txt",
+      "sha256": "a1d6078337ae6ca95e13ee60dbcef97a88a183d2a8a9ca0bcf503f5b665551fa",
+      "bytes": 21
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_single_roll_c1.txt",
+      "sha256": "f27927b101a53c31913c398c26c98b1b675c17e2af0f6d00b12f39a593caf784",
+      "bytes": 34
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_single_roll_c2.txt",
+      "sha256": "9f84823895434304fc76f79601c8e9a9003625abf8838703a42742564a224afb",
+      "bytes": 38
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_special_attack_journal.txt",
+      "sha256": "5f05df8c10553124ea0f06fd15ad9ec8badb187c97878f3aff08a4d2739c84df",
+      "bytes": 58906
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_stage31_fixes.txt",
+      "sha256": "986a78a7ae0c23162a0acef0a5b71a16993a48c0fd1b8dc7ba005bec7251c212",
+      "bytes": 2654
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_status_journal.txt",
+      "sha256": "ae5107b0ff8b184d5386653cf5058743614e2a13f70d37cbb9a4c2da52060e3d",
+      "bytes": 86181
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_temple_combat.txt",
+      "sha256": "d4d88f435bf46a5c671f38dc2ea42c67770569750c94b623378e522b2546f5b0",
+      "bytes": 23
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_temple_ranged.txt",
+      "sha256": "13ae4d71c9b1079b90edd07500e512fb32d07e7f98ad6808763cbcfefbf63b42",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_tremor_incarnation.txt",
+      "sha256": "f47b3cb759c2790badded7f5a1e557e9918a96f2f467990be21ae85d387f4dfb",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_tremor_movement.txt",
+      "sha256": "97f86ffaf36c299cd9e6be0bc806e0b484fa4d9ab4502139f3f849589a2ddedf",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_turn_instant_result_visibility.txt",
+      "sha256": "a66ea9dbb273c9ef0e05d1c790f971e842448b262facbe7e2d3b0f64d0a504c1",
+      "bytes": 49
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_turn_instant_stack.txt",
+      "sha256": "90b2e5d8b7bded0de8548358533e20fc24c5d813a4c94b32fc1d48c7f3031845",
+      "bytes": 33
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_turn_timer.txt",
+      "sha256": "714d449812fe6ee9d6e2f87d4d5e0623411ea74340325df2b3ac41bfe3e8673e",
+      "bytes": 14
+    },
+    {
+      "file": "docs/evidence/stage4d3b4/test_volkhv_wound_transfer.txt",
+      "sha256": "5581e0ce36bfb2d76cae29f268603e17116ca8df283e74b8b67a02309b69519a",
+      "bytes": 35
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/complex-http-output.txt",
+      "sha256": "80ae6851c037c370678ac998c2cb2e331a49623cf734342f02198f969f715ac5",
+      "bytes": 392
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/final-regressions.json",
+      "sha256": "37274136d4fcf22c4848f6e3a1e293f2cc80df524b738c56fc0d26fe4f2e42bb",
+      "bytes": 4756
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/journal-browser-results.json",
+      "sha256": "7468f7140853bfdf705a528fdbed83cdbe29322ca786272fa9ffb1839883c3b1",
+      "bytes": 316
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/journal-live-browser-results.json",
+      "sha256": "bf806a96f8e6d52bb1f668120c0d119bba60c9fc26c85e4402cf35bcd014e6c1",
+      "bytes": 337
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/lint.json",
+      "sha256": "d5e0373ca4d169cb1351a9fb67ae7684fd46a0cc3ebc6d0ea724fe47673deb84",
+      "bytes": 2637
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/regressions-initial-harness-attempt.json",
+      "sha256": "3081cef5172612cbf687b0389c411816aeec67d9fdf65c5b16a7dde48a5bf830",
+      "bytes": 7114
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/results.json",
+      "sha256": "473ce6352609d851180122e39a30cac64ef933fbfd189e070e7e2b0ad8c3fca4",
+      "bytes": 11536
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_abyss_card_roll.txt",
+      "sha256": "e9827501f698ffc87a917f89a996e1cf2d5bb5791638c5ae106cac2251e45981",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_abyss_double_reroll.txt",
+      "sha256": "266351529834e1c2a935bbe0ac5d6ea0b8549fd493957b30f6d53b5dad8a206a",
+      "bytes": 43
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_abyss_luck_window.txt",
+      "sha256": "cd25ab4e8fe90e48c1e5bd3929e0c925a6c7c24a2a08de6a4d79184ce63c16e0",
+      "bytes": 43
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_abyss_movement.txt",
+      "sha256": "664d066a8a20b29ea0a4453844825f9e813d3f943ae9c94ea3374749ce8cff1f",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_alvalind.txt",
+      "sha256": "3865fea03e3e7b9aca93b18488e952a6663275bda729da6e6fc2502563930682",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_battle_helper_movement.txt",
+      "sha256": "600c907b6b8ac189ef576f920d6d71e23ea506b192d9cfd2339956454dfbf404",
+      "bytes": 48
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_cell_marker_cancel.txt",
+      "sha256": "40eceb8c1157928665c90f3b7ca03ba0a041f30e235cc5f420087f9d1d5d49ab",
+      "bytes": 47
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_combat_continuation.txt",
+      "sha256": "960125d94ff9adc47c277485a9fc1c0e41327d2e31cbc18499f6d4e2f0aeb418",
+      "bytes": 148
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_combat_instant_phases.txt",
+      "sha256": "b41dce6291997632d46e2dfe80580eba79ef37161e4e881fdbc23546b77bbe68",
+      "bytes": 36
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_complex_journal.txt",
+      "sha256": "2885630879b0bf6504bc85698ac452f29955052a45a567e9e8f33c20fdb0ec64",
+      "bytes": 387509
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_dice.txt",
+      "sha256": "df6021942412bce35b1971c0348b5772875c478e6e625c210cde5c774a877a64",
+      "bytes": 19
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_dynamic_flying_lifecycle.txt",
+      "sha256": "8dfc8ea98e6bd238acb7861234ea524233adc030644c5e5df36db04ab36a1fd7",
+      "bytes": 40
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_flesh_stitcher.txt",
+      "sha256": "7134d1c23c0b52bcc729d3e636155a7f30fe6110e67890008e5fdb64b651e602",
+      "bytes": 33
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_flesh_stitcher_persistence.txt",
+      "sha256": "77318cf9d436dc4dcc4d917451307f39ad896cb582e815c49d93e20dd43701cd",
+      "bytes": 164
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_forced_directional_movement.txt",
+      "sha256": "7db354df5ec68fd93faf8ccd88cfc66514a1dda8a25b98533ade6c5c39096a9f",
+      "bytes": 54
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_forrendor_watch.txt",
+      "sha256": "c972ccb2167a43ea0ff4bf10214f6d9189c4c27ae4fae77e10625eddda052a57",
+      "bytes": 31
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_free_instant_reservation.txt",
+      "sha256": "0dbeb9ef07c40c427723d7cc685f51f905286eea7d27946789347005f37000f7",
+      "bytes": 54
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_gloomy_noblewoman.txt",
+      "sha256": "1ae9b4c13fb7878914059ec68f2ca8ff8fa0af8dff1914dd47ec584866ab628b",
+      "bytes": 54
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_health_journal.txt",
+      "sha256": "eb1f06b20f0512c8c7a5370f67db8b4a2cae5f5208da913e5b6c683e96dbc069",
+      "bytes": 725
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_hydra.txt",
+      "sha256": "301166e33a15d5859f80197137455198fbd5617dcdfd8360b565f13fc969c07b",
+      "bytes": 32
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_instant_availability.txt",
+      "sha256": "a77b262672b10bc212b30ae1148fbfc2afd282cf468eb3224685b1043858b48f",
+      "bytes": 50
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_instant_followup_fixes.txt",
+      "sha256": "330f195fbbbc67c6f338746eb87219494fbbc2f70e682e7d018131947581859c",
+      "bytes": 43
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_instant_reservation.txt",
+      "sha256": "aa2a8a24c26ddcd1dcc8267eadd668f052f75c26134e10dbc69e7c89bcd0ecf4",
+      "bytes": 40
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_instant_stage4.txt",
+      "sha256": "de770170aa6c3a52af10f67868f3ba05979a2cd7f21e1f9cef2847f131767430",
+      "bytes": 66
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_journal_cosmetics.txt",
+      "sha256": "a1ae7a416a1fbecc7721deb4f0391f0df6c9c7f5ab3432b2c764a2e52e980375",
+      "bytes": 250
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_journal_gap_causes.txt",
+      "sha256": "a48d29b6cfc8c6f877c79cd9f84de1401df0cc1f9174007356d1790f2f66ba50",
+      "bytes": 17820
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_kersam_satyr_wild_healer.txt",
+      "sha256": "dd5eff18fb4c9f2c601f8ba670ea047f4c9df728fab20d0fcb5aed1d05b66608",
+      "bytes": 40
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_live_battle_journal.txt",
+      "sha256": "8d095c092bdcf1e345ff357cf754883751198675377c6381247ce6a385ad85f6",
+      "bytes": 925
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_live_journal_restoration.txt",
+      "sha256": "24cfbf66facc931eb87e5a9621d5369f4ea0eef9c3f45a7f8812d471e02c4327",
+      "bytes": 548
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_lucktest_recorder_atomicity.txt",
+      "sha256": "f7fe8823af5ba62bac00127be5256df6186ffdd87167db3cd3d372f8b31df659",
+      "bytes": 135
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_matriarch_order.txt",
+      "sha256": "42d8971018ba79b524753c27d581d1bcb20e31eca3f5fe133c4b294efa839178",
+      "bytes": 389
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_movement_effects.txt",
+      "sha256": "22b1dc97b056cec09ebdb8a2b402710669dfcb7d4abfbf80623863f964cef654",
+      "bytes": 42
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_movement_journal.txt",
+      "sha256": "fbee920664c0efe2edb2ce49c419ae48f19e27ebc39c8df1f5c9bc2c25b38e64",
+      "bytes": 63182
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_nested_combat_ownership.txt",
+      "sha256": "63b8288443e7a45dd6abf1d81b651c88009bdcbfe7dea411219463b692b5a5ec",
+      "bytes": 490
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_ochi_informer_multi_heal.txt",
+      "sha256": "0c4aef17ca60a251a0edc7907014a49bcd8a4634e46f57cd3526fb7dd44adc85",
+      "bytes": 108
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_ochi_kronga.txt",
+      "sha256": "89de4a1ba4fc0f64fed9c106a78ca9ddfb2dc26272e8314f462c2b5a66b245b2",
+      "bytes": 996
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_ochi_kronga_journal.txt",
+      "sha256": "2fb8b64cbd2809134796ddb4a6958e37dcd6d2aba78a7526b3dbe5aa37dd7e1a",
+      "bytes": 97
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_ochi_kronga_persistence.txt",
+      "sha256": "0d8f60bf32d0f7523cb8fce24143cdef8430515cf23d0494fdeb6e6b36c11546",
+      "bytes": 371
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_pending_wait_timer.txt",
+      "sha256": "7ea3621ed670d1486a1cd22e9591ffb636298f33a2e0fdd365398988a08826eb",
+      "bytes": 100
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_prophecy_deck_order.txt",
+      "sha256": "29c80827c148fec410696a7b13dc341f392fb640dc09526e110bda06c96a8f0e",
+      "bytes": 81
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_ragnar.txt",
+      "sha256": "ebc36860555030ad0a198432a215f1d9e14488b04374643cbc13b7df856bdbac",
+      "bytes": 21
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_riala_movement.txt",
+      "sha256": "123fb1d19232b587da4d79e35984f5c6707953ab9842eeb99782cf8a9dd3e8ec",
+      "bytes": 41
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_row_spell_pending_dice.txt",
+      "sha256": "bd9a6d38447b1c4cad7ba6bb5be16a54b3156ff88bf02b3bb7834c4ffd280cf9",
+      "bytes": 38
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_shaksi.txt",
+      "sha256": "c1cf6f8f9ed1b936fe2c433b8b2bf2d34af6483f6a016e27dea06b08f75f7dc5",
+      "bytes": 22
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_single_roll_c1.txt",
+      "sha256": "ba707b5da44567ecb93782ef189dfb3320d0b8616e77357527db979fbc26849c",
+      "bytes": 35
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_single_roll_c2.txt",
+      "sha256": "0b9e21681fea809ff665844126eaae305f2003831fb07ec2780ba4c41e95ff08",
+      "bytes": 39
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_special_attack_journal.txt",
+      "sha256": "53c5c9294fe91b0454d0edc5c82410b5ad4fcc4d3bd68f23f7209577f1bc9e1c",
+      "bytes": 60196
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_stage31_fixes.txt",
+      "sha256": "4baf8e70e54fc7c8efa09ca7e58ce0aabf411de44bf3e23d9e23800979ed4b6d",
+      "bytes": 2687
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_status_journal.txt",
+      "sha256": "542fc5bc8f0709bb5fc4c7ac149072e1d558bb385295475c01db819ba4dccf94",
+      "bytes": 88924
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_temple_combat.txt",
+      "sha256": "c2933c4b3f39f956934601123977d96b43802cec1b711b302c559b8852a05a4a",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_temple_ranged.txt",
+      "sha256": "64cce58d7df4814c9ca7f2ffc5348cb4f37e6aa11f764194fd96aebe80a74d81",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_tremor_incarnation.txt",
+      "sha256": "07885c8ebbda120d2dfdddcd6553bc055d2ac3e1f23518b8853d668eb44ca5ac",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_tremor_movement.txt",
+      "sha256": "fc9221d70de63f0fe94b7d0c0bfeb57003a44569475c6b83095c56e9c5abdd80",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_troll_prophecy_ui.txt",
+      "sha256": "9d9cf92519f95553caaeac03a03c4a69bd261a14b75fe0dbba3f220f80713c2d",
+      "bytes": 38
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_turn_instant_result_visibility.txt",
+      "sha256": "0db83e471773c6abaa2fce08d469dd7ca56087c6e05b8c1f30738f70fb856158",
+      "bytes": 50
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_turn_instant_stack.txt",
+      "sha256": "1e33c1b9a9c6d7ef08d3c627bb6ff435ae03c1c45a9d7d48fcbc50e4e6e0d84d",
+      "bytes": 34
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_turn_timer.txt",
+      "sha256": "f8030de5075d74fc18360f5ec380b9bbd7cb94666f01094de38da0f241331e01",
+      "bytes": 15
+    },
+    {
+      "file": "docs/evidence/stage4d3b5/test_volkhv_wound_transfer.txt",
+      "sha256": "09fd430b257ab07f8ebd3c9080278b9a3faff9c47964b79a0a2c45ad47590d9a",
+      "bytes": 36
+    },
+    {
+      "file": "docs/evidence/stage4d3c/complex-http-output.txt",
+      "sha256": "80ae6851c037c370678ac998c2cb2e331a49623cf734342f02198f969f715ac5",
+      "bytes": 392
+    },
+    {
+      "file": "docs/evidence/stage4d3c/journal-browser-results.json",
+      "sha256": "126134a9662d3ba9ea3a86819ad104f53d231f0b87402389bf7b17c8614b8d30",
+      "bytes": 316
+    },
+    {
+      "file": "docs/evidence/stage4d3c/journal-live-browser-results.json",
+      "sha256": "bf806a96f8e6d52bb1f668120c0d119bba60c9fc26c85e4402cf35bcd014e6c1",
+      "bytes": 337
+    },
+    {
+      "file": "docs/evidence/stage4d3c/lint.json",
+      "sha256": "a1246b3dcef51c818d7443a3ad98402675ec184cfa8c2bc2b232b6cbbbe2a711",
+      "bytes": 16741
+    },
+    {
+      "file": "docs/evidence/stage4d3c/regressions.json",
+      "sha256": "0f9d078f6aa721d1bc3a5d740a4c236f7bd6f6a8d3693165cf0ce62866eaa025",
+      "bytes": 4113
+    },
+    {
+      "file": "docs/evidence/stage4d3c/results.json",
+      "sha256": "473ce6352609d851180122e39a30cac64ef933fbfd189e070e7e2b0ad8c3fca4",
+      "bytes": 11536
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_abyss_card_roll.txt",
+      "sha256": "e9827501f698ffc87a917f89a996e1cf2d5bb5791638c5ae106cac2251e45981",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_abyss_double_reroll.txt",
+      "sha256": "266351529834e1c2a935bbe0ac5d6ea0b8549fd493957b30f6d53b5dad8a206a",
+      "bytes": 43
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_abyss_luck_window.txt",
+      "sha256": "cd25ab4e8fe90e48c1e5bd3929e0c925a6c7c24a2a08de6a4d79184ce63c16e0",
+      "bytes": 43
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_abyss_movement.txt",
+      "sha256": "664d066a8a20b29ea0a4453844825f9e813d3f943ae9c94ea3374749ce8cff1f",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_alvalind.txt",
+      "sha256": "3865fea03e3e7b9aca93b18488e952a6663275bda729da6e6fc2502563930682",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_battle_helper_movement.txt",
+      "sha256": "600c907b6b8ac189ef576f920d6d71e23ea506b192d9cfd2339956454dfbf404",
+      "bytes": 48
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_cell_marker_cancel.txt",
+      "sha256": "40eceb8c1157928665c90f3b7ca03ba0a041f30e235cc5f420087f9d1d5d49ab",
+      "bytes": 47
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_combat_continuation.txt",
+      "sha256": "960125d94ff9adc47c277485a9fc1c0e41327d2e31cbc18499f6d4e2f0aeb418",
+      "bytes": 148
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_combat_instant_phases.txt",
+      "sha256": "b41dce6291997632d46e2dfe80580eba79ef37161e4e881fdbc23546b77bbe68",
+      "bytes": 36
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_complex_journal.txt",
+      "sha256": "2e3dfcd1d157c23ecc08fa0ea8a57997417af7411d56e78abdd0a3c06a2244c7",
+      "bytes": 392092
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_dice.txt",
+      "sha256": "df6021942412bce35b1971c0348b5772875c478e6e625c210cde5c774a877a64",
+      "bytes": 19
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_dynamic_flying_lifecycle.txt",
+      "sha256": "8dfc8ea98e6bd238acb7861234ea524233adc030644c5e5df36db04ab36a1fd7",
+      "bytes": 40
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_flesh_stitcher.txt",
+      "sha256": "7134d1c23c0b52bcc729d3e636155a7f30fe6110e67890008e5fdb64b651e602",
+      "bytes": 33
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_flesh_stitcher_persistence.txt",
+      "sha256": "77318cf9d436dc4dcc4d917451307f39ad896cb582e815c49d93e20dd43701cd",
+      "bytes": 164
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_forced_directional_movement.txt",
+      "sha256": "7db354df5ec68fd93faf8ccd88cfc66514a1dda8a25b98533ade6c5c39096a9f",
+      "bytes": 54
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_forrendor_watch.txt",
+      "sha256": "c972ccb2167a43ea0ff4bf10214f6d9189c4c27ae4fae77e10625eddda052a57",
+      "bytes": 31
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_free_instant_reservation.txt",
+      "sha256": "0dbeb9ef07c40c427723d7cc685f51f905286eea7d27946789347005f37000f7",
+      "bytes": 54
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_gloomy_noblewoman.txt",
+      "sha256": "1ae9b4c13fb7878914059ec68f2ca8ff8fa0af8dff1914dd47ec584866ab628b",
+      "bytes": 54
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_health_journal.txt",
+      "sha256": "eb1f06b20f0512c8c7a5370f67db8b4a2cae5f5208da913e5b6c683e96dbc069",
+      "bytes": 725
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_hydra.txt",
+      "sha256": "301166e33a15d5859f80197137455198fbd5617dcdfd8360b565f13fc969c07b",
+      "bytes": 32
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_instant_availability.txt",
+      "sha256": "a77b262672b10bc212b30ae1148fbfc2afd282cf468eb3224685b1043858b48f",
+      "bytes": 50
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_instant_followup_fixes.txt",
+      "sha256": "330f195fbbbc67c6f338746eb87219494fbbc2f70e682e7d018131947581859c",
+      "bytes": 43
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_instant_reservation.txt",
+      "sha256": "03a684582f95967217ae84f7e4507066ff4003a410fc7543b1075daea8b22a0f",
+      "bytes": 40
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_instant_stage4.txt",
+      "sha256": "de770170aa6c3a52af10f67868f3ba05979a2cd7f21e1f9cef2847f131767430",
+      "bytes": 66
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_journal_cosmetics.txt",
+      "sha256": "a1ae7a416a1fbecc7721deb4f0391f0df6c9c7f5ab3432b2c764a2e52e980375",
+      "bytes": 250
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_journal_gap_causes.txt",
+      "sha256": "d58f289f4572221e453c5a64e3fa192df1d1818604a2ae01c9b2ed7ad41031cd",
+      "bytes": 17824
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_kersam_satyr_wild_healer.txt",
+      "sha256": "dd5eff18fb4c9f2c601f8ba670ea047f4c9df728fab20d0fcb5aed1d05b66608",
+      "bytes": 40
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_live_battle_journal.txt",
+      "sha256": "8d095c092bdcf1e345ff357cf754883751198675377c6381247ce6a385ad85f6",
+      "bytes": 925
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_live_journal_restoration.txt",
+      "sha256": "24cfbf66facc931eb87e5a9621d5369f4ea0eef9c3f45a7f8812d471e02c4327",
+      "bytes": 548
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_lucktest_recorder_atomicity.txt",
+      "sha256": "f7fe8823af5ba62bac00127be5256df6186ffdd87167db3cd3d372f8b31df659",
+      "bytes": 135
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_matriarch_order.txt",
+      "sha256": "42d8971018ba79b524753c27d581d1bcb20e31eca3f5fe133c4b294efa839178",
+      "bytes": 389
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_movement_effects.txt",
+      "sha256": "22b1dc97b056cec09ebdb8a2b402710669dfcb7d4abfbf80623863f964cef654",
+      "bytes": 42
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_movement_journal.txt",
+      "sha256": "fbee920664c0efe2edb2ce49c419ae48f19e27ebc39c8df1f5c9bc2c25b38e64",
+      "bytes": 63182
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_nested_combat_ownership.txt",
+      "sha256": "63b8288443e7a45dd6abf1d81b651c88009bdcbfe7dea411219463b692b5a5ec",
+      "bytes": 490
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_ochi_informer_multi_heal.txt",
+      "sha256": "0c4aef17ca60a251a0edc7907014a49bcd8a4634e46f57cd3526fb7dd44adc85",
+      "bytes": 108
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_ochi_kronga.txt",
+      "sha256": "89de4a1ba4fc0f64fed9c106a78ca9ddfb2dc26272e8314f462c2b5a66b245b2",
+      "bytes": 996
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_ochi_kronga_journal.txt",
+      "sha256": "2fb8b64cbd2809134796ddb4a6958e37dcd6d2aba78a7526b3dbe5aa37dd7e1a",
+      "bytes": 97
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_ochi_kronga_persistence.txt",
+      "sha256": "0d8f60bf32d0f7523cb8fce24143cdef8430515cf23d0494fdeb6e6b36c11546",
+      "bytes": 371
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_pending_wait_timer.txt",
+      "sha256": "7ea3621ed670d1486a1cd22e9591ffb636298f33a2e0fdd365398988a08826eb",
+      "bytes": 100
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_prophecy_deck_order.txt",
+      "sha256": "29c80827c148fec410696a7b13dc341f392fb640dc09526e110bda06c96a8f0e",
+      "bytes": 81
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_ragnar.txt",
+      "sha256": "ebc36860555030ad0a198432a215f1d9e14488b04374643cbc13b7df856bdbac",
+      "bytes": 21
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_riala_movement.txt",
+      "sha256": "123fb1d19232b587da4d79e35984f5c6707953ab9842eeb99782cf8a9dd3e8ec",
+      "bytes": 41
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_row_spell_pending_dice.txt",
+      "sha256": "bd9a6d38447b1c4cad7ba6bb5be16a54b3156ff88bf02b3bb7834c4ffd280cf9",
+      "bytes": 38
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_shaksi.txt",
+      "sha256": "c1cf6f8f9ed1b936fe2c433b8b2bf2d34af6483f6a016e27dea06b08f75f7dc5",
+      "bytes": 22
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_single_roll_c1.txt",
+      "sha256": "ba707b5da44567ecb93782ef189dfb3320d0b8616e77357527db979fbc26849c",
+      "bytes": 35
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_single_roll_c2.txt",
+      "sha256": "0b9e21681fea809ff665844126eaae305f2003831fb07ec2780ba4c41e95ff08",
+      "bytes": 39
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_special_attack_journal.txt",
+      "sha256": "53c5c9294fe91b0454d0edc5c82410b5ad4fcc4d3bd68f23f7209577f1bc9e1c",
+      "bytes": 60196
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_stage31_fixes.txt",
+      "sha256": "4baf8e70e54fc7c8efa09ca7e58ce0aabf411de44bf3e23d9e23800979ed4b6d",
+      "bytes": 2687
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_status_journal.txt",
+      "sha256": "542fc5bc8f0709bb5fc4c7ac149072e1d558bb385295475c01db819ba4dccf94",
+      "bytes": 88924
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_temple_combat.txt",
+      "sha256": "c2933c4b3f39f956934601123977d96b43802cec1b711b302c559b8852a05a4a",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_temple_ranged.txt",
+      "sha256": "64cce58d7df4814c9ca7f2ffc5348cb4f37e6aa11f764194fd96aebe80a74d81",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_tremor_incarnation.txt",
+      "sha256": "07885c8ebbda120d2dfdddcd6553bc055d2ac3e1f23518b8853d668eb44ca5ac",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_tremor_movement.txt",
+      "sha256": "fc9221d70de63f0fe94b7d0c0bfeb57003a44569475c6b83095c56e9c5abdd80",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_troll_prophecy_ui.txt",
+      "sha256": "9d9cf92519f95553caaeac03a03c4a69bd261a14b75fe0dbba3f220f80713c2d",
+      "bytes": 38
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_turn_instant_result_visibility.txt",
+      "sha256": "0db83e471773c6abaa2fce08d469dd7ca56087c6e05b8c1f30738f70fb856158",
+      "bytes": 50
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_turn_instant_stack.txt",
+      "sha256": "1e33c1b9a9c6d7ef08d3c627bb6ff435ae03c1c45a9d7d48fcbc50e4e6e0d84d",
+      "bytes": 34
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_turn_timer.txt",
+      "sha256": "f8030de5075d74fc18360f5ec380b9bbd7cb94666f01094de38da0f241331e01",
+      "bytes": 15
+    },
+    {
+      "file": "docs/evidence/stage4d3c/test_volkhv_wound_transfer.txt",
+      "sha256": "09fd430b257ab07f8ebd3c9080278b9a3faff9c47964b79a0a2c45ad47590d9a",
+      "bytes": 36
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/48-branch-review.json",
+      "sha256": "6f100c76283569104886bdfaaa3984c4e011b8eb29d47b7fdbf50713bc7f7d94",
+      "bytes": 76053
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/baseline-oyuun-holvert.txt",
+      "sha256": "e0b19c37de5c83c47bb7cc51a7a35331e16041efa437db3692e6fc3673b1542a",
+      "bytes": 608
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/baseline-swamp-queen.txt",
+      "sha256": "afc6c9d60e39c41b0a6b52381265aa8250db4731dbb2a9520b462189d6d2a253",
+      "bytes": 504
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/cleanup.json",
+      "sha256": "1d855b5d9a0046d0a57226f0762ea5ab994158c17a42e2cef4add1e01434438d",
+      "bytes": 164
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/closure-branches-final.json",
+      "sha256": "f45cfa3f8620fcc3edbe8e3f35d460af41ecbf0fa62a65be53f48ce0411e7364",
+      "bytes": 7555
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/closure-branches-output.txt",
+      "sha256": "7e179d413ef6c39b68012e2804595514e440bfa67807168ce0fee7042856b5ec",
+      "bytes": 7553
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/closure-integrations-final.json",
+      "sha256": "b5ba4b851b0429d05501623015b1e41fcc2e17f3c3e30ee120fca848a3273653",
+      "bytes": 2477
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/closure-pairs.json",
+      "sha256": "4f9940382af0996d376a970f511aed498cca4a3bb75bc1726fc75ecfdde60477",
+      "bytes": 342424
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/closure-transaction-output.txt",
+      "sha256": "7b05e572ef662e10612fab9406ef5b534d47ded080f5168a106c482cac970b64",
+      "bytes": 2565
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/closure-transactions-cli-attempt.txt",
+      "sha256": "fa93325cf64e37ebcff5db68640760418c60273401eecd9d76734ab39b2eae2e",
+      "bytes": 341
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/common-route-risk-review.json",
+      "sha256": "a1f75531446a3ec2ab50e9e552060e241a523b4c9c71d09553884d7a0e6be1af",
+      "bytes": 108179
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/final-regressions.json",
+      "sha256": "3f05d29ac799ded9b5c79e915a2c4e9f621ee7aa6a75aa762238c8600a958243",
+      "bytes": 5719
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/integration-pairs.json",
+      "sha256": "de73b8ffa9b0c5c6f33f45e1f5ab1910d72f52371610da897dad7ef589b5c4e9",
+      "bytes": 354632
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/journal-browser-results.json",
+      "sha256": "1257ab2cacb8ddc2a2ea9865f5bf8874c36a07a230cf2c34bd8093a3d63084cc",
+      "bytes": 318
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/journal-live-browser-results.json",
+      "sha256": "bf806a96f8e6d52bb1f668120c0d119bba60c9fc26c85e4402cf35bcd014e6c1",
+      "bytes": 337
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/last-completed-closure-transaction-output.txt",
+      "sha256": "7b05e572ef662e10612fab9406ef5b534d47ded080f5168a106c482cac970b64",
+      "bytes": 2565
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/last-completed-complex-http-output.txt",
+      "sha256": "80ae6851c037c370678ac998c2cb2e331a49623cf734342f02198f969f715ac5",
+      "bytes": 392
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/last-completed-journal-browser-results.json",
+      "sha256": "3b6b3310f6c98a1cadd6e2828e770aee98a294504efb31109e6a9cabbb74831f",
+      "bytes": 318
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/last-completed-journal-live-browser-results.json",
+      "sha256": "bf806a96f8e6d52bb1f668120c0d119bba60c9fc26c85e4402cf35bcd014e6c1",
+      "bytes": 337
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/last-completed-results.json",
+      "sha256": "2c2b14de5eff553ab27963cd6a31045a9c34dba93443d084520ab9bf20d2680f",
+      "bytes": 11636
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/lint.json",
+      "sha256": "0f57adf086ef70f88fe366610a73d8c63429479c73f7e8a3798ab83d62abe4af",
+      "bytes": 16989
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/regressions.json",
+      "sha256": "f489bd2505d3e9db8017d43bdfbd7ab607784b2faa2fdcf4972a6b142f9a5abc",
+      "bytes": 6694
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/results.json",
+      "sha256": "8b74ef52c59e280ee03e6cb700da7ae70ea73b95f88c98351ea3746001e62af3",
+      "bytes": 11748
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_abyss_card_roll.txt",
+      "sha256": "e9827501f698ffc87a917f89a996e1cf2d5bb5791638c5ae106cac2251e45981",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_abyss_double_reroll.txt",
+      "sha256": "266351529834e1c2a935bbe0ac5d6ea0b8549fd493957b30f6d53b5dad8a206a",
+      "bytes": 43
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_abyss_luck_window.txt",
+      "sha256": "cd25ab4e8fe90e48c1e5bd3929e0c925a6c7c24a2a08de6a4d79184ce63c16e0",
+      "bytes": 43
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_abyss_movement.txt",
+      "sha256": "664d066a8a20b29ea0a4453844825f9e813d3f943ae9c94ea3374749ce8cff1f",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_alvalind.txt",
+      "sha256": "3865fea03e3e7b9aca93b18488e952a6663275bda729da6e6fc2502563930682",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_battle_helper_movement.txt",
+      "sha256": "600c907b6b8ac189ef576f920d6d71e23ea506b192d9cfd2339956454dfbf404",
+      "bytes": 48
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_cell_marker_cancel.txt",
+      "sha256": "40eceb8c1157928665c90f3b7ca03ba0a041f30e235cc5f420087f9d1d5d49ab",
+      "bytes": 47
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_combat_continuation.txt",
+      "sha256": "960125d94ff9adc47c277485a9fc1c0e41327d2e31cbc18499f6d4e2f0aeb418",
+      "bytes": 148
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_combat_instant_phases.txt",
+      "sha256": "b41dce6291997632d46e2dfe80580eba79ef37161e4e881fdbc23546b77bbe68",
+      "bytes": 36
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_complex_journal.txt",
+      "sha256": "472101e49577ef5284bee1f454f0a239ba2f2659cd4ffc3caa920894961e90c6",
+      "bytes": 384853
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_coverage_closure_journal.txt",
+      "sha256": "0d0331a58084394d25db6a2213d0044f593da0c24d020a52655be0f9925a8b87",
+      "bytes": 333885
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_degasca.txt",
+      "sha256": "e409cfdc92b2a79c87c3af2ead184ef24438aaa7226405b4e63359dde77c66f3",
+      "bytes": 23
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_dice.txt",
+      "sha256": "df6021942412bce35b1971c0348b5772875c478e6e625c210cde5c774a877a64",
+      "bytes": 19
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_dynamic_flying_lifecycle.txt",
+      "sha256": "8dfc8ea98e6bd238acb7861234ea524233adc030644c5e5df36db04ab36a1fd7",
+      "bytes": 40
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_flesh_stitcher.txt",
+      "sha256": "7134d1c23c0b52bcc729d3e636155a7f30fe6110e67890008e5fdb64b651e602",
+      "bytes": 33
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_flesh_stitcher_persistence.txt",
+      "sha256": "77318cf9d436dc4dcc4d917451307f39ad896cb582e815c49d93e20dd43701cd",
+      "bytes": 164
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_forced_directional_movement.txt",
+      "sha256": "7db354df5ec68fd93faf8ccd88cfc66514a1dda8a25b98533ade6c5c39096a9f",
+      "bytes": 54
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_forrendor_watch.txt",
+      "sha256": "c972ccb2167a43ea0ff4bf10214f6d9189c4c27ae4fae77e10625eddda052a57",
+      "bytes": 31
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_free_instant_reservation.txt",
+      "sha256": "032699f4c46f03ced18a7a85b01690fa2e3866e0dee1e2edaf85d8d1830d67b4",
+      "bytes": 54
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_gloomy_noblewoman.txt",
+      "sha256": "1ae9b4c13fb7878914059ec68f2ca8ff8fa0af8dff1914dd47ec584866ab628b",
+      "bytes": 54
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_health_journal.txt",
+      "sha256": "eb1f06b20f0512c8c7a5370f67db8b4a2cae5f5208da913e5b6c683e96dbc069",
+      "bytes": 725
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_hydra.txt",
+      "sha256": "301166e33a15d5859f80197137455198fbd5617dcdfd8360b565f13fc969c07b",
+      "bytes": 32
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_instant_availability.txt",
+      "sha256": "a77b262672b10bc212b30ae1148fbfc2afd282cf468eb3224685b1043858b48f",
+      "bytes": 50
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_instant_followup_fixes.txt",
+      "sha256": "330f195fbbbc67c6f338746eb87219494fbbc2f70e682e7d018131947581859c",
+      "bytes": 43
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_instant_reservation.txt",
+      "sha256": "aa2a8a24c26ddcd1dcc8267eadd668f052f75c26134e10dbc69e7c89bcd0ecf4",
+      "bytes": 40
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_instant_stage4.txt",
+      "sha256": "de770170aa6c3a52af10f67868f3ba05979a2cd7f21e1f9cef2847f131767430",
+      "bytes": 66
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_integration_closure_journal.txt",
+      "sha256": "8b5f5df6480ae28c3a84586d0a83f2596748b3ec6a059907337e76c5c4bfc3b2",
+      "bytes": 346001
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_journal_cosmetics.txt",
+      "sha256": "a1ae7a416a1fbecc7721deb4f0391f0df6c9c7f5ab3432b2c764a2e52e980375",
+      "bytes": 250
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_journal_gap_causes.txt",
+      "sha256": "a48d29b6cfc8c6f877c79cd9f84de1401df0cc1f9174007356d1790f2f66ba50",
+      "bytes": 17820
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_kersam_satyr_wild_healer.txt",
+      "sha256": "dd5eff18fb4c9f2c601f8ba670ea047f4c9df728fab20d0fcb5aed1d05b66608",
+      "bytes": 40
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_lilith.txt",
+      "sha256": "bbda0a7fb13b39a8d800f63233dd1b82f964c075ef2ac7c7bb48af1fb99caf18",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_live_battle_journal.txt",
+      "sha256": "8d095c092bdcf1e345ff357cf754883751198675377c6381247ce6a385ad85f6",
+      "bytes": 925
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_live_journal_restoration.txt",
+      "sha256": "24cfbf66facc931eb87e5a9621d5369f4ea0eef9c3f45a7f8812d471e02c4327",
+      "bytes": 548
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_lucktest_recorder_atomicity.txt",
+      "sha256": "f7fe8823af5ba62bac00127be5256df6186ffdd87167db3cd3d372f8b31df659",
+      "bytes": 135
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_matriarch_order.txt",
+      "sha256": "42d8971018ba79b524753c27d581d1bcb20e31eca3f5fe133c4b294efa839178",
+      "bytes": 389
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_movement_effects.txt",
+      "sha256": "22b1dc97b056cec09ebdb8a2b402710669dfcb7d4abfbf80623863f964cef654",
+      "bytes": 42
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_movement_journal.txt",
+      "sha256": "fbee920664c0efe2edb2ce49c419ae48f19e27ebc39c8df1f5c9bc2c25b38e64",
+      "bytes": 63182
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_nested_combat_ownership.txt",
+      "sha256": "63b8288443e7a45dd6abf1d81b651c88009bdcbfe7dea411219463b692b5a5ec",
+      "bytes": 490
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_ochi_informer_multi_heal.txt",
+      "sha256": "0c4aef17ca60a251a0edc7907014a49bcd8a4634e46f57cd3526fb7dd44adc85",
+      "bytes": 108
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_ochi_kronga.txt",
+      "sha256": "89de4a1ba4fc0f64fed9c106a78ca9ddfb2dc26272e8314f462c2b5a66b245b2",
+      "bytes": 996
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_ochi_kronga_journal.txt",
+      "sha256": "2fb8b64cbd2809134796ddb4a6958e37dcd6d2aba78a7526b3dbe5aa37dd7e1a",
+      "bytes": 97
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_ochi_kronga_persistence.txt",
+      "sha256": "0d8f60bf32d0f7523cb8fce24143cdef8430515cf23d0494fdeb6e6b36c11546",
+      "bytes": 371
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_oyuun_holvert.txt",
+      "sha256": "5fa6f164521db03cdf511b52987b160635458156606358782a6fb897f4cb791b",
+      "bytes": 44
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_pending_wait_timer.txt",
+      "sha256": "7ea3621ed670d1486a1cd22e9591ffb636298f33a2e0fdd365398988a08826eb",
+      "bytes": 100
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_prophecy_deck_order.txt",
+      "sha256": "29c80827c148fec410696a7b13dc341f392fb640dc09526e110bda06c96a8f0e",
+      "bytes": 81
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_ragnar.txt",
+      "sha256": "ebc36860555030ad0a198432a215f1d9e14488b04374643cbc13b7df856bdbac",
+      "bytes": 21
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_riala_movement.txt",
+      "sha256": "123fb1d19232b587da4d79e35984f5c6707953ab9842eeb99782cf8a9dd3e8ec",
+      "bytes": 41
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_row_spell_pending_dice.txt",
+      "sha256": "bd9a6d38447b1c4cad7ba6bb5be16a54b3156ff88bf02b3bb7834c4ffd280cf9",
+      "bytes": 38
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_shaksi.txt",
+      "sha256": "c1cf6f8f9ed1b936fe2c433b8b2bf2d34af6483f6a016e27dea06b08f75f7dc5",
+      "bytes": 22
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_single_roll_c1.txt",
+      "sha256": "ba707b5da44567ecb93782ef189dfb3320d0b8616e77357527db979fbc26849c",
+      "bytes": 35
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_single_roll_c2.txt",
+      "sha256": "0b9e21681fea809ff665844126eaae305f2003831fb07ec2780ba4c41e95ff08",
+      "bytes": 39
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_special_attack_journal.txt",
+      "sha256": "53c5c9294fe91b0454d0edc5c82410b5ad4fcc4d3bd68f23f7209577f1bc9e1c",
+      "bytes": 60196
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_stage31_fixes.txt",
+      "sha256": "4baf8e70e54fc7c8efa09ca7e58ce0aabf411de44bf3e23d9e23800979ed4b6d",
+      "bytes": 2687
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_status_journal.txt",
+      "sha256": "542fc5bc8f0709bb5fc4c7ac149072e1d558bb385295475c01db819ba4dccf94",
+      "bytes": 88924
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_swamp_queen.txt",
+      "sha256": "4d27d76a1cca0282d7ee16bc06426a7c951248b4134f844306772c0ad5419ca9",
+      "bytes": 74
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_temple_combat.txt",
+      "sha256": "c2933c4b3f39f956934601123977d96b43802cec1b711b302c559b8852a05a4a",
+      "bytes": 24
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_temple_ranged.txt",
+      "sha256": "64cce58d7df4814c9ca7f2ffc5348cb4f37e6aa11f764194fd96aebe80a74d81",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_tremor_incarnation.txt",
+      "sha256": "07885c8ebbda120d2dfdddcd6553bc055d2ac3e1f23518b8853d668eb44ca5ac",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_tremor_movement.txt",
+      "sha256": "fc9221d70de63f0fe94b7d0c0bfeb57003a44569475c6b83095c56e9c5abdd80",
+      "bytes": 25
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_troll_prophecy_ui.txt",
+      "sha256": "9d9cf92519f95553caaeac03a03c4a69bd261a14b75fe0dbba3f220f80713c2d",
+      "bytes": 38
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_turn_instant_result_visibility.txt",
+      "sha256": "0db83e471773c6abaa2fce08d469dd7ca56087c6e05b8c1f30738f70fb856158",
+      "bytes": 50
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_turn_instant_stack.txt",
+      "sha256": "1e33c1b9a9c6d7ef08d3c627bb6ff435ae03c1c45a9d7d48fcbc50e4e6e0d84d",
+      "bytes": 34
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_turn_timer.txt",
+      "sha256": "f8030de5075d74fc18360f5ec380b9bbd7cb94666f01094de38da0f241331e01",
+      "bytes": 15
+    },
+    {
+      "file": "docs/evidence/stage4d3c1/test_volkhv_wound_transfer.txt",
+      "sha256": "09fd430b257ab07f8ebd3c9080278b9a3faff9c47964b79a0a2c45ad47590d9a",
+      "bytes": 36
+    },
+    {
+      "file": "tools/audit_first_set_journal.py",
+      "sha256": "b18754c6374d2b31e4b2559cf0c369be6814879763917cc1a45464d32d981362",
+      "bytes": 13876
+    },
+    {
+      "file": "tools/closure_transaction_probe.php",
+      "sha256": "68d985ef210ce5005dca3d46ae275a972978e3b9aad4b8a1f782a6d787a66bc8",
+      "bytes": 3579
+    },
+    {
+      "file": "tools/complex-s1-fixture.json",
+      "sha256": "9bee6ba783aa6f4b42738e5715fca20e852c3c77d97269773586177d164c8e82",
+      "bytes": 116016
+    },
+    {
+      "file": "tools/complex_http_probe.php",
+      "sha256": "26f69ffac6be21ea3874dcb406e89135f522e9a91a10244161fc6a27492155a2",
+      "bytes": 4359
+    },
+    {
+      "file": "tools/health-s1-fixture.json",
+      "sha256": "bae5d4f7e9181170f96d16e087ef3de94f347a24c9b1a1999089f866d38be7d5",
+      "bytes": 4834
+    },
+    {
+      "file": "tools/health_http_probe.php",
+      "sha256": "7ed3b235bd92a53572683007c0bfa3164c90b76bec4679b64091d5ae4d20e4d0",
+      "bytes": 3106
+    },
+    {
+      "file": "tools/health_transaction_probe.php",
+      "sha256": "961d41cc668c3209a7f10bcb845c456eb8e6b1542d7d1368027d3265d4227850",
+      "bytes": 3068
+    },
+    {
+      "file": "tools/movement-s1-fixture.json",
+      "sha256": "9dff3296f2470380f8c1096bfe27c1a7c8f121d9e8f2aa1457d72d3b983b1c26",
+      "bytes": 11884
+    },
+    {
+      "file": "tools/movement_http_probe.php",
+      "sha256": "91369c2ef32548390b245a9312b0d65c9484d8edb5e3ccb542470a8cdf982060",
+      "bytes": 4152
+    },
+    {
+      "file": "tools/special-s1-fixture.json",
+      "sha256": "a4f56d50e9ffd2311da3602594533e9cebbedc726f0d651d78af3ae8bedbb6ec",
+      "bytes": 12166
+    },
+    {
+      "file": "tools/special_http_probe.php",
+      "sha256": "78a486135213f408271b545c4f0956d22d41a0590880588632688498d07d0828",
+      "bytes": 4171
+    },
+    {
+      "file": "tools/status-s1-fixture.json",
+      "sha256": "822945a79569ec77f04cb0af5dc83517ad136ad288eada00f3beb7395d70d932",
+      "bytes": 13021
+    },
+    {
+      "file": "tools/status_http_probe.php",
+      "sha256": "88ef756c8ff3ec5149ffef3abee4ff424f70596aabc0d40e18e7383f2c20cd5b",
+      "bytes": 4225
+    },
+    {
+      "file": "tools/test_complex_journal.php",
+      "sha256": "c80ae72b5222290de35b9a23151da85b6cdca06a7710b7870e43cc64ce3e24ba",
+      "bytes": 25515
+    },
+    {
+      "file": "tools/test_coverage_closure_journal.php",
+      "sha256": "697fe006ebcd538e87f58c05252a0222ef6a213ddf026682d4af232e6a1c9646",
+      "bytes": 16765
+    },
+    {
+      "file": "tools/test_health_journal.php",
+      "sha256": "dcd2bca17535c3bdaa77d50752f1e1e1c5025b844e77a291b680243803a62ad2",
+      "bytes": 8722
+    },
+    {
+      "file": "tools/test_health_transaction_http.py",
+      "sha256": "346af797ca5d03b0f9aafc2fb242de1b3a47fd63c45bf5781b053f757bc8af5a",
+      "bytes": 12727
+    },
+    {
+      "file": "tools/test_integration_closure_journal.php",
+      "sha256": "2d158416e9dd51a0639ad09838c496369fe07cf9e8e64cb237b3ce5918888a0e",
+      "bytes": 9439
+    },
+    {
+      "file": "tools/test_movement_journal.php",
+      "sha256": "0ebd1e47aa6be7ee25090736a6d95417841edaf5e4312be97592768b57aa7d4f",
+      "bytes": 13474
+    },
+    {
+      "file": "tools/test_special_attack_journal.php",
+      "sha256": "c2a6aef5f441b8a5351340dcb1a8b7cf95c371f0c37536b5af2867f10acb2a39",
+      "bytes": 12577
+    },
+    {
+      "file": "tools/test_status_journal.php",
+      "sha256": "6f1534d78280b40c7b8d4e94433e42bc4d20e5ad49228bfb42c096692af494f5",
+      "bytes": 16067
+    }
+  ]
+}

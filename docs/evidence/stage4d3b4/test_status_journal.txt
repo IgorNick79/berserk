@@ -1,0 +1,1945 @@
+{
+    "status": "PASS",
+    "pairs": 29,
+    "scenarios": [
+        "native coin gain",
+        "Chronos transfer actual deltas",
+        "Bon external coin blocked",
+        "Bon own capped actual gain",
+        "Gryz permanent modifiers",
+        "native protection trait",
+        "native poison marker",
+        "marker add update remove checkpoints",
+        "hidden source visible modifier",
+        "hidden target resources",
+        "temporary declared modifier end_of_turn",
+        "temporary declared modifier permanent",
+        "temporary declared modifier 2",
+        "duration countdown no false removal",
+        "explicit modifier removal",
+        "cell marker native methods",
+        "Glorm actual cap 0",
+        "Glorm actual cap 1",
+        "Ost level 1,6,2,5",
+        "Ost level 6,1,2,5",
+        "Abyss six readiness",
+        "rejected command no resource facts",
+        "Chronos native turn continuation",
+        "Ost and banshee sequential effects",
+        "Oyuun hidden source public open and wound",
+        "native end turn modifier marker expiry",
+        "coin ceiling changes",
+        "native command repeat no duplicate gain",
+        "memory loss add and remove without source leak"
+    ],
+    "examples": {
+        "native coin gain": {
+            "structured": [
+                {
+                    "type": "coins.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "before": 0,
+                        "after": 1,
+                        "delta": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Хронос",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Хронос"
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "before": 0,
+                        "after": 1,
+                        "delta": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Хронос",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Хронос"
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Хронос получает 1 монету (0 → 1). Источник: Хронос.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Хронос получает 1 монету (0 → 1). Источник: Хронос.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "Chronos transfer actual deltas": {
+            "structured": [
+                {
+                    "type": "coins.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "cost",
+                        "before": 2,
+                        "after": 1,
+                        "delta": -1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Хронос",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Хронос"
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "cost",
+                        "before": 2,
+                        "after": 1,
+                        "delta": -1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Хронос",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Хронос"
+                        }
+                    }
+                },
+                {
+                    "type": "coins.changed",
+                    "host": {
+                        "target_id": 3,
+                        "reason": "action",
+                        "before": 0,
+                        "after": 1,
+                        "delta": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "3": {
+                                    "name": "Арбалетчик",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Хронос"
+                        }
+                    },
+                    "player": {
+                        "target_id": 3,
+                        "reason": "action",
+                        "before": 0,
+                        "after": 1,
+                        "delta": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "3": {
+                                    "name": "Арбалетчик",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Хронос"
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Хронос тратит 1 монету (2 → 1). Источник: Хронос.",
+                "Арбалетчик получает 1 монету (0 → 1). Источник: Хронос.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Хронос тратит 1 монету (2 → 1). Источник: Хронос.",
+                "Арбалетчик получает 1 монету (0 → 1). Источник: Хронос.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "Bon external coin blocked": {
+            "structured": [
+                {
+                    "type": "coins.prevented",
+                    "host": {
+                        "target_id": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Бон и Берроу",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Бон и Берроу",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Бон и Берроу: получение монет заблокировано.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Бон и Берроу: получение монет заблокировано.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "Bon own capped actual gain": {
+            "structured": [
+                {
+                    "type": "coins.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "gain",
+                        "before": 0,
+                        "after": 1,
+                        "delta": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Бон и Берроу",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Бон и Берроу"
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "gain",
+                        "before": 0,
+                        "after": 1,
+                        "delta": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Бон и Берроу",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Бон и Берроу"
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Бон и Берроу получает 1 монету (0 → 1). Источник: Бон и Берроу.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Бон и Берроу получает 1 монету (0 → 1). Источник: Бон и Берроу.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "Gryz permanent modifiers": {
+            "structured": [
+                {
+                    "type": "modifier.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "operation": "added",
+                        "stat": "direct",
+                        "value": 1,
+                        "expire": "permanent",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Грызь",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Грызь"
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "operation": "added",
+                        "stat": "direct",
+                        "value": 1,
+                        "expire": "permanent",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Грызь",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Грызь"
+                        }
+                    }
+                },
+                {
+                    "type": "modifier.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "operation": "added",
+                        "stat": "zoal",
+                        "value": 1,
+                        "expire": "permanent",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Грызь",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Грызь"
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "operation": "added",
+                        "stat": "zoal",
+                        "value": 1,
+                        "expire": "permanent",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Грызь",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Грызь"
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Грызь: получает эффект «направленный удар +1» (постоянно). Источник: Грызь.",
+                "Грызь: получает эффект «защита от атак летающих +1» (постоянно). Источник: Грызь.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Грызь: получает эффект «направленный удар +1» (постоянно). Источник: Грызь.",
+                "Грызь: получает эффект «защита от атак летающих +1» (постоянно). Источник: Грызь.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "native protection trait": {
+            "structured": [
+                {
+                    "type": "trait.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "trait": "zoal",
+                        "active": true,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Шаман-душегрыз",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Шаман-душегрыз"
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "trait": "zoal",
+                        "active": true,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Шаман-душегрыз",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Шаман-душегрыз"
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Шаман-душегрыз: получено свойство «Защита от атак летающих».",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Шаман-душегрыз: получено свойство «Защита от атак летающих».",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "native poison marker": {
+            "structured": [
+                {
+                    "type": "marker.changed",
+                    "host": {
+                        "target_id": 2,
+                        "reason": "action",
+                        "marker": "poison",
+                        "before": null,
+                        "after": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            },
+                            "cause_name": "Ундина"
+                        }
+                    },
+                    "player": {
+                        "target_id": 2,
+                        "reason": "action",
+                        "marker": "poison",
+                        "before": null,
+                        "after": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            },
+                            "cause_name": "Ундина"
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Тролль: Яд добавлен (1). Источник: Ундина.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Тролль: Яд добавлен (1). Источник: Ундина.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "marker add update remove checkpoints": {
+            "structured": [
+                {
+                    "type": "marker.changed",
+                    "host": {
+                        "target_id": 2,
+                        "reason": "effect",
+                        "marker": "hunt",
+                        "before": null,
+                        "after": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 2,
+                        "reason": "effect",
+                        "marker": "hunt",
+                        "before": null,
+                        "after": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "type": "marker.changed",
+                    "host": {
+                        "target_id": 2,
+                        "reason": "effect",
+                        "marker": "hunt",
+                        "before": 1,
+                        "after": 2,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 2,
+                        "reason": "effect",
+                        "marker": "hunt",
+                        "before": 1,
+                        "after": 2,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "type": "marker.changed",
+                    "host": {
+                        "target_id": 2,
+                        "reason": "action",
+                        "marker": "hunt",
+                        "before": 2,
+                        "after": null,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 2,
+                        "reason": "action",
+                        "marker": "hunt",
+                        "before": 2,
+                        "after": null,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Тролль: Охота добавлен (1).",
+                "Тролль: Охота 1 → 2.",
+                "Тролль: Охота снят.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Тролль: Охота добавлен (1).",
+                "Тролль: Охота 1 → 2.",
+                "Тролль: Охота снят.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "hidden source visible modifier": {
+            "structured": [
+                {
+                    "type": "modifier.changed",
+                    "host": {
+                        "target_id": 2,
+                        "reason": "action",
+                        "operation": "added",
+                        "stat": "ova",
+                        "value": 2,
+                        "expire": "end_of_turn",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 2,
+                        "reason": "action",
+                        "operation": "added",
+                        "stat": "ova",
+                        "value": 2,
+                        "expire": "end_of_turn",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Тролль: получает эффект «ОВА +2» (до конца хода).",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Тролль: получает эффект «ОВА +2» (до конца хода).",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "hidden target resources": {
+            "structured": [
+                {
+                    "type": "coins.changed",
+                    "host": null,
+                    "player": {
+                        "target_id": 2,
+                        "reason": "action",
+                        "before": 0,
+                        "after": 1,
+                        "delta": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "type": "modifier.changed",
+                    "host": null,
+                    "player": {
+                        "target_id": 2,
+                        "reason": "action",
+                        "operation": "added",
+                        "stat": "ova",
+                        "value": 2,
+                        "expire": "permanent",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Тролль получает 1 монету (0 → 1).",
+                "Тролль: получает эффект «ОВА +2» (постоянно).",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "temporary declared modifier end_of_turn": {
+            "structured": [
+                {
+                    "type": "modifier.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "operation": "added",
+                        "stat": "ova",
+                        "value": 2,
+                        "expire": "end_of_turn",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Арбалетчик",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "operation": "added",
+                        "stat": "ova",
+                        "value": 2,
+                        "expire": "end_of_turn",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Арбалетчик",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Арбалетчик: получает эффект «ОВА +2» (до конца хода).",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Арбалетчик: получает эффект «ОВА +2» (до конца хода).",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "temporary declared modifier permanent": {
+            "structured": [
+                {
+                    "type": "modifier.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "operation": "added",
+                        "stat": "ova",
+                        "value": 2,
+                        "expire": "permanent",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Арбалетчик",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "operation": "added",
+                        "stat": "ova",
+                        "value": 2,
+                        "expire": "permanent",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Арбалетчик",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Арбалетчик: получает эффект «ОВА +2» (постоянно).",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Арбалетчик: получает эффект «ОВА +2» (постоянно).",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "temporary declared modifier 2": {
+            "structured": [
+                {
+                    "type": "modifier.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "operation": "added",
+                        "stat": "ova",
+                        "value": 2,
+                        "expire": 2,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Арбалетчик",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "operation": "added",
+                        "stat": "ova",
+                        "value": 2,
+                        "expire": 2,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Арбалетчик",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Арбалетчик: получает эффект «ОВА +2» (срок: 2).",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Арбалетчик: получает эффект «ОВА +2» (срок: 2).",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "duration countdown no false removal": {
+            "structured": [],
+            "host": [
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "explicit modifier removal": {
+            "structured": [
+                {
+                    "type": "modifier.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "expired",
+                        "operation": "removed",
+                        "stat": "ova",
+                        "value": 2,
+                        "expire": "end_of_turn",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Арбалетчик",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "expired",
+                        "operation": "removed",
+                        "stat": "ova",
+                        "value": 2,
+                        "expire": "end_of_turn",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Арбалетчик",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Арбалетчик: истёк эффект «ОВА +2».",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Арбалетчик: истёк эффект «ОВА +2».",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "cell marker native methods": {
+            "structured": [
+                {
+                    "type": "cell_marker.changed",
+                    "host": {
+                        "cell": [
+                            4,
+                            4
+                        ],
+                        "marker": "bonfire",
+                        "before": 0,
+                        "after": 1,
+                        "reason": "effect",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": []
+                        }
+                    },
+                    "player": {
+                        "cell": [
+                            4,
+                            4
+                        ],
+                        "marker": "bonfire",
+                        "before": 0,
+                        "after": 1,
+                        "reason": "effect",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": []
+                        }
+                    }
+                },
+                {
+                    "type": "cell_marker.changed",
+                    "host": {
+                        "cell": [
+                            4,
+                            4
+                        ],
+                        "marker": "bonfire",
+                        "before": 1,
+                        "after": 0,
+                        "reason": "action",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": []
+                        }
+                    },
+                    "player": {
+                        "cell": [
+                            4,
+                            4
+                        ],
+                        "marker": "bonfire",
+                        "before": 1,
+                        "after": 0,
+                        "reason": "action",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": []
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Клетка Вражеский [1:4]: Костёр добавлен (1).",
+                "Клетка Вражеский [1:4]: Костёр снят.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Клетка Свой [1:2]: Костёр добавлен (1).",
+                "Клетка Свой [1:2]: Костёр снят.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "Glorm actual cap 0": {
+            "structured": [
+                {
+                    "type": "coins.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "cost",
+                        "before": 1,
+                        "after": 0,
+                        "delta": -1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кшар",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Кшар"
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "cost",
+                        "before": 1,
+                        "after": 0,
+                        "delta": -1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кшар",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Кшар"
+                        }
+                    }
+                },
+                {
+                    "type": "instant.result",
+                    "host": {
+                        "target_id": 2,
+                        "source_id": 4,
+                        "ability": "Отвлекающая вспышка",
+                        "effect": "damage_cap",
+                        "after": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                },
+                                "4": {
+                                    "name": "Глорм",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 2,
+                        "source_id": 4,
+                        "ability": "Отвлекающая вспышка",
+                        "effect": "damage_cap",
+                        "after": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                },
+                                "4": {
+                                    "name": "Глорм",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Кшар тратит 1 монету (1 → 0). Источник: Кшар.",
+                "Кшар: Особый удар → Тролль.",
+                "Кшар: Бросок: 4.",
+                "Кшар: Итог кубика: 4 (исходное 4, модификатор 0).",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Глорм получает 1 рану.",
+                "Тролль: урон ограничен: 1. Источник: Глорм — Отвлекающая вспышка.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль получает 1 рану.",
+                "Тролль: Особый удар — итог: величина 1."
+            ],
+            "player": [
+                "Кшар тратит 1 монету (1 → 0). Источник: Кшар.",
+                "Кшар: Особый удар → Тролль.",
+                "Кшар: Бросок: 4.",
+                "Кшар: Итог кубика: 4 (исходное 4, модификатор 0).",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Глорм получает 1 рану.",
+                "Тролль: урон ограничен: 1. Источник: Глорм — Отвлекающая вспышка.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль получает 1 рану.",
+                "Тролль: Особый удар — итог: величина 1."
+            ]
+        },
+        "Glorm actual cap 1": {
+            "structured": [
+                {
+                    "type": "coins.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "cost",
+                        "before": 1,
+                        "after": 0,
+                        "delta": -1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кшар",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Кшар"
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "cost",
+                        "before": 1,
+                        "after": 0,
+                        "delta": -1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кшар",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Кшар"
+                        }
+                    }
+                },
+                {
+                    "type": "instant.result",
+                    "host": {
+                        "target_id": 2,
+                        "effect": "damage_cap",
+                        "after": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 2,
+                        "source_id": 4,
+                        "ability": "Отвлекающая вспышка",
+                        "effect": "damage_cap",
+                        "after": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                },
+                                "4": {
+                                    "name": "Глорм",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Кшар тратит 1 монету (1 → 0). Источник: Кшар.",
+                "Кшар: Особый удар → Тролль.",
+                "Кшар: Бросок: 4.",
+                "Кшар: Итог кубика: 4 (исходное 4, модификатор 0).",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль: урон ограничен: 1.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль получает 1 рану.",
+                "Тролль: Особый удар — итог: величина 1."
+            ],
+            "player": [
+                "Кшар тратит 1 монету (1 → 0). Источник: Кшар.",
+                "Кшар: Особый удар → Тролль.",
+                "Кшар: Бросок: 4.",
+                "Кшар: Итог кубика: 4 (исходное 4, модификатор 0).",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Глорм получает 1 рану.",
+                "Тролль: урон ограничен: 1. Источник: Глорм — Отвлекающая вспышка.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль получает 1 рану.",
+                "Тролль: Особый удар — итог: величина 1."
+            ]
+        },
+        "Ost level 1,6,2,5": {
+            "structured": [
+                {
+                    "type": "instant.result",
+                    "host": {
+                        "target_id": 1,
+                        "source_id": 3,
+                        "ability": "Дар силы",
+                        "effect": "strike_level",
+                        "before": "weak",
+                        "after": "strong",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                },
+                                "3": {
+                                    "name": "Ост",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "source_id": 3,
+                        "ability": "Дар силы",
+                        "effect": "strike_level",
+                        "before": "weak",
+                        "after": "strong",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                },
+                                "3": {
+                                    "name": "Ост",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Кочевник атакует Тролль.",
+                "Часть игровых событий не записана. История неполная.",
+                "Бросок: атакующий 1, защитник без броска.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Кочевник: сила удара слабый → сильный. Источник: Ост — Дар силы.",
+                "Кочевник: Итог кубика: 1 (исходное 1, модификатор 0).",
+                "Часть игровых событий не записана. История неполная.",
+                "Итог атаки: сильный удар; ответ: промах.",
+                "Тролль получает 3 раны."
+            ],
+            "player": [
+                "Кочевник атакует Тролль.",
+                "Часть игровых событий не записана. История неполная.",
+                "Бросок: атакующий 1, защитник без броска.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Кочевник: сила удара слабый → сильный. Источник: Ост — Дар силы.",
+                "Кочевник: Итог кубика: 1 (исходное 1, модификатор 0).",
+                "Часть игровых событий не записана. История неполная.",
+                "Итог атаки: сильный удар; ответ: промах.",
+                "Тролль получает 3 раны."
+            ]
+        },
+        "Ost level 6,1,2,5": {
+            "structured": [
+                {
+                    "type": "instant.inactive",
+                    "host": {
+                        "source_id": 3,
+                        "reason": "no_change",
+                        "_private_owner": "host",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "3": {
+                                    "name": "Ост",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": null
+                }
+            ],
+            "host": [
+                "Кочевник атакует Тролль.",
+                "Часть игровых событий не записана. История неполная.",
+                "Бросок: атакующий 6, защитник без броска.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Ост: инстант не изменил результат.",
+                "Кочевник: Итог кубика: 6 (исходное 6, модификатор 0).",
+                "Часть игровых событий не записана. История неполная.",
+                "Итог атаки: сильный удар; ответ: промах.",
+                "Тролль получает 3 раны."
+            ],
+            "player": [
+                "Кочевник атакует Тролль.",
+                "Часть игровых событий не записана. История неполная.",
+                "Бросок: атакующий 6, защитник без броска.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Кочевник: Итог кубика: 6 (исходное 6, модификатор 0).",
+                "Часть игровых событий не записана. История неполная.",
+                "Итог атаки: сильный удар; ответ: промах.",
+                "Тролль получает 3 раны."
+            ]
+        },
+        "Abyss six readiness": {
+            "structured": [
+                {
+                    "type": "capability.ready_six",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Повелитель бездны",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Повелитель бездны",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль погибает.",
+                "Повелитель бездны: подготовлена шестёрка для следующего броска."
+            ],
+            "player": [
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль погибает.",
+                "Повелитель бездны: подготовлена шестёрка для следующего броска."
+            ]
+        },
+        "rejected command no resource facts": {
+            "structured": [],
+            "host": [],
+            "player": []
+        },
+        "Chronos native turn continuation": {
+            "structured": [
+                {
+                    "type": "coins.changed",
+                    "host": {
+                        "target_id": 3,
+                        "reason": "cost",
+                        "before": 1,
+                        "after": 0,
+                        "delta": -1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "3": {
+                                    "name": "Хронос",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Хронос"
+                        }
+                    },
+                    "player": {
+                        "target_id": 3,
+                        "reason": "cost",
+                        "before": 1,
+                        "after": 0,
+                        "delta": -1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "3": {
+                                    "name": "Хронос",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Хронос"
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Часть игровых событий не записана. История неполная.",
+                "Хронос тратит 1 монету (1 → 0). Источник: Хронос.",
+                "Часть игровых событий не записана. История неполная.",
+                "Кочевник восстанавливает 2 HP.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Часть игровых событий не записана. История неполная.",
+                "Хронос тратит 1 монету (1 → 0). Источник: Хронос.",
+                "Часть игровых событий не записана. История неполная.",
+                "Кочевник восстанавливает 2 HP.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "Ost and banshee sequential effects": {
+            "structured": [
+                {
+                    "type": "instant.result",
+                    "host": {
+                        "target_id": 1,
+                        "source_id": 3,
+                        "ability": "Дар силы",
+                        "effect": "strike_level",
+                        "before": "weak",
+                        "after": "strong",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                },
+                                "3": {
+                                    "name": "Ост",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "source_id": 3,
+                        "ability": "Дар силы",
+                        "effect": "strike_level",
+                        "before": "weak",
+                        "after": "strong",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                },
+                                "3": {
+                                    "name": "Ост",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "type": "coins.changed",
+                    "host": {
+                        "target_id": 4,
+                        "reason": "gain",
+                        "before": 0,
+                        "after": 1,
+                        "delta": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "4": {
+                                    "name": "Лунная баньши",
+                                    "owner": "player"
+                                }
+                            },
+                            "cause_name": "Лунная баньши"
+                        }
+                    },
+                    "player": {
+                        "target_id": 4,
+                        "reason": "gain",
+                        "before": 0,
+                        "after": 1,
+                        "delta": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "4": {
+                                    "name": "Лунная баньши",
+                                    "owner": "player"
+                                }
+                            },
+                            "cause_name": "Лунная баньши"
+                        }
+                    }
+                },
+                {
+                    "type": "instant.result",
+                    "host": {
+                        "target_id": 1,
+                        "source_id": 4,
+                        "ability": "Крик баньши",
+                        "effect": "strike_value",
+                        "before": 3,
+                        "after": 2,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                },
+                                "4": {
+                                    "name": "Лунная баньши",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "source_id": 4,
+                        "ability": "Крик баньши",
+                        "effect": "strike_value",
+                        "before": 3,
+                        "after": 2,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                },
+                                "4": {
+                                    "name": "Лунная баньши",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Кочевник атакует Тролль.",
+                "Часть игровых событий не записана. История неполная.",
+                "Бросок: атакующий 1, защитник без броска.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Кочевник: сила удара слабый → сильный. Источник: Ост — Дар силы.",
+                "Лунная баньши получает 1 монету (0 → 1). Источник: Лунная баньши.",
+                "Кочевник: величина удара 3 → 2. Источник: Лунная баньши — Крик баньши.",
+                "Кочевник: Итог кубика: 1 (исходное 1, модификатор 0).",
+                "Часть игровых событий не записана. История неполная.",
+                "Итог атаки: сильный удар; ответ: промах.",
+                "Тролль получает 2 раны."
+            ],
+            "player": [
+                "Кочевник атакует Тролль.",
+                "Часть игровых событий не записана. История неполная.",
+                "Бросок: атакующий 1, защитник без броска.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Кочевник: сила удара слабый → сильный. Источник: Ост — Дар силы.",
+                "Лунная баньши получает 1 монету (0 → 1). Источник: Лунная баньши.",
+                "Кочевник: величина удара 3 → 2. Источник: Лунная баньши — Крик баньши.",
+                "Кочевник: Итог кубика: 1 (исходное 1, модификатор 0).",
+                "Часть игровых событий не записана. История неполная.",
+                "Итог атаки: сильный удар; ответ: промах.",
+                "Тролль получает 2 раны."
+            ]
+        },
+        "Oyuun hidden source public open and wound": {
+            "structured": [
+                {
+                    "type": "status.changed",
+                    "host": {
+                        "target_id": 2,
+                        "closed": false,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 2,
+                        "closed": false,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль получает 1 рану.",
+                "Тролль открывается."
+            ],
+            "player": [
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль получает 1 рану.",
+                "Тролль открывается."
+            ]
+        },
+        "native end turn modifier marker expiry": {
+            "structured": [
+                {
+                    "type": "modifier.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "expired",
+                        "operation": "removed",
+                        "stat": "ova",
+                        "value": 2,
+                        "expire": "end_of_turn",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "expired",
+                        "operation": "removed",
+                        "stat": "ova",
+                        "value": 2,
+                        "expire": "end_of_turn",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "type": "marker.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "expired",
+                        "marker": "hunt",
+                        "before": 2,
+                        "after": null,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "expired",
+                        "marker": "hunt",
+                        "before": 2,
+                        "after": null,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Кочевник: истёк эффект «ОВА +2».",
+                "Кочевник: Охота — срок истёк.",
+                "Ход 1. Игрок 1.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Кочевник: истёк эффект «ОВА +2».",
+                "Кочевник: Охота — срок истёк.",
+                "Ход 1. Игрок 1.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "coin ceiling changes": {
+            "structured": [
+                {
+                    "type": "coins.limit",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "before": 0,
+                        "after": 3,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Хронос",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "before": 0,
+                        "after": 3,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Хронос",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Хронос: предел монет 3.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Хронос: предел монет 3.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "native command repeat no duplicate gain": {
+            "structured": [
+                {
+                    "type": "coins.changed",
+                    "host": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "before": 0,
+                        "after": 1,
+                        "delta": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Хронос",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Хронос"
+                        }
+                    },
+                    "player": {
+                        "target_id": 1,
+                        "reason": "action",
+                        "before": 0,
+                        "after": 1,
+                        "delta": 1,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Хронос",
+                                    "owner": "host"
+                                }
+                            },
+                            "cause_name": "Хронос"
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Хронос получает 1 монету (0 → 1). Источник: Хронос.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Хронос получает 1 монету (0 → 1). Источник: Хронос.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "memory loss add and remove without source leak": {
+            "structured": [
+                {
+                    "type": "status.condition",
+                    "host": {
+                        "target_id": 2,
+                        "reason": "effect",
+                        "condition": "memory_loss",
+                        "active": true,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 2,
+                        "reason": "effect",
+                        "condition": "memory_loss",
+                        "active": true,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "type": "status.condition",
+                    "host": {
+                        "target_id": 2,
+                        "reason": "action",
+                        "condition": "memory_loss",
+                        "active": false,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "target_id": 2,
+                        "reason": "action",
+                        "condition": "memory_loss",
+                        "active": false,
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Тролль: получено состояние «Потеря памяти».",
+                "Тролль: снято состояние «Потеря памяти».",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Тролль: получено состояние «Потеря памяти».",
+                "Тролль: снято состояние «Потеря памяти».",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        }
+    }
+}

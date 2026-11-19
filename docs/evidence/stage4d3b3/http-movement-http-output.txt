@@ -1,0 +1,1 @@
+{"status":"PASS","rollback":true,"retry":true,"types":["journal_effect.started","movement.completed","journal_effect.interrupted","recording_gap.started","recording_gap.settled","journal_effect.started","zone.changed","card.transformed","zone.changed","journal_effect.settled"]}

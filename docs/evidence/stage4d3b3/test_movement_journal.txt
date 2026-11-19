@@ -1,0 +1,1558 @@
+{
+    "status": "PASS",
+    "pairs": 30,
+    "scenarios": [
+        "jump s1_89",
+        "jump s1_107",
+        "jump s1_145",
+        "jump s1_155",
+        "jump s1_182",
+        "jump s1_185",
+        "jump s1_191",
+        "ordinary move",
+        "jump hidden",
+        "jump rejected",
+        "jump repeat",
+        "jump blocked",
+        "forced move hidden external cause",
+        "summon 0",
+        "summon 1",
+        "seeker transform 0",
+        "seeker transform 1",
+        "active gain flight",
+        "exile repeat",
+        "ordinary death no zone noise",
+        "native revive pending",
+        "native teleport pending",
+        "ground incarnation native",
+        "flying incarnation native",
+        "form visibility boundary contract",
+        "same form not a second transformation",
+        "jump blocked cell marker",
+        "incarnated death and exile are distinct",
+        "jump across nonblocking cell marker",
+        "Shaksi jump nested wounds continuation"
+    ],
+    "examples": {
+        "jump s1_89": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Грызь",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Грызь",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Грызь прыгает: Свой [1:3] → Вражеский [1:4].",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Грызь прыгает: Вражеский [1:3] → Свой [1:2].",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "jump s1_107": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Болотник",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Болотник",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Болотник прыгает: Свой [1:3] → Вражеский [1:4].",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Болотник прыгает: Вражеский [1:3] → Свой [1:2].",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "jump s1_145": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "teleport",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Демон зависти",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "teleport",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Демон зависти",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Демон зависти телепортируется: Свой [1:3] → Вражеский [1:4].",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Демон зависти телепортируется: Вражеский [1:3] → Свой [1:2].",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "jump s1_155": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "teleport",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Рогатый демон",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "teleport",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Рогатый демон",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Рогатый демон телепортируется: Свой [1:3] → Вражеский [1:4].",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Рогатый демон телепортируется: Вражеский [1:3] → Свой [1:2].",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "jump s1_182": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Матросы Аделаиды",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Матросы Аделаиды",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Матросы Аделаиды прыгает: Свой [1:3] → Вражеский [1:4].",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Матросы Аделаиды прыгает: Вражеский [1:3] → Свой [1:2].",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "jump s1_185": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Шакси",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Шакси",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Шакси прыгает: Свой [1:3] → Вражеский [1:4].",
+                "Шакси: Бросок: 4.",
+                "Шакси: Итог кубика: 4.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Шакси прыгает: Вражеский [1:3] → Свой [1:2].",
+                "Шакси: Бросок: 4.",
+                "Шакси: Итог кубика: 4.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "jump s1_191": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Ассасин",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Ассасин",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Ассасин прыгает: Свой [1:3] → Вражеский [1:4].",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Ассасин прыгает: Вражеский [1:3] → Свой [1:2].",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "ordinary move": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            3,
+                            4
+                        ],
+                        "movement_type": "move",
+                        "display_kind": "move",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            3,
+                            4
+                        ],
+                        "movement_type": "move",
+                        "display_kind": "move",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Кочевник перемещается: Свой [1:3] → Свой [1:4].",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Кочевник перемещается: Вражеский [1:3] → Вражеский [1:2].",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "jump hidden": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Грызь",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": null
+                }
+            ],
+            "host": [
+                "Грызь прыгает: Свой [1:3] → Вражеский [1:4].",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "jump rejected": {
+            "structured": [],
+            "host": [],
+            "player": []
+        },
+        "jump repeat": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Грызь",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Грызь",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Грызь прыгает: Свой [1:3] → Вражеский [1:4].",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Грызь прыгает: Вражеский [1:3] → Свой [1:2].",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "jump blocked": {
+            "structured": [],
+            "host": [],
+            "player": []
+        },
+        "forced move hidden external cause": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 2,
+                        "from": [
+                            5,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            3
+                        ],
+                        "movement_type": "forced_move",
+                        "display_kind": "forced_move",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 2,
+                        "from": [
+                            5,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            3
+                        ],
+                        "movement_type": "forced_move",
+                        "display_kind": "forced_move",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Тролль принудительно перемещается: Вражеский [2:3] → Вражеский [1:3]."
+            ],
+            "player": [
+                "Тролль принудительно перемещается: Свой [2:3] → Свой [1:3]."
+            ]
+        },
+        "summon 0": {
+            "structured": [
+                {
+                    "type": "zone.changed",
+                    "host": {
+                        "card_id": 1,
+                        "from_zone": "deck",
+                        "to_zone": "field",
+                        "position": [
+                            4,
+                            4
+                        ],
+                        "reason": "summon",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Отряд карателей",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from_zone": "deck",
+                        "to_zone": "field",
+                        "position": [
+                            4,
+                            4
+                        ],
+                        "reason": "summon",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Отряд карателей",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Отряд карателей призывается: поле (Вражеский [1:4])."
+            ],
+            "player": [
+                "Отряд карателей призывается: поле (Свой [1:2])."
+            ]
+        },
+        "summon 1": {
+            "structured": [
+                {
+                    "type": "zone.changed",
+                    "host": {
+                        "card_id": 1,
+                        "from_zone": "deck",
+                        "to_zone": "field",
+                        "position": [
+                            4,
+                            4
+                        ],
+                        "reason": "summon",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Отряд карателей",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from_zone": "deck",
+                        "to_zone": "field",
+                        "position": [
+                            4,
+                            4
+                        ],
+                        "reason": "summon",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Отряд карателей",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Отряд карателей призывается: поле (Вражеский [1:4])."
+            ],
+            "player": [
+                "Отряд карателей призывается: поле (Свой [1:2])."
+            ]
+        },
+        "seeker transform 0": {
+            "structured": [
+                {
+                    "type": "card.transformed",
+                    "host": {
+                        "card_id": 1,
+                        "after": {
+                            "type": "fly",
+                            "zone": "flying"
+                        },
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Искатель тайн",
+                                    "owner": "host"
+                                }
+                            }
+                        },
+                        "before": {
+                            "type": "creature",
+                            "zone": "field"
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "after": {
+                            "type": "fly",
+                            "zone": "flying"
+                        },
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Искатель тайн",
+                                    "owner": "host"
+                                }
+                            }
+                        },
+                        "before": {
+                            "type": "creature",
+                            "zone": "field"
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Искатель тайн: трансформация — существо → летающее существо.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Искатель тайн: трансформация — существо → летающее существо.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "seeker transform 1": {
+            "structured": [
+                {
+                    "type": "card.transformed",
+                    "host": {
+                        "card_id": 1,
+                        "after": {
+                            "type": "fly",
+                            "zone": "flying"
+                        },
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Искатель тайн",
+                                    "owner": "host"
+                                }
+                            }
+                        },
+                        "before": {
+                            "type": "creature",
+                            "zone": "field"
+                        }
+                    },
+                    "player": null
+                }
+            ],
+            "host": [
+                "Искатель тайн: трансформация — существо → летающее существо.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "active gain flight": {
+            "structured": [
+                {
+                    "type": "card.transformed",
+                    "host": {
+                        "card_id": 1,
+                        "after": {
+                            "type": "fly",
+                            "zone": "flying"
+                        },
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Владыка небес",
+                                    "owner": "host"
+                                }
+                            }
+                        },
+                        "before": {
+                            "type": "creature",
+                            "zone": "field"
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "after": {
+                            "type": "fly",
+                            "zone": "flying"
+                        },
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Владыка небес",
+                                    "owner": "host"
+                                }
+                            }
+                        },
+                        "before": {
+                            "type": "creature",
+                            "zone": "field"
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Владыка небес: трансформация — существо → летающее существо.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Владыка небес: трансформация — существо → летающее существо.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "exile repeat": {
+            "structured": [
+                {
+                    "type": "zone.changed",
+                    "host": {
+                        "card_id": 2,
+                        "from_zone": "field",
+                        "to_zone": "exile",
+                        "position": null,
+                        "reason": "",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 2,
+                        "from_zone": "field",
+                        "to_zone": "exile",
+                        "position": null,
+                        "reason": "",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Тролль изгоняется."
+            ],
+            "player": [
+                "Тролль изгоняется."
+            ]
+        },
+        "ordinary death no zone noise": {
+            "structured": [],
+            "host": [
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль погибает."
+            ],
+            "player": [
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль погибает."
+            ]
+        },
+        "native revive pending": {
+            "structured": [
+                {
+                    "type": "zone.changed",
+                    "host": {
+                        "card_id": 3,
+                        "from_zone": "graveyard",
+                        "to_zone": "field",
+                        "position": [
+                            4,
+                            4
+                        ],
+                        "reason": "revive",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "3": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 3,
+                        "from_zone": "graveyard",
+                        "to_zone": "field",
+                        "position": [
+                            4,
+                            4
+                        ],
+                        "reason": "revive",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "3": {
+                                    "name": "Кочевник",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Кочевник возвращается с кладбища: поле (Вражеский [1:4]).",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Кочевник возвращается с кладбища: поле (Свой [1:2]).",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "native teleport pending": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 2,
+                        "from": [
+                            5,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "teleport",
+                        "display_kind": "teleport",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 2,
+                        "from": [
+                            5,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "teleport",
+                        "display_kind": "teleport",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль телепортируется: Вражеский [2:3] → Вражеский [1:4].",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль телепортируется: Свой [2:3] → Свой [1:2].",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "ground incarnation native": {
+            "structured": [
+                {
+                    "type": "zone.changed",
+                    "host": {
+                        "card_id": 1,
+                        "from_zone": "graveyard",
+                        "to_zone": "field",
+                        "position": [
+                            1,
+                            3
+                        ],
+                        "reason": "incarnation",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Моровой всадник",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from_zone": "graveyard",
+                        "to_zone": "field",
+                        "position": [
+                            1,
+                            3
+                        ],
+                        "reason": "incarnation",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Моровой всадник",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Моровой всадник возвращается с кладбища: поле (Свой [3:3]).",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Моровой всадник возвращается с кладбища: поле (Вражеский [3:3]).",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "flying incarnation native": {
+            "structured": [
+                {
+                    "type": "zone.changed",
+                    "host": {
+                        "card_id": 1,
+                        "from_zone": "graveyard",
+                        "to_zone": "flying",
+                        "position": null,
+                        "reason": "incarnation",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Вестник мора",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from_zone": "graveyard",
+                        "to_zone": "flying",
+                        "position": null,
+                        "reason": "incarnation",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Вестник мора",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Вестник мора возвращается с кладбища: зона летающих."
+            ],
+            "player": [
+                "Вестник мора возвращается с кладбища: зона летающих."
+            ]
+        },
+        "form visibility boundary contract": {
+            "structured": [
+                {
+                    "type": "card.transformed",
+                    "host": {
+                        "card_id": 1,
+                        "after": {
+                            "type": "fly",
+                            "zone": "field"
+                        },
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Искатель тайн",
+                                    "owner": "host"
+                                }
+                            }
+                        },
+                        "before": {
+                            "type": "creature",
+                            "zone": "field"
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "after": {
+                            "type": "fly",
+                            "zone": "field"
+                        },
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Искатель тайн",
+                                    "owner": "host"
+                                }
+                            }
+                        },
+                        "before": null
+                    }
+                }
+            ],
+            "host": [
+                "Искатель тайн: трансформация — существо → летающее существо."
+            ],
+            "player": [
+                "Искатель тайн: трансформация — летающее существо."
+            ]
+        },
+        "same form not a second transformation": {
+            "structured": [
+                {
+                    "type": "card.transformed",
+                    "host": {
+                        "card_id": 1,
+                        "after": {
+                            "type": "fly",
+                            "zone": "flying"
+                        },
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Искатель тайн",
+                                    "owner": "host"
+                                }
+                            }
+                        },
+                        "before": {
+                            "type": "creature",
+                            "zone": "field"
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "after": {
+                            "type": "fly",
+                            "zone": "flying"
+                        },
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Искатель тайн",
+                                    "owner": "host"
+                                }
+                            }
+                        },
+                        "before": {
+                            "type": "creature",
+                            "zone": "field"
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Искатель тайн: трансформация — существо → летающее существо.",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Искатель тайн: трансформация — существо → летающее существо.",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "jump blocked cell marker": {
+            "structured": [],
+            "host": [],
+            "player": []
+        },
+        "incarnated death and exile are distinct": {
+            "structured": [
+                {
+                    "type": "zone.changed",
+                    "host": {
+                        "card_id": 2,
+                        "from_zone": "field",
+                        "to_zone": "exile",
+                        "position": null,
+                        "reason": "",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 2,
+                        "from_zone": "field",
+                        "to_zone": "exile",
+                        "position": null,
+                        "reason": "",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "2": {
+                                    "name": "Тролль",
+                                    "owner": "player"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль погибает.",
+                "Тролль изгоняется."
+            ],
+            "player": [
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль погибает.",
+                "Тролль изгоняется."
+            ]
+        },
+        "jump across nonblocking cell marker": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Грызь",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Грызь",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Грызь прыгает: Свой [1:3] → Вражеский [1:4].",
+                "Часть игровых событий не записана. История неполная."
+            ],
+            "player": [
+                "Грызь прыгает: Вражеский [1:3] → Свой [1:2].",
+                "Часть игровых событий не записана. История неполная."
+            ]
+        },
+        "Shaksi jump nested wounds continuation": {
+            "structured": [
+                {
+                    "type": "movement.completed",
+                    "host": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Шакси",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    },
+                    "player": {
+                        "card_id": 1,
+                        "from": [
+                            3,
+                            3
+                        ],
+                        "to": [
+                            4,
+                            4
+                        ],
+                        "movement_type": "jump",
+                        "display_kind": "jump",
+                        "origin": "ordinary",
+                        "_journal": {
+                            "turn": 1,
+                            "active": "host",
+                            "cards": {
+                                "1": {
+                                    "name": "Шакси",
+                                    "owner": "host"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "host": [
+                "Шакси прыгает: Свой [1:3] → Вражеский [1:4].",
+                "Шакси: Бросок: 1.",
+                "Шакси: Итог кубика: 1.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль получает 2 раны."
+            ],
+            "player": [
+                "Шакси прыгает: Вражеский [1:3] → Свой [1:2].",
+                "Шакси: Бросок: 1.",
+                "Шакси: Итог кубика: 1.",
+                "Часть игровых событий не записана. История неполная.",
+                "Часть игровых событий не записана. История неполная.",
+                "Тролль получает 2 раны."
+            ]
+        }
+    }
+}

@@ -2,8 +2,15 @@
 declare(strict_types=1);
 define('C1_FIXTURES_ONLY',true);require __DIR__.'/test_single_roll_c1.php';
 use Berserk\Core\{Dice,Engine,Command,SingleRoll,GameState,InformationalWaitManager as IW,InstantProcessor};
+$props=[];
+if (getenv('BERSERK_STAGE4D3B2_ISOLATED')==='1') {
+ if (file_exists(__DIR__.'/../.git')) throw new RuntimeException('Disposable source copy required');
+ foreach (json_decode(file_get_contents(__DIR__.'/special-s1-fixture.json'),true,512,JSON_THROW_ON_ERROR) as $row)
+  $props[$row['ukid']]=json_decode($row['prop']??'{}',true,512,JSON_THROW_ON_ERROR);
+} else {
 $c=require getcwd().'/config/db.php';$db=new mysqli($c['host'],$c['user'],$c['pass'],$c['name']);$db->set_charset('utf8mb4');$db->query('START TRANSACTION READ ONLY');
 $props=[];foreach($db->query("SELECT ukid,prop FROM cards WHERE ukid IN ('s1_181','s1_174','s1_185','s1_96')")->fetch_all(MYSQLI_ASSOC) as $row)$props[$row['ukid']]=json_decode($row['prop'],true,512,JSON_THROW_ON_ERROR);$db->rollback();
+}
 function c2cmd(GameState $s,string $actor,string $cmd,array $payload=[]):void {$r=(new Engine())->apply($s,$actor,new Command($cmd,$payload));c1check($r->success,$cmd.' '.$actor.' '.($r->error??''));}
 function c2drain(GameState $s,string $choice):void {
  for($i=0;$i<12;$i++){

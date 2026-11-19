@@ -47,6 +47,7 @@ final class TurnProcessor
 
             if ($card->type === 'fly') {
                 $zone->toFlying($card);
+                $this->state->historyRecorder?->zoneChanged($this->state,$card,'field');
             }
         }
 
@@ -123,7 +124,9 @@ final class TurnProcessor
         if ((new AlvalindProcessor($this->state,$this->engine))->beforeEnd($playerKey)) {
             $this->state->bumpVersion();return Result::ok(['alvalind_end_pending']);
         }
+        $journalClassBonuses=$this->state->battle['class_turn_bonuses']??[];
         $this->state->battle['class_turn_bonuses']=array_values(array_filter($this->state->battle['class_turn_bonuses']??[],static fn($b)=>$b['owner']!==$playerKey));
+        foreach($journalClassBonuses as $bonus)if($bonus['owner']===$playerKey)$this->state->historyRecorder?->liveEvent($this->state,'rule.class_bonus',['owner'=>$playerKey,'class'=>$bonus['class'],'strong'=>(int)($bonus['strong']??0),'ova'=>(int)($bonus['ova']??0),'active'=>false]);
         $journalEndingTurn=(int)($this->state->battle['turn']??0);
         InstantReservation::endPeriod($this->state);
         $oppKey = $this->state->getOpponentKey($playerKey);
@@ -157,6 +160,7 @@ final class TurnProcessor
                 $card->revealed = true;
                 if ($card->type === 'fly') {
                     $zone->toFlying($card);
+                    $this->state->historyRecorder?->zoneChanged($this->state,$card,'field');
                 }
             }
         }
@@ -194,8 +198,10 @@ final class TurnProcessor
         $limit = $this->state->battle['moves_limit'] ?? null;
         if ($limit && ($limit['owner'] ?? '') === $endingKey) {
             unset($this->state->battle['moves_limit']);
+            $this->state->historyRecorder?->liveEvent($this->state,'rule.movement_limit',['owner'=>$endingKey,'limit'=>null]);
         }
 
+        $this->state->historyRecorder?->statusCheckpoint($this->state);
         // Истечение маркеров
         foreach ($this->state->cards as $card) {
             if ($card->zone !== CardInstance::ZONE_FIELD
@@ -266,6 +272,7 @@ final class TurnProcessor
             unset($card->flags['movement_direction_bonus']);
         }
 
+        $this->state->historyRecorder?->statusCheckpoint($this->state,'expired');
         // Тик маркеров клеток
         foreach ($this->state->cell_markers as $key => $markers) {
             $list = ZoneManager::markersAt($this->state, $key);
@@ -301,6 +308,8 @@ final class TurnProcessor
                 }
             }
         }
+
+        $this->state->historyRecorder?->statusCheckpoint($this->state,'expired');
 
         // Pre-turn choice (Оборотень и подобные) — до фазы начала хода
         if ($this->checkCardChoice($nextActiveKey)) {
@@ -343,6 +352,7 @@ final class TurnProcessor
                 if (!$card->closed) continue;
 
                 $card->closed = false;
+                $this->state->historyRecorder?->liveEvent($this->state,'card.status',['target_id'=>$card->instanceId,'closed'=>false,'effect'=>'open','reason'=>'Открытие в начале хода противника'],[$card->instanceId]);
             }
             // 1. Открытие карт + восстановление move
             foreach ($this->state->cards as $card) {
@@ -531,6 +541,7 @@ final class TurnProcessor
 
             $card->markers['incarnation']['value']++;
             $newValue = (int) $card->markers['incarnation']['value'];
+            $this->state->historyRecorder?->liveEvent($this->state,'marker.changed',['target_id'=>$card->instanceId,'marker'=>'incarnation','before'=>$newValue-1,'after'=>$newValue,'reason'=>'turn_start'],[$card->instanceId]);
             $threshold = (int) ($card->markers['incarnation']['threshold'] ?? 0);
 
             // Триггер "получил жетон" — до сброса в 0 и до ready
@@ -540,6 +551,7 @@ final class TurnProcessor
             if ($threshold > 0 && $newValue >= $threshold) {
                 $card->markers['incarnation']['value'] = 0;
                 $card->flags['incarnation_ready'] = true;
+                $this->state->historyRecorder?->liveEvent($this->state,'incarnation.ready',['target_id'=>$card->instanceId],[$card->instanceId]);
                 $events[$card->instanceId] = [
                     'instance_id' => $card->instanceId,
                     'event'       => 'ready',
@@ -982,6 +994,7 @@ final class TurnProcessor
             ];
         }
 
+        $this->state->historyRecorder?->zoneChanged($this->state,$card,'graveyard','incarnation');
         $this->applyAlliedIncarnationEffects($card);
         CardRoll::arm($this->state, $card, true);
 
@@ -1071,6 +1084,7 @@ final class TurnProcessor
             ];
         }
 
+        $this->state->historyRecorder?->zoneChanged($this->state,$card,'graveyard','incarnation');
         $this->applyAlliedIncarnationEffects($card);
         CardRoll::arm($this->state, $card, true);
         $this->engine->refreshArmor($this->state);
@@ -1092,6 +1106,7 @@ final class TurnProcessor
             if (!is_array($effect)) continue;
             if (!empty($effect['open_self']) && $source->closed) {
                 $this->engine->openCard($source);
+                $this->state->historyRecorder?->liveEvent($this->state,'status.changed',['target_id'=>$source->instanceId,'closed'=>false],[$source->instanceId]);
             }
             // Several providers grant the strongest copy once, independently of other movement effects.
             $moveBonus = max($moveBonus, (int) ($effect['move_bonus'] ?? 0));

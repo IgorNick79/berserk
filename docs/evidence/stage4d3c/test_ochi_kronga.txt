@@ -1,0 +1,15 @@
+simple/reload passed
+before/after no coin/reload passed
+child/two remaining items/reload passed
+after/coin/reload passed
+Degasca/reload passed
+action resolution: hit/miss/block/zero, reload, ACK and duplicate identity passed
+action resolution: heal 1/0, multi aggregate/reload, shot hit/miss, vampire order passed
+action resolution: rejection/cancel/repeat, nonforest, four movements and bounded metadata passed
+action resolution: real after instant, forced child, parent identities, reload and total order passed
+action resolution: real before-window cancellation passed
+action resolution: transfer healing lineage/actor/HP after reload passed
+action resolution: distinct reply and nonforest shot hit with prevented damage passed
+Ochi Kronga: permutations, reset/ignore rules, native hits/heal/vampire, cap/open, instances, turns, leave/reload/ACK passed
+Ochi Kronga: native nested after/forced/reload/ACK passed
+Ochi Kronga: native end_turn/player/end_turn/host lifecycle passed

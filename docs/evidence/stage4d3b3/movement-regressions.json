@@ -1,0 +1,57 @@
+[
+  {
+    "suite": "test_abyss_movement",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_battle_helper_movement",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_forced_directional_movement",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_dynamic_flying_lifecycle",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_flesh_stitcher",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_flesh_stitcher_persistence",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_movement_effects",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_riala_movement",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_prophecy_deck_order",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_tremor_movement",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "suite": "test_tremor_incarnation",
+    "exit": 0,
+    "tail": ""
+  }
+]

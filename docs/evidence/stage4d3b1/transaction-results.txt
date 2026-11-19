@@ -1,0 +1,1 @@
+{"status":"PASS","rollback":true,"retry":true,"health_events":1,"reload_both":true}

@@ -15,13 +15,18 @@ final class CoinAbilities
 
     public function gain(CardInstance $target, int $value, ?CardInstance $source = null, bool $selfEffect = false): int
     {
+        $this->state->historyRecorder?->statusCheckpoint($this->state);
         if ($value <= 0) return 0;
         if (!empty($target->effectiveProp()['coins_receive_deny'])
-            && (!$selfEffect || !$source || $source->instanceId !== $target->instanceId)) return 0;
+            && (!$selfEffect || !$source || $source->instanceId !== $target->instanceId)) {
+            $this->state->historyRecorder?->liveEvent($this->state,'coins.prevented',['target_id'=>$target->instanceId],[$target->instanceId]);
+            return 0;
+        }
         $max = (int) ($target->effectiveProp()['coins']['max_value'] ?? 0);
         $before = $target->coins;
         $target->coins = $max > 0 ? min($max, $before + $value) : $before + $value;
         $this->engine->syncCoinBonus($target);
+        $this->state->historyRecorder?->statusCheckpoint($this->state,'gain',$source);
         return $target->coins - $before;
     }
 
@@ -163,6 +168,7 @@ final class CoinAbilities
                 $context = $p['continuation'];
                 if ($choice === 'yes') {
                     $card->coins -= $p['cost'];
+                    $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
                     $this->engine->syncCoinBonus($card);
                     $this->block($p);
                 } elseif ($context['kind'] === 'strike') {
@@ -253,6 +259,11 @@ final class CoinAbilities
             $s['damage_total'] = 0;
         } else {
             if (isset($context['action'][ActionResolution::ID])) ActionResolution::resolve($this->state, $context['action'], 'blocked', ['hit'=>false]);
+            $target=$this->state->getCard((int)$pending['card_id']);
+            if ($target) {
+                $this->state->historyRecorder?->attackEvent($this->state,$source,$target,$pending['type'],'declared');
+                $this->state->historyRecorder?->attackEvent($this->state,$source,$target,$pending['type'],'result',['outcome'=>'blocked','value'=>0]);
+            }
             $source->closed = true;
             InformationalWaitManager::publish($this->state);
             $this->state->battle['strike'] = [

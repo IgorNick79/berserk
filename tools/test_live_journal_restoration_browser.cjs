@@ -10,17 +10,20 @@ if(base!=='http://127.0.0.1:33672'||!game||!out)throw Error('Disposable lab only
    const context=await browser.newContext(),p=await context.newPage();
    await p.goto(base+'/auth.php');await p.locator('[name=login]').fill(login);await p.locator('[name=password]').fill('LobbyFixture123');await p.getByRole('button',{name:'Войти',exact:true}).click();await p.waitForURL('**/lobby.php');
    const entries=[];let cursor=0;
-   for(let i=0;i<100;i++){
-    const response=await context.request.get(base+'/battle-journal.php?game='+game+'&after='+cursor+'&limit=2');assert.equal(response.status(),200);const data=await response.json();entries.push(...data.entries);cursor=data.cursor;if(!data.has_more)break;
+   for(let i=0;i<10000;i++){
+    const response=await context.request.get(base+'/battle-journal.php?game='+game+'&after='+cursor+'&limit=100');assert.equal(response.status(),200);const data=await response.json();entries.push(...data.entries);cursor=data.cursor;if(!data.has_more)break;
    }
-   const expected=entries.filter(e=>e.kind!=='gap').map(e=>/^Бросок: атакующий \d+, защитник (?:\d+|без броска)\.$/.test(e.text)?'⚄\uFE0E А'+e.text.slice('Бросок: а'.length):e.text);assert(expected.some(t=>t.includes('атакует'))&&expected.some(t=>t.includes('Атакующий')));
+   const expected=entries.filter(e=>e.kind!=='gap').map(e=>/^(Бросок|Изменение кубиков): атакующий \d+, защитник (\d+|без броска)\.$/.test(e.text)?e.text.replace(/^Бросок: атакующий /,'Атакующий ').replace(/^Изменение кубиков: атакующий /,'Изменение кубиков: Атакующий '):e.text);
+   assert(expected.some(t=>t.includes('атакует'))&&expected.some(t=>t.includes('Атакующий')));
+   const accessibleLines=()=>p.locator('[data-journal-entries] li').evaluateAll(es=>es.map(e=>{const c=e.cloneNode(true);for(const badge of c.querySelectorAll('.coords[aria-label]'))badge.replaceWith(document.createTextNode(badge.getAttribute('aria-label')));for(const img of c.querySelectorAll('img'))img.replaceWith(document.createTextNode(img.alt));return c.textContent;}));
+   for(const phrase of ['Трупоедство','вместо лечения','передаёт раны','предотвращено ран','броня поглотила','Выстрел','Удар через ряд','Итог кубика','призывается','трансформация','изгоняется','телепортируется','монету','получает эффект','Охота','открывается'])assert(expected.some(t=>t.includes(phrase)),'missing health text '+phrase);
    await p.goto(base+'/index.php?game='+game);await p.locator('[data-action="battle-log"]').click();
    await p.waitForFunction(n=>document.querySelectorAll('[data-journal-entries] li').length===n,expected.length);
-   assert.deepEqual(await p.locator('[data-journal-entries] li').allTextContents(),expected);
+   assert.deepEqual(await accessibleLines(),expected);
    await p.evaluate(()=>document.dispatchEvent(new Event('berserk:battle-updated')));await p.waitForTimeout(200);
    assert.equal(await p.locator('[data-journal-entries] li').count(),expected.length);
    await p.reload();await p.locator('[data-action="battle-log"]').click();await p.waitForFunction(n=>document.querySelectorAll('[data-journal-entries] li').length===n,expected.length);
-   assert.deepEqual(await p.locator('[data-journal-entries] li').allTextContents(),expected);
+   assert.deepEqual(await accessibleLines(),expected);
    await context.setOffline(true);await p.evaluate(()=>document.dispatchEvent(new Event('berserk:battle-updated')));
    await p.waitForFunction(()=>document.querySelector('[data-journal-state]').textContent.includes('временно'));
    await context.setOffline(false);await p.evaluate(()=>window.dispatchEvent(new Event('online')));await p.waitForTimeout(300);

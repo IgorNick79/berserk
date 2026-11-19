@@ -21,6 +21,7 @@ final class DamageResolver
         if ($val <= 0 || $target->type === 'terrain') return;
 
         if ($actionType === 'answer' && !empty($target->effectiveProp()['block_strike_answer'])) {
+            $this->state->historyRecorder?->healthEvent($this->state,$target,'health.prevented',['amount'=>$val]);
             if (!empty($this->state->battle['strike'])) {
                 $this->state->battle['strike']['answer_blocked'][] = [
                     'target_id' => $target->instanceId,
@@ -38,6 +39,7 @@ final class DamageResolver
                     'wound_transfer', 'whip', 'blood_tap',
                 ];
                 if (!in_array($actionType, $magicTypes, true)) {
+                    $this->state->historyRecorder?->healthEvent($this->state,$target,'health.prevented',['amount'=>$val]);
                     return;
                 }
                 break;
@@ -64,14 +66,16 @@ final class DamageResolver
             }
         }
 
+        if ($historyArmorBefore > $target->armor) $this->state->historyRecorder?->healthEvent($this->state,$target,'health.armor',['amount'=>$historyArmorBefore-$target->armor]);
         if ($val <= 0) {
             $this->state->historyRecorder?->combatEvent($this->state,'combat.wounds',[
-                'target_id'=>$target->instanceId,'source_id'=>$attacker?->instanceId,'type'=>$actionType,
-                'wounds'=>0,'hp_before'=>$historyHpBefore,'hp_after'=>$target->hp,'armor_before'=>$historyArmorBefore,'armor_after'=>$target->armor,
-            ],array_values(array_filter([$target->instanceId,$attacker?->instanceId])));
+                'target_id'=>$target->instanceId,'type'=>$actionType,
+                'armor_reported'=>true,'wounds'=>0,'hp_before'=>$historyHpBefore,'hp_after'=>$target->hp,'armor_before'=>$historyArmorBefore,'armor_after'=>$target->armor,
+            ],[$target->instanceId]);
             return;
         }
 
+        $journalBaseWounds=$val;
         $val += $this->lanternWoundBonus($target, $actionType, $attacker);
         $hpBefore = $target->hp;
         $target->hp -= $val;
@@ -81,9 +85,9 @@ final class DamageResolver
             $this->state->battle['strike']['actual_strike_wounds'][$attacker->instanceId]=(int)($this->state->battle['strike']['actual_strike_wounds'][$attacker->instanceId]??0)+max(0,$realDamage);
         }
         $this->state->historyRecorder?->combatEvent($this->state,'combat.wounds',[
-            'target_id'=>$target->instanceId,'source_id'=>$attacker?->instanceId,'type'=>$actionType,
-            'wounds'=>$realDamage,'hp_before'=>$hpBefore,'hp_after'=>$target->hp,'armor_before'=>$historyArmorBefore,'armor_after'=>$target->armor,
-        ],array_values(array_filter([$target->instanceId,$attacker?->instanceId])));
+            'target_id'=>$target->instanceId,'type'=>$actionType,
+            'cell_bonus'=>$val-$journalBaseWounds,'wounds'=>$realDamage,'hp_before'=>$hpBefore,'hp_after'=>$target->hp,'armor_before'=>$historyArmorBefore,'armor_after'=>$target->armor,
+        ],[$target->instanceId]);
         if ($realDamage > 0 && $attacker) {
             RangedNeighborTeleport::record($this->state, $attacker, $target, $actionType, $realDamage);
         }
@@ -228,12 +232,14 @@ final class DamageResolver
                     'instance_id' => $source->instanceId,
                 ];
             } else {
+                $journalMaxBefore=$source->hpMax;
                 if (!empty($source->effectiveProp()['deadeat_hp_bonus'])) {
                     $source->hpMax += (int) $source->effectiveProp()['deadeat_hp_bonus'];
                 }
                 $resolutionHpBefore = $source->hp;
                 $source->hp = $source->hpMax;
                 ActionResolution::healed($this->state, $source, $source, $resolutionHpBefore, 'deadeat');
+                $this->recordDeadeat($source,$resolutionHpBefore,$journalMaxBefore);
             }
         }
 
@@ -634,6 +640,7 @@ final class DamageResolver
             if (EffectiveFeatures::suppressed($card)) continue;
             if ($card->hp <= 0) continue;
 
+            $journalMaxBefore=$card->hpMax;
             if (!empty($card->effectiveProp()['deadeat_hp_bonus'])) {
                 $card->hpMax += (int) $card->effectiveProp()['deadeat_hp_bonus'];
             }
@@ -641,6 +648,7 @@ final class DamageResolver
             $hpBefore = $card->hp;
             $card->hp = $card->hpMax;
             ActionResolution::healed($this->state, $card, $card, $hpBefore, 'deadeat');
+            $this->recordDeadeat($card,$hpBefore,$journalMaxBefore);
 
             if ($card->hp > $hpBefore) {
                 $this->state->battle['strike']['deadeat'][] = [
@@ -651,6 +659,13 @@ final class DamageResolver
             }
         }
         unset($this->state->battle['strike']['deadeat_queue']);
+    }
+
+    private function recordDeadeat(CardInstance $card,int $before,int $maxBefore): void
+    {
+        if($card->hpMax !== $maxBefore) $this->state->historyRecorder?->healthEvent($this->state,$card,'health.maximum',
+            ['before'=>$maxBefore,'after'=>$card->hpMax,'ability'=>'deadeat']);
+        $this->state->historyRecorder?->healed($this->state,$card,$before,$card,'deadeat');
     }
 
     public function applyAnswer(
@@ -1025,8 +1040,10 @@ final class DamageResolver
             if (!is_array($effect)) continue;
             $type = (string) ($effect['type'] ?? '');
             if ($type === 'gain_flight') {
-                $source->type = 'fly';
+                $journalForm=$this->state->historyRecorder?->formBefore($this->state,$source);
+        $source->type = 'fly';
                 (new ZoneManager($this->state))->toFlying($source);
+        if ($journalForm!==null) $this->state->historyRecorder?->transformed($this->state,$source,$journalForm);
                 continue;
             }
             if ($type === 'grant_modifier') {
@@ -1043,6 +1060,7 @@ final class DamageResolver
                 ];
             }
         }
+        $this->state->historyRecorder?->statusCheckpoint($this->state,'passive',$source);
     }
 
     private function applyPoison(CardInstance $target, int $value, string $sourceKey): void

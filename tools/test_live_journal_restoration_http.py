@@ -23,6 +23,11 @@ class Client(Browser):
     def lobby(self,room=None,data=None,api=True):
         url=self.base.replace('auth.php','lobby.php')+('?' if api or room is not None else '')
         url+=('api=1' if api else '')+('&' if api and room is not None else '')+('room='+str(room) if room is not None else '')
+        if data is not None and data.get('action')=='create':
+            wizard=self.opener.open(self.base.replace('auth.php','lobby.php')+'?new=1',timeout=30).read().decode('utf-8')
+            key=re.search(r'name="creation_key" value="([a-f0-9]{32})"',wizard)
+            assert key,'Current lobby wizard must provide creation_key'
+            data={**data,'creation_key':key.group(1)}
         req=urllib.request.Request(url,data=urllib.parse.urlencode(data).encode() if data is not None else None)
         try:r=self.opener.open(req,timeout=30)
         except urllib.error.HTTPError as e:r=e
@@ -70,11 +75,12 @@ def main():
         spawn([str(pathlib.Path(args.db_bin)/'mysqld.exe'),'--no-defaults',f'--datadir={LAB / "data"}','--bind-address=127.0.0.1','--port=33671','--skip-log-bin','--console'],'db');ready(33671)
         port,directory=sql('SELECT @@port,@@datadir;').split('\t')
         check('exact isolated database identity',port=='33671' and directory.replace('\\','/').rstrip('/').lower()==str((LAB/'data').resolve()).replace('\\','/').lower())
-        sql("CREATE DATABASE LAB_DB;USE LAB_DB;CREATE TABLE games(ind INT NOT NULL AUTO_INCREMENT PRIMARY KEY,host_id INT NOT NULL,player_id INT NOT NULL,status VARCHAR(32) NOT NULL,json LONGTEXT NOT NULL,version INT NOT NULL DEFAULT 0,date DATETIME NOT NULL,active INT NOT NULL) ENGINE=InnoDB;INSERT INTO games VALUES(1,1,2,'battle','{}',0,UTC_TIMESTAMP(),1);")
-        for name in ['20261021_auth.sql','20261021_lobby_preflight.sql','20261021_lobby.sql','20261021_lobby_setup.sql','20261021_command_journal.sql','20261019_game_chat.sql','20261020_battle_history.sql']:
+        sql("CREATE DATABASE LAB_DB CHARACTER SET utf8mb4;USE LAB_DB;CREATE TABLE games(ind INT NOT NULL AUTO_INCREMENT PRIMARY KEY,host_id INT NOT NULL,player_id INT NOT NULL,status VARCHAR(32) NOT NULL,json LONGTEXT NOT NULL,version INT NOT NULL DEFAULT 0,date DATETIME NOT NULL,active INT NOT NULL) ENGINE=InnoDB;INSERT INTO games VALUES(1,1,2,'battle','{}',0,UTC_TIMESTAMP(),1);")
+        for name in ['20261021_auth.sql','20261021_lobby_preflight.sql','20261021_lobby.sql','20261021_lobby_setup.sql','20261021_command_journal.sql','20261019_game_chat.sql','20261020_battle_history.sql','20261030_lobby_wizard.sql','20261024_account_ui_preferences.sql','20261030_account_ui_preferences.sql','20261115_messages_preference.sql']:
             sql('USE LAB_DB;'+(ROOT/'tools/migrations'/name).read_text())
         (LAB/'postchecks.txt').write_text(sql('USE LAB_DB;'+(ROOT/'tools/migrations/20261021_lobby_postchecks.sql').read_text()),encoding='utf-8')
         sql("CREATE USER 'AUTH_USER'@'127.0.0.1' IDENTIFIED BY '';GRANT SELECT,INSERT ON LAB_DB.accounts TO 'AUTH_USER'@'127.0.0.1';GRANT SELECT,INSERT,UPDATE ON LAB_DB.auth_login_attempts TO 'AUTH_USER'@'127.0.0.1';CREATE USER 'LOBBY_USER'@'127.0.0.1' IDENTIFIED BY '';GRANT SELECT ON LAB_DB.accounts TO 'LOBBY_USER'@'127.0.0.1';GRANT SELECT,INSERT,UPDATE ON LAB_DB.lobby_rooms TO 'LOBBY_USER'@'127.0.0.1';GRANT SELECT,INSERT,UPDATE ON LAB_DB.games TO 'LOBBY_USER'@'127.0.0.1';")
+        sql("GRANT SELECT,INSERT,UPDATE ON LAB_DB.account_ui_preferences TO 'AUTH_USER'@'127.0.0.1';")
         check('runtime no TRIGGER or DDL privileges','TRIGGER' not in sql("SHOW GRANTS FOR 'LOBBY_USER'@'127.0.0.1';") and 'CREATE' not in sql("SHOW GRANTS FOR 'LOBBY_USER'@'127.0.0.1';"))
         db=lambda who:"['host'=>'127.0.0.1','port'=>33671,'name'=>'"+database+"','user'=>'"+who+"','pass'=>'']"
         config="<?php return ['db'=>"+db(authuser)+",'lobby_db'=>"+db(user)+",'limiter_secret'=>'"+os.urandom(32).hex()+"','allow_loopback_http'=>true];"
@@ -83,7 +89,7 @@ def main():
         sql("GRANT SELECT,INSERT,UPDATE ON LAB_DB.battle_command_journal TO 'LOBBY_USER'@'127.0.0.1';GRANT SELECT,INSERT,UPDATE ON LAB_DB.game_chat_messages TO 'LOBBY_USER'@'127.0.0.1';GRANT SELECT,INSERT,UPDATE ON LAB_DB.game_chat_reads TO 'LOBBY_USER'@'127.0.0.1';")
         for table in ['battle_history_matches','battle_history_batches','battle_history_actions','battle_history_events','battle_history_steps']:
             sql("GRANT SELECT,INSERT,UPDATE ON LAB_DB."+table+" TO 'LOBBY_USER'@'127.0.0.1';")
-        sql("USE LAB_DB;CREATE TABLE elements(ind INT PRIMARY KEY,code VARCHAR(32),name VARCHAR(128)) ENGINE=InnoDB;INSERT INTO elements VALUES(1,'neutral','Neutral');CREATE TABLE cards(ind INT PRIMARY KEY,ukid VARCHAR(64),name VARCHAR(128),health INT,power INT DEFAULT 1,move INT,strike_weak INT,strike_medium INT,strike_strong INT,prop LONGTEXT,price INT DEFAULT 1,elite INT DEFAULT 0,single INT DEFAULT 0,element_id INT DEFAULT 1,descr TEXT,rarity VARCHAR(16) DEFAULT '',class VARCHAR(128) DEFAULT '',type VARCHAR(16) DEFAULT 'creature') ENGINE=InnoDB;CREATE TABLE decks(ind INT PRIMARY KEY,name VARCHAR(128),image TEXT,cards LONGTEXT,type VARCHAR(32),status VARCHAR(32)) ENGINE=InnoDB;")
+        sql("USE LAB_DB;CREATE TABLE elements(ind INT PRIMARY KEY,code VARCHAR(32),name VARCHAR(128)) ENGINE=InnoDB;INSERT INTO elements VALUES(1,'neutral','Neutral');CREATE TABLE cards(ind INT PRIMARY KEY,ukid VARCHAR(64),name VARCHAR(128),release_id INT DEFAULT 1,health INT,power INT DEFAULT 1,move INT,strike_weak INT,strike_medium INT,strike_strong INT,prop LONGTEXT,price INT DEFAULT 1,elite INT DEFAULT 0,single INT DEFAULT 0,element_id INT DEFAULT 1,descr TEXT,rarity VARCHAR(16) DEFAULT '',class VARCHAR(128) DEFAULT '',type VARCHAR(16) DEFAULT 'creature') ENGINE=InnoDB;CREATE TABLE decks(ind INT PRIMARY KEY,name VARCHAR(128),image TEXT,cards LONGTEXT,type VARCHAR(32),status VARCHAR(32)) ENGINE=InnoDB;")
         card_values=[]
         for i in range(1,101):
             rarity=['common','uncommon','rare','ultrarare'][(i-1)//25]
@@ -207,11 +213,13 @@ def main():
             code,body=service(client,'battle-journal.php',g,f'&after={after}&limit={limit}');assert code==200,(code,body);return json.loads(body)
         def journal_entries(client,g):
             entries=[];cursor=0
-            for _ in range(200):
+            for _ in range(10000):
+                previous=cursor
                 value=page(client,g,cursor);assert value['cursor']>=cursor
                 assert set(value)=={'entries','cursor','has_more','recording'}
                 assert all(set(e)=={'seq','kind','text'} for e in value['entries'])
                 entries+=value['entries'];cursor=value['cursor']
+                assert not value['has_more'] or cursor>previous,'cursor stalled with has_more'
                 if not value['has_more']:return entries,cursor
             raise AssertionError('cursor stalled')
 
@@ -312,6 +320,109 @@ def main():
         check('unauthorized sync cannot fire timeout',http(c,game,query='&ajax=battle_sync')[0]==403 and version(game)==before)
         code,body,_=http(a,game,query='&ajax=battle_sync')
         check('authorized sync executes existing automatic timeout',code==200 and state(game)['battle']['active']!=owner)
+        for index,definition in enumerate(json.loads((ROOT/'tools/health-s1-fixture.json').read_text(encoding='utf-8-sig')),1001):
+            quote=lambda value:"'"+str(value).replace('\\','\\\\').replace("'","''")+"'"
+            sql("USE LAB_DB;INSERT INTO cards(ind,ukid,name,health,move,strike_weak,strike_medium,strike_strong,prop,descr)VALUES("+','.join([str(index),quote(definition['ukid']),quote(definition['name']),definition['health'],definition['move'],definition['strike_weak'],definition['strike_medium'],definition['strike_strong'],quote(definition['prop'] or '{}'),quote('')])+');')
+        health=subprocess.run(php+[str(ROOT/'tools/health_http_probe.php'),str(game)],capture_output=True,text=True,encoding='utf-8')
+        (LAB/'health-http-output.txt').write_text(health.stdout+health.stderr,encoding='utf-8')
+        check('real health processors commit all five health event types once',health.returncode==0)
+        health_info=json.loads(health.stdout)
+        host_health,_=journal_entries(a,game);player_health,_=journal_entries(b,game)
+        for side,rows in [('host',host_health),('player',player_health)]:
+            check('real first set names in health journal '+side,any('Тролль' in e['text']for e in rows)and any('Жжраг' in e['text']for e in rows))
+            check('all health texts in authorized journal '+side,all(any(term in e['text'] for e in rows)for term in ['Трупоедство','вместо лечения','передаёт раны','предотвращено ран','броня поглотила']))
+            check('no duplicate health seq '+side,len({e['seq']for e in rows})==len(rows))
+        check('hidden healer not exposed in player health projection',not any('Леший' in e['text'] for e in player_health))
+        known={d['ukid'] for d in json.loads((ROOT/'tools/health-s1-fixture.json').read_text(encoding='utf-8-sig'))}
+        for index,definition in enumerate(json.loads((ROOT/'tools/special-s1-fixture.json').read_text(encoding='utf-8')),2001):
+            if definition['ukid'] in known:continue
+            sql("USE LAB_DB;INSERT INTO cards(ind,ukid,name,health,move,strike_weak,strike_medium,strike_strong,prop,descr)VALUES("+','.join([str(index),quote(definition['ukid']),quote(definition['name']),definition['health'],definition['move'],definition['strike_weak'],definition['strike_medium'],definition['strike_strong'],quote(definition['prop'] or '{}'),quote('')])+');')
+        special=subprocess.run(php+[str(ROOT/'tools/special_http_probe.php'),str(game)],capture_output=True,text=True,encoding='utf-8')
+        (LAB/'special-http-output.txt').write_text(special.stdout+special.stderr,encoding='utf-8')
+        check('special actual Engine attacks atomic rollback retry',special.returncode==0)
+        for client,side in [(a,'host'),(b,'player')]:
+            rows,_=journal_entries(client,game)
+            check('special attack text in authorized journal '+side,all(any(term in e['text'] for e in rows)for term in ['Выстрел','Удар через ряд','Итог кубика']))
+        check('hidden special source not exposed in API',not any('Тови' in e['text'] for e in journal_entries(b,game)[0]))
+        # Real multi-request SingleRoll: persisted window, choice, two ACKs and resumed attack.
+        position=state(game);position['battle']={'active':'host','turn':1,'strike':None,'turn_timer':{'period_id':1,'owner':'host','status':'running','remaining_seconds':180,'anchor_at':int(time.time()),'pause_reason':None}}
+        special_defs={d['ukid']:d for d in json.loads((ROOT/'tools/special-s1-fixture.json').read_text(encoding='utf-8'))}
+        for card_id,ukid,row,col in [(1,'s1_17',3,3),(2,'s1_128',5,3),(3,'s1_181',1,1),(4,'s1_1',6,5)]:
+            card=next(x for x in position['cards'].values() if x['instance_id']==card_id);definition=special_defs[ukid]
+            card.update(ukid=ukid,row=row,col=col,hp=int(definition['health']),hp_max=int(definition['health']),prop=json.loads(definition['prop'] or '{}'),closed=False,revealed=True,coins=0,flags={},markers={},modifiers=[])
+        set_fixture(game,position)
+        first_seq=int(sql(f'USE LAB_DB;SELECT last_event_seq FROM battle_history_matches WHERE game_id={game};'))
+        check('HTTP native special declaration opens SingleRoll',battle(a,game,'action',card_id=1,target_id=2,action_key='shot')[1].get('ok') and bool(state(game)['battle'].get('single_roll')))
+        check('HTTP real Luck Catcher instant accepted',battle(a,game,'combat_instant_play',card_id=3,instant_key='udacha')[1].get('ok'))
+        last_ack=None
+        for step in range(24):
+            current=state(game);roll=current['battle'].get('single_roll')
+            if not roll:break
+            choice=current['battle'].get('pending_dice_choice')
+            if choice: response=battle(a if choice['owner']=='host' else b,game,'choose_dice_choice',choice='reroll:any')
+            elif roll.get('stage')=='results':
+                side='player' if 'host' in roll.get('confirmed',[]) else 'host'
+                response=battle(a if side=='host' else b,game,'confirm_strike',wait_id=current['battle']['informational_wait']['wait_id']);last_ack=(a if side=='host' else b,response[2])
+            else:response=battle(a if roll['instant_priority']=='host' else b,game,'combat_instant_pass')
+            assert response[1].get('ok'),response
+        check('HTTP native continuation finishes',not state(game)['battle'].get('single_roll'))
+        for event_type in ['attack.declared','dice.rolled','dice.changed','dice.final','attack.result','combat.wounds']:
+            check('HTTP continuation exactly one '+event_type,sql(f"USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id={game} AND event_seq>{first_seq} AND event_type='{event_type}';")=='1')
+        if last_ack:
+            client,data=last_ack;before=sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id={game};')
+            reply=http(client,game,data,'&ajax=battle_command')
+            check('HTTP repeated ACK command has no duplicate events',json.loads(reply[1]).get('command_status')=='committed' and sql(f'USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id={game};')==before)
+        known_movement=set(special_defs)|known
+        for index,definition in enumerate(json.loads((ROOT/'tools/movement-s1-fixture.json').read_text(encoding='utf-8')),3001):
+            if definition['ukid'] in known_movement:continue
+            sql("USE LAB_DB;INSERT INTO cards(ind,ukid,name,health,move,strike_weak,strike_medium,strike_strong,prop,descr)VALUES("+','.join([str(index),quote(definition['ukid']),quote(definition['name']),definition['health'],definition['move'],definition['strike_weak'],definition['strike_medium'],definition['strike_strong'],quote(definition['prop'] or '{}'),quote('')])+');')
+        movement=subprocess.run(php+[str(ROOT/'tools/movement_http_probe.php'),str(game)],capture_output=True,text=True,encoding='utf-8')
+        (LAB/'movement-http-output.txt').write_text(movement.stdout+movement.stderr,encoding='utf-8')
+        check('movement zone transformation rollback retry and projections',movement.returncode==0)
+        for client,side in [(a,'host'),(b,'player')]:
+            rows,_=journal_entries(client,game)
+            check('summon transform exile visible through authenticated API '+side,all(any(term in e['text'] for e in rows)for term in ['призывается','трансформация','изгоняется']))
+        check('hidden jump visible only to owner',any('Грызь прыгает' in e['text'] for e in journal_entries(a,game)[0]) and not any('Грызь' in e['text'] for e in journal_entries(b,game)[0]))
+        position=state(game);movement_defs={d['ukid']:d for d in json.loads((ROOT/'tools/movement-s1-fixture.json').read_text(encoding='utf-8'))}
+        position['battle']={'active':'host','turn':1,'strike':None,'turn_timer':{'period_id':1,'owner':'host','status':'running','remaining_seconds':180,'anchor_at':int(time.time()),'pause_reason':None}}
+        source=position['cards']['1'];definition=movement_defs['s1_198'];source.update(ukid='s1_198',row=3,col=3,hp=int(definition['health']),hp_max=int(definition['health']),prop=json.loads(definition['prop']),closed=False,revealed=False,coins=1,flags={},modifiers=[],markers={})
+        set_fixture(game,position);first_seq=int(sql(f'USE LAB_DB;SELECT last_event_seq FROM battle_history_matches WHERE game_id={game};'))
+        check('HTTP hidden caster starts native teleport',battle(a,game,'action',card_id=1,target_id=2,action_key='dimension_door')[1].get('ok'))
+        check('HTTP native teleport selection completes',battle(a,game,'choose_teleport_cell',cell='4_3')[1].get('ok'))
+        check('HTTP teleport emitted once',sql(f"USE LAB_DB;SELECT COUNT(*) FROM battle_history_events WHERE game_id={game} AND event_seq>{first_seq} AND event_type='movement.completed';")=='1')
+        for client,side in [(a,'host'),(b,'player')]:
+            check('visible teleported target despite hidden caster '+side,any('Тролль телепортируется' in e['text'] for e in journal_entries(client,game)[0]))
+        known_status=set(movement_defs)|known_movement
+        for index,definition in enumerate(json.loads((ROOT/'tools/status-s1-fixture.json').read_text(encoding='utf-8')),4001):
+            if definition['ukid'] in known_status:continue
+            sql("USE LAB_DB;INSERT INTO cards(ind,ukid,name,health,move,strike_weak,strike_medium,strike_strong,prop,descr)VALUES("+','.join([str(index),quote(definition['ukid']),quote(definition['name']),definition['health'],definition['move'],definition['strike_weak'],definition['strike_medium'],definition['strike_strong'],quote(definition['prop'] or '{}'),quote('')])+');')
+        statuses=subprocess.run(php+[str(ROOT/'tools/status_http_probe.php'),str(game)],capture_output=True,text=True,encoding='utf-8')
+        (LAB/'status-http-output.txt').write_text(statuses.stdout+statuses.stderr,encoding='utf-8')
+        check('status coins modifiers atomic rollback retry and hidden source',statuses.returncode==0)
+        for client,side in [(a,'host'),(b,'player')]:
+            rows,_=journal_entries(client,game)
+            check('new status and resource text through authenticated API '+side,all(any(term in e['text'] for e in rows)for term in ['монету','получает эффект','Охота','открывается']))
+            check('status resource polling has no duplicate seq '+side,len(rows)==len({e['seq']for e in rows}))
+        complex_defs=json.loads((ROOT/'tools/complex-s1-fixture.json').read_text(encoding='utf-8'))
+        known_complex=set(sql("USE LAB_DB;SELECT ukid FROM cards;").splitlines())
+        for index,definition in enumerate(complex_defs,5001):
+            if definition['ukid'] in known_complex:continue
+            sql("USE LAB_DB;INSERT INTO cards(ind,ukid,name,health,move,strike_weak,strike_medium,strike_strong,prop,descr)VALUES("+','.join([str(index),quote(definition['ukid']),quote(definition['name']),definition['health'],definition['move'],definition['strike_weak'],definition['strike_medium'],definition['strike_strong'],quote(definition['prop'] or '{}'),quote('')])+');')
+        complex_run=subprocess.run(php+[str(ROOT/'tools/complex_http_probe.php'),str(game)],capture_output=True,text=True,encoding='utf-8')
+        (LAB/'complex-http-output.txt').write_text(complex_run.stdout+complex_run.stderr,encoding='utf-8')
+        check('complex chains atomic rollback private prophecy Ragnar remainder cancellation retry',complex_run.returncode==0)
+        host_complex,_=journal_entries(a,game);player_complex,_=journal_entries(b,game)
+        check('owner sees private prophecy cards',any('Пророчество' in e['text'] and 'Кочевник' in e['text'] for e in host_complex))
+        check('opponent never sees private prophecy',not any('Пророчество' in e['text'] for e in player_complex))
+        for rows,side in [(host_complex,'host'),(player_complex,'player')]:
+            check('actual Valhalla remainder cancellation text '+side,any('оставшиеся' in e['text'] or 'дальнейшие' in e['text'] for e in rows))
+            check('complex cursor unique '+side,len(rows)==len({e['seq']for e in rows}))
+        closure=subprocess.run(php+[str(ROOT/'tools/closure_transaction_probe.php'),str(game)],capture_output=True,text=True,encoding='utf-8')
+        (LAB/'closure-transaction-output.txt').write_text(closure.stdout+closure.stderr,encoding='utf-8')
+        check('integrated chains saved rollback retry and projections',closure.returncode==0)
+        branch_save=subprocess.run(php+[str(ROOT/'tools/closure_transaction_probe.php'),str(game),'branches'],capture_output=True,text=True,encoding='utf-8')
+        (LAB/'closure-branches-output.txt').write_text(branch_save.stdout+branch_save.stderr,encoding='utf-8')
+        check('all addressed native branches saved rollback retry and projections',branch_save.returncode==0)
         code,res,_=battle(a,game,'resign');check('resign completes existing match',res.get('ok') and state(game)['status']=='game_over')
         check('game over omitted from active lobby',int(sql(f'USE LAB_DB;SELECT id FROM lobby_rooms WHERE game_id={game};')) not in [r['id'] for r in a.lobby()[1]['rooms']])
 
@@ -355,7 +466,9 @@ def main():
         normal=a.lobby(room['id'])[1]['room']['game_id']
         check('non-quick LuckTest records preparation without quick-only assertion',state(normal)['status']=='turn' and sql(f'USE LAB_DB;SELECT has_initial FROM battle_history_matches WHERE game_id={normal};')=='0')
         # A selected room must also enroll an atomic quick game before its first battle event.
-        sql('USE LAB_DB;UPDATE cards SET price=7;')
+        # Keep this transport-only random fixture stable as the real-card scenario catalog grows.
+        # Archive/restore exact rows in this disposable schema; real-card effect probes ran above.
+        sql("USE LAB_DB;CREATE TABLE journal_real_fixture_cards LIKE cards;INSERT INTO journal_real_fixture_cards SELECT * FROM cards WHERE ukid LIKE 's1_%';DELETE FROM cards WHERE ukid LIKE 's1_%';UPDATE cards SET price=7;")
         code,quick_room=a.lobby(data={'action':'create','csrf':a.token('account'),'setup_mode':'lucktest','lucktest_card_count':'3','lucktest_quick_game':'1'})
         assert code==200,(code,quick_room);quick_room=quick_room['room']
         # Quick games follow the same mandatory lifecycle.
@@ -388,6 +501,7 @@ def main():
             else:raise AssertionError('unexpected quick combat '+phase)
         death_rows,_=journal_entries(attacker,quick_game)
         check('actual wounds death and natural terminal text',state(quick_game)['status']=='game_over' and all(any(t in e['text'] for e in death_rows) for t in ['получает','погибает','Бой завершён']))
+        sql('USE LAB_DB;INSERT INTO cards SELECT * FROM journal_real_fixture_cards;')
         # Failure linking a selected room must roll back both game creation and enrollment.
         rollback_room=a.create();assert b.act(rollback_room)[0]==200
         pending=a.lobby(rollback_room['id'])[1]['room'];before_games=sql('USE LAB_DB;SELECT COUNT(*) FROM games;');before_meta=sql('USE LAB_DB;SELECT COUNT(*) FROM battle_history_matches;')

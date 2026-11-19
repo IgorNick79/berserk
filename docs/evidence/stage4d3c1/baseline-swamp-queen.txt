@@ -1,0 +1,7 @@
+Effective features: 93 checks passed
+
+Fatal error: Uncaught RuntimeException: normal end/start phase ACK in C:\Users\mi\Documents\Berserk\health-regression-review\baseline\tools\test_effective_features.php:19
+Stack trace:
+#0 C:\Users\mi\Documents\Berserk\health-regression-review\baseline\tools\test_swamp_queen.php(55): efCheck(false, 'normal end/start phase ACK')
+#1 {main}
+  thrown in C:\Users\mi\Documents\Berserk\health-regression-review\baseline\tools\test_effective_features.php on line 19

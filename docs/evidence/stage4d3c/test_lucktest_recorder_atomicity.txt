@@ -1,0 +1,2 @@
+LuckTest: 186 checks passed (in-memory adapter; no live database).
+LuckTest Recorder atomicity: 83 checks passed (no live database).

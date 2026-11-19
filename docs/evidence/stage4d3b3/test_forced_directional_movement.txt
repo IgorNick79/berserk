@@ -1,0 +1,1 @@
+Forced directional movement regression tests passed.

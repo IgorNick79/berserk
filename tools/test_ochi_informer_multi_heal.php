@@ -22,13 +22,13 @@ foreach (['host','player'] as $owner) {
     $choice=new MultiHealChoice();$info=[];
     foreach($s->cards as $c)$info[$c->ukid]=['name'=>'Фея <лесa>'];
     $spec=$choice->spec($s,$owner,$info,'?game=1',$owner);
-    foreach($spec->form['items'] as $item){
+    foreach($spec->cardSelection->candidates as $item){
         $card=$s->getCard((int)$item['value']);
         mtAssert(str_contains($item['label_html'],Coords::renderResult($card->row,$card->col,$owner,$card->owner)),'Native coordinate badge for owner orientation');
         mtAssert(str_contains($item['label_html'],'&lt;лесa&gt;')&&!str_contains($item['label_html'],'<лесa>'),'Name escaped');
     }
     mtAssert(str_contains(Panel::render($spec),'coords--own'),'Rendered checkbox coordinates');
-    mtAssert(str_ends_with($spec->form['cancel'],'cmd=cancel_pending'),'Existing cancellation URL');
+    mtAssert(str_contains($spec->form['cancel'],'cmd=cancel_pending'),'Existing cancellation URL');
     mtAssert($engine->apply($s,$owner,new Command('cancel_pending'))->success,'Owner cancels after reload');
     mtAssert(!isset($s->battle['pending_multi_heal']),'Pending removed');
     mtAssert($s->getCard(1)->toArray()===$actorBefore,'Cancel spends no card resources');

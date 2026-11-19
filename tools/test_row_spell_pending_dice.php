@@ -130,11 +130,11 @@ $specB = $choice->spec($state, GameState::PLAYER_HOST, [
     'card_4' => ['name' => 'Враг 2'],
 ], '?first&game=196', 'host');
 
-rowSpellAssert($specA !== null && str_contains(implode('', $specA->text), '<div class="dice">6</div>'), 'Row spell choice should show saved dice');
+rowSpellAssert($specA !== null && str_contains(implode('', $specA->text), '<div class="dice">' . \Berserk\View\Ui\DiceValue::render(6) . '</div>'), 'Row spell choice should show saved dice');
 rowSpellAssert($specB !== null && $specB->title === $specA->title, 'Repeated row spell render should keep the same result');
 $choiceHtml = Panel::render($specA);
 rowSpellAssert(str_contains($choiceHtml, '<div class="label">Кубик</div>'), 'Rendered row spell choice should show dice label');
-rowSpellAssert(str_contains($choiceHtml, '<div class="dice">6</div>'), 'Rendered row spell choice should show saved dice');
+rowSpellAssert(str_contains($choiceHtml, '<div class="dice">' . \Berserk\View\Ui\DiceValue::render(6) . '</div>'), 'Rendered row spell choice should show saved dice');
 rowSpellAssert(str_contains($choiceHtml, 'Урон: 2 на цель'), 'Rendered row spell choice should show saved damage');
 rowSpellAssert(Dice::remaining() === [1], 'Repeated row spell render should not consume another roll');
 
@@ -156,8 +156,8 @@ $resultHtml = (new InfoPanel(new Template(__DIR__ . '/../templates')))->render($
     'card_3' => ['name' => 'Враг 1'],
     'card_4' => ['name' => 'Враг 2'],
 ], '?first&game=196');
-rowSpellAssert(str_contains($resultHtml, '2 урона на цель'), 'Row spell result should show applied damage');
+rowSpellAssert(substr_count($resultHtml, '<strong>−2 ❤ HP</strong>') === 2, 'Row spell result should show applied damage');
 rowSpellAssert(!str_contains($resultHtml, 'кубик 6'), 'Row spell result should not repeat dice after target choice');
-rowSpellAssert(!str_contains($resultHtml, '<div class="dice">6</div>'), 'Row spell result should not render a dice block after target choice');
+rowSpellAssert(!str_contains($resultHtml, '<div class="dice">' . \Berserk\View\Ui\DiceValue::render(6) . '</div>'), 'Row spell result should not render a dice block after target choice');
 
 echo "Row spell pending dice tests passed.\n";

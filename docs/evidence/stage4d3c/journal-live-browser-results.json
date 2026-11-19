@@ -1,0 +1,21 @@
+{
+  "results": [
+    {
+      "side": "host",
+      "status": "PASS",
+      "before": 1,
+      "after": 5,
+      "panel_preserved": true,
+      "duplicates": 0
+    },
+    {
+      "side": "player",
+      "status": "PASS",
+      "before": 1,
+      "after": 5,
+      "panel_preserved": true,
+      "duplicates": 0
+    }
+  ],
+  "reloads": 0
+}

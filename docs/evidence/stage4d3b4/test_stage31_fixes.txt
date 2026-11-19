@@ -1,0 +1,33 @@
+PASS R1 reduce attacker final damage {"target_hp":17}
+PASS R1 defender set final answer damage {"attacker_hp":16,"target_hp":17}
+PASS R1 attacker set final damage {"target_hp":16}
+PASS R1 multiple phases power then value {"phases":["power","value"],"hp":17}
+PASS R1 same phase LIFO two reductions {"hp":18,"sequence":[1,0]}
+PASS R1 redirect before level change {"new_target_hp":17,"old_target_hp":20}
+PASS R1 redirect after level change {"new_target_hp":17,"old_target_hp":20}
+PASS R1 dice changes baseline before levels {"dice":4,"result":"weak"}
+PASS R1 repeated recalc after persistence not repeated reduction {"recalcs":3,"result":"medium"}
+PASS R1 set does not freeze defender recomputation {"result":{"attack":"strong","defend":"","winner":"attack"}}
+PASS R2 combat cancel at source {"donor_hp":18,"source_closed":false,"combat_cleared":true}
+PASS R2 combat cancel at amount {"donor_hp":18,"source_closed":false,"combat_cleared":true}
+PASS R2 combat cancel at target {"donor_hp":18,"source_closed":false,"combat_cleared":true}
+PASS R2 combat cancel at target_amount {"donor_hp":18,"source_closed":false,"combat_cleared":true}
+PASS R2 main phase cancel refunds once {"coins":3}
+PASS R2 resume next wound item without replaying earlier summary {"donor_hp":18,"next_source":90}
+PASS R3 cancel first ordinary activation {"hp":20,"double":false}
+PASS R3 cancel first double activation {"hp":20,"double":true}
+PASS R3 cancel second preserves first and spent repeat {"first_hp":19,"other_hp":20}
+PASS R3 choose two different targets {"hp":[19,19]}
+PASS R3 no candidates after activation can cancel {"cleared":true}
+PASS R3 wrong owner cannot cancel {"denied":true}
+PASS R3 cancel releases phase subtask {"phase_cleared":true}
+PASS R3 UI cancel maps to supported command {"cancel_supported":true}
+PASS H1 voluntary end then immediate end_turn no card action {"closed_at_first_battle":false,"closed_after_end":true,"closed_next_turn":true,"target_hp":16}
+PASS H1 natural series end includes closing {"closed":true}
+PASS H1 dead Hydra does not continue {"zone":"graveyard"}
+PASS H1 winner during series no manufactured cleanup {"status":"game_over","strike_remaining":true}
+PASS R1 dice pending resume and final damage once {"dice":4,"hp":18,"summaries":2}
+PASS R1 legacy attacker override retains value and new reduction {"result":"medium"}
+PASS R3 first lethal application no candidates no second repeat {"status":"game_over","zone":"graveyard"}
+PASS Review R1 exact metadata roundtrip and pure recalc {"base":"strong","result":"medium","effects":1,"hp":20}
+PASS Review R2 mismatched queue item cannot be cancelled {"rejected":true,"queue_preserved":true}

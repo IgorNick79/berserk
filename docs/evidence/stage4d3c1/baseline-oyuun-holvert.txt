@@ -1,0 +1,7 @@
+
+Fatal error: Uncaught RuntimeException: Stale acknowledgement in C:\Users\mi\Documents\Berserk\health-regression-review\baseline\tools\test_oyuun_holvert.php:28
+Stack trace:
+#0 C:\Users\mi\Documents\Berserk\health-regression-review\baseline\tools\test_oyuun_holvert.php(176): ohAssert(false, 'Stale acknowledgement')
+#1 C:\Users\mi\Documents\Berserk\health-regression-review\baseline\tools\test_oyuun_holvert.php(267): ohAckTurnInstantResult(Object(Berserk\Core\GameState))
+#2 {main}
+  thrown in C:\Users\mi\Documents\Berserk\health-regression-review\baseline\tools\test_oyuun_holvert.php on line 28

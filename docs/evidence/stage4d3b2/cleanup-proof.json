@@ -1,0 +1,14 @@
+{
+  "ports": {
+    "33671": "closed",
+    "33672": "closed",
+    "33673": "closed",
+    "33674": "closed",
+    "33675": "closed"
+  },
+  "private_config_absent": {
+    "auth.local.php": true,
+    "db.php": true,
+    "battle_history.local.php": true
+  }
+}

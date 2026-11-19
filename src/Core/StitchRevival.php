@@ -136,6 +136,7 @@ final class StitchRevival
         $revive->flags = MemoryLoss::persistentFlags($revive);
         $revive->flags['stitched_unique_loss'] = true;
         $zone->toField($revive, $r, $c);
+        $this->state->historyRecorder?->zoneChanged($this->state,$revive,'graveyard','revive');
         unset($this->state->battle['pending_revive']);
         $this->engine->refreshArmor($this->state);
         $this->engine->checkGameOver($this->state);

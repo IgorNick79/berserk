@@ -151,6 +151,8 @@ final class ValhallaProcessor
         if (!$pending) return Result::error('Нет ожидающего выбора');
         if ($pending['owner'] !== $playerKey) return Result::error('Не ваш выбор');
 
+        $source=$this->state->getCard((int)$pending['card_id']);
+        $this->state->historyRecorder?->chainEvent($this->state,$source,null,'Вальхалла','stopped');
         unset($this->state->battle['pending_valhalla_pick']);
         $this->finishPendingSubtask();
         if ($this->engine !== null && !empty($this->state->battle['turn_phase'])) {
@@ -233,6 +235,7 @@ final class ValhallaProcessor
     private function advanceHealingEffects(array $to): void
     {
         $source=$this->state->getCard($to['source_id']);$chosen=$this->state->getCard((int)$to['chosen_id']);
+        $this->state->historyRecorder?->statusCheckpoint($this->state);
         while($to['effects']) {
             $eff=array_shift($to['effects']);
             if(($eff['type']??'')==='heal') {
@@ -242,6 +245,7 @@ final class ValhallaProcessor
                 if($r===null)return;
             } else {
                 $this->applyEffect($source,$eff,$to['owner'],$chosen);
+                $this->state->historyRecorder?->statusCheckpoint($this->state,'valhalla',$source);
                 if(CardHealing::waiting($this->state)){CardHealing::defer($this->state,$to);return;}
             }
         }
@@ -274,11 +278,13 @@ final class ValhallaProcessor
             }
         }
 
+        $this->state->historyRecorder?->statusCheckpoint($this->state);
         $journalHpBefore=$target?->hp;
         switch ($type) {
             case 'ragnar_first_strike_unanswer':
                 $source->flags['ragnar_valhalla_resolved_this_turn'] =
                     ((int) ($source->flags['ragnar_valhalla_resolved_this_turn'] ?? 0)) + 1;
+                $this->state->historyRecorder?->chainEvent($this->state,$source,null,'Безответный первый удар','applied');
                 $source->flags['ragnar_valhalla_resolved_period'] =
                     ($this->state->battle['turn'] ?? 0) . ':' . ($this->state->battle['active'] ?? '');
                 break;
@@ -292,8 +298,6 @@ final class ValhallaProcessor
                     'expire' => $eff['expire'] ?? 'end_of_turn',
                     'source' => $ownerKey,
                 ];
-                $this->state->historyRecorder?->liveEvent($this->state,'ability.applied',[
-                    'source_id'=>$source->instanceId,'ability'=>'Вальхалла','_private_owner'=>$source->owner],[$source->instanceId,$target->instanceId]);
                 break;
 
             case 'damage':
@@ -336,6 +340,7 @@ final class ValhallaProcessor
             if (!empty($card->flags['ragnar_valhalla_double_used_this_turn'])) continue;
 
             $card->flags['ragnar_valhalla_double_used_this_turn'] = true;
+            $this->state->historyRecorder?->chainEvent($this->state,$card,null,'Удвоение Вальхаллы','applied');
             return 2;
         }
 

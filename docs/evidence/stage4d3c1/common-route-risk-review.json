@@ -1,0 +1,1971 @@
+[
+  {
+    "card": "s1_2",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_2",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_3",
+    "ability": "actions[0]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_4",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_4",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_5",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_5",
+    "ability": "instants[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "InstantProcessor resolves actual effect; Engine checkpoints; dedicated B.4 tests suppress coarse duplicate HP/marker summaries."
+  },
+  {
+    "card": "s1_6",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_6",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_7",
+    "ability": "on_move",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_8",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_9",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_10",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_11",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_12",
+    "ability": "on_move_half",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_14",
+    "ability": "actions[0]",
+    "route": "ZoneManager + смысловой processor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_17",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_18",
+    "ability": "on_move",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_20",
+    "ability": "instants[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "InstantProcessor resolves actual effect; Engine checkpoints; dedicated B.4 tests suppress coarse duplicate HP/marker summaries."
+  },
+  {
+    "card": "s1_22",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_24",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_24",
+    "ability": "on_move",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_25",
+    "ability": "actions[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_25",
+    "ability": "instants[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "InstantProcessor resolves actual effect; Engine checkpoints; dedicated B.4 tests suppress coarse duplicate HP/marker summaries."
+  },
+  {
+    "card": "s1_27",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_28",
+    "ability": "actions[0]",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_30",
+    "ability": "on_move",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_31",
+    "ability": "actions[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_31",
+    "ability": "instants[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "InstantProcessor resolves actual effect; Engine checkpoints; dedicated B.4 tests suppress coarse duplicate HP/marker summaries."
+  },
+  {
+    "card": "s1_38",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_38",
+    "ability": "instants[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "InstantProcessor resolves actual effect; Engine checkpoints; dedicated B.4 tests suppress coarse duplicate HP/marker summaries."
+  },
+  {
+    "card": "s1_39",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_39",
+    "ability": "actions[1]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_39",
+    "ability": "deadeat",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_40",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_41",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_42",
+    "ability": "actions[0]",
+    "route": "ZoneManager + смысловой processor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_42",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_42",
+    "ability": "valhalla[0]",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_42",
+    "ability": "valhalla[1]",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_45",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_45",
+    "ability": "valhalla[0]",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_46",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_49",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_49",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_51",
+    "ability": "actions[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_51",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_52",
+    "ability": "line_death_next_strike_bonus",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_54",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_54",
+    "ability": "prophecy",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Zone/reveal/pending boundaries checked in B.3/B.5/C.1; no technical ACK event; public/private frozen independently."
+  },
+  {
+    "card": "s1_54",
+    "ability": "prophecy_transform",
+    "route": "ZoneManager + смысловой processor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Zone/reveal/pending boundaries checked in B.3/B.5/C.1; no technical ACK event; public/private frozen independently."
+  },
+  {
+    "card": "s1_55",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_57",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_58",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_59",
+    "ability": "valhalla[0]",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_60",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_60",
+    "ability": "on_discharge_self",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_62",
+    "ability": "valhalla[0]",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_63",
+    "ability": "valhalla[0]",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_63",
+    "ability": "ragnar_valhalla_double",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_63",
+    "ability": "ragnar_first_strike_unanswer",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_64",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_65",
+    "ability": "actions[0]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_65",
+    "ability": "instants[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "InstantProcessor resolves actual effect; Engine checkpoints; dedicated B.4 tests suppress coarse duplicate HP/marker summaries."
+  },
+  {
+    "card": "s1_66",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_68",
+    "ability": "actions[0]",
+    "route": "ZoneManager + смысловой processor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_68",
+    "ability": "on_hit_marker",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_69",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_69",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_71",
+    "ability": "actions[0]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_72",
+    "ability": "actions[0]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_73",
+    "ability": "actions[0]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_74",
+    "ability": "deadeat",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_75",
+    "ability": "actions[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_76",
+    "ability": "actions[0]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_76",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_77",
+    "ability": "actions[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_78",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_79",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_81",
+    "ability": "on_heal_instead_wound",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_83",
+    "ability": "on_heal_instead_open",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_84",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_84",
+    "ability": "lose_coins_on_move",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_86",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_87",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_89",
+    "ability": "actions[0]",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_89",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_89",
+    "ability": "actions[2]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_90",
+    "ability": "actions[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_91",
+    "ability": "on_move_heal_adjacent",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_92",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_93",
+    "ability": "on_ally_action_sequence_open",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_94",
+    "ability": "actions[1]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_95",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_95",
+    "ability": "actions[1]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_96",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_96",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_97",
+    "ability": "auto[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_99",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_99",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_101",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_101",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_102",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_102",
+    "ability": "on_strike_self_heal",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_103",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_104",
+    "ability": "actions[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_104",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_104",
+    "ability": "prophecy_reorder",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Zone/reveal/pending boundaries checked in B.3/B.5/C.1; no technical ACK event; public/private frozen independently."
+  },
+  {
+    "card": "s1_105",
+    "ability": "prophecy_summon",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Zone/reveal/pending boundaries checked in B.3/B.5/C.1; no technical ACK event; public/private frozen independently."
+  },
+  {
+    "card": "s1_107",
+    "ability": "actions[0]",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_109",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_109",
+    "ability": "actions[1]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_109",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_110",
+    "ability": "actions[0]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_110",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_111",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_111",
+    "ability": "force_opponent_directional_move",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_112",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_113",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_114",
+    "ability": "actions[0]",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_115",
+    "ability": "actions[0]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_118",
+    "ability": "actions[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_118",
+    "ability": "instants[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "InstantProcessor resolves actual effect; Engine checkpoints; dedicated B.4 tests suppress coarse duplicate HP/marker summaries."
+  },
+  {
+    "card": "s1_119",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_121",
+    "ability": "auto[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_121",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_121",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_122",
+    "ability": "prophecy_block",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Zone/reveal/pending boundaries checked in B.3/B.5/C.1; no technical ACK event; public/private frozen independently."
+  },
+  {
+    "card": "s1_123",
+    "ability": "actions[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_123",
+    "ability": "on_poison_damage",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_124",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_125",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_127",
+    "ability": "prophecy_charge",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Zone/reveal/pending boundaries checked in B.3/B.5/C.1; no technical ACK event; public/private frozen independently."
+  },
+  {
+    "card": "s1_128",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_129",
+    "ability": "actions[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_129",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_131",
+    "ability": "deadeat",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_131",
+    "ability": "vampire",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_132",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_132",
+    "ability": "strike_prophecy",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_134",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_135",
+    "ability": "on_hit_gain",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_135",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_136",
+    "ability": "regeneration",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_136",
+    "ability": "attack_series",
+    "route": "ValhallaProcessor / MatriarchOrderProcessor / ProphecyProcessor / OchiKronga",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Zone/reveal/pending boundaries checked in B.3/B.5/C.1; no technical ACK event; public/private frozen independently."
+  },
+  {
+    "card": "s1_137",
+    "ability": "incarnation",
+    "route": "ZoneManager + смысловой processor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Zone/reveal/pending boundaries checked in B.3/B.5/C.1; no technical ACK event; public/private frozen independently.",
+    "finding": "Reviewed both native token paths: grant and TurnProcessor direct turn increment. Added graveyard marker progress and readiness hooks; exact addressed pair confirms no fake reset event."
+  },
+  {
+    "card": "s1_138",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_138",
+    "ability": "on_teleport_adjacent_bonus",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_139",
+    "ability": "vampire",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_139",
+    "ability": "vampire_offset",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_140",
+    "ability": "actions[0]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_140",
+    "ability": "vampire",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_141",
+    "ability": "incarnation",
+    "route": "ZoneManager + смысловой processor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Zone/reveal/pending boundaries checked in B.3/B.5/C.1; no technical ACK event; public/private frozen independently.",
+    "finding": "Reviewed both native token paths: grant and TurnProcessor direct turn increment. Added graveyard marker progress and readiness hooks; exact addressed pair confirms no fake reset event."
+  },
+  {
+    "card": "s1_142",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_145",
+    "ability": "actions[0]",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_145",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_147",
+    "ability": "instants[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "InstantProcessor resolves actual effect; Engine checkpoints; dedicated B.4 tests suppress coarse duplicate HP/marker summaries.",
+    "finding": "Direct allied incarnation opening bypassed resource-only ledger; fixed with status.changed and exact pair."
+  },
+  {
+    "card": "s1_147",
+    "ability": "on_ally_incarnation",
+    "route": "ZoneManager + смысловой processor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint",
+    "finding": "Direct allied incarnation opening bypassed resource-only ledger; fixed with status.changed and exact pair."
+  },
+  {
+    "card": "s1_148",
+    "ability": "actions[0]",
+    "route": "ZoneManager + смысловой processor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_148",
+    "ability": "actions[1]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_149",
+    "ability": "incarnation",
+    "route": "ZoneManager + смысловой processor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Zone/reveal/pending boundaries checked in B.3/B.5/C.1; no technical ACK event; public/private frozen independently.",
+    "finding": "Reviewed both native token paths: grant and TurnProcessor direct turn increment. Added graveyard marker progress and readiness hooks; exact addressed pair confirms no fake reset event."
+  },
+  {
+    "card": "s1_150",
+    "ability": "actions[0]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_150",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_152",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_152",
+    "ability": "actions[1]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_153",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_154",
+    "ability": "vampire",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_154",
+    "ability": "first_card_heal",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_155",
+    "ability": "actions[0]",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_155",
+    "ability": "vampire",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_157",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_157",
+    "ability": "instants[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "InstantProcessor resolves actual effect; Engine checkpoints; dedicated B.4 tests suppress coarse duplicate HP/marker summaries."
+  },
+  {
+    "card": "s1_158",
+    "ability": "deadeat",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_159",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_160",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_161",
+    "ability": "incarnation",
+    "route": "ZoneManager + смысловой processor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Zone/reveal/pending boundaries checked in B.3/B.5/C.1; no technical ACK event; public/private frozen independently.",
+    "finding": "Reviewed both native token paths: grant and TurnProcessor direct turn increment. Added graveyard marker progress and readiness hooks; exact addressed pair confirms no fake reset event."
+  },
+  {
+    "card": "s1_161",
+    "ability": "tremor_on_graveyard",
+    "route": "ZoneManager + смысловой processor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_162",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_162",
+    "ability": "deadeat",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_163",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_164",
+    "ability": "incarnation",
+    "route": "ZoneManager + смысловой processor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Zone/reveal/pending boundaries checked in B.3/B.5/C.1; no technical ACK event; public/private frozen independently.",
+    "finding": "Reviewed both native token paths: grant and TurnProcessor direct turn increment. Added graveyard marker progress and readiness hooks; exact addressed pair confirms no fake reset event."
+  },
+  {
+    "card": "s1_164",
+    "ability": "on_incarnation_token",
+    "route": "ZoneManager + смысловой processor",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_166",
+    "ability": "vampire",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_166",
+    "ability": "vampire_offset",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_168",
+    "ability": "adjacent_move_wound_cheap",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_168",
+    "ability": "next_six_on_enemy_death_or_ally_incarnation",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_169",
+    "ability": "actions[0]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_171",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_173",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_174",
+    "ability": "instants[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "InstantProcessor resolves actual effect; Engine checkpoints; dedicated B.4 tests suppress coarse duplicate HP/marker summaries."
+  },
+  {
+    "card": "s1_174",
+    "ability": "instants[1]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "InstantProcessor resolves actual effect; Engine checkpoints; dedicated B.4 tests suppress coarse duplicate HP/marker summaries."
+  },
+  {
+    "card": "s1_175",
+    "ability": "actions[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_175",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_177",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_178",
+    "ability": "turn_end_discharge",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_178",
+    "ability": "on_ally_strike_miss",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_178",
+    "ability": "on_counter_threshold",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_179",
+    "ability": "deadeat",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_179",
+    "ability": "deadeat_hp_bonus",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "DamageResolver/CardHealing native actual HP, armor and death"
+  },
+  {
+    "card": "s1_180",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_181",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_181",
+    "ability": "instants[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "InstantProcessor resolves actual effect; Engine checkpoints; dedicated B.4 tests suppress coarse duplicate HP/marker summaries."
+  },
+  {
+    "card": "s1_181",
+    "ability": "open_on_opponent_turn",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_182",
+    "ability": "actions[0]",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_183",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_184",
+    "ability": "actions[0]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_184",
+    "ability": "instants[0]",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "InstantProcessor resolves actual effect; Engine checkpoints; dedicated B.4 tests suppress coarse duplicate HP/marker summaries."
+  },
+  {
+    "card": "s1_185",
+    "ability": "actions[0]",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_185",
+    "ability": "on_jump_roll",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_189",
+    "ability": "ranged_block_roll",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_191",
+    "ability": "actions[0]",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_191",
+    "ability": "actions[1]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_191",
+    "ability": "actions[2]",
+    "route": "DamageResolver / CardHealing / TurnPhaseProcessor",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_192",
+    "ability": "on_strike_ally_shield",
+    "route": "Recorder::statusCheckpoint после native effect",
+    "risk": "high",
+    "review": "Check direct mutations, leave/return zone skipping ledger and continuation observer boundaries.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "Observer at native result boundary plus successful command checkpoint"
+  },
+  {
+    "card": "s1_194",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_195",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_198",
+    "ability": "actions[0]",
+    "route": "ActionResolver / SingleRoll / StrikeResolver / CardRoll",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  },
+  {
+    "card": "s1_198",
+    "ability": "actions[1]",
+    "route": "MovementResolver / MovementEffectResolver",
+    "risk": "ordinary",
+    "review": "Common native writer; exact values frozen at result; scenario coverage retained from B.1-B.5.",
+    "remaining": "Combination coverage not implied by common writer.",
+    "reviewed_control": "ActionResolver/SingleRoll health, dice, movement or status route; cost checkpoint distinct from effect; scope does not determine text certification."
+  }
+]

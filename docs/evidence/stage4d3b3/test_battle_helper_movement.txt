@@ -1,0 +1,1 @@
+BattleHelper movement regression tests passed.

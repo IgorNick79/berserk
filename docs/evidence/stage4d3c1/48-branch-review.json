@@ -1,0 +1,2688 @@
+[
+  {
+    "card": "s1_7",
+    "name": "Смотритель стойла",
+    "ability": "turn_start[0]",
+    "definition": {
+      "type": "whip",
+      "label": "Щелчок хлыста",
+      "value": 1
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          482,
+          490,
+          493,
+          498,
+          600,
+          723,
+          725,
+          1060,
+          1087,
+          1089
+        ]
+      },
+      {
+        "file": "src/Core/TurnProcessor.php",
+        "lines": [
+          1169,
+          1232,
+          1282
+        ]
+      },
+      {
+        "file": "src/Core/Observation/ProphecyKnowledge.php",
+        "lines": [
+          91
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "TurnPhaseProcessor::executeTurnStartEffect → ActionResolver::chooseWhipTarget",
+    "event_types": "combat.wounds + modifier.changed",
+    "test_or_evidence": "native whip choice damage and movement bonus",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_8",
+    "name": "Степной волколак",
+    "ability": "on_death[0]",
+    "definition": {
+      "type": "tap",
+      "value": 2,
+      "target": "near"
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/DamageResolver.php",
+        "lines": [
+          370,
+          373,
+          384,
+          400,
+          407,
+          431,
+          469,
+          603
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "DamageResolver::resolveDeath → on_death near → applyDamage",
+    "event_types": "combat.death + combat.wounds",
+    "test_or_evidence": "native death effect s1_8",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_15",
+    "name": "Рубаки Холверта",
+    "ability": "on_successful_strike",
+    "definition": {
+      "key": "holvert_open",
+      "type": "open_line_ally_cannot_attack",
+      "uses_per_turn": 1
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          2892,
+          2894
+        ]
+      },
+      {
+        "file": "src/Core/CardStats.php",
+        "lines": [
+          934
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "StrikeResolver → ActionResolver::triggerLineOpenOnStrike → resolveLineOpenOnStrike",
+    "event_types": "status.changed + modifier.changed",
+    "test_or_evidence": "Holvert native successful strike opens ally and restricts attacks",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_26",
+    "name": "Анубисар",
+    "ability": "strike_effects[0]",
+    "definition": {
+      "levels": [
+        "strong"
+      ],
+      "chain_damage": {
+        "value": 1,
+        "filter": "enemy",
+        "max_targets": 2
+      }
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          1612,
+          1613,
+          2781
+        ]
+      },
+      {
+        "file": "src/Core/DegascaProcessor.php",
+        "lines": [
+          34,
+          580
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1181
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1197,
+          1245,
+          1923,
+          2207,
+          2294
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "StrikeResolver::applyStrongStrikeFollowUpEffects → applyChainDamageToTargets; chooseAnubisarChain continuation",
+    "event_types": "combat.wounds",
+    "test_or_evidence": "configured strong followup s1_26",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_27",
+    "name": "Бон и Берроу",
+    "ability": "on_wounding_strike",
+    "definition": {
+      "name": "Разряд при ударе",
+      "type": "discharge",
+      "range": 3,
+      "strike": {
+        "weak": 1,
+        "medium": 2,
+        "strong": 2
+      },
+      "min_coins": 1
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/CoinAbilities.php",
+        "lines": [
+          114
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Native triggered discharge writer checked directly. Deferred scheduling crypto identity tested by existing combat continuation suites; full multi-proposal combinations not exhaustive.",
+    "native_route": "CoinAbilities::triggerDischarge → deferred post-combat → ActionResolver/SingleRoll",
+    "event_types": "attack.* + dice.* + combat.wounds",
+    "test_or_evidence": "Bon native triggered discharge actual roll result",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_29",
+    "name": "Пеший латник",
+    "ability": "answer",
+    "definition": {
+      "type": "tap",
+      "types": [
+        "strike",
+        "tap",
+        "magic"
+      ],
+      "value": 2
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/CardStats.php",
+        "lines": [
+          53
+        ]
+      },
+      {
+        "file": "src/Core/CoinAbilities.php",
+        "lines": [
+          115
+        ]
+      },
+      {
+        "file": "src/Core/DamageResolver.php",
+        "lines": [
+          23,
+          83,
+          93,
+          98,
+          266,
+          675,
+          689
+        ]
+      },
+      {
+        "file": "src/Core/FirstStrikeJump.php",
+        "lines": [
+          31,
+          33,
+          67
+        ]
+      },
+      {
+        "file": "src/Core/OchiKronga.php",
+        "lines": [
+          66
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1016,
+          1022,
+          1064,
+          1065,
+          1070,
+          1187,
+          2468
+        ]
+      },
+      {
+        "file": "src/Core/ValhallaProcessor.php",
+        "lines": [
+          11
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "DamageResolver::applyAnswer → applyDamage",
+    "event_types": "combat.wounds",
+    "test_or_evidence": "reactive answer s1_29",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_32",
+    "name": "Дегаска",
+    "ability": "strike_effects[0]",
+    "definition": {
+      "type": "degasca_sequence",
+      "levels": [
+        "strong"
+      ]
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          1612,
+          1613,
+          2781
+        ]
+      },
+      {
+        "file": "src/Core/DegascaProcessor.php",
+        "lines": [
+          34,
+          580
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1181
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1197,
+          1245,
+          1923,
+          2207,
+          2294
+        ]
+      }
+    ],
+    "decision": "focused_hook_added_and_tested",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "DegascaProcessor::resume → StrikeResolver::applyConfiguredStrikeEffects; chooseCard → addLearned",
+    "event_types": "capability.learned (owner-only) + native configured effect results",
+    "test_or_evidence": "Degasca native learns secret deck ability",
+    "separate_event_required": true,
+    "real_missing_event_found": true,
+    "focused_hook_added": true
+  },
+  {
+    "card": "s1_35",
+    "name": "Гном-поджигатель",
+    "ability": "turn_start[0]",
+    "definition": {
+      "type": "damage",
+      "label": "Нестерпимый жар",
+      "value": 1,
+      "target": "opposite",
+      "value_if_not_moved": 2
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          482,
+          490,
+          493,
+          498,
+          600,
+          723,
+          725,
+          1060,
+          1087,
+          1089
+        ]
+      },
+      {
+        "file": "src/Core/TurnProcessor.php",
+        "lines": [
+          1169,
+          1232,
+          1282
+        ]
+      },
+      {
+        "file": "src/Core/Observation/ProphecyKnowledge.php",
+        "lines": [
+          91
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "TurnPhaseProcessor::executeTurnStartEffect damage opposite → Engine::applyDamage",
+    "event_types": "combat.wounds",
+    "test_or_evidence": "turn start native effect s1_35",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_36",
+    "name": "Ледяной змей",
+    "ability": "strike_effects[0]",
+    "definition": {
+      "levels": [
+        "weak",
+        "medium",
+        "strong"
+      ],
+      "grant_ally_modifier": {
+        "filter": "has_magic",
+        "modifier": {
+          "stat": "damage_reduction",
+          "types": [
+            "strike",
+            "tap",
+            "uchr",
+            "shot",
+            "throw"
+          ],
+          "value": 1,
+          "expire": "end_of_opponent_turn"
+        }
+      }
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          1612,
+          1613,
+          2781
+        ]
+      },
+      {
+        "file": "src/Core/DegascaProcessor.php",
+        "lines": [
+          34,
+          580
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1181
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1197,
+          1245,
+          1923,
+          2207,
+          2294
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "StrikeResolver → grant ally modifier choice → ActionResolver::chooseAllyModifier",
+    "event_types": "modifier.changed",
+    "test_or_evidence": "native strong postcombat choice s1_36",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_37",
+    "name": "Овражный гном",
+    "ability": "strike_effects[0]",
+    "definition": {
+      "levels": [
+        "weak",
+        "medium",
+        "strong"
+      ],
+      "close_or_damage": {
+        "damage": 2,
+        "condition": "target_open"
+      }
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          1612,
+          1613,
+          2781
+        ]
+      },
+      {
+        "file": "src/Core/DegascaProcessor.php",
+        "lines": [
+          34,
+          580
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1181
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1197,
+          1245,
+          1923,
+          2207,
+          2294
+        ]
+      }
+    ],
+    "decision": "focused_hook_added_and_tested",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "StrikeResolver → close_or_damage choice → applyDamage or direct close",
+    "event_types": "status.changed on actual close or combat.wounds on damage",
+    "test_or_evidence": "close or damage actual close continuation",
+    "separate_event_required": true,
+    "real_missing_event_found": true,
+    "focused_hook_added": true
+  },
+  {
+    "card": "s1_46",
+    "name": "Мастер топора",
+    "ability": "turn_start[0]",
+    "definition": {
+      "line": true,
+      "type": "get_coins",
+      "coins": 1
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          482,
+          490,
+          493,
+          498,
+          600,
+          723,
+          725,
+          1060,
+          1087,
+          1089
+        ]
+      },
+      {
+        "file": "src/Core/TurnProcessor.php",
+        "lines": [
+          1169,
+          1232,
+          1282
+        ]
+      },
+      {
+        "file": "src/Core/Observation/ProphecyKnowledge.php",
+        "lines": [
+          91
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "TurnPhaseProcessor::executeGetCoins → CoinAbilities::gain",
+    "event_types": "coins.changed",
+    "test_or_evidence": "native start coins s1_46",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_56",
+    "name": "Ном",
+    "ability": "on_death[0]",
+    "definition": {
+      "type": "damage",
+      "value": 3,
+      "filter": "enemy_creature_not_flying",
+      "target": "choice"
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/DamageResolver.php",
+        "lines": [
+          370,
+          373,
+          384,
+          400,
+          407,
+          431,
+          469,
+          603
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "DamageResolver::resolveDeath → pending_choice → chooseDeathTarget → applyDamage",
+    "event_types": "combat.death + combat.wounds",
+    "test_or_evidence": "native death effect s1_56",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_57",
+    "name": "Криомант",
+    "ability": "actions[0]",
+    "definition": {
+      "key": "ice_rain",
+      "name": "Ледяной дождь",
+      "type": "freeze_moves",
+      "coins": 1,
+      "strike": {
+        "weak": 3,
+        "medium": 2,
+        "strong": 1
+      },
+      "action_type": "cast"
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          134,
+          4135,
+          4158,
+          4180
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": "Cryomancer actual limit and expiration",
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "ActionResolver::resolveFreezeMoves; TurnProcessor::afterEndPhase",
+    "event_types": "rule.movement_limit",
+    "test_or_evidence": "Cryomancer actual limit and expiration",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_58",
+    "name": "Молотобоец",
+    "ability": "strike_effects[0]",
+    "definition": {
+      "push": 2,
+      "levels": [
+        "weak",
+        "medium",
+        "strong"
+      ]
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          1612,
+          1613,
+          2781
+        ]
+      },
+      {
+        "file": "src/Core/DegascaProcessor.php",
+        "lines": [
+          34,
+          580
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1181
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1197,
+          1245,
+          1923,
+          2207,
+          2294
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "StrikeResolver pending_push → choosePushChoice → forced movement or damage",
+    "event_types": "movement.completed / combat.wounds",
+    "test_or_evidence": "native strong postcombat choice s1_58",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_59",
+    "name": "Оборотень",
+    "ability": "pre_turn_start",
+    "definition": {
+      "expire": "end_of_turn",
+      "options": [
+        {
+          "label": "Регенерация 2",
+          "modifiers": [
+            {
+              "stat": "regeneration",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "label": "+2 к strike, +1 к move",
+          "modifiers": [
+            {
+              "stat": "ability_strike",
+              "value": 2
+            },
+            {
+              "stat": "move",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/TurnProcessor.php",
+        "lines": [
+          760,
+          763
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "TurnProcessor::checkCardChoice → chooseCardOption → modifiers",
+    "event_types": "modifier.changed",
+    "test_or_evidence": "Werewolf native preturn option modifiers",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_79",
+    "name": "Бегущая по кронам",
+    "ability": "turn_start[0]",
+    "definition": {
+      "type": "position_modifier",
+      "scope": "any",
+      "position": "near",
+      "modifiers": [
+        {
+          "stat": "shot_bonus",
+          "value": 1
+        }
+      ]
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          482,
+          490,
+          493,
+          498,
+          600,
+          723,
+          725,
+          1060,
+          1087,
+          1089
+        ]
+      },
+      {
+        "file": "src/Core/TurnProcessor.php",
+        "lines": [
+          1169,
+          1232,
+          1282
+        ]
+      },
+      {
+        "file": "src/Core/Observation/ProphecyKnowledge.php",
+        "lines": [
+          91
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "TurnPhaseProcessor::executeTurnStartEffect position_modifier → successful command checkpoint",
+    "event_types": "modifier.changed",
+    "test_or_evidence": "turn start native effect s1_79",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_79",
+    "name": "Бегущая по кронам",
+    "ability": "turn_start[1]",
+    "definition": {
+      "type": "position_modifier",
+      "scope": "any",
+      "position": "far",
+      "modifiers": [
+        {
+          "stat": "direct",
+          "value": true
+        }
+      ]
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          482,
+          490,
+          493,
+          498,
+          600,
+          723,
+          725,
+          1060,
+          1087,
+          1089
+        ]
+      },
+      {
+        "file": "src/Core/TurnProcessor.php",
+        "lines": [
+          1169,
+          1232,
+          1282
+        ]
+      },
+      {
+        "file": "src/Core/Observation/ProphecyKnowledge.php",
+        "lines": [
+          91
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "TurnPhaseProcessor::executeTurnStartEffect position_modifier → successful command checkpoint",
+    "event_types": "modifier.changed",
+    "test_or_evidence": "native far row position direct modifier",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_80",
+    "name": "Бьерн",
+    "ability": "on_become_defender",
+    "definition": [
+      {
+        "type": "heal_target",
+        "value": 2
+      }
+    ],
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          495,
+          497
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "StrikeResolver::chooseDefender → advanceDefenderHealing → CardHealing",
+    "event_types": "card.healed",
+    "test_or_evidence": "actual chosen defender reaction s1_80",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_82",
+    "name": "Клаэр",
+    "ability": "on_become_defender",
+    "definition": [
+      {
+        "stat": "ova",
+        "value": 1
+      },
+      {
+        "stat": "ability_strike",
+        "value": 2
+      }
+    ],
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          495,
+          497
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "StrikeResolver::chooseDefender → advanceDefenderHealing modifier branch",
+    "event_types": "modifier.changed",
+    "test_or_evidence": "actual chosen defender reaction s1_82",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_84",
+    "name": "Камнедрев",
+    "ability": "turn_start[0]",
+    "definition": {
+      "type": "get_coins",
+      "coins": 1
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          482,
+          490,
+          493,
+          498,
+          600,
+          723,
+          725,
+          1060,
+          1087,
+          1089
+        ]
+      },
+      {
+        "file": "src/Core/TurnProcessor.php",
+        "lines": [
+          1169,
+          1232,
+          1282
+        ]
+      },
+      {
+        "file": "src/Core/Observation/ProphecyKnowledge.php",
+        "lines": [
+          91
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "TurnPhaseProcessor coin gain; CardStats::getAbilityBonus derives coin_strike_bonus; DamageResolver spends coins",
+    "event_types": "coins.changed + combat.result/wounds; no duplicate derived bonus",
+    "test_or_evidence": "native start coins s1_84; Kamnedrev derived coin strike result no invented spending",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_84",
+    "name": "Камнедрев",
+    "ability": "coin_strike_bonus",
+    "definition": true,
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/CardStats.php",
+        "lines": [
+          455,
+          617,
+          1401
+        ]
+      },
+      {
+        "file": "src/Core/DamageResolver.php",
+        "lines": [
+          1110
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1480,
+          1485,
+          1491
+        ]
+      },
+      {
+        "file": "src/Core/ValhallaProcessor.php",
+        "lines": [
+          315
+        ]
+      }
+    ],
+    "decision": "derived_rule_no_separate_message",
+    "addressed_test": null,
+    "new_classification": "no_separate_event_required",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "TurnPhaseProcessor coin gain; CardStats::getAbilityBonus derives coin_strike_bonus; DamageResolver spends coins",
+    "event_types": "combat.result / combat.wounds; no coins.changed on unchanged coins",
+    "test_or_evidence": "native start coins s1_84; Kamnedrev derived coin strike result no invented spending",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_92",
+    "name": "Кобольд",
+    "ability": "on_successful_hit",
+    "definition": {
+      "type": "optional_heal",
+      "value_from": "opposite_creature_strike_medium"
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          2725,
+          2730,
+          2771
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "ActionResolver::openSuccessfulHitOptionalHeal → chooseKoboldHeal → CardHealing",
+    "event_types": "card.healed",
+    "test_or_evidence": "Kobold native optional heal accepted",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_94",
+    "name": "Король-жрец",
+    "ability": "actions[0]",
+    "definition": {
+      "key": "memory_loss",
+      "name": "Потеря памяти",
+      "type": "impact",
+      "coins": 1,
+      "effect": "memory_loss",
+      "once_per_battle": true
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/AbyssMovement.php",
+        "lines": [
+          56
+        ]
+      },
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          68,
+          343,
+          357,
+          812,
+          817,
+          1257,
+          1275,
+          1301,
+          3298,
+          3909,
+          3929,
+          4743,
+          5344,
+          5425,
+          5501,
+          5902,
+          5990
+        ]
+      },
+      {
+        "file": "src/Core/AlvalindProcessor.php",
+        "lines": [
+          78
+        ]
+      },
+      {
+        "file": "src/Core/BattleHelper.php",
+        "lines": [
+          196,
+          333,
+          335
+        ]
+      },
+      {
+        "file": "src/Core/CardHealing.php",
+        "lines": [
+          140
+        ]
+      },
+      {
+        "file": "src/Core/CardStats.php",
+        "lines": [
+          271,
+          782
+        ]
+      },
+      {
+        "file": "src/Core/DamageResolver.php",
+        "lines": [
+          264
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          537,
+          699,
+          823,
+          835
+        ]
+      },
+      {
+        "file": "src/Core/IncarnationTokenProcessor.php",
+        "lines": [
+          90
+        ]
+      },
+      {
+        "file": "src/Core/MatriarchOrderProcessor.php",
+        "lines": [
+          82,
+          87
+        ]
+      },
+      {
+        "file": "src/Core/MemoryLoss.php",
+        "lines": [
+          13
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1222,
+          1312,
+          2269
+        ]
+      },
+      {
+        "file": "src/Core/SwampQueenProcessor.php",
+        "lines": [
+          157,
+          165
+        ]
+      },
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          847,
+          995,
+          1239
+        ]
+      },
+      {
+        "file": "src/Core/ValhallaProcessor.php",
+        "lines": [
+          306,
+          308
+        ]
+      },
+      {
+        "file": "src/Core/WormIncarnation.php",
+        "lines": [
+          57
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "ActionResolver MemoryLoss → EffectiveFeatures flags → status ledger",
+    "event_types": "status.condition",
+    "test_or_evidence": "memory loss add and remove without source leak",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_95",
+    "name": "Ловец душ",
+    "ability": "on_any_death",
+    "definition": {
+      "side": "any",
+      "cause": "any",
+      "value": 1,
+      "effect": "get_coin"
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/DamageResolver.php",
+        "lines": [
+          728,
+          1058
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "DamageResolver any-death get_coin → CoinAbilities::gain",
+    "event_types": "combat.death + coins.changed",
+    "test_or_evidence": "any death actual coin s1_95",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_107",
+    "name": "Болотник",
+    "ability": "actions[1]",
+    "definition": {
+      "name": "Ядовитый взрыв",
+      "type": "impact",
+      "coins": 1,
+      "value": 1,
+      "filter": "enemy",
+      "poison": 1,
+      "target": "all_near",
+      "self_destroy": true
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/AbyssMovement.php",
+        "lines": [
+          56
+        ]
+      },
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          68,
+          343,
+          357,
+          812,
+          817,
+          1257,
+          1275,
+          1301,
+          3298,
+          3909,
+          3929,
+          4743,
+          5344,
+          5425,
+          5501,
+          5902,
+          5990
+        ]
+      },
+      {
+        "file": "src/Core/AlvalindProcessor.php",
+        "lines": [
+          78
+        ]
+      },
+      {
+        "file": "src/Core/BattleHelper.php",
+        "lines": [
+          196,
+          333,
+          335
+        ]
+      },
+      {
+        "file": "src/Core/CardHealing.php",
+        "lines": [
+          140
+        ]
+      },
+      {
+        "file": "src/Core/CardStats.php",
+        "lines": [
+          271,
+          782
+        ]
+      },
+      {
+        "file": "src/Core/DamageResolver.php",
+        "lines": [
+          264
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          537,
+          699,
+          823,
+          835
+        ]
+      },
+      {
+        "file": "src/Core/IncarnationTokenProcessor.php",
+        "lines": [
+          90
+        ]
+      },
+      {
+        "file": "src/Core/MatriarchOrderProcessor.php",
+        "lines": [
+          82,
+          87
+        ]
+      },
+      {
+        "file": "src/Core/MemoryLoss.php",
+        "lines": [
+          13
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1222,
+          1312,
+          2269
+        ]
+      },
+      {
+        "file": "src/Core/SwampQueenProcessor.php",
+        "lines": [
+          157,
+          165
+        ]
+      },
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          847,
+          995,
+          1239
+        ]
+      },
+      {
+        "file": "src/Core/ValhallaProcessor.php",
+        "lines": [
+          306,
+          308
+        ]
+      },
+      {
+        "file": "src/Core/WormIncarnation.php",
+        "lines": [
+          57
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "ActionResolver impact all_near → damage + poison + self death",
+    "event_types": "combat.wounds + marker.changed + combat.death",
+    "test_or_evidence": "3 summon native ability then self destruction zone",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_112",
+    "name": "Хедд",
+    "ability": "strike_effects[0]",
+    "definition": {
+      "levels": [
+        "medium",
+        "strong"
+      ],
+      "poison": 1
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          1612,
+          1613,
+          2781
+        ]
+      },
+      {
+        "file": "src/Core/DegascaProcessor.php",
+        "lines": [
+          34,
+          580
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1181
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1197,
+          1245,
+          1923,
+          2207,
+          2294
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "Engine::applyStrikeEffects poison → checkpoint",
+    "event_types": "marker.changed",
+    "test_or_evidence": "native configured strike effect s1_112",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_116",
+    "name": "Василиск",
+    "ability": "strike_effects[0]",
+    "definition": {
+      "levels": [
+        "weak",
+        "medium",
+        "strong"
+      ],
+      "rooted": true
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          1612,
+          1613,
+          2781
+        ]
+      },
+      {
+        "file": "src/Core/DegascaProcessor.php",
+        "lines": [
+          34,
+          580
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1181
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1197,
+          1245,
+          1923,
+          2207,
+          2294
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "Engine::applyStrikeEffects rooted → checkpoint",
+    "event_types": "marker.changed",
+    "test_or_evidence": "native configured strike effect s1_116",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_119",
+    "name": "Бул'Багур",
+    "ability": "opponent_turn_start[0]",
+    "definition": {
+      "type": "cell_effect",
+      "label": "Свет фонаря",
+      "range": 3,
+      "value": 1,
+      "effect": "lantern_light"
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          356,
+          359,
+          538,
+          601,
+          1060
+        ]
+      },
+      {
+        "file": "src/Core/ZoneManager.php",
+        "lines": [
+          301
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "CellEffectDirectionChoice places markers; DamageResolver::lanternWoundBonus",
+    "event_types": "cell_marker.changed + combat.wounds.cell_bonus",
+    "test_or_evidence": "native light direction places public cells; 9 movement into light then real ranged wounds",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_120",
+    "name": "Гоблин",
+    "ability": "strike_effects[0]",
+    "definition": {
+      "close": true
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          1612,
+          1613,
+          2781
+        ]
+      },
+      {
+        "file": "src/Core/DegascaProcessor.php",
+        "lines": [
+          34,
+          580
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1181
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1197,
+          1245,
+          1923,
+          2207,
+          2294
+        ]
+      }
+    ],
+    "decision": "focused_hook_added_and_tested",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "Engine::applyStrikeEffects direct close → focused observer",
+    "event_types": "status.changed",
+    "test_or_evidence": "native configured strike effect s1_120",
+    "separate_event_required": true,
+    "real_missing_event_found": true,
+    "focused_hook_added": true
+  },
+  {
+    "card": "s1_121",
+    "name": "Слизь",
+    "ability": "answer",
+    "definition": {
+      "types": [
+        "strike",
+        "tap",
+        "magic"
+      ],
+      "value": 1
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/CardStats.php",
+        "lines": [
+          53
+        ]
+      },
+      {
+        "file": "src/Core/CoinAbilities.php",
+        "lines": [
+          115
+        ]
+      },
+      {
+        "file": "src/Core/DamageResolver.php",
+        "lines": [
+          23,
+          83,
+          93,
+          98,
+          266,
+          675,
+          689
+        ]
+      },
+      {
+        "file": "src/Core/FirstStrikeJump.php",
+        "lines": [
+          31,
+          33,
+          67
+        ]
+      },
+      {
+        "file": "src/Core/OchiKronga.php",
+        "lines": [
+          66
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1016,
+          1022,
+          1064,
+          1065,
+          1070,
+          1187,
+          2468
+        ]
+      },
+      {
+        "file": "src/Core/ValhallaProcessor.php",
+        "lines": [
+          11
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "DamageResolver::applyAnswer",
+    "event_types": "combat.wounds",
+    "test_or_evidence": "reactive answer s1_121",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_124",
+    "name": "Сеятель хвори",
+    "ability": "on_any_death",
+    "definition": {
+      "cause": "poison",
+      "filter": "any",
+      "once_per_turn": true
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/DamageResolver.php",
+        "lines": [
+          728,
+          1058
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": "Seeder poison death target continuation",
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "DamageResolver poison death → pending_any_death → selected poison target",
+    "event_types": "combat.death + marker.changed",
+    "test_or_evidence": "Seeder poison death target continuation",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_130",
+    "name": "Королева топи",
+    "ability": "actions[0]",
+    "definition": {
+      "key": "prophecy_wounds",
+      "name": "Пророчество 1",
+      "type": "impact",
+      "count": 1,
+      "effect": "prophecy_wounds"
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/AbyssMovement.php",
+        "lines": [
+          56
+        ]
+      },
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          68,
+          343,
+          357,
+          812,
+          817,
+          1257,
+          1275,
+          1301,
+          3298,
+          3909,
+          3929,
+          4743,
+          5344,
+          5425,
+          5501,
+          5902,
+          5990
+        ]
+      },
+      {
+        "file": "src/Core/AlvalindProcessor.php",
+        "lines": [
+          78
+        ]
+      },
+      {
+        "file": "src/Core/BattleHelper.php",
+        "lines": [
+          196,
+          333,
+          335
+        ]
+      },
+      {
+        "file": "src/Core/CardHealing.php",
+        "lines": [
+          140
+        ]
+      },
+      {
+        "file": "src/Core/CardStats.php",
+        "lines": [
+          271,
+          782
+        ]
+      },
+      {
+        "file": "src/Core/DamageResolver.php",
+        "lines": [
+          264
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          537,
+          699,
+          823,
+          835
+        ]
+      },
+      {
+        "file": "src/Core/IncarnationTokenProcessor.php",
+        "lines": [
+          90
+        ]
+      },
+      {
+        "file": "src/Core/MatriarchOrderProcessor.php",
+        "lines": [
+          82,
+          87
+        ]
+      },
+      {
+        "file": "src/Core/MemoryLoss.php",
+        "lines": [
+          13
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1222,
+          1312,
+          2269
+        ]
+      },
+      {
+        "file": "src/Core/SwampQueenProcessor.php",
+        "lines": [
+          157,
+          165
+        ]
+      },
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          847,
+          995,
+          1239
+        ]
+      },
+      {
+        "file": "src/Core/ValhallaProcessor.php",
+        "lines": [
+          306,
+          308
+        ]
+      },
+      {
+        "file": "src/Core/WormIncarnation.php",
+        "lines": [
+          57
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "SwampQueenProcessor::startProphecy/finishProphecy; startSummon → ZoneManager::summonFromDeck",
+    "event_types": "prophecy.viewed + combat.wounds; zone.changed",
+    "test_or_evidence": "Queen private prophecy then actual impact continuation; deck summon actual queen eight neighbours",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_130",
+    "name": "Королева топи",
+    "ability": "opponent_turn_end[0]",
+    "definition": {
+      "type": "deck_summon",
+      "element": "swamps",
+      "max_price": 5,
+      "own_neighbors": 8
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/SwampQueenProcessor.php",
+        "lines": [
+          18
+        ]
+      },
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          603,
+          922,
+          1163,
+          1182,
+          1191
+        ]
+      },
+      {
+        "file": "src/Core/Observation/PlayerObservation.php",
+        "lines": [
+          227,
+          229
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "SwampQueenProcessor::startProphecy/finishProphecy; startSummon → ZoneManager::summonFromDeck",
+    "event_types": "prophecy.viewed + combat.wounds; zone.changed",
+    "test_or_evidence": "Queen private prophecy then actual impact continuation; deck summon actual queen eight neighbours",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_131",
+    "name": "Медуза Горгона",
+    "ability": "strike_effects[0]",
+    "definition": {
+      "levels": [
+        "strong"
+      ],
+      "marker": {
+        "type": "stun",
+        "expire": 1,
+        "timing": "owner_turn"
+      }
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          1612,
+          1613,
+          2781
+        ]
+      },
+      {
+        "file": "src/Core/DegascaProcessor.php",
+        "lines": [
+          34,
+          580
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1181
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1197,
+          1245,
+          1923,
+          2207,
+          2294
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "Engine::applyStrikeEffects stun marker + close",
+    "event_types": "marker.changed + status.changed",
+    "test_or_evidence": "native configured strike effect s1_131",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_134",
+    "name": "Уриил",
+    "ability": "answer",
+    "definition": {
+      "types": [
+        "strike"
+      ],
+      "value": 0,
+      "marker": {
+        "type": "stun",
+        "expire": 1,
+        "timing": "owner_turn",
+        "skip_first_tick": true
+      }
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/CardStats.php",
+        "lines": [
+          53
+        ]
+      },
+      {
+        "file": "src/Core/CoinAbilities.php",
+        "lines": [
+          115
+        ]
+      },
+      {
+        "file": "src/Core/DamageResolver.php",
+        "lines": [
+          23,
+          83,
+          93,
+          98,
+          266,
+          675,
+          689
+        ]
+      },
+      {
+        "file": "src/Core/FirstStrikeJump.php",
+        "lines": [
+          31,
+          33,
+          67
+        ]
+      },
+      {
+        "file": "src/Core/OchiKronga.php",
+        "lines": [
+          66
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1016,
+          1022,
+          1064,
+          1065,
+          1070,
+          1187,
+          2468
+        ]
+      },
+      {
+        "file": "src/Core/ValhallaProcessor.php",
+        "lines": [
+          11
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "DamageResolver::applyAnswer marker",
+    "event_types": "marker.changed",
+    "test_or_evidence": "reactive answer s1_134",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_144",
+    "name": "Герольд мрака",
+    "ability": "actions[0]",
+    "definition": {
+      "key": "dissonance",
+      "name": "Диссонанс",
+      "near": true,
+      "type": "dissonance",
+      "value": 1,
+      "action_type": "impact"
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          182,
+          918,
+          3907,
+          3940,
+          3951
+        ]
+      },
+      {
+        "file": "src/Core/BattleHelper.php",
+        "lines": [
+          429
+        ]
+      },
+      {
+        "file": "src/Core/CardStats.php",
+        "lines": [
+          782
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "ActionResolver::resolveDissonance → damage and CardHealing continuation",
+    "event_types": "combat.wounds + card.healed",
+    "test_or_evidence": "native dissonance actual wounds",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_146",
+    "name": "Керсамская знать",
+    "ability": "actions[0]",
+    "definition": {
+      "key": "blood_storm",
+      "name": "Буря крови",
+      "self": true,
+      "type": "blood_storm"
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          122,
+          4405,
+          4445,
+          4456,
+          4644,
+          4655,
+          4667
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": "Blood storm actual hp bonus before choice",
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "ActionResolver blood_storm → hp/max bonus → pending damage",
+    "event_types": "health.bonus + combat.wounds",
+    "test_or_evidence": "Blood storm actual hp bonus before choice",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_149",
+    "name": "Талион",
+    "ability": "strike_effects[0]",
+    "definition": {
+      "type": "incarnation_token_graveyard",
+      "levels": [
+        "strong"
+      ]
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          1612,
+          1613,
+          2781
+        ]
+      },
+      {
+        "file": "src/Core/DegascaProcessor.php",
+        "lines": [
+          34,
+          580
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1181
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1197,
+          1245,
+          1923,
+          2207,
+          2294
+        ]
+      }
+    ],
+    "decision": "focused_hook_added_and_tested",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "StrikeResolver follow-up → ActionResolver::addIncarnationToken → IncarnationTokenProcessor::grant",
+    "event_types": "marker.changed graveyard",
+    "test_or_evidence": "grave ritual actual s1_142",
+    "separate_event_required": true,
+    "real_missing_event_found": true,
+    "focused_hook_added": true
+  },
+  {
+    "card": "s1_153",
+    "name": "Сайкорон",
+    "ability": "on_ranged_neighbor_wounded",
+    "definition": {
+      "types": [
+        "shot",
+        "throw",
+        "discharge"
+      ],
+      "optional": true,
+      "destination": "adjacent_attacker",
+      "exclude_self": true,
+      "actual_wounds": true,
+      "once_per_battle": true
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/RangedNeighborTeleport.php",
+        "lines": [
+          16
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Native wound-time proposal generated once then both continuations start from the same persisted context; exact state comparison retained.",
+    "native_route": "DamageResolver wounds → RangedNeighborTeleport::record → post-combat choose → MovementEffectResolver",
+    "event_types": "movement.completed after combat.wounds",
+    "test_or_evidence": "shared native wound context teleport continuation",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_160",
+    "name": "Лилит и Эйдерик",
+    "ability": "turn_start[0]",
+    "definition": {
+      "ova": 1,
+      "type": "grave_ritual",
+      "strong": 1,
+      "demon_class": "Демон",
+      "undead_class": "Нежить"
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          482,
+          490,
+          493,
+          498,
+          600,
+          723,
+          725,
+          1060,
+          1087,
+          1089
+        ]
+      },
+      {
+        "file": "src/Core/TurnProcessor.php",
+        "lines": [
+          1169,
+          1232,
+          1282
+        ]
+      },
+      {
+        "file": "src/Core/Observation/ProphecyKnowledge.php",
+        "lines": [
+          91
+        ]
+      }
+    ],
+    "decision": "focused_hook_added_and_tested",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "GraveRitual::start mill; advance class bonus/token; TurnProcessor expires bonus",
+    "event_types": "zone.changed + rule.class_bonus + marker.changed",
+    "test_or_evidence": "grave ritual actual s1_149/s1_142/s1_160",
+    "separate_event_required": true,
+    "real_missing_event_found": true,
+    "focused_hook_added": true
+  },
+  {
+    "card": "s1_163",
+    "name": "Хозяин склепа",
+    "ability": "on_any_death",
+    "definition": {
+      "side": "any",
+      "cause": "any",
+      "value": 1,
+      "effect": "get_coin",
+      "filter": "not_flying"
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/DamageResolver.php",
+        "lines": [
+          728,
+          1058
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "DamageResolver any death not_flying → CoinAbilities::gain",
+    "event_types": "coins.changed",
+    "test_or_evidence": "any death actual coin s1_163",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_170",
+    "name": "Демон жадности",
+    "ability": "opponent_turn_end[0]",
+    "definition": {
+      "type": "greed_teleport",
+      "damage": 2,
+      "self_damage": 3
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/SwampQueenProcessor.php",
+        "lines": [
+          18
+        ]
+      },
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          603,
+          922,
+          1163,
+          1182,
+          1191
+        ]
+      },
+      {
+        "file": "src/Core/Observation/PlayerObservation.php",
+        "lines": [
+          227,
+          229
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "TurnPhaseProcessor gates choice and greed_teleport continuation → native movement/damage",
+    "event_types": "cell_marker.changed + movement.completed + combat.wounds",
+    "test_or_evidence": "native gates then greed teleport damage and removal",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_170",
+    "name": "Демон жадности",
+    "ability": "opponent_turn_start[0]",
+    "definition": {
+      "type": "place_gates",
+      "count": 3
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          356,
+          359,
+          538,
+          601,
+          1060
+        ]
+      },
+      {
+        "file": "src/Core/ZoneManager.php",
+        "lines": [
+          301
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "TurnPhaseProcessor gates choice and greed_teleport continuation → native movement/damage",
+    "event_types": "cell_marker.changed + movement.completed + combat.wounds",
+    "test_or_evidence": "native gates then greed teleport damage and removal",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_173",
+    "name": "Ведунья Ордена",
+    "ability": "opponent_turn_end[0]",
+    "definition": {
+      "type": "deck_reorder",
+      "count": 3
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/SwampQueenProcessor.php",
+        "lines": [
+          18
+        ]
+      },
+      {
+        "file": "src/Core/TurnPhaseProcessor.php",
+        "lines": [
+          603,
+          922,
+          1163,
+          1182,
+          1191
+        ]
+      },
+      {
+        "file": "src/Core/Observation/PlayerObservation.php",
+        "lines": [
+          227,
+          229
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "DeckReorderProcessor::choose show and committed finish",
+    "event_types": "prophecy.viewed/reordered private",
+    "test_or_evidence": "C deck reorder private show actual completion repeat rejected",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_183",
+    "name": "Дозор Форрендора",
+    "ability": "on_any_death",
+    "definition": {
+      "key": "forrendor_watch_flying_death",
+      "side": "any",
+      "title": "Дозор Форрендора: получить полёт и +1 к удару до конца боя?",
+      "effects": [
+        {
+          "type": "gain_flight"
+        },
+        {
+          "stat": "strike",
+          "type": "grant_modifier",
+          "value": 1,
+          "expire": "end_of_battle"
+        }
+      ],
+      "optional": true,
+      "condition": "dead_creature_flying",
+      "accept_label": "Получить полёт",
+      "decline_label": "Закрыть",
+      "result_message": "Дозор Форрендора получает полёт и +1 к удару до конца боя",
+      "once_per_battle": true
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/DamageResolver.php",
+        "lines": [
+          728,
+          1058
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": "Forrendor actual death choice accepted; optional decline",
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "DamageResolver optional any-death → gain flight + grant modifier",
+    "event_types": "card.transformed + modifier.changed",
+    "test_or_evidence": "Forrendor actual death choice accepted",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_193",
+    "name": "Арацент",
+    "ability": "strike_effects[0]",
+    "definition": {
+      "levels": [
+        "weak"
+      ],
+      "poison": 1
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          1612,
+          1613,
+          2781
+        ]
+      },
+      {
+        "file": "src/Core/DegascaProcessor.php",
+        "lines": [
+          34,
+          580
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1181
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1197,
+          1245,
+          1923,
+          2207,
+          2294
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "Engine::applyStrikeEffects poison per level",
+    "event_types": "marker.changed",
+    "test_or_evidence": "weak strike poison real one marker",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_193",
+    "name": "Арацент",
+    "ability": "strike_effects[1]",
+    "definition": {
+      "levels": [
+        "medium",
+        "strong"
+      ],
+      "poison": 2
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          1612,
+          1613,
+          2781
+        ]
+      },
+      {
+        "file": "src/Core/DegascaProcessor.php",
+        "lines": [
+          34,
+          580
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1181
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1197,
+          1245,
+          1923,
+          2207,
+          2294
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "Engine::applyStrikeEffects poison per level",
+    "event_types": "marker.changed",
+    "test_or_evidence": "native configured strike effect s1_193 (strong branch)",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  },
+  {
+    "card": "s1_199",
+    "name": "Тич",
+    "ability": "strike_effects[0]",
+    "definition": {
+      "levels": [
+        "strong"
+      ],
+      "wound_target_by_behind_weak_strike": true
+    },
+    "original_classification": "partial",
+    "native_references": [
+      {
+        "file": "src/Core/ActionResolver.php",
+        "lines": [
+          1612,
+          1613,
+          2781
+        ]
+      },
+      {
+        "file": "src/Core/DegascaProcessor.php",
+        "lines": [
+          34,
+          580
+        ]
+      },
+      {
+        "file": "src/Core/Engine.php",
+        "lines": [
+          1181
+        ]
+      },
+      {
+        "file": "src/Core/StrikeResolver.php",
+        "lines": [
+          1197,
+          1245,
+          1923,
+          2207,
+          2294
+        ]
+      }
+    ],
+    "decision": "existing_native_result_writer_addressed_test",
+    "addressed_test": null,
+    "new_classification": "common_handler_confirmed_addressed_branch_variants_remain",
+    "remaining_risk": "Alternate targets and combinations are not exhaustively enumerated; common native result route and named addressed scenario checked.",
+    "native_route": "StrikeResolver::applyStrongStrikeFollowUpEffects behind weak strike → applyDamage",
+    "event_types": "combat.wounds",
+    "test_or_evidence": "configured strong followup s1_199",
+    "separate_event_required": false,
+    "real_missing_event_found": false,
+    "focused_hook_added": false
+  }
+]

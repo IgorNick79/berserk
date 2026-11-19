@@ -72,6 +72,7 @@ final class ProphecyProcessor
         string $title,
         array $actions
     ): void {
+        $this->state->historyRecorder?->prophecyCards($this->state,$ownerKey,'prophecy.viewed',$peeked['cards']);
         $originalIds = [];
         foreach ($peeked['cards'] as $c) {
             $originalIds[] = $c->instanceId;
@@ -211,6 +212,7 @@ final class ProphecyProcessor
             return Result::error('Карта не найдена');
         }
 
+        $journalForm=$this->state->historyRecorder?->formBefore($this->state,$seeker);
         $seeker->type = 'fly';
         $seeker->prop = [];
         $seeker->modifiers[] = [
@@ -219,6 +221,7 @@ final class ProphecyProcessor
             'expire' => 'permanent',
         ];
         (new ZoneManager($this->state))->toFlying($seeker);
+        if ($journalForm!==null) $this->state->historyRecorder?->transformed($this->state,$seeker,$journalForm);
         return Result::ok(['seeker_transformed']);
     }
 
@@ -261,6 +264,7 @@ final class ProphecyProcessor
                     'source' => 'prophecy_charge',
                 ];
             }
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'prophecy',$card);
         }
     }
 
@@ -289,6 +293,7 @@ final class ProphecyProcessor
 
         if (count($cards) === 1) {
             $this->putOnTop($cards[0]);
+            $this->state->historyRecorder?->prophecyCards($this->state,$playerKey,'prophecy.reordered',[$cards[0]],['destination'=>'top']);
 
             // Убираем кнопку Махинатора, остальное оставляем
             $actions = [];
@@ -354,6 +359,7 @@ final class ProphecyProcessor
             // Вниз — снимаем order, карта уйдёт вниз при close()
             $card->order = null;
         }
+        $this->state->historyRecorder?->prophecyCards($this->state,$playerKey,'prophecy.reordered',[$card],['destination'=>$direction==='top'?'top':'bottom']);
 
         $remaining = array_values(array_filter(
             $remaining,

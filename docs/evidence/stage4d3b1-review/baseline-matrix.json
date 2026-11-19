@@ -1,0 +1,682 @@
+[
+  {
+    "variant": "baseline",
+    "mode": "original",
+    "suite": "test_stage31_fixes",
+    "repeat": 0,
+    "exit": 1,
+    "error": [
+      "R2 combat cancel at source \"selected stage\""
+    ]
+  },
+  {
+    "variant": "baseline",
+    "mode": "original",
+    "suite": "test_stage31_fixes",
+    "repeat": 1,
+    "exit": 1,
+    "error": [
+      "R2 combat cancel at source \"selected stage\""
+    ]
+  },
+  {
+    "variant": "baseline",
+    "mode": "original",
+    "suite": "test_nested_combat_ownership",
+    "repeat": 0,
+    "exit": 255,
+    "error": "Auto target completion resumes combat owner"
+  },
+  {
+    "variant": "baseline",
+    "mode": "original",
+    "suite": "test_nested_combat_ownership",
+    "repeat": 1,
+    "exit": 255,
+    "error": "Auto target completion resumes combat owner"
+  },
+  {
+    "variant": "baseline",
+    "mode": "original",
+    "suite": "test_pending_wait_timer",
+    "repeat": 0,
+    "exit": 255,
+    "error": "New handler requires ownership coverage: Berserk\\Core\\Choice\\SymbioteSeatingChoice"
+  },
+  {
+    "variant": "baseline",
+    "mode": "original",
+    "suite": "test_pending_wait_timer",
+    "repeat": 1,
+    "exit": 255,
+    "error": "New handler requires ownership coverage: Berserk\\Core\\Choice\\SymbioteSeatingChoice"
+  },
+  {
+    "variant": "baseline",
+    "mode": "original",
+    "suite": "test_gloomy_noblewoman",
+    "repeat": 0,
+    "exit": 255,
+    "error": "regeneration_does_not_consume_first turn_ack: Подтверждение устарело"
+  },
+  {
+    "variant": "baseline",
+    "mode": "original",
+    "suite": "test_gloomy_noblewoman",
+    "repeat": 1,
+    "exit": 255,
+    "error": "regeneration_does_not_consume_first turn_ack: Подтверждение устарело"
+  },
+  {
+    "variant": "baseline",
+    "mode": "original",
+    "suite": "test_ochi_informer_multi_heal",
+    "repeat": 0,
+    "exit": 255,
+    "error": "Existing cancellation URL"
+  },
+  {
+    "variant": "baseline",
+    "mode": "original",
+    "suite": "test_ochi_informer_multi_heal",
+    "repeat": 1,
+    "exit": 255,
+    "error": "Existing cancellation URL"
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_stage31_fixes",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_stage31_fixes",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_hydra",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_hydra",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_ragnar",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_ragnar",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_combat_instant_phases",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_combat_instant_phases",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_volkhv_wound_transfer",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_volkhv_wound_transfer",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_nested_combat_ownership",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_nested_combat_ownership",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_pending_wait_timer",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_pending_wait_timer",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_turn_instant_stack",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_turn_instant_stack",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_turn_timer",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_turn_timer",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_lucktest_recorder_atomicity",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_lucktest_recorder_atomicity",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_live_battle_journal",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_live_battle_journal",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_journal_gap_causes",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_journal_gap_causes",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_live_journal_restoration",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_live_journal_restoration",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_gloomy_noblewoman",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_gloomy_noblewoman",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_kersam_satyr_wild_healer",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_kersam_satyr_wild_healer",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_ochi_informer_multi_heal",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "baseline",
+    "mode": "adapted",
+    "suite": "test_ochi_informer_multi_heal",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "original",
+    "suite": "test_stage31_fixes",
+    "repeat": 0,
+    "exit": 1,
+    "error": [
+      "R2 combat cancel at source \"selected stage\""
+    ]
+  },
+  {
+    "variant": "patched",
+    "mode": "original",
+    "suite": "test_stage31_fixes",
+    "repeat": 1,
+    "exit": 1,
+    "error": [
+      "R2 combat cancel at source \"selected stage\""
+    ]
+  },
+  {
+    "variant": "patched",
+    "mode": "original",
+    "suite": "test_nested_combat_ownership",
+    "repeat": 0,
+    "exit": 255,
+    "error": "Auto target completion resumes combat owner"
+  },
+  {
+    "variant": "patched",
+    "mode": "original",
+    "suite": "test_nested_combat_ownership",
+    "repeat": 1,
+    "exit": 255,
+    "error": "Auto target completion resumes combat owner"
+  },
+  {
+    "variant": "patched",
+    "mode": "original",
+    "suite": "test_pending_wait_timer",
+    "repeat": 0,
+    "exit": 255,
+    "error": "New handler requires ownership coverage: Berserk\\Core\\Choice\\SymbioteSeatingChoice"
+  },
+  {
+    "variant": "patched",
+    "mode": "original",
+    "suite": "test_pending_wait_timer",
+    "repeat": 1,
+    "exit": 255,
+    "error": "New handler requires ownership coverage: Berserk\\Core\\Choice\\SymbioteSeatingChoice"
+  },
+  {
+    "variant": "patched",
+    "mode": "original",
+    "suite": "test_gloomy_noblewoman",
+    "repeat": 0,
+    "exit": 255,
+    "error": "regeneration_does_not_consume_first turn_ack: Подтверждение устарело"
+  },
+  {
+    "variant": "patched",
+    "mode": "original",
+    "suite": "test_gloomy_noblewoman",
+    "repeat": 1,
+    "exit": 255,
+    "error": "regeneration_does_not_consume_first turn_ack: Подтверждение устарело"
+  },
+  {
+    "variant": "patched",
+    "mode": "original",
+    "suite": "test_ochi_informer_multi_heal",
+    "repeat": 0,
+    "exit": 255,
+    "error": "Existing cancellation URL"
+  },
+  {
+    "variant": "patched",
+    "mode": "original",
+    "suite": "test_ochi_informer_multi_heal",
+    "repeat": 1,
+    "exit": 255,
+    "error": "Existing cancellation URL"
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_stage31_fixes",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_stage31_fixes",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_hydra",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_hydra",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_ragnar",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_ragnar",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_combat_instant_phases",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_combat_instant_phases",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_volkhv_wound_transfer",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_volkhv_wound_transfer",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_nested_combat_ownership",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_nested_combat_ownership",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_pending_wait_timer",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_pending_wait_timer",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_turn_instant_stack",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_turn_instant_stack",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_turn_timer",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_turn_timer",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_lucktest_recorder_atomicity",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_lucktest_recorder_atomicity",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_live_battle_journal",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_live_battle_journal",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_journal_gap_causes",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_journal_gap_causes",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_live_journal_restoration",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_live_journal_restoration",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_gloomy_noblewoman",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_gloomy_noblewoman",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_kersam_satyr_wild_healer",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_kersam_satyr_wild_healer",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_ochi_informer_multi_heal",
+    "repeat": 0,
+    "exit": 0,
+    "error": []
+  },
+  {
+    "variant": "patched",
+    "mode": "adapted",
+    "suite": "test_ochi_informer_multi_heal",
+    "repeat": 1,
+    "exit": 0,
+    "error": []
+  }
+]

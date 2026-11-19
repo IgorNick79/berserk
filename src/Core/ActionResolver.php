@@ -242,6 +242,7 @@ final class ActionResolver
             }
 
             $attacker->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
 
             $this->state->battle['pending_self_wound'] = [
                 'attacker_id' => $cardId,
@@ -292,6 +293,8 @@ final class ActionResolver
                 $attacker->closed = true;
                 $this->state->bumpVersion();
                 ActionResolution::effect($this->state, $attacker, $type, 'ordinary', ['blocked_before_execution'=>true]);
+            $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,$type,'declared');
+            $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,$type,'result',['outcome'=>'blocked','value'=>0]);
                 return Result::ok(["action_blocked:{$type}:{$cardId}->{$targetId}"]);
             }
         }
@@ -333,6 +336,7 @@ final class ActionResolver
                 return Result::error('Не хватает монет');
             }
             $attacker->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
         }
 
         // Особые пути
@@ -450,6 +454,8 @@ final class ActionResolver
             $this->state->bumpVersion();
             (new CoinAbilities($this->state, $this->engine))->offerGain($attacker, $uchrAction);
             ActionResolution::effect($this->state, $attacker, 'uchr', 'ordinary', ['blocked_before_execution'=>true]);
+            $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'uchr','declared');
+            $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'uchr','result',['outcome'=>'blocked','value'=>0]);
             return Result::ok(["uchr_blocked:{$cardId}->{$targetId}"]);
         }
 
@@ -484,6 +490,8 @@ final class ActionResolver
         $coins = new CoinAbilities($this->state, $this->engine);
         if ((new FirstStrikeJump($this->state, $this->engine))->tryBlock($attacker, $target, 'uchr')) {
             ActionResolution::effect($this->state, $attacker, 'uchr', 'ordinary', ['blocked_before_execution'=>true]);
+            $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'uchr','declared');
+            $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'uchr','result',['outcome'=>'blocked','value'=>0]);
             return Result::ok(['first_strike_blocked']);
         }
         if (!$coinBlockChecked && $coins->offerBlock($attacker, $target, 'uchr', [
@@ -514,6 +522,7 @@ final class ActionResolver
                 }
                 if (!$legal) {
                     ActionResolution::resolve($this->state,$roll,'cancelled',['hit'=>false]);
+                    $this->state->historyRecorder?->attackEvent($this->state,$source,$target,$roll['kind'],'result',['outcome'=>'cancelled','value'=>0]);
                     return Result::ok(['single_roll_target_lost']);
                 }
             }
@@ -523,6 +532,7 @@ final class ActionResolver
         if ($to['handler']!=='damage') throw new \LogicException('Unknown roll continuation');
         if ($roll['stage']==='window' && $this->validateTarget($source,$target,$to['action'],$roll['kind'],$roll['owner'])!==null) {
             ActionResolution::resolve($this->state,$roll,'cancelled',['hit'=>false]);
+            $this->state->historyRecorder?->attackEvent($this->state,$source,$target,$roll['kind'],'result',['outcome'=>'cancelled','value'=>0]);
             return Result::ok(['single_roll_target_lost']);
         }
         return $this->continueDamageRoll($source,$target,$to['action'],$roll['kind'],$roll['owner'],
@@ -635,6 +645,7 @@ final class ActionResolver
         ActionResolution::effect($this->state, $attacker, 'uchr', 'ordinary');
         $this->engine->applyDamage($this->state, $target, $val, 'uchr', $attacker);
         $woundsDealt = max(0, $hpBefore - $target->hp);
+        $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'uchr','result',['value'=>$val,'outcome'=>$val>0?'hit':($defended?'blocked':(isset($action['strike'])&&(int)($action['strike'][$level]??0)===0?'miss':'no_effect')),'level'=>$level,'die'=>$dice,'modifiers'=>['reduction'=>$reduction,'ability'=>$abilityBonus??0,'shot'=>$shotBonus??0,'next_action'=>$nextActionBonus??0,'coins'=>$coinBonus??0,'rows'=>$rowsBonus??0,'target'=>$targetModifierBonus??0,'flying'=>$flyingBonus??0]]);
         $this->state->battle['strike']['damage_reduction'] = $reduction;
         $this->state->battle['strike']['damage_total'] = $val;
 
@@ -1100,10 +1111,12 @@ final class ActionResolver
             return Result::error('Не на поле');
         }
 
+        $journalForm=$this->state->historyRecorder?->formBefore($this->state,$attacker);
         $attacker->type = 'fly';
         $attacker->closed = true;
 
         (new ZoneManager($this->state))->toFlying($attacker);
+        if ($journalForm!==null) $this->state->historyRecorder?->transformed($this->state,$attacker,$journalForm);
 
         // Для отображения результата
         InformationalWaitManager::publish($this->state);
@@ -1155,7 +1168,7 @@ final class ActionResolver
         $attacker->closed = true;
         $this->state->historyRecorder?->liveEvent($this->state,'ability.applied',[
             'source_id'=>$cardId,'ability'=>$action['name']??'Лечение','_private_owner'=>$attacker->owner],[$cardId,$targetId]);
-        $this->state->historyRecorder?->healed($this->state,$target,$journalHpBefore,$attacker,'heal');
+
 
         $strike = [
             'kind'           => 'heal',
@@ -1340,7 +1353,9 @@ final class ActionResolver
         ];
 
         ActionResolution::performed($this->state, $attacker, array_replace(['type'=>'execute'], $action));
+        $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'execute','declared');
         $this->engine->forceDeath($this->state, $target, 'execute', $attacker);
+        $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'execute','result',['outcome'=>'executed']);
 
         $attacker->closed = true;
 
@@ -1439,6 +1454,8 @@ final class ActionResolver
             if (!empty($action['_granted_flag_key'])) $attacker->flags[$action['_granted_flag_key']]['used'] = true;
             $this->state->battle['strike'][ActionResolution::ID] = $action[ActionResolution::ID];
             ActionResolution::resolve($this->state, $action, 'blocked', ['hit'=>false]);
+            $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,$type,'declared');
+            $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,$type,'result',['outcome'=>'blocked','value'=>0]);
             return Result::ok(['first_strike_blocked']);
         }
         if (!$coinBlockChecked && (new CoinAbilities($this->state, $this->engine))->offerBlock($attacker, $target, $type, [
@@ -1456,7 +1473,8 @@ final class ActionResolver
         if (in_array($type,['tap','magic','shot','throw','discharge'],true))
             return (new SingleRoll($this->state,$this->engine))->begin($attacker,$target,$type,$action,'damage',
                 ['forced_coin_spend'=>$forcedCoinSpend]);
-        $dice = CardRoll::roll($this->state,$attacker);
+        $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,$type,'declared');
+        $dice = CardRoll::roll($this->state,$attacker,$type);
         return $this->continueDamageRoll($attacker,$target,$action,$type,$playerKey,$forcedCoinSpend,$dice);
     }
 
@@ -1507,6 +1525,7 @@ final class ActionResolver
             $coinBonus = $perCoin * $coinsHeld;
             $coinsSpent = $coinsHeld;
             $attacker->coins = 0;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
             $val += $coinBonus;
 
             if (!empty($action['reset_coins_after'])) {
@@ -1530,6 +1549,7 @@ final class ActionResolver
                 }
 
                 $attacker->coins -= $coinsSpent;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
                 $val += $coinBonus;
 
                 $this->engine->syncCoinBonus($attacker);
@@ -1581,6 +1601,7 @@ final class ActionResolver
 
         $this->state->battle['strike'][ActionResolution::ID] = $action[ActionResolution::ID];
         if (TempleWarrior::rangedBlock($this->state,$target,$type)) {
+            $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,$type,'result',['outcome'=>'blocked','value'=>0]);
             if (empty($action['no_close'])) $attacker->closed=true;
             $this->consumeNextActionBonuses($attacker,$type);
             ActionResolution::resolve($this->state,$action,'blocked',['hit'=>false]);
@@ -1589,7 +1610,7 @@ final class ActionResolver
         }
         // Эффекты действия (strike_effects) — например, яд при среднем/сильном разряде
         if (!empty($action['strike_effects'])) {
-            $this->engine->applyStrikeEffects($attacker, $target, $level, $action['strike_effects']);
+            $this->engine->applyStrikeEffects($attacker, $target, $level, $action['strike_effects'], $this->state);
         }
 
         $reduction = 0;
@@ -1676,6 +1697,7 @@ final class ActionResolver
         $hpBefore = $target->hp;
         $this->engine->applyDamage($this->state, $target, $val, $type, $attacker);
         $woundsDealt = max(0, $hpBefore - $target->hp);
+        $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,$type,'result',['value'=>$val,'outcome'=>$val>0?'hit':($defended?'blocked':(isset($action['strike'])&&(int)($action['strike'][$level]??0)===0?'miss':'no_effect')),'level'=>$level,'die'=>$dice,'modifiers'=>['reduction'=>$reduction,'ability'=>$abilityBonus??0,'shot'=>$shotBonus??0,'next_action'=>$nextActionBonus??0,'coins'=>$coinBonus??0,'rows'=>$rowsBonus??0,'target'=>$targetModifierBonus??0,'flying'=>$flyingBonus??0]]);
 
         if ($closeAfter) {
             $target->closed = true;
@@ -2010,6 +2032,7 @@ final class ActionResolver
 
         if ($mode === 'shield') {
             $attacker->coins -= $amount;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
             $this->engine->syncCoinBonus($attacker);
             return $this->applyShieldLight($attacker, $target, $action, $amount, $playerKey);
         }
@@ -2242,6 +2265,7 @@ final class ActionResolver
         }
 
         if ($cost > 0) $attacker->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
 
         $target->modifiers[] = [
             'stat'   => 'ability_strike',
@@ -2428,12 +2452,15 @@ final class ActionResolver
             ActionResolution::performed($this->state, $attacker, $action);
         }
         foreach ($targets as $tid => $target) {
-            $results[$tid]['dice'] = CardRoll::roll($this->state, $attacker);
+            $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'discharge','declared');
+            $results[$tid]['dice'] = CardRoll::roll($this->state, $attacker,'discharge');
+            if ($blocked) $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'discharge','result',['value'=>0,'outcome'=>'blocked']);
             if ($blocked) continue;
 
             $hpBefore = $target->hp;
             $this->engine->applyDamage($this->state, $target, $value, 'discharge', $attacker);
             $results[$tid]['damage'] = max(0, $hpBefore - $target->hp);
+            $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'discharge','result',['value'=>$value,'outcome'=>$value>0?'hit':'miss']);
         }
 
         $attacker->closed = true;
@@ -2465,7 +2492,8 @@ final class ActionResolver
             return Result::error('Неверная цель');
         }
 
-        $dice = CardRoll::roll($this->state, $source);
+        $this->state->historyRecorder?->attackEvent($this->state,$source,$target,'discharge','declared');
+        $dice = CardRoll::roll($this->state, $source,'discharge');
         $level = BattleHelper::diceToLevel($dice);
         $defended = CardStats::hasDefense($this->state, $target, 'discharge', $source);
         $pending['series_id'] ??= $this->state->version;
@@ -2557,6 +2585,10 @@ final class ActionResolver
                 $this->state->battle['strike']['discharged'][$index]['damage'] = max(0, $before - $target->hp);
             }
             $this->engine->flushDeadeatQueue($this->state);
+        }
+        foreach ($series['results'] as $result) {
+            $target=$this->state->getCard($result['target_id']);
+            if ($target) $this->state->historyRecorder?->attackEvent($this->state,$source,$target,'discharge','result',['value'=>$blocked?0:(int)($result['prepared_damage']??$series['value']),'outcome'=>$blocked?'blocked':'hit']);
         }
         return true;
     }
@@ -2944,12 +2976,14 @@ final class ActionResolver
     {
         ActionResolution::effect($this->state, $source, 'open', 'passive', ['target_id'=>$target->instanceId]);
         $this->engine->openCard($target);
+        $this->state->historyRecorder?->liveEvent($this->state,'status.changed',['target_id'=>$target->instanceId,'closed'=>false],[$target->instanceId]);
         $target->modifiers[] = [
             'stat' => 'cannot_attack',
             'value' => 1,
             'expire' => 'end_of_turn',
             'source' => $source->owner,
         ];
+        $this->state->historyRecorder?->statusCheckpoint($this->state,'passive',$source);
         $source->flags[$flag] = ((int) ($source->flags[$flag] ?? 0)) + 1;
 
         if (!empty($this->state->battle['strike'])) {
@@ -2973,6 +3007,7 @@ final class ActionResolver
                 return Result::error('Не хватает монет');
             }
             $attacker->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
         }
 
         // Кандидаты — свои существа с кладбища
@@ -3093,6 +3128,7 @@ final class ActionResolver
         $card->flags = MemoryLoss::persistentFlags($card);      // moved_this_turn и т.д. — с нуля
                                     // flags.incarnated НЕ ставим — это не инкарнация
 
+        $this->state->historyRecorder?->zoneChanged($this->state,$card,'graveyard','revive');
         $healer->closed = true;
         $healer->flags['revive_used'] = true;
 
@@ -3123,6 +3159,7 @@ final class ActionResolver
         $card->modifiers = [];
         $card->flags = MemoryLoss::persistentFlags($card);
 
+        $this->state->historyRecorder?->zoneChanged($this->state,$card,'graveyard','revive');
         $healer->closed = true;
         $healer->flags['revive_used'] = true;
 
@@ -3393,6 +3430,7 @@ final class ActionResolver
 
         if ($cost > 0) {
             $source->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
             if ($source->coins < 0) $source->coins = 0;
             $this->engine->syncCoinBonus($source);
         }
@@ -3960,6 +3998,7 @@ final class ActionResolver
         }
 
         $attacker->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
         $this->engine->syncCoinBonus($attacker);
 
         $target->coins += $cost;
@@ -4093,12 +4132,13 @@ final class ActionResolver
             return Result::error('Не хватает монет');
         }
 
-        $dice  = CardRoll::roll($this->state, $attacker);
+        $dice  = CardRoll::roll($this->state, $attacker,'freeze_moves');
         $level = BattleHelper::diceToLevel($dice);
         $limit = (int) ($action['strike'][$level] ?? 0);
 
         if ($cost > 0) {
             $attacker->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
             $this->engine->syncCoinBonus($attacker);
         }
 
@@ -4111,6 +4151,7 @@ final class ActionResolver
             'moved_ids'  => [],
             'source_id'  => $cardId,
         ];
+        $this->state->historyRecorder?->liveEvent($this->state,'rule.movement_limit',['owner'=>$oppKey,'limit'=>$limit]);
 
         InformationalWaitManager::publish($this->state);
         $this->state->battle['strike'] = [
@@ -4154,6 +4195,7 @@ final class ActionResolver
         }
         if ($cost > 0) {
             $attacker->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
             $this->engine->syncCoinBonus($attacker);
         }
 
@@ -4222,6 +4264,7 @@ final class ActionResolver
         if ($cost > 0) {
             if ($card->coins < $cost) return Result::error('Не хватает монет');
             $card->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
             $this->engine->syncCoinBonus($card);
         }
 
@@ -4330,6 +4373,7 @@ final class ActionResolver
 
         if ($cost > 0) {
             $attacker->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
             $this->engine->syncCoinBonus($attacker);
         }
 
@@ -4361,11 +4405,14 @@ final class ActionResolver
         ActionResolution::bind($this->state, $action, $attacker, 'blood_storm');
         ActionResolution::resolve($this->state, $action, 'performed');
         // 1. Получить допку (раны сохраняются)
+        $journalHp=$attacker->hp;$journalMax=$attacker->hpMax;
         $attacker->hpMax += 1;
         $attacker->hp += 1;
+        $this->state->historyRecorder?->healthEvent($this->state,$attacker,'health.bonus',['hp_before'=>$journalHp,'hp_after'=>$attacker->hp,'maximum_before'=>$journalMax,'maximum_after'=>$attacker->hpMax]);
 
         if ($cost > 0) {
             $attacker->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
             $this->engine->syncCoinBonus($attacker);
         }
 
@@ -4849,6 +4896,7 @@ final class ActionResolver
         unset($this->state->battle['pending_life_gift']);
 
         $attacker->coins -= $x;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
         $this->engine->syncCoinBonus($attacker);
         $attacker->closed = true;
 
@@ -4938,6 +4986,7 @@ final class ActionResolver
         if ($cost > 0) {
             if ($attacker->coins < $cost) return Result::error('Не хватает монет');
             $attacker->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
         }
 
         $value      = (int) ($action['value'] ?? 1);
@@ -4951,8 +5000,10 @@ final class ActionResolver
             $value = 0;
         }
 
+        $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'bomb_shot','declared');
         $hpBefore = $target->hp;
         $this->engine->applyDamage($this->state, $target, $value, 'shot', $attacker);
+        $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'bomb_shot','result',['value'=>$value,'outcome'=>$value>0?'hit':'blocked']);
         $realDamage = max(0, $hpBefore - $target->hp);
 
         ZoneManager::addMarker($this->state, $cellKey, [
@@ -5025,12 +5076,14 @@ final class ActionResolver
 
         // 3. Кондор становится существом на освободившейся клетке
         $zone = new ZoneManager($this->state);
+        $journalForm=$this->state->historyRecorder?->formBefore($this->state,$attacker);
         $zone->toField($attacker, $oldRow, $oldCol);
         $attacker->type     = 'creature';
         $attacker->closed   = true;
         $attacker->move     = 1;
         $attacker->moveMax  = 1;
         $attacker->flags['dive_used'] = true;
+        if ($journalForm!==null) $this->state->historyRecorder?->transformed($this->state,$attacker,$journalForm);
 
         (new \Berserk\Core\Movement\MovementEffectResolver($this->state, $this->engine))
             ->applyForcedPositionChange(new \Berserk\Core\Movement\MovementContext(
@@ -5045,11 +5098,13 @@ final class ActionResolver
             ));
 
         // 4. Кубик и урон
-        $dice  = CardRoll::roll($this->state, $attacker);
+        $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'dive','declared');
+        $dice  = CardRoll::roll($this->state, $attacker,'dive');
         $level = BattleHelper::diceToLevel($dice);
         $val   = (int) ($action['strike'][$level] ?? 0);
 
         $this->engine->applyDamage($this->state, $target, $val, 'tap', $attacker);
+        $this->state->historyRecorder?->attackEvent($this->state,$attacker,$target,'dive','result',['value'=>$val,'outcome'=>$val>0?'hit':'miss']);
 
         unset($this->state->battle['pending_dive']);
 
@@ -5188,7 +5243,9 @@ final class ActionResolver
             $target = $this->state->getCard($tid);
             if (!$target) continue;
             $hpBefore = $target->hp;
+            $this->state->historyRecorder?->attackEvent($this->state,$source,$target,'row_spell','declared');
             $this->engine->applyDamage($this->state, $target, $val, 'discharge', $source);
+            $this->state->historyRecorder?->attackEvent($this->state,$source,$target,'row_spell','result',['value'=>$val,'outcome'=>$val>0?'hit':'miss']);
             $results[] = [
                 'target_id' => $tid,
                 'damage'    => max(0, $hpBefore - $target->hp),
@@ -5508,7 +5565,9 @@ final class ActionResolver
             if (!CardStats::hasRangedAction($c)) continue;
 
             $hpBefore = $c->hp;
+            $this->state->historyRecorder?->attackEvent($this->state,$attacker,$c,'damage_ranged','declared');
             $this->engine->applyDamage($this->state, $c, $value, 'cast', $attacker);
+            $this->state->historyRecorder?->attackEvent($this->state,$attacker,$c,'damage_ranged','result',['value'=>$value,'outcome'=>$value>0?'hit':'miss']);
             $affected[] = [
                 'target_id' => $c->instanceId,
                 'damage'    => max(0, $hpBefore - $c->hp),
@@ -5576,6 +5635,7 @@ final class ActionResolver
 
         if ($cost > 0) {
             $attacker->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost');
             $this->engine->syncCoinBonus($attacker);
         }
 

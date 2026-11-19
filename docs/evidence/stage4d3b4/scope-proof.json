@@ -1,0 +1,12 @@
+{
+  "branch": "codex/battle-journal-stage4d3",
+  "head": "f7454d2e738fd8d402f229e1af4a3e4f8c8c9ade",
+  "unchanged": {
+    "src/Core/Dice.php": true,
+    "src/Core/GameRepository.php": true,
+    "src/Core/BattleHistory/HistoryRuntime.php": true,
+    "src/Core/BattleHistory/HistoryRepository.php": true,
+    "src/Core/BattleHistory/LiveJournal.php": true,
+    "www/index.php": true
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "src/Core/ActionResolver.php": "1d6669307fdf73b7f0d4978998e82c6b439024ed8f512f4b73101e783205e2ab",
+  "src/Core/BattleHistory/JournalText.php": "294f5ae7f0d373339d85d6621b281538b584fdc7a8199a712f9cc0d81d8f77be",
+  "src/Core/BattleHistory/Recorder.php": "8b067e3afe8ff12cd5c9fe56b29f69fbd710357485b6acbeb1dca2983d60d094",
+  "src/Core/CardHealing.php": "a52f97e154aadb473899a0a478972c50f4f2fc4aa4b832b727653cfa8fa0d75e",
+  "src/Core/DamageResolver.php": "37455759c4dc83254bbf1fa81b3b8813577afc8f41a1f178fa7cc6a09e714f1b",
+  "src/Core/Engine.php": "47360d8cf82554b2e92c5b44d2802d352ba60cbe6e12f56aa71bd25d74958bb9",
+  "src/Core/TurnPhaseProcessor.php": "43f8961433888aa008a60dae03398921d662acaf9c2b154eeb9c010e67bd018e",
+  "src/Core/WoundTransferProcessor.php": "e09648cf9374aaf26f7f35c7119f217d7285ef96f4ca9804518421d2a6ddc804"
+}

@@ -1,0 +1,257 @@
+{
+    "status": "PASS",
+    "chains": [
+        {
+            "scenario": "grave ritual actual s1_149",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 6
+        },
+        {
+            "scenario": "grave ritual actual s1_142",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 6
+        },
+        {
+            "scenario": "grave ritual actual s1_160",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 7
+        },
+        {
+            "scenario": "native configured strike effect s1_112",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "native configured strike effect s1_116",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "native configured strike effect s1_120",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "native configured strike effect s1_131",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 6
+        },
+        {
+            "scenario": "native configured strike effect s1_193",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "reactive answer s1_29",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "reactive answer s1_121",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "reactive answer s1_134",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "turn start native effect s1_35",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "turn start native effect s1_79",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "deck summon actual queen eight neighbours",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 6
+        },
+        {
+            "scenario": "Degasca native learns secret deck ability",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 6
+        },
+        {
+            "scenario": "any death actual coin s1_95",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 6
+        },
+        {
+            "scenario": "any death actual coin s1_163",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 6
+        },
+        {
+            "scenario": "native death effect s1_8",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 6
+        },
+        {
+            "scenario": "native death effect s1_56",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 10
+        },
+        {
+            "scenario": "actual chosen defender reaction s1_80",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 14
+        },
+        {
+            "scenario": "actual chosen defender reaction s1_82",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 14
+        },
+        {
+            "scenario": "native start coins s1_46",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 6
+        },
+        {
+            "scenario": "native start coins s1_84",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "native dissonance actual wounds",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 9
+        },
+        {
+            "scenario": "Kobold native optional heal accepted",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "configured strong followup s1_26",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "configured strong followup s1_199",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "close or damage actual close continuation",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 14
+        },
+        {
+            "scenario": "native whip choice damage and movement bonus",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 6
+        },
+        {
+            "scenario": "native gates then greed teleport damage and removal",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 14
+        },
+        {
+            "scenario": "native light direction places public cells",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 7
+        },
+        {
+            "scenario": "Werewolf native preturn option modifiers",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 9
+        },
+        {
+            "scenario": "native strong postcombat choice s1_36",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 14
+        },
+        {
+            "scenario": "native strong postcombat choice s1_58",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 14
+        },
+        {
+            "scenario": "risk review allied incarnation direct opening and movement bonus",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 6
+        },
+        {
+            "scenario": "shared native wound context teleport continuation",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "Bon native triggered discharge actual roll result",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 11
+        },
+        {
+            "scenario": "Kamnedrev derived coin strike result no invented spending",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 10
+        },
+        {
+            "scenario": "Queen private prophecy then actual impact continuation",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 9
+        },
+        {
+            "scenario": "native far row position direct modifier",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "weak strike poison real one marker",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 5
+        },
+        {
+            "scenario": "risk review native graveyard incarnation progress readiness",
+            "rollback": true,
+            "retry": true,
+            "saved_events": 6
+        }
+    ]
+}

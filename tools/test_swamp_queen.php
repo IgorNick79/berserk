@@ -52,7 +52,7 @@ efCheck($s->getCard(30)===$raw&&$raw->zone==='field'&&$raw->row===2&&$raw->col==
 efCheck($raw->closed&&$raw->revealed&&$raw->hp===$raw->hpMax&&$raw->move===$raw->moveMax,'native summoned arrival contract');
 efCheck(empty($s->battle[SwampQueenProcessor::PENDING]),'automatic summon has no pick');
 for($i=0;$i<25&&!empty($s->battle['turn_phase']);$i++){
-    $r=(new Engine())->apply($s,$s->battle['active'],new Command('turn_ack'));efCheck($r->success,'normal end/start phase ACK');
+    $ack=$s->battle['turn_phase']['pending_ack'];$r=(new Engine())->apply($s,$ack['owner'],new Command('turn_ack',['ack_id'=>$ack['ack_id']]));efCheck($r->success,'normal end/start phase ACK');
 }
 efCheck(empty($s->battle['turn_phase'])&&$s->battle['active']==='host','opponent end continuation completes');
 $s=sqState();sqEnd($s,'host');efCheck($s->getCard(30)->zone==='deck','no summon at own end');

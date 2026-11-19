@@ -64,6 +64,7 @@ final class WoundTransferProcessor
 
         if ($cost > 0) {
             $source->coins -= $cost;
+            $this->state->historyRecorder?->statusCheckpoint($this->state,'cost',$source);
             $this->engine->syncCoinBonus($source);
         }
 
@@ -416,6 +417,7 @@ final class WoundTransferProcessor
             $this->state->battle['strike']['wounds_received'][$id]=max(0,
                 (int)($this->state->battle['strike']['wounds_received'][$id]??0)-max(0,$donor->hp-$resolutionHpBefore));
         }
+        if($donor->hp>$resolutionHpBefore) $this->state->historyRecorder?->healthEvent($this->state,$donor,'health.transfer_out',['amount'=>max(0,$donor->hp-$resolutionHpBefore),'hp_before'=>$resolutionHpBefore,'hp_after'=>$donor->hp,'recipient_ids'=>array_column($appliedTransfers,'target_id')]);
         if ($source) ActionResolution::healed($this->state, $source, $donor, $resolutionHpBefore, 'wound_transfer', $resolutionParent);
         foreach ($appliedTransfers as $t) {
             $target = $this->state->getCard($t['target_id']);

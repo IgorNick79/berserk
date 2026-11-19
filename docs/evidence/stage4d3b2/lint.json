@@ -1,0 +1,110 @@
+[
+  {
+    "file": "src/Core/ActionResolver.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Core/BattleHistory/JournalText.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Core/BattleHistory/Recorder.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Core/CardHealing.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Core/CardRoll.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Core/CoinAbilities.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Core/DamageResolver.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Core/Engine.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Core/Movement/MovementResolver.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Core/SingleRoll.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Core/StrikeResolver.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Core/TempleWarrior.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Core/TurnPhaseProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "src/Core/WoundTransferProcessor.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/stage31_fixtures.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/test_gloomy_noblewoman.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/test_nested_combat_ownership.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/test_ochi_informer_multi_heal.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/test_pending_wait_timer.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/test_row_spell_pending_dice.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/test_single_roll_c2.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/test_stage31_fixes.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/special_http_probe.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/test_special_attack_journal.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/health_http_probe.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/test_health_journal.php",
+    "exit": 0
+  },
+  {
+    "file": "tools/health_transaction_probe.php",
+    "exit": 0
+  }
+]

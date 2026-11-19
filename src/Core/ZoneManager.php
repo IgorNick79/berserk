@@ -19,10 +19,12 @@ final class ZoneManager
     /** Same arrival contract as the existing prophecy summon; moves this instance. */
     public function summonFromDeck(CardInstance $card, int $row, int $col): void
     {
+        $journalFrom=$card->zone;
         unset($card->flags['in_prophecy_pending']);
         $card->closed = true; $card->revealed = true; $card->dying = false;
         $card->hp = $card->hpMax; $card->move = $card->moveMax;
         $this->toField($card, $row, $col);
+        $this->state->historyRecorder?->zoneChanged($this->state,$card,$journalFrom,'summon');
     }
 
     /** Shared with Degasca: shuffle remaining physical deck instances once. */
@@ -212,6 +214,7 @@ final class ZoneManager
 
     public function toExile(CardInstance $card): void
     {
+        $journalFrom=$card->zone;
         $flyingOwner = $this->flyingOwnerBeforeTransition($card);
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);
         $card->zone      = CardInstance::ZONE_EXILE;
@@ -228,6 +231,7 @@ final class ZoneManager
         $card->markers   = [];
         $card->flags = MemoryLoss::persistentFlags($card);
         $this->clearPosition($card);
+        $this->state->historyRecorder?->zoneChanged($this->state,$card,$journalFrom);
         $this->normalizeFlyingSlots($flyingOwner);
         SymbioteProcessor::refresh($this->state);
         Strangulation::refresh($this->state);
