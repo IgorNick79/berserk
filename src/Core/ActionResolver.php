@@ -1116,7 +1116,7 @@ final class ActionResolver
         $attacker->closed = true;
 
         (new ZoneManager($this->state))->toFlying($attacker);
-        if ($journalForm!==null) $this->state->historyRecorder?->transformed($this->state,$attacker,$journalForm);
+        if ($journalForm!==null) $this->state->historyRecorder?->transformed($this->state,$attacker,$journalForm,'gain_flight');
 
         // Для отображения результата
         InformationalWaitManager::publish($this->state);

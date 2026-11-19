@@ -302,10 +302,10 @@ final class Recorder
         foreach (['public','host','player'] as $view) $forms[$view]=$this->builder->known($card,$view)?['type'=>$card->type,'zone'=>$card->zone]:null;
         return $forms;
     }
-    public function transformed(GameState $state,CardInstance $card,array $before): void
+    public function transformed(GameState $state,CardInstance $card,array $before,string $reason=''): void
     {
         if (($before[$card->owner]??null)===['type'=>$card->type,'zone'=>$card->zone]) return;
-        $this->liveEvent($state,'card.transformed',['card_id'=>$card->instanceId,'after'=>['type'=>$card->type,'zone'=>$card->zone],'_before_forms'=>$before],[$card->instanceId]);
+        $this->liveEvent($state,'card.transformed',['card_id'=>$card->instanceId,'after'=>['type'=>$card->type,'zone'=>$card->zone],'_before_forms'=>$before]+($reason!==''?['reason'=>$reason]:[]),[$card->instanceId]);
     }
     public function zoneChanged(GameState $state,CardInstance $card,string $from,string $reason=''): void
     {

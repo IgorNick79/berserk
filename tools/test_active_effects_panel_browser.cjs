@@ -48,6 +48,7 @@ const fixtures = JSON.parse(execFileSync(process.env.PHP_BINARY || 'C:/OSPanel/m
                         throw Error('Snapshot rejected');
                 },{fragments,version:++version});
                 assert.equal(await page.locator('.active-card-effect').count(),count);
+                if(count)assert(await page.locator('.active-card-effects').evaluate(e=>Boolean(e.previousElementSibling?.classList.contains('battle-mode-buttons'))),'effects follow action buttons');
                 assert.equal(await page.locator('.active-card-effects ul,.active-card-effects li').count(),0);
                 assert.equal(await page.locator('.active-card-effect').evaluateAll(es=>es.filter(e=>e.scrollWidth>e.clientWidth).length),0);
             }

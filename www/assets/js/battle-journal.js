@@ -48,22 +48,35 @@
                     if (entry.kind === "gap") { hasGaps = true; seen.add(entry.seq); return; }
                     var item = document.createElement("li");
                     // Keep the text API and journal history intact. Asset paths are a fixed 1..6 whitelist.
-                    var dice = /^(Бросок|Изменение кубиков): атакующий (\d+), защитник (\d+|без броска)\.$/.exec(entry.text);
+                    function appendDie(value) {
+                        if (!/^[1-6]$/.test(value)) { item.appendChild(document.createTextNode(value)); return; }
+                        var icon = document.createElement("img");
+                        icon.className = "battle-journal-die";
+                        icon.src = "/assets/images/battle/dice/dice_" + value + ".svg";
+                        icon.alt = value;
+                        icon.setAttribute("aria-label", "Кубик: " + value);
+                        icon.width = 24; icon.height = 24;
+                        item.appendChild(icon);
+                    }
+                    var dice = /^(Бросок|Изменение кубиков|Переброс|Значения кубиков): атакующий (\d+)( \(модификатор -?\d+, итог -?\d+\))?, защитник (\d+|без броска)( \(модификатор -?\d+, итог -?\d+\))?\.$/.exec(entry.text);
+                    var single = /^(.*: (?:Бросок|Переброс|Изменение кубика|Установленное значение|Итог кубика): )(?:(-?\d+) → )?(-?\d+)( \(исходное (-?\d+), модификатор -?\d+\))?\.$/.exec(entry.text);
                     if (dice) {
-                        function appendDie(value) {
-                            if (!/^[1-6]$/.test(value)) { item.appendChild(document.createTextNode(value)); return; }
-                            var icon = document.createElement("img");
-                            icon.className = "battle-journal-die";
-                            icon.src = "/assets/images/battle/dice/dice_" + value + ".svg";
-                            icon.alt = value;
-                            icon.setAttribute("aria-label", "Кубик: " + value);
-                            icon.width = 24; icon.height = 24;
-                            item.appendChild(icon);
-                        }
-                        item.appendChild(document.createTextNode((dice[1] === "Изменение кубиков" ? "Изменение кубиков: " : "") + "Атакующий "));
+                        item.appendChild(document.createTextNode((dice[1] === "Бросок" ? "" : dice[1] + ": ") + "Атакующий "));
                         appendDie(dice[2]);
+                        if (dice[3]) item.appendChild(document.createTextNode(dice[3]));
                         item.appendChild(document.createTextNode(", защитник "));
-                        appendDie(dice[3]);
+                        appendDie(dice[4]);
+                        if (dice[5]) item.appendChild(document.createTextNode(dice[5]));
+                        item.appendChild(document.createTextNode("."));
+                    } else if (single) {
+                        item.appendChild(document.createTextNode(single[1]));
+                        if (single[2] !== undefined) { appendDie(single[2]); item.appendChild(document.createTextNode(" → ")); }
+                        appendDie(single[3]);
+                        if (single[4]) {
+                            item.appendChild(document.createTextNode(" (исходное "));
+                            appendDie(single[5]);
+                            item.appendChild(document.createTextNode(single[4].slice(single[4].indexOf(", модификатор"))));
+                        }
                         item.appendChild(document.createTextNode("."));
                     } else {
                         var positions = /(Свой|Вражеский) \[([1-3]):([1-5])\]/g, match, offset = 0;

@@ -75,6 +75,7 @@ final class JournalText
                 return $n.' '.$verb.': '.($zones[$p['to_zone']]??'игровая зона').(is_array($p['position']??null)?' ('.\Berserk\View\Ui\BattlefieldPosition::label((int)$p['position'][0],(int)$p['position'][1],$viewer).')':'').'.';
             case 'card.transformed':
                 if(($n=$name($p['card_id']??null))===null)return null;
+                if(($p['reason']??'')==='gain_flight')return $n.' получает полёт.';
                 $forms=['creature'=>'существо','fly'=>'летающее существо','artifact'=>'артефакт','companion'=>'симбиот','parasite'=>'паразит'];
                 return $n.': трансформация — '.(isset($p['before']['type'])?($forms[$p['before']['type']]??'форма').' → ':'').($forms[$p['after']['type']]??'новая форма').'.';
             case 'move.started':
