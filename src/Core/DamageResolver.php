@@ -46,6 +46,9 @@ final class DamageResolver
             }
         }
 
+        $val = CardStats::limitDamage($target, $val, $actionType, $attacker);
+        if ($val <= 0) return;
+
         $armorIgnores = [
             'prophecy_wounds',
             'cast', 'magic', 'discharge', 'poison', 'heal',
@@ -203,7 +206,7 @@ final class DamageResolver
             return;
         }
 
-        if (CardStats::isIncorporeal($target)) {
+        if (CardStats::hasIncorporealTrait($target)) {
             (new ZoneManager($this->state))->exileIncorporeal($target, 'death');
             $this->state->bumpVersion();
             return; // Replacement precedes death events, Valhalla and death triggers.

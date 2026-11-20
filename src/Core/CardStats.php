@@ -24,6 +24,12 @@ final class CardStats
 
     public static function isIncorporeal(CardInstance $card): bool
     {
+        return self::hasIncorporealTrait($card)
+            && $card->effectiveProp()['incorporeal'] !== 'icon_and_exile';
+    }
+
+    public static function hasIncorporealTrait(CardInstance $card): bool
+    {
         return $card->isCreature() && !empty($card->effectiveProp()['incorporeal']);
     }
 
@@ -115,7 +121,7 @@ final class CardStats
         if ($target->dying || $target->hp <= 0) return false;
         if (self::hasDefense($state, $target, 'execute', $attacker)) return false;
         if ($target->type === 'fly') return false;
-        if (!empty($target->effectiveProp()['incorporeal'])) return false;
+        if (self::isIncorporeal($target)) return false;
         if ($target->hp > $value) return false;
 
         $dr = abs($target->row - $attacker->row);
@@ -717,6 +723,20 @@ final class CardStats
         }
 
         return $total;
+    }
+
+    public static function limitDamage(CardInstance $target, int $damage, string $actionType, ?CardInstance $attacker): int
+    {
+        if ($attacker && self::isDefenseIgnored($attacker, 'damage_reduction')) return $damage;
+
+        $type = $actionType === 'answer' ? 'strike' : $actionType;
+        foreach ($target->effectiveProp()['damage_reduction'] ?? [] as $rule) {
+            if (!isset($rule['max_damage'])) continue;
+            if (isset($rule['types']) && !in_array($type, $rule['types'], true)) continue;
+            $damage = min($damage, max(0, (int) $rule['max_damage']));
+        }
+
+        return $damage;
     }
 
     // ─── Броня и строй ───────────────────────────────────────

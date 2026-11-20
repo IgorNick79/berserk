@@ -11,7 +11,7 @@ final class SymbioteProcessor
     {
         return in_array($card->type,['companion','parasite'],true)?$card->type:null;
     }
-    public static function corporeal(CardInstance $card): bool { return empty($card->effectiveProp()['incorporeal']); }
+    public static function corporeal(CardInstance $card): bool { return !CardStats::isIncorporeal($card); }
     public function hosts(CardInstance $sym): array
     {
         $kind=self::subtype($sym);if($kind===null)return [];
@@ -56,6 +56,7 @@ final class SymbioteProcessor
         if($p['source_id']===null){$this->state->battle[self::PENDING]['source_id']=$source->instanceId;$this->state->bumpVersion();return Result::ok(['symbiote_selected']);}
         $hostId=(int)$cmd->get('target_id',0);if(!in_array($hostId,$this->hosts($source),true))return Result::error('Недопустимый хозяин');
         $host=$this->state->getCard($hostId);$source->flags['symbiote_host_id']=$hostId;$source->row=$host->row;$source->col=$host->col;
+        self::refresh($this->state, $this->engine);
         $this->state->battle[self::PENDING]['source_id']=null;$this->advance();$this->state->bumpVersion();
         if(empty($this->state->battle[self::PENDING])&&$this->state->status!=='game_over')(new TurnProcessor($this->state,$this->engine))->finishReveal();
         return Result::ok(['symbiote_seated:'.$source->instanceId.':'.$hostId]);
@@ -68,16 +69,59 @@ final class SymbioteProcessor
     }
     public static function refresh(GameState $state,?Engine $engine=null): void
     {
+        $hostEffects = [];
         foreach($state->cards as$sym){
             $hostId=(int)($sym->flags['symbiote_host_id']??0);
             if(!$hostId)continue;
             if($sym->zone!==CardInstance::ZONE_FIELD){unset($sym->flags['symbiote_host_id']);continue;}
-            if($sym->dying)continue;
+            if($sym->dying || $sym->hp <= 0)continue;
             $host=$state->getCard($hostId);
             if(!$host||$host->zone!==CardInstance::ZONE_FIELD||$host->dying||$host->hp<=0||$host->type!=='creature'||self::subtype($host)!==null||(self::corporeal($sym)&&!self::corporeal($host))){($engine??new Engine())->forceDeath($state,$sym,'destroy');continue;}
             $sym->row=$host->row;$sym->col=$host->col;
+            $effects = $sym->effectiveProp()['host_effects'] ?? [];
+            if ($effects) $hostEffects[$hostId] = $effects;
+        }
+        foreach ($state->cards as $card) {
+            self::syncHostEffects($card, $hostEffects[$card->instanceId] ?? []);
         }
     }
+
+    private static function syncHostEffects(CardInstance $host, array $effects): void
+    {
+        if (($host->flags['symbiote_host_effects'] ?? []) === $effects) return;
+
+        $previousMove = 0;
+        foreach ($host->modifiers as $index => $modifier) {
+            if (empty($modifier['symbiote_host_effect'])) continue;
+            if ($modifier['stat'] === 'move') $previousMove = (int) $modifier['value'];
+            unset($host->modifiers[$index]);
+        }
+        $host->modifiers = array_values($host->modifiers);
+
+        $bonus = $host->increaseMove([
+            'value' => $effects['increase_move'] ?? 0,
+            'expire' => 'end_of_battle',
+        ], $host->owner);
+        if ($bonus > 0) {
+            $host->modifiers[array_key_last($host->modifiers)]['symbiote_host_effect'] = true;
+        }
+        $host->move = max(0, $host->move - $previousMove);
+
+        foreach ($effects['damage_reduction'] ?? [] as $rule) {
+            $host->modifiers[] = [
+                'stat' => 'damage_reduction',
+                'value' => (int) ($rule['value'] ?? 0),
+                'types' => $rule['types'] ?? null,
+                'expire' => 'end_of_battle',
+                'source' => $host->owner,
+                'symbiote_host_effect' => true,
+            ];
+        }
+
+        if ($effects) $host->flags['symbiote_host_effects'] = $effects;
+        else unset($host->flags['symbiote_host_effects']);
+    }
+
     public static function follow(GameState $state,Engine $engine,\Berserk\Core\Movement\MovementContext $context): void
     {
         foreach($state->cards as$sym)if($sym->zone===CardInstance::ZONE_FIELD&&!$sym->dying&&(int)($sym->flags['symbiote_host_id']??0)===$context->card->instanceId){

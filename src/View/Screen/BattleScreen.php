@@ -1328,7 +1328,7 @@ final class BattleScreen
                 'label' => 'Летающее существо',
             ]);
         }
-        if (CardStats::isIncorporeal($c)) {
+        if (CardStats::hasIncorporealTrait($c)) {
             $statValues .= $this->tpl->parse('includes/battle/stat_icon.tpl', [
                 'url' => '/assets/images/card/incorpeal@2x.png',
                 'label' => 'Бестелесное существо',

@@ -1,0 +1,12 @@
+{
+  "incorporeal": "icon_and_exile",
+  "damage_reduction": [
+    {"types": ["strike", "tap", "uchr", "shot", "throw"], "max_damage": 1}
+  ],
+  "host_effects": {
+    "increase_move": 1,
+    "damage_reduction": [
+      {"types": ["shot", "throw", "discharge"], "value": 1}
+    ]
+  }
+}
