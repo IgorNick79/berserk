@@ -104,7 +104,6 @@ final class ActiveCardEffects
                 $description['source_ability'] = $q['source_ability'] ?? '';
             }
             if (!empty($q['symbiote_host_effect'])) {
-                $description['duration'] = 'Пока симбиот прикреплён.';
                 foreach ($state->cards as $symbiote) {
                     if ($symbiote->zone === CardInstance::ZONE_FIELD && !$symbiote->dying
                         && (int) ($symbiote->flags['symbiote_host_id'] ?? 0) === $card->instanceId) {
