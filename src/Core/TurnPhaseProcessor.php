@@ -799,6 +799,13 @@ final class TurnPhaseProcessor
                 }
                 return ['label' => 'Свет фонаря', 'items' => []];
 
+            case 'increase_move':
+                $value = $card->increaseMove($eff, $ownerKey);
+                return ['label' => $label, 'items' => $value > 0 ? [[
+                    'instance_id' => $card->instanceId,
+                    'text' => CardStats::statLabel('move') . ' +' . $value,
+                ]] : []];
+
             case 'whip':
                 $targets = [$card->instanceId];
                 foreach ($this->state->cards as $other) {
@@ -815,6 +822,7 @@ final class TurnPhaseProcessor
                     'source_ukid' => $card->ukid,
                     'targets'     => $targets,
                     'value'       => (int) ($eff['value'] ?? 1),
+                    'increase_move' => $eff['increase_move'] ?? null,
                 ];
                 return ['label' => $label, 'items' => []];
 

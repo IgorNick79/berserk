@@ -2507,7 +2507,7 @@
     {
         "ukid": "s1_7",
         "name": "Смотритель стойла",
-        "prop": "{\"on_move\": [{\"stat\": \"ova\", \"type\": \"modifier\", \"value\": 1, \"expire\": \"end_of_turn\"}], \"turn_start\": [{\"type\": \"whip\", \"label\": \"Щелчок хлыста\", \"value\": 1}]}",
+        "prop": "{\"on_move\": [{\"stat\": \"ova\", \"type\": \"modifier\", \"value\": 1, \"expire\": \"end_of_turn\"}], \"turn_start\": [{\"type\": \"whip\", \"label\": \"Щелчок хлыста\", \"value\": 1, \"increase_move\": {\"value\": 1, \"expire\": \"end_of_turn\"}}]}",
         "health": "8",
         "move": "2",
         "strike_weak": "2",

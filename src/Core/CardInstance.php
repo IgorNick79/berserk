@@ -161,6 +161,22 @@ final class CardInstance
         return $this->hp > 0 && $this->zone !== self::ZONE_GRAVEYARD;
     }
 
+    public function increaseMove(array $effect, string $source): int
+    {
+        $value = max(0, (int) ($effect['value'] ?? 0));
+        if ($value === 0) return 0;
+
+        $this->modifiers[] = [
+            'stat' => 'move',
+            'value' => $value,
+            'expire' => $effect['expire'] ?? 'end_of_turn',
+            'source' => $source,
+        ];
+        $this->move += $value;
+
+        return $value;
+    }
+
     public function effectiveMove(): int
     {
         $bonus = 0;

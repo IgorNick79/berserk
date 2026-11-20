@@ -3330,20 +3330,18 @@ final class ActionResolver
 
         $this->engine->applyDamage($this->state, $target, $value, 'whip', $source);
         $died = $target->dying || $target->hp <= 0;
+        $moveBonus = 0;
         if (!$died) {
-            // Не погиб — +1 move до конца хода
-            $target->modifiers[] = [
-                'stat'   => 'move',
-                'value'  => 1,
-                'expire' => 'end_of_turn',
-                'source' => $playerKey,
-            ];
-            // Применяем немедленно — текущий move ещё не пересчитан
-            $target->move += 1;
+            // Older card props and saved choices did not store the movement effect.
+            $effect = $pw['increase_move'] ?? null;
+            if ($effect === null) {
+                $prop = json_decode(file_get_contents(__DIR__ . '/../../config/legacy_whip.prop.json'), true, 512, JSON_THROW_ON_ERROR);
+                $effect = $prop['turn_start'][0]['increase_move'];
+            }
+            if (is_array($effect)) {
+                $moveBonus = $target->increaseMove($effect, $playerKey);
+            }
         }
-
-        $sourceName = $target->ukid;
-        $targetName = $target->ukid;
 
         unset($this->state->battle['pending_whip']);
 
@@ -3354,7 +3352,7 @@ final class ActionResolver
 
         $this->state->bumpVersion();
         return Result::ok([
-            "whip:{$target->instanceId}:" . ($died ? 'died' : 'move+1'),
+            "whip:{$target->instanceId}:" . ($died ? 'died' : 'move+' . $moveBonus),
         ]);
     }
 
