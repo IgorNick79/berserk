@@ -211,7 +211,7 @@ final class DamageResolver
             $this->state->bumpVersion();
             return; // Replacement precedes death events, Valhalla and death triggers.
         }
-        if (!empty($target->effectiveProp()['return_to_deck_instead_of_death'])) {
+        if (!empty($target->effectiveProp()['return_to_deck'])) {
             (new ZoneManager($this->state))->returnToDeckInsteadOfDeath($target);
             $this->clearRootedBySource($target->instanceId);
             $this->refreshArmor();
