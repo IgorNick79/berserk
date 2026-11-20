@@ -647,7 +647,7 @@ final class DamageResolver
         foreach ($queue as $item) {
             $card = $this->state->getCard($item['instance_id']);
             if (!$card) continue;
-            if (EffectiveFeatures::suppressed($card)) continue;
+            if (EffectiveFeatures::suppressed($card) || CardStats::isIncorporeal($card)) continue;
             if ($card->hp <= 0) continue;
 
             $journalMaxBefore=$card->hpMax;
