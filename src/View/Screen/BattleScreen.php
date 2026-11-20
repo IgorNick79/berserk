@@ -1838,6 +1838,18 @@ final class BattleScreen
             $lines[] = "{$zone}: host={$host} player={$plr}";
         }
 
+        $active = $state->battle['active'] ?? null;
+        if (is_string($active) && isset($state->players[$active])) {
+            $deck = (new ZoneManager($state))->orderedDeck($active);
+            $lines[] = '';
+            $lines[] = "--- active deck ({$active}, " . count($deck) . ') ---';
+            foreach ($deck as $card) {
+                $name = $cardsInfo[$card->ukid]['name'] ?? $card->ukid;
+                $order = $card->order ?? '?';
+                $lines[] = "{$order}. #{$card->instanceId} {$name} [{$card->ukid}]";
+            }
+        }
+
         // ─── Cell markers ──────────────────────────────────
         if (!empty($state->cell_markers)) {
             $lines[] = '';

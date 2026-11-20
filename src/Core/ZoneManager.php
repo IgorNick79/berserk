@@ -27,12 +27,18 @@ final class ZoneManager
         $this->state->historyRecorder?->zoneChanged($this->state,$card,$journalFrom,'summon');
     }
 
-    /** Shared with Degasca: shuffle remaining physical deck instances once. */
-    public function shuffleDeck(string $owner): void
+    public function orderedDeck(string $owner): array
     {
         $deck = $this->state->getCardsInZone($owner, CardInstance::ZONE_DECK);
         usort($deck, fn(CardInstance $a, CardInstance $b): int => ($a->order ?? PHP_INT_MAX) <=> ($b->order ?? PHP_INT_MAX)
             ?: $a->instanceId <=> $b->instanceId);
+        return $deck;
+    }
+
+    /** Shared with Degasca: shuffle remaining physical deck instances once. */
+    public function shuffleDeck(string $owner): void
+    {
+        $deck = $this->orderedDeck($owner);
         shuffle($deck);
         foreach ($deck as $i => $card) $card->order = $i + 1;
     }
@@ -73,6 +79,27 @@ final class ZoneManager
         $this->normalizeFlyingSlots($flyingOwner);
         SymbioteProcessor::refresh($this->state);
         Strangulation::refresh($this->state);
+    }
+
+    public function returnToDeckInsteadOfDeath(CardInstance $card): void
+    {
+        $from = $card->zone;
+        TemporaryHealth::clear($card);
+        $card->hp = 0;
+        $card->move = 0;
+        $card->armor = 0;
+        $card->armorMax = 0;
+        $card->coins = 0;
+        $card->closed = false;
+        $card->revealed = false;
+        $card->dying = false;
+        $card->markers = [];
+        $card->modifiers = [];
+        $card->flags = MemoryLoss::persistentFlags($card);
+        $this->toDeck($card);
+        $this->shuffleDeck($card->owner);
+        $this->state->historyRecorder?->unsupported($this->state, 'return_to_deck_instead_of_death');
+        $this->state->historyRecorder?->zoneChanged($this->state, $card, $from, 'return_to_deck_instead_of_death');
     }
 
     public function toSideboard(CardInstance $card): void

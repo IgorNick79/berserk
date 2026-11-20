@@ -211,6 +211,13 @@ final class DamageResolver
             $this->state->bumpVersion();
             return; // Replacement precedes death events, Valhalla and death triggers.
         }
+        if (!empty($target->effectiveProp()['return_to_deck_instead_of_death'])) {
+            (new ZoneManager($this->state))->returnToDeckInsteadOfDeath($target);
+            $this->clearRootedBySource($target->instanceId);
+            $this->refreshArmor();
+            $this->state->bumpVersion();
+            return;
+        }
         $target->hp = 0;
         $target->dying = true;
         SymbioteProcessor::refresh($this->state);
