@@ -142,7 +142,7 @@ final class ZoneManager
      */
     public function toGraveyard(CardInstance $card): void
     {
-        if (CardStats::hasIncorporealTrait($card)) { $this->exileIncorporeal($card, 'death'); return; }
+        if (CardStats::isIncorporeal($card)) { $this->exileIncorporeal($card, 'death'); return; }
         $completedDeath = $card->dying;
         $flyingOwner = $this->flyingOwnerBeforeTransition($card);
         $this->handleLinkedRecruitSourceLeavingBattlefield($card);

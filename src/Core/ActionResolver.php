@@ -797,7 +797,7 @@ final class ActionResolver
             if ($target->type === 'fly') {
                 return Result::error('Нельзя добить летающего');
             }
-            if (CardStats::isIncorporeal($target)) {
+            if (!empty($target->effectiveProp()['incorporeal'])) {
                 return Result::error('Нельзя добить бестелесного');
             }
             $value = CardStats::getExecuteValue($this->state, $attacker, $target, $action);

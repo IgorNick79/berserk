@@ -1,5 +1,5 @@
 {
-  "incorporeal": "icon_and_exile",
+  "incorporeal": true,
   "damage_reduction": [
     {"types": ["strike", "tap", "uchr", "shot", "throw"], "max_damage": 1}
   ],

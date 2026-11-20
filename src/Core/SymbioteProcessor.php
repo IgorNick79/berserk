@@ -11,7 +11,7 @@ final class SymbioteProcessor
     {
         return in_array($card->type,['companion','parasite'],true)?$card->type:null;
     }
-    public static function corporeal(CardInstance $card): bool { return !CardStats::isIncorporeal($card); }
+    public static function corporeal(CardInstance $card): bool { return empty($card->effectiveProp()['incorporeal']); }
     public function hosts(CardInstance $sym): array
     {
         $kind=self::subtype($sym);if($kind===null)return [];

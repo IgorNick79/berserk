@@ -24,12 +24,6 @@ final class CardStats
 
     public static function isIncorporeal(CardInstance $card): bool
     {
-        return self::hasIncorporealTrait($card)
-            && $card->effectiveProp()['incorporeal'] !== 'icon_and_exile';
-    }
-
-    public static function hasIncorporealTrait(CardInstance $card): bool
-    {
         return $card->isCreature() && !empty($card->effectiveProp()['incorporeal']);
     }
 
@@ -121,7 +115,7 @@ final class CardStats
         if ($target->dying || $target->hp <= 0) return false;
         if (self::hasDefense($state, $target, 'execute', $attacker)) return false;
         if ($target->type === 'fly') return false;
-        if (self::isIncorporeal($target)) return false;
+        if (!empty($target->effectiveProp()['incorporeal'])) return false;
         if ($target->hp > $value) return false;
 
         $dr = abs($target->row - $attacker->row);

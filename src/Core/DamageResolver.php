@@ -206,7 +206,7 @@ final class DamageResolver
             return;
         }
 
-        if (CardStats::hasIncorporealTrait($target)) {
+        if (CardStats::isIncorporeal($target)) {
             (new ZoneManager($this->state))->exileIncorporeal($target, 'death');
             $this->state->bumpVersion();
             return; // Replacement precedes death events, Valhalla and death triggers.

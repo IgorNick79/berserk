@@ -37,7 +37,7 @@ for ($i = 0; $i < 3; $i++) {
     syCheck($host->move === 2 && $host->effectiveMove() === 3 && count($host->modifiers) === 2, 'refresh does not refill or duplicate');
 }
 
-syCheck(CardStats::hasIncorporealTrait($symbiote) && !CardStats::isIncorporeal($symbiote), 'icon and exile only');
+syCheck(CardStats::isIncorporeal($symbiote), 'standard incorporeal flag');
 $info = [];
 foreach ($state->cards as $card) {
     $info[$card->ukid] = ['name' => $card->ukid, 'price' => 1];
