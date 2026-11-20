@@ -10,6 +10,7 @@ use Berserk\Core\CardInstance;
 use Berserk\Core\ZoneManager;
 use Berserk\Core\BattleHelper;
 use Berserk\Core\CardStats;
+use Berserk\Core\SymbioteProcessor;
 use Berserk\Core\Choice\ChoiceRegistry;
 use Berserk\View\Template;
 use Berserk\View\Screen\Battle\InfoPanel;
@@ -1299,7 +1300,7 @@ final class BattleScreen
         $hpMax = $this->displayHpMax($c, $info);
         $statValues = $statValue('hp', 'heart@2x', $c->hp . '/' . $hpMax,
             'Здоровье: ' . $c->hp . '/' . $hpMax);
-        if ($c->type !== 'artifact' && !CardStats::isFlyingCreature($c)) {
+        if ($c->type !== 'artifact' && !CardStats::isFlyingCreature($c) && SymbioteProcessor::subtype($c) === null) {
             $statValues .= $statValue('move', 'move@2x', $c->move . '/' . $c->moveMax,
                 'Ходов: ' . $c->move . '/' . $c->moveMax);
         }
