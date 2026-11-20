@@ -150,6 +150,27 @@ final class ProphecyProcessor
         ];
 
         $this->applyProphecyCharges($ownerKey, (int) ($peeked['meta']['count'] ?? 1));
+        if ($context === 'turn_start') {
+            $this->applyTurnStartModifier($source, (int) $peeked['meta']['first_price']);
+        }
+    }
+
+    private function applyTurnStartModifier(CardInstance $source, int $price): void
+    {
+        $config = $source->effectiveProp()['prophecy_modifier'] ?? null;
+        if (!is_array($config) || $source->dying || !$source->isAlive()) return;
+        if (isset($config['max_price']) && $price > (int) $config['max_price']) return;
+        if (empty($config['stat']) || !isset($config['value'])) return;
+
+        $modifier = [
+            'stat' => (string) $config['stat'],
+            'value' => (int) $config['value'],
+            'expire' => $config['expire'] ?? 'end_of_turn',
+            'source' => $source->owner,
+        ];
+        if (isset($config['types'])) $modifier['types'] = (array) $config['types'];
+        $source->modifiers[] = $modifier;
+        $this->state->historyRecorder?->statusCheckpoint($this->state, 'prophecy', $source);
     }
 
     /**

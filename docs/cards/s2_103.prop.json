@@ -1,0 +1,18 @@
+{
+  "prophecy": 1,
+  "prophecy_modifier": {
+    "max_price": 4,
+    "stat": "action_range",
+    "types": ["throw"],
+    "value": 2,
+    "expire": "end_of_turn"
+  },
+  "actions": [
+    {
+      "type": "throw",
+      "name": "Метание «икринки»",
+      "range": 3,
+      "strike": {"weak": 1, "medium": 2, "strong": 2}
+    }
+  ]
+}
