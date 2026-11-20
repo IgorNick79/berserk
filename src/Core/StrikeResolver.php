@@ -105,14 +105,18 @@ final class StrikeResolver
             } elseif ($attackerIsFlying) {
                 $drT = abs($card->row - $target->row);
                 $dcT = abs($card->col - $target->col);
-                $canDefend = ($drT <= 1 && $dcT <= 1 && ($drT + $dcT) > 0);
+                $sharesHostCell = (int) ($card->flags['symbiote_host_id'] ?? 0) === $target->instanceId
+                    && $drT === 0 && $dcT === 0;
+                $canDefend = ($drT <= 1 && $dcT <= 1 && (($drT + $dcT) > 0 || $sharesHostCell));
             } else {
                 $drA = abs($card->row - $attacker->row);
                 $dcA = abs($card->col - $attacker->col);
                 $drT = abs($card->row - $target->row);
                 $dcT = abs($card->col - $target->col);
                 $nearA = ($drA <= 1 && $dcA <= 1 && ($drA + $dcA) > 0);
-                $nearT = ($drT <= 1 && $dcT <= 1 && ($drT + $dcT) > 0);
+                $sharesHostCell = (int) ($card->flags['symbiote_host_id'] ?? 0) === $target->instanceId
+                    && $drT === 0 && $dcT === 0;
+                $nearT = ($drT <= 1 && $dcT <= 1 && (($drT + $dcT) > 0 || $sharesHostCell));
                 $canDefend = $nearA && $nearT;
             }
 
