@@ -94,7 +94,8 @@ final class TurnInstantKnowledge
      foreach($s->battle as $key=>$value)if(is_string($key) && str_starts_with($key,'pending_') && !empty($value))return null;
      if ($frame['continuation'] === ['type'=>'strike_after']) {
          $resolution=$s->battle['action_resolution']??[];
-         $id=$resolution['next_id']??null;
+         $ids=array_keys($resolution['tokens']??[]);
+         $id=$ids===[]?null:max($ids);
          if (!is_int($id) || !is_array($resolution['tokens']??null)) return null;
          $token=$resolution['tokens'][$id]??[];
          if (($token['action_id']??null)!==$id || ($token['parent_id']??null)!==null) return null;
