@@ -3339,7 +3339,7 @@ final class ActionResolver
                 $effect = $prop['turn_start'][0]['increase_move'];
             }
             if (is_array($effect)) {
-                $moveBonus = $target->increaseMove($effect, $playerKey);
+                $moveBonus = $target->increaseMove($effect, $playerKey, $source->instanceId, 'Щелчок хлыста');
             }
         }
 

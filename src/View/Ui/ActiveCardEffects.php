@@ -99,6 +99,20 @@ final class ActiveCardEffects
             // Preserve zero/net-zero records: a conditional effect may still carry meaning.
             $label=$stat==='execute'?'Добивание':CardStats::statLabel($stat);
             $description = self::modifierDescription($stat, $value, $q);
+            if (isset($q['source_instance_id'])) {
+                $description['source_instance_id'] = $q['source_instance_id'];
+                $description['source_ability'] = $q['source_ability'] ?? '';
+            }
+            if (!empty($q['symbiote_host_effect'])) {
+                $description['duration'] = 'Пока симбиот прикреплён.';
+                foreach ($state->cards as $symbiote) {
+                    if ($symbiote->zone === CardInstance::ZONE_FIELD && !$symbiote->dying
+                        && (int) ($symbiote->flags['symbiote_host_id'] ?? 0) === $card->instanceId) {
+                        $description['source_instance_id'] = $symbiote->instanceId;
+                        break;
+                    }
+                }
+            }
             if ($stat === 'damage_reduction' && ($q['expire'] ?? null) === 'end_of_opponent_turn') {
                 $rows[] = (-$value) . ' от немагических атак';
                 $descriptions[count($rows) - 1] = $description;
@@ -225,6 +239,17 @@ final class ActiveCardEffects
         $html = '<section class="active-card-effects" aria-label="Активные эффекты"><h3>Активные эффекты</h3>';
         foreach ($effects as $effect) {
             $html .= '<article class="active-card-effect"><h4>' . self::escape($effect['title']) . '</h4>';
+            if (isset($effect['source_instance_id'])) {
+                $source = $state->getCard((int) $effect['source_instance_id']);
+                $ability = $effect['source_ability'] ?? '';
+                $name = $source && ($source->owner === $viewer || $source->revealed)
+                    ? ($catalog[$source->ukid]['name'] ?? '') : '';
+                $origin = $name;
+                if ($ability !== '') $origin .= ($name !== '' ? ' — ' : '') . '«' . $ability . '»';
+                if ($origin !== '') {
+                    $html .= '<p class="active-card-effect-source">' . self::escape($origin) . '</p>';
+                }
+            }
             $marker = $effect['marker'] ?? null;
             $names = [];
             if ($marker === 'rooted') {

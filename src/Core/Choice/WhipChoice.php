@@ -9,7 +9,7 @@ use Berserk\Core\GameState;
 use Berserk\Core\Engine;
 use Berserk\Core\Command;
 use Berserk\Core\Result;
-use Berserk\View\Ui\{CreatureChoice, PanelSpec};
+use Berserk\View\Ui\{CreatureChoice, Form, PanelSpec};
 
 final class WhipChoice implements ChoiceHandlerInterface
 {
@@ -43,24 +43,21 @@ final class WhipChoice implements ChoiceHandlerInterface
             );
         }
 
-        $links = [];
-        foreach ($pw['targets'] as $tid) {
-            $links[] = [
-                'instanceId' => $tid,
-                'url' => "{$baseUrl}&cmd=choose_whip_target&target_id={$tid}",
-                'suffix' => (int) $tid === (int) $pw['source_id'] ? ' (сам)' : '',
+        $items = [];
+        foreach ($pw['targets'] as $targetId) {
+            $target = $state->getCard((int) $targetId);
+            if (!$target || $target->dying || $target->hp <= 0) continue;
+            $items[] = [
+                'value' => $target->instanceId,
+                'suffix' => $target->instanceId === (int) $pw['source_id'] ? ' (сам)' : '',
             ];
         }
-        $buttons = CreatureChoice::immediateButtons($state, $playerKey, $cardsInfo, $links);
-        $buttons[] = [
-            'label' => 'Отмена',
-            'url'   => $baseUrl . '&cmd=cancel_pending',
-            'class' => 'skip',
-        ];
-        
-        return new PanelSpec(
-            title: $srcName . ' — щелчок хлыста: выбери цель',
-            buttons: $buttons,
+
+        return CreatureChoice::targetPanel(
+            $state, $playerKey, $cardsInfo, $items, 'whip:' . $pw['source_id'] . ':' . ($state->battle['turn'] ?? 0),
+            $srcName . ' — Щелчок хлыста: выберите цель',
+            Form::battleHidden($role, $state->gameId, 'choose_whip_target'),
+            $baseUrl . '&cmd=cancel_pending',
         );
     }
 
