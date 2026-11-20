@@ -1,0 +1,14 @@
+{
+  "ability": {
+    "line": true,
+    "only": ["shot"],
+    "value": 1
+  },
+  "actions": [
+    {
+      "type": "shot",
+      "range": 4,
+      "strike": {"weak": 0, "medium": 1, "strong": 1}
+    }
+  ]
+}
